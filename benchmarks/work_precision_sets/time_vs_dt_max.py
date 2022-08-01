@@ -3,28 +3,47 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-parameters = [
-    # "Marquis2019",
-    "NCA_Kim2011",
-    # "Prada2013",-
-    "Ramadass2004",
-    # "Mohtat2020",-
-    # "Chen2020",-
-    # "Chen2020_plating",
-    # "Ecker2015",
+dt_max = [
+    10,
+    20,
+    50,
+    80,
+    100,
+    150,
+    250,
+    400,
+    600,
+    900,
+    1200,
+    1600,
+    2100,
+    2600,
+    3000,
+    3600,
 ]
-
-dt_max = [1.0e-6,1.0e-5,1.0e-4,1.0e-3,0.01,0.1,1,10,100,1000,1.0e4,1.0e5,1.0e6,1.0e7,1.0e9,1.0e10,1.0e11,1.0e12]
-models = [ "DFN"]
+models = ["SPM", "DFN"]
 
 for model_ in models:
     if model_ == "SPM":
         x = 1
+        parameters = [
+            "Marquis2019",
+            "NCA_Kim2011",
+            "Ramadass2004",
+            "Mohtat2020",
+            "Chen2020",
+            "Chen2020_plating",
+            "Ecker2015",
+        ]
     else:
         x = 2
+        parameters = [
+            "Marquis2019",
+            "Ramadass2004",
+        ]
     for params in parameters:
         time_points = []
-        print(params)
+
         if model_ == "SPM":
             model = pybamm.lithium_ion.SPM()
         else:
@@ -56,15 +75,18 @@ for model_ in models:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         for t in dt_max:
-            print("a")
-            solver = pybamm.CasadiSolver(dt_max = t)
+
+            solver = pybamm.CasadiSolver(dt_max=t)
             # solve first
             solver.solve(model, t_eval=t_eval)
             time = 0
             runs = 5
             for k in range(0, runs):
+                try:
+                    solution = solver.solve(model, t_eval=t_eval)
+                except Exception:
+                    pass
 
-                solution = solver.solve(model, t_eval=t_eval)
                 time += solution.solve_time.value
             time = time / runs
 
@@ -89,7 +111,7 @@ plt.tight_layout()
 plt.savefig(f"benchmarks/benchmark_images/time_vs_dt_max_{pybamm.__version__}.png")
 
 
-content = f"<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>"
+content = f"## Solve Time vs dt_max\n<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>\n"  # noqa
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()

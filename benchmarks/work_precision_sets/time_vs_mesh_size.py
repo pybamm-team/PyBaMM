@@ -20,24 +20,24 @@ for model_ in models:
         x = 2
 
     for params in parameters:
-        
+
         solutions = []
 
         for N in npts:
-            
-            solver = pybamm.CasadiSolver(mode = "fast")
+
+            solver = pybamm.CasadiSolver(mode="fast")
             if model_ == "SPM":
                 model = pybamm.lithium_ion.SPM()
             else:
                 model = pybamm.lithium_ion.DFN()
             parameter_values = pybamm.ParameterValues(params)
             var_pts = {
-            "x_n": N,  # negative electrode
-            "x_s": N,  # separator 
-            "x_p": N,  # positive electrode
-            "r_n": N,  # negative particle
-            "r_p": N,  # positive particle
-            }    
+                "x_n": N,  # negative electrode
+                "x_s": N,  # separator
+                "x_p": N,  # positive electrode
+                "r_n": N,  # negative particle
+                "r_p": N,  # positive particle
+            }
             sim = pybamm.Simulation(
                 model, solver=solver, parameter_values=parameter_values, var_pts=var_pts
             )
@@ -47,15 +47,15 @@ for model_ in models:
                 solution = sim.solve([0, 3500])
                 time += solution.solve_time.value
             time = time / 5
-            
+
             solutions.append(time)
 
-        plt.subplot(1, 2, x)    
+        plt.subplot(1, 2, x)
         plt.plot(npts, solutions)
         plt.title(f"Work Precision Sets for {model_}")
         plt.xlabel("mesh points")
         plt.xticks(npts)
-        
+
         plt.yscale("log")
         plt.ylabel("time(s)")
 
@@ -69,7 +69,7 @@ plt.tight_layout()
 plt.savefig(f"benchmarks/benchmark_images/time_vs_mesh_size_{pybamm.__version__}.png")
 
 
-content = f"<img src='./benchmark_images/time_vs_mesh_size_{pybamm.__version__}.png'>"
+content = f"## Solve Time vs Mesh size\n<img src='./benchmark_images/time_vs_mesh_size_{pybamm.__version__}.png'>\n"  # noqa
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()
