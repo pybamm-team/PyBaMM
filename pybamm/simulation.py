@@ -837,6 +837,7 @@ class Simulation:
                     except pybamm.SolverError as e:
                         logs["error"] = e
                         callbacks.on_experiment_error(logs)
+                        step_solution.termination = f"error: {e}"
                         feasible = False
                         # If none of the cycles worked, raise an error
                         if cycle_num == 1 and step_num == 1:
@@ -858,6 +859,7 @@ class Simulation:
                         or step_solution.termination == "final time"
                         or "[experiment]" in step_solution.termination
                     ):
+                        callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
 
@@ -910,11 +912,6 @@ class Simulation:
                     min_voltage = cycle_sum_vars["Minimum voltage [V]"]
                     if min_voltage <= voltage_stop[0]:
                         break
-
-                # Break if the experiment is infeasible (or errored)
-                if feasible is False:
-                    callbacks.on_experiment_infeasible(logs)
-                    break
 
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
