@@ -45,9 +45,17 @@ class SPM(BaseModel):
         if kinetics is not None and surface_form is None:
             options["surface form"] = "algebraic"
 
-        # For degradation models we use the "x-average" form since this is a
-        # reduced-order model with uniform current density in the electrodes
+        # For degradation models we use the "x-average", note that for side reactions
+        # this is set by "x-average side reactions"
         self.x_average = True
+
+        # Set "x-average side reactions" to "true" if the model is SPM
+        x_average_side_reactions = options.get("x-average side reactions")
+        if (
+            x_average_side_reactions is None
+            and self.__class__ in [pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM]
+        ):
+            options["x-average side reactions"] = "true"
 
         super().__init__(options, name)
 
@@ -55,6 +63,12 @@ class SPM(BaseModel):
 
         if self.__class__ != "MPM":
             pybamm.citations.register("Marquis2019")
+
+        if (
+            self.options["SEI"] not in ["none", "constant"]
+            or self.options["lithium plating"] != "none"
+        ):
+            pybamm.citations.register("BrosaPlanella2022")
 
     def set_convection_submodel(self):
 
@@ -106,16 +120,16 @@ class SPM(BaseModel):
             )
             for phase in phases:
                 if particle == "Fickian diffusion":
-                    submod = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                        self.param, domain, self.options, phase
+                    submod = pybamm.particle.FickianDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=True
                     )
                 elif particle in [
                     "uniform profile",
                     "quadratic profile",
                     "quartic profile",
                 ]:
-                    submod = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                        self.param, domain, particle, self.options, phase
+                    submod = pybamm.particle.XAveragedPolynomialProfile(
+                        self.param, domain, self.options, phase=phase
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
 

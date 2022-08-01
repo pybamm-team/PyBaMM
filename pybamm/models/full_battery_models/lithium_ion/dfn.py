@@ -83,28 +83,18 @@ class DFN(BaseModel):
                 getattr(self.options, domain)["particle phases"]
             )
             for phase in phases:
-                if self.options["particle size"] == "single":
-                    if particle == "Fickian diffusion":
-                        submod = pybamm.particle.no_distribution.FickianDiffusion(
-                            self.param, domain, self.options, phase
-                        )
-                    elif particle in [
-                        "uniform profile",
-                        "quadratic profile",
-                        "quartic profile",
-                    ]:
-                        submod = pybamm.particle.no_distribution.PolynomialProfile(
-                            self.param, domain, particle, self.options, phase
-                        )
-                elif self.options["particle size"] == "distribution":
-                    if particle == "Fickian diffusion":
-                        submod = pybamm.particle.size_distribution.FickianDiffusion(
-                            self.param, domain
-                        )
-                    elif particle == "uniform profile":
-                        submod = pybamm.particle.size_distribution.UniformProfile(
-                            self.param, domain
-                        )
+                if particle == "Fickian diffusion":
+                    submod = pybamm.particle.FickianDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=False
+                    )
+                elif particle in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    submod = pybamm.particle.PolynomialProfile(
+                        self.param, domain, self.options, phase=phase
+                    )
                 self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):

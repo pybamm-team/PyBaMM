@@ -162,7 +162,17 @@ class BaseIntegrationTestLithiumIon:
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        param = pybamm.ParameterValues("Chen2020_plating")
+        param = pybamm.ParameterValues({
+            "chemistry": "lithium_ion",
+            "cell": "LGM50_Chen2020",
+            "negative electrode": "graphite_Chen2020",
+            "separator": "separator_Chen2020",
+            "positive electrode": "nmc_Chen2020",
+            "electrolyte": "lipf6_Nyman2008",
+            "experiment": "1C_discharge_from_full_Chen2020",
+            "sei": "example",
+            "lithium plating": "okane2020_Li_plating",
+        })
         self.run_basic_processing_test(options, parameter_values=param)
 
     def test_sei_reaction_limited(self):

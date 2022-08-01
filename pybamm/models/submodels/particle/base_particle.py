@@ -25,6 +25,30 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def __init__(self, param, domain, options=None, phase=None):
         super().__init__(param, domain, options=options, phase=phase)
+        # Read from options to see if we have a particle size distribution
+        self.size_distribution = self.options["particle size"] == "distribution"
+
+    def _get_effective_diffusivity(self, c, T):
+        param = self.param
+        domain = self.domain.lower()
+        domain_param = self.domain_param
+        phase_param = self.phase_param
+
+        # Get diffusivity
+        D = phase_param.D(c, T)
+
+        # Account for stress-induced difftusion by defining a multiplicative
+        # "stress factor"
+        stress_option = getattr(self.options, domain)["stress-induced diffusion"]
+
+        if stress_option == "true":
+            stress_factor = 1 + domain_param.theta * (c - domain_param.c_0) / (
+                1 + param.Theta * T
+            )
+        else:
+            stress_factor = 1
+
+        return D * stress_factor
 
     def _get_standard_concentration_variables(
         self, c_s, c_s_xav=None, c_s_rav=None, c_s_av=None, c_s_surf=None
@@ -73,7 +97,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"Average {domain} {phase_name}particle concentration [mol.m-3]": c_s_av
             * c_scale,
             f"{Domain} {phase_name}particle " "surface concentration": c_s_surf,
-            f"{Domain} particle surface concentration [mol.m-3]": c_scale * c_s_surf,
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_scale
+            * c_s_surf,
             f"X-averaged {domain} {phase_name}particle "
             "surface concentration": c_s_surf_av,
             f"X-averaged {domain} {phase_name}particle "
@@ -127,14 +152,305 @@ class BaseParticle(pybamm.BaseSubModel):
         )
         return variables
 
-    def _get_standard_flux_variables(self, N_s, N_s_xav):
+    def _get_standard_flux_variables(self, N_s):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
 
+        variables = {f"{Domain} {phase_name}particle flux": N_s}
+
+        if isinstance(N_s, pybamm.Broadcast):
+            N_s_xav = pybamm.x_average(N_s)
+            variables.update(
+                {f"X-averaged {domain} {phase_name}particle flux": N_s_xav}
+            )
+        return variables
+
+    def _get_distribution_variables(self, R):
+        """
+        Forms the particle-size distributions and mean radii given a spatial variable
+        R. The domains of R will be different depending on the submodel, e.g. for the
+        `SingleSizeDistribution` classes R does not have an "electrode" domain.
+        """
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
+        R_typ = self.phase_param.R_typ
+        # Particle-size distribution (area-weighted)
+        f_a_dist = self.phase_param.f_a_dist(R)
+
+        # Ensure the distribution is normalised, irrespective of discretisation
+        # or user input
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
+
+        # Volume-weighted particle-size distribution
+        f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)
+
+        # Number-based particle-size distribution
+        f_num_dist = (f_a_dist / R ** 2) / pybamm.Integral(f_a_dist / R ** 2, R)
+
+        # True mean radii and standard deviations, calculated from the f_a_dist that
+        # was given
+        R_num_mean = pybamm.Integral(R * f_num_dist, R)
+        R_a_mean = pybamm.Integral(R * f_a_dist, R)
+        R_v_mean = pybamm.Integral(R * f_v_dist, R)
+        sd_num = pybamm.sqrt(pybamm.Integral((R - R_num_mean) ** 2 * f_num_dist, R))
+        sd_a = pybamm.sqrt(pybamm.Integral((R - R_a_mean) ** 2 * f_a_dist, R))
+        sd_v = pybamm.sqrt(pybamm.Integral((R - R_v_mean) ** 2 * f_v_dist, R))
+
+        # X-average the means and standard deviations to give scalars
+        # (to remove the "electrode" domain, if present)
+        R_num_mean = pybamm.x_average(R_num_mean)
+        R_a_mean = pybamm.x_average(R_a_mean)
+        R_v_mean = pybamm.x_average(R_v_mean)
+        sd_num = pybamm.x_average(sd_num)
+        sd_a = pybamm.x_average(sd_a)
+        sd_v = pybamm.x_average(sd_v)
+
+        # X-averaged distributions, or broadcast
+        if R.domains["secondary"] == [f"{domain} electrode"]:
+            f_a_dist_xav = pybamm.x_average(f_a_dist)
+            f_v_dist_xav = pybamm.x_average(f_v_dist)
+            f_num_dist_xav = pybamm.x_average(f_num_dist)
+        else:
+            f_a_dist_xav = f_a_dist
+            f_v_dist_xav = f_v_dist
+            f_num_dist_xav = f_num_dist
+
+            # broadcast
+            f_a_dist = pybamm.SecondaryBroadcast(f_a_dist_xav, [f"{domain} electrode"])
+            f_v_dist = pybamm.SecondaryBroadcast(f_v_dist_xav, [f"{domain} electrode"])
+            f_num_dist = pybamm.SecondaryBroadcast(
+                f_num_dist_xav, [f"{domain} electrode"]
+            )
+
         variables = {
-            f"{Domain} {phase_name}particle flux": N_s,
-            f"X-averaged {domain} {phase_name}particle flux": N_s_xav,
+            f"{Domain} {phase_name}particle sizes": R,
+            f"{Domain} {phase_name}particle sizes [m]": R * R_typ,
+            f"{Domain} area-weighted {phase_name}particle-size"
+            + " distribution": f_a_dist,
+            f"{Domain} area-weighted {phase_name}particle-size"
+            " distribution [m-1]": f_a_dist / R_typ,
+            f"{Domain} volume-weighted {phase_name}particle-size"
+            + " distribution": f_v_dist,
+            f"{Domain} volume-weighted {phase_name}particle-size"
+            " distribution [m-1]": f_v_dist / R_typ,
+            f"{Domain} number-based {phase_name}particle-size"
+            + " distribution": f_num_dist,
+            f"{Domain} number-based {phase_name}particle-size"
+            " distribution [m-1]": f_num_dist / R_typ,
+            f"{Domain} area-weighted" + " mean particle radius": R_a_mean,
+            f"{Domain} area-weighted" + " mean particle radius [m]": R_a_mean * R_typ,
+            f"{Domain} volume-weighted" + " mean particle radius": R_v_mean,
+            f"{Domain} volume-weighted" + " mean particle radius [m]": R_v_mean * R_typ,
+            f"{Domain} number-based" + " mean particle radius": R_num_mean,
+            f"{Domain} number-based" + " mean particle radius [m]": R_num_mean * R_typ,
+            f"{Domain} area-weighted {phase_name}particle-size"
+            + " standard deviation": sd_a,
+            f"{Domain} area-weighted {phase_name}particle-size"
+            " standard deviation [m]": sd_a * R_typ,
+            f"{Domain} volume-weighted {phase_name}particle-size"
+            + " standard deviation": sd_v,
+            f"{Domain} volume-weighted {phase_name}particle-size"
+            " standard deviation [m]": sd_v * R_typ,
+            f"{Domain} number-based {phase_name}particle-size"
+            + " standard deviation": sd_num,
+            f"{Domain} number-based {phase_name}particle-size"
+            " standard deviation [m]": sd_num * R_typ,
+            # X-averaged distributions
+            f"X-averaged {domain} area-weighted {phase_name}particle-size "
+            "distribution": f_a_dist_xav,
+            f"X-averaged {domain} area-weighted {phase_name}particle-size "
+            "distribution [m-1]": f_a_dist_xav / R_typ,
+            f"X-averaged {domain} volume-weighted {phase_name}particle-size "
+            "distribution": f_v_dist_xav,
+            f"X-averaged {domain} volume-weighted {phase_name}particle-size "
+            "distribution [m-1]": f_v_dist_xav / R_typ,
+            f"X-averaged {domain} number-based {phase_name}particle-size "
+            "distribution": f_num_dist_xav,
+            f"X-averaged {domain} number-based {phase_name}particle-size "
+            "distribution [m-1]": f_num_dist_xav / R_typ,
+        }
+
+        return variables
+
+    def _get_standard_concentration_distribution_variables(self, c_s):
+        """
+        Forms standard concentration variables that depend on particle size R given
+        the fundamental concentration distribution variable c_s from the submodel.
+        """
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
+        c_scale = self.phase_param.c_max
+        # Broadcast and x-average when necessary
+        if c_s.domain == [f"{domain} {phase_name}particle size"] and c_s.domains[
+            "secondary"
+        ] != [f"{domain} electrode"]:
+            # X-avg concentration distribution
+            c_s_xav_distribution = pybamm.PrimaryBroadcast(
+                c_s, [f"{domain} {phase_name}particle"]
+            )
+
+            # Surface concentration distribution variables
+            c_s_surf_xav_distribution = c_s
+            c_s_surf_distribution = pybamm.SecondaryBroadcast(
+                c_s_surf_xav_distribution, [f"{domain} electrode"]
+            )
+
+            # Concentration distribution in all domains.
+            c_s_distribution = pybamm.PrimaryBroadcast(
+                c_s_surf_distribution, [f"{domain} {phase_name}particle"]
+            )
+        elif c_s.domain == [f"{domain} {phase_name}particle"] and (
+            c_s.domains["tertiary"] != [f"{domain} electrode"]
+        ):
+            # X-avg concentration distribution
+            c_s_xav_distribution = c_s
+
+            # Surface concentration distribution variables
+            c_s_surf_xav_distribution = pybamm.surf(c_s_xav_distribution)
+            c_s_surf_distribution = pybamm.SecondaryBroadcast(
+                c_s_surf_xav_distribution, [f"{domain} electrode"]
+            )
+
+            # Concentration distribution in all domains.
+            c_s_distribution = pybamm.TertiaryBroadcast(
+                c_s_xav_distribution, [f"{domain} electrode"]
+            )
+        elif c_s.domain == [f"{domain} {phase_name}particle size"] and c_s.domains[
+            "secondary"
+        ] == [f"{domain} electrode"]:
+            # Surface concentration distribution variables
+            c_s_surf_distribution = c_s
+            c_s_surf_xav_distribution = pybamm.x_average(c_s)
+
+            # X-avg concentration distribution
+            c_s_xav_distribution = pybamm.PrimaryBroadcast(
+                c_s_surf_xav_distribution, [f"{domain} {phase_name}particle"]
+            )
+
+            # Concentration distribution in all domains.
+            c_s_distribution = pybamm.PrimaryBroadcast(
+                c_s_surf_distribution, [f"{domain} {phase_name}particle"]
+            )
+        else:
+            c_s_distribution = c_s
+
+            # x-average the *tertiary* domain.
+            # NOTE: not yet implemented. Make 0.5 everywhere
+            c_s_xav_distribution = pybamm.FullBroadcast(
+                0.5,
+                [f"{domain} {phase_name}particle"],
+                {
+                    "secondary": f"{domain} {phase_name}particle size",
+                    "tertiary": "current collector",
+                },
+            )
+
+            # Surface concentration distribution variables
+            c_s_surf_distribution = pybamm.surf(c_s)
+            c_s_surf_xav_distribution = pybamm.x_average(c_s_surf_distribution)
+
+        c_s_rav_distribution = pybamm.r_average(c_s_distribution)
+        c_s_av_distribution = pybamm.x_average(c_s_rav_distribution)
+
+        variables = {
+            f"Average {domain} {phase_name}particle concentration "
+            "distribution": c_s_av_distribution,
+            f"{Domain} {phase_name}particle concentration "
+            "distribution": c_s_distribution,
+            f"{Domain} {phase_name}particle concentration distribution "
+            "[mol.m-3]": c_scale * c_s_distribution,
+            f"R-averaged {domain} {phase_name}particle concentration "
+            "distribution": c_s_rav_distribution,
+            f"R-averaged {domain} {phase_name}particle concentration distribution "
+            "[mol.m-3]": c_scale * c_s_rav_distribution,
+            f"X-averaged {domain} {phase_name}particle concentration "
+            "distribution": c_s_xav_distribution,
+            f"X-averaged {domain} {phase_name}particle concentration distribution "
+            "[mol.m-3]": c_scale * c_s_xav_distribution,
+            f"X-averaged {domain} {phase_name}particle surface concentration"
+            " distribution": c_s_surf_xav_distribution,
+            f"X-averaged {domain} {phase_name}particle surface concentration "
+            "distribution [mol.m-3]": c_scale * c_s_surf_xav_distribution,
+            f"{Domain} {phase_name}particle surface concentration"
+            " distribution": c_s_surf_distribution,
+            f"{Domain} {phase_name}particle surface concentration"
+            " distribution [mol.m-3]": c_scale * c_s_surf_distribution,
+        }
+        return variables
+
+    def _get_standard_flux_distribution_variables(self, N_s):
+        """
+        Forms standard flux variables that depend on particle size R given
+        the flux variable N_s from the distribution submodel.
+        """
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
+        if [f"{domain} electrode"] in N_s.domains.values():
+            # N_s depends on x
+
+            N_s_distribution = N_s
+            # x-av the *tertiary* domain
+            # NOTE: not yet implemented. Fill with zeros instead
+            N_s_xav_distribution = pybamm.FullBroadcast(
+                0,
+                [f"{domain} {phase_name}particle"],
+                {
+                    "secondary": f"{domain} {phase_name}particle size",
+                    "tertiary": "current collector",
+                },
+            )
+        else:
+            N_s_xav_distribution = N_s
+            N_s_distribution = pybamm.TertiaryBroadcast(N_s, [f"{domain} electrode"])
+
+        variables = {
+            f"X-averaged {domain} {phase_name}particle flux "
+            "distribution": N_s_xav_distribution,
+            f"{Domain} {phase_name}particle flux distribution": N_s_distribution,
+        }
+
+        return variables
+
+    def _get_standard_diffusivity_variables(self, D_eff):
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
+        D_scale = self.phase_param.D_typ_dim
+
+        variables = {
+            f"{Domain} {phase_name}particle effective diffusivity": D_eff,
+            f"{Domain} {phase_name}particle effective "
+            "diffusivity [m2.s-1]": D_eff * D_scale,
+            f"X-averaged {domain} {phase_name}particle effective "
+            "diffusivity": pybamm.x_average(D_eff),
+            f"X-averaged {domain} {phase_name}particle effective "
+            "diffusivity [m2.s-1]": pybamm.x_average(D_eff * D_scale),
+        }
+        return variables
+
+    def _get_standard_diffusivity_distribution_variables(self, D_eff):
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
+        D_scale = self.phase_param.D_typ_dim
+
+        variables = {
+            f"{Domain} {phase_name}particle effective diffusivity distribution": D_eff,
+            f"{Domain} {phase_name}particle effective diffusivity "
+            "distribution [m2.s-1]": D_eff * D_scale,
+            f"X-averaged {domain} {phase_name}particle effective diffusivity "
+            "distribution": pybamm.x_average(D_eff),
+            f"X-averaged {domain} {phase_name}particle effective diffusivity "
+            "distribution[m2.s-1]": pybamm.x_average(D_eff * D_scale),
         }
 
         return variables

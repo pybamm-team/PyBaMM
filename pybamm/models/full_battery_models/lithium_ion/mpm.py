@@ -64,23 +64,16 @@ class MPM(SPM):
         pybamm.citations.register("Kirk2021")
 
     def set_particle_submodel(self):
-
-        if self.options["particle"] == "Fickian diffusion":
-            submod_n = pybamm.particle.size_distribution.XAveragedFickianDiffusion(
-                self.param, "Negative"
-            )
-            submod_p = pybamm.particle.size_distribution.XAveragedFickianDiffusion(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] == "uniform profile":
-            submod_n = pybamm.particle.size_distribution.XAveragedUniformProfile(
-                self.param, "Negative"
-            )
-            submod_p = pybamm.particle.size_distribution.XAveragedUniformProfile(
-                self.param, "Positive"
-            )
-        self.submodels["negative particle"] = submod_n
-        self.submodels["positive particle"] = submod_p
+        for domain in ["negative", "positive"]:
+            if self.options["particle"] == "Fickian diffusion":
+                submod = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=True, phase="primary"
+                )
+            elif self.options["particle"] == "uniform profile":
+                submod = pybamm.particle.XAveragedPolynomialProfile(
+                    self.param, domain, self.options, phase="primary"
+                )
+            self.submodels[f"{domain} particle"] = submod
 
     @property
     def default_parameter_values(self):

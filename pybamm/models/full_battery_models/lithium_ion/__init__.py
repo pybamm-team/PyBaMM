@@ -2,7 +2,13 @@
 # Root of the lithium-ion models module.
 #
 from .base_lithium_ion_model import BaseModel
-from .electrode_soh import ElectrodeSOH, get_initial_stoichiometries
+from .electrode_soh import (
+    ElectrodeSOHFull,
+    ElectrodeSOHx100,
+    ElectrodeSOHx0,
+    ElectrodeSOHSolver,
+    get_initial_stoichiometries,
+)
 from .electrode_soh_half_cell import ElectrodeSOHHalfCell
 from .spm import SPM
 from .spme import SPMe

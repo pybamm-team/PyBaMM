@@ -36,7 +36,8 @@ class TotalKinetics(pybamm.BaseSubModel):
             if not self.half_cell:
                 # no separate plating reaction in a half-cell,
                 # since plating is the main reaction
-                reaction_names.append("lithium plating ")
+                # no SEI on cracks with half-cell model
+                reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
 
@@ -110,7 +111,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j = pybamm.concatenation(j_n, zero_s, j_p)
                 j_dim = pybamm.concatenation(j_n_dim, zero_s, j_p_dim)
 
-            if reaction_name not in ["SEI ", "lithium plating "]:
+            if reaction_name not in ["SEI ", "SEI on cracks ", "lithium plating "]:
                 j0_p = variables[
 <<<<<<< HEAD
                     f"Positive electrode {reaction_p}exchange current density"
