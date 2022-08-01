@@ -17,6 +17,7 @@ class TestPrintName(unittest.TestCase):
 
         # Test superscripts
         self.assertEqual(param.n.prim.U_ref.print_name, r"U_{n}^{ref}")
+        self.assertEqual(param.D_e_typ.print_name, r"D_{e}^{typ}")
 
         # Test subscripts
         self.assertEqual(param.p.prim.a_R.print_name, r"a_{R\,p}")
