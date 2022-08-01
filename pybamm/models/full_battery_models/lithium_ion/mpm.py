@@ -6,13 +6,15 @@ from .spm import SPM
 
 
 class MPM(SPM):
-    """Many-Particle Model (MPM) of a lithium-ion battery with particle-size
+    """
+    Many-Particle Model (MPM) of a lithium-ion battery with particle-size
     distributions for each electrode, from [1]_.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -62,23 +64,16 @@ class MPM(SPM):
         pybamm.citations.register("Kirk2021")
 
     def set_particle_submodel(self):
-
-        if self.options["particle"] == "Fickian diffusion":
-            submod_n = pybamm.particle.size_distribution.XAveragedFickianDiffusion(
-                self.param, "Negative"
-            )
-            submod_p = pybamm.particle.size_distribution.XAveragedFickianDiffusion(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] == "uniform profile":
-            submod_n = pybamm.particle.size_distribution.XAveragedUniformProfile(
-                self.param, "Negative"
-            )
-            submod_p = pybamm.particle.size_distribution.XAveragedUniformProfile(
-                self.param, "Positive"
-            )
-        self.submodels["negative particle"] = submod_n
-        self.submodels["positive particle"] = submod_p
+        for domain in ["negative", "positive"]:
+            if self.options["particle"] == "Fickian diffusion":
+                submod = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=True
+                )
+            elif self.options["particle"] == "uniform profile":
+                submod = pybamm.particle.XAveragedPolynomialProfile(
+                    self.param, domain, self.options
+                )
+            self.submodels[f"{domain} particle"] = submod
 
     @property
     def default_parameter_values(self):

@@ -109,6 +109,12 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertGreater(sol2.t[-1], sol.t[-1])
         self.assertEqual(sol2.cycles[0], sol.cycles[0])
         self.assertEqual(len(sol2.cycles), 2)
+        # Solve again starting from solution but only inputting the cycle
+        sol2 = sim.solve(starting_solution=sol.cycles[-1])
+        self.assertEqual(sol2.termination, "final time")
+        self.assertGreater(sol2.t[-1], sol.t[-1])
+        self.assertEqual(len(sol2.cycles), 2)
+
         # Check starting solution is unchanged
         self.assertEqual(len(sol.cycles), 1)
 
@@ -338,8 +344,8 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM()
 
-        # Chen 2020 plating: pos = function, neg = data
-        param = pybamm.ParameterValues("Chen2020_plating")
+        # O'Kane 2022: pos = function, neg = data
+        param = pybamm.ParameterValues("OKane2022")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
 

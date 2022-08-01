@@ -407,11 +407,15 @@ class Simulation:
                 # Keep the min and max voltages as safeguards but add some tolerances
                 # so that they are not triggered before the voltage limits in the
                 # experiment
-                for event in new_model.events:
+                for i, event in enumerate(new_model.events):
                     if event.name == "Minimum voltage":
-                        event._expression += 1
+                        new_model.events[i] = pybamm.Event(
+                            event.name, event.expression + 1, event.event_type
+                        )
                     elif event.name == "Maximum voltage":
-                        event._expression -= 1
+                        new_model.events[i] = pybamm.Event(
+                            event.name, event.expression - 1, event.event_type
+                        )
 
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
@@ -648,7 +652,12 @@ class Simulation:
                     "starting_solution can only be provided if simulating an Experiment"
                 )
             if self.operating_mode == "without experiment" or isinstance(
-                self.model, pybamm.lithium_ion.ElectrodeSOH
+                self.model,
+                (
+                    pybamm.lithium_ion.ElectrodeSOH,
+                    pybamm.lithium_ion.ElectrodeSOHx0,
+                    pybamm.lithium_ion.ElectrodeSOHx0,
+                ),
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -723,10 +732,24 @@ class Simulation:
             inputs = kwargs.get("inputs", {})
             timer = pybamm.Timer()
 
+            # Set up eSOH solver (for summary variables)
+            esoh_solver = self.get_esoh_solver(calc_esoh)
+
             if starting_solution is None:
                 starting_solution_cycles = []
                 starting_solution_summary_variables = []
                 starting_solution_first_states = []
+            elif not hasattr(starting_solution, "all_summary_variables"):
+                (
+                    cycle_solution,
+                    cycle_sum_vars,
+                    cycle_first_state,
+                ) = pybamm.make_cycle_solution(
+                    starting_solution.steps, esoh_solver, True
+                )
+                starting_solution_cycles = [cycle_solution]
+                starting_solution_summary_variables = [cycle_sum_vars]
+                starting_solution_first_states = [cycle_first_state]
             else:
                 starting_solution_cycles = starting_solution.cycles.copy()
                 starting_solution_summary_variables = (
@@ -741,15 +764,6 @@ class Simulation:
             all_summary_variables = starting_solution_summary_variables
             all_first_states = starting_solution_first_states
             current_solution = starting_solution
-
-            # Set up eSOH model (for summary variables)
-            if calc_esoh is True:
-                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
-                esoh_sim = pybamm.Simulation(
-                    esoh_model, parameter_values=self.parameter_values
-                )
-            else:
-                esoh_sim = None
 
             voltage_stop = self.experiment.termination.get("voltage")
             logs["stopping conditions"] = {"voltage": voltage_stop}
@@ -857,7 +871,7 @@ class Simulation:
                 if len(steps) > 0:
                     cycle_sol = pybamm.make_cycle_solution(
                         steps,
-                        esoh_sim,
+                        esoh_solver,
                         save_this_cycle=save_this_cycle,
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
@@ -959,6 +973,22 @@ class Simulation:
         )
 
         return self.solution
+
+    def get_esoh_solver(self, calc_esoh):
+        if (
+            calc_esoh is False
+            or isinstance(self.model, pybamm.lead_acid.BaseModel)
+            or self.model.options["working electrode"] != "both"
+        ):
+            return None
+
+        try:
+            return self._esoh_solver
+        except AttributeError:
+            self._esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+                self.parameter_values, self.model.param
+            )
+            return self._esoh_solver
 
     def plot(self, output_variables=None, **kwargs):
         """
