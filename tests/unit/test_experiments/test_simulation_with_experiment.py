@@ -198,7 +198,12 @@ class TestSimulationExperiment(unittest.TestCase):
 
     def test_run_experiment_breaks_early_error(self):
         experiment = pybamm.Experiment(
-            [("Rest for 10 minutes", "Discharge at 10 C for 1 minute")]
+            [
+                (
+                    "Rest for 10 minutes",
+                    "Discharge at 20 C for 10 minutes (10 minute period)",
+                )
+            ]
         )
         model = pybamm.lithium_ion.DFN()
 

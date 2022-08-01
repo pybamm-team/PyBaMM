@@ -547,14 +547,11 @@ class CasadiSolver(pybamm.BaseSolver):
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
 
-            # When not in DEBUG mode (level=10), suppress warnings from CasADi
-            show_eval_warnings = False
-
             options = {
+                "show_eval_warnings": False,
                 **self.extra_options_setup,
                 "reltol": self.rtol,
                 "abstol": self.atol,
-                "show_eval_warnings": show_eval_warnings,
             }
 
             # set up and solve
