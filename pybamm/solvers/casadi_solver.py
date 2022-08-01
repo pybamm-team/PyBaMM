@@ -402,7 +402,11 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_event = np.nanmin(t_events)
                 # create interpolant to evaluate y in the current integration
                 # window
-                y_sol = interp1d(sol_t, sol_y, kind="linear")
+                sol_event_idx = np.where(t_event < sol_t)[0][0]
+                sol_t_interp = sol_t[sol_event_idx - 1 : sol_event_idx + 1]
+                sol_y_interp = sol_y[:, sol_event_idx - 1 : sol_event_idx + 1]
+                sol_y_interp = casadi.horzcat(sol_y_interp[:, 0], sol_y_interp[:, 1])
+                y_sol = interp1d(sol_t_interp, sol_y_interp, kind="linear")
                 y_event = y_sol(t_event)
 
                 closest_event_idx = event_idx[np.nanargmin(t_events)]
