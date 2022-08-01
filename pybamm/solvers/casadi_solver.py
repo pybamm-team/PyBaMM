@@ -548,13 +548,7 @@ class CasadiSolver(pybamm.BaseSolver):
             algebraic = model.casadi_algebraic
 
             # When not in DEBUG mode (level=10), suppress warnings from CasADi
-            if (
-                pybamm.logger.getEffectiveLevel() == 10
-                or pybamm.settings.debug_mode is True
-            ):
-                show_eval_warnings = True
-            else:
-                show_eval_warnings = False
+            show_eval_warnings = False
 
             options = {
                 **self.extra_options_setup,
@@ -695,9 +689,11 @@ class CasadiSolver(pybamm.BaseSolver):
                 inputs_with_tmin = casadi.vertcat(inputs, t_min)
                 # Call the integrator once, with the grid
                 timer = pybamm.Timer()
+                pybamm.logger.debug("Calling casadi integrator")
                 casadi_sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
+                pybamm.logger.debug("Finished casadi integrator")
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                 sol = pybamm.Solution(

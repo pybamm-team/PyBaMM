@@ -32,6 +32,7 @@ class Composite(BaseElectrolyteConductivity):
     def _higher_order_macinnes_function(self, x):
         "Function to differentiate between composite and first-order models"
         if self.higher_order_terms == "composite":
+            x = pybamm.maximum(x, 1e-15)
             return pybamm.log(x)
         elif self.higher_order_terms == "first-order":
             return x

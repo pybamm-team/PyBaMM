@@ -203,10 +203,12 @@ class TestSimulationExperiment(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
 
         parameter_values = pybamm.ParameterValues("Chen2020")
+        solver = pybamm.CasadiSolver(max_step_decrease_count=2)
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
             parameter_values=parameter_values,
+            solver=solver,
         )
         sol = sim.solve()
         self.assertEqual(len(sol.cycles), 1)
@@ -220,6 +222,7 @@ class TestSimulationExperiment(unittest.TestCase):
             model,
             experiment=experiment,
             parameter_values=parameter_values,
+            solver=solver,
         )
         sol = sim.solve()
         self.assertEqual(len(sol.cycles), 1)
