@@ -538,6 +538,7 @@ class Simulation:
         check_model=True,
         save_at_cycles=None,
         calc_esoh=True,
+        calc_min_max_summary_vars=False,
         starting_solution=None,
         initial_soc=None,
         callbacks=None,
@@ -578,6 +579,10 @@ class Simulation:
             Whether to include eSOH variables in the summary variables. If `False`
             then only summary variables that do not require the eSOH calculation
             are calculated. Default is True.
+        calc_min_max_summary_vars : bool, optional
+            Whether to calculate the minimum and maximum values of some variables
+            (e.g. Discharge capacity [A.h], Battery voltage [V]) in the summary
+            variables. Default is True, but this can be slow for some experiments.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
             is used. Must be None if not using an experiment.
@@ -745,7 +750,10 @@ class Simulation:
                     cycle_sum_vars,
                     cycle_first_state,
                 ) = pybamm.make_cycle_solution(
-                    starting_solution.steps, esoh_solver, True
+                    starting_solution.steps,
+                    esoh_solver=esoh_solver,
+                    save_this_cycle=True,
+                    calc_min_max_summary_vars=calc_min_max_summary_vars,
                 )
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
@@ -871,8 +879,9 @@ class Simulation:
                 if len(steps) > 0:
                     cycle_sol = pybamm.make_cycle_solution(
                         steps,
-                        esoh_solver,
+                        esoh_solver=esoh_solver,
                         save_this_cycle=save_this_cycle,
+                        calc_min_max_summary_vars=calc_min_max_summary_vars,
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
                     all_cycle_solutions.append(cycle_solution)
@@ -897,6 +906,7 @@ class Simulation:
                         capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
+                logs["elapsed time"] = timer.time()
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met

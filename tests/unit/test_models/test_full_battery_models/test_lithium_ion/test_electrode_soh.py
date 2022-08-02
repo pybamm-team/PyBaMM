@@ -30,8 +30,8 @@ class TestElectrodeSOH(unittest.TestCase):
         self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li, places=5)
 
         # Solve with split esoh and check outputs
-        ics = esoh_solver.set_up_solve(inputs)
-        sol_split = esoh_solver.solve_split(inputs, ics)
+        ics = esoh_solver._set_up_solve(inputs)
+        sol_split = esoh_solver._solve_split(inputs, ics)
         for key in sol.all_models[0].variables:
             self.assertAlmostEqual(sol[key].data[0], sol_split[key].data[0], places=5)
 
@@ -96,10 +96,10 @@ class TestSetInitialSOC(unittest.TestCase):
 
         inputs = {"V_min": 0, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
         with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
-            esoh_solver.check_esoh_feasible(inputs)
+            esoh_solver._check_esoh_feasible(inputs)
         inputs = {"V_min": 3, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
         with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
-            esoh_solver.check_esoh_feasible(inputs)
+            esoh_solver._check_esoh_feasible(inputs)
 
 
 if __name__ == "__main__":

@@ -796,8 +796,14 @@ class BaseSolver(object):
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
             if ics_set_up != model.concatenated_initial_conditions:
-                # If the new initial conditions are different, set up again
-                self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)
+                try:
+                    print("here1")
+                    model.y0 = model.concatenated_initial_conditions.evaluate()
+                    print("here2")
+                except NotImplementedError:
+                    # If the new initial conditions are different
+                    # and cannot be evaluated directly, set up again
+                    self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions

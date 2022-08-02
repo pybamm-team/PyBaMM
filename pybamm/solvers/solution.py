@@ -781,7 +781,12 @@ class Solution(object):
         return new_sol
 
 
-def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
+def make_cycle_solution(
+    step_solutions,
+    esoh_solver=None,
+    save_this_cycle=True,
+    calc_min_max_summary_vars=True,
+):
     """
     Function to create a Solution for an entire cycle, and associated summary variables
 
@@ -796,6 +801,10 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True
+    calc_min_max_summary_vars : bool, optional
+            Whether to calculate the minimum and maximum values of some variables
+            (e.g. Discharge capacity [A.h], Battery voltage [V]) in the summary
+            variables. Default is True, but this can be slow for some experiments.
 
     Returns
     -------
@@ -833,7 +842,9 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_solver)
+    cycle_summary_variables = _get_cycle_summary_variables(
+        cycle_solution, esoh_solver, calc_min_max_summary_vars
+    )
 
     cycle_first_state = cycle_solution.first_state
 
@@ -845,31 +856,34 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
-def get_cycle_summary_variables(cycle_solution, esoh_solver):
+def _get_cycle_summary_variables(
+    cycle_solution, esoh_solver, calc_min_max_summary_vars
+):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
     # Measured capacity variables
-    if "Discharge capacity [A.h]" in model.variables:
-        Q = cycle_solution["Discharge capacity [A.h]"].data
-        min_Q, max_Q = np.min(Q), np.max(Q)
+    if calc_min_max_summary_vars:
+        if "Discharge capacity [A.h]" in model.variables:
+            Q = cycle_solution["Discharge capacity [A.h]"].data
+            min_Q, max_Q = np.min(Q), np.max(Q)
 
-        cycle_summary_variables.update(
-            {
-                "Minimum measured discharge capacity [A.h]": min_Q,
-                "Maximum measured discharge capacity [A.h]": max_Q,
-                "Measured capacity [A.h]": max_Q - min_Q,
-            }
-        )
+            cycle_summary_variables.update(
+                {
+                    "Minimum measured discharge capacity [A.h]": min_Q,
+                    "Maximum measured discharge capacity [A.h]": max_Q,
+                    "Measured capacity [A.h]": max_Q - min_Q,
+                }
+            )
 
-    # Voltage variables
-    if "Battery voltage [V]" in model.variables:
-        V = cycle_solution["Battery voltage [V]"].data
-        min_V, max_V = np.min(V), np.max(V)
+        # Voltage variables
+        if "Battery voltage [V]" in model.variables:
+            V = cycle_solution["Battery voltage [V]"].data
+            min_V, max_V = np.min(V), np.max(V)
 
-        cycle_summary_variables.update(
-            {"Minimum voltage [V]": min_V, "Maximum voltage [V]": max_V}
-        )
+            cycle_summary_variables.update(
+                {"Minimum voltage [V]": min_V, "Maximum voltage [V]": max_V}
+            )
 
     # Degradation variables
     degradation_variables = model.summary_variables
