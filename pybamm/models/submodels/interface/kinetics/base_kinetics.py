@@ -28,31 +28,33 @@ class BaseKinetics(BaseInterface):
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options=options, phase=phase)
+        # print("Jason-enter BaseKinetics")
 
     def get_fundamental_variables(self):
-        phase_name = self.phase_name
+        # print("Jason-enter get_fundamental_variables")
+
+        domain = self.domain.lower()
+        # phase_name = self.phase_name
+
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             j = pybamm.Variable(
-                "Total "
-                + self.domain.lower()
-                + f" electrode {phase_name}interfacial current density variable",
-                domain=self.domain.lower() + " electrode",
+                f"Total {domain} electrode interfacial current density variable",
+                domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
 
             variables = {
-                "Total "
-                + self.domain.lower()
-                + f" electrode {phase_name}interfacial current density variable": j
+                f"Total {domain} electrode interfacial current density variable": j
             }
             return variables
         else:
             return {}
 
     def get_coupled_variables(self, variables):
+        # print("Jason-enter get_coupled_variables")
         phase_name = self.phase_name
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
@@ -95,7 +97,7 @@ class BaseKinetics(BaseInterface):
                 R_sei = self.phase_param.R_sei
                 L_sei = variables[f"Total {phase_name}SEI thickness"]
                 j_tot = variables[
-                    f"Total negative electrode {phase_name}interfacial current density variable" # Jason - {phase_name},here means primary reaction current
+                    f"Total negative electrode interfacial current density variable" # Jason - {phase_name},here means primary reaction current
                 ]
 
                 # Override print_name
@@ -177,16 +179,19 @@ class BaseKinetics(BaseInterface):
         return variables
 
     def set_algebraic(self, variables):
+        # print("Jason-enter set_algebraic")
+        domain = self.domain.lower()
         phase_name = self.phase_name
+        print(f"Jason-enter set_algebraic, domain={domain}")
+
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
+
             j_tot_var = variables[
-                "Total "
-                + self.domain.lower()
-                + f" electrode interfacial current density variable"  # Jason-{phase_name}?
-            ]
+                f"Total {domain} electrode interfacial current density variable"
+            ] # Jason-{phase_name}?
 
             # Override print_name
             j_tot_var.print_name = "j_tot"
@@ -201,6 +206,8 @@ class BaseKinetics(BaseInterface):
             self.algebraic[j_tot_var] = j_tot_var - j_tot
 
     def set_initial_conditions(self, variables):
+        # print("Jason-enter set_initial_conditions")
+        domain = self.domain.lower()
         phase_name = self.phase_name
         if (
             self.options["total interfacial current density as a state"] == "true"
@@ -208,10 +215,8 @@ class BaseKinetics(BaseInterface):
         ):
             param = self.param
             j_tot_var = variables[
-                "Total "
-                + self.domain.lower()
-                + f" electrode interfacial current density variable" # Jason - {phase_name}
-            ]
+                f"Total {domain} electrode interfacial current density variable"
+            ] # Jason-{phase_name}?
             current_at_0 = (
                 pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})
                 / param.I_typ

@@ -118,6 +118,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j_n_scale = param.n.sec.j_scale
                 j_p_scale = param.p.sec.j_scale
 
+            print(f"Jason-reaction_n={reaction_n}")
             j_p_av = variables[
                 f"X-averaged positive electrode {reaction_p}"
                 "interfacial current density"

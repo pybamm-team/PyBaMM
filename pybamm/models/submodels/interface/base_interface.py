@@ -41,7 +41,7 @@ class BaseInterface(pybamm.BaseSubModel):
             # self.reaction_name = "SEI "
             # print("Jason-1")
             self.reaction_name = f"{self.phase_name}SEI " # primary SEI or secondary SEI
-            print("Jason-reaction_name = ",self.reaction_name)
+            # print("Jason-reaction_name = ",self.reaction_name)
 
         elif reaction == "lithium plating":
             self.reaction_name = "lithium plating "
@@ -308,7 +308,7 @@ class BaseInterface(pybamm.BaseSubModel):
             "interfacial current density per volume [A.m-3]": i_typ / L_x * j_av,
         } # Jason - reaction_name should be expanded with "primary SEI" and "secondary SEI"
 
-        print(f"Jason-in base_interface._get_standard_interfacial_current_variables:reaction_name = {reaction_name}")
+        # print(f"Jason-in base_interface._get_standard_interfacial_current_variables:reaction_name = {reaction_name}")
         return variables
 
     def _get_standard_total_interfacial_current_variables(self, j_tot_av):
@@ -554,7 +554,7 @@ class BaseInterface(pybamm.BaseSubModel):
             "open circuit potential [V]": ocp_av_dim,
         }
 
-        print(f"Jason-{Domain} electrode {reaction_name}open circuit potential") # SEI has no open circuit potential?
+        # print(f"Jason-{Domain} electrode {reaction_name}open circuit potential") # SEI has no open circuit potential?
 
         if self.reaction in ["lithium-ion main", "lead-acid main"]:
             variables.update(
