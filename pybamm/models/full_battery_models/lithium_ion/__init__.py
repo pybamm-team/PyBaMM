@@ -3,11 +3,10 @@
 #
 from .base_lithium_ion_model import BaseModel
 from .electrode_soh import (
+    ElectrodeSOH,
     ElectrodeSOHx100,
     ElectrodeSOHx0,
-    create_electrode_soh_sims,
-    solve_electrode_soh,
-    check_esoh_feasible,
+    ElectrodeSOHSolver,
     get_initial_stoichiometries,
 )
 from .electrode_soh_half_cell import ElectrodeSOHHalfCell

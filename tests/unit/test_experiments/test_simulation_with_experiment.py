@@ -124,6 +124,26 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(len(sol3.cycles), 2)
         os.remove("test_experiment.sav")
 
+    def test_run_experiment_multiple_times(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at C/20 until 4.1 V",
+                )
+            ]
+            * 3
+        )
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        # Test that solving twice gives the same solution (see #2193)
+        sol1 = sim.solve()
+        sol2 = sim.solve()
+        np.testing.assert_array_equal(
+            sol1["Terminal voltage [V]"].data, sol2["Terminal voltage [V]"].data
+        )
+
     def test_run_experiment_cccv_ode(self):
         experiment_2step = pybamm.Experiment(
             [
