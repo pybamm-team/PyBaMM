@@ -1123,7 +1123,7 @@ def simplified_multiplication(left, right):
     elif isinstance(right, (Addition, Subtraction)):
         mul_classes = (
             pybamm.Multiplication,
-            pybamm.MatrixMultiplication,
+            MatrixMultiplication,
             pybamm.Division,
         )
         if (
@@ -1257,6 +1257,16 @@ def simplified_division(left, right):
             r_left, r_right = right.orphans
             return (left * r_right) / r_left
 
+    # Cancelling out common terms
+    if (
+        isinstance(left, pybamm.Multiplication)
+        and isinstance(right, pybamm.Multiplication)
+        and left.left == right.left
+    ):
+        _, l_right = left.orphans
+        _, r_right = right.orphans
+        return l_right / r_right
+
     # Negation simplifications
     if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
         # Double negation cancels out
@@ -1275,7 +1285,7 @@ def simplified_division(left, right):
 def simplified_matrix_multiplication(left, right):
     left, right = preprocess_binary(left, right)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
-        return pybamm.zeros_like(pybamm.MatrixMultiplication(left, right))
+        return pybamm.zeros_like(MatrixMultiplication(left, right))
 
     if isinstance(right, Multiplication) and left.is_constant():
         # Simplify A @ (b * c) to (A * b) @ c if (A * b) is constant
@@ -1309,18 +1319,31 @@ def simplified_matrix_multiplication(left, right):
         new_mul.copy_domains(right)
         return new_mul
 
-    # Simplify A @ (b + c) to (A @ b) + (A @ c) if (A @ b) or (A @ c) is constant
-    # This is a common construction that appears from discretisation of spatial
-    # operators
-    # Don't do this if either b or c is a number as this will lead to matmul errors
-    elif isinstance(right, Addition):
-        if (right.left.is_constant() or right.right.is_constant()) and not (
+    elif isinstance(right, (Addition, Subtraction)):
+        # Simplify A @ (b +- c) to (A @ b) +- (A @ c) if (A @ b) or (A @ c) is constant
+        # This is a common construction that appears from discretisation of spatial
+        # operators
+        # Or simplify A @ (B @ b +- C @ c) to (A @ B @ b) +- (A @ C @ c) if (A @ B)
+        # and (A @ C) are constant
+        # Don't do this if either b or c is a number as this will lead to matmul errors
+        if (
+            (right.left.is_constant() or right.right.is_constant())
+            or (
+                isinstance(right.left, MatrixMultiplication)
+                and right.left.left.is_constant()
+                and isinstance(right.right, MatrixMultiplication)
+                and right.right.left.is_constant()
+            )
+        ) and not (
             right.left.size_for_testing == 1 or right.right.size_for_testing == 1
         ):
             r_left, r_right = right.orphans
-            return (left @ r_left) + (left @ r_right)
+            if isinstance(right, Addition):
+                return (left @ r_left) + (left @ r_right)
+            elif isinstance(right, Subtraction):
+                return (left @ r_left) - (left @ r_right)
 
-    return pybamm.simplify_if_constant(pybamm.MatrixMultiplication(left, right))
+    return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
 
 
 def minimum(left, right):
