@@ -830,64 +830,13 @@ class BaseSolver(object):
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
 
-        # Calculate discontinuities
-        discontinuities = [
-            # Assuming that discontinuities do not depend on
-            # input parameters when len(input_list) > 1, only
-            # `input_list[0]` is passed to `evaluate`.
-            # See https://github.com/pybamm-team/PyBaMM/pull/1261
-            event.expression.evaluate(inputs=inputs_list[0])
-            for event in model.discontinuity_events_eval
-        ]
-
-        # make sure they are increasing in time
-        discontinuities = sorted(discontinuities)
-
-        # remove any identical discontinuities
-        discontinuities = [
-            v
-            for i, v in enumerate(discontinuities)
-            if (
-                i == len(discontinuities) - 1
-                or discontinuities[i] < discontinuities[i + 1]
-            )
-            and v > 0
-        ]
-
-        # remove any discontinuities after end of t_eval
-        discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
-
-        if len(discontinuities) > 0:
-            pybamm.logger.verbose(
-                "Discontinuity events found at t = {}".format(discontinuities)
-            )
-            if isinstance(inputs, list):
-                raise pybamm.SolverError(
-                    "Cannot solve for a list of input parameters"
-                    " sets with discontinuities"
-                )
-        else:
-            pybamm.logger.verbose("No discontinuity events found")
-
-        # insert time points around discontinuities in t_eval
-        # keep track of sub sections to integrate by storing start and end indices
-        start_indices = [0]
-        end_indices = []
-        eps = sys.float_info.epsilon
-        for dtime in discontinuities:
-            dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
-            end_indices.append(dindex + 1)
-            start_indices.append(dindex + 1)
-            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
-                t_eval_dimensionless[dindex] += eps
-                t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, dtime - eps
-                )
-            else:
-                t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
-                )
-        end_indices.append(len(t_eval_dimensionless))
+        (
+            start_indices,
+            end_indices,
+            t_eval_dimensionless,
+        ) = self._get_discontinuity_start_end_indices(
+            model, inputs, t_eval_dimensionless
+        )
 
         # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
@@ -1012,6 +961,69 @@ class BaseSolver(object):
             return solutions[0]
         else:
             return solutions
+
+    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval_dimensionless):
+        if model.discontinuity_events_eval == []:
+            pybamm.logger.verbose("No discontinuity events found")
+            return [0], [len(t_eval_dimensionless)], t_eval_dimensionless
+
+        # Calculate discontinuities
+        discontinuities = [
+            # Assuming that discontinuities do not depend on
+            # input parameters when len(input_list) > 1, only
+            # `inputs` is passed to `evaluate`.
+            # See https://github.com/pybamm-team/PyBaMM/pull/1261
+            event.expression.evaluate(inputs=inputs)
+            for event in model.discontinuity_events_eval
+        ]
+
+        # make sure they are increasing in time
+        discontinuities = sorted(discontinuities)
+
+        # remove any identical discontinuities
+        discontinuities = [
+            v
+            for i, v in enumerate(discontinuities)
+            if (
+                i == len(discontinuities) - 1
+                or discontinuities[i] < discontinuities[i + 1]
+            )
+            and v > 0
+        ]
+
+        # remove any discontinuities after end of t_eval
+        discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
+
+        pybamm.logger.verbose(
+            "Discontinuity events found at t = {}".format(discontinuities)
+        )
+        if isinstance(inputs, list):
+            raise pybamm.SolverError(
+                "Cannot solve for a list of input parameters"
+                " sets with discontinuities"
+            )
+
+        # insert time points around discontinuities in t_eval
+        # keep track of sub sections to integrate by storing start and end indices
+        start_indices = [0]
+        end_indices = []
+        eps = sys.float_info.epsilon
+        for dtime in discontinuities:
+            dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
+            end_indices.append(dindex + 1)
+            start_indices.append(dindex + 1)
+            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
+                t_eval_dimensionless[dindex] += eps
+                t_eval_dimensionless = np.insert(
+                    t_eval_dimensionless, dindex, dtime - eps
+                )
+            else:
+                t_eval_dimensionless = np.insert(
+                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
+                )
+        end_indices.append(len(t_eval_dimensionless))
+
+        return start_indices, end_indices, t_eval_dimensionless
 
     def step(
         self,
