@@ -103,7 +103,7 @@ class BasicFull(BaseModel):
 
         # transport_efficiency
         tor = pybamm.concatenation(
-            eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
+            eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
         )
 
         # Interfacial reactions
@@ -290,6 +290,6 @@ class BasicFull(BaseModel):
         self.events.extend(
             [
                 pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-                pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+                pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
             ]
         )

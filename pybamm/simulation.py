@@ -396,11 +396,15 @@ class Simulation:
 
                 # add voltage events to the model
                 if op_inputs["Power switch"] == 1 or op_inputs["Current switch"] == 1:
+                    if op_inputs["Power switch"] == 1:
+                        sign = (op_inputs["Power input [W]"] > 0)
+                    else:
+                        sign = (op_inputs["Current input [A]"] > 0)
                     new_model.events.append(
                         pybamm.Event(
                             "Voltage cut-off [V] [experiment]",
-                            new_model.variables["Battery voltage [V]"]
-                            - pybamm.InputParameter("Voltage cut-off [V]"),
+                            sign * (new_model.variables["Battery voltage [V]"]
+                            - pybamm.InputParameter("Voltage cut-off [V]")),
                         )
                     )
 

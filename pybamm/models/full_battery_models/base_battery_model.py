@@ -1210,7 +1210,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                V - self.param.voltage_high_cut,
+                self.param.voltage_high_cut - V,
                 pybamm.EventType.TERMINATION,
             )
         )

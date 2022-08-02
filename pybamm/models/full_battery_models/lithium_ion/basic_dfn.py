@@ -284,5 +284,5 @@ class BasicDFN(BaseModel):
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+            pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
         ]
