@@ -579,7 +579,7 @@ class BaseModel:
 
         self.build_model_equations()
 
-    def set_initial_conditions_from(self, solution, inplace=True):
+    def set_initial_conditions_from(self, solution, inplace=True, return_type="model"):
         """
         Update initial conditions with the final states from a Solution object or from
         a dictionary.
@@ -590,14 +590,12 @@ class BaseModel:
         ----------
         solution : :class:`pybamm.Solution`, or dict
             The solution to use to initialize the model
-        inplace : bool
-            Whether to modify the model inplace or create a new model
+        inplace : bool, optional
+            Whether to modify the model inplace or create a new model (default True)
+        return_type : str, optional
+            Whether to return the model (default) or initial conditions ("ics")
         """
-        if inplace is True:
-            model = self
-        else:
-            model = self.new_copy()
-
+        initial_conditions = {}
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
         for var in self.initial_conditions:
@@ -623,7 +621,7 @@ class BaseModel:
                     final_state_eval = final_state[:, :, -1].flatten(order="F")
                 else:
                     raise NotImplementedError("Variable must be 0D, 1D, or 2D")
-                model.initial_conditions[var] = pybamm.Vector(final_state_eval)
+                initial_conditions[var] = pybamm.Vector(final_state_eval)
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
@@ -645,7 +643,7 @@ class BaseModel:
                             "Variable in concatenation must be 1D"
                         )
                     children.append(final_state_eval)
-                model.initial_conditions[var] = pybamm.Vector(np.concatenate(children))
+                initial_conditions[var] = pybamm.Vector(np.concatenate(children))
 
             else:
                 raise NotImplementedError(
@@ -670,14 +668,26 @@ class BaseModel:
                     )
                 else:
                     slices.append(y_slices[symbol][0])
-            equations = list(model.initial_conditions.values())
+            equations = list(initial_conditions.values())
             # sort equations according to slices
             sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
-            model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+            concatenated_initial_conditions = pybamm.NumpyConcatenation(
                 *sorted_equations
             )
+        else:
+            concatenated_initial_conditions = None
 
-        return model
+        if return_type == "model":
+            if inplace is True:
+                model = self
+            else:
+                model = self.new_copy()
+
+            model.initial_conditions = initial_conditions
+            model.concatenated_initial_conditions = concatenated_initial_conditions
+            return model
+        elif return_type == "ics":
+            return initial_conditions, concatenated_initial_conditions
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
