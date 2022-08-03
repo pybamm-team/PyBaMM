@@ -39,6 +39,10 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "cannot be 'false' for SPM"):
             pybamm.lithium_ion.SPM(options)
 
+    def test_distribution_options(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "particle size"):
+            pybamm.lithium_ion.SPM({"particle size": "distribution"})
+
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
