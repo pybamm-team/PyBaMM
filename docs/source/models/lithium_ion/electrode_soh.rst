@@ -1,7 +1,7 @@
 Electrode SOH models
 ====================
 
-.. autoclass:: pybamm.lithium_ion.ElectrodeSOHFull
+.. autoclass:: pybamm.lithium_ion.ElectrodeSOH
     :members:
 
 .. autoclass:: pybamm.lithium_ion.ElectrodeSOHx100

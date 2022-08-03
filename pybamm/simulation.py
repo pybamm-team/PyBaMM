@@ -654,7 +654,7 @@ class Simulation:
             if self.operating_mode == "without experiment" or isinstance(
                 self.model,
                 (
-                    pybamm.lithium_ion.ElectrodeSOHFull,
+                    pybamm.lithium_ion.ElectrodeSOH,
                     pybamm.lithium_ion.ElectrodeSOHx0,
                     pybamm.lithium_ion.ElectrodeSOHx0,
                 ),
@@ -837,7 +837,6 @@ class Simulation:
                     except pybamm.SolverError as e:
                         logs["error"] = e
                         callbacks.on_experiment_error(logs)
-                        step_solution.termination = f"error: {e}"
                         feasible = False
                         # If none of the cycles worked, raise an error
                         if cycle_num == 1 and step_num == 1:
@@ -899,6 +898,7 @@ class Simulation:
                         capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
+                logs["elapsed time"] = timer.time()
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -912,6 +912,10 @@ class Simulation:
                     min_voltage = cycle_sum_vars["Minimum voltage [V]"]
                     if min_voltage <= voltage_stop[0]:
                         break
+
+                # Break if the experiment is infeasible (or errored)
+                if feasible is False:
+                    break
 
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions

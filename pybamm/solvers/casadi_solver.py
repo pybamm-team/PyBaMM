@@ -261,13 +261,13 @@ class CasadiSolver(pybamm.BaseSolver):
                         dt_max = dt
                     count += 1
                     if count >= self.max_step_decrease_count:
+                        t_dim = t * model.timescale_eval
+                        dt_max_dim = dt_max * model.timescale_eval
                         raise pybamm.SolverError(
-                            "Maximum number of decreased steps occurred at t={}. Try "
-                            "solving the model up to this time only or reducing dt_max "
-                            "(currently, dt_max={})."
-                            "".format(
-                                t * model.timescale_eval, dt_max * model.timescale_eval
-                            )
+                            f"Maximum number of decreased steps occurred at t={t_dim}. "
+                            "Try solving the model up to this time only or reducing "
+                            f"dt_max (currently, dt_max={dt_max_dim}) and/or reducing "
+                            "the size of the time steps or period of the expeeriment."
                         )
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
