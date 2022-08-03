@@ -353,19 +353,13 @@ class Simulation:
                             )
                         )
                     else:
-                        # current events both negative and positive to catch
-                        # specification
+                        # current event
                         new_model.events.extend(
                             [
                                 pybamm.Event(
-                                    "Current cut-off (positive) [A] [experiment]",
-                                    new_model.variables["Current [A]"]
-                                    - abs(pybamm.InputParameter("Current cut-off [A]")),
-                                ),
-                                pybamm.Event(
-                                    "Current cut-off (negative) [A] [experiment]",
-                                    new_model.variables["Current [A]"]
-                                    + abs(pybamm.InputParameter("Current cut-off [A]")),
+                                    "Current cut-off [A] [experiment]",
+                                    abs(new_model.variables["Current [A]"])
+                                    - pybamm.InputParameter("Current cut-off [A]"),
                                 ),
                             ]
                         )
@@ -397,28 +391,34 @@ class Simulation:
                 # add voltage events to the model
                 if op_inputs["Power switch"] == 1 or op_inputs["Current switch"] == 1:
                     if op_inputs["Power switch"] == 1:
-                        sign = (op_inputs["Power input [W]"] > 0)
+                        sign = np.sign(op_inputs["Power input [W]"])
                     else:
-                        sign = (op_inputs["Current input [A]"] > 0)
-                    new_model.events.append(
-                        pybamm.Event(
-                            "Voltage cut-off [V] [experiment]",
-                            sign * (new_model.variables["Battery voltage [V]"]
-                            - pybamm.InputParameter("Voltage cut-off [V]")),
+                        sign = np.sign(op_inputs["Current input [A]"])
+                    if sign > 0:
+                        name = "Discharge"
+                    else:
+                        name = "Charge"
+                    if sign != 0:
+                        # Event should be positive at initial conditions for both
+                        # charge and discharge
+                        new_model.events.append(
+                            pybamm.Event(
+                                f"{name} voltage cut-off [V] [experiment]",
+                                sign
+                                * (
+                                    new_model.variables["Battery voltage [V]"]
+                                    - pybamm.InputParameter("Voltage cut-off [V]")
+                                ),
+                            )
                         )
-                    )
 
                 # Keep the min and max voltages as safeguards but add some tolerances
                 # so that they are not triggered before the voltage limits in the
                 # experiment
                 for i, event in enumerate(new_model.events):
-                    if event.name == "Minimum voltage":
+                    if event.name in ["Minimum voltage", "Maximum voltage"]:
                         new_model.events[i] = pybamm.Event(
                             event.name, event.expression + 1, event.event_type
-                        )
-                    elif event.name == "Maximum voltage":
-                        new_model.events[i] = pybamm.Event(
-                            event.name, event.expression - 1, event.event_type
                         )
 
                 # Update parameter values
@@ -767,7 +767,7 @@ class Simulation:
             all_cycle_solutions = starting_solution_cycles
             all_summary_variables = starting_solution_summary_variables
             all_first_states = starting_solution_first_states
-            current_solution = starting_solution
+            current_solution = starting_solution or pybamm.EmptySolution()
 
             voltage_stop = self.experiment.termination.get("voltage")
             logs["stopping conditions"] = {"voltage": voltage_stop}
@@ -821,10 +821,7 @@ class Simulation:
                     callbacks.on_step_start(logs)
 
                     inputs.update(exp_inputs)
-                    if current_solution is None:
-                        start_time = 0
-                    else:
-                        start_time = current_solution.t[-1]
+                    start_time = current_solution.t[-1]
                     inputs.update({"start time": start_time})
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
@@ -838,27 +835,35 @@ class Simulation:
                             save=False,
                             **kwargs,
                         )
-                    except pybamm.SolverError as e:
-                        logs["error"] = e
-                        callbacks.on_experiment_error(logs)
-                        feasible = False
-                        # If none of the cycles worked, raise an error
-                        if cycle_num == 1 and step_num == 1:
-                            raise e
-                        # Otherwise, just stop this cycle
-                        break
+                    except pybamm.SolverError as error:
+                        if (
+                            "non-positive at initial conditions" in error.message
+                            and "[experiment]" in error.message
+                        ):
+                            step_solution = pybamm.EmptySolution(
+                                "Event exceeded in initial conditions", t=start_time
+                            )
+                        else:
+                            logs["error"] = error
+                            callbacks.on_experiment_error(logs)
+                            feasible = False
+                            # If none of the cycles worked, raise an error
+                            if cycle_num == 1 and step_num == 1:
+                                raise error
+                            # Otherwise, just stop this cycle
+                            break
 
                     steps.append(step_solution)
-                    current_solution = step_solution
 
                     cycle_solution = cycle_solution + step_solution
+                    current_solution = cycle_solution
 
                     callbacks.on_step_end(logs)
 
                     logs["termination"] = step_solution.termination
                     # Only allow events specified by experiment
                     if not (
-                        step_solution is None
+                        isinstance(step_solution, pybamm.EmptySolution)
                         or step_solution.termination == "final time"
                         or "[experiment]" in step_solution.termination
                     ):

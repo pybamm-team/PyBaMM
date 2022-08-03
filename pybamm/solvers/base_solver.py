@@ -1047,16 +1047,16 @@ class BaseSolver(object):
                 event_eval = event.evaluate(t=t_eval[0], y=model.y0, inputs=inputs_dict)
             events_eval[idx] = event_eval
 
-        min_event_eval = np.min(events_eval)
-        if min_event_eval <= 0:
-            # find the event that failed
+        events_eval = np.array(events_eval)
+        if any(events_eval < 0):
+            # find the events that were triggered by initial conditions
             termination_events = [
                 x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
             ]
-            idx = np.argmin(np.abs(np.array(events_eval)))
-            event_name = termination_events[idx].name
+            idxs = np.where(events_eval < 0)[0]
+            event_names = [termination_events[idx].name for idx in idxs]
             raise pybamm.SolverError(
-                f"Event '{event_name}' is non-positive at initial conditions"
+                f"Events {event_names} are non-positive at initial conditions"
             )
 
     def step(
@@ -1104,9 +1104,12 @@ class BaseSolver(object):
             `model.variables = {}`)
 
         """
+        if old_solution is None:
+            old_solution = pybamm.EmptySolution()
 
-        if old_solution is not None and not (
-            old_solution.termination == "final time"
+        if not (
+            isinstance(old_solution, pybamm.EmptySolution)
+            or old_solution.termination == "final time"
             or "[experiment]" in old_solution.termination
         ):
             # Return same solution as an event has already been triggered
@@ -1140,7 +1143,10 @@ class BaseSolver(object):
             del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
-        if old_solution is None:
+        if (
+            isinstance(old_solution, pybamm.EmptySolution)
+            and old_solution.termination is None
+        ):
             # Run set up on first step
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
@@ -1150,7 +1156,6 @@ class BaseSolver(object):
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
-            t = 0.0
         elif model not in self.models_set_up:
             # Run set up if the model has changed
 
@@ -1158,9 +1163,9 @@ class BaseSolver(object):
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
+        t = old_solution.t[-1]
 
-        if old_solution is not None:
-            t = old_solution.all_ts[-1][-1]
+        if not isinstance(old_solution, pybamm.EmptySolution):
             if old_solution.all_models[-1] == model:
                 # initialize with old solution
                 model.y0 = old_solution.all_ys[-1][:, -1]
