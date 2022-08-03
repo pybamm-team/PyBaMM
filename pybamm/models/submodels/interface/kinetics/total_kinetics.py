@@ -113,11 +113,7 @@ class TotalKinetics(pybamm.BaseSubModel):
 
             if reaction_name not in ["SEI ", "SEI on cracks ", "lithium plating "]:
                 j0_p = variables[
-<<<<<<< HEAD
-                    f"Positive electrode {reaction_p}exchange current density"
-=======
                     f"Positive electrode {reaction_name}exchange current density"
->>>>>>> issue-2026-total-reaction
                 ]
                 j0_p_dim = variables[
                     f"Positive electrode {reaction_name}"

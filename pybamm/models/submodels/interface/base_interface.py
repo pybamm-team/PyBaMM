@@ -286,9 +286,19 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
+        phase_name = self.phase_name
 
-        a = variables[f"{Domain} electrode surface area to volume ratio"]
-        a_av = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
+        if isinstance(self, pybamm.kinetics.NoReaction):
+            a = 1
+            a_av = 1
+        else:
+            a = variables[
+                f"{Domain} electrode {phase_name}surface area to volume ratio"
+            ]
+            a_av = variables[
+                f"X-averaged {domain} electrode {phase_name}"
+                "surface area to volume ratio"
+            ]
         j = variables[f"{Domain} electrode {reaction_name}interfacial current density"]
         j_av = variables[
             f"X-averaged {domain} electrode {reaction_name}interfacial current density"

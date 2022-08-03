@@ -296,7 +296,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, self.options
             )
         else:
-            x_average = (self.options["x-average side reactions"] == "true")
+            x_average = self.options["x-average side reactions"] == "true"
             self.submodels["lithium plating"] = pybamm.lithium_plating.Plating(
                 self.param, x_average, self.options
             )
@@ -312,16 +312,24 @@ class BaseModel(pybamm.BaseBatteryModel):
             if crack == "none":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_mechanics.NoMechanics(self.param, domain)
+                ] = pybamm.particle_mechanics.NoMechanics(
+                    self.param, domain, options=self.options, phase="primary"
+                )
             elif crack == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_mechanics.SwellingOnly(self.param, domain)
+                ] = pybamm.particle_mechanics.SwellingOnly(
+                    self.param, domain, options=self.options, phase="primary"
+                )
             elif crack == "swelling and cracking":
                 self.submodels[
                     domain.lower() + " particle mechanics"
                 ] = pybamm.particle_mechanics.CrackPropagation(
-                    self.param, domain, self.x_average
+                    self.param,
+                    domain,
+                    self.x_average,
+                    options=self.options,
+                    phase="primary",
                 )
 
     def set_active_material_submodel(self):
@@ -359,7 +367,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.options["SEI porosity change"] == "true"
             or self.options["lithium plating porosity change"] == "true"
         ):
-            x_average = (self.options["x-average side reactions"] == "true")
+            x_average = self.options["x-average side reactions"] == "true"
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, x_average
             )

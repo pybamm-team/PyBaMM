@@ -51,10 +51,10 @@ class SPM(BaseModel):
 
         # Set "x-average side reactions" to "true" if the model is SPM
         x_average_side_reactions = options.get("x-average side reactions")
-        if (
-            x_average_side_reactions is None
-            and self.__class__ in [pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM]
-        ):
+        if x_average_side_reactions is None and self.__class__ in [
+            pybamm.lithium_ion.SPM,
+            pybamm.lithium_ion.MPM,
+        ]:
             options["x-average side reactions"] = "true"
 
         super().__init__(options, name)

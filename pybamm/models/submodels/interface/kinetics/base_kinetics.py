@@ -26,7 +26,7 @@ class BaseKinetics(BaseInterface):
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
+    def __init__(self, param, domain, reaction, options, phase):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):
