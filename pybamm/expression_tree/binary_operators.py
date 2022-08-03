@@ -1334,6 +1334,8 @@ def simplified_matrix_multiplication(left, right):
             right.left.size_for_testing == 1 or right.right.size_for_testing == 1
         ):
             r_left, r_right = right.orphans
+            r_left.domains = right.domains
+            r_right.domains = right.domains
             if isinstance(right, Addition):
                 return (left @ r_left) + (left @ r_right)
             elif isinstance(right, Subtraction):
