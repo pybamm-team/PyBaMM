@@ -119,4 +119,7 @@ def prettify_print_name(name):
     greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
     name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
 
+    if name.endswith("{"):
+        name += "}"
+
     return name
