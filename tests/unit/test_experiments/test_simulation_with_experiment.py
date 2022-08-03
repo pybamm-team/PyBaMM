@@ -449,7 +449,7 @@ class TestSimulationExperiment(unittest.TestCase):
 
     def test_run_experiment_lead_acid(self):
         experiment = pybamm.Experiment(
-            [("Discharge at C/20 until 1.9V", "Charge at 1C until 2.1 V")]
+            [("Discharge at C/20 until 10.5V", "Charge at C/20 until 12.5 V")]
         )
         model = pybamm.lead_acid.Full()
         sim = pybamm.Simulation(model, experiment=experiment)
