@@ -222,7 +222,8 @@ class LoggingCallback(Callback):
         self.logger.notice("Finish experiment simulation, took {}".format(elapsed_time))
 
     def on_experiment_error(self, logs):
-        pass
+        error = logs["error"]
+        pybamm.logger.error(f"Simulation error: {error}")
 
     def on_experiment_infeasible(self, logs):
         termination = logs["termination"]
