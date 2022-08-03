@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 
-class ElectrodeSOHFull(pybamm.BaseModel):
+class ElectrodeSOH(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
@@ -241,7 +241,7 @@ class ElectrodeSOHSolver:
         )
 
     def create_electrode_soh_sims(self, parameter_values, param):
-        full_model = ElectrodeSOHFull(param=param)
+        full_model = ElectrodeSOH(param=param)
         full_sim = pybamm.Simulation(full_model, parameter_values=parameter_values)
         x100_model = ElectrodeSOHx100(param=param)
         x100_sim = pybamm.Simulation(x100_model, parameter_values=parameter_values)
