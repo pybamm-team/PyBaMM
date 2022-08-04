@@ -422,7 +422,7 @@ def get_julia_function(
         # Look for lists in the variable symbols. These correpsond to concatenations, so
         # assign the children to the right parts of the vector
         symbol_line_split = symbol_line.split(", ")
-        var_str += "{} = get_tmp(cs.{},{})\n".format(julia_var,julia_var,symbol_line_split[1])
+        var_str += "{} = get_tmp(cs.{},{})\n".format(julia_var,julia_var,symbol_line)
         if symbol_line[0] == "[" and symbol_line[-1] == "]":
             # convert to actual list
             symbol_line = symbol_line[1:-1].split(", ")
