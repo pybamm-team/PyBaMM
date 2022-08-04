@@ -780,6 +780,13 @@ class Solution(object):
 
         return new_sol
 
+    def condition_number(self, model):
+        # returns condition number for the solution
+        f = model.rhs_algebraic_eval(self.t[0], self.y[:, 0], [])
+        J = model.jac_rhs_algebraic_eval(self.t[0], self.y[:, 0], [])
+
+        return np.linalg.norm(J) / (np.linalg.norm(f) / np.linalg.norm(self.y[:, 0]))
+
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     """
