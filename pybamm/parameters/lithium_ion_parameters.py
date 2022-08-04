@@ -199,13 +199,15 @@ class LithiumIonParameters(BaseParameters):
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
-        c_e = pybamm.maximum(c_e, 10)
+        tol = pybamm.settings.tolerances["D_e__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
     def kappa_e_dimensional(self, c_e, T):
         """Dimensional electrolyte conductivity"""
-        c_e = pybamm.maximum(c_e, 10)
+        tol = pybamm.settings.tolerances["D_e__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
@@ -442,7 +444,8 @@ class LithiumIonParameters(BaseParameters):
         chi * (1 + Theta * T) / c,
         as it appears in the electrolyte potential equation
         """
-        c_e = pybamm.maximum(c_e, 1e-2)
+        tol = pybamm.settings.tolerances["chi__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
         return self.chi(c_e, T) * (1 + self.Theta * T) / c_e
 
     def t_plus(self, c_e, T):
@@ -693,9 +696,6 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def j0_dimensional(self, c_e, c_s_surf, T):
         """Dimensional exchange-current density [A.m-2]"""
-        # tol = 1e-3
-        # c_e = c_e  # pybamm.maximum(c_e, tol)
-        # c_s_surf = pybamm.maximum(pybamm.minimum(c_s_surf, 1 - tol), tol)
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             f"{self.domain} particle surface concentration [mol.m-3]": c_s_surf,
@@ -711,7 +711,7 @@ class DomainLithiumIonParameters(BaseParameters):
         # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
         # will ensure that ocp goes to +- infinity if sto goes into that region
         # anyway
-        tol = 1e-10
+        tol = pybamm.settings.tolerances["U__c_s"]
         sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
         inputs = {f"{self.domain} particle stoichiometry": sto}
         u_ref = pybamm.FunctionParameter(f"{self.domain} electrode OCP [V]", inputs)
@@ -879,8 +879,9 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def j0(self, c_e, c_s_surf, T):
         """Dimensionless exchange-current density"""
-        tol = 1e-8
+        tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
+        tol = pybamm.settings.tolerances["j0__c_s"]
         c_s_surf = pybamm.maximum(pybamm.minimum(c_s_surf, 1 - tol), tol)
         c_e_dim = c_e * self.main_param.c_e_typ
         c_s_surf_dim = c_s_surf * self.c_max
