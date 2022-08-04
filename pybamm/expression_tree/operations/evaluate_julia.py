@@ -448,7 +448,7 @@ def get_julia_function(
                 var_str += "{} = {}\n".format(julia_var, symbol_line)
             else:
                 symbol_line = symbol_line.replace(" @ ", ", ")
-                var_str += "{} = get_tmp(cs.{},{}\n".format(julia_var,julia_var,symbol_line)
+                var_str += "{} = get_tmp(cs.{},{})\n".format(julia_var,julia_var,symbol_line)
                 var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
         # find input parameters
         elif symbol_line.startswith("inputs"):
