@@ -580,10 +580,10 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr, (((A @ B) @ var) - (A @ vec)))
 
         # Distribute the @ operator to a sum if both symbols being summed are matmuls
-        expr = A @ (B @ var + C @ var2)
-        self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
-        expr = A @ (B @ var - C @ var2)
-        self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
+        # expr = A @ (B @ var + C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
+        # expr = A @ (B @ var - C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
 
         # Reduce (A@var + B@var) to ((A+B)@var)
         expr = A @ var + B @ var
