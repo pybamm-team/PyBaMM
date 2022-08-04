@@ -511,6 +511,9 @@ def get_julia_function(
     var_str = "   " + var_str
     var_str = var_str.replace("\n", "\n   ")
 
+
+    cache_initialization_str = ""
+
     # add the cache variables to the cache NamedTuple
     i_cache = 0
     for var_symbol_id, var_symbol_size in var_symbol_sizes.items():
@@ -526,6 +529,7 @@ def get_julia_function(
                 const_and_cache_str += "   {} = dualcache(zeros({})),\n".format(
                     julia_var_short, var_symbol_size
                 )
+                cache_initialization_str += "   {} = cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
             else:
                 # Cache variables have not been preallocated
                 var_str = var_str.replace(
@@ -593,6 +597,7 @@ def get_julia_function(
         "begin\n"
         + const_and_cache_str
         + function_def
+        + cache_initialization_str
         + input_parameter_extraction
         + var_str
     )
