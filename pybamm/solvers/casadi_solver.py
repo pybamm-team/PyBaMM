@@ -267,7 +267,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             f"Maximum number of decreased steps occurred at t={t_dim}. "
                             "Try solving the model up to this time only or reducing "
                             f"dt_max (currently, dt_max={dt_max_dim}) and/or reducing "
-                            "the size of the time steps or period of the expeeriment."
+                            "the size of the time steps or period of the experiment."
                         )
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
