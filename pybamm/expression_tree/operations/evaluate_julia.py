@@ -409,7 +409,7 @@ def get_julia_function(
         const_name_short = "const_{}".format(i_const)
         const_and_cache_str += "   {} = {},\n".format(const_name_short, const_value)
         shorter_const_names[const_name] = const_name_short
-
+    
     # Pop (get and remove) items from the dictionary of symbols one by one
     # If they are simple operations (@view, +, -, *, /), replace all future
     # occurences instead of assigning them. This "inlining" speeds up the computation
@@ -448,6 +448,7 @@ def get_julia_function(
                 var_str += "{} = {}\n".format(julia_var, symbol_line)
             else:
                 symbol_line = symbol_line.replace(" @ ", ", ")
+                var_str += "{} = get_tmp(cs.{},{}\n".format(julia_var,julia_var,symbol_line)
                 var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
         # find input parameters
         elif symbol_line.startswith("inputs"):
