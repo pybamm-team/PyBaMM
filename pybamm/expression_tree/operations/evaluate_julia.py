@@ -529,7 +529,7 @@ def get_julia_function(
                 const_and_cache_str += "   {} = dualcache(zeros({})),\n".format(
                     julia_var_short, var_symbol_size
                 )
-                cache_initialization_str += "   {} = cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
+                cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
             else:
                 # Cache variables have not been preallocated
                 var_str = var_str.replace(
