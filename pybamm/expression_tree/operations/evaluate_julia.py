@@ -532,8 +532,8 @@ def get_julia_function(
                 )
 
     # Shorten the name of the constants from id to const_0, const_1, etc.
-    for long, short in shorter_const_names.items():
-        var_str = var_str.replace(long, "cs." + short)
+    #for long, short in shorter_const_names.items():
+    #    var_str = var_str.replace(long, "cs." + short)
 
     # close the constants and cache string
     const_and_cache_str += ")\n"
