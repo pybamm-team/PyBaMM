@@ -521,7 +521,7 @@ def get_julia_function(
             var_str = var_str.replace(julia_var, julia_var_short)
             i_cache += 1
             if preallocate is True:
-                const_and_cache_str += "   {} = zeros({}),\n".format(
+                const_and_cache_str += "   {} = dualcache(zeros({})),\n".format(
                     julia_var_short, var_symbol_size
                 )
             else:
