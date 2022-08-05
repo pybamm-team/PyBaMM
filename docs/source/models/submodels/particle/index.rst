@@ -5,5 +5,6 @@ Particle
   :maxdepth: 1
 
   base_particle
-  no_distribution/index
-  size_distribution/index
+  fickian_diffusion
+  polynomial_profile
+  x_averaged_polynomial_profile

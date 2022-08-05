@@ -109,6 +109,12 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertGreater(sol2.t[-1], sol.t[-1])
         self.assertEqual(sol2.cycles[0], sol.cycles[0])
         self.assertEqual(len(sol2.cycles), 2)
+        # Solve again starting from solution but only inputting the cycle
+        sol2 = sim.solve(starting_solution=sol.cycles[-1])
+        self.assertEqual(sol2.termination, "final time")
+        self.assertGreater(sol2.t[-1], sol.t[-1])
+        self.assertEqual(len(sol2.cycles), 2)
+
         # Check starting solution is unchanged
         self.assertEqual(len(sol.cycles), 1)
 
@@ -117,6 +123,26 @@ class TestSimulationExperiment(unittest.TestCase):
         sol3 = pybamm.load("test_experiment.sav")
         self.assertEqual(len(sol3.cycles), 2)
         os.remove("test_experiment.sav")
+
+    def test_run_experiment_multiple_times(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at C/20 until 4.1 V",
+                )
+            ]
+            * 3
+        )
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        # Test that solving twice gives the same solution (see #2193)
+        sol1 = sim.solve()
+        sol2 = sim.solve()
+        np.testing.assert_array_equal(
+            sol1["Terminal voltage [V]"].data, sol2["Terminal voltage [V]"].data
+        )
 
     def test_run_experiment_cccv_ode(self):
         experiment_2step = pybamm.Experiment(
@@ -338,8 +364,8 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM()
 
-        # Chen 2020 plating: pos = function, neg = data
-        param = pybamm.ParameterValues("Chen2020_plating")
+        # O'Kane 2022: pos = function, neg = data
+        param = pybamm.ParameterValues("OKane2022")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
 
@@ -423,7 +449,7 @@ class TestSimulationExperiment(unittest.TestCase):
 
     def test_run_experiment_lead_acid(self):
         experiment = pybamm.Experiment(
-            [("Discharge at C/20 until 1.9V", "Charge at 1C until 2.1 V")]
+            [("Discharge at C/20 until 10.5V", "Charge at C/20 until 12.5 V")]
         )
         model = pybamm.lead_acid.Full()
         sim = pybamm.Simulation(model, experiment=experiment)

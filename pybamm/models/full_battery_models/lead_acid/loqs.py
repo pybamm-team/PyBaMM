@@ -6,12 +6,14 @@ from .base_lead_acid_model import BaseModel
 
 
 class LOQS(BaseModel):
-    """Leading-Order Quasi-Static model for lead-acid, from [1]_.
+    """
+    Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -48,6 +50,7 @@ class LOQS(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if build:
             self.build_model()

@@ -222,22 +222,16 @@ class LoggingCallback(Callback):
         self.logger.notice("Finish experiment simulation, took {}".format(elapsed_time))
 
     def on_experiment_error(self, logs):
-        pass
+        error = logs["error"]
+        pybamm.logger.error(f"Simulation error: {error}")
 
     def on_experiment_infeasible(self, logs):
         termination = logs["termination"]
         cycle_num = logs["cycle number"][0]
         step_num = logs["step number"][0]
         operating_conditions = logs["step operating conditions"]
-        if step_num == 1:
-            cycle_num -= 1
-            up_to_step = ""
-        else:
-            up_to_step = f", up to step {step_num-1}"
         self.logger.warning(
             f"\n\n\tExperiment is infeasible: '{termination}' was "
             f"triggered during '{operating_conditions}'. The returned solution only "
-            f"contains the first {cycle_num} cycles{up_to_step}. "
-            "Try reducing the current, shortening the time interval, or reducing the "
-            "period.\n\n"
+            f"contains up to step {step_num} of cycle {cycle_num}. "
         )

@@ -29,12 +29,12 @@ model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOr
 model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-    model.param, "Negative", "uniform profile", options=model.options
+particle_n = pybamm.particle.PolynomialProfile(
+    model.param, "Negative", options={**model.options, "particle": "uniform profile"}
 )
 model.submodels["negative particle"] = particle_n
-particle_p = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-    model.param, "Positive", "uniform profile", options=model.options
+particle_p = pybamm.particle.PolynomialProfile(
+    model.param, "Positive", options={**model.options, "particle": "uniform profile"}
 )
 model.submodels["positive particle"] = particle_p
 
@@ -86,7 +86,14 @@ model.submodels[
 ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
     model.param, "Positive"
 )
+model.submodels[
+    "Negative particle mechanics"
+] = pybamm.particle_mechanics.NoMechanics(model.param, "Negative")
+model.submodels[
+    "Positive particle mechanics"
+] = pybamm.particle_mechanics.NoMechanics(model.param, "Positive")
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
+model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
 model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
 
 # build model

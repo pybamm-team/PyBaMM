@@ -39,6 +39,16 @@ class TestSolution(unittest.TestCase):
         ):
             sol.set_t()
 
+        ts = [np.array([1, 2, 3])]
+        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
+        model = pybamm.BaseModel()
+        var = pybamm.StateVector(slice(0, 1))
+        model.rhs = {var: 0}
+        model.variables = {var.name: var}
+        with self.assertLogs() as captured:
+            pybamm.Solution(ts, bad_ys, model, {})
+        self.assertIn("exceeds the maximum", captured.records[0].getMessage())
+
     def test_add_solutions(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
@@ -279,11 +289,9 @@ class TestSolution(unittest.TestCase):
         csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
 
         # check string is the same as the file
-        with open('test.csv') as f:
+        with open("test.csv") as f:
             # need to strip \r chars for windows
-            self.assertEqual(
-                csv_str.replace('\r', ''), f.read()
-            )
+            self.assertEqual(csv_str.replace("\r", ""), f.read())
 
         # read csv
         df = pd.read_csv("test.csv")
@@ -295,11 +303,9 @@ class TestSolution(unittest.TestCase):
         json_str = solution.save_data(to_format="json")
 
         # check string is the same as the file
-        with open('test.json') as f:
+        with open("test.json") as f:
             # need to strip \r chars for windows
-            self.assertEqual(
-                json_str.replace('\r', ''), f.read()
-            )
+            self.assertEqual(json_str.replace("\r", ""), f.read())
 
         # check if string has the right values
         json_data = json.loads(json_str)

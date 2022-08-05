@@ -6,13 +6,15 @@ from .spm import SPM
 
 
 class SPMe(SPM):
-    """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
+    """
+    Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
     [1]_. Inherits most submodels from SPM, only modifies potentials and electrolyte.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -39,12 +41,12 @@ class SPMe(SPM):
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):
-        # For degradation models we use the "x-average" form since this is a
-        # reduced-order model with uniform current density in the electrodes
+        # For degradation models we use the "x-average", note that for side reactions
+        # this is overwritten by "x-average side reactions"
         self.x_average = True
 
         # Initialize with the SPM
-        super().__init__(options, name)
+        super().__init__(options, name, build)
 
     def set_convection_submodel(self):
 

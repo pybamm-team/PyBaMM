@@ -286,9 +286,11 @@ class UserSupplied1DSubMesh(SubMesh1D):
         # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
-                """User-suppled edges has should have length (npts + 1) but has length {}.
-                 Number of points (npts) for domain {} is {}.""".format(
+                """User-suppled edges has should have length (npts + 1) but has length
+                {}.Number of points (npts) for domain {} is {}.""".format(
                     len(edges), spatial_var.domain, npts
+                ).replace(
+                    "\n                ", " "
                 )
             )
 

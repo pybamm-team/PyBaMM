@@ -20,5 +20,4 @@ Upper voltage cut-off [V],4.1,,
 # Initial conditions
 Initial concentration in negative electrode [mol.m-3],19986.609595075,Scott Moura FastDFN,
 Initial concentration in positive electrode [mol.m-3],30730.7554385565,Scott Moura FastDFN,
-Initial concentration in electrolyte [mol.m-3],1000,Scott Moura FastDFN,
 Initial temperature [K],298.15,,

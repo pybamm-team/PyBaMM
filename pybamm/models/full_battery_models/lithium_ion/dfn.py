@@ -6,12 +6,14 @@ from .base_lithium_ion_model import BaseModel
 
 
 class DFN(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [1]_.
+    """
+    Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [1]_.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -62,41 +64,20 @@ class DFN(BaseModel):
             )
 
     def set_particle_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            particle = getattr(self.options, domain.lower())["particle"]
-            if self.options["particle size"] == "single":
-                if particle == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.no_distribution.FickianDiffusion(
-                        self.param,
-                        domain,
-                        self.options,
-                    )
-                elif particle in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param, domain, particle, self.options
-                    )
-            elif self.options["particle size"] == "distribution":
-                if particle == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.size_distribution.FickianDiffusion(
-                        self.param, domain
-                    )
-                elif particle == "uniform profile":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.size_distribution.UniformProfile(
-                        self.param,
-                        domain,
-                    )
+        for domain in ["negative", "positive"]:
+            particle = getattr(self.options, domain)["particle"]
+            if particle == "Fickian diffusion":
+                self.submodels[f"{domain} particle"] = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=False
+                )
+            elif particle in [
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ]:
+                self.submodels[
+                    f"{domain} particle"
+                ] = pybamm.particle.PolynomialProfile(self.param, domain, self.options)
 
     def set_solid_submodel(self):
 

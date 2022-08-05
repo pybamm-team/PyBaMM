@@ -73,6 +73,7 @@ class Solution(object):
         y_event=None,
         termination="final time",
         sensitivities=False,
+        check_solution=True,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -105,6 +106,10 @@ class Solution(object):
             isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
         )
 
+        # Check no ys are too large
+        if check_solution and not self.has_symbolic_inputs:
+            self.check_ys_are_not_too_large()
+
         # Copy the timescale_eval and lengthscale_evals if they exist
         if hasattr(all_models[0], "timescale_eval"):
             self.timescale_eval = all_models[0].timescale_eval
@@ -130,7 +135,7 @@ class Solution(object):
         self.solve_time = None
         self.integration_time = None
 
-        # initiaize empty variables and data
+        # initialize empty variables and data
         self._variables = pybamm.FuzzyDict()
         self.data = pybamm.FuzzyDict()
 
@@ -147,7 +152,7 @@ class Solution(object):
         pybamm.citations.register("Andersson2019")
 
     def extract_explicit_sensitivities(self):
-        # if we got here, we havn't set y yet
+        # if we got here, we haven't set y yet
         self.set_y()
 
         # extract sensitivities from full y solution
@@ -312,6 +317,24 @@ class Solution(object):
                 "computed explicitly."
             )
 
+    def check_ys_are_not_too_large(self):
+        # Only check last one so that it doesn't take too long
+        # We only care about the cases where y is growing too large without any
+        # restraint, so if y gets large in the middle then comes back down that is ok
+        y, model = self.all_ys[-1], self.all_models[-1]
+        y = y[:, -1]
+        if np.any(y > pybamm.settings.max_y_value):
+            for var in [*model.rhs.keys(), *model.algebraic.keys()]:
+                y_var = y[model.variables[var.name].y_slices[0]]
+                if np.any(y_var > pybamm.settings.max_y_value):
+                    pybamm.logger.error(
+                        f"Solution for '{var}' exceeds the maximum allowed value "
+                        f"of `{pybamm.settings.max_y_value}. This could be due to "
+                        "incorrect nondimensionalisation, model formulation, or "
+                        "parameter values. The maximum allowed value is set by "
+                        "'pybammm.settings.max_y_value'."
+                    )
+
     @property
     def all_ts(self):
         return self._all_ts
@@ -457,12 +480,14 @@ class Solution(object):
             # ProcessedSymbolicVariable
             if self.has_symbolic_inputs is True:
                 var = pybamm.ProcessedSymbolicVariable(
-                    self.all_models[0].variables[key], self
+                    self.all_models[0].variables_and_events[key], self
                 )
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                vars_pybamm = [model.variables[key] for model in self.all_models]
+                vars_pybamm = [
+                    model.variables_and_events[key] for model in self.all_models
+                ]
 
                 # Iterate through all models, some may be in the list several times and
                 # therefore only get set up once
@@ -756,7 +781,7 @@ class Solution(object):
         return new_sol
 
 
-def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
+def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     """
     Function to create a Solution for an entire cycle, and associated summary variables
 
@@ -764,10 +789,9 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
     ----------
     step_solutions : list of :class:`Solution`
         Step solutions that form the entire cycle
-    esoh_sim : :class:`pybamm.Simulation`, optional
-        A simulation, whose model should be a :class:`pybamm.lithium_ion.ElectrodeSOH`
-        model, which is used to calculate some of the summary variables. If `None`
-        (default) then only summary variables that do not require the eSOH calculation
+    esoh_solver : :class:`pybamm.lithium_ion.ElectrodeSOHSolver`
+        Solver to calculate electrode SOH (eSOH) variables. If `None` (default)
+        then only summary variables that do not require the eSOH calculation
         are calculated. See [1] for more details on eSOH variables.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
@@ -809,7 +833,7 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
+    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_solver)
 
     cycle_first_state = cycle_solution.first_state
 
@@ -821,7 +845,7 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
     return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
-def get_cycle_summary_variables(cycle_solution, esoh_sim):
+def get_cycle_summary_variables(cycle_solution, esoh_solver):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
@@ -862,50 +886,16 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
 
     # eSOH variables (full-cell lithium-ion model only, for now)
     if (
-        esoh_sim is not None
+        esoh_solver is not None
         and isinstance(model, pybamm.lithium_ion.BaseModel)
         and model.half_cell is False
     ):
-        V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
-        V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
+        V_min = esoh_solver.parameter_values["Lower voltage cut-off [V]"]
+        V_max = esoh_solver.parameter_values["Upper voltage cut-off [V]"]
         C_n = last_state["Negative electrode capacity [A.h]"].data[0]
         C_p = last_state["Positive electrode capacity [A.h]"].data[0]
         n_Li = last_state["Total lithium in particles [mol]"].data[0]
-        if esoh_sim.solution is not None:
-            # initialize with previous solution if it is available
-            esoh_sim.built_model.set_initial_conditions_from(esoh_sim.solution)
-            solver = None
-        else:
-            x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
-            # make sure x_0 > 0
-            C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
 
-            # Solve the esoh model and add outputs to the summary variables
-            # use CasadiAlgebraicSolver if there are interpolants
-            if isinstance(
-                esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple
-            ) or isinstance(
-                esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
-            ):
-                solver = pybamm.CasadiAlgebraicSolver()
-                # Choose x_100_init so as not to violate the interpolation limits
-                if isinstance(
-                    esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
-                ):
-                    y_100_min = np.min(
-                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][0][0]
-                    )
-                    x_100_max = (
-                        n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
-                    ) / C_n
-                    x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
-            else:
-                solver = None
-            # Update initial conditions using the cycle solution
-            esoh_sim.build()
-            esoh_sim.built_model.set_initial_conditions_from(
-                {"x_100": x_100_init, "C": C_init}
-            )
         inputs = {
             "V_min": V_min,
             "V_max": V_max,
@@ -915,15 +905,14 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         }
 
         try:
-            esoh_sol = esoh_sim.solve([0], inputs=inputs, solver=solver)
+            esoh_sol = esoh_solver.solve(inputs)
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
             )
-        for var in esoh_sim.built_model.variables:
-            cycle_summary_variables[var] = esoh_sol[var].data[0]
 
-        cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
+        for var in esoh_sol.all_models[0].variables:
+            cycle_summary_variables[var] = esoh_sol[var].data[0]
 
     return cycle_summary_variables
