@@ -533,7 +533,7 @@ def get_julia_function(
             var_str = var_str.replace(julia_var, julia_var_short)
             i_cache += 1
             if preallocate is True:
-                if cache_type is "symbolic":
+                if cache_type == "symbolic":
                     const_and_cache_str += "   {} = symcache(zeros({}),Vector{{Num}}(undef,{})),\n".format(
                         julia_var_short, var_symbol_size,var_symbol_size
                     )
