@@ -1296,9 +1296,12 @@ class BaseSolver(object):
                 # initialize with old solution
                 model.y0 = old_solution.all_ys[-1][:, -1]
             else:
-                model.y0 = model.set_initial_conditions_from(
-                    old_solution
-                ).concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
+                _, concatenated_initial_conditions = model.set_initial_conditions_from(
+                    old_solution, return_type="ics"
+                )
+                model.y0 = concatenated_initial_conditions.evaluate(
+                    0, inputs=ext_and_inputs
+                )
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
