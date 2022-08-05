@@ -218,15 +218,22 @@ class TestSimulationExperiment(unittest.TestCase):
 
     def test_run_experiment_breaks_early_error(self):
         experiment = pybamm.Experiment(
-            [("Rest for 10 minutes", "Discharge at 10 C for 1 minute")]
+            [
+                (
+                    "Rest for 10 minutes",
+                    "Discharge at 20 C for 10 minutes (10 minute period)",
+                )
+            ]
         )
         model = pybamm.lithium_ion.DFN()
 
         parameter_values = pybamm.ParameterValues("Chen2020")
+        solver = pybamm.CasadiSolver(max_step_decrease_count=2)
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
             parameter_values=parameter_values,
+            solver=solver,
         )
         sol = sim.solve()
         self.assertEqual(len(sol.cycles), 1)
@@ -234,12 +241,16 @@ class TestSimulationExperiment(unittest.TestCase):
 
         # Different experiment setup style
         experiment = pybamm.Experiment(
-            ["Rest for 10 minutes", "Discharge at 10 C for 1 minute"]
+            [
+                "Rest for 10 minutes",
+                "Discharge at 20 C for 10 minutes (10 minute period)",
+            ]
         )
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
             parameter_values=parameter_values,
+            solver=solver,
         )
         sol = sim.solve()
         self.assertEqual(len(sol.cycles), 1)

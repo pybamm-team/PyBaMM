@@ -422,6 +422,13 @@ class LeadAcidParameters(BaseParameters):
         kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         return self.kappa_e_dimensional(c_e_dimensional, self.T_ref) / kappa_scale
 
+    def chiT_over_c(self, c_e, T):
+        """
+        chi * (1 + Theta * T) / c,
+        as it appears in the electrolyte potential equation
+        """
+        return self.chi(c_e, T) * (1 + self.Theta * T) / c_e
+
     def chi(self, c_e, T, c_ox=0, c_hy=0):
         """Thermodynamic factor"""
         return (
