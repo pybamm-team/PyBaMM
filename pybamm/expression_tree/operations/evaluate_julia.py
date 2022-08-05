@@ -349,6 +349,7 @@ def get_julia_function(
     len_rhs=None,
     preallocate=True,
     round_constants=True,
+    cache_type="standard"
 ):
     """
     Converts a pybamm expression tree into pure julia code that will calculate the
@@ -372,6 +373,12 @@ def get_julia_function(
         Whether to write the function in a way that preallocates memory for the output.
         Default is True, which is faster. Must be False for the function to be
         modelingtoolkitized.
+    cache_type : str, optional
+        The type of cache to use for the function. Must be one of 'standard', 'dual',
+        or 'symbolic'. If 'standard', the function will be cached in the standard way,
+        if 'dual', the function will use the dualcache provided by preallocationtools.jl,
+        and if 'symbolic', the function will use the symcache provided by PyBaMM.jl. Default 
+        is standard, and as of so far, I haven't been able to beat it with performance yet.
 
     Returns
     -------
@@ -526,10 +533,21 @@ def get_julia_function(
             var_str = var_str.replace(julia_var, julia_var_short)
             i_cache += 1
             if preallocate is True:
-                const_and_cache_str += "   {} = symcache(zeros({}),Vector{{Num}}(undef,{})),\n".format(
-                    julia_var_short, var_symbol_size,var_symbol_size
-                )
-                cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
+                if cache_type is "symbolic":
+                    const_and_cache_str += "   {} = symcache(zeros({}),Vector{{Num}}(undef,{})),\n".format(
+                        julia_var_short, var_symbol_size,var_symbol_size
+                    )
+                    cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
+                elif cache_type == "standard":
+                    const_and_cache_str += "   {} = zeros({}),\n".format(
+                        julia_var_short, var_symbol_size
+                    )
+                elif cache_type == "dual":
+                    const_and_cache_str += "   {} = dualcache(zeros({}),12),\n".format(
+                        julia_var_short, var_symbol_size
+                    )
+                    cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
+                
             else:
                 # Cache variables have not been preallocated
                 var_str = var_str.replace(
@@ -570,8 +588,9 @@ def get_julia_function(
         var_str = var_str.replace(result_var, out)
 
     # add "cs." to cache names
-    #if preallocate is True:
-    #    var_str = var_str.replace("cache", "cs.cache")
+    if preallocate is True:
+        if cache_type =="standard":
+            var_str = var_str.replace("cache", "cs.cache")
 
     # line that extracts the input parameters in the right order
     if input_parameter_order is None:
