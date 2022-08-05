@@ -526,8 +526,8 @@ def get_julia_function(
             var_str = var_str.replace(julia_var, julia_var_short)
             i_cache += 1
             if preallocate is True:
-                const_and_cache_str += "   {} = dualcache(zeros({}),12),\n".format(
-                    julia_var_short, var_symbol_size
+                const_and_cache_str += "   {} = symcache(zeros({}),Vector{{Num}}(undef,{})),\n".format(
+                    julia_var_short, var_symbol_size,var_symbol_size
                 )
                 cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
             else:
