@@ -796,11 +796,12 @@ class BaseSolver(object):
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
             if ics_set_up != model.concatenated_initial_conditions:
-                try:
-                    print("here1")
+                if self.algebraic_solver is True:
+                    # For an algebraic solver, we don't need to set up the initial
+                    # conditions function and we can just evaluate
+                    # model.concatenated_initial_conditions
                     model.y0 = model.concatenated_initial_conditions.evaluate()
-                    print("here2")
-                except NotImplementedError:
+                else:
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
                     self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)

@@ -281,8 +281,6 @@ class ElectrodeSOHSolver:
                 self._check_esoh_feasible(inputs)
                 raise e
 
-        print(sol.solve_time)
-        print(sol.integration_time)
         return sol
 
     def _set_up_solve(self, inputs):
