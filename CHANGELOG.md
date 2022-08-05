@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+
+-   Added more rules for simplifying expressions ([#2211](https://github.com/pybamm-team/PyBaMM/pull/2211))
+
 # [v22.7](https://github.com/pybamm-team/PyBaMM/tree/v22.7) - 2022-07-31
 
 ## Features 
@@ -15,7 +19,6 @@
 
 ## Optimizations
 
--   Added more rules for simplifying expressions ([#2211](https://github.com/pybamm-team/PyBaMM/pull/2211))
 -   Improved eSOH calculations to be more robust ([#2192](https://github.com/pybamm-team/PyBaMM/pull/2192),[#2199](https://github.com/pybamm-team/PyBaMM/pull/2199))
 -   The (2x2x2=8) particle diffusion submodels have been consolidated into just three submodels (Fickian diffusion, polynomial profile, and x-averaged polynomial profile) with optional x-averaging and size distribution. Polynomial profile and x-averaged polynomial profile are still two separate submodels, since they deal with surface concentration differently.
 -   Added error for when solution vector gets too large, to help debug solver errors ([#2138](https://github.com/pybamm-team/PyBaMM/pull/2138))
