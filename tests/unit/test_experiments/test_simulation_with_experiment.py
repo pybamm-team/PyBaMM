@@ -239,6 +239,23 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(len(sol.cycles), 1)
         self.assertEqual(len(sol.cycles[0].steps), 1)
 
+        # Different experiment setup style
+        experiment = pybamm.Experiment(
+            [
+                "Rest for 10 minutes",
+                "Discharge at 20 C for 10 minutes (10 minute period)",
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=parameter_values,
+            solver=solver,
+        )
+        sol = sim.solve()
+        self.assertEqual(len(sol.cycles), 1)
+        self.assertEqual(len(sol.cycles[0].steps), 1)
+
         # Different callback - this is for coverage on the `Callback` class
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
 
