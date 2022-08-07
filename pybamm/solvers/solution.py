@@ -780,12 +780,20 @@ class Solution(object):
 
         return new_sol
 
-    def condition_number(self, model):
+    def condition_number(self):
         # returns condition number for the solution
-        f = model.rhs_algebraic_eval(self.t[0], self.y[:, 0], [])
-        J = model.jac_rhs_algebraic_eval(self.t[0], self.y[:, 0], [])
 
-        return np.linalg.norm(J) / (np.linalg.norm(f) / np.linalg.norm(self.y[:, 0]))
+        entries = np.empty(len(self.t))
+        for ts, ys, model in zip(self.all_ts, self.all_ys, self.all_models):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
+                f = model.rhs_algebraic_eval(t, y, [])
+                J = model.jac_rhs_algebraic_eval(t, y, [])
+                cond = np.linalg.norm(J) / (np.linalg.norm(f) / np.linalg.norm(y))
+                np.insert(entries, -1, cond)
+
+        return entries
 
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
