@@ -551,7 +551,7 @@ def get_julia_function(
                     )
                     cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
                 elif cache_type == "gpu":
-                    const_and_cache_str+="  {} = CUDA.zeros({}),\n".format(julia_var_short,julia_symbol_size)
+                    const_and_cache_str+="  {} = CUDA.zeros({}),\n".format(julia_var_short,var_symbol_size)
                 
             else:
                 # Cache variables have not been preallocated
