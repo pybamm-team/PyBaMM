@@ -188,25 +188,6 @@ class BasicDFN(BaseModel):
         }
         self.initial_conditions[c_s_n] = param.n.c_init
         self.initial_conditions[c_s_p] = param.p.c_init
-        # Events specify points at which a solution should terminate
-        self.events += [
-            pybamm.Event(
-                "Minimum negative particle surface concentration",
-                pybamm.min(c_s_surf_n) - 0.01,
-            ),
-            pybamm.Event(
-                "Maximum negative particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_n),
-            ),
-            pybamm.Event(
-                "Minimum positive particle surface concentration",
-                pybamm.min(c_s_surf_p) - 0.01,
-            ),
-            pybamm.Event(
-                "Maximum positive particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_p),
-            ),
-        ]
         ######################
         # Current in the solid
         ######################
@@ -238,7 +219,7 @@ class BasicDFN(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chiT_over_c(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
         self.boundary_conditions[phi_e] = {
@@ -260,11 +241,6 @@ class BasicDFN(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events.append(
-            pybamm.Event(
-                "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
-            )
-        )
 
         ######################
         # (Some) variables
@@ -281,7 +257,9 @@ class BasicDFN(BaseModel):
             "Electrolyte potential": phi_e,
             "Positive electrode potential": phi_s_p,
             "Terminal voltage": voltage,
+            "Terminal voltage [V]": voltage * param.potential_scale + param.ocv_ref,
         }
+        # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
