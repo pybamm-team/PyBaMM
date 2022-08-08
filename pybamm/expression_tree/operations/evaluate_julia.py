@@ -374,9 +374,9 @@ def get_julia_function(
         Default is True, which is faster. Must be False for the function to be
         modelingtoolkitized.
     cache_type : str, optional
-        The type of cache to use for the function. Must be one of 'standard', 'dual',
-        or 'symbolic'. If 'standard', the function will be cached in the standard way,
-        if 'dual', the function will use the dualcache provided by preallocationtools.jl,
+        The type of cache to use for the function. Must be one of 'standard', 'dual', 'symbolic',
+        or 'gpu'. If 'standard', the function will be cached in the standard way,
+        If 'dual', the function will use the dualcache provided by preallocationtools.jl,
         and if 'symbolic', the function will use the symcache provided by PyBaMM.jl. Default 
         is standard, and as of so far, I haven't been able to beat it with performance yet.
 
@@ -414,7 +414,10 @@ def get_julia_function(
     for i_const, (symbol_id, const_value) in enumerate(constants.items()):
         const_name = id_to_julia_variable(symbol_id, "const")
         const_name_short = "const_{}".format(i_const)
-        const_and_cache_str += "   {} = {},\n".format(const_name_short, const_value)
+        if cache_type=="gpu":
+            const_and_cache_str += "   {} = cu({}),\n".format(const_name_short, const_value)
+        else:
+            const_and_cache_str += "   {} = {},\n".format(const_name_short, const_value)
         shorter_const_names[const_name] = const_name_short
     
     # Pop (get and remove) items from the dictionary of symbols one by one
@@ -547,6 +550,8 @@ def get_julia_function(
                         julia_var_short, var_symbol_size
                     )
                     cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
+                elif cache_type == "gpu":
+                    const_and_cache_str+="  {} = CUDA.zeros({}),\n".format(julia_var_short,julia_symbol_size)
                 
             else:
                 # Cache variables have not been preallocated
