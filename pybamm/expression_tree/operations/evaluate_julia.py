@@ -594,7 +594,7 @@ def get_julia_function(
 
     # add "cs." to cache names
     if preallocate is True:
-        if cache_type =="standard":
+        if cache_type in ["standard","gpu"]:
             var_str = var_str.replace("cache", "cs.cache")
 
     # line that extracts the input parameters in the right order
