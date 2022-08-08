@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-Corrected initial SEI thickness for OKane2022 parameter set
+Corrected initial SEI thickness for OKane2022 parameter set. ([#2218](https://github.com/pybamm-team/PyBaMM/pull/2218))
 
 ## Optimizations
 
