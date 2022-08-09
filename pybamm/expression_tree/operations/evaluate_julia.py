@@ -549,7 +549,7 @@ def get_julia_function(
                     const_and_cache_str += "   {} = dualcache(zeros({}),12),\n".format(
                         julia_var_short, var_symbol_size
                     )
-                    cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
+                    cache_initialization_str += "   {} = PreallocationTools.get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
                 elif cache_type == "gpu":
                     const_and_cache_str+="  {} = CUDA.zeros({}),\n".format(julia_var_short,var_symbol_size)
                 
