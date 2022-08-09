@@ -416,7 +416,7 @@ class TestSimulation(unittest.TestCase):
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
         with self.assertWarns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, 1, 100))
+            sim.solve(t_eval=np.linspace(0, 10, 3))
 
         # check warning raised if t_eval doesnt contain time_data , but has a finer
         # resolution (can still solve, but good for users to know they dont have
