@@ -332,7 +332,9 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # SEI parameters
-        self.alpha_sei = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+        self.inner_prop = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+
+        self.z_sei = pybamm.Parameter("Ratio of lithium moles to SEI moles")
 
         self.E_over_RT_sei = self.E_sei_dimensional / self.R / self.T_ref
 
@@ -384,7 +386,7 @@ class LithiumIonParameters(BaseParameters):
         # ratio of SEI reaction scale to intercalation reaction
         self.Gamma_SEI = (
             self.V_bar_inner_dimensional * self.n.j_scale * self.timescale
-        ) / (self.F * self.L_sei_0_dim)
+        ) / (self.F * self.z_sei * self.L_sei_0_dim)
 
         # EC reaction
         self.C_ec = (
@@ -407,8 +409,16 @@ class LithiumIonParameters(BaseParameters):
                 )
             )
         )
-        self.beta_sei = self.n.a_typ * self.L_sei_0_dim * self.Gamma_SEI
+
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
+
+        # This ensures z_sei is hardcoded to 2 if ec reaction limited is selected
+        self.Gamma_SEI_ec = (
+            self.V_bar_inner_dimensional * self.n.j_scale * self.timescale
+        ) / (2 * self.F * self.L_sei_0_dim)
+
+        # I don't think this gets used anywhere?
+        self.beta_sei = self.n.a_typ * self.L_sei_0_dim * self.Gamma_SEI
 
         # lithium plating parameters
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
@@ -421,6 +431,7 @@ class LithiumIonParameters(BaseParameters):
             self.F * self.c_Li_typ
         )
 
+        # Does this get used anywhere?
         self.beta_plating = self.Gamma_plating * self.V_bar_plated_Li * self.c_Li_typ
 
         # Initial conditions
