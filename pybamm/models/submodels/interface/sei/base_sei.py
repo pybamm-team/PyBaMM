@@ -182,15 +182,14 @@ class BaseModel(BaseInterface):
                     param.L_sei_0_dim * param.n.a_typ / param.V_bar_outer_dimensional
                 )
             v_bar = param.v_bar
+            z_sei = param.z_sei
             # Set scales for the "EC Reaction Limited" model
             if self.options["SEI"] == "ec reaction limited":
                 L_inner_0 = 0
                 L_outer_0 = 1
-                z_sei = 2
             else:
                 L_inner_0 = param.L_inner_0
                 L_outer_0 = param.L_outer_0
-                z_sei = param.z_sei
 
         if self.reaction == "SEI":
             L_inner = variables["Inner SEI thickness"]

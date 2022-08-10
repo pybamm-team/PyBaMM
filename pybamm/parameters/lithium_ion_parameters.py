@@ -332,7 +332,7 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # SEI parameters
-        self.inner_prop = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+        self.inner_sei_proportion = pybamm.Parameter("Inner SEI reaction proportion")
 
         self.z_sei = pybamm.Parameter("Ratio of lithium moles to SEI moles")
 
@@ -411,11 +411,6 @@ class LithiumIonParameters(BaseParameters):
         )
 
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
-
-        # This ensures z_sei is hardcoded to 2 if ec reaction limited is selected
-        self.Gamma_SEI_ec = (
-            self.V_bar_inner_dimensional * self.n.j_scale * self.timescale
-        ) / (2 * self.F * self.L_sei_0_dim)
 
         # I don't think this gets used anywhere?
         self.beta_sei = self.n.a_typ * self.L_sei_0_dim * self.Gamma_SEI

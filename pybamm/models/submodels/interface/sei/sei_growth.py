@@ -171,15 +171,15 @@ class SEIGrowth(BaseModel):
                 )
 
         if self.options["SEI"] == "ec reaction limited":
-            inner_prop = 0
+            inner_sei_proportion = 0
         else:
-            inner_prop = param.inner_prop
+            inner_sei_proportion = param.inner_sei_proportion
 
         # All SEI growth mechanisms assumed to have Arrhenius dependence
         Arrhenius = pybamm.exp(param.E_over_RT_sei * (1 - prefactor))
 
-        j_inner = inner_prop * Arrhenius * j_sei
-        j_outer = (1 - inner_prop) * Arrhenius * j_sei
+        j_inner = inner_sei_proportion * Arrhenius * j_sei
+        j_outer = (1 - inner_sei_proportion) * Arrhenius * j_sei
 
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
@@ -229,11 +229,11 @@ class SEIGrowth(BaseModel):
             spreading_outer = 0
             spreading_inner = 0
 
+        Gamma_SEI = self.param.Gamma_SEI
+
         if self.options["SEI"] == "ec reaction limited":
-            Gamma_SEI_ec = self.param.Gamma_SEI_ec
-            self.rhs = {L_outer: -Gamma_SEI_ec * a * j_outer + spreading_outer}
+            self.rhs = {L_outer: -Gamma_SEI * a * j_outer + spreading_outer}
         else:
-            Gamma_SEI = self.param.Gamma_SEI
             v_bar = self.param.v_bar
             self.rhs = {
                 L_inner: -Gamma_SEI * a * j_inner + spreading_inner,
