@@ -117,7 +117,7 @@ class Concatenation(pybamm.Symbol):
 
     def _concatenation_jac(self, children_jacs):
         """Calculate the jacobian of a concatenation."""
-        return NotImplementedError
+        raise NotImplementedError
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape`"""

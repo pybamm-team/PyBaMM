@@ -45,6 +45,13 @@ class TestConcatenations(TestCase):
         b = pybamm.Variable("b", domain="test b")
         with self.assertRaisesRegex(TypeError, "ConcatenationVariable"):
             pybamm.Concatenation(a, b)
+        
+        # base concatenation jacobian
+        a = pybamm.Symbol("a", domain="test a")
+        b = pybamm.Symbol("b", domain="test b")
+        conc3 = pybamm.Concatenation(a, b)
+        with self.assertRaises(NotImplementedError):
+            conc3._concatenation_jac(None)
 
     def test_concatenation_domains(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -135,6 +142,9 @@ class TestConcatenations(TestCase):
         conc = pybamm.NumpyConcatenation(a, b, c)
         y = np.linspace(0, 1, 23)[:, np.newaxis]
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
+        # empty concatenation
+        conc = pybamm.NumpyConcatenation()
+        self.assertEqual(conc._concatenation_jac(None), 0)
 
     def test_numpy_concatenation_vector_scalar(self):
         # with entries
@@ -175,6 +185,13 @@ class TestConcatenations(TestCase):
                 "positive electrode",
             ],
         )
+
+        conc.secondary_dimensions_npts = 2
+        with self.assertRaisesRegex(
+            ValueError, "Concatenation and children must have"
+        ):
+            conc.create_slices(None)
+
 
     def test_concatenation_orphans(self):
         a = pybamm.Variable("a", domain=["negative electrode"])
