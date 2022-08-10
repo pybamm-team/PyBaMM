@@ -48,7 +48,6 @@ class TestEvent(unittest.TestCase):
             self.assertEqual(event.event_type, event_type)
 
 
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
