@@ -45,7 +45,7 @@ class TestConcatenations(TestCase):
         b = pybamm.Variable("b", domain="test b")
         with self.assertRaisesRegex(TypeError, "ConcatenationVariable"):
             pybamm.Concatenation(a, b)
-        
+
         # base concatenation jacobian
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
@@ -187,11 +187,8 @@ class TestConcatenations(TestCase):
         )
 
         conc.secondary_dimensions_npts = 2
-        with self.assertRaisesRegex(
-            ValueError, "Concatenation and children must have"
-        ):
+        with self.assertRaisesRegex(ValueError, "Concatenation and children must have"):
             conc.create_slices(None)
-
 
     def test_concatenation_orphans(self):
         a = pybamm.Variable("a", domain=["negative electrode"])
