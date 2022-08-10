@@ -45,6 +45,15 @@ class TestSimulation(unittest.TestCase):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
+        self.assertEqual(sim.submesh_types, model.default_submesh_types)
+        self.assertEqual(sim.var_pts, model.default_var_pts)
+        self.assertIsNone(sim.mesh)
+        for key in sim.spatial_methods.keys():
+            self.assertEqual(
+                sim.spatial_methods[key].__class__,
+                model.default_spatial_methods[key].__class__
+            )
+
         sim.build()
         self.assertFalse(sim._mesh is None)
         self.assertFalse(sim._disc is None)
