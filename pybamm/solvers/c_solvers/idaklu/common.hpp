@@ -1,5 +1,5 @@
-#ifndef PYBAMM_IDAKLU_PYTHON_HPP
-#define PYBAMM_IDAKLU_PYTHON_HPP
+#ifndef PYBAMM_IDAKLU_COMMON_HPP
+#define PYBAMM_IDAKLU_COMMON_HPP
 
 #include <idas/idas.h>                 /* prototypes for IDAS fcts., consts.    */
 #include <nvector/nvector_serial.h>  /* access to serial N_Vector            */
@@ -18,4 +18,4 @@ using np_array_dense = py::array_t<realtype, py::array::c_style | py::array::for
 using np_array_int = py::array_t<int64_t>;
 
 
-#endif // PYBAMM_IDAKLU_PYTHON_HPP
+#endif // PYBAMM_IDAKLU_COMMON_HPP
