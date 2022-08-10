@@ -12,7 +12,8 @@ class EventType(Enum):
     should return the time that the discontinuity occurs. The solver will integrate up
     to the discontinuity and then restart just after the discontinuity.
 
-    INTERPOLANT_EXTRAPOLATION indicates that a pybamm.Interpolant object has been evaluated outside of the range.
+    INTERPOLANT_EXTRAPOLATION indicates that a pybamm.Interpolant object has been
+    evaluated outside of the range.
 
     SWITCH indicates an event switch that is used in CasADI "fast with events" model.
     """
