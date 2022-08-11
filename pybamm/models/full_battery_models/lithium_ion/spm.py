@@ -111,6 +111,12 @@ class SPM(BaseModel):
                         )
 
                     self.submodels[f"{domain} {phase} interface"] = submod
+                if len(phases) > 1:
+                    self.submodels[
+                        f"total {domain} interface"
+                    ] = pybamm.kinetics.TotalMainKinetics(
+                        self.param, domain, "lithium-ion main", self.options
+                    )
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:

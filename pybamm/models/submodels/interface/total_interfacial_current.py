@@ -1,12 +1,12 @@
 #
-# Total kinetics class, summing up contributions from all reactions
+# Total interfacial current class, summing up contributions from all reactions
 #
 import pybamm
 
 
-class TotalKinetics(pybamm.BaseSubModel):
+class TotalInterfacialCurrent(pybamm.BaseSubModel):
     """
-    Total kinetics class, summing up contributions from all reactions
+    Total interfacial current, summing up contributions from all reactions
 
     Parameters
     ----------

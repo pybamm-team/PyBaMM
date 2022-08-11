@@ -71,7 +71,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
-        self.set_total_kinetics_submodel()
+        self.set_total_interface_submodel()
 
         self.set_standard_output_variables()
 
@@ -301,8 +301,8 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, x_average, self.options
             )
 
-    def set_total_kinetics_submodel(self):
-        self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
+    def set_total_interface_submodel(self):
+        self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(
             self.param, "lithium-ion", self.options
         )
 
