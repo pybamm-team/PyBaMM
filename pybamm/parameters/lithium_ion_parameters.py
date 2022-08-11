@@ -193,11 +193,15 @@ class LithiumIonParameters(BaseParameters):
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
+        tol = pybamm.settings.tolerances["D_e__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
     def kappa_e_dimensional(self, c_e, T):
         """Dimensional electrolyte conductivity"""
+        tol = pybamm.settings.tolerances["D_e__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
@@ -428,6 +432,15 @@ class LithiumIonParameters(BaseParameters):
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
         return (2 * (1 - self.t_plus(c_e, T))) * (self.one_plus_dlnf_dlnc(c_e, T))
+
+    def chiT_over_c(self, c_e, T):
+        """
+        chi * (1 + Theta * T) / c,
+        as it appears in the electrolyte potential equation
+        """
+        tol = pybamm.settings.tolerances["chi__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
+        return self.chi(c_e, T) * (1 + self.Theta * T) / c_e
 
     def t_plus(self, c_e, T):
         """Cation transference number (dimensionless)"""
@@ -900,7 +913,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
         # will ensure that ocp goes to +- infinity if sto goes into that region
         # anyway
-        tol = 1e-10
+        tol = pybamm.settings.tolerances["U__c_s"]
         sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
         if lithiation is None:
             lithiation = ""
@@ -1008,6 +1021,10 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def j0(self, c_e, c_s_surf, T):
         """Dimensionless exchange-current density"""
+        tol = pybamm.settings.tolerances["j0__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
+        tol = pybamm.settings.tolerances["j0__c_s"]
+        c_s_surf = pybamm.maximum(pybamm.minimum(c_s_surf, 1 - tol), tol)
         c_e_dim = c_e * self.main_param.c_e_typ
         c_s_surf_dim = c_s_surf * self.c_max
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
@@ -1043,4 +1060,17 @@ class ParticleLithiumIonParameters(BaseParameters):
                 f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
                 "surface concentration [mol.m-3]": self.c_max,
             },
+        )
+
+    def k_cr(self, T):
+        """
+        Dimensionless cracking rate for the electrode;
+        """
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
+        delta_k_cr = self.E ** self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
+        return (
+            pybamm.FunctionParameter(
+                f"{self.domain} electrode cracking rate", {"Temperature [K]": T_dim}
+            )
+            * delta_k_cr
         )

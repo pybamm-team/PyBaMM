@@ -108,9 +108,12 @@ class Experiment:
                     badly_typed_conditions = []
                 badly_typed_conditions = badly_typed_conditions or [cycle]
                 raise TypeError(
-                    """Operating conditions should be strings or tuples of strings, not {}. For example: {}
-                """.format(
+                    """Operating conditions should be strings or tuples of strings, not
+                    {}. For example: {}
+                    """.format(
                         type(badly_typed_conditions[0]), examples
+                    ).replace(
+                        "\n                    ", " "
                     )
                 )
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
@@ -177,12 +180,15 @@ class Experiment:
             cond_CC, cond_CV = cond.split(" then ")
             op_CC, _ = self.read_string(cond_CC, drive_cycles)
             op_CV, event_CV = self.read_string(cond_CV, drive_cycles)
-            return {
-                "electric": op_CC["electric"] + op_CV["electric"],
-                "time": op_CV["time"],
-                "period": op_CV["period"],
-                "dc_data": None,
-            }, event_CV
+            return (
+                {
+                    "electric": op_CC["electric"] + op_CV["electric"],
+                    "time": op_CV["time"],
+                    "period": op_CV["period"],
+                    "dc_data": None,
+                },
+                event_CV,
+            )
         # Read period
         if " period)" in cond:
             cond, time_period = cond.split("(")
@@ -257,18 +263,19 @@ class Experiment:
                 events = self.convert_electric(cond_list[idx + 1 :])
             else:
                 raise ValueError(
-                    """Operating conditions must contain keyword 'for' or 'until' or 'Run'.
-                    For example: {}""".format(
+                    """Operating conditions must contain keyword 'for' or 'until' or
+                    'Run'. For example: {}
+                    """.format(
                         examples
+                    ).replace(
+                        "\n                    ", " "
                     )
                 )
 
-        return {
-            "electric": electric,
-            "time": time,
-            "period": period,
-            "dc_data": dc_data,
-        }, events
+        return (
+            {"electric": electric, "time": time, "period": period, "dc_data": dc_data},
+            events,
+        )
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
@@ -327,9 +334,11 @@ class Experiment:
                     sign = -1
                 else:
                     raise ValueError(
-                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or 'Run'.
-                        For example: {}""".format(
+                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or
+                        'Run'. For example: {}""".format(
                             examples
+                        ).replace(
+                            "\n                        ", " "
                         )
                     )
             elif len(electric) == 2:

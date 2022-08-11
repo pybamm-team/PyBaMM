@@ -654,7 +654,7 @@ class Simulation:
             if self.operating_mode == "without experiment" or isinstance(
                 self.model,
                 (
-                    pybamm.lithium_ion.ElectrodeSOHFull,
+                    pybamm.lithium_ion.ElectrodeSOH,
                     pybamm.lithium_ion.ElectrodeSOHx0,
                     pybamm.lithium_ion.ElectrodeSOHx0,
                 ),
@@ -858,6 +858,7 @@ class Simulation:
                         or step_solution.termination == "final time"
                         or "[experiment]" in step_solution.termination
                     ):
+                        callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
 
@@ -897,6 +898,7 @@ class Simulation:
                         capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
+                logs["elapsed time"] = timer.time()
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -913,7 +915,6 @@ class Simulation:
 
                 # Break if the experiment is infeasible (or errored)
                 if feasible is False:
-                    callbacks.on_experiment_infeasible(logs)
                     break
 
             if self.solution is not None and len(all_cycle_solutions) > 0:
