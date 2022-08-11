@@ -7,10 +7,10 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
-    # pybamm.lithium_ion.SPMe(),
-    # pybamm.lithium_ion.DFN(),
-    # pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.SPM(),
+    pybamm.lithium_ion.SPMe(),
+    pybamm.lithium_ion.DFN(),
+    pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations
@@ -21,4 +21,4 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims, ["Terminal voltage [V]"])
+pybamm.dynamic_plot(sims)
