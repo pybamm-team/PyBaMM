@@ -1,5 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+Corrected initial SEI thickness for OKane2022 parameter set. ([#2218](https://github.com/pybamm-team/PyBaMM/pull/2218))
+
+## Optimizations
+
+-   Added limits for variables in some functions to avoid division by zero, sqrt(negative number), etc ([#2213](https://github.com/pybamm-team/PyBaMM/pull/2213))
+
 # [v22.7](https://github.com/pybamm-team/PyBaMM/tree/v22.7) - 2022-07-31
 
 ## Features 

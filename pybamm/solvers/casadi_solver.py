@@ -267,7 +267,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             f"Maximum number of decreased steps occurred at t={t_dim}. "
                             "Try solving the model up to this time only or reducing "
                             f"dt_max (currently, dt_max={dt_max_dim}) and/or reducing "
-                            "the size of the time steps or period of the expeeriment."
+                            "the size of the time steps or period of the experiment."
                         )
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
@@ -686,9 +686,11 @@ class CasadiSolver(pybamm.BaseSolver):
                 inputs_with_tmin = casadi.vertcat(inputs, t_min)
                 # Call the integrator once, with the grid
                 timer = pybamm.Timer()
+                pybamm.logger.debug("Calling casadi integrator")
                 casadi_sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
+                pybamm.logger.debug("Finished casadi integrator")
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                 sol = pybamm.Solution(
