@@ -1,7 +1,6 @@
 #include "casadi_solver.hpp"
 #include "casadi_sundials_functions.hpp"
 
-
 CasadiSolver
 create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &rhs_alg, const Function &jac_times_cjmass,
@@ -19,14 +18,14 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
       jac_times_cjmass_colptrs, inputs, jac_action, mass_action, sens, events,
       number_of_states, number_of_events, number_of_parameters);
 
-  CasadiSolver solver(atol_np, number_of_parameters, use_jacobian,
+  CasadiSolver solver(atol_np, rel_tol, rhs_alg_id, number_of_parameters, use_jacobian,
                       jac_times_cjmass_nnz, functions);
   return solver;
 }
 
-CasadiSolver::CasadiSolver(np_array atol_np, int number_of_parameters,
-                           bool use_jacobian, int jac_times_cjmass_nnz,
-                           CasadiFunctions &functions)
+CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id,
+                           int number_of_parameters, bool use_jacobian,
+                           int jac_times_cjmass_nnz, CasadiFunctions &functions)
     : number_of_states(atol_np.request().size),
       number_of_parameters(number_of_parameters),
       jac_times_cjmass_nnz(jac_times_cjmass_nnz), functions(functions)
@@ -34,9 +33,9 @@ CasadiSolver::CasadiSolver(np_array atol_np, int number_of_parameters,
   auto atol = atol_np.unchecked<1>();
 
   // allocate vectors
-  yy = N_VNew_Serial(number_of_states);
-  yp = N_VNew_Serial(number_of_states);
-  avtol = N_VNew_Serial(number_of_states);
+  yy = N_VNew_Serial(number_of_states, sunctx);
+  yp = N_VNew_Serial(number_of_states, sunctx);
+  avtol = N_VNew_Serial(number_of_states, sunctx);
 
   if (number_of_parameters > 0)
   {
@@ -45,13 +44,11 @@ CasadiSolver::CasadiSolver(np_array atol_np, int number_of_parameters,
   }
 
   // set initial value
-  yval = N_VGetArrayPointer(yy);
   if (number_of_parameters > 0)
   {
-    ySval = N_VGetArrayPointer(yyS[0]);
   }
-  ypval = N_VGetArrayPointer(yp);
-  atval = N_VGetArrayPointer(avtol);
+  realtype *ypval = N_VGetArrayPointer(yp);
+  realtype *atval = N_VGetArrayPointer(avtol);
   for (int i = 0; i < number_of_states; i++)
   {
     atval[i] = atol[i];
@@ -64,7 +61,9 @@ CasadiSolver::CasadiSolver(np_array atol_np, int number_of_parameters,
   }
 
   // allocate memory for solver
-  ida_mem = IDACreate();
+  ida_mem = IDACreate(sunctx);
+
+  SUNContext_Create(NULL, &sunctx);
 
   // initialise solver
   IDAInit(ida_mem, residual_casadi, 0, yy, yp);
@@ -84,13 +83,13 @@ CasadiSolver::CasadiSolver(np_array atol_np, int number_of_parameters,
   if (use_jacobian == 1)
   {
     J = SUNSparseMatrix(number_of_states, number_of_states,
-                        jac_times_cjmass_nnz, CSC_MAT);
-    LS = SUNLinSol_KLU(yy, J);
+                        jac_times_cjmass_nnz, CSC_MAT, sunctx);
+    LS = SUNLinSol_KLU(yy, J, sunctx);
   }
   else
   {
-    J = SUNDenseMatrix(number_of_states, number_of_states);
-    LS = SUNLinSol_Dense(yy, J);
+    J = SUNDenseMatrix(number_of_states, number_of_states, sunctx);
+    LS = SUNLinSol_Dense(yy, J, sunctx);
   }
 
   IDASetLinearSolver(ida_mem, LS, J);
@@ -108,21 +107,68 @@ CasadiSolver::CasadiSolver(np_array atol_np, int number_of_parameters,
   }
 
   SUNLinSolInitialize(LS);
+
+  auto id_np_val = rhs_alg_id.unchecked<1>();
+  id = N_VNew_Serial(number_of_states, sunctx);
+  realtype *id_val;
+  id_val = N_VGetArrayPointer(id);
+
+  int ii;
+  for (ii = 0; ii < number_of_states; ii++)
+  {
+    id_val[ii] = id_np_val[ii];
+  }
+
+  IDASetId(ida_mem, id);
+}
+
+CasadiSolver::~CasadiSolver()
+{
+
+  /* Free memory */
+  if (number_of_parameters > 0)
+  {
+    IDASensFree(ida_mem);
+  }
+  SUNLinSolFree(LS);
+  SUNMatDestroy(J);
+  N_VDestroy(avtol);
+  N_VDestroy(yy);
+  N_VDestroy(yp);
+  N_VDestroy(id);
+  if (number_of_parameters > 0)
+  {
+    N_VDestroyVectorArray(yyS, number_of_parameters);
+    N_VDestroyVectorArray(ypS, number_of_parameters);
+  }
+
+  IDAFree(&ida_mem);
+  SUNContext_Free(&sunctx);
 }
 
 Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
                              np_array_dense inputs)
 {
   int number_of_timesteps = t_np.request().size;
-  auto t = t_np.unchecked<1>();
 
+  realtype *yval = N_VGetArrayPointer(yy);
+  realtype *ypval = N_VGetArrayPointer(yp);
+  realtype *ySval;
+  if (number_of_parameters > 0) {
+    ySval = N_VGetArrayPointer(yyS[0]);
+  }
+
+  auto t = t_np.unchecked<1>();
+  auto y0 = y0_np.unchecked<1>();
+  auto yp0 = yp0_np.unchecked<1>();
   for (int i = 0; i < number_of_states; i++)
   {
     yval[i] = y0[i];
     ypval[i] = yp0[i];
   }
 
-  IDAReInit(ida_mem, residual_casadi, t0, yy, yp);
+  realtype t0 = RCONST(t(0));
+  IDAReInit(ida_mem, t0, yy, yp);
 
   int t_i = 1;
   realtype tret;
@@ -172,21 +218,10 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   // calculate consistent initial conditions
-  N_Vector id;
-  auto id_np_val = rhs_alg_id.unchecked<1>();
-  id = N_VNew_Serial(number_of_states);
-  realtype *id_val;
-  id_val = N_VGetArrayPointer(id);
 
-  int ii;
-  for (ii = 0; ii < number_of_states; ii++)
-  {
-    id_val[ii] = id_np_val[ii];
-  }
-
-  IDASetId(ida_mem, id);
   IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
 
+  int retval;
   while (true)
   {
     t_next = t(t_i);
@@ -269,25 +304,6 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
               << "\n"
               << std::endl;
   }
-
-  /* Free memory */
-  if (number_of_parameters > 0)
-  {
-    IDASensFree(ida_mem);
-  }
-  SUNLinSolFree(LS);
-  SUNMatDestroy(J);
-  N_VDestroy(avtol);
-  N_VDestroy(yy);
-  N_VDestroy(yp);
-  N_VDestroy(id);
-  if (number_of_parameters > 0)
-  {
-    N_VDestroyVectorArray(yyS, number_of_parameters);
-    N_VDestroyVectorArray(ypS, number_of_parameters);
-  }
-
-  IDAFree(&ida_mem);
 
   // std::cout << "finished solving 9" << std::endl;
 

@@ -1,4 +1,5 @@
-#include "idaklu.hpp"
+#include "common.hpp"
+#include "python.hpp"
 #include <iostream>
 
 class PybammFunctions
@@ -288,10 +289,13 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   SUNMatrix J;
   SUNLinearSolver LS;
 
+  SUNContext sunctx;
+  SUNContext_Create(NULL, &sunctx);
+
   // allocate vectors
-  yy = N_VNew_Serial(number_of_states);
-  yp = N_VNew_Serial(number_of_states);
-  avtol = N_VNew_Serial(number_of_states);
+  yy = N_VNew_Serial(number_of_states, sunctx);
+  yp = N_VNew_Serial(number_of_states, sunctx);
+  avtol = N_VNew_Serial(number_of_states, sunctx);
 
   if (number_of_parameters > 0) {
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
@@ -319,7 +323,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   // allocate memory for solver
-  ida_mem = IDACreate();
+  ida_mem = IDACreate(sunctx);
 
   // initialise solver
   realtype t0 = RCONST(t(0));
@@ -341,9 +345,9 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
-  J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT);
+  J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT, sunctx);
 
-  LS = SUNLinSol_KLU(yy, J);
+  LS = SUNLinSol_KLU(yy, J, sunctx);
   IDASetLinearSolver(ida_mem, LS, J);
 
   if (use_jacobian == 1)
@@ -383,7 +387,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   // calculate consistent initial conditions
   N_Vector id;
   auto id_np_val = rhs_alg_id.unchecked<1>();
-  id = N_VNew_Serial(number_of_states);
+  id = N_VNew_Serial(number_of_states, sunctx);
   realtype *id_val;
   id_val = N_VGetArrayPointer(id);
 
@@ -441,6 +445,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
     N_VDestroyVectorArray(yyS, number_of_parameters);
     N_VDestroyVectorArray(ypS, number_of_parameters);
   }
+  SUNContext_Free(&sunctx);
 
   np_array t_ret = np_array(t_i, &t_return[0]);
   np_array y_ret = np_array(t_i * number_of_states, &y_return[0]);

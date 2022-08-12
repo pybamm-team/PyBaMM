@@ -5,6 +5,7 @@
 #include <nvector/nvector_serial.h>  /* access to serial N_Vector            */
 #include <sundials/sundials_math.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_types.h> /* defs. of realtype, sunindextype      */
+#include <sundials/sundials_context.h> 
 #include <sunlinsol/sunlinsol_klu.h> /* access to KLU linear solver          */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense linear solver          */
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */

@@ -20,4 +20,8 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector *resvalS, void *user_data, N_Vector tmp1,
                          N_Vector tmp2, N_Vector tmp3);
 
+int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
+                    N_Vector resvec, SUNMatrix JJ, void *user_data,
+                    N_Vector tempv1, N_Vector tempv2, N_Vector tempv3);
+
 #endif // PYBAMM_IDAKLU_CASADI_SUNDIALS_FUNCTIONS_HPP

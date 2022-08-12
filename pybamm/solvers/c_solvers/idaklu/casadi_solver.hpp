@@ -11,10 +11,12 @@ using Function = casadi::Function;
 class CasadiSolver
 {
 public:
-  CasadiSolver(np_array atol_np, int number_of_parameters, bool use_jacobian,
+  CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id, int number_of_parameters, bool use_jacobian,
                int jac_times_cjmass_nnz, CasadiFunctions &functions);
+  ~CasadiSolver();
 
   void *ida_mem; // pointer to memory
+  SUNContext sunctx; 
 
   int number_of_states;
   int number_of_parameters;
@@ -22,7 +24,7 @@ public:
   N_Vector yy, yp, avtol; // y, y', and absolute tolerance
   N_Vector *yyS, *ypS;    // y, y' for sensitivities
   N_Vector id;            // rhs_alg_id
-  realtype rtol, *yval, *ypval, *atval, *ySval;
+  realtype rtol;
   const int jac_times_cjmass_nnz;
 
   SUNMatrix J;

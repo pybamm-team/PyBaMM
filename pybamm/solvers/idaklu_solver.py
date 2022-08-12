@@ -379,7 +379,28 @@ class IDAKLUSolver(pybamm.BaseSolver):
             rootfn = idaklu.generate_function(rootfn.serialize())
             mass_action = idaklu.generate_function(mass_action.serialize())
             sensfn = idaklu.generate_function(sensfn.serialize())
+
+            solver = idaklu.create_casadi_solver(
+                len(y0),
+                self._setup['number_of_sensitivity_parameters']
+                self._setup['rhs_algebraic'],
+                self._setup['jac_times_cjmass'],
+                self._setup['jac_times_cjmass_colptrs'],
+                self._setup['jac_times_cjmass_rowvals'],
+                self._setup['jac_times_cjmass_nnz'],
+                self._setup['jac_rhs_algebraic_action'],
+                self._setup['mass_action'],
+                self._setup['sensfn'],
+                self._setup['rootfn'],
+                self._setup['num_of_events'],
+                self._setup['use_jac'],
+                self._setup['ids'],
+                atol, rtol, inputs,
+                self._setup['number_of_sensitivity_parameters']
+            )
+
             self._setup = {
+                'solver': solver,
                 'rhs_algebraic': rhs_algebraic,
                 'jac_times_cjmass': jac_times_cjmass,
                 'jac_times_cjmass_colptrs': jac_times_cjmass_colptrs,
@@ -452,24 +473,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi":
-            sol = idaklu.solve_casadi(
-                t_eval,
-                y0,
-                ydot0,
-                self._setup['rhs_algebraic'],
-                self._setup['jac_times_cjmass'],
-                self._setup['jac_times_cjmass_colptrs'],
-                self._setup['jac_times_cjmass_rowvals'],
-                self._setup['jac_times_cjmass_nnz'],
-                self._setup['jac_rhs_algebraic_action'],
-                self._setup['mass_action'],
-                self._setup['sensfn'],
-                self._setup['rootfn'],
-                self._setup['num_of_events'],
-                self._setup['use_jac'],
-                self._setup['ids'],
-                atol, rtol, inputs,
-                self._setup['number_of_sensitivity_parameters']
+            sol = self._setup['solver'].solve(
+                t_eval, y0, ydot0, inputs,
             )
         else:
             sol = idaklu.solve_python(

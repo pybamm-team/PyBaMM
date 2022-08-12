@@ -1,3 +1,6 @@
+#include "casadi_sundials_functions.hpp"
+#include "casadi_functions.hpp"
+
 int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data)
 {
@@ -47,7 +50,7 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
-  casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
+  casadi::casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
 
   // std::cout << "residual = [";
   // for (int i = 0; i < p_python_functions->number_of_states; i++) {
@@ -106,7 +109,7 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   // AXPY: y <- a*x + y
   // rr has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
-  casadi_axpy(ns, -cj, tmp, NV_DATA_S(rr));
+  casadi::casadi_axpy(ns, -cj, tmp, NV_DATA_S(rr));
 
   return 0;
 }
@@ -318,7 +321,7 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
     // std::cout << "]" << std::endl;
 
     const int ns = p_python_functions->number_of_states;
-    casadi_axpy(ns, 1., tmp, NV_DATA_S(resvalS[i]));
+    casadi::casadi_axpy(ns, 1., tmp, NV_DATA_S(resvalS[i]));
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
     p_python_functions->mass_action.m_arg[0] = NV_DATA_S(ypS[i]);
@@ -333,7 +336,7 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
 
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
     // AXPY: y <- a*x + y
-    casadi_axpy(ns, -1., tmp, NV_DATA_S(resvalS[i]));
+    casadi::casadi_axpy(ns, -1., tmp, NV_DATA_S(resvalS[i]));
 
     // std::cout << "resvalS[" << i << "] = [";
     // for (int j = 0; j < p_python_functions->number_of_states; j++) {
