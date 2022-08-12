@@ -16,7 +16,10 @@ public:
   ~CasadiSolver();
 
   void *ida_mem; // pointer to memory
+
+  #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx; 
+  #endif
 
   int number_of_states;
   int number_of_parameters;

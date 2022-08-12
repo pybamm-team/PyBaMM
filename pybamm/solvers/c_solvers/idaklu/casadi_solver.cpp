@@ -32,10 +32,26 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
 {
   auto atol = atol_np.unchecked<1>();
 
+  // allocate memory for solver
+#if SUNDIALS_VERSION_MAJOR >= 6
+  SUNContext_Create(NULL, &sunctx);
+  ida_mem = IDACreate(sunctx);
+#else
+  ida_mem = IDACreate();
+#endif
+
   // allocate vectors
+#if SUNDIALS_VERSION_MAJOR >= 6
   yy = N_VNew_Serial(number_of_states, sunctx);
   yp = N_VNew_Serial(number_of_states, sunctx);
   avtol = N_VNew_Serial(number_of_states, sunctx);
+  id = N_VNew_Serial(number_of_states, sunctx);
+#else
+  yy = N_VNew_Serial(number_of_states);
+  yp = N_VNew_Serial(number_of_states);
+  avtol = N_VNew_Serial(number_of_states);
+  id = N_VNew_Serial(number_of_states);
+#endif
 
   if (number_of_parameters > 0)
   {
@@ -60,11 +76,6 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
     N_VConst(RCONST(0.0), ypS[is]);
   }
 
-  // allocate memory for solver
-  ida_mem = IDACreate(sunctx);
-
-  SUNContext_Create(NULL, &sunctx);
-
   // initialise solver
   IDAInit(ida_mem, residual_casadi, 0, yy, yp);
 
@@ -80,6 +91,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
+#if SUNDIALS_VERSION_MAJOR >= 6
   if (use_jacobian == 1)
   {
     J = SUNSparseMatrix(number_of_states, number_of_states,
@@ -91,6 +103,19 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
     J = SUNDenseMatrix(number_of_states, number_of_states, sunctx);
     LS = SUNLinSol_Dense(yy, J, sunctx);
   }
+#else
+  if (use_jacobian == 1)
+  {
+    J = SUNSparseMatrix(number_of_states, number_of_states,
+                        jac_times_cjmass_nnz, CSC_MAT);
+    LS = SUNLinSol_KLU(yy, J);
+  }
+  else
+  {
+    J = SUNDenseMatrix(number_of_states, number_of_states);
+    LS = SUNLinSol_Dense(yy, J);
+  }
+#endif
 
   IDASetLinearSolver(ida_mem, LS, J);
 
@@ -109,7 +134,6 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
   SUNLinSolInitialize(LS);
 
   auto id_np_val = rhs_alg_id.unchecked<1>();
-  id = N_VNew_Serial(number_of_states, sunctx);
   realtype *id_val;
   id_val = N_VGetArrayPointer(id);
 
@@ -143,7 +167,9 @@ CasadiSolver::~CasadiSolver()
   }
 
   IDAFree(&ida_mem);
+  #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Free(&sunctx);
+  #endif
 }
 
 Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,

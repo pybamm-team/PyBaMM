@@ -284,18 +284,34 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   void *ida_mem;          // pointer to memory
   N_Vector yy, yp, avtol; // y, y', and absolute tolerance
   N_Vector *yyS, *ypS;      // y, y' for sensitivities
+  N_Vector id;
   realtype rtol, *yval, *ypval, *atval, *ySval;
   int retval;
   SUNMatrix J;
   SUNLinearSolver LS;
 
+#if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
   SUNContext_Create(NULL, &sunctx);
+
+  // allocate memory for solver
+  ida_mem = IDACreate(sunctx);
 
   // allocate vectors
   yy = N_VNew_Serial(number_of_states, sunctx);
   yp = N_VNew_Serial(number_of_states, sunctx);
   avtol = N_VNew_Serial(number_of_states, sunctx);
+  id = N_VNew_Serial(number_of_states, sunctx);
+#else
+  // allocate memory for solver
+  ida_mem = IDACreate();
+
+  // allocate vectors
+  yy = N_VNew_Serial(number_of_states);
+  yp = N_VNew_Serial(number_of_states);
+  avtol = N_VNew_Serial(number_of_states);
+  id = N_VNew_Serial(number_of_states);
+#endif
 
   if (number_of_parameters > 0) {
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
@@ -322,9 +338,6 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
     N_VConst(RCONST(0.0), ypS[is]);
   }
 
-  // allocate memory for solver
-  ida_mem = IDACreate(sunctx);
-
   // initialise solver
   realtype t0 = RCONST(t(0));
   IDAInit(ida_mem, residual, t0, yy, yp);
@@ -345,9 +358,14 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
+#if SUNDIALS_VERSION_MAJOR >= 6
   J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT, sunctx);
-
   LS = SUNLinSol_KLU(yy, J, sunctx);
+#else
+  J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT);
+  LS = SUNLinSol_KLU(yy, J);
+#endif
+
   IDASetLinearSolver(ida_mem, LS, J);
 
   if (use_jacobian == 1)
@@ -385,9 +403,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   // calculate consistent initial conditions
-  N_Vector id;
   auto id_np_val = rhs_alg_id.unchecked<1>();
-  id = N_VNew_Serial(number_of_states, sunctx);
   realtype *id_val;
   id_val = N_VGetArrayPointer(id);
 
@@ -445,7 +461,9 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
     N_VDestroyVectorArray(yyS, number_of_parameters);
     N_VDestroyVectorArray(ypS, number_of_parameters);
   }
+#if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Free(&sunctx);
+#endif
 
   np_array t_ret = np_array(t_i, &t_return[0]);
   np_array y_ret = np_array(t_i * number_of_states, &y_return[0]);
