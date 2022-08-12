@@ -5,8 +5,6 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
-import site
-import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
