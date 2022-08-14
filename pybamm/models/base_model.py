@@ -1104,6 +1104,7 @@ class BaseModel:
         input_parameter_order=None,
         get_consistent_ics_solver=None,
         dae_type="semi-explicit",
+        generate_jacobian=False,
         **kwargs,
     ):
         """
@@ -1173,6 +1174,17 @@ class BaseModel:
         # Change the string to a form for u0
         ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
         ics_str = ics_str.replace("dy", "u0")
+
+        if generate_jacobian:
+            expr = pybamm.jac(pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic))
+            jac_str = pybamm.get_julia_function(
+                expr,
+                funcname="jac_"+name,
+                input_parameter_order=input_parameter_order,
+                **kwargs,
+            )
+            jac_str.replace("dy","J")
+            return eqn_str,ics_str,jac_str
 
         return eqn_str, ics_str
 
