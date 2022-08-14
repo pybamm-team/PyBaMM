@@ -1176,7 +1176,7 @@ class BaseModel:
         ics_str = ics_str.replace("dy", "u0")
 
         if generate_jacobian:
-            size_state = self.concatenated_intial_conditions.size
+            size_state = self.concatenated_initial_conditions.size
             state_vector = pybamm.StateVector(slice(0,(size_state-1)))
             expr = pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic).jac(state_vector)
             jac_str = pybamm.get_julia_function(
