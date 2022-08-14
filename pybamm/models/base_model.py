@@ -1176,7 +1176,7 @@ class BaseModel:
         ics_str = ics_str.replace("dy", "u0")
 
         if generate_jacobian:
-            expr = pybamm.jac(pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic))
+            expr = pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic).jac(self.y0.full)
             jac_str = pybamm.get_julia_function(
                 expr,
                 funcname="jac_"+name,
