@@ -2,6 +2,7 @@ Name [units],Value,Reference,Notes
 # Empty rows and rows starting with ‘#’ will be ignored,,,
 ,,,
 # SEI properties,,,
+Ratio of lithium moles to SEI moles,2,,Assume SEI made of LEDC and/or Li2CO3
 Inner SEI reaction proportion,0.5,,
 Inner SEI partial molar volume [m3.mol-1],9.585e-5, Safari paper,
 Outer SEI partial molar volume [m3.mol-1],9.585e-5, Safari paper,

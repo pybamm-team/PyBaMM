@@ -167,7 +167,7 @@ class BaseModel(BaseInterface):
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
-            li_mols_per_sei_mols = 1
+            z_sei = 1
         else:
             if self.reaction_loc == "interface":
                 # scales in mol/m2 (n is an interfacial quantity)
@@ -182,15 +182,14 @@ class BaseModel(BaseInterface):
                     param.L_sei_0_dim * param.n.a_typ / param.V_bar_outer_dimensional
                 )
             v_bar = param.v_bar
+            z_sei = param.z_sei
             # Set scales for the "EC Reaction Limited" model
             if self.options["SEI"] == "ec reaction limited":
                 L_inner_0 = 0
                 L_outer_0 = 1
-                li_mols_per_sei_mols = 2
             else:
                 L_inner_0 = param.L_inner_0
                 L_outer_0 = param.L_outer_0
-                li_mols_per_sei_mols = 1
 
         if self.reaction == "SEI":
             L_inner = variables["Inner SEI thickness"]
@@ -215,7 +214,7 @@ class BaseModel(BaseInterface):
                 L_n = self.param.n.L
 
             Q_sei = (
-                li_mols_per_sei_mols
+                z_sei
                 * delta_n_SEI
                 * n_scale
                 * L_n
@@ -259,7 +258,7 @@ class BaseModel(BaseInterface):
 
             # Q_sei_cr in mol
             Q_sei_cr = (
-                li_mols_per_sei_mols
+                z_sei
                 * delta_n_SEI_cr
                 * n_scale
                 * self.param.n.L
