@@ -29,7 +29,7 @@ for model_ in models:
     for solver_ in solvers:
 
         for params in parameters:
-
+            print(params)
             time_points = []
             if model_ == "SPM":
                 model = pybamm.lithium_ion.SPM()
@@ -97,7 +97,7 @@ for model_ in models:
             plt.subplot(3, 2, x)
 
             plt.plot(abstols, time_points)
-            plt.title(f"Work Precision Sets for {model_} with {solver_} solver")
+            plt.title(f"{model_} with {solver_} solver")
             plt.xlabel("abstols")
             plt.xticks(abstols)
             plt.xscale("log")

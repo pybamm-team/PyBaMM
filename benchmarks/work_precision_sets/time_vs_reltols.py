@@ -97,7 +97,7 @@ for model_ in models:
             plt.subplot(3, 2, x)
 
             plt.plot(reltols, time_points)
-            plt.title(f"Work Precision Sets for {model_} with {solver_} solver")
+            plt.title(f"{model_} with {solver_} solver")
             plt.xlabel("reltols")
             plt.xticks(reltols)
             plt.xscale("log")

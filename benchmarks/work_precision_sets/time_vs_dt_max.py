@@ -93,7 +93,7 @@ for model_ in models:
             time_points.append(time)
         plt.subplot(1, 2, x)
         plt.plot(dt_max, time_points)
-        plt.title(f"Work Precision Sets for {model_}")
+        plt.title(f"{model_}")
         plt.xlabel("dt_max")
         plt.xticks(dt_max)
         plt.xscale("log")

@@ -56,7 +56,7 @@ for model_ in models:
             plt.subplot(1, 2, x)
 
             plt.plot(ns, solutions)
-            plt.title(f"Work Precision Sets for {model_}")
+            plt.title(f"{model_}")
             plt.xlabel("number of states")
             # plt.xticks(ns)
             plt.xscale("log")
