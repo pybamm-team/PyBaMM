@@ -271,10 +271,8 @@ class FullDifferential(BaseModel):
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of {domain} electrode volumetric " "interfacial current densities"
+            f"Sum of {domain} electrode volumetric interfacial current densities"
         ]
-        a = variables[
-            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-        ]
+        a = variables[f"{Domain} electrode {phase_name}surface area to volume ratio"]
 
         self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j)
