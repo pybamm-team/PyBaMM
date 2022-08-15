@@ -204,11 +204,6 @@ class ParameterValues:
             if component_group == "negative secondary particle":
                 component_group = "negative electrode"
                 prefactor = "Secondary: "
-            elif (
-                "negative secondary particle" in component_groups
-                and component_group == "negative electrode"
-            ):
-                prefactor = "Primary: "
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )
@@ -222,7 +217,6 @@ class ParameterValues:
                 # If a parameter is already present as a secondary parameter, we
                 # distinguish it by adding "Primary:" to the given name
                 if "Secondary: " + k in self._dict_items:
-                    print(k)
                     component_params["Primary: " + k] = v
                 else:
                     # Add prefactor to distinguish e.g. secondary particles

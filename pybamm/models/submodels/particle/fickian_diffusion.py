@@ -249,7 +249,9 @@ class FickianDiffusion(BaseParticle):
                 D_eff = variables[
                     f"{Domain} {phase_name}particle effective diffusivity"
                 ]
-                j = variables[f"{Domain} electrode interfacial current density"]
+                j = variables[
+                    f"{Domain} electrode {phase_name}interfacial current density"
+                ]
                 R = variables[f"{Domain} {phase_name}particle radius"]
             else:
                 c_s = variables[
@@ -259,7 +261,7 @@ class FickianDiffusion(BaseParticle):
                     f"X-averaged {domain} {phase_name}particle effective diffusivity"
                 ]
                 j = variables[
-                    f"X-averaged {domain} electrode interfacial current density"
+                    f"X-averaged {domain} electrode {phase_name}interfacial current density"
                 ]
                 R = 1
         else:
@@ -271,7 +273,7 @@ class FickianDiffusion(BaseParticle):
                     f"{Domain} {phase_name}particle effective diffusivity distribution"
                 ]
                 j = variables[
-                    f"{Domain} electrode interfacial current density distribution"
+                    f"{Domain} electrode {phase_name}interfacial current density distribution"
                 ]
             else:
                 c_s = variables[
@@ -283,7 +285,7 @@ class FickianDiffusion(BaseParticle):
                     "diffusivity distribution"
                 ]
                 j = variables[
-                    f"X-averaged {domain} electrode interfacial "
+                    f"X-averaged {domain} electrode {phase_name}interfacial "
                     "current density distribution"
                 ]
             R = variables[f"{Domain} {phase_name}particle sizes"]

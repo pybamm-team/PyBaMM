@@ -77,12 +77,12 @@ class BasicDFNComposite(BaseModel):
         # the x-direction (electrode domain) and so must be provided with auxiliary
         # domains
         c_s_n_p1 = pybamm.Variable(
-            "Negative particle concentration of phase 1",
+            "Negative primary particle concentration",
             domain="negative primary particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
         c_s_n_p2 = pybamm.Variable(
-            "Negative particle concentration of phase 2",
+            "Negative secondary particle concentration",
             domain="negative secondary particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
@@ -163,7 +163,6 @@ class BasicDFNComposite(BaseModel):
             * param.n.sec.j0(c_e_n, c_s_surf_n_p2, T)
             / param.n.sec.C_r
         )
-        ocp_n_p2 = param.n.sec.U(c_s_surf_n_p2, T)
         j_n_p2 = (
             2
             * j0_n_p2
@@ -176,15 +175,7 @@ class BasicDFNComposite(BaseModel):
             / param.p.prim.C_r
         )
         j_s = pybamm.PrimaryBroadcast(0, "separator")
-        j_p = (
-            2
-            * j0_p
-            * pybamm.sinh(
-                param.p.prim.ne
-                / 2
-                * (phi_s_p - phi_e_p - param.p.prim.U(c_s_surf_p, T))
-            )
-        )
+        j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * (phi_s_p - phi_e_p - ocp_p))
         j = pybamm.concatenation(j_n, j_s, j_p)
 
         ######################
@@ -342,7 +333,7 @@ class BasicDFNComposite(BaseModel):
         voltage_dim = U_ref + voltage * pot_scale
         ocp_n_p1_dim = param.n.prim.U_ref + param.potential_scale * ocp_n_p1
         ocp_av_n_p1_dim = pybamm.x_average(ocp_n_p1_dim)
-        ocp_n_p2_dim = param.n.prim.U_ref + param.potential_scale * ocp_n_p2
+        ocp_n_p2_dim = param.n.sec.U_ref + param.potential_scale * ocp_n_p2
         ocp_av_n_p2_dim = pybamm.x_average(ocp_n_p2_dim)
         ocp_p_dim = param.p.prim.U_ref + param.potential_scale * ocp_p
         ocp_av_p_dim = pybamm.x_average(ocp_p_dim)
@@ -359,6 +350,9 @@ class BasicDFNComposite(BaseModel):
         c_s_xrav_p_dim = c_s_xrav_p * param.p.prim.c_max
         j_n_p1_dim = j_n_p1 * param.n.prim.j_scale / param.n.prim.a_typ
         j_n_p2_dim = j_n_p2 * param.n.sec.j_scale / param.n.sec.a_typ
+        j_n_p1_av = pybamm.x_average(j_n_p1)
+        j_n_p2_av = pybamm.x_average(j_n_p2)
+        j_n_av = j_n_p1_av + j_n_p2_av
         j_n_p1_av_dim = pybamm.x_average(j_n_p1_dim)
         j_n_p2_av_dim = pybamm.x_average(j_n_p2_dim)
         j_n_p1_v_dim = j_n_p1 * param.i_typ / param.L_x
@@ -368,12 +362,16 @@ class BasicDFNComposite(BaseModel):
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
-            "Negative particle concentration of phase 1": c_s_n_p1,
-            "Negative particle concentration of phase 2": c_s_n_p2,
+            "Negative primary particle concentration": c_s_n_p1,
+            "Negative secondary particle concentration": c_s_n_p2,
+            "Negative primary particle concentration [mol.m-3]": c_s_n_p1
+            * param.n.prim.c_max,
+            "Negative secondary particle concentration [mol.m-3]": c_s_n_p2
+            * param.n.sec.c_max,
             "Positive particle concentration": c_s_p,
             "Negative particle concentration": c_s_p,
-            "Negative particle surface concentration of phase 1": c_s_surf_n_p1,
-            "Negative particle surface concentration of phase 2": c_s_surf_n_p2,
+            "Negative primary particle surface concentration": c_s_surf_n_p1,
+            "Negative secondary particle surface concentration": c_s_surf_n_p2,
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
             "Negative electrode potential [V]": param.potential_scale * phi_s_n,
@@ -395,50 +393,49 @@ class BasicDFNComposite(BaseModel):
             "Discharge capacity [A.h]": Q,
             "Time [s]": pybamm.t * param.timescale,
             "Terminal voltage [V]": voltage_dim,
-            "Negative electrode open circuit potential of phase 1 [V]": ocp_n_p1_dim,
-            "Negative electrode open circuit potential of phase 2 [V]": ocp_n_p2_dim,
-            "X-averaged negative electrode open circuit potential "
-            + "of phase 1 [V]": ocp_av_n_p1_dim,
-            "X-averaged negative electrode open circuit potential "
-            + "of phase 2 [V]": ocp_av_n_p2_dim,
+            "Negative electrode primary open circuit potential [V]": ocp_n_p1_dim,
+            "Negative electrode secondary open circuit potential [V]": ocp_n_p2_dim,
+            "X-averaged negative electrode primary open circuit potential "
+            "[V]": ocp_av_n_p1_dim,
+            "X-averaged negative electrode secondary open circuit potential "
+            "[V]": ocp_av_n_p2_dim,
             "Positive electrode open circuit potential [V]": ocp_p_dim,
             "X-averaged positive electrode open circuit potential [V]": ocp_av_p_dim,
-            "R-averaged negative particle concentration of phase 1": c_s_rav_n_p1,
-            "R-averaged negative particle concentration of phase 2": c_s_rav_n_p2,
-            "R-averaged negative particle concentration "
-            + "of phase 1 [mol.m-3]": c_s_rav_n_p1_dim,
-            "R-averaged negative particle concentration "
-            + "of phase 2 [mol.m-3]": c_s_rav_n_p2_dim,
-            "Averaged negative electrode concentration of phase 1": c_s_xrav_n_p1,
-            "Averaged negative electrode concentration of phase 2": c_s_xrav_n_p2,
-            "Averaged negative electrode concentration "
-            + "of phase 1 [mol.m-3]": c_s_xrav_n_p1_dim,
-            "Averaged negative electrode concentration "
-            + "of phase 2 [mol.m-3]": c_s_xrav_n_p2_dim,
-            "Negative electrode concentration of phase 1": c_s_n_p1,
-            "Negative electrode concentration of phase 2": c_s_n_p2,
-            "Negative electrode concentration of phase 1 [mol.m-3]": c_s_n_p1
-            * param.n.prim.c_max,
-            "Negative electrode concentration of phase 2 [mol.m-3]": c_s_n_p2
-            * param.n.sec.c_max,
-            "Averaged positive electrode concentration": c_s_xrav_p,
-            "Averaged positive electrode concentration [mol.m-3]": c_s_xrav_p_dim,
-            "Negative electrode interfacial current density "
-            + "of phase 1 [A.m-2]": j_n_p1_dim,
-            "Negative electrode interfacial current density "
-            + "of phase 2 [A.m-2]": j_n_p2_dim,
-            "X-averaged negative electrode interfacial current density "
-            + "of phase 1 [A.m-2]": j_n_p1_av_dim,
-            "X-averaged negative electrode interfacial current density "
-            + "of phase 2 [A.m-2]": j_n_p2_av_dim,
-            "Negative electrode interfacial current density "
-            + "of phase 1 per volume [A.m-3]": j_n_p1_v_dim,
-            "Negative electrode interfacial current density "
-            + "of phase 2 per volume [A.m-3]": j_n_p2_v_dim,
-            "X-averaged negative electrode interfacial current density "
-            + "of phase 1 per volume [A.m-3]": j_n_p1_v_av_dim,
-            "X-averaged negative electrode interfacial current density "
-            + "of phase 2 per volume [A.m-3]": j_n_p2_v_av_dim,
+            "R-averaged negative primary particle concentration": c_s_rav_n_p1,
+            "R-averaged negative primary particle concentration": c_s_rav_n_p2,
+            "R-averaged negative primary particle concentration "
+            "[mol.m-3]": c_s_rav_n_p1_dim,
+            "R-averaged negative secondary particle concentration "
+            "[mol.m-3]": c_s_rav_n_p2_dim,
+            "Average negative primary particle concentration": c_s_xrav_n_p1,
+            "Average negative secondary particle concentration": c_s_xrav_n_p2,
+            "Average negative primary particle concentration "
+            "[mol.m-3]": c_s_xrav_n_p1_dim,
+            "Average negative secondary particle concentration "
+            "[mol.m-3]": c_s_xrav_n_p2_dim,
+            "Average positive particle concentration": c_s_xrav_p,
+            "Average positive particle concentration [mol.m-3]": c_s_xrav_p_dim,
+            "Negative electrode primary interfacial current density "
+            "[A.m-2]": j_n_p1_dim,
+            "Negative electrode secondary interfacial current density "
+            "[A.m-2]": j_n_p2_dim,
+            "X-averaged negative electrode primary interfacial current density"
+            "": j_n_p1_av,
+            "X-averaged negative electrode secondary interfacial current density"
+            "": j_n_p2_av,
+            "X-averaged negative electrode interfacial current density": j_n_av,
+            "X-averaged negative electrode primary interfacial current density "
+            "[A.m-2]": j_n_p1_av_dim,
+            "X-averaged negative electrode secondary interfacial current density "
+            "[A.m-2]": j_n_p2_av_dim,
+            "Negative electrode primary volumetric interfacial current density "
+            "[A.m-3]": j_n_p1_v_dim,
+            "Negative electrode secondary volumetric interfacial current density "
+            "[A.m-3]": j_n_p2_v_dim,
+            "X-averaged negative electrode primary volumetric "
+            "interfacial current density [A.m-3]": j_n_p1_v_av_dim,
+            "X-averaged negative electrode secondary volumetric "
+            "interfacial current density [A.m-3]": j_n_p2_v_av_dim,
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),

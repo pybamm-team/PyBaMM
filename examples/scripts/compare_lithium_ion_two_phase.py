@@ -4,36 +4,19 @@
 import pybamm
 
 pybamm.set_logging_level("INFO")
-
 # load models
+options = {
+    "particle phases": ("2", "1"),
+    "open circuit potential": (("single", "current sigmoid"), "single"),
+}
 models = [
     # pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
     # pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")}),
-    pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
+    pybamm.lithium_ion.DFN(options),
+    pybamm.lithium_ion.BasicDFNComposite(),
 ]
 
-parameter_set = pybamm.parameter_sets.Chen2020
-parameter_values = pybamm.ParameterValues(parameter_set)
-
-for parameter in [
-    "Negative electrode OCP [V]",
-    "Negative electrode OCP entropic change [V.K-1]",
-    "Maximum concentration in negative electrode [mol.m-3]",
-    "Initial concentration in negative electrode [mol.m-3]",
-    "Negative particle radius [m]",
-    "Negative electrode diffusivity [m2.s-1]",
-    "Negative electrode exchange-current density [A.m-2]",
-    "Negative electrode active material volume fraction",
-    "Negative electrode electrons in reaction",
-]:
-    parameter_values.update(
-        {
-            f"Primary: {parameter}": parameter_values[parameter],
-            f"Secondary: {parameter}": parameter_values[parameter],
-        },
-        check_already_exists=False,
-    )
-    del parameter_values[parameter]
+parameter_values = pybamm.ParameterValues("Chen2020_composite")
 
 # create and run simulations
 sims = []
@@ -43,4 +26,25 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims, ["Terminal voltage [V]"])
+pybamm.dynamic_plot(
+    sims,
+    [
+        [
+            "Average negative primary particle concentration",
+            "Average negative secondary particle concentration",
+        ],
+        "X-averaged negative electrode primary interfacial current density",
+        "X-averaged negative electrode secondary interfacial current density",
+        "X-averaged negative electrode primary open circuit potential [V]",
+        "X-averaged negative electrode secondary open circuit potential [V]",
+        "X-averaged negative electrode interfacial current density",
+        # "Electrolyte concentration",
+        "Average positive particle concentration [mol.m-3]",
+        # "Current [A]",
+        # "Negative electrode potential [V]",
+        # "Electrolyte potential [V]",
+        # "Positive electrode potential [V]",
+        "Terminal voltage [V]",
+        # ["Negative primary particle radius", "Negative secondary particle radius"],
+    ],
+)
