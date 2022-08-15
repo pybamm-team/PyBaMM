@@ -103,7 +103,7 @@ def find_symbols(
                     m,
                     n,
                 )
-                variable_symbol_sizes[symbol.id] = symbol.shape
+                variable_symbol_sizes[symbol.id] = -1
             elif value.shape == (1, 1):
                 # Extract value if array has only one entry
                 constant_symbols[symbol.id] = value[0, 0]
