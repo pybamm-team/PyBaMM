@@ -84,7 +84,7 @@ class Function(pybamm.Symbol):
                     ) * child.diff(variable)
 
             # remove None entries
-            partial_derivatives = list(filter(None, partial_derivatives))
+            partial_derivatives = [x for x in partial_derivatives if x is not None]
 
             derivative = sum(partial_derivatives)
             if derivative == 0:

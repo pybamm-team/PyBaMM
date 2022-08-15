@@ -42,10 +42,10 @@ class DiffusionLimited(BaseInterface):
         # Get open-circuit potential variables and reaction overpotential
         if self.options["particle size"] == "distribution":
             ocp = variables[
-                f"{Domain} electrode{rxn} open circuit potential distribution"
+                f"{Domain} electrode {rxn}open circuit potential distribution"
             ]
         else:
-            ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+            ocp = variables[f"{Domain} electrode {rxn}open circuit potential"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
@@ -59,6 +59,10 @@ class DiffusionLimited(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
 
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
+
         # No SEI film resistance in this model
         eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
@@ -67,21 +71,15 @@ class DiffusionLimited(BaseInterface):
             # For the composite model, adds the first-order x-averaged interfacial
             # current density to the dictionary of variables.
             j_0 = variables[
-                "Leading-order "
-                + self.domain.lower()
-                + " electrode"
-                + self.reaction_name
-                + " interfacial current density"
+                f"Leading-order {self.domain.lower()} electrode {self.reaction_name}"
+                "interfacial current density"
             ]
             j_1_bar = (pybamm.x_average(j) - pybamm.x_average(j_0)) / self.param.C_e
 
             variables.update(
                 {
-                    "First-order x-averaged "
-                    + self.domain.lower()
-                    + " electrode"
-                    + self.reaction_name
-                    + " interfacial current density": j_1_bar
+                    f"First-order x-averaged {self.domain.lower()} electrode"
+                    f" {self.reaction_name}interfacial current density": j_1_bar
                 }
             )
 
@@ -92,9 +90,8 @@ class DiffusionLimited(BaseInterface):
         if self.domain == "Negative":
             if self.order == "leading":
                 j_p = variables[
-                    "X-averaged positive electrode"
-                    + self.reaction_name
-                    + " interfacial current density"
+                    f"X-averaged positive electrode {self.reaction_name}"
+                    "interfacial current density"
                 ]
                 j = -self.param.p.l * j_p / self.param.n.l
             elif self.order in ["composite", "full"]:
@@ -125,11 +122,8 @@ class DiffusionLimited(BaseInterface):
         """
         if self.order == "leading":
             j_leading_order = variables[
-                "Leading-order x-averaged "
-                + self.domain.lower()
-                + " electrode"
-                + self.reaction_name
-                + " interfacial current density"
+                f"Leading-order x-averaged {self.domain.lower()} electrode "
+                f"{self.reaction_name}interfacial current density"
             ]
             param = self.param
             if self.domain == "Negative":

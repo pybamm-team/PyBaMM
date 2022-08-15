@@ -26,7 +26,7 @@ class BaseKinetics(BaseInterface):
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
+    def __init__(self, param, domain, reaction, options, phase):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):
@@ -157,6 +157,10 @@ class BaseKinetics(BaseInterface):
         )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
+
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
 
         if self.domain == "Negative" and self.reaction in [
             "lithium-ion main",

@@ -13,7 +13,11 @@ class TestInterpolant(unittest.TestCase):
             pybamm.Interpolant(np.ones(10), np.ones(11), pybamm.Symbol("a"))
         with self.assertRaisesRegex(ValueError, "x2"):
             pybamm.Interpolant(
-                (np.ones(10), np.ones(11)), np.ones((10, 12)), pybamm.Symbol("a")
+                (np.ones(12), np.ones(11)), np.ones((10, 12)), pybamm.Symbol("a")
+            )
+        with self.assertRaisesRegex(ValueError, "x1"):
+            pybamm.Interpolant(
+                (np.ones(11), np.ones(10)), np.ones((10, 12)), pybamm.Symbol("a")
             )
         with self.assertRaisesRegex(ValueError, "y should"):
             pybamm.Interpolant(
@@ -29,7 +33,7 @@ class TestInterpolant(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "should equal"):
             pybamm.Interpolant(
-                (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
+                (np.ones(12), np.ones(10)), np.ones((10, 12)), pybamm.Symbol("a")
             )
         with self.assertRaisesRegex(ValueError, "interpolator should be 'linear'"):
             pybamm.Interpolant(
@@ -77,7 +81,7 @@ class TestInterpolant(unittest.TestCase):
             )
 
     def test_interpolation_2_x_2d_y(self):
-        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.05))
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.01))
         xx, yy = np.meshgrid(x[0], x[1])
         z = np.sin(xx ** 2 + yy ** 2)
         var1 = pybamm.StateVector(slice(0, 1))

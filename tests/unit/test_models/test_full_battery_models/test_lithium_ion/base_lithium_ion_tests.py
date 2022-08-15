@@ -197,6 +197,47 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_sei_reaction_limited_on_cracks(self):
+        options = {
+            "SEI": "reaction limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_solvent_diffusion_limited_on_cracks(self):
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_electron_migration_limited_on_cracks(self):
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_interstitial_diffusion_limited_on_cracks(self):
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_ec_reaction_limited_on_cracks(self):
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_reversible_plating(self):
         options = {"lithium plating": "reversible"}
         self.check_well_posedness(options)
@@ -262,7 +303,13 @@ class BaseUnitTestLithiumIon:
         def external_circuit_function(variables):
             I = variables["Current [A]"]
             V = variables["Terminal voltage [V]"]
-            return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
 
         options = {"operating mode": external_circuit_function}
         self.check_well_posedness(options)

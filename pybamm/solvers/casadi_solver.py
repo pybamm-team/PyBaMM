@@ -180,6 +180,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
             solution = self._solve_for_event(solution, init_event_signs)
+            solution.check_ys_are_not_too_large()
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
@@ -260,13 +261,13 @@ class CasadiSolver(pybamm.BaseSolver):
                         dt_max = dt
                     count += 1
                     if count >= self.max_step_decrease_count:
+                        t_dim = t * model.timescale_eval
+                        dt_max_dim = dt_max * model.timescale_eval
                         raise pybamm.SolverError(
-                            "Maximum number of decreased steps occurred at t={}. Try "
-                            "solving the model up to this time only or reducing dt_max "
-                            "(currently, dt_max={})."
-                            "".format(
-                                t * model.timescale_eval, dt_max * model.timescale_eval
-                            )
+                            f"Maximum number of decreased steps occurred at t={t_dim}. "
+                            "Try solving the model up to this time only or reducing "
+                            f"dt_max (currently, dt_max={dt_max_dim}) and/or reducing "
+                            "the size of the time steps or period of the experiment."
                         )
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
@@ -289,6 +290,7 @@ class CasadiSolver(pybamm.BaseSolver):
             if bool(model.calculate_sensitivities):
                 solution.sensitivities = True
 
+            solution.check_ys_are_not_too_large()
             return solution
 
     def _solve_for_event(self, coarse_solution, init_event_signs):
@@ -545,20 +547,11 @@ class CasadiSolver(pybamm.BaseSolver):
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
 
-            # When not in DEBUG mode (level=10), suppress warnings from CasADi
-            if (
-                pybamm.logger.getEffectiveLevel() == 10
-                or pybamm.settings.debug_mode is True
-            ):
-                show_eval_warnings = True
-            else:
-                show_eval_warnings = False
-
             options = {
+                "show_eval_warnings": False,
                 **self.extra_options_setup,
                 "reltol": self.rtol,
                 "abstol": self.atol,
-                "show_eval_warnings": show_eval_warnings,
             }
 
             # set up and solve
@@ -693,9 +686,11 @@ class CasadiSolver(pybamm.BaseSolver):
                 inputs_with_tmin = casadi.vertcat(inputs, t_min)
                 # Call the integrator once, with the grid
                 timer = pybamm.Timer()
+                pybamm.logger.debug("Calling casadi integrator")
                 casadi_sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
+                pybamm.logger.debug("Finished casadi integrator")
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                 sol = pybamm.Solution(
@@ -704,6 +699,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     model,
                     inputs_dict,
                     sensitivities=extract_sensitivities_in_solution,
+                    check_solution=False,
                 )
                 sol.integration_time = integration_time
                 return sol
@@ -738,6 +734,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 model,
                 inputs_dict,
                 sensitivities=extract_sensitivities_in_solution,
+                check_solution=False,
             )
             sol.integration_time = integration_time
             return sol

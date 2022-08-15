@@ -68,9 +68,6 @@ class BaseSubModel(pybamm.BaseModel):
         phase=None,
     ):
         super().__init__(name)
-        if domain is not None:
-            domain = domain.capitalize()
-
         self.domain = domain
         self.set_domain_for_broadcast()
         self.name = name
@@ -86,9 +83,9 @@ class BaseSubModel(pybamm.BaseModel):
         if param is None:
             self.domain_param = None
         else:
-            if domain == "Negative":
+            if self.domain == "Negative":
                 self.domain_param = param.n
-            elif domain == "Positive":
+            elif self.domain == "Positive":
                 self.domain_param = param.p
 
             if phase is not None:
@@ -116,6 +113,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     @domain.setter
     def domain(self, domain):
+        if domain is not None:
+            domain = domain.capitalize()
         ok_domain_list = [
             "Negative",
             "Separator",
@@ -125,11 +124,10 @@ class BaseSubModel(pybamm.BaseModel):
             "Separator electrolyte",
             "Positive electrode",
             "Positive electrolyte",
+            None,
         ]
         if domain in ok_domain_list:
             self._domain = domain
-        elif domain is None:
-            pass
         else:
             raise pybamm.DomainError(
                 "Domain '{}' not recognised (must be one of {})".format(

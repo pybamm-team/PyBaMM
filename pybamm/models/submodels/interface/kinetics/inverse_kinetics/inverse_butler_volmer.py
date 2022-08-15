@@ -35,10 +35,10 @@ class InverseButlerVolmer(BaseInterface):
 
         if self.options["particle size"] == "distribution":
             ocp = variables[
-                f"{Domain} electrode{rxn} open circuit potential distribution"
+                f"{Domain} electrode {rxn}open circuit potential distribution"
             ]
         else:
-            ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+            ocp = variables[f"{Domain} electrode {rxn}open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
@@ -157,6 +157,9 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             j = j_tot
 
         variables.update(self._get_standard_interfacial_current_variables(j))
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
 
         return variables
 

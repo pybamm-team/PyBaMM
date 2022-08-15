@@ -54,12 +54,12 @@ class TestAi2020(unittest.TestCase):
             "lico2_cracking_rate_Ai2020": ([T], 3.9e-20),
             "lico2_diffusivity_Dualfoil1998": ([sto, T], 5.387e-15),
             "lico2_electrolyte_exchange_current_density_Dualfoil1998": (
-                [1e3, 1e4, T, c_p_max],
+                [1e3, 1e4, c_p_max, T],
                 0.6098,
             ),
-            "lico2_entropic_change_Ai2020_function": ([sto], -2.1373e-4),
+            "lico2_entropic_change_Ai2020_function": ([sto, c_p_max], -2.1373e-4),
             "lico2_ocp_Ai2020_function.py": ([sto], 4.1638),
-            "lico2_volume_change_Ai2020": ([sto], -1.8179e-2),
+            "lico2_volume_change_Ai2020": ([sto, c_p_max], -1.8179e-2),
         }
 
         for name, value in fun_test.items():
@@ -75,12 +75,15 @@ class TestAi2020(unittest.TestCase):
             "graphite_cracking_rate_Ai2020.py": ([T], 3.9e-20),
             "graphite_diffusivity_Dualfoil1998.py": ([sto, T], 3.9e-14),
             "graphite_electrolyte_exchange_current_density_Dualfoil1998.py": (
-                [1e3, 1e4, T, c_n_max],
+                [1e3, 1e4, c_n_max, T],
                 0.4172,
             ),
-            "graphite_entropy_Enertech_Ai2020_function.py": ([sto], -1.1033e-4),
+            "graphite_entropy_Enertech_Ai2020_function.py": (
+                [sto, c_n_max],
+                -1.1033e-4,
+            ),
             "graphite_ocp_Enertech_Ai2020_function.py": ([sto], 0.1395),
-            "graphite_volume_change_Ai2020.py": ([sto], 5.1921e-2),
+            "graphite_volume_change_Ai2020.py": ([sto, c_n_max], 5.1921e-2),
         }
 
         for name, value in fun_test.items():

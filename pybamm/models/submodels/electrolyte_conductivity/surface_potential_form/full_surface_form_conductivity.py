@@ -57,7 +57,7 @@ class BaseModel(BaseElectrolyteConductivity):
             T = variables[self.domain + " electrode temperature"]
 
             i_e = conductivity * (
-                ((1 + param.Theta * T) * param.chi(c_e, T) / c_e) * pybamm.grad(c_e)
+                param.chiT_over_c(c_e, T) * pybamm.grad(c_e)
                 + pybamm.grad(delta_phi)
                 + i_boundary_cc / sigma_eff
             )
@@ -79,11 +79,11 @@ class BaseModel(BaseElectrolyteConductivity):
             tor_s = variables["Separator porosity"]
             T = variables["Separator temperature"]
 
-            chi_e_s = param.chi(c_e_s, T)
+            chiT_over_c_e_s = param.chiT_over_c(c_e_s, T)
             kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
 
             phi_e = phi_e_n_s + pybamm.IndefiniteIntegral(
-                (1 + param.Theta * T) * chi_e_s / c_e_s * pybamm.grad(c_e_s)
+                chiT_over_c_e_s * pybamm.grad(c_e_s)
                 - param.C_e * i_boundary_cc / kappa_s_eff,
                 x_s,
             )
@@ -161,10 +161,7 @@ class BaseModel(BaseElectrolyteConductivity):
             flux_left = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             flux_right = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
-                - pybamm.BoundaryValue(
-                    (1 + param.Theta * T) * param.chi(c_e, T) / c_e, "right"
-                )
-                * c_e_flux
+                - pybamm.BoundaryValue(param.chiT_over_c(c_e, T), "right") * c_e_flux
                 - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
             )
 
@@ -178,10 +175,7 @@ class BaseModel(BaseElectrolyteConductivity):
             c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
-                - pybamm.BoundaryValue(
-                    (1 + param.Theta * T) * param.chi(c_e, T) / c_e, "left"
-                )
-                * c_e_flux
+                - pybamm.BoundaryValue(param.chiT_over_c(c_e, T), "left") * c_e_flux
                 - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             )
             flux_right = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
@@ -237,8 +231,8 @@ class FullAlgebraic(BaseModel):
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of area-weighted {self.domain.lower()} "
-            "electrode interfacial current densities"
+            f"Sum of {self.domain.lower()} electrode volumetric "
+            "interfacial current densities"
         ]
 
         self.algebraic[delta_phi] = pybamm.div(i_e) - sum_a_j
@@ -266,15 +260,19 @@ class FullDifferential(BaseModel):
         if self.domain == "Separator":
             return
 
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
         C_dl = self.domain_param.C_dl
 
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-        i_e = variables[self.domain + " electrolyte current density"]
+        delta_phi = variables[f"{Domain} electrode surface potential difference"]
+        i_e = variables[f"{Domain} electrolyte current density"]
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of area-weighted {self.domain.lower()} "
-            "electrode interfacial current densities"
+            f"Sum of {domain} electrode volumetric interfacial current densities"
         ]
+        a = variables[f"{Domain} electrode {phase_name}surface area to volume ratio"]
 
-        self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - sum_a_j)
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j)

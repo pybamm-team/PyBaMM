@@ -84,10 +84,13 @@ class AlgebraicSolver(pybamm.BaseSolver):
         test_result = model.algebraic_eval(0, y0, inputs)
 
         if isinstance(test_result, casadi.DM):
+
             def algebraic(t, y):
                 result = model.algebraic_eval(t, y, inputs)
                 return result.full().flatten()
+
         else:
+
             def algebraic(t, y):
                 result = model.algebraic_eval(t, y, inputs)
                 return result.flatten()

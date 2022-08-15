@@ -164,9 +164,9 @@ class TestSearch(unittest.TestCase):
 
         # Test bad var search (returns best matches)
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            model.variables.search("bad var")
+            model.variables.search("Electrolyte cot")
             out = (
-                "No results for search using 'bad var'. "
+                "No results for search using 'Electrolyte cot'. "
                 "Best matches are ['Electrolyte concentration', "
                 "'Electrode potential']\n"
             )

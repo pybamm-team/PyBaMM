@@ -63,7 +63,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_convection_submodel()
         self.set_open_circuit_potential_submodel()
         self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
         self.set_electrolyte_submodel()
@@ -72,6 +71,9 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_interface_submodel()
+
+        self.set_standard_output_variables()
 
         self.set_standard_output_variables()
 
@@ -213,11 +215,13 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Different way of measuring LLI but should give same value
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
         if self.half_cell:
+            LLI_sei_cracks = pybamm.Scalar(0)
             LLI_pl = pybamm.Scalar(0)
         else:
+            LLI_sei_cracks = self.variables["Loss of lithium to SEI on cracks [mol]"]
             LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
 
-        LLI_reactions = LLI_sei + LLI_pl
+        LLI_reactions = LLI_sei + LLI_sei_cracks + LLI_pl
         self.variables.update(
             {
                 "Total lithium lost to side reactions [mol]": LLI_reactions,
@@ -261,6 +265,8 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Total lithium in negative electrode [mol]",
                 "Loss of lithium to lithium plating [mol]",
                 "Loss of capacity to lithium plating [A.h]",
+                "Loss of lithium to SEI on cracks [mol]",
+                "Loss of capacity to SEI on cracks [A.h]",
             ]
 
         self.summary_variables = summary_variables
@@ -270,15 +276,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             phases = self.options.phase_number_to_names(
                 getattr(self.options, domain)["particle phases"]
             )
-            domain_options = getattr(self.options, domain)
             for phase in phases:
-                ocp_option = getattr(domain_options, phase)["open circuit potential"]
-                if ocp_option == "single":
-                    ocp_model = pybamm.open_circuit_potential.SingleOpenCircuitPotential
-                elif ocp_option == "current sigmoid":
-                    ocp_model = (
-                        pybamm.open_circuit_potential.CurrentSigmoidOpenCircuitPotential
-                    )
+                ocp_model = pybamm.open_circuit_potential.SingleOpenCircuitPotential
                 self.submodels[f"{domain} {phase} open circuit potential"] = ocp_model(
                     self.param, domain, "lithium-ion main", self.options, phase
                 )
@@ -286,7 +285,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_sei_submodel(self):
         if self.half_cell:
             reaction_loc = "interface"
-        elif self.x_average:
+        elif self.options["x-average side reactions"] == "true":
             reaction_loc = "x-average"
         else:
             reaction_loc = "full electrode"
@@ -297,8 +296,22 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
         else:
             self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                self.param, reaction_loc, self.options
+                self.param, reaction_loc, self.options, cracks=False
             )
+        # Do not set "sei on cracks" submodel for half-cells
+        # For full cells, "sei on cracks" submodel must be set, even if it is zero
+        if reaction_loc != "interface":
+            if (
+                self.options["SEI"] in ["none", "constant"]
+                or self.options["SEI on cracks"] == "false"
+            ):
+                self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+                    self.param, self.options, cracks=True
+                )
+            else:
+                self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
+                    self.param, reaction_loc, self.options, cracks=True
+                )
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":
@@ -306,42 +319,40 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, self.options
             )
         else:
+            x_average = self.options["x-average side reactions"] == "true"
             self.submodels["lithium plating"] = pybamm.lithium_plating.Plating(
-                self.param, self.x_average, self.options
+                self.param, x_average, self.options
             )
 
-    def set_total_kinetics_submodel(self):
-        self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
+    def set_total_interface_submodel(self):
+        self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(
             self.param, "lithium-ion", self.options
         )
-
-    def set_other_reaction_submodels_to_zero(self):
-        for domain in ["Negative", "Positive"]:
-            self.submodels[
-                f"{domain.lower()} oxygen interface"
-            ] = pybamm.kinetics.NoReaction(
-                self.param, domain, "lithium-ion oxygen", "primary"
-            )
-            self.submodels[
-                f"{domain.lower()} oxygen open circuit potential"
-            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-                self.param, domain, "lithium-ion oxygen", self.options, "primary"
-            )
 
     def set_crack_submodel(self):
         for domain in ["Negative", "Positive"]:
             crack = getattr(self.options, domain.lower())["particle mechanics"]
             if crack == "none":
-                pass
+                self.submodels[
+                    domain.lower() + " particle mechanics"
+                ] = pybamm.particle_mechanics.NoMechanics(
+                    self.param, domain, options=self.options, phase="primary"
+                )
             elif crack == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_mechanics.SwellingOnly(self.param, domain)
+                ] = pybamm.particle_mechanics.SwellingOnly(
+                    self.param, domain, options=self.options, phase="primary"
+                )
             elif crack == "swelling and cracking":
                 self.submodels[
                     domain.lower() + " particle mechanics"
                 ] = pybamm.particle_mechanics.CrackPropagation(
-                    self.param, domain, self.x_average
+                    self.param,
+                    domain,
+                    self.x_average,
+                    options=self.options,
+                    phase="primary",
                 )
 
     def set_active_material_submodel(self):
@@ -379,15 +390,16 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.options["SEI porosity change"] == "true"
             or self.options["lithium plating porosity change"] == "true"
         ):
+            x_average = self.options["x-average side reactions"] == "true"
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
-                self.param, self.options, self.x_average
+                self.param, self.options, x_average
             )
 
     def set_li_metal_counter_electrode_submodels(self):
         self.submodels[
             "counter electrode open circuit potential"
         ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-            self.param, "Negative", "lithium metal plating", self.options
+            self.param, "Negative", "lithium metal plating", self.options, "primary"
         )
 
         if (

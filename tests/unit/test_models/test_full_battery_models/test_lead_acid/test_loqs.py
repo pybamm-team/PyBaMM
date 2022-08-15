@@ -135,7 +135,13 @@ class TestLeadAcidLOQSExternalCircuits(unittest.TestCase):
         def external_circuit_function(variables):
             I = variables["Current [A]"]
             V = variables["Terminal voltage [V]"]
-            return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
 
         options = {"operating mode": external_circuit_function}
         model = pybamm.lead_acid.LOQS(options)

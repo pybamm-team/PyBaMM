@@ -17,18 +17,19 @@ class TestPrintName(unittest.TestCase):
 
         # Test superscripts
         self.assertEqual(param.n.prim.U_ref.print_name, r"U_{n}^{ref}")
+        self.assertEqual(param.D_e_typ.print_name, r"D_{e}^{typ}")
 
         # Test subscripts
         self.assertEqual(param.p.prim.a_R.print_name, r"a_{R\,p}")
 
         # Test dim and dimensional
-        # self.assertEqual(
-        #     param.n.prim.j0_ref_dimensional.print_name, r"\hat{j0}_{n}^{ref}"
-        # )
-        # self.assertEqual(param.n.C_dl_dimensional.print_name, r"\hat{C}_{dl\,n}")
+        self.assertEqual(
+            param.n.prim.j0_ref_dimensional.print_name, r"\hat{j0}_{n}^{ref}"
+        )
+        self.assertEqual(param.n.C_dl_dimensional.print_name, r"\hat{C}_{dl\,n}")
 
         # Test bar
-        self.assertEqual(param1.c_s_n_xav.print_name, r"\bar{c}_{s\,n}")
+        self.assertEqual(param1.c_e_av.print_name, r"\bar{c}_{e}")
 
         # Test greek letters
         self.assertEqual(param2.delta.print_name, r"\delta")

@@ -39,6 +39,16 @@ class TestSolution(unittest.TestCase):
         ):
             sol.set_t()
 
+        ts = [np.array([1, 2, 3])]
+        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
+        model = pybamm.BaseModel()
+        var = pybamm.StateVector(slice(0, 1))
+        model.rhs = {var: 0}
+        model.variables = {var.name: var}
+        with self.assertLogs() as captured:
+            pybamm.Solution(ts, bad_ys, model, {})
+        self.assertIn("exceeds the maximum", captured.records[0].getMessage())
+
     def test_add_solutions(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
@@ -80,9 +90,13 @@ class TestSolution(unittest.TestCase):
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
         self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
 
-        # radd
-        sol4 = None + sol3
+        # add None
+        sol4 = sol3 + None
         self.assertEqual(sol3.all_ys, sol4.all_ys)
+
+        # radd
+        sol5 = None + sol3
+        self.assertEqual(sol3.all_ys, sol5.all_ys)
 
         # radd failure
         with self.assertRaisesRegex(

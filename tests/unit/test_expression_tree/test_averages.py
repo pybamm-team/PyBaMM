@@ -140,7 +140,9 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(av_a, a)
 
         # x-average of symbol that evaluates on edges raises error
-        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        symbol_on_edges = pybamm.SpatialVariableEdge(
+            "x_n", domain=["negative electrode"]
+        )
         with self.assertRaisesRegex(
             ValueError, "Can't take the x-average of a symbol that evaluates on edges"
         ):
