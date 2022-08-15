@@ -412,9 +412,6 @@ class LithiumIonParameters(BaseParameters):
 
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
-        # I don't think this gets used anywhere?
-        self.beta_sei = self.n.a_typ * self.L_sei_0_dim * self.Gamma_SEI
-
         # lithium plating parameters
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
@@ -425,9 +422,6 @@ class LithiumIonParameters(BaseParameters):
         self.Gamma_plating = (self.n.a_typ * self.n.j_scale * self.timescale) / (
             self.F * self.c_Li_typ
         )
-
-        # Does this get used anywhere?
-        self.beta_plating = self.Gamma_plating * self.V_bar_plated_Li * self.c_Li_typ
 
         # Initial conditions
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
