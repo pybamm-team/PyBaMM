@@ -797,7 +797,6 @@ class Solution(object):
 
                 entries.append(cond)
         entries_ = np.array(entries)
-        
 
         return entries_
 
