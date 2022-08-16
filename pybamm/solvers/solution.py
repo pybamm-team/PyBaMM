@@ -781,19 +781,25 @@ class Solution(object):
         return new_sol
 
     def condition_number(self):
-        # returns condition number for the solution
+        """Returns condition number for the solution."""
+        entries = []
 
-        entries = np.empty(len(self.t))
         for ts, ys, model in zip(self.all_ts, self.all_ys, self.all_models):
-            for inner_idx, t in enumerate(ts):
+            for inner_idx, t_ in enumerate(ts):
+
                 t = ts[inner_idx]
+
                 y = ys[:, inner_idx]
                 f = model.rhs_algebraic_eval(t, y, [])
+
                 J = model.jac_rhs_algebraic_eval(t, y, [])
                 cond = np.linalg.norm(J) / (np.linalg.norm(f) / np.linalg.norm(y))
-                np.insert(entries, -1, cond)
 
-        return entries
+                entries.append(cond)
+        entries_ = np.array(entries)
+        
+
+        return entries_
 
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):

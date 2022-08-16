@@ -346,6 +346,23 @@ class TestSolution(unittest.TestCase):
         time = sim.solution["Time [h]"](sim.solution.t)
         self.assertEqual(len(time), 10)
 
+    def test_condition_number(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sol = sim.solve([0, 1])
+        entries = []
+        for ts, ys, model in zip(sol.all_ts, sol.all_ys, sol.all_models):
+            for inner_idx, t_ in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
+                f = model.rhs_algebraic_eval(t, y, [])
+                J = model.jac_rhs_algebraic_eval(t, y, [])
+                cond = np.linalg.norm(J) / (np.linalg.norm(f) / np.linalg.norm(y))
+
+                entries.append(cond)
+        entries_ = np.array(entries)
+
+        self.assertEqual((entries_ == sol.condition_number()).all(), True)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
