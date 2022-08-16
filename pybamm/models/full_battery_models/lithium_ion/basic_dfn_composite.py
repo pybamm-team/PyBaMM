@@ -336,8 +336,8 @@ class BasicDFNComposite(BaseModel):
         c_s_rav_p = pybamm.r_average(c_s_p)
         c_s_xrav_p = pybamm.x_average(c_s_rav_p)
         c_s_xrav_p_dim = c_s_xrav_p * param.p.prim.c_max
-        j_n_p1_dim = j_n_p1 * param.n.j_scale
-        j_n_p2_dim = j_n_p2 * param.n.j_scale
+        j_n_p1_dim = j_n_p1 * param.n.prim.j_scale
+        j_n_p2_dim = j_n_p2 * param.n.sec.j_scale
         j_n_p1_av = pybamm.x_average(j_n_p1)
         j_n_p2_av = pybamm.x_average(j_n_p2)
         j_n_av = j_n_p1_av + j_n_p2_av
