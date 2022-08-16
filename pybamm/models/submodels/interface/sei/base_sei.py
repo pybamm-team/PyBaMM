@@ -303,7 +303,7 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI currents.
         """
-        j_scale = self.param.n.j_scale
+        j_scale = self.param.n.prim.j_scale
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
@@ -329,7 +329,7 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_reaction_variables(self, j_sei):
         """Update variables related to total SEI interfacial current density."""
-        j_scale = self.param.n.j_scale
+        j_scale = self.param.n.prim.j_scale
 
         variables = {
             f"{self.reaction} interfacial current density": j_sei,
