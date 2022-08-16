@@ -1,8 +1,8 @@
 #ifndef PYBAMM_IDAKLU_CASADI_FUNCTIONS_HPP
 #define PYBAMM_IDAKLU_CASADI_FUNCTIONS_HPP
 
-#include "solution.hpp"
 #include "common.hpp"
+#include "solution.hpp"
 #include <casadi/casadi.hpp>
 
 using Function = casadi::Function;
@@ -44,11 +44,10 @@ public:
                   const int jac_times_cjmass_nnz,
                   const np_array_int &jac_times_cjmass_rowvals,
                   const np_array_int &jac_times_cjmass_colptrs,
-                  const np_array_dense &inputs, const Function &jac_action,
+                  const int inputs_length, const Function &jac_action,
                   const Function &mass_action, const Function &sens,
                   const Function &events, const int n_s, int n_e,
                   const int n_p);
-  ~CasadiFunctions();
 
   realtype *get_tmp();
 

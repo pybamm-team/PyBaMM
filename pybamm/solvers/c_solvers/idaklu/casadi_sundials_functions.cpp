@@ -4,36 +4,32 @@
 int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data)
 {
-  std::cout << "residual_casadi" << std::endl;
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
-  // std::cout << "RESIDUAL t = " << tres << " y = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(yy)[i] << " ";
-  // }
-  // std::cout << "] yp = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(yp)[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  //std::cout << "RESIDUAL t = " << tres << " y = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(yy)[i] << " ";
+  //}
+  //std::cout << "] yp = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(yp)[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
   //  args are t, y, put result in rr
 
-  std::cout << "residual_casadi 1" << std::endl;
   p_python_functions->rhs_alg.m_arg[0] = &tres;
   p_python_functions->rhs_alg.m_arg[1] = NV_DATA_S(yy);
   p_python_functions->rhs_alg.m_arg[2] = p_python_functions->inputs.data();
   p_python_functions->rhs_alg.m_res[0] = NV_DATA_S(rr);
-  std::cout << "residual_casadi 2" << std::endl;
   p_python_functions->rhs_alg();
 
-  // std::cout << "rhs_alg = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(rr)[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  //std::cout << "rhs_alg = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(rr)[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
 
-  std::cout << "residual_casadi 3" << std::endl;
   realtype *tmp = p_python_functions->get_tmp();
   // std::cout << "tmp before = [";
   // for (int i = 0; i < p_python_functions->number_of_states; i++) {
@@ -55,15 +51,14 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
 
-  // std::cout << "residual = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(rr)[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  //std::cout << "residual = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(rr)[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
 
-  std::cout << "residual_casadi end" << std::endl;
   return 0;
 }
 
@@ -91,7 +86,6 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, realtype cj, void *user_data,
                   N_Vector tmp1, N_Vector tmp2)
 {
-  std::cout << "jtimes_casadi" << std::endl;
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
@@ -114,7 +108,6 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -cj, tmp, NV_DATA_S(rr));
 
-  std::cout << "jtimes_casadi end" << std::endl;
   return 0;
 }
 
@@ -140,7 +133,6 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
 {
 
-  std::cout << "jacobian_casadi" << std::endl;
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
@@ -161,18 +153,18 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   const int n_row_vals = p_python_functions->jac_times_cjmass_rowvals.size();
   auto p_jac_times_cjmass_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
 
-  // std::cout << "jac_data = [";
-  // for (int i = 0; i < p_python_functions->number_of_nnz; i++) {
-  //   std::cout << jac_data[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  //std::cout << "jac_data = [";
+  //for (int i = 0; i < p_python_functions->number_of_nnz; i++) {
+  //  std::cout << jac_data[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
 
   // just copy across row vals (do I need to do this every time?)
   // (or just in the setup?)
   for (int i = 0; i < n_row_vals; i++)
   {
-    // std::cout << "check row vals " << jac_rowvals[i] << " " <<
-    // p_jac_times_cjmass_rowvals[i] << std::endl;
+    //std::cout << "check row vals " << jac_rowvals[i] << " " <<
+    //p_jac_times_cjmass_rowvals[i] << std::endl;
     jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
   }
 
@@ -182,32 +174,30 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   // just copy across col ptrs (do I need to do this every time?)
   for (int i = 0; i < n_col_ptrs; i++)
   {
-    // std::cout << "check col ptrs " << jac_colptrs[i] << " " <<
-    // p_jac_times_cjmass_colptrs[i] << std::endl;
+    //std::cout << "check col ptrs " << jac_colptrs[i] << " " <<
+    //p_jac_times_cjmass_colptrs[i] << std::endl;
     jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
   }
 
-  std::cout << "jacobian_casadi end" << std::endl;
   return (0);
 }
 
 int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
                   void *user_data)
 {
-  std::cout << "events_casadi" << std::endl;
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
-  // std::cout << "EVENTS" << std::endl;
-  // std::cout << "t = " << t << " y = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(yy)[i] << " ";
-  // }
-  // std::cout << "] yp = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(yp)[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  //std::cout << "EVENTS" << std::endl;
+  //std::cout << "t = " << t << " y = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(yy)[i] << " ";
+  //}
+  //std::cout << "] yp = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(yp)[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
 
   // args are t, y, put result in events_ptr
   p_python_functions->events.m_arg[0] = &t;
@@ -216,13 +206,12 @@ int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
   p_python_functions->events.m_res[0] = events_ptr;
   p_python_functions->events();
 
-  // std::cout << "events = [";
-  // for (int i = 0; i < p_python_functions->number_of_events; i++) {
-  //   std::cout << events_ptr[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  //std::cout << "events = [";
+  //for (int i = 0; i < p_python_functions->number_of_events; i++) {
+  //  std::cout << events_ptr[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
 
-  std::cout << "events_casadi end" << std::endl;
   return (0);
 }
 
@@ -254,7 +243,6 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector tmp2, N_Vector tmp3)
 {
 
-  std::cout << "sensitivities_casadi" << std::endl;
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
@@ -345,6 +333,5 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
     // std::cout << "]" << std::endl;
   }
 
-  std::cout << "sensitivities_casadi end" << std::endl;
   return 0;
 }

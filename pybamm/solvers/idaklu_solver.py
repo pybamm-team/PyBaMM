@@ -405,8 +405,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 'number_of_sensitivity_parameters': number_of_sensitivity_parameters,
             }
 
-            print('inputs', inputs.shape)
-            print('colptrs', self._setup['jac_times_cjmass_colptrs'])
             solver = idaklu.create_casadi_solver(
                 len(y0),
                 self._setup['number_of_sensitivity_parameters'],
@@ -422,7 +420,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup['num_of_events'],
                 self._setup['use_jac'],
                 self._setup['ids'],
-                atol, rtol, inputs,
+                atol, rtol, len(inputs),
             )
 
             self._setup['solver'] = solver
