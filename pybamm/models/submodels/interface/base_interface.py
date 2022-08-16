@@ -179,7 +179,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        j_scale = self.domain_param.j_scale
+        j_scale = self.phase_param.j_scale
 
         if self.reaction == "lithium metal plating":
             # Half-cell domain, j should not be broadcast
@@ -215,7 +215,7 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_total_interfacial_current_variables(self, j_tot_av):
         domain = self.domain.lower()
 
-        j_scale = self.domain_param.j_scale
+        j_scale = self.phase_param.j_scale
 
         if self.half_cell and self.domain == "Negative":
             variables = {
@@ -237,7 +237,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        j_scale = self.domain_param.j_scale
+        j_scale = self.phase_param.j_scale
 
         if self.reaction == "lithium metal plating":
             # half-cell domain
@@ -431,7 +431,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.SecondaryBroadcast(j_xav, [f"{domain} electrode"])
 
         # j scale
-        j_scale = self.domain_param.j_scale
+        j_scale = self.phase_param.j_scale
 
         variables = {
             f"{Domain} electrode {reaction_name}"
@@ -453,7 +453,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        j_scale = self.domain_param.j_scale
+        j_scale = self.phase_param.j_scale
 
         # X-average or broadcast to electrode if necessary
         if j0.domains["secondary"] != [f"{domain} electrode"]:
