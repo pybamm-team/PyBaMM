@@ -326,29 +326,31 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # SEI parameters
-        self.alpha_sei = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+        self.inner_sei_proportion = pybamm.Parameter("Inner SEI reaction proportion")
+
+        self.z_sei = pybamm.Parameter("Ratio of lithium moles to SEI moles")
 
         self.E_over_RT_sei = self.E_sei_dimensional / self.R / self.T_ref
 
-        self.C_sei_reaction = (
-            self.n.prim.j_scale / self.m_sei_dimensional
-        ) * pybamm.exp(-(self.F * self.n.prim.U_ref / (2 * self.R * self.T_ref)))
+        self.C_sei_reaction = (self.n.j_scale / self.m_sei_dimensional) * pybamm.exp(
+            -(self.F * self.n.prim.U_ref / (2 * self.R * self.T_ref))
+        )
 
         self.C_sei_solvent = (
-            self.n.prim.j_scale
+            self.n.j_scale
             * self.L_sei_0_dim
             / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
         )
 
         self.C_sei_electron = (
-            self.n.prim.j_scale
+            self.n.j_scale
             * self.F
             * self.L_sei_0_dim
             / (self.kappa_inner_dimensional * self.R * self.T_ref)
         )
 
         self.C_sei_inter = (
-            self.n.prim.j_scale
+            self.n.j_scale
             * self.L_sei_0_dim
             / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
         )
@@ -357,7 +359,7 @@ class LithiumIonParameters(BaseParameters):
 
         self.R_sei = (
             self.F
-            * self.n.prim.j_scale
+            * self.n.j_scale
             * self.R_sei_dimensional
             * self.L_sei_0_dim
             / self.R
@@ -377,20 +379,20 @@ class LithiumIonParameters(BaseParameters):
 
         # ratio of SEI reaction scale to intercalation reaction
         self.Gamma_SEI = (
-            self.V_bar_inner_dimensional * self.n.prim.j_scale * self.timescale
-        ) / (self.F * self.L_sei_0_dim)
+            self.V_bar_inner_dimensional * self.n.j_scale * self.timescale
+        ) / (self.F * self.z_sei * self.L_sei_0_dim)
 
         # EC reaction
         self.C_ec = (
             self.L_sei_0_dim
-            * self.n.prim.j_scale
+            * self.n.j_scale
             / (self.F * self.c_ec_0_dim * self.D_ec_dim)
         )
         self.C_sei_ec = (
             self.F
             * self.k_sei_dim
             * self.c_ec_0_dim
-            / self.n.prim.j_scale
+            / self.n.j_scale
             * (
                 pybamm.exp(
                     -(
@@ -401,7 +403,6 @@ class LithiumIonParameters(BaseParameters):
                 )
             )
         )
-        self.beta_sei = self.n.prim.a_typ * self.L_sei_0_dim * self.Gamma_SEI
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
@@ -411,11 +412,9 @@ class LithiumIonParameters(BaseParameters):
         self.alpha_stripping = 1 - self.alpha_plating
 
         # ratio of lithium plating reaction scaled to intercalation reaction
-        self.Gamma_plating = (
-            self.n.prim.a_typ * self.n.prim.j_scale * self.timescale
-        ) / (self.F * self.c_Li_typ)
-
-        self.beta_plating = self.Gamma_plating * self.V_bar_plated_Li * self.c_Li_typ
+        self.Gamma_plating = (self.n.prim.a_typ * self.n.j_scale * self.timescale) / (
+            self.F * self.c_Li_typ
+        )
 
         # Initial conditions
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
@@ -477,10 +476,7 @@ class LithiumIonParameters(BaseParameters):
         c_Li_dim = c_Li * self.c_Li_typ
         T_dim = self.Delta_T * T + self.T_ref
 
-        return (
-            self.j0_stripping_dimensional(c_e_dim, c_Li_dim, T_dim)
-            / self.n.prim.j_scale
-        )
+        return self.j0_stripping_dimensional(c_e_dim, c_Li_dim, T_dim) / self.n.j_scale
 
     def j0_plating(self, c_e, c_Li, T):
         """Dimensionless reverse plating current"""
@@ -488,9 +484,7 @@ class LithiumIonParameters(BaseParameters):
         c_Li_dim = c_Li * self.c_Li_typ
         T_dim = self.Delta_T * T + self.T_ref
 
-        return (
-            self.j0_plating_dimensional(c_e_dim, c_Li_dim, T_dim) / self.n.prim.j_scale
-        )
+        return self.j0_plating_dimensional(c_e_dim, c_Li_dim, T_dim) / self.n.j_scale
 
     def dead_lithium_decay_rate(self, L_sei):
         """Dimensionless exchange-current density for stripping"""
@@ -675,8 +669,23 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
+        main = self.main_param
+
         for phase in self.phases:
             phase._set_scales()
+
+        if self.domain == "Separator":
+            return
+
+        # Scale for interfacial current density in A/m2
+        # Use same scale for all phases since they all appear in the same equation
+        # for total current
+        if main.half_cell and self.domain == "Negative":
+            # metal electrode (boundary condition between negative and separator)
+            self.j_scale = main.i_typ
+        else:
+            # porous electrode
+            self.j_scale = main.i_typ / (self.prim.a_typ * main.L_x)
 
     def _set_dimensionless_parameters(self):
         for phase in self.phases:
@@ -709,10 +718,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Electrochemical Reactions
         self.C_dl = (
-            self.C_dl_dimensional
-            * main.potential_scale
-            / self.prim.j_scale
-            / main.timescale
+            self.C_dl_dimensional * main.potential_scale / self.j_scale / main.timescale
         )
         # Electrode Properties
         self.sigma_cc = (
@@ -735,14 +741,14 @@ class DomainLithiumIonParameters(BaseParameters):
         self.beta_LAM_sei = (
             self.beta_LAM_sei_dimensional
             * self.prim.a_typ
-            * self.prim.j_scale
+            * self.j_scale
             * main.timescale
         ) / main.F
         # Utilisation factors
         self.beta_utilisation = (
             self.beta_utilisation_dimensional
             * self.prim.a_typ
-            * self.prim.j_scale
+            * self.j_scale
             * main.timescale
         ) / main.F
 
@@ -961,14 +967,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Concentration
         self.particle_concentration_scale = self.c_max
 
-        # Scale for interfacial current density in A/m2
-        if main.half_cell and self.domain == "Negative":
-            # metal electrode (boundary condition between negative and separator)
-            self.j_scale = main.i_typ
-        else:
-            # porous electrode
-            self.j_scale = main.i_typ / (self.a_typ * main.L_x)
-
         # Reference exchange-current density
         self.j0_ref_dimensional = (
             self.j0_dimensional(main.c_e_typ, self.c_max / 2, main.T_ref) * 2
@@ -1030,7 +1028,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
 
         return (
-            self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim) / self.j0_ref_dimensional
+            self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim)
+            / self.domain_param.j_scale
         )
 
     def U(self, c_s, T, lithiation=None):
