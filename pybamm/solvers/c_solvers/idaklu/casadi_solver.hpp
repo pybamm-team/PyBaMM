@@ -12,7 +12,7 @@ class CasadiSolver
 {
 public:
   CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id, int number_of_parameters, bool use_jacobian,
-               int jac_times_cjmass_nnz, CasadiFunctions &functions);
+               int jac_times_cjmass_nnz, std::unique_ptr<CasadiFunctions> functions);
   ~CasadiSolver();
 
   void *ida_mem; // pointer to memory
@@ -33,14 +33,14 @@ public:
   SUNMatrix J;
   SUNLinearSolver LS;
 
-  CasadiFunctions functions;
+  std::unique_ptr<CasadiFunctions> functions;
 
   Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
                  np_array_dense inputs);
 };
 
 
-CasadiSolver create_casadi_solver(int number_of_states, int number_of_parameters,
+CasadiSolver *create_casadi_solver(int number_of_states, int number_of_parameters,
                       const Function &rhs_alg, const Function &jac_times_cjmass,
                       const np_array_int &jac_times_cjmass_colptrs,
                       const np_array_int &jac_times_cjmass_rowvals,

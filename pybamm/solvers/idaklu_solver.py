@@ -368,6 +368,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 for i, dFdp_i in enumerate(dFdp.values()):
                     resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
 
+        try:
+            atol = model.atol
+        except AttributeError:
+            atol = self.atol
+
+        rtol = self.rtol
+        atol = self._check_atol_type(atol, y0.size)
+
         if model.convert_to_format == "casadi":
             rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
             jac_times_cjmass = idaklu.generate_function(
@@ -380,27 +388,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_action = idaklu.generate_function(mass_action.serialize())
             sensfn = idaklu.generate_function(sensfn.serialize())
 
-            solver = idaklu.create_casadi_solver(
-                len(y0),
-                self._setup['number_of_sensitivity_parameters']
-                self._setup['rhs_algebraic'],
-                self._setup['jac_times_cjmass'],
-                self._setup['jac_times_cjmass_colptrs'],
-                self._setup['jac_times_cjmass_rowvals'],
-                self._setup['jac_times_cjmass_nnz'],
-                self._setup['jac_rhs_algebraic_action'],
-                self._setup['mass_action'],
-                self._setup['sensfn'],
-                self._setup['rootfn'],
-                self._setup['num_of_events'],
-                self._setup['use_jac'],
-                self._setup['ids'],
-                atol, rtol, inputs,
-                self._setup['number_of_sensitivity_parameters']
-            )
-
             self._setup = {
-                'solver': solver,
                 'rhs_algebraic': rhs_algebraic,
                 'jac_times_cjmass': jac_times_cjmass,
                 'jac_times_cjmass_colptrs': jac_times_cjmass_colptrs,
@@ -416,6 +404,28 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 'sensitivity_names': sensitivity_names,
                 'number_of_sensitivity_parameters': number_of_sensitivity_parameters,
             }
+
+            print('inputs', inputs.shape)
+            print('colptrs', self._setup['jac_times_cjmass_colptrs'])
+            solver = idaklu.create_casadi_solver(
+                len(y0),
+                self._setup['number_of_sensitivity_parameters'],
+                self._setup['rhs_algebraic'],
+                self._setup['jac_times_cjmass'],
+                self._setup['jac_times_cjmass_colptrs'],
+                self._setup['jac_times_cjmass_rowvals'],
+                self._setup['jac_times_cjmass_nnz'],
+                self._setup['jac_rhs_algebraic_action'],
+                self._setup['mass_action'],
+                self._setup['sensfn'],
+                self._setup['rootfn'],
+                self._setup['num_of_events'],
+                self._setup['use_jac'],
+                self._setup['ids'],
+                atol, rtol, inputs,
+            )
+
+            self._setup['solver'] = solver
         else:
             self._setup = {
                 'resfn': resfn,

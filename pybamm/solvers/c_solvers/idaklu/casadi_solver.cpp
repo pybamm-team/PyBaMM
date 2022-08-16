@@ -1,7 +1,8 @@
 #include "casadi_solver.hpp"
 #include "casadi_sundials_functions.hpp"
+#include <memory>
 
-CasadiSolver
+CasadiSolver *
 create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &rhs_alg, const Function &jac_times_cjmass,
                      const np_array_int &jac_times_cjmass_colptrs,
@@ -12,27 +13,32 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      int use_jacobian, np_array rhs_alg_id, np_array atol_np,
                      double rel_tol, np_array_dense inputs)
 {
+  std::cout << "create_casadi_solver" << std::endl;
 
-  CasadiFunctions functions(
+  std::cout << "create CAsadiFunctions" << std::endl;
+  auto functions = std::make_unique<CasadiFunctions>(
       rhs_alg, jac_times_cjmass, jac_times_cjmass_nnz, jac_times_cjmass_rowvals,
       jac_times_cjmass_colptrs, inputs, jac_action, mass_action, sens, events,
       number_of_states, number_of_events, number_of_parameters);
 
-  CasadiSolver solver(atol_np, rel_tol, rhs_alg_id, number_of_parameters, use_jacobian,
-                      jac_times_cjmass_nnz, functions);
-  return solver;
+  std::cout << "create CAsadiSolver" << std::endl;
+  return new CasadiSolver(atol_np, rel_tol, rhs_alg_id, number_of_parameters,
+                      use_jacobian, jac_times_cjmass_nnz, std::move(functions));
 }
 
-CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id,
-                           int number_of_parameters, bool use_jacobian,
-                           int jac_times_cjmass_nnz, CasadiFunctions &functions)
+CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
+                           np_array rhs_alg_id, int number_of_parameters,
+                           bool use_jacobian, int jac_times_cjmass_nnz,
+                           std::unique_ptr<CasadiFunctions> functions_arg)
     : number_of_states(atol_np.request().size),
       number_of_parameters(number_of_parameters),
-      jac_times_cjmass_nnz(jac_times_cjmass_nnz), functions(functions)
+      jac_times_cjmass_nnz(jac_times_cjmass_nnz), functions(std::move(functions_arg))
 {
+  std::cout << "CasadiSolver construct start" << std::endl;
   auto atol = atol_np.unchecked<1>();
 
   // allocate memory for solver
+  std::cout << "\t allocate memory for solver" << std::endl;
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Create(NULL, &sunctx);
   ida_mem = IDACreate(sunctx);
@@ -41,6 +47,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
 #endif
 
   // allocate vectors
+  std::cout << "\t allocate vectors" << std::endl;
 #if SUNDIALS_VERSION_MAJOR >= 6
   yy = N_VNew_Serial(number_of_states, sunctx);
   yp = N_VNew_Serial(number_of_states, sunctx);
@@ -76,21 +83,26 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
     N_VConst(RCONST(0.0), ypS[is]);
   }
 
+  std::cout << "\t initialise solver" << std::endl;
   // initialise solver
   IDAInit(ida_mem, residual_casadi, 0, yy, yp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
 
+  std::cout << "\t set tolerances" << std::endl;
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // set events
+  std::cout << "\t set events" << std::endl;
   IDARootInit(ida_mem, number_of_events, events_casadi);
 
-  void *user_data = &functions;
+  void *user_data = functions.get();
+  std::cout << "\t set user_data " << user_data << std::endl;
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
+  std::cout << "\t set linear solver" << std::endl;
 #if SUNDIALS_VERSION_MAJOR >= 6
   if (use_jacobian == 1)
   {
@@ -124,6 +136,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
     IDASetJacFn(ida_mem, jacobian_casadi);
   }
 
+  std::cout << "\t set sens" << std::endl;
   if (number_of_parameters > 0)
   {
     IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
@@ -133,6 +146,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
 
   SUNLinSolInitialize(LS);
 
+  std::cout << "\t set id" << std::endl;
   auto id_np_val = rhs_alg_id.unchecked<1>();
   realtype *id_val;
   id_val = N_VGetArrayPointer(id);
@@ -144,11 +158,13 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id
   }
 
   IDASetId(ida_mem, id);
+  std::cout << "CasadiSolver construct end" << std::endl;
 }
 
 CasadiSolver::~CasadiSolver()
 {
 
+  std::cout << "CasadiSolver deconstruct start" << std::endl;
   /* Free memory */
   if (number_of_parameters > 0)
   {
@@ -167,20 +183,23 @@ CasadiSolver::~CasadiSolver()
   }
 
   IDAFree(&ida_mem);
-  #if SUNDIALS_VERSION_MAJOR >= 6
+#if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Free(&sunctx);
-  #endif
+#endif
+  std::cout << "CasadiSolver deconstruct end" << std::endl;
 }
 
 Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
                              np_array_dense inputs)
 {
+  std::cout << "CasadiSolver solve start" << std::endl;
   int number_of_timesteps = t_np.request().size;
 
   realtype *yval = N_VGetArrayPointer(yy);
   realtype *ypval = N_VGetArrayPointer(yp);
   realtype *ySval;
-  if (number_of_parameters > 0) {
+  if (number_of_parameters > 0)
+  {
     ySval = N_VGetArrayPointer(yyS[0]);
   }
 
@@ -193,9 +212,11 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     ypval[i] = yp0[i];
   }
 
+  std::cout << "\t IDAReIinit" << std::endl;
   realtype t0 = RCONST(t(0));
   IDAReInit(ida_mem, t0, yy, yp);
 
+  std::cout << "\t set return vectors" << std::endl;
   int t_i = 1;
   realtype tret;
   realtype t_next;
@@ -244,9 +265,10 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   // calculate consistent initial conditions
-
+  std::cout << "\t calcIC " << t(1) << std::endl;
   IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
 
+  std::cout << "\t main loop" << std::endl;
   int retval;
   while (true)
   {
@@ -289,6 +311,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     }
   }
 
+  std::cout << "\t construting return solution" << std::endl;
   np_array t_ret = np_array(t_i, &t_return[0], free_t_when_done);
   np_array y_ret =
       np_array(t_i * number_of_states, &y_return[0], free_y_when_done);
@@ -331,6 +354,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
               << std::endl;
   }
 
+  std::cout << "CasadiSolver solve end" << std::endl;
   // std::cout << "finished solving 9" << std::endl;
 
   // std::cout << "finished solving 10" << std::endl;

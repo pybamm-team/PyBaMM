@@ -33,9 +33,9 @@ public:
   CasadiFunction rhs_alg;
   CasadiFunction sens;
   CasadiFunction jac_times_cjmass;
-  const np_array_int &jac_times_cjmass_rowvals;
-  const np_array_int &jac_times_cjmass_colptrs;
-  const np_array_dense &inputs;
+  std::vector<int64_t> jac_times_cjmass_rowvals;
+  std::vector<int64_t> jac_times_cjmass_colptrs;
+  std::vector<realtype> inputs;
   CasadiFunction jac_action;
   CasadiFunction mass_action;
   CasadiFunction events;
@@ -48,6 +48,7 @@ public:
                   const Function &mass_action, const Function &sens,
                   const Function &events, const int n_s, int n_e,
                   const int n_p);
+  ~CasadiFunctions();
 
   realtype *get_tmp();
 

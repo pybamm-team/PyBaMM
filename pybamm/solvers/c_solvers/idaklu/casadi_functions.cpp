@@ -31,25 +31,50 @@ void CasadiFunction::operator()()
   m_func.release(mem);
 }
 
-CasadiFunctions::CasadiFunctions(const Function &rhs_alg,
-                                 const Function &jac_times_cjmass,
-                                 const int jac_times_cjmass_nnz,
-                                 const np_array_int &jac_times_cjmass_rowvals,
-                                 const np_array_int &jac_times_cjmass_colptrs,
-                                 const np_array_dense &inputs,
-                                 const Function &jac_action,
-                                 const Function &mass_action,
-                                 const Function &sens, const Function &events,
-                                 const int n_s, int n_e, const int n_p)
+CasadiFunctions::CasadiFunctions(
+    const Function &rhs_alg, const Function &jac_times_cjmass,
+    const int jac_times_cjmass_nnz,
+    const np_array_int &jac_times_cjmass_rowvals_arg,
+    const np_array_int &jac_times_cjmass_colptrs_arg,
+    const np_array_dense &inputs_arg, const Function &jac_action,
+    const Function &mass_action, const Function &sens, const Function &events,
+    const int n_s, int n_e, const int n_p)
     : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
       number_of_nnz(jac_times_cjmass_nnz), rhs_alg(rhs_alg),
-      jac_times_cjmass(jac_times_cjmass),
-      jac_times_cjmass_rowvals(jac_times_cjmass_rowvals),
-      jac_times_cjmass_colptrs(jac_times_cjmass_colptrs), inputs(inputs),
-      jac_action(jac_action), mass_action(mass_action), sens(sens),
-      events(events), tmp(number_of_states)
+      jac_times_cjmass(jac_times_cjmass), jac_action(jac_action),
+      mass_action(mass_action), sens(sens), events(events),
+      tmp(number_of_states)
 {
+  std::cout << "CasadiFunctions constructor" << std::endl;
+
+  // copy across numpy array values
+  const int n_row_vals = jac_times_cjmass_rowvals_arg.request().size;
+  auto p_jac_times_cjmass_rowvals = jac_times_cjmass_rowvals_arg.unchecked<1>();
+  jac_times_cjmass_rowvals.resize(n_row_vals);
+  for (int i; i < n_row_vals; i++) {
+    jac_times_cjmass_rowvals[i] = p_jac_times_cjmass_rowvals[i];
+  }
+
+  const int n_col_ptrs = jac_times_cjmass_colptrs_arg.request().size;
+  auto p_jac_times_cjmass_colptrs = jac_times_cjmass_colptrs_arg.unchecked<1>();
+  jac_times_cjmass_colptrs.resize(n_col_ptrs);
+  for (int i; i < n_col_ptrs; i++) {
+    jac_times_cjmass_colptrs[i] = p_jac_times_cjmass_rowvals[i];
+  }
+
+
+  const int n_inputs = inputs_arg.request().size;
+  std::cout << "n_inputs " << n_inputs << std::endl;
+  auto p_inputs = inputs_arg.unchecked<2>();
+  inputs.resize(n_inputs);
+  for (int i; i < n_inputs; i++) {
+    inputs[i] = p_inputs(i, 0);
+  }
+}
+
+CasadiFunctions::~CasadiFunctions()
+{
+  std::cout << "CasadiFunctions deconstruct" << std::endl;
 }
 
 realtype *CasadiFunctions::get_tmp() { return tmp.data(); }
-
