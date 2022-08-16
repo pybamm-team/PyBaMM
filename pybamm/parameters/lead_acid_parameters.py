@@ -540,6 +540,9 @@ class DomainLeadAcidParameters(BaseParameters):
         for phase in self.phases:
             phase._set_scales()
 
+        # Electrical
+        self.j_scale = self.main_param.i_typ / (self.prim.a_typ * self.main_param.L_x)
+
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
         main = self.main_param
@@ -586,10 +589,7 @@ class DomainLeadAcidParameters(BaseParameters):
         )
 
         self.C_dl = (
-            self.C_dl_dimensional
-            * main.potential_scale
-            / self.prim.j_scale
-            / main.timescale
+            self.C_dl_dimensional * main.potential_scale / self.j_scale / main.timescale
         )
 
         # Thermal
@@ -693,9 +693,6 @@ class PhaseLeadAcidParameters(BaseParameters):
         # Microscale (typical values at electrode/current collector interface)
         self.a_typ = pybamm.xyz_average(self.a_dimensional)
 
-        # Electrical
-        self.j_scale = self.main_param.i_typ / (self.a_typ * self.main_param.L_x)
-
         # Reference OCP
         inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
         self.U_ref = pybamm.FunctionParameter(
@@ -736,10 +733,10 @@ class PhaseLeadAcidParameters(BaseParameters):
         """Dimensionless exchange-current density in the negative electrode"""
         c_e_dim = c_e * self.main_param.c_e_typ
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        return self.j0_dimensional(c_e_dim, T_dim) / self.j_scale
+        return self.j0_dimensional(c_e_dim, T_dim) / self.domain_param.j_scale
 
     def j0_Ox(self, c_e, T):
         """Dimensionless oxygen exchange-current density in the positive electrode"""
         c_e_dim = c_e * self.main_param.c_e_typ
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        return self.j0_Ox_dimensional(c_e_dim, T_dim) / self.j_scale
+        return self.j0_Ox_dimensional(c_e_dim, T_dim) / self.domain_param.j_scale
