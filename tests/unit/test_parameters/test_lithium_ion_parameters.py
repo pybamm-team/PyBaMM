@@ -70,10 +70,6 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             8,
         )
 
-        np.testing.assert_almost_equal(
-            values.evaluate(param.n.prim.gamma / param.n.prim.C_r * c_rate), 26.6639, 3
-        )
-
         # j0_p
         np.testing.assert_almost_equal(
             values.evaluate(
@@ -85,11 +81,6 @@ class TestDimensionlessParameterValues(unittest.TestCase):
                 6 * 10 ** (-7) * param.c_e_typ ** 0.5 * param.p.prim.c_max / 2
             ),
             8,
-        )
-
-        # gamma_p / C_r_p
-        np.testing.assert_almost_equal(
-            values.evaluate(param.p.prim.gamma / param.p.prim.C_r * c_rate), 1.366, 3
         )
 
         # particle dynamics

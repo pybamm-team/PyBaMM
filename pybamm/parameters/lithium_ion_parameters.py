@@ -1015,7 +1015,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
 
         return (
-            self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim) / self.j0_ref_dimensional
+            self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim)
+            / self.domain_param.j_scale
         )
 
     def U(self, c_s, T, lithiation=None):
