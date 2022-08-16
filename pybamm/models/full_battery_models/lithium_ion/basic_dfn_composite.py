@@ -148,32 +148,20 @@ class BasicDFNComposite(BaseModel):
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
-        j0_n_p1 = (
-            param.n.prim.gamma
-            * param.n.prim.j0(c_e_n, c_s_surf_n_p1, T)
-            / param.n.prim.C_r
-        )
+        j0_n_p1 = param.n.prim.j0(c_e_n, c_s_surf_n_p1, T)
         j_n_p1 = (
             2
             * j0_n_p1
             * pybamm.sinh(param.n.prim.ne / 2 * (phi_s_n - phi_e_n - ocp_n_p1))
         )
-        j0_n_p2 = (
-            param.n.sec.gamma
-            * param.n.sec.j0(c_e_n, c_s_surf_n_p2, T)
-            / param.n.sec.C_r
-        )
+        j0_n_p2 = param.n.sec.j0(c_e_n, c_s_surf_n_p2, T)
         j_n_p2 = (
             2
             * j0_n_p2
             * pybamm.sinh(param.n.sec.ne / 2 * (phi_s_n - phi_e_n - ocp_n_p2))
         )
         j_n = j_n_p1 + j_n_p2
-        j0_p = (
-            param.p.prim.gamma
-            * param.p.prim.j0(c_e_p, c_s_surf_p, T)
-            / param.p.prim.C_r
-        )
+        j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * (phi_s_p - phi_e_p - ocp_p))
         j = pybamm.concatenation(j_n, j_s, j_p)
