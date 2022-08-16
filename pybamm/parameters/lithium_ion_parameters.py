@@ -887,9 +887,7 @@ class DomainLithiumIonParameters(BaseParameters):
         c_s_surf_dim = c_s_surf * self.c_max
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
 
-        return (
-            self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim) / self.j0_ref_dimensional
-        )
+        return self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim) / self.j_scale
 
     def U(self, c_s, T):
         """Dimensionless open-circuit potential in the electrode"""
