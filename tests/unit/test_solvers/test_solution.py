@@ -349,7 +349,7 @@ class TestSolution(unittest.TestCase):
     def test_condition_number(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sol = sim.solve([0, 1])
-        entries = []
+        c_nums = []
         for ts, ys, model in zip(sol.all_ts, sol.all_ys, sol.all_models):
             for inner_idx, t_ in enumerate(ts):
                 t = ts[inner_idx]
@@ -358,10 +358,10 @@ class TestSolution(unittest.TestCase):
                 J = model.jac_rhs_algebraic_eval(t, y, [])
                 cond = np.linalg.norm(J) / (np.linalg.norm(f) / np.linalg.norm(y))
 
-                entries.append(cond)
-        entries_ = np.array(entries)
+                c_nums.append(cond)
+        c_nums = np.array(c_nums)
 
-        self.assertEqual((entries_ == sol.condition_number()).all(), True)
+        self.assertEqual((c_nums == sol.condition_number()).all(), True)
 
 
 if __name__ == "__main__":
