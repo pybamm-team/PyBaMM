@@ -10,8 +10,8 @@ options = {
     "open circuit potential": (("single", "current sigmoid"), "single"),
 }
 models = [
-    pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
+    # pybamm.lithium_ion.SPM(options),
+    # pybamm.lithium_ion.SPMe(options),
     pybamm.lithium_ion.DFN(options),
     pybamm.lithium_ion.BasicDFNComposite(),
 ]
