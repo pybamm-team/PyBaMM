@@ -23,7 +23,6 @@ for parameter in [
     "Negative particle radius [m]",
     "Negative electrode diffusivity [m2.s-1]",
     "Negative electrode exchange-current density [A.m-2]",
-    "Negative electrode active material volume fraction",
     "Negative electrode electrons in reaction",
 ]:
     parameter_values.update(
@@ -34,13 +33,60 @@ for parameter in [
         check_already_exists=False,
     )
     del parameter_values[parameter]
+parameter_values.update(
+    {
+        "Primary: Negative electrode active material volume fraction": parameter_values[
+            "Negative electrode active material volume fraction"
+        ]
+        * 0.4,
+        "Secondary: Negative electrode active material volume "
+        "fraction": parameter_values[
+            "Negative electrode active material volume fraction"
+        ]
+        * 0.6,
+    },
+    check_already_exists=False,
+)
+del parameter_values["Negative electrode active material volume fraction"]
+
+# print(parameter_values.evaluate(models[0].param.n.prim.a_R))
+# print(parameter_values.evaluate(models[0].param.n.sec.a_R))
 
 # create and run simulations
 sims = []
 for model in models:
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
-    sim.solve([0, 3600])
+    sim.solve([0, 1000])
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims, ["Terminal voltage [V]"])
+pybamm.dynamic_plot(
+    sims,
+    [
+        "Terminal voltage [V]",
+        [
+            "X-averaged negative electrode primary active material volume fraction",
+            "X-averaged negative electrode secondary active material volume fraction",
+            "X-averaged negative electrode active material volume fraction",
+        ],
+        [
+            "X-averaged negative electrode primary surface area to volume ratio [m-1]",
+            "X-averaged negative electrode secondary surface area to volume ratio [m-1]",
+        ],
+        [
+            "Average negative primary particle concentration",
+            "Average negative secondary particle concentration",
+        ],
+        [
+            "X-averaged negative electrode primary interfacial current density",
+            "X-averaged negative electrode secondary interfacial current density",
+            "X-averaged negative electrode interfacial current density",
+        ],
+        [
+            "X-averaged negative electrode primary volumetric interfacial current density",
+            "X-averaged negative electrode secondary volumetric interfacial current density",
+            "X-averaged negative electrode volumetric interfacial current density",
+        ],
+        "Current [A]",
+    ],
+)
