@@ -791,7 +791,7 @@ class Solution(object):
         """
         c_nums = []
         for ts, ys, model in zip(self.all_ts, self.all_ys, self.all_models):
-            for inner_idx, t_ in enumerate(ts):
+            for inner_idx, _ in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 f = model.rhs_algebraic_eval(t, y, [])
