@@ -128,7 +128,7 @@ class TestCasadiConverter(unittest.TestCase):
             np.arccosh,
             np.arcsinh,
         ]:
-            self.assert_casadi_equal(
+            self.assert_casadi_almost_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
             )
 
@@ -137,9 +137,7 @@ class TestCasadiConverter(unittest.TestCase):
         #       pybamm.Function(np_fun, c).to_casadi()
         # ) - casadi.evalf(casadi.MX(np_fun(3)))
         # is not zero, but a small number of the order 10^-15 when np_func is np.cosh
-        for np_fun in [
-            np.cosh
-        ]:
+        for np_fun in [np.cosh]:
             self.assert_casadi_almost_equal(
                 pybamm.Function(np_fun, c).to_casadi(),
                 casadi.MX(np_fun(3)),
@@ -196,9 +194,11 @@ class TestCasadiConverter(unittest.TestCase):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
         # error for converted children count
-        y3 = (pybamm.StateVector(slice(0, 1)),
-              pybamm.StateVector(slice(0, 1)),
-              pybamm.StateVector(slice(0, 1)))
+        y3 = (
+            pybamm.StateVector(slice(0, 1)),
+            pybamm.StateVector(slice(0, 1)),
+            pybamm.StateVector(slice(0, 1)),
+        )
         x3_ = [np.linspace(0, 1) for _ in range(3)]
         x3 = np.column_stack(x3_)
         data3 = 2 * x3  # np.tile(2 * x3, (10, 1)).T
@@ -218,18 +218,14 @@ class TestCasadiConverter(unittest.TestCase):
         y_test = np.array([0.4, 0.6])
         Y = (2 * x).sum(axis=1).reshape(*[len(el) for el in x_])
         for interpolator in ["linear"]:
-            interp = pybamm.Interpolant(x_,
-                                        Y,
-                                        y, interpolator=interpolator)
+            interp = pybamm.Interpolant(x_, Y, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
         # square
         y = (pybamm.StateVector(slice(0, 1)), pybamm.StateVector(slice(0, 1)))
         Y = (x ** 2).sum(axis=1).reshape(*[len(el) for el in x_])
-        interp = pybamm.Interpolant(x_,
-                                    Y,
-                                    y, interpolator="linear")
+        interp = pybamm.Interpolant(x_, Y, y, interpolator="linear")
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
         np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
