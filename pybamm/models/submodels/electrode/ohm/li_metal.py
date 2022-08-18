@@ -22,14 +22,15 @@ class LithiumMetalBaseModel(BaseModel):
             "Lithium metal interface electrode potential": phi_s,
             "Lithium metal interface electrode potential [V]": pot_scale * phi_s,
             "Lithium metal interface electrolyte potential": phi_e,
-            "Lithium metal interface electrolyte potential [V]": param.U_n_ref
+            "Lithium metal interface electrolyte potential [V]": param.n.U_ref
             + pot_scale * phi_e,
         }
         return variables
 
 
 class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
-    """Explicit model for potential drop across a lithium metal electrode.
+    """Model for potential drop across a lithium metal electrode, with a
+    differential or algebraic equation for the surface potential difference
 
     Parameters
     ----------
@@ -42,7 +43,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """
 
     def get_fundamental_variables(self):
-        ocp_ref = self.param.U_n_ref
+        ocp_ref = self.param.n.U_ref
         pot_scale = self.param.potential_scale
 
         delta_phi = pybamm.Variable(
@@ -62,8 +63,8 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
 
         i_boundary_cc = variables["Current collector current density"]
         T_n = variables["Negative current collector temperature"]
-        l_n = param.l_n
-        delta_phi_s = i_boundary_cc * l_n / param.sigma_n(T_n)
+        l_n = param.n.l
+        delta_phi_s = i_boundary_cc * l_n / param.n.sigma(T_n)
 
         phi_s_cn = variables["Negative current collector potential"]
         delta_phi = variables["Lithium metal interface surface potential difference"]
@@ -79,19 +80,37 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
 
     def set_initial_conditions(self, variables):
         delta_phi = variables["Lithium metal interface surface potential difference"]
-        delta_phi_init = self.param.U_n_init
+        delta_phi_init = self.param.n.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
+    def set_rhs(self, variables):
+        if self.options["surface form"] == "differential":
+            j_pl = variables["Lithium metal plating current density"]
+            j_sei = variables["SEI interfacial current density"]
+            sum_j = j_pl + j_sei
+
+            i_cc = variables["Current collector current density"]
+            delta_phi = variables[
+                "Lithium metal interface surface potential difference"
+            ]
+
+            C_dl = self.param.n.C_dl
+
+            self.rhs[delta_phi] = 1 / C_dl * (i_cc - sum_j)
+
     def set_algebraic(self, variables):
-        j_pl = variables["Lithium metal plating current density"]
-        j_sei = variables["SEI interfacial current density"]
-        sum_j = j_pl + j_sei
+        if self.options["surface form"] != "differential":  # also catches "false"
+            j_pl = variables["Lithium metal plating current density"]
+            j_sei = variables["SEI interfacial current density"]
+            sum_j = j_pl + j_sei
 
-        i_cc = variables["Current collector current density"]
-        delta_phi = variables["Lithium metal interface surface potential difference"]
+            i_cc = variables["Current collector current density"]
+            delta_phi = variables[
+                "Lithium metal interface surface potential difference"
+            ]
 
-        self.algebraic[delta_phi] = i_cc - sum_j
+            self.algebraic[delta_phi] = i_cc - sum_j
 
 
 class LithiumMetalExplicit(LithiumMetalBaseModel):
@@ -112,8 +131,8 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
 
         i_boundary_cc = variables["Current collector current density"]
         T_n = variables["Negative current collector temperature"]
-        l_n = param.l_n
-        delta_phi_s = i_boundary_cc * l_n / param.sigma_n(T_n)
+        l_n = param.n.l
+        delta_phi_s = i_boundary_cc * l_n / param.n.sigma(T_n)
 
         phi_s_cn = variables["Negative current collector potential"]
         delta_phi = variables["Lithium metal interface surface potential difference"]

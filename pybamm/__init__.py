@@ -12,36 +12,7 @@ import os
 #
 # Version info
 #
-def _load_version_int():
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "version"), "r") as f:
-            version = f.read().strip().split(",")
-        year, month = [int(x) for x in version]
-        return year, month
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
-__version_int__ = _load_version_int()
-__version__ = ".".join(["{:02d}".format(x) for x in __version_int__])
-if sys.version_info[0] < 3:
-    del x  # Before Python3, list comprehension iterators leaked
-
-#
-# Expose PyBaMM version
-#
-def version(formatted=False):
-    """
-    Returns the version number, as a 2-part integer (year, month).
-    If ``formatted=True``, it returns a string formatted version (for example
-    "PyBaMM 21.08").
-    """
-    if formatted:
-        return "PyBaMM " + __version__
-    else:
-        return __version_int__
-
+from pybamm.version import __version__
 
 #
 # Constants
@@ -61,13 +32,21 @@ PARAMETER_PATH = [
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
 
+
 #
 # Utility classes and methods
 #
 from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
-from .util import get_parameters_filepath, have_jax, install_jax
+from .util import (
+    get_parameters_filepath,
+    have_jax,
+    install_jax,
+    is_jax_compatible,
+    have_julia,
+)
 from .logger import logger, set_logging_level
+from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
 
@@ -111,6 +90,10 @@ from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.replace_symbols import SymbolReplacer
+from .expression_tree.operations.evaluate_julia import (
+    get_julia_function,
+    get_julia_mtk_model,
+)
 
 #
 # Model classes
@@ -146,13 +129,14 @@ from .models.submodels import (
     particle,
     porosity,
     thermal,
-    tortuosity,
+    transport_efficiency,
     particle_mechanics,
 )
 from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
 from .models.submodels.interface import interface_utilisation
+from .models.submodels.interface import open_circuit_potential
 
 #
 # Geometry
@@ -256,6 +240,11 @@ from .simulation import Simulation, load_sim, is_notebook
 # Batch Study
 #
 from .batch_study import BatchStudy
+
+#
+# Callbacks
+#
+from . import callbacks
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

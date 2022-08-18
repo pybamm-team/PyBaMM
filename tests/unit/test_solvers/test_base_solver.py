@@ -20,10 +20,6 @@ class TestBaseSolver(unittest.TestCase):
         solver.rtol = 1e-7
         self.assertEqual(solver.rtol, 1e-7)
 
-        # max_steps deprecated
-        with self.assertRaisesRegex(ValueError, "max_steps has been deprecated"):
-            pybamm.BaseSolver(max_steps=10)
-
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
         self.assertIsInstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
@@ -175,7 +171,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model = VectorModel()
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
         # with casadi
         init_cond = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
@@ -186,7 +182,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model.jac_algebraic_eval = jac_dense
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
         # With sparse jacobian
         def jac_sparse(t, y, inputs):
@@ -196,7 +192,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model.jac_algebraic_eval = jac_sparse
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
     def test_fail_consistent_initial_conditions(self):
         class Model:
@@ -290,11 +286,9 @@ class TestBaseSolver(unittest.TestCase):
         model.initial_conditions = {v: 1}
         a = pybamm.InputParameter("a")
         model.timescale = a
-        solver = pybamm.CasadiSolver()
-        solver.set_up(model, inputs={"a": 10})
-        sol = solver.step(old_solution=None, model=model, dt=1.0, inputs={"a": 10})
-        with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
-            sol = solver.step(old_solution=sol, model=model, dt=1.0, inputs={"a": 20})
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a scalar"):
+            solver.set_up(model)
 
     def test_inputs_step(self):
         # Make sure interpolant inputs are dropped
@@ -377,12 +371,20 @@ class TestBaseSolver(unittest.TestCase):
                 else:
                     use_inputs = inputs
 
-                sens = model.sensitivities_eval(t, y, use_inputs)
+                sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
+
+                if convert_to_format == "casadi":
+                    sens_a = sens[0]
+                    sens_b = sens[1]
+                else:
+                    sens_a = sens["a"]
+                    sens_b = sens["b"]
+
                 np.testing.assert_allclose(
-                    sens["a"], exact_diff_a(y, inputs["a"], inputs["b"])
+                    sens_a, exact_diff_a(y, inputs["a"], inputs["b"])
                 )
                 np.testing.assert_allclose(
-                    sens["b"], exact_diff_b(y, inputs["a"], inputs["b"])
+                    sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
                 )
 
 

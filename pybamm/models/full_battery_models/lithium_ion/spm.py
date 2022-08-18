@@ -6,12 +6,14 @@ from .base_lithium_ion_model import BaseModel
 
 
 class SPM(BaseModel):
-    """Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
+    """
+    Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -19,6 +21,12 @@ class SPM(BaseModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.SPM()
+    >>> model.name
+    'Single Particle Model'
 
     References
     ----------
@@ -36,38 +44,31 @@ class SPM(BaseModel):
         surface_form = options.get("surface form")
         if kinetics is not None and surface_form is None:
             options["surface form"] = "algebraic"
-        super().__init__(options, name)
-        # For degradation models we use the "x-average" form since this is a
-        # reduced-order model with uniform current density in the electrodes
+
+        # For degradation models we use the "x-average", note that for side reactions
+        # this is set by "x-average side reactions"
         self.x_average = True
 
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_interface_utilisation_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
-        self.set_convection_submodel()
-        self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_solid_submodel()
-        self.set_electrolyte_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
+        # Set "x-average side reactions" to "true" if the model is SPM
+        x_average_side_reactions = options.get("x-average side reactions")
+        if (
+            x_average_side_reactions is None
+            and self.__class__ in [pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM]
+        ):
+            options["x-average side reactions"] = "true"
 
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
+        super().__init__(options, name)
 
-        if self.half_cell:
-            # This also removes "negative electrode" submodels, so should be done last
-            self.set_li_metal_counter_electrode_submodels()
-
-        if build:
-            self.build_model()
+        self.set_submodels(build)
 
         if self.__class__ != "MPM":
             pybamm.citations.register("Marquis2019")
+
+        if (
+            self.options["SEI"] not in ["none", "constant"]
+            or self.options["lithium plating"] != "none"
+        ):
+            pybamm.citations.register("BrosaPlanella2022")
 
     def set_convection_submodel(self):
 
@@ -98,39 +99,30 @@ class SPM(BaseModel):
                 self.param, "Positive", "lithium-ion main", self.options
             )
         else:
-            self.submodels["negative interface"] = self.intercalation_kinetics(
-                self.param, "Negative", "lithium-ion main", self.options
-            )
-
-            self.submodels["positive interface"] = self.intercalation_kinetics(
-                self.param, "Positive", "lithium-ion main", self.options
-            )
+            for domain in ["Negative", "Positive"]:
+                intercalation_kinetics = self.get_intercalation_kinetics(domain)
+                self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+                    self.param, domain, "lithium-ion main", self.options
+                )
 
     def set_particle_submodel(self):
-        if isinstance(self.options["particle"], str):
-            particle_left = self.options["particle"]
-            particle_right = self.options["particle"]
-        else:
-            particle_left, particle_right = self.options["particle"]
-        for particle_side, domain in [
-            [particle_left, "Negative"],
-            [particle_right, "Positive"],
-        ]:
-            if particle_side == "Fickian diffusion":
+        for domain in ["Negative", "Positive"]:
+            particle = getattr(self.options, domain.lower())["particle"]
+            if particle == "Fickian diffusion":
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain, self.options
+                ] = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=True
                 )
-            elif particle_side in [
+            elif particle in [
                 "uniform profile",
                 "quadratic profile",
                 "quartic profile",
             ]:
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle_side, self.options
+                ] = pybamm.particle.XAveragedPolynomialProfile(
+                    self.param, domain, self.options
                 )
 
     def set_solid_submodel(self):

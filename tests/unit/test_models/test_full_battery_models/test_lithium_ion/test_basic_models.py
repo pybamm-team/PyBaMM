@@ -10,30 +10,18 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFN()
         model.check_well_posedness()
 
-        copy = model.new_copy()
-        copy.check_well_posedness()
-
     def test_spm_well_posed(self):
         model = pybamm.lithium_ion.BasicSPM()
         model.check_well_posedness()
-
-        copy = model.new_copy()
-        copy.check_well_posedness()
 
     def test_dfn_half_cell_well_posed(self):
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
 
-        copy = model.new_copy()
-        copy.check_well_posedness()
-
         options = {"working electrode": "negative"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
-
-        copy = model.new_copy()
-        copy.check_well_posedness()
 
     def test_dfn_half_cell_simulation_with_experiment_error(self):
         options = {"working electrode": "negative"}
@@ -43,7 +31,7 @@ class TestBasicModels(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             NotImplementedError,
-            "BasicDFNHalfCell is not compatible with experiment simulations yet.",
+            "BasicDFNHalfCell is not compatible with experiment simulations.",
         ):
             pybamm.Simulation(model, experiment=experiment)
 
@@ -51,7 +39,7 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFNHalfCell(
             options={"working electrode": "positive"}
         )
-        param = pybamm.ParameterValues("Chen2020_plating")
+        param = pybamm.ParameterValues("OKane2022")
         param["Current function [A]"] = 2.5
         sim = pybamm.Simulation(model=model, parameter_values=param)
         sim.solve([0, 100])

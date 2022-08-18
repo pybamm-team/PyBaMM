@@ -111,6 +111,7 @@ setup.log
 
 # test
 test.c
+test.json
 
 # tox
 .tox/
@@ -120,6 +121,7 @@ Manifest.toml
 
 # vcpkg
 vcpkg_installed/
-gmproj/data/esoh/desktop.ini
-gmproj/data/esoh_V/desktop.ini
-gmproj/data/ocv/desktop.ini
+
+# benchmarks
+html/
+results/

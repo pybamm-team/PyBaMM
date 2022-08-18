@@ -18,4 +18,4 @@ Submodels
     particle_mechanics/index
     porosity/index
     thermal/index
-    tortuosity/index
+    transport_efficiency/index

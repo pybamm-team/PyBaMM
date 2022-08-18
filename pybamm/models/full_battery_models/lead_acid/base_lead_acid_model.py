@@ -23,11 +23,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
 
-        # Default timescale is discharge timescale
-        self.timescale = self.param.tau_discharge
+        # Default timescale
+        self._timescale = self.param.timescale
 
         # Set default length scales
-        self.length_scales = {
+        self._length_scales = {
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
@@ -81,6 +81,19 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
 
+    def set_open_circuit_potential_submodel(self):
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                f"{domain.lower()} open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid main", self.options
+            )
+            self.submodels[
+                f"{domain.lower()} oxygen open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid oxygen", self.options
+            )
+
     def set_active_material_submodel(self):
         self.submodels["negative active material"] = pybamm.active_material.Constant(
             self.param, "Negative", self.options
@@ -96,3 +109,8 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_lithium_plating_submodel(self):
 
         self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
+
+    def set_total_kinetics_submodel(self):
+        self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
+            self.param, "lead-acid", self.options
+        )

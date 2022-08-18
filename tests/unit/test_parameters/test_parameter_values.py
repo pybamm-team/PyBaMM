@@ -60,6 +60,18 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
+        # from file, absolute path
+        param = pybamm.ParameterValues(
+            os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium_ion/positive_electrodes/lico2_Marquis2019/parameters.csv",
+            )
+        )
+        self.assertEqual(param["Positive electrode porosity"], 0.3)
+
         # values vs chemistry
         with self.assertRaisesRegex(
             ValueError, "values and chemistry cannot both be None"
@@ -125,26 +137,9 @@ class TestParameterValues(unittest.TestCase):
             param.update({"b": 1})
 
     def test_check_parameter_values(self):
-        # Cell capacity [A.h] deprecated
-        with self.assertRaisesRegex(ValueError, "Cell capacity"):
-            pybamm.ParameterValues({"Cell capacity [A.h]": 1})
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues({"Typical current [A]": 0})
-        with self.assertRaisesRegex(
-            ValueError, "The 'C-rate' parameter has been deprecated"
-        ):
-            pybamm.ParameterValues({"C-rate": 0})
-        with self.assertRaisesRegex(ValueError, "surface area density"):
-            pybamm.ParameterValues({"Negative surface area density": 1})
-        with self.assertRaisesRegex(ValueError, "reaction rate"):
-            pybamm.ParameterValues({"Negative reaction rate": 1})
-        with self.assertRaisesRegex(ValueError, "particle distribution"):
-            pybamm.ParameterValues({"Negative particle distribution in x": 1})
-        with self.assertRaisesRegex(ValueError, "surface area to volume ratio"):
-            pybamm.ParameterValues(
-                {"Negative electrode surface area to volume ratio distribution in x": 1}
-            )
         with self.assertRaisesRegex(ValueError, "propotional term"):
             pybamm.ParameterValues(
                 {"Negative electrode LAM constant propotional term": 1}
@@ -180,14 +175,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_mul.value, 136)
 
         # process integral
-        aa = pybamm.Parameter("a", domain=["negative electrode"])
+        aa = pybamm.PrimaryBroadcast(pybamm.Parameter("a"), "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         integ = pybamm.Integral(aa, x)
         processed_integ = parameter_values.process_symbol(integ)
         self.assertIsInstance(processed_integ, pybamm.Integral)
-        self.assertIsInstance(processed_integ.children[0], pybamm.Scalar)
-        self.assertEqual(processed_integ.children[0].value, 4)
-        self.assertEqual(processed_integ.integration_variable[0].id, x.id)
+        self.assertIsInstance(processed_integ.children[0], pybamm.PrimaryBroadcast)
+        self.assertEqual(processed_integ.children[0].child.value, 4)
+        self.assertEqual(processed_integ.integration_variable[0], x)
 
         # process unary operation
         v = pybamm.Variable("v", domain="test")
@@ -207,7 +202,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_a.value, 4)
 
         # process boundary operator (test for BoundaryValue)
-        aa = pybamm.Parameter("a", domain=["negative electrode"])
+        aa = pybamm.Parameter("a")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         boundary_op = pybamm.BoundaryValue(aa * x, "left")
         processed_boundary_op = parameter_values.process_symbol(boundary_op)
@@ -216,7 +211,7 @@ class TestParameterValues(unittest.TestCase):
         processed_x = processed_boundary_op.children[0].children[1]
         self.assertIsInstance(processed_a, pybamm.Scalar)
         self.assertEqual(processed_a.value, 4)
-        self.assertEqual(processed_x.id, x.id)
+        self.assertEqual(processed_x, x)
 
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -281,11 +276,6 @@ class TestParameterValues(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
-
-        # not implemented
-        sym = pybamm.Symbol("sym")
-        with self.assertRaises(NotImplementedError):
-            parameter_values.process_symbol(sym)
 
         # not found
         with self.assertRaises(KeyError):
@@ -400,24 +390,18 @@ class TestParameterValues(unittest.TestCase):
             parameter_values.process_symbol(func)
 
         # function itself as input (different to the variable being an input)
-        parameter_values = pybamm.ParameterValues(
-            {"func": "[input]", "vector func": pybamm.InputParameter("vec", "test")}
-        )
+        parameter_values = pybamm.ParameterValues({"func": "[input]"})
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
-
-        func = pybamm.FunctionParameter("vector func", {"a": a})
-        processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(inputs={"vec": 13}), 13)
 
         # make sure function keeps the domain of the original function
 
         def my_func(x):
             return 2 * x
 
-        x = pybamm.standard_spatial_vars.x_n
+        x = pybamm.SpatialVariable("x", "negative electrode")
         func = pybamm.FunctionParameter("func", {"x": x})
 
         parameter_values = pybamm.ParameterValues({"func": my_func})
@@ -477,6 +461,25 @@ class TestParameterValues(unittest.TestCase):
 
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 3)
+
+    def test_function_parameter_replace_callable(self):
+        # This functionality is used for generating a model in Julia's MTK
+        def D(a, b):
+            return a * pybamm.exp(b)
+
+        parameter_values = pybamm.ParameterValues({"a": 3, "Diffusivity": D})
+        parameter_values._replace_callable_function_parameters = False
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Variable("b")
+        func = pybamm.FunctionParameter("Diffusivity", {"a": a, "b": b})
+        func.print_name = "D"
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.FunctionParameter)
+        self.assertEqual(processed_func.name, "D")
+        self.assertEqual(processed_func.arg_names, ["a", "b"])
+        self.assertIsInstance(processed_func.callable, pybamm.Multiplication)
 
     def test_process_interpolant(self):
         x = np.linspace(0, 10)[:, np.newaxis]
@@ -669,7 +672,7 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues({"func": 2})
         func_proc = param.process_symbol(func)
 
-        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+        self.assertEqual(func_proc, pybamm.Scalar(2, name="func"))
 
         # test with auxiliary domains
 
@@ -685,10 +688,8 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
-            pybamm.PrimaryBroadcast(
-                pybamm.Scalar(2, name="func"), "current collector"
-            ).id,
+            func_proc,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "current collector"),
         )
 
         # secondary and tertiary
@@ -706,10 +707,10 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
+            func_proc,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"), "negative particle", "current collector"
-            ).id,
+            ),
         )
 
         # secondary, tertiary and quaternary
@@ -728,7 +729,7 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
+            func_proc,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"),
                 "negative particle",
@@ -736,7 +737,7 @@ class TestParameterValues(unittest.TestCase):
                     "secondary": "negative particle size",
                     "tertiary": "current collector",
                 },
-            ).id,
+            ),
         )
 
         # special case for integral of concatenations of broadcasts
@@ -760,7 +761,7 @@ class TestParameterValues(unittest.TestCase):
         )
         func_proc = param.process_symbol(func)
 
-        self.assertEqual(func_proc.id, pybamm.Scalar(3).id)
+        self.assertEqual(func_proc, pybamm.Scalar(3))
 
         # with auxiliary domains
         var_n = pybamm.Variable(
@@ -796,8 +797,8 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
-            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
+            func_proc,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector"),
         )
 
     def test_process_size_average(self):
@@ -812,13 +813,16 @@ class TestParameterValues(unittest.TestCase):
             {
                 "Negative particle radius [m]": 2,
                 "Negative area-weighted particle-size distribution [m-1]": dist,
+                "Negative electrode thickness [m]": 3,
+                "Separator thickness [m]": 4,
+                "Positive electrode thickness [m]": 5,
             }
         )
         var_av_proc = param.process_symbol(var_av)
 
         self.assertIsInstance(var_av_proc, pybamm.SizeAverage)
         R = pybamm.SpatialVariable("R", "negative particle size")
-        self.assertEqual(var_av_proc.f_a_dist.id, ((R * 2) ** 2 * 2).id)
+        self.assertEqual(var_av_proc.f_a_dist, ((R * 2) ** 2 * 2))
 
     def test_process_not_constant(self):
         param = pybamm.ParameterValues({"a": 4})
@@ -896,11 +900,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(bc_value["right"][0], pybamm.Scalar)
         self.assertEqual(bc_value["right"][0].value, 42)
         # variables
-        self.assertEqual(model.variables["var1"].id, var1.id)
+        self.assertEqual(model.variables["var1"], var1)
         self.assertIsInstance(model.variables["grad_var1"], pybamm.Gradient)
         self.assertIsInstance(model.variables["grad_var1"].children[0], pybamm.Variable)
         self.assertEqual(
-            model.variables["d_var1"].id, (pybamm.Scalar(42, name="d") * var1).id
+            model.variables["d_var1"], (pybamm.Scalar(42, name="d") * var1)
         )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
@@ -916,10 +920,32 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(KeyError):
             parameter_values.process_model(model)
 
-    def test_update_model(self):
+    def test_process_model_timescale_lengthscale_not_inputs(self):
+        model = pybamm.BaseModel()
+
+        v = pybamm.Variable("v")
+        model.rhs = {v: 1}
+        model.initial_conditions = {v: 0}
+
+        # Model defined with timescale as an input parameter
+        model.timescale = pybamm.InputParameter("a")
         param = pybamm.ParameterValues({})
-        with self.assertRaises(NotImplementedError):
-            param.update_model(None, None)
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
+            param.process_model(model)
+
+        # Input parameter in parameter values
+        model.timescale = pybamm.Parameter("a")
+        param = pybamm.ParameterValues({"a": "[input]"})
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
+            param.process_model(model)
+
+        # Geometry
+        geometry = geometry = {
+            "negative electrode": {"x_n": {"min": 0, "max": pybamm.Parameter("a")}}
+        }
+        parameter_values = pybamm.ParameterValues({"a": "[input]"})
+        with self.assertRaisesRegex(ValueError, "Geometry parameters must be Scalars"):
+            parameter_values.process_geometry(geometry)
 
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()
@@ -975,17 +1001,6 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["a"], "0.1")
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
-
-    def test_deprecate_anode_cathode(self):
-        chemistry = pybamm.parameter_sets.Ecker2015.copy()
-        chemistry["anode"] = chemistry.pop("negative electrode")
-        with self.assertRaisesRegex(KeyError, "anode"):
-            pybamm.ParameterValues(chemistry)
-
-        chemistry = pybamm.parameter_sets.Ecker2015.copy()
-        chemistry["cathode"] = chemistry.pop("positive electrode")
-        with self.assertRaisesRegex(KeyError, "cathode"):
-            pybamm.ParameterValues(chemistry)
 
 
 if __name__ == "__main__":

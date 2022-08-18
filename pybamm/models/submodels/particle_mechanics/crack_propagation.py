@@ -51,14 +51,9 @@ class CrackPropagation(BaseMechanics):
         variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
         T = variables[self.domain + " electrode temperature"]
-        if self.domain == "Negative":
-            k_cr = self.param.k_cr_n(T)
-            m_cr = self.param.m_cr_n
-            b_cr = self.param.b_cr_n
-        else:
-            k_cr = self.param.k_cr_p(T)
-            m_cr = self.param.m_cr_p
-            b_cr = self.param.b_cr_p
+        k_cr = self.domain_param.k_cr(T)
+        m_cr = self.domain_param.m_cr
+        b_cr = self.domain_param.b_cr
         stress_t_surf = variables[self.domain + " particle surface tangential stress"]
         l_cr = variables[self.domain + " particle crack length"]
         # # compressive stress will not lead to crack propagation
@@ -97,3 +92,17 @@ class CrackPropagation(BaseMechanics):
             l_cr = variables[self.domain + " particle crack length"]
             l0 = pybamm.PrimaryBroadcast(1, self.domain.lower() + " electrode")
         self.initial_conditions = {l_cr: l0}
+
+    def set_events(self, variables):
+        domain = self.domain.lower()
+        if self.x_average is True:
+            l_cr = variables[f"X-averaged {domain} particle crack length"]
+        else:
+            l_cr = variables[self.domain + " particle crack length"]
+        self.events.append(
+            pybamm.Event(
+                f"{domain} particle crack length larger than particle radius",
+                pybamm.max(l_cr) - self.domain_param.R_typ / self.domain_param.l_cr_0,
+                pybamm.EventType.TERMINATION,
+            )
+        )

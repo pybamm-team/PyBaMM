@@ -58,14 +58,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        repeats = self._get_auxiliary_domain_repeats(symbol.auxiliary_domains)
+        repeats = self._get_auxiliary_domain_repeats(symbol.domains)
         if symbol.evaluates_on_edges("primary"):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)
-        return pybamm.Vector(
-            entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
-        )
+        return pybamm.Vector(entries, domains=symbol.domains)
 
     def preprocess_external_variables(self, var):
         """
@@ -101,8 +99,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         domain = symbol.domain
 
         # Add Dirichlet boundary conditions, if defined
-        if symbol.id in boundary_conditions:
-            bcs = boundary_conditions[symbol.id]
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
             if any(bc[1] == "Dirichlet" for bc in bcs.values()):
                 # add ghost nodes and update domain
                 discretised_symbol, domain = self.add_ghost_nodes(
@@ -110,20 +108,20 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # note in 1D cartesian, cylindrical and spherical grad are the same
-        gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
+        gradient_matrix = self.gradient_matrix(domain, symbol.domains)
 
         # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
 
         # Add Neumann boundary conditions, if defined
-        if symbol.id in boundary_conditions:
-            bcs = boundary_conditions[symbol.id]
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
             if any(bc[1] == "Neumann" for bc in bcs.values()):
                 out = self.add_neumann_values(symbol, out, bcs, domain)
 
         return out
 
-    def gradient_matrix(self, domain, auxiliary_domains):
+    def gradient_matrix(self, domain, domains):
         """
         Gradient matrix for finite volumes in the appropriate domain.
         Equivalent to grad(y) = (y[1:] - y[:-1])/dx
@@ -131,16 +129,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         Parameters
         ----------
         domains : list
-            The domain(s) in which to compute the gradient matrix, including ghost nodes
-        auxiliary_domains : dict
-            The auxiliary domains in which to compute the gradient matrix
+            The domain in which to compute the gradient matrix, including ghost nodes
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The (sparse) finite volume gradient matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
+        # Create appropriate submesh by combining submeshes in primary domain
         submesh = self.mesh.combine_submeshes(*domain)
 
         # Create 1D matrix using submesh
@@ -149,7 +145,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
@@ -765,9 +761,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Prepare sizes and empty bcs_vector
         n = submesh.npts - 1
-        second_dim_repeats = self._get_auxiliary_domain_repeats(
-            symbol.auxiliary_domains
-        )
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
@@ -858,9 +852,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh.combine_submeshes(*discretised_child.domain)
 
         prim_pts = submesh.npts
-        repeats = self._get_auxiliary_domain_repeats(
-            discretised_child.auxiliary_domains
-        )
+        repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
         if bcs is None:
             bcs = {}
@@ -889,7 +881,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Dirichlet"):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
-                additive = bcs[child.id][symbol.side][0]
+                additive = bcs[child][symbol.side][0]
 
             elif symbol.side == "left":
 
@@ -902,7 +894,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     ):
                         sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts))
 
-                        additive = -dx0 * bcs[child.id][symbol.side][0]
+                        additive = -dx0 * bcs[child][symbol.side][0]
 
                     else:
                         sub_matrix = csr_matrix(
@@ -923,7 +915,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         sub_matrix = csr_matrix(
                             ([a, b], ([0, 0], [0, 1])), shape=(1, prim_pts)
                         )
-                        additive = alpha * bcs[child.id][symbol.side][0]
+                        additive = alpha * bcs[child][symbol.side][0]
 
                     else:
                         a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
@@ -950,7 +942,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         sub_matrix = csr_matrix(
                             ([1], ([0], [prim_pts - 1])), shape=(1, prim_pts)
                         )
-                        additive = dxN * bcs[child.id][symbol.side][0]
+                        additive = dxN * bcs[child][symbol.side][0]
 
                     else:
                         # to find value at x* use formula:
@@ -976,7 +968,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
 
-                        additive = alpha * bcs[child.id][symbol.side][0]
+                        additive = alpha * bcs[child][symbol.side][0]
 
                     else:
                         a = (
@@ -1003,7 +995,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Neumann"):
                 # just use the value from the bc: f'(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
-                additive = bcs[child.id][symbol.side][0]
+                additive = bcs[child][symbol.side][0]
 
             elif symbol.side == "left":
 
@@ -1409,14 +1401,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh.combine_submeshes(*symbol.domain)
         n = submesh.npts
 
-        if symbol.id not in bcs:
+        if symbol not in bcs:
             raise pybamm.ModelError(
                 "Boundary conditions must be provided for "
                 "{}ing '{}'".format(direction, symbol)
             )
 
         if direction == "upwind":
-            bc, typ = bcs[symbol.id]["left"]
+            bc, typ = bcs[symbol]["left"]
             if typ != "Dirichlet":
                 raise pybamm.ModelError(
                     "Dirichlet boundary conditions must be provided for "
@@ -1433,7 +1425,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
             symbol_out = pybamm.Matrix(upwind_mat) @ concat_bc
         elif direction == "downwind":
-            bc, typ = bcs[symbol.id]["right"]
+            bc, typ = bcs[symbol]["right"]
             if typ != "Dirichlet":
                 raise pybamm.ModelError(
                     "Dirichlet boundary conditions must be provided for "

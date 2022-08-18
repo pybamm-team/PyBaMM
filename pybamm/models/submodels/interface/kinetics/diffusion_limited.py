@@ -29,6 +29,9 @@ class DiffusionLimited(BaseInterface):
         self.order = order
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain
+        rxn = self.reaction_name
+
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
@@ -37,7 +40,7 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp, dUdT = self._get_open_circuit_potential(variables)
+        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
@@ -50,26 +53,14 @@ class DiffusionLimited(BaseInterface):
         )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
-        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
+
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
 
         # No SEI film resistance in this model
         eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
-
-        if (
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-            in variables
-            and "Positive electrode"
-            + self.reaction_name
-            + " interfacial current density"
-            in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         if self.order == "composite":
             # For the composite model, adds the first-order x-averaged interfacial
@@ -104,18 +95,18 @@ class DiffusionLimited(BaseInterface):
                     + self.reaction_name
                     + " interfacial current density"
                 ]
-                j = -self.param.l_p * j_p / self.param.l_n
+                j = -self.param.p.l * j_p / self.param.n.l
             elif self.order in ["composite", "full"]:
-                tor_s = variables["Separator tortuosity"]
+                tor_s = variables["Separator transport efficiency"]
                 c_ox_s = variables["Separator oxygen concentration"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
                     * param.curlyD_ox
                     * pybamm.BoundaryGradient(c_ox_s, "left")
                 )
-                N_ox_neg_sep_interface.domain = ["current collector"]
+                N_ox_neg_sep_interface.domains = {"primary": "current collector"}
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
 
         return j
 
@@ -144,7 +135,7 @@ class DiffusionLimited(BaseInterface):
                 N_ox_s_p = variables["Oxygen flux"].orphans[1]
                 N_ox_neg_sep_interface = pybamm.Index(N_ox_s_p, slice(0, 1))
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
 
             return (j - j_leading_order) / param.C_e
         else:

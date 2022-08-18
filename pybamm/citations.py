@@ -111,7 +111,7 @@ class Citations:
 
 
 def print_citations(filename=None, output_format="text"):
-    """ See :meth:`Citations.print` """
+    """See :meth:`Citations.print`"""
     pybamm.citations.print(filename, output_format)
 
 

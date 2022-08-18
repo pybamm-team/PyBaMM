@@ -24,9 +24,9 @@ class FirstOrder(BaseElectrolyteDiffusion):
 
     def get_coupled_variables(self, variables):
         param = self.param
-        l_n = param.l_n
-        l_s = param.l_s
-        l_p = param.l_p
+        l_n = param.n.l
+        l_s = param.s.l
+        l_p = param.p.l
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
@@ -39,9 +39,13 @@ class FirstOrder(BaseElectrolyteDiffusion):
         eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_0 = variables["Leading-order x-averaged separator porosity"]
         eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
-        tor_n_0 = variables["Leading-order x-averaged negative electrolyte tortuosity"]
-        tor_s_0 = variables["Leading-order x-averaged separator tortuosity"]
-        tor_p_0 = variables["Leading-order x-averaged positive electrolyte tortuosity"]
+        tor_n_0 = variables[
+            "Leading-order x-averaged negative electrolyte transport efficiency"
+        ]
+        tor_s_0 = variables["Leading-order x-averaged separator transport efficiency"]
+        tor_p_0 = variables[
+            "Leading-order x-averaged positive electrolyte transport efficiency"
+        ]
         deps_n_0_dt = variables[
             "Leading-order x-averaged negative electrode porosity change"
         ]

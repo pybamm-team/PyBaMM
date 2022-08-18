@@ -13,7 +13,7 @@ class SymbolReplacer(object):
     ----------
     symbol_replacement_map : dict {:class:`pybamm.Symbol` -> :class:`pybamm.Symbol`}
         Map of which symbols should be replaced by which.
-    processed_symbols: dict {variable ids -> :class:`pybamm.Symbol`}, optional
+    processed_symbols: dict {:class:`pybamm.Symbol` -> :class:`pybamm.Symbol`}, optional
         cached replaced symbols
     process_initial_conditions: bool, optional
         Whether to process initial conditions, default is True
@@ -26,10 +26,6 @@ class SymbolReplacer(object):
         process_initial_conditions=True,
     ):
         self._symbol_replacement_map = symbol_replacement_map
-        self._symbol_replacement_map_ids = {
-            symbol_in.id: symbol_out
-            for symbol_in, symbol_out in symbol_replacement_map.items()
-        }
         self._processed_symbols = processed_symbols or {}
         self.process_initial_conditions = process_initial_conditions
 
@@ -54,8 +50,8 @@ class SymbolReplacer(object):
             # since they point to the same object
             model = unprocessed_model
         else:
-            # create a blank model of the same class
-            model = unprocessed_model.new_empty_copy()
+            # create a copy of the model
+            model = unprocessed_model.new_copy()
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
@@ -110,13 +106,13 @@ class SymbolReplacer(object):
         ]
 
         # Process timescale
-        model.timescale = self.process_symbol(unprocessed_model.timescale)
+        model._timescale = self.process_symbol(unprocessed_model.timescale)
 
         # Process length scales
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
             new_length_scales[domain] = self.process_symbol(scale)
-        model.length_scales = new_length_scales
+        model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish replacing symbols in {}".format(model.name))
 
@@ -171,18 +167,18 @@ class SymbolReplacer(object):
         """
 
         try:
-            return self._processed_symbols[symbol.id]
+            return self._processed_symbols[symbol]
         except KeyError:
             replaced_symbol = self._process_symbol(symbol)
 
-            self._processed_symbols[symbol.id] = replaced_symbol
+            self._processed_symbols[symbol] = replaced_symbol
 
             return replaced_symbol
 
     def _process_symbol(self, symbol):
         """See :meth:`Simplification.process_symbol()`."""
-        if symbol.id in self._symbol_replacement_map_ids.keys():
-            return self._symbol_replacement_map_ids[symbol.id]
+        if symbol in self._symbol_replacement_map.keys():
+            return self._symbol_replacement_map[symbol]
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -210,6 +206,5 @@ class SymbolReplacer(object):
         else:
             # Only other option is that the symbol is a leaf (doesn't have children)
             # In this case, since we have already ruled out that the symbol is one of
-            # the symbols that needs to be replaced, we can just return a new copy of
-            # the symbol
-            return symbol.new_copy()
+            # the symbols that needs to be replaced, we can just return the symbol
+            return symbol

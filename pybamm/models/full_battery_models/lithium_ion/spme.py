@@ -6,13 +6,15 @@ from .spm import SPM
 
 
 class SPMe(SPM):
-    """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
+    """
+    Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
     [1]_. Inherits most submodels from SPM, only modifies potentials and electrolyte.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -20,6 +22,12 @@ class SPMe(SPM):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.SPMe()
+    >>> model.name
+    'Single Particle Model with electrolyte'
 
     References
     ----------
@@ -33,36 +41,12 @@ class SPMe(SPM):
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):
-        super().__init__(options, name, build=False)
-        # For degradation models we use the "x-average" form since this is a
-        # reduced-order model with uniform current density in the electrodes
+        # For degradation models we use the "x-average", note that for side reactions
+        # this is overwritten by "x-average side reactions"
         self.x_average = True
 
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_interface_utilisation_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
-        self.set_convection_submodel()
-        self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_solid_submodel()
-        self.set_electrolyte_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
-
-        if self.half_cell:
-            # This also removes "negative electrode" submodels, so should be done last
-            self.set_li_metal_counter_electrode_submodels()
-
-        if build:
-            self.build_model()
-
-        pybamm.citations.register("Marquis2019")
+        # Initialize with the SPM
+        super().__init__(options, name, build)
 
     def set_convection_submodel(self):
 
@@ -73,11 +57,15 @@ class SPMe(SPM):
             "transverse convection"
         ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
 
-    def set_tortuosity_submodels(self):
-        self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
+    def set_transport_efficiency_submodels(self):
+        self.submodels[
+            "electrolyte transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrolyte", self.options, True
         )
-        self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
+        self.submodels[
+            "electrode transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrode", self.options, True
         )
 

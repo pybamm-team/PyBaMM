@@ -28,18 +28,18 @@ You now have everything you need to start making changes!
 
 ### B. Writing your code
 
-5. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
-6. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
-7. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
-8. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
+6. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
+7. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
+8. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
+9. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
 
 ### C. Merging your changes with PyBaMM
 
-9. [Test your code!](#testing)
-10. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
-11. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
-12. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
-13. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
+10. [Test your code!](#testing)
+11. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
+12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
+13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
+14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
@@ -301,90 +301,6 @@ pybamm.citations.register("your_paper_bibtex_identifier")
 ```
 
 wherever code is called that uses that citation (for example, in functions or in the `__init__` method of a class such as a model or solver).
-
-## Benchmarks
-
-A benchmark suite is located in the `benchmarks` directory at the root of the PyBaMM project. These benchmarks can be run using [airspeed velocity](https://asv.readthedocs.io/en/stable/) (`asv`).
-
-### Running the benchmarks
-First of all, you'll need `asv` installed:
-```shell
-pip install asv
-```
-
-To run the benchmarks for the latest commit on the `develop` branch, simply enter the following command:
-```shell
-asv run
-```
-If it is the first time you run `asv`, you will be prompted for information about your machine (e.g. its name, operating system, architecture...).
-
-Running the benchmarks can take a while, as all benchmarks are repeated several times to ensure statistically significant results. If accuracy isn't an issue, use the `--quick` option to avoid repeating each benchmark multiple times.
-```shell
-asv run --quick
-```
-
-Benchmarks can also be run over a range of commits. For instance, the following command runs the benchmark suite over every commit between version `0.3` and the tip of the `develop` branch:
-```shell
-asv run v0.3..develop
-```
-Further information on how to run benchmarks with `asv` can be found in the documentation at [Using airspeed velocity](https://asv.readthedocs.io/en/stable/using.html).
-
-`asv` is configured using a file `asv.conf.json` located at the root of the PyBaMM repository. See the [asv reference](https://asv.readthedocs.io/en/stable/reference.html) for details on available settings and options.
-
-Benchmark results are stored in a directory `results/` at the location of the configuration file. There is one result file per commit, per machine.
-
-### Visualising benchmark results
-
-`asv` is able to generate a static website with a visualisation of the benchmarks results, i.e. the benchmark's duration as a function of the commit hash.
-To generate the website, use
-```shell
-asv publish
-```
-then, to view the website:
-```shell
-asv preview
-```
-
-Current benchmarks over PyBaMM's history can be viewed at https://pybamm-team.github.io/pybamm-bench/
-
-### Adding benchmarks
-
-To contribute benchmarks to PyBaMM, add a new benchmark function in one of the files in the `benchmarks/` directory.
-Benchmarks are distributed across multiple files, grouped by theme. You're welcome to add a new file if none of your benchmarks fit into one of the already existing files.
-Inside a benchmark file (e.g. `benchmarks/benchmarks.py`) benchmarks functions are grouped within classes.
-
-Note that benchmark functions _must_ start with the prefix `time_`, for instance
-```python3
-def time_solve_SPM_ScipySolver(self):
-        solver = pb.ScipySolver()
-        solver.solve(self.model, [0, 3600])
-```
-
-In the case where some setup is necessary, but should not be timed, a `setup` function
-can be defined as a method of the relevant class. For example:
-```python3
-class TimeSPM:
-    def setup(self):
-        model = pb.lithium_ion.SPM()
-        geometry = model.default_geometry
-
-	    # ...
-
-        self.model = model
-
-    def time_solve_SPM_ScipySolver(self):
-        solver = pb.ScipySolver()
-        solver.solve(self.model, [0, 3600])
-```
-
-Similarly, a `teardown` method will be run after the benchmark. Note that, unless the `--quick` option is used, benchmarks are executed several times for accuracy, and both the `setup` and `teardown` function are executed before/after each repetition.
-
-Running benchmarks can take a while, and by default encountered exceptions will not be shown. When developing benchmarks, it is often convenient to use the following command instead of `asv run`:
-```shell
-asv dev
-```
-
-`asv dev` implies options `--quick`, `--show-stderr`, and `--dry-run` (to avoid updating the `results` directory).
 
 ## Infrastructure
 

@@ -82,7 +82,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -118,7 +118,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         grad = pybamm.Concatenation(
             grad_y, grad_z, check_domain=False, concat_fun=np.hstack
         )
-        grad.domain = domain
+        grad.copy_domains(symbol)
 
         return grad
 
@@ -140,7 +140,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The symbol for which we want to calculate the gradient matrix
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -184,7 +184,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -198,8 +198,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
 
         # get boundary conditions and type
-        neg_bc_value, neg_bc_type = boundary_conditions[symbol.id]["negative tab"]
-        pos_bc_value, pos_bc_type = boundary_conditions[symbol.id]["positive tab"]
+        neg_bc_value, neg_bc_type = boundary_conditions[symbol]["negative tab"]
+        pos_bc_value, pos_bc_type = boundary_conditions[symbol]["positive tab"]
         # boundary load vector is adjusted to account for boundary conditions below
         boundary_load = pybamm.Vector(np.zeros(mesh.npts))
 
@@ -256,7 +256,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The symbol for which we want to calculate the laplacian matrix
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -277,8 +277,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         # get boundary conditions and type
         try:
-            _, neg_bc_type = boundary_conditions[symbol.id]["negative tab"]
-            _, pos_bc_type = boundary_conditions[symbol.id]["positive tab"]
+            _, neg_bc_type = boundary_conditions[symbol]["negative tab"]
+            _, pos_bc_type = boundary_conditions[symbol]["positive tab"]
         except KeyError:
             raise pybamm.ModelError(
                 "No boundary conditions provided for symbol `{}``".format(symbol)
@@ -326,9 +326,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        domain = child.domains["primary"]
-        if isinstance(domain, list):
-            domain = domain[0]
+        domain = child.domain[0]
         mesh = self.mesh[domain]
 
         # make form for the integral
@@ -356,9 +354,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.boundary_integral`
         """
         # Calculate integration vector
-        integration_vector = self.boundary_integral_vector(
-            child.domain[0], region=region
-        )
+        integration_vector = self.boundary_integral_vector(child.domain, region=region)
 
         out = integration_vector @ discretised_child
         out.clear_domains()
@@ -391,9 +387,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        if isinstance(domain, list):
-            domain = domain[0]
-        mesh = self.mesh[domain]
+        mesh = self.mesh[domain[0]]
 
         # make form for the boundary integral
         @skfem.LinearForm
@@ -428,7 +422,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
                 region = "negative tab"
             elif symbol.side == "positive tab":
                 region = "positive tab"
-            domain = symbol.children[0].domain[0]
+            domain = symbol.children[0].domain
             integration_vector = self.boundary_integral_vector(domain, region=region)
 
             # divide integration weights by (numerical) tab width to give average value
@@ -442,7 +436,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         boundary_value = boundary_val_vector @ discretised_child
 
-        boundary_value.domain = symbol.domain
+        boundary_value.copy_domains(symbol)
 
         return boundary_value
 
@@ -457,7 +451,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -478,7 +472,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -499,7 +493,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+            ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
         region: str, optional
             The domain over which to assemble the mass matrix form. Can be "interior"
             (default) or "boundary".
@@ -525,9 +519,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             mass = skfem.asm(mass_form, mesh.facet_basis)
 
         # get boundary conditions and type
-        if symbol.id in boundary_conditions:
-            _, neg_bc_type = boundary_conditions[symbol.id]["negative tab"]
-            _, pos_bc_type = boundary_conditions[symbol.id]["positive tab"]
+        if symbol in boundary_conditions:
+            _, neg_bc_type = boundary_conditions[symbol]["negative tab"]
+            _, pos_bc_type = boundary_conditions[symbol]["positive tab"]
 
             if neg_bc_type == "Dirichlet":
                 # set source terms to zero on boundary by zeroing out mass matrix

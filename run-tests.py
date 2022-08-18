@@ -37,7 +37,8 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         interpreter = sys.executable
     if executable is False:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-        unittest.TextTestRunner(verbosity=2).run(suite)
+        result = unittest.TextTestRunner(verbosity=2).run(suite)
+        ret = int(not result.wasSuccessful())
     else:
         print("Running {} tests with executable '{}'".format(folder, interpreter))
         cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
@@ -52,8 +53,9 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
             p.wait()
             print("")
             sys.exit(1)
-        if ret != 0:
-            sys.exit(ret)
+
+    if ret != 0:
+        sys.exit(ret)
 
 
 def run_flake8():

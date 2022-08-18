@@ -2,9 +2,8 @@
 # Parameter classes
 #
 import numbers
-
 import numpy as np
-
+import scipy.sparse
 import pybamm
 
 
@@ -22,41 +21,51 @@ class InputParameter(pybamm.Symbol):
     domain : iterable of str, or str
         list of domains over which the node is valid (empty list indicates the symbol
         is valid over all domains)
+    expected_size : int
+        The size of the input parameter expected, defaults to 1 (scalar input)
     """
 
-    def __init__(self, name, domain=None):
-        # Expected shape defaults to 1
-        self._expected_size = 1
+    def __init__(self, name, domain=None, expected_size=None):
+        # Expected size defaults to 1 if no domain else None (gets set later)
+        if expected_size is None:
+            if domain is None:
+                expected_size = 1
+            else:
+                expected_size = None
+        self._expected_size = expected_size
         super().__init__(name, domain=domain)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_input_parameter = InputParameter(self.name, self.domain)
-        new_input_parameter._expected_size = self._expected_size
+        new_input_parameter = InputParameter(
+            self.name, self.domain, expected_size=self._expected_size
+        )
         return new_input_parameter
-
-    def set_expected_size(self, size):
-        """Specify the size that the input parameter should be."""
-        self._expected_size = size
-
-        # We also need to update the saved size and shape
-        self._saved_size = size
-        self._saved_shape = (size, 1)
-        self._saved_evaluate_for_shape = self._evaluate_for_shape()
 
     def _evaluate_for_shape(self):
         """
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        if self._expected_size == 1:
+        if self._expected_size is None:
+            return pybamm.evaluate_for_shape_using_domain(self.domains)
+        elif self._expected_size == 1:
             return np.nan
         else:
             return np.nan * np.ones((self._expected_size, 1))
 
     def _jac(self, variable):
         """See :meth:`pybamm.Symbol._jac()`."""
-        return pybamm.Scalar(0)
+        n_variable = variable.evaluation_array.count(True)
+        nan_vector = self._evaluate_for_shape()
+        if isinstance(nan_vector, numbers.Number):
+            n_self = 1
+        else:
+            n_self = nan_vector.shape[0]
+        zero_matrix = scipy.sparse.csr_matrix(
+            (n_self, n_variable)
+        )
+        return pybamm.Matrix(zero_matrix)
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         # inputs should be a dictionary

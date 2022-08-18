@@ -6,13 +6,15 @@ from .base_lead_acid_model import BaseModel
 
 
 class Full(BaseModel):
-    """Porous electrode model for lead-acid, from [1]_, based on the Newman-Tiedemann
+    """
+    Porous electrode model for lead-acid, from [1]_, based on the Newman-Tiedemann
     model.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -35,11 +37,12 @@ class Full(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
+        self.set_open_circuit_potential_submodel()
         self.set_intercalation_kinetics_submodel()
         self.set_interface_utilisation_submodel()
         self.set_porosity_submodel()
         self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
+        self.set_transport_efficiency_submodels()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
         self.set_solid_submodel()
@@ -48,6 +51,7 @@ class Full(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if build:
             self.build_model()
@@ -81,12 +85,11 @@ class Full(BaseModel):
             ] = pybamm.convection.through_cell.Full(self.param)
 
     def set_intercalation_kinetics_submodel(self):
-        self.submodels["negative interface"] = self.intercalation_kinetics(
-            self.param, "Negative", "lead-acid main", self.options
-        )
-        self.submodels["positive interface"] = self.intercalation_kinetics(
-            self.param, "Positive", "lead-acid main", self.options
-        )
+        for domain in ["Negative", "Positive"]:
+            intercalation_kinetics = self.get_intercalation_kinetics(domain)
+            self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+                self.param, domain, "lead-acid main", self.options
+            )
 
     def set_solid_submodel(self):
         if self.options["surface form"] == "false":

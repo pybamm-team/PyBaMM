@@ -3,7 +3,6 @@
 #
 
 import numpy as np
-import warnings
 
 examples = """
 
@@ -43,17 +42,11 @@ class Experiment:
     ----------
     operating_conditions : list
         List of operating conditions
-    parameters : dict
-        Dictionary of parameters to use for this experiment, replacing default
-        parameters as appropriate
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
     termination : list, optional
         List of conditions under which to terminate the experiment. Default is None.
-    use_simulation_setup_type : str
-        Whether to use the "new" (default) or "old" simulation set-up type. "new" is
-        faster at simulating individual steps but has higher set-up overhead
     drive_cycles : dict
         Dictionary of drive cycles to use for this experiment.
     cccv_handling : str, optional
@@ -66,32 +59,14 @@ class Experiment:
     def __init__(
         self,
         operating_conditions,
-        parameters=None,
         period="1 minute",
         termination=None,
-        use_simulation_setup_type="new",
         drive_cycles={},
         cccv_handling="two-step",
     ):
         if cccv_handling not in ["two-step", "ode"]:
             raise ValueError("cccv_handling should be either 'two-step' or 'ode'")
         self.cccv_handling = cccv_handling
-        # Deprecations
-        if parameters is not None:
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                "'parameters' as an input to the Experiment class will soon be "
-                "deprecated. Please open an issue if you are using this feature.",
-                DeprecationWarning,
-            )
-        if use_simulation_setup_type == "old":
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                "'old' simulation setup type for the Experiment class will soon be "
-                "deprecated. Use 'new' instead. Please open an issue if this gives an "
-                "error or unexpected results.",
-                DeprecationWarning,
-            )
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -133,9 +108,12 @@ class Experiment:
                     badly_typed_conditions = []
                 badly_typed_conditions = badly_typed_conditions or [cycle]
                 raise TypeError(
-                    """Operating conditions should be strings or tuples of strings, not {}. For example: {}
-                """.format(
+                    """Operating conditions should be strings or tuples of strings, not
+                    {}. For example: {}
+                    """.format(
                         type(badly_typed_conditions[0]), examples
+                    ).replace(
+                        "\n                    ", " "
                     )
                 )
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
@@ -147,15 +125,9 @@ class Experiment:
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions, drive_cycles
         )
-        parameters = parameters or {}
-        if isinstance(parameters, dict):
-            self.parameters = parameters
-        else:
-            raise TypeError("experimental parameters should be a dictionary")
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
-        self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
         return str(self.operating_conditions_strings)
@@ -208,12 +180,15 @@ class Experiment:
             cond_CC, cond_CV = cond.split(" then ")
             op_CC, _ = self.read_string(cond_CC, drive_cycles)
             op_CV, event_CV = self.read_string(cond_CV, drive_cycles)
-            return {
-                "electric": op_CC["electric"] + op_CV["electric"],
-                "time": op_CV["time"],
-                "period": op_CV["period"],
-                "dc_data": None,
-            }, event_CV
+            return (
+                {
+                    "electric": op_CC["electric"] + op_CV["electric"],
+                    "time": op_CV["time"],
+                    "period": op_CV["period"],
+                    "dc_data": None,
+                },
+                event_CV,
+            )
         # Read period
         if " period)" in cond:
             cond, time_period = cond.split("(")
@@ -288,18 +263,19 @@ class Experiment:
                 events = self.convert_electric(cond_list[idx + 1 :])
             else:
                 raise ValueError(
-                    """Operating conditions must contain keyword 'for' or 'until' or 'Run'.
-                    For example: {}""".format(
+                    """Operating conditions must contain keyword 'for' or 'until' or
+                    'Run'. For example: {}
+                    """.format(
                         examples
+                    ).replace(
+                        "\n                    ", " "
                     )
                 )
 
-        return {
-            "electric": electric,
-            "time": time,
-            "period": period,
-            "dc_data": dc_data,
-        }, events
+        return (
+            {"electric": electric, "time": time, "period": period, "dc_data": dc_data},
+            events,
+        )
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
@@ -358,9 +334,11 @@ class Experiment:
                     sign = -1
                 else:
                     raise ValueError(
-                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or 'Run'.
-                        For example: {}""".format(
+                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or
+                        'Run'. For example: {}""".format(
                             examples
+                        ).replace(
+                            "\n                        ", " "
                         )
                     )
             elif len(electric) == 2:

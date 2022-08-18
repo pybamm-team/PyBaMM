@@ -23,9 +23,7 @@ class TestMPM(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
-        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, to_python)
 
         if pybamm.have_jax():
@@ -83,8 +81,6 @@ class TestMPM(unittest.TestCase):
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
-
-    sys.setrecursionlimit(10000)
 
     if "-v" in sys.argv:
         debug = True

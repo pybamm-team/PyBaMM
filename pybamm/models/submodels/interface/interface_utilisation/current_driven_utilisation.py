@@ -32,31 +32,31 @@ class CurrentDriven(BaseModel):
         if self.reaction_loc == "full electrode":
             if self.domain == "Negative":
                 u = pybamm.Variable(
-                    "Negative electrode interface utilisation",
+                    "Negative electrode interface utilisation variable",
                     domain="negative electrode",
                     auxiliary_domains={"secondary": "current collector"},
                 )
             else:
                 u = pybamm.Variable(
-                    "Positive electrode interface utilisation",
+                    "Positive electrode interface utilisation variable",
                     domain="positive electrode",
                     auxiliary_domains={"secondary": "current collector"},
                 )
         elif self.reaction_loc == "x-average":
             if self.domain == "Negative":
                 u_xav = pybamm.Variable(
-                    "X-averaged negative electrode interface utilisation",
+                    "X-averaged negative electrode interface utilisation variable",
                     domain="current collector",
                 )
             else:
                 u_xav = pybamm.Variable(
-                    "X-averaged positive electrode interface utilisation",
+                    "X-averaged positive electrode interface utilisation variable",
                     domain="current collector",
                 )
             u = pybamm.PrimaryBroadcast(u_xav, self.domain.lower() + " electrode")
         else:
             u = pybamm.Variable(
-                "Lithium metal interface utilisation",
+                "Lithium metal interface utilisation variable",
                 domain="current collector",
             )
         variables = self._get_standard_interface_utilisation_variables(u)
@@ -65,12 +65,14 @@ class CurrentDriven(BaseModel):
 
     def set_rhs(self, variables):
         if self.reaction_loc == "full electrode":
-            u = variables[self.domain + " electrode interface utilisation"]
+            u = variables[self.domain + " electrode interface utilisation variable"]
             a = variables[self.domain + " electrode surface area to volume ratio"]
             j = variables[self.domain + " electrode interfacial current density"]
         elif self.reaction_loc == "x-average":
             u = variables[
-                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode interface utilisation variable"
             ]
             a = variables[
                 "X-averaged "
@@ -83,31 +85,27 @@ class CurrentDriven(BaseModel):
                 + " electrode interfacial current density"
             ]
         else:
-            u = variables["Lithium metal interface utilisation"]
+            u = variables["Lithium metal interface utilisation variable"]
             a = 1
             j = variables["Lithium metal total interfacial current density"]
 
-        if self.domain == "Negative":
-            beta = self.param.beta_utilisation_n
-        else:
-            beta = self.param.beta_utilisation_p
+        beta = self.domain_param.beta_utilisation
 
-        self.rhs = {u: beta * a * j}
+        self.rhs = {u: beta * a * u * j}
 
     def set_initial_conditions(self, variables):
         if self.reaction_loc == "full electrode":
-            u = variables[self.domain + " electrode interface utilisation"]
+            u = variables[self.domain + " electrode interface utilisation variable"]
         elif self.reaction_loc == "x-average":
             u = variables[
-                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode interface utilisation variable"
             ]
         else:
-            u = variables["Lithium metal interface utilisation"]
+            u = variables["Lithium metal interface utilisation variable"]
 
-        if self.domain == "Negative":
-            u_init = self.param.u_n_init
-        else:
-            u_init = self.param.u_p_init
+        u_init = self.domain_param.u_init
 
         self.initial_conditions = {u: u_init}
 

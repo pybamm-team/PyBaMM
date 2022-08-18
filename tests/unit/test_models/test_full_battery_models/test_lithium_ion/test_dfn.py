@@ -23,6 +23,14 @@ class TestDFN(BaseUnitTestLithiumIon, unittest.TestCase):
         options = {"particle size": "distribution", "particle": "uniform profile"}
         self.check_well_posedness(options)
 
+    def test_well_posed_external_circuit_explicit_power(self):
+        options = {"operating mode": "explicit power"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_explicit_resistance(self):
+        options = {"operating mode": "explicit resistance"}
+        self.check_well_posedness(options)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

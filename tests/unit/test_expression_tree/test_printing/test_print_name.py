@@ -16,7 +16,7 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param.timescale.print_name, r"\tau")
 
         # Test superscripts
-        self.assertEqual(param.U_n_ref.print_name, r"U_{n}^{ref}")
+        self.assertEqual(param.n.U_ref.print_name, r"U_{n}^{ref}")
 
         # Test subscripts
         self.assertEqual(param.a_R_p.print_name, r"a_{R\,p}")

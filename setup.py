@@ -5,8 +5,6 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
-import site
-import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -86,23 +84,13 @@ class bdist_wheel(orig.bdist_wheel):
         orig.bdist_wheel.run(self)
 
 
-def load_version():
-    # Read version number from file
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "pybamm", "version"), "r") as f:
-            version = f.read().strip().split(",")
-        return ".".join(["{:02d}".format(int(x)) for x in version])
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
 def compile_KLU():
     # Return whether or not the KLU extension should be compiled.
     # Return True if:
     # - Not running on Windows AND
     # - CMake is found AND
-    # - The pybind11 directory is found in the PyBaMM project directory
+    # - The pybind11 and casadi-headers directories are found
+    #   in the PyBaMM project directory
     CMakeFound = True
     PyBind11Found = True
     windows = (not system()) or system() == "Windows"
@@ -154,13 +142,29 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     pybamm_data.extend(
         [os.path.join(*Path(filename).parts[1:]) for filename in list_of_files]
     )
-pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
 
-idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension(
+    "pybamm.solvers.idaklu",
+    [
+        "pybamm/solvers/c_solvers/idaklu.cpp"
+        "pybamm/solvers/c_solvers/idaklu.hpp"
+        "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
+        "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
+        "pybamm/solvers/c_solvers/idaklu_python.cpp"
+        "pybamm/solvers/c_solvers/idaklu_python.hpp"
+        "pybamm/solvers/c_solvers/solution.cpp"
+        "pybamm/solvers/c_solvers/solution.hpp"
+    ],
+)
 ext_modules = [idaklu_ext] if compile_KLU() else []
+
+# Defines __version__
+root = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(root, "pybamm", "version.py")) as f:
+    exec(f.read())
 
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
@@ -168,7 +172,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=__version__,  # noqa: F821
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -193,9 +197,12 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "imageio>=2.9.0",
+        # Julia pip packaged can be installed even if
+        # julia programming language is not installed
+        "julia>=0.5.6",
         "jupyter",  # For example notebooks
-        "pybtex",
-        "sympy==1.9",
+        "pybtex>=0.24.0",
+        "sympy>=1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -219,9 +226,3 @@ setup(
         ]
     },
 )
-
-# pybtex adds a folder "tests" to the site packages, so we manually remove this
-path_to_sitepackages = site.getsitepackages()[0]
-path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
-if os.path.exists(path_to_tests_dir):
-    shutil.rmtree(path_to_tests_dir)

@@ -30,22 +30,15 @@ class ForwardTafel(BaseKinetics):
     def __init__(self, param, domain, reaction, options):
         super().__init__(param, domain, reaction, options)
 
-    @property
-    def alpha(self):
-        if self.domain == "Negative":
-            return self.param.alpha_bv_n
-        elif self.domain == "Positive":
-            return self.param.alpha_bv_p
-
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        alpha = self.alpha
+        alpha = self.domain_param.alpha_bv
         return (
             u * j0 * pybamm.exp((ne * alpha / (2 * (1 + self.param.Theta * T))) * eta_r)
         )
 
     def _get_dj_dc(self, variables):
         """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"""
-        alpha = self.alpha
+        alpha = self.domain_param.alpha_bv
         (
             c_e,
             delta_phi,
@@ -62,7 +55,7 @@ class ForwardTafel(BaseKinetics):
 
     def _get_dj_ddeltaphi(self, variables):
         """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"""
-        alpha = self.alpha
+        alpha = self.domain_param.alpha_bv
         _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
             variables
         )

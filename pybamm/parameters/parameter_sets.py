@@ -26,11 +26,6 @@ Lithium-ion parameter sets
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-    * Chen2020_plating :
-       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
-         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
     * Ecker2015 :
        - Madeleine Ecker, Stefan Käbitz, Izaro Laresgoiti, and Dirk Uwe Sauer.
          Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II.
@@ -66,15 +61,25 @@ Lithium-ion parameter sets
          Pesaran. Multi-domain modeling of lithium-ion batteries encompassing
          multi-physics in varied length scales. Journal of the Electrochemical Society,
          158(8):A955–A969, 2011. doi:10.1149/1.3597614.
-    * ORegan2021 :
+    * OKane2022 :
+       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+       - Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez,
+         Robert Timms, Valentin Sulzer, Jacqueline Sophie Edge, Billy Wu, Gregory J.
+         Offer, and Monica Marinescu. Lithium-ion battery degradation: how to model it.
+         Phys. Chem. Chem. Phys., 24:7909-7922, 2022. URL:
+         http://dx.doi.org/10.1039/D2CP00417H, doi:10.1039/D2CP00417H.
+    * ORegan2022 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
        - Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-         Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li
-         concentration and temperature dependencies. Journal of The Electrochemical
-         Society, ():, 2021. doi:.
+         Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+         battery. Electrochimica Acta, 425:140700, 2022.
+         doi:10.1016/j.electacta.2022.140700.
     * Prada2013 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
@@ -157,19 +162,6 @@ Chen2020 = {
     "citation": "Chen2020",
 }
 
-Chen2020_plating = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020_plating",
-    "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
-    "electrolyte": "lipf6_Nyman2008",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
-    "lithium plating": "okane2020_Li_plating",
-    "citation": "Chen2020",
-}
-
 Mohtat2020 = {
     "chemistry": "lithium_ion",
     "cell": "UMBL_Mohtat2020",
@@ -230,15 +222,28 @@ Xu2019 = {
     "citation": "Xu2019",
 }
 
-ORegan2021 = {
+ORegan2022 = {
     "chemistry": "lithium_ion",
-    "cell": "LGM50_ORegan2021",
-    "negative electrode": "graphite_ORegan2021",
-    "separator": "separator_ORegan2021",
-    "positive electrode": "nmc_ORegan2021",
+    "cell": "LGM50_ORegan2022",
+    "negative electrode": "graphite_ORegan2022",
+    "separator": "separator_ORegan2022",
+    "positive electrode": "nmc_ORegan2022",
     "electrolyte": "lipf6_EC_EMC_3_7_Landesfeind2019",
-    "experiment": "1C_discharge_from_full_ORegan2021",
-    "citation": ["ORegan2021", "Chen2020"],
+    "experiment": "1C_discharge_from_full_ORegan2022",
+    "citation": ["ORegan2022", "Chen2020"],
+}
+
+OKane2022 = {
+    "chemistry": "lithium_ion",
+    "cell": "LGM50_Chen2020",
+    "negative electrode": "graphite_OKane2022",
+    "separator": "separator_Chen2020",
+    "positive electrode": "nmc_OKane2022",
+    "electrolyte": "lipf6_Nyman2008",
+    "experiment": "1C_discharge_from_full_Chen2020",
+    "sei": "OKane2022",
+    "lithium plating": "okane2022_Li_plating",
+    "citation": ["OKane2022", "Chen2020"],
 }
 
 #

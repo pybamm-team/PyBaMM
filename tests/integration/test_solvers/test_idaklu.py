@@ -22,9 +22,10 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_on_spme_sensitivities(self):
         param_name = "Typical current [A]"
         param_value = 0.15652
-        model = pybamm.lithium_ion.SPMe()
+        param = pybamm.ParameterValues("Marquis2019")
+        timescale = param.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         geometry = model.default_geometry
-        param = model.default_parameter_values
         param.update({param_name: "[input]"})
         inputs = {param_name: param_value}
         param.process_model(model)
@@ -32,7 +33,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = np.linspace(0, 3500, 100)
         solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
         solution = solver.solve(
             model,
@@ -46,7 +47,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         dyda_ida = solution.sensitivities[param_name]
 
         # evaluate the sensitivities using finite difference
-        h = 1e-6
+        h = 1e-5
         sol_plus = solver.solve(
             model, t_eval, inputs={param_name: param_value + 0.5 * h}
         )

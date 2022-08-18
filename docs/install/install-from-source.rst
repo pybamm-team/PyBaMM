@@ -85,7 +85,7 @@ If you are using MacOS, an alternative to the above is to get the required SUNDI
 
 	  brew install sundials
 
-Next, clone the pybind11 repository:
+Next, clone the pybind11 and casadi-headers repositories:
 
 .. code:: bash
 
@@ -103,6 +103,7 @@ If you'd rather do things yourself,
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
+	 
 
 PyBaMM ships with a python script that automates points 2. and 3. You can run it with
 
@@ -180,9 +181,9 @@ Is is often sufficient to run the unit tests only. To do so, use
 
    .. code:: bash
 
-      tox -e quick # (GNU/Linux and MacOS)
+      tox -e unit # (GNU/Linux and MacOS)
       #
-      python -m tox -e windows-quick # (Windows)
+      python -m tox -e windows-unit # (Windows)
 
 
 Using the test runner 
@@ -203,7 +204,7 @@ You can also use the test runner to run the doctests:
 
 .. code:: bash
 
-	  python run-tests.py --doctests
+	  python run-tests.py --doctest
 
 There is more to the PyBaMM test runner. To see a list of all options, type
 
@@ -237,7 +238,7 @@ Note for Windows users
 If you are running Windows, the following tox commands must be prefixed by ``windows-``:
 
 - ``tests``
-- ``quick``
+- ``unit``
 - ``examples``
 - ``doctests``
 - ``dev``

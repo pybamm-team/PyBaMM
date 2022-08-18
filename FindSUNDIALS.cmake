@@ -79,3 +79,12 @@ mark_as_advanced(
     SUNDIALS_LIBRARIES
     SUNDIALS_INCLUDE_DIR
 )
+
+# behave like a CMake module is supposed to behave
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(
+  "SUNDIALS"
+  FOUND_VAR SUNDIALS_FOUND
+  REQUIRED_VARS SUNDIALS_INCLUDE_DIR SUNDIALS_LIBRARIES
+  HANDLE_COMPONENTS
+)

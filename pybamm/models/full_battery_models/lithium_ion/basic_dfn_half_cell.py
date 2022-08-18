@@ -45,22 +45,16 @@ class BasicDFNHalfCell(BaseModel):
                 "The option 'working electrode' should be either 'positive'"
                 " or 'negative'"
             )
-        working_electrode = self.options["working electrode"]
-
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
         param = self.param
 
-        # Define variables and timescale depending on the working electrode
-        if working_electrode == "negative":
-            R_w_typ = param.R_n_typ
-        else:
-            R_w_typ = param.R_p_typ
+        R_w_typ = param.p.R_typ
 
         # Set default length scales
-        self.length_scales = {
+        self._length_scales = {
             "separator": param.L_x,
             "positive electrode": param.L_x,
             "positive particle": R_w_typ,
@@ -119,79 +113,38 @@ class BasicDFNHalfCell(BaseModel):
         # Define parameters. We need to assemble them differently depending on the
         # working electrode
 
-        if working_electrode == "negative":
-            # Porosity and Tortuosity
-            # Primary broadcasts are used to broadcast scalar quantities across a domain
-            # into a vector of the right shape, for multiplying with other vectors
-            eps_s = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Separator porosity"), "separator"
-            )
-            eps_w = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Positive electrode porosity"), "positive electrode"
-            )
-            b_e_s = param.b_e_s
-            b_e_w = param.b_e_n
+        # Porosity and Transport_efficiency
+        eps_s = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Separator porosity"), "separator"
+        )
+        eps_w = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Positive electrode porosity"), "positive electrode"
+        )
+        b_e_s = param.s.b_e
+        b_e_w = param.p.b_e
 
-            # Interfacial reactions
-            j0_w = param.j0_n(c_e_w, c_s_surf_w, T) / param.C_r_n
-            U_w = param.U_n
-            ne_w = param.ne_n
+        # Interfacial reactions
+        j0_w = param.p.j0(c_e_w, c_s_surf_w, T) / param.p.C_r
+        U_w = param.p.U
+        ne_w = param.p.ne
 
-            # Particle diffusion parameters
-            D_w = param.D_n
-            C_w = param.C_n
-            a_R_w = param.a_R_n
-            gamma_e = param.c_e_typ / param.c_n_max
-            c_w_init = param.c_n_init
+        # Particle diffusion parameters
+        D_w = param.p.D
+        C_w = param.p.cap_init
+        a_R_w = param.p.a_R
+        gamma_e = param.c_e_typ / param.p.c_max
+        c_w_init = param.p.c_init
 
-            # Electrode equation parameters
-            eps_s_w = pybamm.Parameter(
-                "Negative electrode active material volume fraction"
-            )
-            b_s_w = param.b_s_n
-            sigma_w = param.sigma_n
+        # Electrode equation parameters
+        eps_s_w = pybamm.Parameter("Positive electrode active material volume fraction")
+        b_s_w = param.p.b_s
+        sigma_w = param.p.sigma
 
-            # Other parameters (for outputs)
-            c_w_max = param.c_n_max
-            U_w_ref = param.U_n_ref
-            U_Li_ref = param.U_p_ref
-            L_w = param.L_n
-
-        else:
-            # Porosity and Tortuosity
-            eps_s = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Separator porosity"), "separator"
-            )
-            eps_w = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Positive electrode porosity"), "positive electrode"
-            )
-            b_e_s = param.b_e_s
-            b_e_w = param.b_e_p
-
-            # Interfacial reactions
-            j0_w = param.j0_p(c_e_w, c_s_surf_w, T) / param.C_r_p
-            U_w = param.U_p
-            ne_w = param.ne_p
-
-            # Particle diffusion parameters
-            D_w = param.D_p
-            C_w = param.C_p
-            a_R_w = param.a_R_p
-            gamma_e = param.c_e_typ / param.c_p_max
-            c_w_init = param.c_p_init
-
-            # Electrode equation parameters
-            eps_s_w = pybamm.Parameter(
-                "Positive electrode active material volume fraction"
-            )
-            b_s_w = param.b_s_p
-            sigma_w = param.sigma_p
-
-            # Other parameters (for outputs)
-            c_w_max = param.c_p_max
-            U_w_ref = param.U_p_ref
-            U_Li_ref = param.U_n_ref
-            L_w = param.L_p
+        # Other parameters (for outputs)
+        c_w_max = param.p.c_max
+        U_w_ref = param.p.U_ref
+        U_Li_ref = param.n.U_ref
+        L_w = param.p.L
 
         # gamma_w is always 1 because we choose the timescale based on the working
         # electrode
@@ -233,12 +186,7 @@ class BasicDFNHalfCell(BaseModel):
                 "Neumann",
             ),
         }
-
-        # c_w_init can in general be a function of x
-        # Note the broadcasting, for domains
-        var = pybamm.standard_spatial_vars
-        x_w = pybamm.PrimaryBroadcast(var.x_p, "positive particle")
-        self.initial_conditions[c_s_w] = c_w_init(x_w)
+        self.initial_conditions[c_s_w] = c_w_init
 
         # Events specify points at which a solution should terminate
         self.events += [
@@ -268,7 +216,7 @@ class BasicDFNHalfCell(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
         # initial conditions
-        self.initial_conditions[phi_s_w] = U_w(c_w_init(1), param.T_init)
+        self.initial_conditions[phi_s_w] = param.p.U_init
 
         ######################
         # Electrolyte concentration
@@ -300,18 +248,14 @@ class BasicDFNHalfCell(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * gamma_e / param.C_e) * (
-            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chiT_over_c(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
         # dimensionless reference potential so that dimensional reference potential
         # is zero (phi_dim = U_n_ref + pot_scale * phi)
-        if working_electrode == "negative":
-            l_Li = param.l_p
-            sigma_Li = param.sigma_p
-        else:
-            l_Li = param.l_n
-            sigma_Li = param.sigma_n
+        l_Li = param.p.l
+        sigma_Li = param.p.sigma
         j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
         eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
 
@@ -325,7 +269,7 @@ class BasicDFNHalfCell(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[phi_e] = param.U_n_ref / pot_scale
+        self.initial_conditions[phi_e] = param.n.U_ref / pot_scale
 
         ######################
         # (Some) variables
@@ -425,6 +369,6 @@ class BasicDFNHalfCell(BaseModel):
         new_model = self.__class__(name=self.name, options=self.options)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
-        new_model.timescale = self.timescale
-        new_model.length_scales = self.length_scales
+        new_model._timescale = self.timescale
+        new_model._length_scales = self.length_scales
         return new_model

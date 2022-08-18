@@ -3,6 +3,7 @@ Name [units],Value,Reference,Notes
 ,,,
 # Electrolyte properties,,,
 Typical electrolyte concentration [mol.m-3],1000,,By convention
+Initial concentration in electrolyte [mol.m-3],1000,,By convention
 Cation transference number,0.38,,Assumed to be constant
 Electrolyte diffusivity [m2.s-1],[function]electrolyte_diffusivity_Valoen2005,, 
 Electrolyte conductivity [S.m-1],[function]electrolyte_conductivity_Valoen2005,,

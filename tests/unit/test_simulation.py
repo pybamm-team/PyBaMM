@@ -54,12 +54,6 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
-    def test_specs_deprecated(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        with self.assertRaisesRegex(NotImplementedError, "specs"):
-            sim.specs()
-
     def test_solve(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -230,7 +224,7 @@ class TestSimulation(unittest.TestCase):
         drive_cycle = pd.read_csv(
             os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
             comment="#",
-            header=None
+            header=None,
         ).to_numpy()
         timescale = param.evaluate(model.timescale)
         current_interpolant = pybamm.Interpolant(
@@ -368,21 +362,16 @@ class TestSimulation(unittest.TestCase):
         sim.solve(t_eval=t_eval)
         sim.plot(testing=True)
 
-        # test quick_plot_vars deprecation error
-        with self.assertRaisesRegex(NotImplementedError, "'quick_plot_vars'"):
-            sim.plot(quick_plot_vars=["var"])
-
     def test_create_gif(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        t_eval = np.linspace(0, 100, 5)
-        sim.solve(t_eval=t_eval)
+        sim.solve(t_eval=[0, 10])
 
         # create a GIF without calling the plot method
-        sim.create_gif(number_of_images=5, duration=1)
+        sim.create_gif(number_of_images=3, duration=1)
 
         # call the plot method before creating the GIF
         sim.plot(testing=True)
-        sim.create_gif(number_of_images=5, duration=1)
+        sim.create_gif(number_of_images=3, duration=1)
 
         os.remove("plot.gif")
 
@@ -476,15 +465,15 @@ class TestSimulation(unittest.TestCase):
         )
 
     def test_battery_model_with_input_height(self):
-        # load model
-        model = pybamm.lithium_ion.SPM()
-        # load parameter values and process model and geometry
-        param = model.default_parameter_values
-        param.update({"Electrode height [m]": "[input]"})
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        # Pass the "timescale" option since we are making electrode height an input
+        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPM({"timescale": timescale})
+        parameter_values.update({"Electrode height [m]": "[input]"})
         # solve model for 1 minute
         t_eval = np.linspace(0, 60, 11)
         inputs = {"Electrode height [m]": 0.2}
-        sim = pybamm.Simulation(model=model, parameter_values=param)
+        sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
         sim.solve(t_eval=t_eval, inputs=inputs)
 
 

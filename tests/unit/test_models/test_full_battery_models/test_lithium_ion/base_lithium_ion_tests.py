@@ -13,6 +13,13 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "isothermal"}
         self.check_well_posedness(options)
 
+    def test_well_posed_isothermal_heat_source(self):
+        options = {
+            "calculate heat source for isothermal models": "true",
+            "thermal": "isothermal",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         self.check_well_posedness(options)
@@ -100,8 +107,12 @@ class BaseUnitTestLithiumIon:
         options = {"loss of active material": "stress-driven"}
         self.check_well_posedness(options)
 
-    def test_well_posed_loss_active_material_stress_reaction_both(self):
+    def test_well_posed_loss_active_material_reaction(self):
         options = {"loss of active material": "reaction-driven"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_reaction(self):
+        options = {"loss of active material": "stress and reaction-driven"}
         self.check_well_posedness(options)
 
     def test_well_posed_surface_form_differential(self):
@@ -186,12 +197,57 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_sei_reaction_limited_on_cracks(self):
+        options = {
+            "SEI": "reaction limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_solvent_diffusion_limited_on_cracks(self):
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_electron_migration_limited_on_cracks(self):
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_interstitial_diffusion_limited_on_cracks(self):
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_ec_reaction_limited_on_cracks(self):
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_reversible_plating(self):
         options = {"lithium plating": "reversible"}
         self.check_well_posedness(options)
 
     def test_well_posed_irreversible_plating(self):
         options = {"lithium plating": "irreversible"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_partially_reversible_plating(self):
+        options = {"lithium plating": "partially reversible"}
         self.check_well_posedness(options)
 
     def test_well_posed_reversible_plating_with_porosity(self):
@@ -208,12 +264,35 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_partially_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "partially reversible",
+            "lithium plating porosity change": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_discharge_energy(self):
+        options = {"calculate discharge energy": "true"}
+        self.check_well_posedness(options)
+
     def test_well_posed_external_circuit_voltage(self):
         options = {"operating mode": "voltage"}
         self.check_well_posedness(options)
 
     def test_well_posed_external_circuit_power(self):
         options = {"operating mode": "power"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_differential_power(self):
+        options = {"operating mode": "differential power"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_resistance(self):
+        options = {"operating mode": "resistance"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_differential_resistance(self):
+        options = {"operating mode": "differential resistance"}
         self.check_well_posedness(options)
 
     def test_well_posed_external_circuit_cccv(self):

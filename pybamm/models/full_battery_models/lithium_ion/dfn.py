@@ -6,12 +6,14 @@ from .base_lithium_ion_model import BaseModel
 
 
 class DFN(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [1]_.
+    """
+    Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [1]_.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -19,6 +21,12 @@ class DFN(BaseModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.DFN()
+    >>> model.name
+    'Doyle-Fuller-Newman model'
 
     References
     ----------
@@ -31,33 +39,11 @@ class DFN(BaseModel):
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
-        super().__init__(options, name)
         # For degradation models we use the full form since this is a full-order model
         self.x_average = False
+        super().__init__(options, name)
 
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_interface_utilisation_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
-        self.set_convection_submodel()
-        self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_solid_submodel()
-        self.set_electrolyte_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
-
-        if self.half_cell:
-            # This also removes "negative electrode" submodels, so should be done last
-            self.set_li_metal_counter_electrode_submodels()
-
-        if build:
-            self.build_model()
+        self.set_submodels(build)
 
         pybamm.citations.register("Doyle1993")
 
@@ -71,61 +57,27 @@ class DFN(BaseModel):
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
 
     def set_intercalation_kinetics_submodel(self):
-
-        self.submodels["negative interface"] = self.intercalation_kinetics(
-            self.param, "Negative", "lithium-ion main", self.options
-        )
-        self.submodels["positive interface"] = self.intercalation_kinetics(
-            self.param, "Positive", "lithium-ion main", self.options
-        )
+        for domain in ["Negative", "Positive"]:
+            intercalation_kinetics = self.get_intercalation_kinetics(domain)
+            self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+                self.param, domain, "lithium-ion main", self.options
+            )
 
     def set_particle_submodel(self):
-
-        if isinstance(self.options["particle"], str):
-            particle_left = self.options["particle"]
-            particle_right = self.options["particle"]
-        else:
-            particle_left, particle_right = self.options["particle"]
-        for particle_side, domain in [
-            [particle_left, "Negative"],
-            [particle_right, "Positive"],
-        ]:
-            if self.options["particle size"] == "single":
-                if particle_side == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.no_distribution.FickianDiffusion(
-                        self.param,
-                        domain,
-                        self.options,
-                    )
-                elif particle_side in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param,
-                        domain,
-                        particle_side,
-                        self.options,
-                    )
-            elif self.options["particle size"] == "distribution":
-                if particle_side == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.size_distribution.FickianDiffusion(
-                        self.param, domain
-                    )
-                elif particle_side == "uniform profile":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.size_distribution.UniformProfile(
-                        self.param,
-                        domain,
-                    )
+        for domain in ["negative", "positive"]:
+            particle = getattr(self.options, domain)["particle"]
+            if particle == "Fickian diffusion":
+                self.submodels[f"{domain} particle"] = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=False
+                )
+            elif particle in [
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ]:
+                self.submodels[
+                    f"{domain} particle"
+                ] = pybamm.particle.PolynomialProfile(self.param, domain, self.options)
 
     def set_solid_submodel(self):
 
@@ -133,8 +85,12 @@ class DFN(BaseModel):
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.options)
             submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.options)
         else:
-            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+            submod_n = pybamm.electrode.ohm.SurfaceForm(
+                self.param, "Negative", self.options
+            )
+            submod_p = pybamm.electrode.ohm.SurfaceForm(
+                self.param, "Positive", self.options
+            )
 
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p

@@ -60,11 +60,18 @@ class BaseSubModel(pybamm.BaseModel):
         self, param, domain=None, name="Unnamed submodel", external=False, options=None
     ):
         super().__init__(name)
-        self.param = param
-
         self.domain = domain
         self.set_domain_for_broadcast()
         self.name = name
+
+        self.param = param
+        if param is None:
+            self.domain_param = None
+        else:
+            if self.domain == "Negative":
+                self.domain_param = param.n
+            elif self.domain == "Positive":
+                self.domain_param = param.p
 
         self.external = external
         self.options = pybamm.BatteryModelOptions(options or {})
@@ -79,6 +86,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     @domain.setter
     def domain(self, domain):
+        if domain is not None:
+            domain = domain.capitalize()
         ok_domain_list = [
             "Negative",
             "Separator",
@@ -88,11 +97,10 @@ class BaseSubModel(pybamm.BaseModel):
             "Separator electrolyte",
             "Positive electrode",
             "Positive electrolyte",
+            None,
         ]
         if domain in ok_domain_list:
             self._domain = domain
-        elif domain is None:
-            pass
         else:
             raise pybamm.DomainError(
                 "Domain '{}' not recognised (must be one of {})".format(
@@ -157,16 +165,16 @@ class BaseSubModel(pybamm.BaseModel):
             for var in list_of_vars:
                 if var.id not in unique_ids and isinstance(var, pybamm.Concatenation):
                     external_variables += [var]
-                    unique_ids += [var.id]
+                    unique_ids += [var]
                     # also add the ids of the children to unique ids
                     for child in var.children:
-                        unique_ids += [child.id]
+                        unique_ids += [child]
 
             # now add any unique variables that are not part of a concatentation
             for var in list_of_vars:
                 if var.id not in unique_ids:
                     external_variables += [var]
-                    unique_ids += [var.id]
+                    unique_ids += [var]
 
         return external_variables
 
