@@ -165,7 +165,7 @@ Chen2020 = {
 Chen2020_composite = {
     "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020",
+    "negative electrode": "graphite_Chen2020_composite",
     "negative secondary particle": "silicon_Ai2022",
     "separator": "separator_Chen2020",
     "positive electrode": "nmc_Chen2020",

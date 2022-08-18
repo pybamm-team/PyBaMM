@@ -3,7 +3,7 @@ Name [units],Value,Reference,Notes
 ,,,
 # Electrode properties,,,
 Maximum concentration in negative electrode [mol.m-3],278000,,
-Initial concentration in negative electrode [mol.m-3],275220,,
+Initial concentration in negative electrode [mol.m-3],276610,,
 Negative electrode diffusivity [m2.s-1],1.67E-14,,
 Negative electrode OCP [V],0,,include this so that the graphite OCP is labeled "Primary"
 Negative electrode lithiation OCP [V],[function]silicon_ocp_lithiation_Mark2016,,
