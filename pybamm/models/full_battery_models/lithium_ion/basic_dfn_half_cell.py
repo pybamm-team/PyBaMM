@@ -125,8 +125,8 @@ class BasicDFNHalfCell(BaseModel):
 
         # Interfacial reactions
         j0_w = param.p.prim.j0(c_e_w, c_s_surf_w, T)
-        U_w = param.p.U
-        ne_w = param.p.ne
+        U_w = param.p.prim.U
+        ne_w = param.p.prim.ne
 
         # Particle diffusion parameters
         D_w = param.p.prim.D

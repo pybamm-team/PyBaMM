@@ -126,6 +126,7 @@ class FickianDiffusion(BaseParticle):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
+        phase_param = self.phase_param
 
         if self.size_distribution is False:
             if self.x_average is False:
@@ -134,6 +135,10 @@ class FickianDiffusion(BaseParticle):
                     variables[f"{Domain} electrode temperature"],
                     [f"{domain} {phase_name}particle"],
                 )
+                R = variables[f"{Domain} {phase_name}particle radius"]
+                j = variables[
+                    f"{Domain} electrode {phase_name}interfacial current density"
+                ]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle concentration"
@@ -142,7 +147,15 @@ class FickianDiffusion(BaseParticle):
                     variables[f"X-averaged {domain} electrode temperature"],
                     [f"{domain} {phase_name}particle"],
                 )
+                R = 1
+                j = variables[
+                    f"X-averaged {domain} electrode {phase_name}"
+                    "interfacial current density"
+                ]
+            R_broad = R
         else:
+            R = variables[f"{Domain} {phase_name}particle sizes"]
+            R_broad = pybamm.PrimaryBroadcast(R, [f"{domain} {phase_name}particle"])
             if self.x_average is False:
                 c_s = variables[
                     f"{Domain} {phase_name}particle concentration distribution"
@@ -154,6 +167,10 @@ class FickianDiffusion(BaseParticle):
                     [f"{domain} {phase_name}particle size"],
                 )
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
+                j = variables[
+                    f"{Domain} electrode {phase_name}interfacial "
+                    "current density distribution"
+                ]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
@@ -166,14 +183,32 @@ class FickianDiffusion(BaseParticle):
                     [f"{domain} {phase_name}particle size"],
                 )
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
+                j = variables[
+                    f"X-averaged {domain} electrode {phase_name}interfacial "
+                    "current density distribution"
+                ]
 
         D_eff = self._get_effective_diffusivity(c_s, T)
         N_s = -D_eff * pybamm.grad(c_s)
 
+        variables.update(
+            {
+                f"{Domain} {phase_name}particle rhs": -(
+                    1 / (R_broad ** 2 * phase_param.C_diff)
+                )
+                * pybamm.div(N_s),
+                f"{Domain} {phase_name}particle bc": -phase_param.C_diff
+                * j
+                * R
+                / phase_param.a_R
+                / phase_param.gamma
+                / pybamm.surf(D_eff),
+            }
+        )
+
         if self.size_distribution is True:
             # Size-dependent flux variables
             variables.update(self._get_standard_flux_distribution_variables(N_s))
-            R = variables[f"{Domain} {phase_name}particle sizes"]
             f_a_dist = self.phase_param.f_a_dist(R)
             # Size-averaged flux variables (perform area-weighted avg manually as flux
             # evals on edges)
@@ -206,99 +241,46 @@ class FickianDiffusion(BaseParticle):
         if self.size_distribution is False:
             if self.x_average is False:
                 c_s = variables[f"{Domain} {phase_name}particle concentration"]
-                N_s = variables[f"{Domain} {phase_name}particle flux"]
-                R = variables[f"{Domain} {phase_name}particle radius"]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle concentration"
                 ]
-                N_s = variables[f"X-averaged {domain} {phase_name}particle flux"]
-                R = 1
         else:
             if self.x_average is False:
                 c_s = variables[
                     f"{Domain} {phase_name}particle concentration distribution"
                 ]
-                N_s = variables[f"{Domain} {phase_name}particle flux distribution"]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
                     "concentration distribution"
                 ]
-
-                N_s = variables[
-                    f"X-averaged {domain} {phase_name}particle flux distribution"
-                ]
-            # Spatial variable R, broadcast into particle
-            R_spatial_variable = variables[f"{Domain} {phase_name}particle sizes"]
-            R = pybamm.PrimaryBroadcast(
-                R_spatial_variable, [f"{domain} {phase_name}particle"]
-            )
-
-        self.rhs = {c_s: -(1 / (R ** 2 * self.phase_param.C_diff)) * pybamm.div(N_s)}
+        self.rhs = {c_s: variables[f"{Domain} {phase_name}particle rhs"]}
 
     def set_boundary_conditions(self, variables):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
-        phase_param = self.phase_param
 
         if self.size_distribution is False:
             if self.x_average is False:
                 c_s = variables[f"{Domain} {phase_name}particle concentration"]
-                D_eff = variables[
-                    f"{Domain} {phase_name}particle effective diffusivity"
-                ]
-                j = variables[
-                    f"{Domain} electrode {phase_name}interfacial current density"
-                ]
-                R = variables[f"{Domain} {phase_name}particle radius"]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle concentration"
                 ]
-                D_eff = variables[
-                    f"X-averaged {domain} {phase_name}particle effective diffusivity"
-                ]
-                j = variables[
-                    f"X-averaged {domain} electrode {phase_name}interfacial current density"
-                ]
-                R = 1
         else:
             if self.x_average is False:
                 c_s = variables[
                     f"{Domain} {phase_name}particle concentration distribution"
-                ]
-                D_eff = variables[
-                    f"{Domain} {phase_name}particle effective diffusivity distribution"
-                ]
-                j = variables[
-                    f"{Domain} electrode {phase_name}interfacial current density distribution"
                 ]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
                     "concentration distribution"
                 ]
-                D_eff = variables[
-                    f"X-averaged {domain} {phase_name}particle effective "
-                    "diffusivity distribution"
-                ]
-                j = variables[
-                    f"X-averaged {domain} electrode {phase_name}interfacial "
-                    "current density distribution"
-                ]
-            R = variables[f"{Domain} {phase_name}particle sizes"]
 
-        rbc = (
-            -phase_param.C_diff
-            * j
-            * R
-            / phase_param.a_R
-            / phase_param.gamma
-            / pybamm.surf(D_eff)
-        )
-
+        rbc = variables[f"{Domain} {phase_name}particle bc"]
         self.boundary_conditions = {
             c_s: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }

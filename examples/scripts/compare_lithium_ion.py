@@ -14,10 +14,9 @@ models = [
     # pybamm.lithium_ion.SPM(options),
     # pybamm.lithium_ion.SPMe(options),
     # pybamm.lithium_ion.BasicDFNComposite(),
-    pybamm.lithium_ion.DFN({"particle size": "distribution"}),
+    pybamm.lithium_ion.DFN(options),
     # pybamm.lithium_ion.NewmanTobias(),
 ]
-
 param = pybamm.ParameterValues("Chen2020_composite")
 
 # create and run simulations

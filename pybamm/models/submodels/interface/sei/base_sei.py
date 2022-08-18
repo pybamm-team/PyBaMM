@@ -268,12 +268,12 @@ class BaseModel(BaseInterface):
             variables.update(
                 {
                     "Inner SEI on cracks concentration [mol.m-3]": n_inner_cr * n_scale,
-                    "X-averaged inner SEI on cracks concentration [mol.m-3]": n_inner_cr_av
-                    * n_scale,
+                    "X-averaged inner SEI on cracks "
+                    "concentration [mol.m-3]": n_inner_cr_av * n_scale,
                     "Outer SEI on cracks concentration [mol.m-3]": n_outer_cr
                     * n_outer_scale,
-                    "X-averaged outer SEI on cracks concentration [mol.m-3]": n_outer_cr_av
-                    * n_outer_scale,
+                    "X-averaged outer SEI on cracks "
+                    "concentration [mol.m-3]": n_outer_cr_av * n_outer_scale,
                     "SEI on cracks concentration [mol.m-3]": n_SEI_cr * n_scale,
                     "X-averaged SEI on cracks concentration [mol.m-3]": n_SEI_cr_av
                     * n_scale,
@@ -312,14 +312,14 @@ class BaseModel(BaseInterface):
             f"Inner {self.reaction} interfacial current density [A.m-2]": j_inner
             * j_scale,
             f"X-averaged inner {self.reaction} interfacial current density": j_i_av,
-            f"X-averaged inner {self.reaction} interfacial current density [A.m-2]": j_i_av
-            * j_scale,
+            f"X-averaged inner {self.reaction} "
+            "interfacial current density [A.m-2]": j_i_av * j_scale,
             f"Outer {self.reaction} interfacial current density": j_outer,
             f"Outer {self.reaction} interfacial current density [A.m-2]": j_outer
             * j_scale,
             f"X-averaged outer {self.reaction} interfacial current density": j_o_av,
-            f"X-averaged outer {self.reaction} interfacial current density [A.m-2]": j_o_av
-            * j_scale,
+            f"X-averaged outer {self.reaction} "
+            "interfacial current density [A.m-2]": j_o_av * j_scale,
         }
 
         j_sei = j_inner + j_outer
@@ -341,8 +341,8 @@ class BaseModel(BaseInterface):
             variables.update(
                 {
                     f"X-averaged {self.reaction} interfacial current density": j_sei_av,
-                    f"X-averaged {self.reaction} interfacial current density [A.m-2]": j_sei_av
-                    * j_scale,
+                    f"X-averaged {self.reaction} "
+                    "interfacial current density [A.m-2]": j_sei_av * j_scale,
                 }
             )
 

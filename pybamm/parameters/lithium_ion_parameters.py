@@ -674,8 +674,6 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        main = self.main_param
-
         for phase in self.phases:
             phase._set_scales()
 

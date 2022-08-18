@@ -266,11 +266,7 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
-    has_particle_domain = (
-        symbol.domain != []
-        and "particle" in symbol.domain[0]
-        and "size" not in symbol.domain[0]
-    )
+    has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith("particle")
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")

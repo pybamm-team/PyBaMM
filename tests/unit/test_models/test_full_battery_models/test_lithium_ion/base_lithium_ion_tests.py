@@ -313,3 +313,14 @@ class BaseUnitTestLithiumIon:
 
         options = {"operating mode": external_circuit_function}
         self.check_well_posedness(options)
+
+    def test_wel_posed_particle_phases(self):
+        options = {"particle phases": "2"}
+        self.check_well_posedness(options)
+
+        options = {"particle phases": ("2", "1")}
+        self.check_well_posedness(options)
+        
+        options = {"particle phases": ("1", "2")}
+        self.check_well_posedness(options)
+    
