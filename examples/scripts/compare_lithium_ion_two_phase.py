@@ -78,16 +78,6 @@ pybamm.dynamic_plot(
             "X-averaged negative electrode secondary interfacial current density",
             "X-averaged negative electrode interfacial current density",
         ],
-        [
-            "Negative electrode primary interfacial current density",
-            "Negative electrode secondary interfacial current density",
-            "Negative electrode interfacial current density",
-        ],
-        [
-            "X-averaged negative electrode primary volumetric interfacial current density",
-            "X-averaged negative electrode secondary volumetric interfacial current density",
-            "X-averaged negative electrode volumetric interfacial current density",
-        ],
         "Current [A]",
     ],
 )
