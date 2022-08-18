@@ -121,6 +121,7 @@ class FickianDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         Domain = self.domain
         domain = Domain.lower()
+        domain_param = self.domain_param
 
         if self.size_distribution is False:
             if self.x_average is False:
@@ -140,9 +141,10 @@ class FickianDiffusion(BaseParticle):
                 j = variables[
                     f"X-averaged {domain} electrode interfacial current density"
                 ]
+            R_broad = R
         else:
-            R_spatial_variable = variables[f"{Domain} particle sizes"]
-            R = pybamm.PrimaryBroadcast(R_spatial_variable, [f"{domain} particle"])
+            R = variables[f"{Domain} particle sizes"]
+            R_broad = pybamm.PrimaryBroadcast(R, [f"{domain} particle"])
             if self.x_average is False:
                 c_s = variables[f"{Domain} particle concentration distribution"]
 
@@ -176,13 +178,13 @@ class FickianDiffusion(BaseParticle):
 
         variables.update(
             {
-                f"{Domain} particle rhs": -(1 / (R ** 2 * self.domain_param.C_diff))
+                f"{Domain} particle rhs": -(1 / (R_broad ** 2 * domain_param.C_diff))
                 * pybamm.div(N_s),
-                f"{Domain} particle bc": -self.domain_param.C_diff
+                f"{Domain} particle bc": -domain_param.C_diff
                 * j
                 * R
-                / self.domain_param.a_R
-                / self.domain_param.gamma
+                / domain_param.a_R
+                / domain_param.gamma
                 / pybamm.surf(D_eff),
             }
         )
@@ -190,10 +192,10 @@ class FickianDiffusion(BaseParticle):
         if self.size_distribution is True:
             # Size-dependent flux variables
             variables.update(self._get_standard_flux_distribution_variables(N_s))
-            f_a_dist = self.domain_param.f_a_dist(R_spatial_variable)
+            f_a_dist = self.domain_param.f_a_dist(R)
             # Size-averaged flux variables (perform area-weighted avg manually as flux
             # evals on edges)
-            N_s = pybamm.Integral(f_a_dist * N_s, R_spatial_variable)
+            N_s = pybamm.Integral(f_a_dist * N_s, R)
 
             # Volume-weighted average for effective diffusivity
             variables.update(
