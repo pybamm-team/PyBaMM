@@ -209,7 +209,7 @@ class FickianDiffusion(BaseParticle):
         if self.size_distribution is True:
             # Size-dependent flux variables
             variables.update(self._get_standard_flux_distribution_variables(N_s))
-            f_a_dist = self.domain_param.f_a_dist(R)
+            f_a_dist = self.phase_param.f_a_dist(R)
             # Size-averaged flux variables (perform area-weighted avg manually as flux
             # evals on edges)
             N_s = pybamm.Integral(f_a_dist * N_s, R)

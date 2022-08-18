@@ -8,8 +8,8 @@ pybamm.set_logging_level("INFO")
 # load models
 models = [
     # pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
-    # pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")}),
-    pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
+    pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")}),
+    # pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
 ]
 
 parameter_set = pybamm.parameter_sets.Chen2020
@@ -70,10 +70,6 @@ pybamm.dynamic_plot(
             "X-averaged negative electrode active material volume fraction",
         ],
         [
-            "X-averaged negative electrode primary surface area to volume ratio [m-1]",
-            "X-averaged negative electrode secondary surface area to volume ratio [m-1]",
-        ],
-        [
             "Average negative primary particle concentration",
             "Average negative secondary particle concentration",
         ],
@@ -81,6 +77,11 @@ pybamm.dynamic_plot(
             "X-averaged negative electrode primary interfacial current density",
             "X-averaged negative electrode secondary interfacial current density",
             "X-averaged negative electrode interfacial current density",
+        ],
+        [
+            "Negative electrode primary interfacial current density",
+            "Negative electrode secondary interfacial current density",
+            "Negative electrode interfacial current density",
         ],
         [
             "X-averaged negative electrode primary volumetric interfacial current density",
