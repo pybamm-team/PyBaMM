@@ -38,12 +38,12 @@ parameter_values.update(
         "Primary: Negative electrode active material volume fraction": parameter_values[
             "Negative electrode active material volume fraction"
         ]
-        * 0.4,
+        * 0.1,
         "Secondary: Negative electrode active material volume "
         "fraction": parameter_values[
             "Negative electrode active material volume fraction"
         ]
-        * 0.6,
+        * 0.9,
     },
     check_already_exists=False,
 )
@@ -56,7 +56,7 @@ del parameter_values["Negative electrode active material volume fraction"]
 sims = []
 for model in models:
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
-    sim.solve([0, 1000])
+    sim.solve([0, 3600])
     sims.append(sim)
 
 # plot
