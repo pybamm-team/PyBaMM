@@ -1,16 +1,19 @@
 from pybamm import exp, constants
 
 
-def electrolyte_diffusivity_Nyman2008(c_e, T):
+def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
-    comes from [1]
+    comes from [1], with Arrhenius temperature dependence added from [2].
 
     References
     ----------
     .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
     modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
     Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+    .. [2] Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of
+    a lithium-ion battery i. determination of parameters." Journal of the
+    Electrochemical Society 162.9 (2015): A1836-A1848.
 
     Parameters
     ----------
