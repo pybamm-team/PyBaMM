@@ -267,10 +267,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             c_e_n = variables["Negative electrolyte concentration"]
             T_n = variables["Negative electrode temperature"]
             indef_integral_n = pybamm.IndefiniteIntegral(
-                param.chi(c_e_n, T_n)
-                * (1 + param.Theta * T_n)
-                * pybamm.grad(c_e_n)
-                / c_e_n,
+                param.chiT_over_c(c_e_n, T_n) * pybamm.grad(c_e_n),
                 pybamm.standard_spatial_vars.x_n,
             )
 
@@ -284,17 +281,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         # concentration overpotential
         indef_integral_s = pybamm.IndefiniteIntegral(
-            param.chi(c_e_s, T_s)
-            * (1 + param.Theta * T_s)
-            * pybamm.grad(c_e_s)
-            / c_e_s,
+            param.chiT_over_c(c_e_s, T_s) * pybamm.grad(c_e_s),
             pybamm.standard_spatial_vars.x_s,
         )
         indef_integral_p = pybamm.IndefiniteIntegral(
-            param.chi(c_e_p, T_p)
-            * (1 + param.Theta * T_p)
-            * pybamm.grad(c_e_p)
-            / c_e_p,
+            param.chiT_over_c(c_e_p, T_p) * pybamm.grad(c_e_p),
             pybamm.standard_spatial_vars.x_p,
         )
 

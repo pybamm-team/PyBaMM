@@ -171,15 +171,15 @@ class SEIGrowth(BaseModel):
                 )
 
         if self.options["SEI"] == "ec reaction limited":
-            alpha = 0
+            inner_sei_proportion = 0
         else:
-            alpha = param.alpha_sei
+            inner_sei_proportion = param.inner_sei_proportion
 
         # All SEI growth mechanisms assumed to have Arrhenius dependence
         Arrhenius = pybamm.exp(param.E_over_RT_sei * (1 - prefactor))
 
-        j_inner = alpha * Arrhenius * j_sei
-        j_outer = (1 - alpha) * Arrhenius * j_sei
+        j_inner = inner_sei_proportion * Arrhenius * j_sei
+        j_outer = (1 - inner_sei_proportion) * Arrhenius * j_sei
 
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
@@ -214,7 +214,8 @@ class SEIGrowth(BaseModel):
             else:
                 a = variables["Negative electrode surface area to volume ratio"]
 
-        # Get variables specific to cracks
+        # The spreading term acts to spread out SEI along the cracks as they grow.
+        # For SEI on initial surface (as opposed to cracks), it is zero.
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
                 l_cr = variables["X-averaged negative particle crack length"]
@@ -231,7 +232,7 @@ class SEIGrowth(BaseModel):
         Gamma_SEI = self.param.Gamma_SEI
 
         if self.options["SEI"] == "ec reaction limited":
-            self.rhs = {L_outer: -Gamma_SEI * a * j_outer / 2 + spreading_outer}
+            self.rhs = {L_outer: -Gamma_SEI * a * j_outer + spreading_outer}
         else:
             v_bar = self.param.v_bar
             self.rhs = {
@@ -252,11 +253,15 @@ class SEIGrowth(BaseModel):
 
         if self.options["SEI"] == "ec reaction limited":
             if self.reaction == "SEI on cracks":
+                # Dividing by 10000 makes initial condition effectively zero
+                # without triggering division by zero errors
                 self.initial_conditions = {L_outer: (L_inner_0 + L_outer_0) / 10000}
             else:
                 self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:
             if self.reaction == "SEI on cracks":
+                # Dividing by 10000 makes initial condition effectively zero
+                # without triggering division by zero errors
                 self.initial_conditions = {
                     L_inner: L_inner_0 / 10000,
                     L_outer: L_outer_0 / 10000,
