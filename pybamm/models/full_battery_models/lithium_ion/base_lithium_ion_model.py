@@ -188,7 +188,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Time [s]",
             "Time [h]",
             "Throughput capacity [A.h]",
-            "Throughput energy [A.h]",
+            "Throughput energy [W.h]",
             "Positive electrode capacity [A.h]",
             # LAM, LLI
             "Loss of active material in positive electrode [%]",

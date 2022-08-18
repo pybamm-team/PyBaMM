@@ -24,6 +24,11 @@ class BaseModel(pybamm.BaseSubModel):
                 "Discharge energy [W.h]": Q_Wh,
                 "Throughput energy [W.h]": Qt_Wh,
             })
+        else:
+            variables.update({
+                "Discharge energy [W.h]": pybamm.Scalar(0),
+                "Throughput energy [W.h]": pybamm.Scalar(0),
+            })
         return variables
 
     def set_initial_conditions(self, variables):
