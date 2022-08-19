@@ -214,34 +214,6 @@ class BaseKinetics(BaseInterface):
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
 
-    def _get_dj_dc(self, variables):
-        """
-        Default to calculate derivative of interfacial current density with respect to
-        concentration. Can be overwritten by specific kinetic functions.
-        """
-        (
-            c_e,
-            delta_phi,
-            j0,
-            ne,
-            ocp,
-            T,
-            u,
-        ) = self._get_interface_variables_for_first_order(variables)
-        j = self._get_kinetics(j0, ne, delta_phi - ocp, T, u)
-        return j.diff(c_e)
-
-    def _get_dj_ddeltaphi(self, variables):
-        """
-        Default to calculate derivative of interfacial current density with respect to
-        surface potential difference. Can be overwritten by specific kinetic functions.
-        """
-        _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
-            variables
-        )
-        j = self._get_kinetics(j0, ne, delta_phi - ocp, T, u)
-        return j.diff(delta_phi)
-
     def _get_interface_variables_for_first_order(self, variables):
         # This is a bit of a hack, but we need to wrap electrolyte concentration with
         # the NotConstant class
@@ -265,12 +237,9 @@ class BaseKinetics(BaseInterface):
         elif self.reaction == "lead-acid oxygen":
             ocp = self.phase_param.U_Ox
 
-        if j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature"]
-            u = variables[f"X-averaged {domain} electrode interface utilisation"]
-        else:
-            T = variables[f"{Domain} electrode temperature"]
-            u = variables[f"{Domain} electrode interface utilisation"]
+        T = variables["X-averaged cell temperature"]
+        u = variables[f"X-averaged {domain} electrode interface utilisation"]
+
         return c_e_0, delta_phi, j0, ne, ocp, T, u
 
     def _get_j_diffusion_limited_first_order(self, variables):

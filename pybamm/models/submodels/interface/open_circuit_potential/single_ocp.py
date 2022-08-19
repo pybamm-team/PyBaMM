@@ -11,10 +11,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
         domain = Domain.lower()
         phase_name = self.phase_name
 
-        if isinstance(self, pybamm.kinetics.NoReaction):
-            ocp = pybamm.Scalar(0)
-            dUdT = pybamm.Scalar(0)
-        elif self.reaction == "lithium-ion main":
+        if self.reaction == "lithium-ion main":
 
             T = variables[f"{Domain} electrode temperature"]
             # For "particle-size distribution" models, take distribution version
