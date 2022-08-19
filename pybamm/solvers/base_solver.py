@@ -1043,6 +1043,8 @@ class BaseSolver(object):
         for idx, event in enumerate(model.terminate_events_eval):
             if model.convert_to_format == "casadi":
                 event_eval = event(t_eval[0], model.y0, inputs)
+            elif model.convert_to_format in ["python", "jax"]:
+                event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
             else:
                 event_eval = event.evaluate(t=t_eval[0], y=model.y0, inputs=inputs_dict)
             events_eval[idx] = event_eval

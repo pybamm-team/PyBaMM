@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   For experiments, the simulation now automatically checks and skips steps that cannot be performed (e.g. "Charge at 1C until 4.2V" from 100% SOC) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
+
 ## Bug fixes
 
 -   Added new parameter `Ratio of lithium moles to SEI moles` (short name z_sei) to fix a bug where this number was incorrectly hardcoded to 1. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
@@ -10,6 +14,10 @@
 ## Optimizations
 
 -   Added limits for variables in some functions to avoid division by zero, sqrt(negative number), etc ([#2213](https://github.com/pybamm-team/PyBaMM/pull/2213))
+
+## Breaking changes
+
+-   Events must now be defined in such a way that they are positive at the initial conditions (events will be triggered when they become negative, instead of when they change sign in either direction) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
 
 # [v22.7](https://github.com/pybamm-team/PyBaMM/tree/v22.7) - 2022-07-31
 
