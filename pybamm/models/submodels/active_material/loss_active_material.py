@@ -109,9 +109,12 @@ class LossActiveMaterial(BaseModel):
             beta_LAM_sei = self.domain_param.beta_LAM_sei
             if self.domain == "Negative":
                 if self.x_average is True:
-                    j_sei = variables["X-averaged SEI interfacial current density"]
+                    j_sei = variables["X-averaged SEI interfacial current density"] # Jason-modified?
+                    # j_sei = variables[f"X-averaged {phase_name}SEI interfacial current density"]
+
                 else:
                     j_sei = variables["SEI interfacial current density"]
+                    # j_sei = variables[f"SEI {phase_name}interfacial current density"]
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM
                 # until other reactions are implemented

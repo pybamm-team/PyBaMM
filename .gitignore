@@ -6,6 +6,8 @@
 *.DS_Store
 *.mat
 *.csv
+*.ini
+*.ini.bak
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -74,6 +76,7 @@ lib64
 share/
 pyvenv.cfg
 .vscode
+jason/
 
 # sundials
 sundials

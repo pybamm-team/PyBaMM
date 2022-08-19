@@ -142,7 +142,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                     f"Total lithium in {phase} phase in {domain} electrode [mol]"
                 ]
                 for phase in phases
-            )
+            ) # Jason - need to be calculated correctly
 
         # LAM
         if self.half_cell:
@@ -190,6 +190,17 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
+        
+        # phases_n = self.options.phase_number_to_names(
+        #     getattr(self.options, "negative")["particle phases"]
+        # )
+
+        # LLI_sei = sum(
+        #     self.variables[f"Loss of lithium to {phase_n} SEI [mol]"]
+        #     for phase_n in phases_n
+        # )
+        # self.variables["Loss of lithium to SEI [mol]"] = LLI_sei # Jason-added a new variable here
+        # self.variables["Loss of capacity to SEI [A.h]"] = LLI_sei * param.F / 3600 
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
         if self.half_cell:
             LLI_sei_cracks = pybamm.Scalar(0)
@@ -273,28 +284,63 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             reaction_loc = "full electrode"
 
-        if self.options["SEI"] == "none":
-            self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
-        elif self.options["SEI"] == "constant":
-            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
-        else:
-            self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                self.param, reaction_loc, self.options, cracks=False
+        # if self.options["SEI"] == "none":
+        #     self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
+        # elif self.options["SEI"] == "constant":
+        #     self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
+        # else:
+        #     self.submodels["sei"] = pybamm.sei.SEIGrowth(
+        #         self.param, reaction_loc, self.options
+        #     )
+        phases = self.options.phase_number_to_names(
+            getattr(self.options, "negative")["particle phases"]
             )
-        # Do not set "sei on cracks" submodel for half-cells
-        # For full cells, "sei on cracks" submodel must be set, even if it is zero
-        if reaction_loc != "interface":
+        
+        for phase in phases:
             if (
-                self.options["SEI"] in ["none", "constant"]
-                or self.options["SEI on cracks"] == "false"
+                phase == "primary" and getattr(self.options, "negative")["particle phases"]
+                == "1"
             ):
-                self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
-                    self.param, self.options, cracks=True
-                )
+                # Only one phase, no need to distinguish between
+                # "primary" and "secondary"
+                self.phase_prefactor = ""
             else:
-                self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
-                    self.param, reaction_loc, self.options, cracks=True
+                # add a space so that we can use "" or (e.g.) "primary " interchangeably
+                # when naming variables
+                # self.phase_prefactor = phase.capitalize() + " "
+                self.phase_prefactor = phase.capitalize() + ": "
+
+                
+            pref = self.phase_prefactor
+            
+            if self.options["SEI"] == "none":
+                submod = pybamm.sei.NoSEI(self.param, self.options, phase)
+            elif self.options["SEI"] == "constant":
+                submod = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+            else:
+                submod = pybamm.sei.SEIGrowth(
+                    self.param, reaction_loc, self.options, phase, cracks=False
                 )
+            self.submodels[f"{pref}sei"] = submod #Jason-where is the definition of submodels
+
+            # Do not set "sei on cracks" submodel for half-cells
+            # For full cells, "sei on cracks" submodel must be set, even if it is zero
+            if reaction_loc != "interface":
+                if (
+                    self.options["SEI"] in ["none", "constant"]
+                    or self.options["SEI on cracks"] == "false"
+                ):
+                    self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+                        self.param, self.options, phase, cracks=True
+                    )
+                else:
+                    self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
+                        self.param, reaction_loc, self.options, phase, cracks=True
+                    )
+
+        # Submodel for the total sei, summing up each phase
+        if len(phases) > 1: # Jason-Positive has no sei, so do not use {domain} total sei here.
+            self.submodels["Negative total sei"] = pybamm.sei.Total(self.param, self.options)
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":
@@ -373,9 +419,14 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.options["SEI porosity change"] == "true"
             or self.options["lithium plating porosity change"] == "true"
         ):
-            x_average = self.options["x-average side reactions"] == "true"
-            self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
-                self.param, self.options, x_average
+            phases_n = self.options.phase_number_to_names(
+                getattr(self.options, "negative")["particle phases"]
+            )
+            if len(phases_n) > 1: # Jason - if phase number in NE > 1, use total porosity submodel
+                self.submodels["porosity"] = pybamm.porosity.Total(self.param, self.options)
+            else:
+                self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
+                self.param, self.options, self.x_average
             )
 
     def set_li_metal_counter_electrode_submodels(self):

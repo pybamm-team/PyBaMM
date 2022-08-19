@@ -35,8 +35,13 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid oxygen":
             self.reaction_name = "oxygen "
-        elif reaction in ["SEI", "SEI on cracks", "lithium plating"]:
+        elif reaction in ["SEI on cracks", "lithium plating"]:
             self.reaction_name = reaction + " "
+        elif reaction == "SEI": # Jason-SEI for "primary" or "secondary"?
+            # self.reaction_name = "SEI "
+            # print("Jason-1")
+            self.reaction_name = f"{self.phase_name}SEI " # primary SEI or secondary SEI
+            # print("Jason-reaction_name = ",self.reaction_name)
 
         self.reaction = reaction
 
@@ -180,6 +185,10 @@ class BaseInterface(pybamm.BaseSubModel):
         domain = Domain.lower()
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
+        # print(f"domain = {domain}")
+        # print(f"reaction = {self.reaction}")
+        # print(f"reaction_name = {self.reaction_name}")
+
 
         if self.reaction == "lithium metal plating":
             # Half-cell domain, j should not be broadcast
@@ -210,6 +219,7 @@ class BaseInterface(pybamm.BaseSubModel):
             "interfacial current density [A.m-2]": j_scale * j_av,
         }
 
+        # print(f"Jason-in base_interface._get_standard_interfacial_current_variables:reaction_name = {reaction_name}")
         return variables
 
     def _get_standard_total_interfacial_current_variables(self, j_tot_av):
@@ -272,7 +282,7 @@ class BaseInterface(pybamm.BaseSubModel):
             f"X-averaged {domain} electrode {reaction_name}"
             "exchange current density [A.m-2]": j_scale * j0_av,
         }
-
+        # print(f"Jason - X-averaged {domain} electrode {reaction_name}exchange current density per volume [A.m-3]")
         return variables
 
     def _get_standard_volumetric_current_density_variables(self, variables):
@@ -351,15 +361,19 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
 
+        phase_name = self.phase_name
         pot_scale = self.param.potential_scale
+        pref = phase_name.capitalize()
 
         if self.half_cell:
             # half-cell domain
             variables = {
-                "SEI film overpotential": eta_sei,
-                "SEI film overpotential [V]": eta_sei * pot_scale,
+                f"{pref}SEI film overpotential": eta_sei,
+                f"{pref}SEI film overpotential [V]": eta_sei * pot_scale,
+                # f"{phase_name}SEI film overpotential": eta_sei,
+                # f"{phase_name}SEI film overpotential [V]": eta_sei * pot_scale,
             }
-            return variables
+            return variables # Jason-does these variables modified properly
 
         # Average, and broadcast if necessary
         eta_sei_av = pybamm.x_average(eta_sei)
@@ -371,10 +385,12 @@ class BaseInterface(pybamm.BaseSubModel):
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
 
         variables = {
-            "SEI film overpotential": eta_sei,
-            "X-averaged SEI film overpotential": eta_sei_av,
-            "SEI film overpotential [V]": eta_sei * pot_scale,
-            "X-averaged SEI film overpotential [V]": eta_sei_av * pot_scale,
+            f"{pref}SEI film overpotential": eta_sei,
+            # f"{phase_name}SEI film overpotential": eta_sei,
+            f"X-averaged {phase_name}SEI film overpotential": eta_sei_av,
+            f"{pref}SEI film overpotential [V]": eta_sei * pot_scale,
+            # f"{phase_name}SEI film overpotential [V]": eta_sei * pot_scale,
+            f"X-averaged {phase_name}SEI film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables
@@ -400,7 +416,7 @@ class BaseInterface(pybamm.BaseSubModel):
                 "surface potential difference": delta_phi_av,
                 f"X-averaged {domain} electrode "
                 "surface potential difference [V]": delta_phi_av_dim,
-            }
+            } # Jason - need {phase_name} here?
 
         return variables
 
@@ -438,7 +454,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j_xav = pybamm.x_average(j)
         else:
             j_xav = j
-            j = pybamm.SecondaryBroadcast(j_xav, [f"{domain} electrode"])
+            j = pybamm.SecondaryBroadcast(j_xav, [f"{domain} electrode"]) # Jason-what does j means here? phase_name?
 
         # j scale
         j_scale = self.phase_param.j_scale

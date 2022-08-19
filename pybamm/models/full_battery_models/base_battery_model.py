@@ -505,7 +505,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                and options["SEI"] == "none"
+                # and options["SEI"] == "none"  # Jason-romove?
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
                 and options["lithium plating"] == "none"
@@ -514,7 +514,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'false', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'SEI', 'particle mechanics', "
+                    "be 'none': 'particle mechanics', "
                     "'loss of active material', 'lithium plating'"
                 )
 
@@ -1244,11 +1244,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # SEI film overpotential
         if self.half_cell:
-            eta_sei_av = self.variables["SEI film overpotential"]
-            eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
+            eta_sei_av = self.variables[f"{phase_n.capitalize()}SEI film overpotential"] # Jason-if halfcell, do we need phase_n SEI?
+            eta_sei_av_dim = self.variables[f"{phase_n.capitalize()}SEI film overpotential [V]"]
+            # eta_sei_av = self.variables[f"SEI film overpotential"]
+            # eta_sei_av_dim = self.variables[f"SEI film overpotential [V]"]
         else:
-            eta_sei_av = self.variables["X-averaged SEI film overpotential"]
-            eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
+            eta_sei_av = self.variables[f"X-averaged {phase_n}SEI film overpotential"]
+            eta_sei_av_dim = self.variables[f"X-averaged {phase_n}SEI film overpotential [V]"]
+            # eta_sei_av = self.variables[f"X-averaged SEI film overpotential"]
+            # eta_sei_av_dim = self.variables[f"X-averaged SEI film overpotential [V]"]
 
         # TODO: add current collector losses to the voltage in 3D
 
@@ -1264,7 +1268,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged SEI film overpotential [V]": eta_sei_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
-            }
+            }# Jason-{phase_n} SEI?
         )
 
         # Battery-wide variables

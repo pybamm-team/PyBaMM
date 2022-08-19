@@ -4,6 +4,7 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],215,Chen 2020,graphite
 Maximum concentration in negative electrode [mol.m-3],33133,Chen 2020,tuned for 1C
+Initial concentration in negative electrode [mol.m-3],29866,Chen 2020,
 Negative electrode diffusivity [m2.s-1],3.3E-14,Chen 2020,tuned for 1C
 Negative electrode OCP [V],[function]graphite_LGM50_ocp_Chen2020,Chen 2020,
 ,,,
@@ -28,3 +29,4 @@ Negative electrode density [kg.m-3],1657,default,
 Negative electrode specific heat capacity [J.kg-1.K-1],700,default,
 Negative electrode thermal conductivity [W.m-1.K-1],1.7,default,
 Negative electrode OCP entropic change [V.K-1],0,,
+

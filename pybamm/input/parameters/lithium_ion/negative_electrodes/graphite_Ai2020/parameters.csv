@@ -4,6 +4,7 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],100,Ai 2020,graphite
 Maximum concentration in negative electrode [mol.m-3],28700,Ai 2020,tuned for 1C
+Initial concentration in negative electrode [mol.m-3],24108,Ai 2020,
 Negative electrode diffusivity [m2.s-1],[function]graphite_diffusivity_Dualfoil1998,Ai 2020,tuned for 1C
 Negative electrode OCP [V],[data]graphite_ocp_Enertech_Ai2020,Ai 2020,
 ,,,

@@ -19,12 +19,14 @@ class ConstantSEI(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
+    phase : str
+        Phase of the particle
+        
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, options=None, phase="primary"):
+        super().__init__(param, options=options, phase=phase)
         if self.half_cell:
             self.reaction_loc = "interface"
         else:
@@ -32,8 +34,8 @@ class ConstantSEI(BaseModel):
 
     def get_fundamental_variables(self):
         # Constant thicknesses
-        L_inner = self.param.L_inner_0
-        L_outer = self.param.L_outer_0
+        L_inner = self.phase_param.L_inner_0
+        L_outer = self.phase_param.L_outer_0
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
 
         # Concentrations (derived from thicknesses)

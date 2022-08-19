@@ -179,7 +179,12 @@ class ParameterValues:
         ]
 
         # add SEI parameters if provided
-        for extra_group in ["sei", "lithium plating"]:
+        for extra_group in [
+            "sei",
+            "primary sei",
+            "secondary sei", # Jason - replace sei with "primary sei" and "secondary sei"
+            "lithium plating",
+        ]:
             if extra_group in chemistry:
                 component_groups = [extra_group] + component_groups
 
@@ -194,6 +199,12 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
+            prefactor = ""
+            for phase in ["primary", "secondary"]:
+                if component_group.startswith(phase):  # Jason - add primary/secondary to sei in component_group
+                    component_group = "sei"
+                    prefactor = phase.capitalize() + ": "
+                    # break
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )
@@ -204,7 +215,7 @@ class ParameterValues:
 
             component_params = {}
             for k, v in component_params_tmp.items():
-                component_params[k] = v
+                component_params[prefactor +　k] = v
 
             # Update parameters, making sure to check any conflicts
             self.update(

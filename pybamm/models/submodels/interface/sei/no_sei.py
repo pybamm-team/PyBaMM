@@ -15,12 +15,14 @@ class NoSEI(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None, cracks=False):
-        super().__init__(param, options=options, cracks=cracks)
+    def __init__(self, param, options=None, phase="primary"):
+        super().__init__(param, options=options, phase=phase)
         if self.half_cell:
             self.reaction_loc = "interface"
         else:
@@ -34,11 +36,6 @@ class NoSEI(BaseModel):
                 pybamm.Scalar(0), "negative electrode", "current collector"
             )
         variables = self._get_standard_thickness_variables(zero, zero)
-        variables.update(self._get_standard_reaction_variables(zero, zero))
-        return variables
-
-    def get_coupled_variables(self, variables):
         variables.update(self._get_standard_concentration_variables(variables))
-        # Update whole cell variables, which also updates the "sum of" variables
-        variables.update(super().get_coupled_variables(variables))
+        variables.update(self._get_standard_reaction_variables(zero, zero))
         return variables
