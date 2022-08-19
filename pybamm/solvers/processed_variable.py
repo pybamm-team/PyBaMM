@@ -341,7 +341,7 @@ class ProcessedVariable(object):
             self.second_dimension = "z"
             self.R_sol = first_dim_pts
             self.z_sol = second_dim_pts
-        else:
+        else:  # pragma: no cover
             raise pybamm.DomainError(
                 f"Cannot process 2D object with domains '{self.domains}'."
             )
