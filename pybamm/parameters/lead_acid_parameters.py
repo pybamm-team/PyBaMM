@@ -331,7 +331,7 @@ class LeadAcidParameters(BaseParameters):
         )
 
         # Electrical
-        self.ocv_ref = self.p.prim.U_ref - self.n.prim.U_ref
+        self.ocv_ref = self.p.U_ref - self.n.U_ref
         self.voltage_low_cut = (
             self.voltage_low_cut_dimensional - self.ocv_ref
         ) / self.potential_scale
@@ -540,6 +540,12 @@ class DomainLeadAcidParameters(BaseParameters):
         for phase in self.phases:
             phase._set_scales()
 
+        # Reference OCP
+        inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
+        self.U_ref = pybamm.FunctionParameter(
+            f"{self.domain} electrode open-circuit potential [V]", inputs
+        )
+
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
         main = self.main_param
@@ -696,12 +702,6 @@ class PhaseLeadAcidParameters(BaseParameters):
         # Electrical
         self.j_scale = self.main_param.i_typ / (self.a_typ * self.main_param.L_x)
 
-        # Reference OCP
-        inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
-        self.U_ref = pybamm.FunctionParameter(
-            f"{self.domain} electrode open-circuit potential [V]", inputs
-        )
-
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
         main = self.main_param
@@ -721,15 +721,15 @@ class PhaseLeadAcidParameters(BaseParameters):
 
         # Electrochemical reactions
         # Oxygen
-        self.U_Ox = (main.U_Ox_dim - self.U_ref) / main.potential_scale
-        self.U_Hy = (main.U_Hy_dim - self.U_ref) / main.potential_scale
+        self.U_Ox = (main.U_Ox_dim - self.domain_param.U_ref) / main.potential_scale
+        self.U_Hy = (main.U_Hy_dim - self.domain_param.U_ref) / main.potential_scale
 
     def U(self, c_e, T):
         """Dimensionless open-circuit voltage in the negative electrode"""
         c_e_dimensional = c_e * self.main_param.c_e_typ
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
         return (
-            self.U_dimensional(c_e_dimensional, T_dim) - self.U_ref
+            self.U_dimensional(c_e_dimensional, T_dim) - self.domain_param.U_ref
         ) / self.main_param.potential_scale
 
     def j0(self, c_e, T):

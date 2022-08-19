@@ -384,7 +384,7 @@ class BaseInterface(pybamm.BaseSubModel):
     ):
         domain = self.domain.lower()
 
-        ocp_ref = self.phase_param.U_ref
+        ocp_ref = self.domain_param.U_ref
 
         delta_phi_av_dim = ocp_ref + delta_phi_av * self.param.potential_scale
 
@@ -406,7 +406,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
-        ocp_ref = self.phase_param.U_ref
+        ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
         delta_phi_dim = ocp_ref + delta_phi * self.param.potential_scale

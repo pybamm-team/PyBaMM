@@ -22,7 +22,7 @@ class LithiumMetalBaseModel(BaseModel):
             "Lithium metal interface electrode potential": phi_s,
             "Lithium metal interface electrode potential [V]": pot_scale * phi_s,
             "Lithium metal interface electrolyte potential": phi_e,
-            "Lithium metal interface electrolyte potential [V]": param.n.prim.U_ref
+            "Lithium metal interface electrolyte potential [V]": param.n.U_ref
             + pot_scale * phi_e,
         }
         return variables
@@ -43,7 +43,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """
 
     def get_fundamental_variables(self):
-        ocp_ref = self.param.n.prim.U_ref
+        ocp_ref = self.param.n.U_ref
         pot_scale = self.param.potential_scale
 
         delta_phi = pybamm.Variable(

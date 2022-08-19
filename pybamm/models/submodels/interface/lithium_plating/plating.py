@@ -74,7 +74,7 @@ class Plating(BasePlating):
         j0_stripping = param.j0_stripping(c_e_n, c_plated_Li, T)
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         # phi_ref is part of the de-dimensionalization used in PyBaMM
-        phi_ref = param.n.prim.U_ref / param.potential_scale
+        phi_ref = param.n.U_ref / param.potential_scale
 
         eta_stripping = delta_phi + phi_ref + eta_sei
         eta_plating = -eta_stripping

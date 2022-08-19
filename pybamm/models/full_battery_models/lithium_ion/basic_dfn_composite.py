@@ -319,11 +319,11 @@ class BasicDFNComposite(BaseModel):
         pot_scale = param.potential_scale
         U_ref = param.ocv_ref
         voltage_dim = U_ref + voltage * pot_scale
-        ocp_n_p1_dim = param.n.prim.U_ref + param.potential_scale * ocp_n_p1
+        ocp_n_p1_dim = param.n.U_ref + param.potential_scale * ocp_n_p1
         ocp_av_n_p1_dim = pybamm.x_average(ocp_n_p1_dim)
-        ocp_n_p2_dim = param.n.sec.U_ref + param.potential_scale * ocp_n_p2
+        ocp_n_p2_dim = param.n.U_ref + param.potential_scale * ocp_n_p2
         ocp_av_n_p2_dim = pybamm.x_average(ocp_n_p2_dim)
-        ocp_p_dim = param.p.prim.U_ref + param.potential_scale * ocp_p
+        ocp_p_dim = param.p.U_ref + param.potential_scale * ocp_p
         ocp_av_p_dim = pybamm.x_average(ocp_p_dim)
         c_s_rav_n_p1 = pybamm.r_average(c_s_n_p1)
         c_s_rav_n_p1_dim = c_s_rav_n_p1 * param.n.prim.c_max
@@ -363,10 +363,9 @@ class BasicDFNComposite(BaseModel):
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
             "Negative electrode potential [V]": param.potential_scale * phi_s_n,
-            "Electrolyte potential [V]": -param.n.prim.U_ref
-            + param.potential_scale * phi_e,
-            "Positive electrode potential [V]": param.p.prim.U_ref
-            - param.n.prim.U_ref
+            "Electrolyte potential [V]": -param.n.U_ref + param.potential_scale * phi_e,
+            "Positive electrode potential [V]": param.p.U_ref
+            - param.n.U_ref
             + param.potential_scale * phi_s_p,
             "Negative electrolyte potential": phi_e_n,
             "Separator electrolyte potential": phi_e_s,

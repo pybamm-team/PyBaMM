@@ -179,14 +179,8 @@ class ParameterValues:
         ]
 
         # add SEI parameters if provided
-        for extra_group in [
-            "sei",
-            "lithium plating",
-            "negative secondary particle",
-        ]:
+        for extra_group in ["sei", "lithium plating"]:
             if extra_group in chemistry:
-                # do extra groups first, as later we will check whether a parameter
-                # appears with "Secondary:" (in which case we change it to "Primary:")
                 component_groups = [extra_group] + component_groups
 
         for component_group in component_groups:
@@ -200,10 +194,6 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
-            prefactor = ""
-            if component_group == "negative secondary particle":
-                component_group = "negative electrode"
-                prefactor = "Secondary: "
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )
@@ -214,13 +204,7 @@ class ParameterValues:
 
             component_params = {}
             for k, v in component_params_tmp.items():
-                # If a parameter is already present as a secondary parameter, we
-                # distinguish it by adding "Primary:" to the given name
-                if "Secondary: " + k in self._dict_items:
-                    component_params["Primary: " + k] = v
-                else:
-                    # Add prefactor to distinguish e.g. secondary particles
-                    component_params[prefactor + k] = v
+                component_params[k] = v
 
             # Update parameters, making sure to check any conflicts
             self.update(

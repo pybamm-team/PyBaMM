@@ -46,7 +46,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         param = self.param
         pot_scale = param.potential_scale
-        U_ref = param.n.prim.U_ref
+        U_ref = param.n.U_ref
 
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -188,7 +188,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the surface potential difference.
         """
 
-        ocp_ref = self.domain_param.prim.U_ref
+        ocp_ref = self.domain_param.U_ref
 
         variables = {
             "X-averaged "
@@ -218,7 +218,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the surface potential difference.
         """
 
-        ocp_ref = self.domain_param.prim.U_ref
+        ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
         if delta_phi.domain == []:
