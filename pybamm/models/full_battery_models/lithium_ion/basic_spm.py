@@ -40,6 +40,7 @@ class BasicSPM(BaseModel):
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
+        Qt = pybamm.Variable("Throughput capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_s_n = pybamm.Variable(
             "X-averaged negative particle concentration", domain="negative particle"
@@ -67,8 +68,10 @@ class BasicSPM(BaseModel):
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
         self.rhs[Q] = I * param.timescale / 3600
+        self.rhs[Qt] = abs(I) * param.timescale / 3600
         # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
+        self.initial_conditions[Qt] = pybamm.Scalar(0)
 
         ######################
         # Particles
@@ -159,6 +162,7 @@ class BasicSPM(BaseModel):
         # into a vector of the right shape, for multiplying with other vectors
         self.variables = {
             "Discharge capacity [A.h]": Q,
+            "Throughput capacity [A.h]": Qt,
             "Negative particle surface concentration": pybamm.PrimaryBroadcast(
                 c_s_surf_n, "negative electrode"
             ),
