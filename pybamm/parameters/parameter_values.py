@@ -171,6 +171,7 @@ class ParameterValues:
 
         # add SEI parameters if provided
         for extra_group in [
+            "sei",
             "primary sei",
             "secondary sei", # Jason - replace sei with "primary sei" and "secondary sei"
             "lithium plating",

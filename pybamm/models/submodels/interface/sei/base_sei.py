@@ -48,10 +48,10 @@ class BaseModel(BaseInterface):
             ) # Jason-whether should the value name be modified as well?
         variables.update(
             {
-                "X-averaged positive electrode SEI interfacial current "
+                f"X-averaged positive electrode {phase_name}SEI interfacial current "
                 "density": zero_av,
-                "Positive electrode SEI interfacial current density": zero,
-            }
+                f"Positive electrode {phase_name}SEI interfacial current density": zero,
+            } # Jason - does PE also need {phase_name}SEI in its vars
         )
 
         return variables

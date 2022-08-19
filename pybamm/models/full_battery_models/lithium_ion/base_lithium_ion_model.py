@@ -353,7 +353,13 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.options["SEI porosity change"] == "true"
             or self.options["lithium plating porosity change"] == "true"
         ):
-            self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
+            phases_n = self.options.phase_number_to_names(
+                getattr(self.options, "negative")["particle phases"]
+            )
+            if len(phases_n) > 1: # Jason - if phase number in NE > 1, use total porosity submodel
+                self.submodels["porosity"] = pybamm.porosity.Total(self.param, self.options)
+            else:
+                self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, self.x_average
             )
 

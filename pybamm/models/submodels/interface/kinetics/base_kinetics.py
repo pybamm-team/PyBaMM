@@ -34,20 +34,20 @@ class BaseKinetics(BaseInterface):
         # print("Jason-enter get_fundamental_variables")
 
         domain = self.domain.lower()
-        # phase_name = self.phase_name
+        phase_name = self.phase_name
 
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             j = pybamm.Variable(
-                f"Total {domain} electrode interfacial current density variable",
+                f"Total {domain} electrode {phase_name}interfacial current density variable",# Jason-{phase_name}
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
 
             variables = {
-                f"Total {domain} electrode interfacial current density variable": j
+                f"Total {domain} electrode {phase_name}interfacial current density variable": j
             }
             return variables
         else:
@@ -92,12 +92,12 @@ class BaseKinetics(BaseInterface):
             if self.half_cell or self.options["SEI film resistance"] == "average":
                 R_sei = self.phase_param.R_sei
                 L_sei = variables[f"Total {phase_name}SEI thickness"]
-                eta_sei = -j_tot_av * L_sei * R_sei
+                eta_sei = -j_tot_av * L_sei * R_sei # Jason - how j_tot_av should be split to primary and secondary j_tot_av? average does not apply to multi-material yet
             elif self.options["SEI film resistance"] == "distributed":
                 R_sei = self.phase_param.R_sei
                 L_sei = variables[f"Total {phase_name}SEI thickness"]
                 j_tot = variables[
-                    f"Total negative electrode interfacial current density variable" # Jason - {phase_name},here means primary reaction current
+                    f"Total negative electrode {phase_name}interfacial current density variable" # Jason - {phase_name},here means primary reaction current
                 ]
 
                 # Override print_name
@@ -182,7 +182,7 @@ class BaseKinetics(BaseInterface):
         # print("Jason-enter set_algebraic")
         domain = self.domain.lower()
         phase_name = self.phase_name
-        print(f"Jason-enter set_algebraic, domain={domain}")
+        # print(f"Jason-enter set_algebraic, domain={domain}")
 
         if (
             self.options["total interfacial current density as a state"] == "true"
@@ -190,7 +190,7 @@ class BaseKinetics(BaseInterface):
         ):
 
             j_tot_var = variables[
-                f"Total {domain} electrode interfacial current density variable"
+                f"Total {domain} electrode {phase_name}interfacial current density variable"# Jason-{phase_name}
             ] # Jason-{phase_name}?
 
             # Override print_name
@@ -199,7 +199,7 @@ class BaseKinetics(BaseInterface):
             j_tot = variables[
                 "Sum of "
                 + self.domain.lower()
-                + f" electrode interfacial current densities"
+                + f" electrode {phase_name}interfacial current densities"# Jason-{phase_name}, but this sum variable needs to be calculated in total_kinetics.py
             ]
             # Algebraic equation to set the variable j_tot_var
             # equal to the sum of currents j_tot
@@ -215,8 +215,9 @@ class BaseKinetics(BaseInterface):
         ):
             param = self.param
             j_tot_var = variables[
-                f"Total {domain} electrode interfacial current density variable"
+                f"Total {domain} electrode {phase_name}interfacial current density variable"
             ] # Jason-{phase_name}?
+            # print(f"Jason - Total {domain} electrode {phase_name}interfacial current density variable")
             current_at_0 = (
                 pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})
                 / param.I_typ

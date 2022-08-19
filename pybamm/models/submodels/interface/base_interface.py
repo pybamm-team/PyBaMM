@@ -271,6 +271,10 @@ class BaseInterface(pybamm.BaseSubModel):
         reaction_name = self.reaction_name
         param = self.param
         j_scale = self.phase_param.j_scale
+        # print(f"domain = {domain}")
+        # print(f"reaction = {self.reaction}")
+        # print(f"reaction_name = {self.reaction_name}")
+
 
         if self.reaction == "lithium metal plating":
             # Half-cell domain, j should not be broadcast
