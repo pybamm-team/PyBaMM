@@ -320,7 +320,6 @@ class BaseUnitTestLithiumIon:
 
         options = {"particle phases": ("2", "1")}
         self.check_well_posedness(options)
-        
+
         options = {"particle phases": ("1", "2")}
         self.check_well_posedness(options)
-    

@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   Reformated submodel structure to allow composite electrodes. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2248](https://github.com/pybamm-team/PyBaMM/pull/2248))
+
 ## Bug fixes
 
 -   Added new parameter `Ratio of lithium moles to SEI moles` (short name z_sei) to fix a bug where this number was incorrectly hardcoded to 1. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
@@ -10,6 +14,10 @@
 ## Optimizations
 
 -   Added limits for variables in some functions to avoid division by zero, sqrt(negative number), etc ([#2213](https://github.com/pybamm-team/PyBaMM/pull/2213))
+
+## Breaking changes
+
+-   Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2248](https://github.com/pybamm-team/PyBaMM/pull/2248))
 
 # [v22.7](https://github.com/pybamm-team/PyBaMM/tree/v22.7) - 2022-07-31
 
@@ -44,17 +52,14 @@
 
 ## Breaking changes
 
--   Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2166](https://github.com/pybamm-team/PyBaMM/pull/2166))
 -   Exchange-current density functions (and some other functions) now take an additional argument, the maximum particle concentration for that phase ([#2134](https://github.com/pybamm-team/PyBaMM/pull/2134))
--   Loss of lithium to SEI on cracks is now a degradation variable, so setting a particle mechanics submodel is now compulsory (NoMechanics will suffice)
+-   Loss of lithium to SEI on cracks is now a degradation variable, so setting a particle mechanics submodel is now compulsory (NoMechanics will suffice) ([#2104](https://github.com/pybamm-team/PyBaMM/pull/2104))
 
 # [v22.6](https://github.com/pybamm-team/PyBaMM/tree/v22.6) - 2022-06-30
 
 ## Features
 
 -   Added open-circuit potential as a separate submodel ([#2094](https://github.com/pybamm-team/PyBaMM/pull/2094))
--   Reformated submodel structure to allow composite electrodes, with an example for graphite/silicon. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
--   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. Silicon parameters are added as a standard negative electrode parameter set, specified as the "negative electrode secondary" set, which automatically adds "Secondary:" to the start of each parameter name. Primary (graphite) parameter names are unchanged. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
 -   Added partially reversible lithium plating model and new `OKane2022` parameter set to go with it ([#2043](https://github.com/pybamm-team/PyBaMM/pull/2043))
 -   Added `__eq__` and `__hash__` methods for `Symbol` objects, using `.id` ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
 
@@ -85,8 +90,7 @@
 
 ## Breaking changes
 
--   Exchange-current density functions now take a fourth argument, the maximum particle concentration for that phase
--   Changed domain-specific parameter names to a nested attribute. `param.l_n` is now `param.n.l` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
+-   Changed domain-specific parameter names to a nested attribute. `param.n.l_n` is now `param.n.l` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
 
 # [v22.4](https://github.com/pybamm-team/PyBaMM/tree/v22.4) - 2022-04-30
 

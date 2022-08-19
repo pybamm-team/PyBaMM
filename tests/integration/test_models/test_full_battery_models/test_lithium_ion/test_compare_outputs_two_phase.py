@@ -4,7 +4,6 @@
 import pybamm
 import numpy as np
 import unittest
-from tests import StandardOutputComparison
 
 
 class TestCompareOutputsTwoPhase(unittest.TestCase):
