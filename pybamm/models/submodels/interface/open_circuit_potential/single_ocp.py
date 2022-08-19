@@ -45,7 +45,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             dUdT = self.phase_param.dUdT(c_s_surf)
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature"]
-            ocp = self.param.n.prim.U_ref
+            ocp = self.param.n.U_ref
             dUdT = 0 * T
         elif self.reaction == "lead-acid main":
             c_e = variables[f"{Domain} electrolyte concentration"]

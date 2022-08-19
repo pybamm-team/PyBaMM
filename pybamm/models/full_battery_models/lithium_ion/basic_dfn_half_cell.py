@@ -142,8 +142,8 @@ class BasicDFNHalfCell(BaseModel):
 
         # Other parameters (for outputs)
         c_w_max = param.p.prim.c_max
-        U_w_ref = param.p.prim.U_ref
-        U_Li_ref = param.n.prim.U_ref
+        U_w_ref = param.p.U_ref
+        U_Li_ref = param.n.U_ref
         L_w = param.p.L
 
         # gamma_w is always 1 because we choose the timescale based on the working
@@ -269,7 +269,7 @@ class BasicDFNHalfCell(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[phi_e] = param.n.prim.U_ref / pot_scale
+        self.initial_conditions[phi_e] = param.n.U_ref / pot_scale
 
         ######################
         # (Some) variables

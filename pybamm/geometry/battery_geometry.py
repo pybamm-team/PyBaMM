@@ -32,6 +32,7 @@ def battery_geometry(
         A geometry class for the battery
 
     """
+    options = pybamm.BatteryModelOptions(options or {})
     geo = pybamm.geometric_parameters
     l_n = geo.n.l
     l_s = geo.s.l
@@ -54,16 +55,15 @@ def battery_geometry(
                 "positive particle": {"r_p": zero_one},
             }
         )
-        if isinstance(options, pybamm.BatteryModelOptions):
-            for domain in ["negative", "positive"]:
-                phases = int(getattr(options, domain)["particle phases"])
-                if phases >= 2:
-                    geometry.update(
-                        {
-                            f"{domain} primary particle": {"r_n_prim": zero_one},
-                            f"{domain} secondary particle": {"r_n_sec": zero_one},
-                        }
-                    )
+        for domain in ["negative", "positive"]:
+            phases = int(getattr(options, domain)["particle phases"])
+            if phases >= 2:
+                geometry.update(
+                    {
+                        f"{domain} primary particle": {"r_n_prim": zero_one},
+                        f"{domain} secondary particle": {"r_n_sec": zero_one},
+                    }
+                )
     # Add particle size domains
     if options is not None and options["particle size"] == "distribution":
         R_min_n = geo.n.prim.R_min

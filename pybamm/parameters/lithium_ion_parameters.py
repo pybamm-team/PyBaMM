@@ -188,7 +188,7 @@ class LithiumIonParameters(BaseParameters):
         self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
 
         # Reference OCP based on initial concentration
-        self.ocv_ref = self.p.prim.U_ref - self.n.prim.U_ref
+        self.ocv_ref = self.p.U_ref - self.n.U_ref
         self.ocv_init_dim = self.p.prim.U_init_dim - self.n.prim.U_init_dim
 
     def D_e_dimensional(self, c_e, T):
@@ -334,7 +334,7 @@ class LithiumIonParameters(BaseParameters):
 
         self.C_sei_reaction = (
             self.n.prim.j_scale / self.m_sei_dimensional
-        ) * pybamm.exp(-(self.F * self.n.prim.U_ref / (2 * self.R * self.T_ref)))
+        ) * pybamm.exp(-(self.F * self.n.U_ref / (2 * self.R * self.T_ref)))
 
         self.C_sei_solvent = (
             self.n.prim.j_scale
@@ -397,7 +397,7 @@ class LithiumIonParameters(BaseParameters):
                 pybamm.exp(
                     -(
                         self.F
-                        * (self.n.prim.U_ref - self.U_sei_dim)
+                        * (self.n.U_ref - self.U_sei_dim)
                         / (2 * self.R * self.T_ref)
                     )
                 )
@@ -585,6 +585,10 @@ class DomainLithiumIonParameters(BaseParameters):
             self.epsilon_inactive = 1 - self.epsilon_init - epsilon_s_tot
 
             self.cap_init = sum(phase.cap_init for phase in self.phases)
+            # Use primary phase to set the reference potential
+            self.U_ref = self.prim.U_dimensional(self.prim.c_init_av, main.T_ref)
+        else:
+            self.U_ref = pybamm.Scalar(0)
 
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phases)
 
@@ -648,28 +652,6 @@ class DomainLithiumIonParameters(BaseParameters):
         inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             f"{self.domain} electrode conductivity [S.m-1]", inputs
-        )
-
-    def j0_stripping_dimensional(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for stripping [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for stripping [A.m-2]", inputs
-        )
-
-    def j0_plating_dimensional(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for plating [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for plating [A.m-2]", inputs
         )
 
     def _set_scales(self):
@@ -845,7 +827,6 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         if self.main_param.half_cell and self.domain == "Negative":
             self.n_Li_init = pybamm.Scalar(0)
-            self.U_ref = pybamm.Scalar(0)
             self.U_init_dim = pybamm.Scalar(0)
         else:
             self.epsilon_s = pybamm.FunctionParameter(
@@ -864,7 +845,7 @@ class ParticleLithiumIonParameters(BaseParameters):
                 )
                 / self.c_max
             )
-            c_init_av = pybamm.xyz_average(pybamm.r_average(self.c_init))
+            self.c_init_av = pybamm.xyz_average(pybamm.r_average(self.c_init))
             eps_c_init_av = pybamm.xyz_average(
                 self.epsilon_s * pybamm.r_average(self.c_init)
             )
@@ -878,8 +859,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             )
             self.cap_init = self.elec_loading * main.A_cc
 
-            self.U_ref = self.U_dimensional(c_init_av, main.T_ref)
-            self.U_init_dim = self.U_dimensional(c_init_av, main.T_init_dim)
+            self.U_init_dim = self.U_dimensional(self.c_init_av, main.T_init_dim)
 
     def D_dimensional(self, sto, T):
         """Dimensional diffusivity in particle. Note this is defined as a
@@ -1013,7 +993,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         if main.half_cell and self.domain == "Negative":
             self.U_init = pybamm.Scalar(0)
         else:
-            self.U_init = (self.U_init_dim - self.U_ref) / main.potential_scale
+            self.U_init = (
+                self.U_init_dim - self.domain_param.U_ref
+            ) / main.potential_scale
 
     def D(self, c_s, T):
         """Dimensionless particle diffusivity"""
@@ -1039,7 +1021,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         sto = c_s
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
         return (
-            self.U_dimensional(sto, T_dim, lithiation) - self.U_ref
+            self.U_dimensional(sto, T_dim, lithiation) - self.domain_param.U_ref
         ) / main.potential_scale
 
     def dUdT(self, c_s):

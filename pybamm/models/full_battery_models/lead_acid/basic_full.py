@@ -284,7 +284,7 @@ class BasicFull(BaseModel):
             "Electrolyte concentration": c_e,
             "Current [A]": I,
             "Negative electrode potential [V]": pot * phi_s_n,
-            "Electrolyte potential [V]": -param.n.prim.U_ref + pot * phi_e,
+            "Electrolyte potential [V]": -param.n.U_ref + pot * phi_e,
             "Positive electrode potential [V]": param.ocv_ref + pot * phi_s_p,
             "Terminal voltage [V]": param.ocv_ref + pot * voltage,
             "Porosity": eps,

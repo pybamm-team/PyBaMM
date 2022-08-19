@@ -73,8 +73,8 @@ class BaseOpenCircuitPotential(BaseInterface):
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
 
         pot_scale = self.param.potential_scale
-        ocp_dim = self.phase_param.U_ref + pot_scale * ocp
-        ocp_av_dim = self.phase_param.U_ref + pot_scale * ocp_av
+        ocp_dim = self.domain_param.U_ref + pot_scale * ocp
+        ocp_av_dim = self.domain_param.U_ref + pot_scale * ocp_av
 
         variables.update(
             {
@@ -124,8 +124,8 @@ class BaseOpenCircuitPotential(BaseInterface):
             dUdT_av = pybamm.x_average(dUdT)
 
         pot_scale = self.param.potential_scale
-        ocp_dim = self.phase_param.U_ref + pot_scale * ocp
-        ocp_av_dim = self.phase_param.U_ref + pot_scale * ocp_av
+        ocp_dim = self.domain_param.U_ref + pot_scale * ocp
+        ocp_av_dim = self.domain_param.U_ref + pot_scale * ocp_av
 
         variables = {
             f"{Domain} electrode {reaction_name}"
