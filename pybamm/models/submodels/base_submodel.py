@@ -68,12 +68,6 @@ class BaseSubModel(pybamm.BaseModel):
         phase=None,
     ):
         super().__init__(name)
-<<<<<<< HEAD
-=======
-        if domain is not None:
-            domain = domain.capitalize()
-
->>>>>>> sei-composite-Jason
         self.domain = domain
         self.set_domain_for_broadcast()
         self.name = name
