@@ -20,7 +20,7 @@ class BaseModel(BaseInterface):
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, options=None,phase="primary"):
+    def __init__(self, param, options=None,phase="primary"，cracks=False):
         reaction = "SEI"
         domain = "Negative"
         super().__init__(param, domain, reaction, options=options,phase=phase)
