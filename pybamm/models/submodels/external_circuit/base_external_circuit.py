@@ -12,7 +12,7 @@ class BaseModel(pybamm.BaseSubModel):
 
     def get_fundamental_variables(self):
         Q_Ah = pybamm.standard_variables.Q_Ah
-        
+
         variables = {"Discharge capacity [A.h]": Q_Ah}
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = pybamm.standard_variables.Q_Wh
