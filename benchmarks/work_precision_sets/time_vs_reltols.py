@@ -1,6 +1,7 @@
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
+import itertools
 
 
 parameters = [
@@ -9,7 +10,9 @@ parameters = [
     "Ramadass2004",
     "Chen2020",
 ]
-models = ["SPM", "DFN"]
+
+models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
+
 reltols = [
     0.001,
     0.0001,
@@ -23,97 +26,83 @@ reltols = [
     1.0e-12,
     1.0e-13,
 ]
-solvers = ["IDAKLU", "Casadi - safe", "Casadi - fast"]
 
-for model_ in models:
-    for solver_ in solvers:
+solvers = {
+    "IDAKLUSolver": pybamm.IDAKLUSolver(),
+    "Casadi - safe": pybamm.CasadiSolver(),
+    "Casadi - fast": pybamm.CasadiSolver(mode="fast"),
+}
 
-        for params in parameters:
 
-            time_points = []
-            if model_ == "SPM":
-                model = pybamm.lithium_ion.SPM()
-            else:
-                model = pybamm.lithium_ion.DFN()
+fig, axs = plt.subplots(len(solvers), len(models), figsize=(8, 5))
 
-            c_rate = 10
-            tmax = 3600 / c_rate
-            nb_points = 500
-            t_eval = np.linspace(0, tmax, nb_points)
-            geometry = model.default_geometry
+for ax, i, j in zip(
+    axs.ravel(),
+    itertools.product(models.values(), solvers.values()),
+    itertools.product(models, solvers),
+):
 
-            # load parameter values and process model and geometry
-            param = pybamm.ParameterValues(params)
-            param.process_model(model)
-            param.process_geometry(geometry)
+    for params in parameters:
+        time_points = []
+        solver = i[1]
 
-            # set mesh
-            var_pts = {
-                "x_n": 20,
-                "x_s": 20,
-                "x_p": 20,
-                "r_n": 30,
-                "r_p": 30,
-                "y": 10,
-                "z": 10,
-            }
-            mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        model = i[0].new_copy()
+        c_rate = 10
+        tmax = 3600 / c_rate
+        nb_points = 500
+        t_eval = np.linspace(0, tmax, nb_points)
+        geometry = model.default_geometry
 
-            # discretise model
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            disc.process_model(model)
+        # load parameter values and process model and geometry
+        param = pybamm.ParameterValues(params)
+        param.process_model(model)
+        param.process_geometry(geometry)
 
-            for tol in reltols:
+        # set mesh
+        var_pts = {
+            "x_n": 20,
+            "x_s": 20,
+            "x_p": 20,
+            "r_n": 30,
+            "r_p": 30,
+            "y": 10,
+            "z": 10,
+        }
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
-                if solver_ == "IDAKLU" and model_ == "SPM":
-                    solver = pybamm.IDAKLUSolver(rtol=tol)
-                    x = 1
-                elif solver_ == "IDAKLU" and model_ == "DFN":
-                    solver = pybamm.IDAKLUSolver(rtol=tol)
-                    x = 2
-                elif solver_ == "Casadi - safe" and model_ == "SPM":
-                    solver = pybamm.CasadiSolver(rtol=tol)
-                    x = 3
-                elif solver_ == "Casadi - safe" and model_ == "DFN":
-                    solver = pybamm.CasadiSolver(rtol=tol)
-                    x = 4
-                elif solver_ == "Casadi - fast" and model_ == "SPM":
-                    solver = pybamm.CasadiSolver(rtol=tol, mode="fast")
-                    x = 5
-                else:
-                    solver = pybamm.CasadiSolver(rtol=tol, mode="fast")
-                    x = 6
-                # solve first
-                solver.solve(model, t_eval=t_eval)
-                time = 0
-                runs = 20
-                for k in range(0, runs):
+        # discretise model
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
 
-                    solution = solver.solve(model, t_eval=t_eval)
-                    time += solution.solve_time.value
-                time = time / runs
+        i = list(i)
 
-                time_points.append(time)
-            plt.subplot(3, 2, x)
+        for tol in reltols:
 
-            plt.plot(reltols, time_points)
-            plt.title(f"{model_} with {solver_} solver")
-            plt.xlabel("reltols")
-            plt.xticks(reltols)
-            plt.xscale("log")
-            plt.yscale("log")
-            plt.ylabel("time(s)")
+            solver.rtol = tol
+            solver.solve(model, t_eval=t_eval)
+            time = 0
+            runs = 20
+            for k in range(0, runs):
 
+                solution = solver.solve(model, t_eval=t_eval)
+                time += solution.solve_time.value
+            time = time / runs
+
+            time_points.append(time)
+
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("reltols")
+        ax.set_ylabel("time(s)")
+
+        ax.set_title(f"{j[0]} with {j[1]}")
+        ax.plot(reltols, time_points)
+
+plt.tight_layout()
 plt.gca().legend(
     parameters,
     loc="upper right",
 )
-
-plt.tight_layout()
-N = 1.5
-params = plt.gcf()
-plSize = params.get_size_inches()
-params.set_size_inches((plSize[0] * N, plSize[1] * N))
 
 plt.savefig(f"benchmarks/benchmark_images/time_vs_reltols_{pybamm.__version__}.png")
 

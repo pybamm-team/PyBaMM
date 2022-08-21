@@ -1,36 +1,48 @@
 import pybamm
+
 import matplotlib.pyplot as plt
+import itertools
 
 
 parameters = [
     "Marquis2019",
     "NCA_Kim2011",
-    # "Prada2013",
     "Ramadass2004",
     "Chen2020",
-    "Chen2020_plating",
     "Ecker2015",
 ]
-models = ["SPM", "DFN"]
+
+models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
+
 npts = [4, 8, 16, 32, 64]
-for model_ in models:
-    if model_ == "SPM":
-        x = 1
-    else:
-        x = 2
+
+solvers = {
+    "Casadi - safe": pybamm.CasadiSolver(),
+    "Casadi - fast": pybamm.CasadiSolver(mode="fast"),
+}
+
+
+fig, axs = plt.subplots(len(solvers), len(models), figsize=(8, 5))
+
+for ax, i, j in zip(
+    axs.ravel(),
+    itertools.product(models.values(), solvers.values()),
+    itertools.product(models, solvers),
+):
 
     for params in parameters:
+        time_points = []
+        solver = i[1]
 
-        solutions = []
+        model = i[0].new_copy()
+
+        # load parameter values and process model and geometry
+        param = pybamm.ParameterValues(params)
+
+        i = list(i)
 
         for N in npts:
 
-            solver = pybamm.CasadiSolver(mode="fast")
-            if model_ == "SPM":
-                model = pybamm.lithium_ion.SPM()
-            else:
-                model = pybamm.lithium_ion.DFN()
-            parameter_values = pybamm.ParameterValues(params)
             var_pts = {
                 "x_n": N,  # negative electrode
                 "x_s": N,  # separator
@@ -39,33 +51,33 @@ for model_ in models:
                 "r_p": N,  # positive particle
             }
             sim = pybamm.Simulation(
-                model, solver=solver, parameter_values=parameter_values, var_pts=var_pts
+                model, solver=solver, parameter_values=param, var_pts=var_pts
             )
+
             time = 0
-            for k in range(0, 5):
+            runs = 20
+            for k in range(0, runs):
 
                 solution = sim.solve([0, 3500])
                 time += solution.solve_time.value
-            time = time / 5
+            time = time / runs
 
-            solutions.append(time)
+            time_points.append(time)
 
-        plt.subplot(1, 2, x)
-        plt.plot(npts, solutions)
-        plt.title(f"{model_}")
-        plt.xlabel("mesh points")
-        plt.xticks(npts)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("mesh points")
+        ax.set_ylabel("time(s)")
+        ax.set_xticks(npts)
+        ax.set_xticklabels(npts, fontsize=10)
+        ax.set_title(f"{j[0]} with {j[1]}")
+        ax.plot(npts, time_points)
 
-        plt.yscale("log")
-        plt.ylabel("time(s)")
-
-
+plt.tight_layout()
 plt.gca().legend(
     parameters,
     loc="upper right",
 )
-plt.tight_layout()
-# plt.show()
 plt.savefig(f"benchmarks/benchmark_images/time_vs_mesh_size_{pybamm.__version__}.png")
 
 

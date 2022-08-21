@@ -3,6 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+parameters = [
+    "Marquis2019",
+    "Prada2013",
+    "Ramadass2004",
+    "Chen2020",
+]
+
+models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
+
 dt_max = [
     10,
     20,
@@ -21,35 +30,24 @@ dt_max = [
     3000,
     3600,
 ]
-models = ["SPM", "DFN"]
 
-for model_ in models:
-    if model_ == "SPM":
-        x = 1
-        parameters = [
-            "Marquis2019",
-            "NCA_Kim2011",
-            "Ramadass2004",
-            "Mohtat2020",
-            "Chen2020",
-            "Chen2020_plating",
-            "Ecker2015",
-        ]
-    else:
-        x = 2
-        parameters = [
-            "Marquis2019",
-            "Ramadass2004",
-        ]
+
+fig, axs = plt.subplots(1, len(models), figsize=(8, 3))
+
+for ax, model_, model_name in zip(
+    axs.ravel(),
+    models.values(),
+    models,
+):
+
     for params in parameters:
-        time_points = []
 
-        if model_ == "SPM":
-            model = pybamm.lithium_ion.SPM()
-        else:
-            model = pybamm.lithium_ion.DFN()
-        c_rate = 1
-        tmax = 4000 / c_rate
+        time_points = []
+        # solver = pybamm.CasadiSolver()
+
+        model = model_.new_copy()
+        c_rate = 10
+        tmax = 3600 / c_rate
         nb_points = 500
         t_eval = np.linspace(0, tmax, nb_points)
         geometry = model.default_geometry
@@ -74,40 +72,34 @@ for model_ in models:
         # discretise model
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
+
         for t in dt_max:
 
             solver = pybamm.CasadiSolver(dt_max=t)
-            # solve first
+
             solver.solve(model, t_eval=t_eval)
             time = 0
-            runs = 5
+            runs = 20
             for k in range(0, runs):
-                try:
-                    solution = solver.solve(model, t_eval=t_eval)
-                except Exception:
-                    pass
 
+                solution = solver.solve(model, t_eval=t_eval)
                 time += solution.solve_time.value
             time = time / runs
 
             time_points.append(time)
-        plt.subplot(1, 2, x)
-        plt.plot(dt_max, time_points)
-        plt.title(f"{model_}")
-        plt.xlabel("dt_max")
-        plt.xticks(dt_max)
-        plt.xscale("log")
-        plt.yscale("log")
-        plt.ylabel("time(s)")
 
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("dt_max")
+        ax.set_ylabel("time(s)")
+        ax.set_title(f"{model_name}")
+        ax.plot(dt_max, time_points)
 
+plt.tight_layout()
 plt.gca().legend(
     parameters,
     loc="upper right",
 )
-
-plt.tight_layout()
-# plt.show()
 plt.savefig(f"benchmarks/benchmark_images/time_vs_dt_max_{pybamm.__version__}.png")
 
 
