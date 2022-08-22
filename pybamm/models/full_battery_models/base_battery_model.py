@@ -21,8 +21,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         option for the negative and positive electrodes.
 
             * "calculate discharge energy": str
-                Whether to calculate the discharge energy. Must be one of "true" or
-                "false". "false" is the default, since calculating the discharge
+                Whether to calculate the discharge energy, throughput energy and
+                throughput capacity in addition to discharge capacity. Must be one of
+                "true" or "false". "false" is the default, since calculating discharge
                 energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
                 Sets the geometry of the cell. Can be "pouch" (default) or
@@ -558,7 +559,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 value_list = []
                 for val in value:
                     if isinstance(val, tuple):
-                        value_list.extend(val)
+                        value_list.extend(list(val))
                     else:
                         value_list.append(val)
                 for val in value_list:

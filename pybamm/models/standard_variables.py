@@ -11,6 +11,10 @@ class StandardVariables:
         self.Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
         self.Q_Wh = pybamm.Variable("Discharge energy [W.h]")
 
+        # Throughput capacity and energy (cumulative)
+        self.Qt_Ah = pybamm.Variable("Throughput capacity [A.h]")
+        self.Qt_Wh = pybamm.Variable("Throughput energy [W.h]")
+
         # Electrolyte concentration
         self.c_e_n = pybamm.Variable(
             "Negative electrolyte concentration",

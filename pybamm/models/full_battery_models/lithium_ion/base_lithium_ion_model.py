@@ -53,6 +53,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         if not self.half_cell and phases_n >= 2:
             self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
 
+        self.set_standard_output_variables()
+
     def set_submodels(self, build):
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
@@ -72,8 +74,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
         self.set_total_interface_submodel()
-
-        self.set_standard_output_variables()
 
         if self.half_cell:
             # This also removes "negative electrode" submodels, so should be done last
@@ -213,6 +213,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         Sets the default summary variables.
         """
         summary_variables = [
+            "Time [s]",
+            "Time [h]",
+            "Throughput capacity [A.h]",
+            "Throughput energy [W.h]",
             "Positive electrode capacity [A.h]",
             # LAM, LLI
             "Loss of active material in positive electrode [%]",

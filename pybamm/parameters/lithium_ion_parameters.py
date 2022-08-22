@@ -890,20 +890,16 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
-    def U_dimensional(self, sto, T, lithiation=None):
+    def U_dimensional(self, sto, T):
         """Dimensional open-circuit potential [V]"""
         # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
         # will ensure that ocp goes to +- infinity if sto goes into that region
         # anyway
         tol = pybamm.settings.tolerances["U__c_s"]
         sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
-        if lithiation is None:
-            lithiation = ""
-        else:
-            lithiation = lithiation + " "
         inputs = {f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto}
         u_ref = pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{self.domain} electrode {lithiation}OCP [V]", inputs
+            f"{self.phase_prefactor}{self.domain} electrode OCP [V]", inputs
         )
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
@@ -1015,13 +1011,13 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         return self.j0_dimensional(c_e_dim, c_s_surf_dim, T_dim) / self.j_scale
 
-    def U(self, c_s, T, lithiation=None):
+    def U(self, c_s, T):
         """Dimensionless open-circuit potential in the electrode"""
         main = self.main_param
         sto = c_s
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
         return (
-            self.U_dimensional(sto, T_dim, lithiation) - self.domain_param.U_ref
+            self.U_dimensional(sto, T_dim) - self.domain_param.U_ref
         ) / main.potential_scale
 
     def dUdT(self, c_s):
@@ -1042,17 +1038,4 @@ class ParticleLithiumIonParameters(BaseParameters):
                 f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
                 "surface concentration [mol.m-3]": self.c_max,
             },
-        )
-
-    def k_cr(self, T):
-        """
-        Dimensionless cracking rate for the electrode;
-        """
-        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        delta_k_cr = self.E ** self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
-        return (
-            pybamm.FunctionParameter(
-                f"{self.domain} electrode cracking rate", {"Temperature [K]": T_dim}
-            )
-            * delta_k_cr
         )

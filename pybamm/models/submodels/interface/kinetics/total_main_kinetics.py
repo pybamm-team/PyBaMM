@@ -36,7 +36,7 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
 
-        phases = phases = self.options.phase_number_to_names(
+        phases = self.options.phase_number_to_names(
             getattr(self.options, domain)["particle phases"]
         )
 
