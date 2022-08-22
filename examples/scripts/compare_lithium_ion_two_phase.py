@@ -7,9 +7,9 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    # pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
+    pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
     pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")}),
-    # pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
+    pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
 ]
 
 parameter_set = pybamm.parameter_sets.Chen2020

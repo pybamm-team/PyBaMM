@@ -63,9 +63,7 @@ class BaseInterface(pybamm.BaseSubModel):
         c_e = variables[f"{Domain} electrolyte concentration"]
         T = variables[f"{Domain} electrode temperature"]
 
-        if isinstance(self, pybamm.kinetics.NoReaction):
-            return pybamm.Scalar(0)
-        elif self.reaction == "lithium-ion main":
+        if self.reaction == "lithium-ion main":
             # For "particle-size distribution" submodels, take distribution version
             # of c_s_surf that depends on particle size.
             if self.options["particle size"] == "distribution":

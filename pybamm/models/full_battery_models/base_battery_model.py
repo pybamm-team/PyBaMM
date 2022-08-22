@@ -539,7 +539,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 value_list = []
                 for val in value:
                     if isinstance(val, tuple):
-                        value_list.extend(val)
+                        value_list.extend(list(val))
                     else:
                         value_list.append(val)
                 for val in value_list:
