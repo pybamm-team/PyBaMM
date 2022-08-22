@@ -60,56 +60,31 @@ class BaseMechanics(pybamm.BaseSubModel):
             cell_thickness_change = (
                 T_xav * self.param.Delta_T * self.param.alpha_T_cell_dim
             )  # thermal expansion
-            cell_thickness_change_n = 0
-            cell_thickness_change_p = 0
+            
         else:
             cell_thickness_change = variables["Cell thickness change [m]"]
-            cell_thickness_change_n = variables["Negative Electrode thickness change [m]"]
-            cell_thickness_change_p = variables["Positive Electrode thickness change [m]"]
 
-        if self.domain == "Negative":
-            x = pybamm.standard_spatial_vars.x_n
-            Omega = self.param.Omega_n
-            R0 = self.param.R_n(x)
-            c_scale = self.param.c_n_max
-            c_0 = self.param.c_n_0
-            E0 = self.param.E_n
-            nu = self.param.nu_n
-            L0 = self.param.L_n
-            c_init = self.param.c_n_init(1)
-            v_change = pybamm.x_average(
-                eps_s * self.param.t_n_change(c_s_rav)
-            ) - pybamm.x_average(eps_s * self.param.t_n_change(c_init))
-            cell_thickness_change_n += self.param.n_electrodes_parallel * v_change * L0
+        if self.domain+" electrode thickness change [m]" not in variables:
+            electrode_thickness_change = 0
+        else:
+            electrode_thickness_change = variables[self.domain+" electrode thickness change [m]"]
 
-        elif self.domain == "Positive":
-            x = pybamm.standard_spatial_vars.x_p
-            Omega = self.param.Omega_p
-            R0 = self.param.R_p(x)
-            c_scale = self.param.c_p_max
-            c_0 = self.param.c_p_0
-            E0 = self.param.E_p
-            nu = self.param.nu_p
-            L0 = self.param.L_p
-            c_init = self.param.c_p_init(0)
-            v_change = pybamm.x_average(
-                eps_s * self.param.t_p_change(c_s_rav)
-            ) - pybamm.x_average(eps_s * self.param.t_p_change(c_init))
-            cell_thickness_change_p += self.param.n_electrodes_parallel * v_change * L0
-        # Omega = domain_param.Omega
-        # R0 = domain_param.R
-        # c_scale = domain_param.c_max
-        # c_0 = domain_param.c_0
-        # E0 = domain_param.E
-        # nu = domain_param.nu
-        # L0 = domain_param.L
-        # c_init = pybamm.r_average(domain_param.c_init)
-        # v_change = pybamm.x_average(
-        #     eps_s * domain_param.t_change(c_s_rav)
-        # ) - pybamm.x_average(eps_s * domain_param.t_change(c_init))
+        Omega = domain_param.Omega
+        R0 = domain_param.R
+        c_scale = domain_param.c_max
+        c_0 = domain_param.c_0
+        E0 = domain_param.E
+        nu = domain_param.nu
+        L0 = domain_param.L
+        c_init = pybamm.r_average(domain_param.c_init)
+        v_change = pybamm.x_average(
+            eps_s * domain_param.t_change(c_s_rav)
+        ) - pybamm.x_average(eps_s * domain_param.t_change(c_init))
 
         cell_thickness_change += self.param.n_electrodes_parallel * v_change * L0
         
+        electrode_thickness_change += self.param.n_electrodes_parallel * v_change * L0
+
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0) * c_scale
         # c0 reference concentration for no deformation
         # stress evaluated at the surface of the particles
@@ -144,8 +119,7 @@ class BaseMechanics(pybamm.BaseSubModel):
             + self.domain.lower()
             + " particle surface tangential stress [Pa]": stress_t_surf_av * E0,
             "Cell thickness change [m]": cell_thickness_change,
-            "Negative Electrode thickness change [m]": cell_thickness_change_n,
-            "Positive Electrode thickness change [m]": cell_thickness_change_p,
+            self.domain+" electrode thickness change [m]": electrode_thickness_change,
         }
 
     def _get_standard_surface_variables(self, variables):

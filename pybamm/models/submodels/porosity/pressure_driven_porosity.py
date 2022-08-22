@@ -73,7 +73,7 @@ class PressureDriven(BaseModel):
         # deps_n_dt = -self.param.beta_surf_n * j_n
         # deps_p_dt = -self.param.beta_surf_p * j_p*0
 
-        deps_n_dt = 0.01*3*(1-eps_n)/(self.param.R_n_typ*self.param.c_n_max)*(j_n/self.param.F) 
+        deps_n_dt = 0.01*3*(1-eps_n)/(self.param.n.R_typ*self.param.n.c_max)*(j_n/self.param.F) 
         
         #deps_n_dt = -j_n# 3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
         deps_p_dt =  j_p*0
@@ -106,9 +106,9 @@ class PressureDriven(BaseModel):
             eps_p_av = variables["X-averaged positive electrode porosity"]
 
             self.initial_conditions = {
-                eps_n_av: pybamm.x_average(self.param.epsilon_n_init),
-                eps_s_av: pybamm.x_average(self.param.epsilon_s_init),
-                eps_p_av: pybamm.x_average(self.param.epsilon_p_init),
+                eps_n_av: pybamm.x_average(self.param.n.epsilon_init),
+                eps_s_av: pybamm.x_average(self.param.s.epsilon_init),
+                eps_p_av: pybamm.x_average(self.param.p.epsilon_init),
             }
         else:
             eps = variables["Porosity"]

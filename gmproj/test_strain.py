@@ -16,11 +16,11 @@ eSOH_DIR = "gmproj/data/esoh/"
 oCV_DIR = "gmproj/data/ocv/"
 fig_DIR = "gmproj/figures/"
 
-def nmc_volume_change_mohtat(sto):
+def nmc_volume_change_mohtat(sto,c_s_max):
     t_change = -1.10/100*(1-sto)
     return t_change
 
-def graphite_volume_change_mohtat(sto):
+def graphite_volume_change_mohtat(sto,c_s_max):
     stoichpoints = np.array([0,0.12,0.18,0.24,0.50,1])
     thicknesspoints = np.array([0,2.406/100,3.3568/100,4.3668/100,5.583/100,13.0635/100])
     x = [sto]
@@ -108,9 +108,9 @@ spm = pybamm.lithium_ion.SPMe(
 )
 
 param = spm.param
-eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.L_n * param.c_n_max * param.F* param.A_cc))
-eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.L_p * param.c_p_max * param.F* param.A_cc))
-cs_p_init = parameter_values.evaluate(y_0_init* param.c_p_max)
+eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.c_max * param.F* param.A_cc))
+eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.c_max * param.F* param.A_cc))
+cs_p_init = parameter_values.evaluate(y_0_init* param.p.c_max)
 
 parameter_values = get_parameter_values()
 parameter_values.update(
