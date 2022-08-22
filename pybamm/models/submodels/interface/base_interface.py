@@ -106,11 +106,7 @@ class BaseInterface(pybamm.BaseSubModel):
                     c_e = c_e.orphans[0]
                     T = T.orphans[0]
 
-            j0 = (
-                domain_param.gamma
-                * domain_param.j0(c_e, c_s_surf, T)
-                / domain_param.C_r
-            )
+            j0 = domain_param.j0(c_e, c_s_surf, T)
 
         elif self.reaction == "lithium metal plating":
             j0 = param.j0_plating(c_e, 1, T)
