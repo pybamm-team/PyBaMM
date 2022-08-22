@@ -239,7 +239,7 @@ OKane2022 = {
     "negative electrode": "graphite_OKane2022",
     "separator": "separator_Chen2020",
     "positive electrode": "nmc_OKane2022",
-    "electrolyte": "lipf6_Nyman2008",
+    "electrolyte": "lipf6_OKane2022",
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "OKane2022",
     "lithium plating": "okane2022_Li_plating",
