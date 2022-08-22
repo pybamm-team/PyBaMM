@@ -406,6 +406,8 @@ class TestOptions(unittest.TestCase):
             options.negative.secondary["particle mechanics"], "swelling and cracking"
         )
         self.assertEqual(options.positive["particle mechanics"], "none")
+        self.assertEqual(options.positive.primary["particle mechanics"], "none")
+        self.assertEqual(options.positive.secondary["particle mechanics"], "none")
 
 
 if __name__ == "__main__":
