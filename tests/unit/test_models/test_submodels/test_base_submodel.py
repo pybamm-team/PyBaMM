@@ -24,7 +24,6 @@ class TestBaseSubModel(unittest.TestCase):
         # Without domain
         submodel = pybamm.BaseSubModel(None, None)
         self.assertEqual(submodel.phase, None)
-        self.assertEqual(submodel.phase_name, None)
 
         with self.assertRaisesRegex(ValueError, "Phase must be None"):
             pybamm.BaseSubModel(None, None, phase="primary")
