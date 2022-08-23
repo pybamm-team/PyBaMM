@@ -813,12 +813,13 @@ class Symbol:
                 return None
             else:  # pragma: no cover
                 raise error
-        except ValueError as e:
+        except ValueError as error:
             # return None if specific ValueError is raised
             # (there is a e.g. Time in the tree)
-            if e.args[0] == "t must be provided":
+            if error.args[0] == "t must be provided":
                 return None
-            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+            else:  # pragma: no cover
+                return error
         return result
 
     def evaluates_to_number(self):

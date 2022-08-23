@@ -251,11 +251,6 @@ class TestSymbol(unittest.TestCase):
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVectorDot(slice(0, 1)).evaluate_ignoring_errors())
 
-        # with self.assertRaisesRegex(pybamm.ShapeError, "Cannot find shape"):
-        #     pybamm.inner(
-        #         pybamm.Matrix(np.zeros((2, 3))), pybamm.Matrix(np.ones((4, 5)))
-        #     ).evaluate_ignoring_errors()
-
         np.testing.assert_array_equal(
             pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
         )
