@@ -16,7 +16,6 @@ models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
 npts = [4, 8, 16, 32, 64]
 
 solvers = {
-    # "IDAKLUSolver": pybamm.IDAKLUSolver(),
     "Casadi - safe": pybamm.CasadiSolver(),
     "Casadi - fast": pybamm.CasadiSolver(mode="fast"),
 }
@@ -26,16 +25,16 @@ fig, axs = plt.subplots(len(solvers), len(models), figsize=(8, 5))
 
 for ax, i, j in zip(
     axs.ravel(),
-    itertools.product(models.values(), solvers.values()),
-    itertools.product(models, solvers),
+    itertools.product(solvers.values(), models.values()),
+    itertools.product(solvers, models),
 ):
 
     for params in parameters:
         time_points = []
         ns = []
-        solver = i[1]
+        solver = i[0]
 
-        model = i[0].new_copy()
+        model = i[1].new_copy()
 
         # load parameter values and process model and geometry
         param = pybamm.ParameterValues(params)
@@ -72,7 +71,7 @@ for ax, i, j in zip(
         ax.set_ylabel("time(s)")
         ax.set_xticks(ns)
         ax.set_xticklabels(ns, fontsize=10)
-        ax.set_title(f"{j[0]} with {j[1]}")
+        ax.set_title(f"{j[1]} with {j[0]}")
         ax.plot(ns, time_points)
 
 plt.tight_layout()

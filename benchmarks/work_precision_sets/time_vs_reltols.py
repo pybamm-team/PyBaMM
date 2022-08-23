@@ -6,7 +6,7 @@ import itertools
 
 parameters = [
     "Marquis2019",
-    "Prada2013",
+    "Ecker2015",
     "Ramadass2004",
     "Chen2020",
 ]
@@ -34,21 +34,22 @@ solvers = {
 }
 
 
-fig, axs = plt.subplots(len(solvers), len(models), figsize=(8, 5))
+fig, axs = plt.subplots(len(solvers), len(models), figsize=(8, 10))
 
 for ax, i, j in zip(
     axs.ravel(),
-    itertools.product(models.values(), solvers.values()),
-    itertools.product(models, solvers),
+    itertools.product(solvers.values(), models.values()),
+    itertools.product(solvers, models),
 ):
 
     for params in parameters:
-        time_points = []
-        solver = i[1]
 
-        model = i[0].new_copy()
-        c_rate = 10
-        tmax = 3600 / c_rate
+        time_points = []
+        solver = i[0]
+
+        model = i[1].new_copy()
+        c_rate = 1
+        tmax = 3500 / c_rate
         nb_points = 500
         t_eval = np.linspace(0, tmax, nb_points)
         geometry = model.default_geometry
@@ -74,8 +75,6 @@ for ax, i, j in zip(
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
 
-        i = list(i)
-
         for tol in reltols:
 
             solver.rtol = tol
@@ -95,13 +94,13 @@ for ax, i, j in zip(
         ax.set_xlabel("reltols")
         ax.set_ylabel("time(s)")
 
-        ax.set_title(f"{j[0]} with {j[1]}")
+        ax.set_title(f"{j[1]} with {j[0]}")
         ax.plot(reltols, time_points)
 
 plt.tight_layout()
 plt.gca().legend(
     parameters,
-    loc="upper right",
+    loc="lower right",
 )
 
 plt.savefig(f"benchmarks/benchmark_images/time_vs_reltols_{pybamm.__version__}.png")
