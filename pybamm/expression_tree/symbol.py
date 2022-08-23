@@ -820,7 +820,7 @@ class Symbol:
                 return None
             raise pybamm.ShapeError(
                 f"Cannot find shape (original error: {error})"
-            )  # pragma: no cover 
+            )  # pragma: no cover
         return result
 
     def evaluates_to_number(self):
