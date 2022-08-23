@@ -105,17 +105,16 @@ class BaseSubModel(pybamm.BaseModel):
                     "Phase must be either 'primary' or 'secondary' "
                     "if there are two phases"
                 )
-        self.phase = phase
 
-        if phase is None:
-            self.phase_name = None
-        elif options_phase == "1":
-            # Only one phase, no need to distinguish between "primary" and "secondary"
-            self.phase_name = ""
-        else:
-            # add a space so that we can use "" or (e.g.) "primary " interchangeably
-            # when naming variables
-            self.phase_name = phase + " "
+            if options_phase == "1":
+                # Only one phase, no need to distinguish between "primary" and "secondary"
+                self.phase_name = ""
+            else:
+                # add a space so that we can use "" or (e.g.) "primary " interchangeably
+                # when naming variables
+                self.phase_name = phase + " "
+
+        self.phase = phase
 
     @property
     def domain(self):

@@ -70,7 +70,7 @@ class DFN(BaseModel):
                         self.param, domain, "lithium-ion main", self.options, phase
                     )
 
-                self.submodels[f"{domain.lower()} {phase} interface"] = submod
+                    self.submodels[f"{domain.lower()} {phase} interface"] = submod
 
             if len(phases) > 1:
                 self.submodels[

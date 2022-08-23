@@ -17,12 +17,15 @@ class FirstOrderKinetics(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     leading_order_model : :class:`pybamm.interface.kinetics.BaseKinetics`
         The leading-order model with respect to which this is first-order
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, leading_order_model):
-        super().__init__(param, domain, leading_order_model.reaction)
+    def __init__(self, param, domain, leading_order_model, options):
+        super().__init__(param, domain, leading_order_model.reaction, options)
         self.leading_order_model = leading_order_model
 
     def get_coupled_variables(self, variables):
