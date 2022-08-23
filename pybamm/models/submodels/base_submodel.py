@@ -107,7 +107,8 @@ class BaseSubModel(pybamm.BaseModel):
                 )
 
             if options_phase == "1":
-                # Only one phase, no need to distinguish between "primary" and "secondary"
+                # Only one phase, no need to distinguish between
+                # "primary" and "secondary"
                 self.phase_name = ""
             else:
                 # add a space so that we can use "" or (e.g.) "primary " interchangeably
