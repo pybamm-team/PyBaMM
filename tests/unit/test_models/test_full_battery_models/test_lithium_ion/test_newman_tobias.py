@@ -15,7 +15,7 @@ class TestNewmanTobias(BaseUnitTestLithiumIon, unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
             pybamm.lithium_ion.NewmanTobias(options)
 
-    def test_wel_posed_particle_phases(self):
+    def test_well_posed_particle_phases(self):
         pass  # skip this test
 
 

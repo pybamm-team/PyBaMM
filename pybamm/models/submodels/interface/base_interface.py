@@ -284,31 +284,25 @@ class BaseInterface(pybamm.BaseSubModel):
 
         if isinstance(self, pybamm.kinetics.NoReaction):
             a = 1
-            a_av = 1
         else:
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio"
             ]
-            a_av = variables[
-                f"X-averaged {domain} electrode {phase_name}"
-                "surface area to volume ratio"
-            ]
         j = variables[f"{Domain} electrode {reaction_name}interfacial current density"]
-        j_av = variables[
-            f"X-averaged {domain} electrode {reaction_name}interfacial current density"
-        ]
+        a_j = a * j
+        a_j_av = pybamm.x_average(a_j)
         scale = self.param.i_typ / self.param.L_x
 
         variables.update(
             {
                 f"{Domain} electrode {reaction_name}volumetric "
-                "interfacial current density": a * j,
+                "interfacial current density": a_j,
                 f"X-averaged {domain} electrode {reaction_name}volumetric "
-                "interfacial current density": a_av * j_av,
+                "interfacial current density": a_j_av,
                 f"{Domain} electrode {reaction_name}volumetric "
-                "interfacial current density [A.m-3]": scale * a * j,
+                "interfacial current density [A.m-3]": scale * a_j,
                 f"X-averaged {domain} electrode {reaction_name}volumetric "
-                "interfacial current density [A.m-3]": scale * a_av * j_av,
+                "interfacial current density [A.m-3]": scale * a_j_av,
             }
         )
         return variables

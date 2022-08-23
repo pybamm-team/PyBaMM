@@ -49,9 +49,6 @@ parameter_values.update(
 )
 del parameter_values["Negative electrode active material volume fraction"]
 
-# print(parameter_values.evaluate(models[0].param.n.prim.a_R))
-# print(parameter_values.evaluate(models[0].param.n.sec.a_R))
-
 # create and run simulations
 sims = []
 for model in models:

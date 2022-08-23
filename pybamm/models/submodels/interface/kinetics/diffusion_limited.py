@@ -30,7 +30,7 @@ class DiffusionLimited(BaseInterface):
 
     def get_coupled_variables(self, variables):
         Domain = self.domain
-        rxn = self.reaction_name
+        reaction_name = self.reaction_name
 
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
@@ -40,7 +40,7 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode {rxn}open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
