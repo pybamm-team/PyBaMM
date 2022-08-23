@@ -20,13 +20,13 @@ class BaseInterface(pybamm.BaseSubModel):
     options: dict
         A dictionary of options to be passed to the model. See
         :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, reaction, options=None, phase="primary"):
+    def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
         if reaction in ["lithium-ion main", "lithium metal plating"]:
             self.reaction_name = self.phase_name

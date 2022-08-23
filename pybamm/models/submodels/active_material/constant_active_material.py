@@ -17,8 +17,8 @@ class Constant(BaseModel):
         The domain of the model either 'Negative' or 'Positive'
     options : dict
         Additional options to pass to the model
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.active_material.BaseModel`
     """

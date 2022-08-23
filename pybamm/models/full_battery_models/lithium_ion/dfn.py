@@ -69,10 +69,6 @@ class DFN(BaseModel):
                     submod = intercalation_kinetics(
                         self.param, domain, "lithium-ion main", self.options, phase
                     )
-                else:
-                    submod = pybamm.kinetics.NoReaction(
-                        self.param, domain, "lithium-ion main", phase
-                    )
 
                 self.submodels[f"{domain.lower()} {phase} interface"] = submod
 
