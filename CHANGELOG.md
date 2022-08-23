@@ -1,11 +1,20 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   Added new cumulative variables `Throughput capacity [A.h]` and `Throughput energy [W.h]` to standard variables and summary variables, to assist with degradation studies. Throughput variables are only calculated if `calculate discharge energy` is set to `true`. `Time [s]` and `Time [h]` also added to summary variables. ([#2249](https://github.com/pybamm-team/PyBaMM/pull/2249))
+-   Added `lipf6_OKane2022` electrolyte to `OKane2022` parameter set ([#2249](https://github.com/pybamm-team/PyBaMM/pull/2249))
+
 ## Bug fixes
 
-Corrected initial SEI thickness for OKane2022 parameter set. ([#2218](https://github.com/pybamm-team/PyBaMM/pull/2218))
+-   Added new parameter `Ratio of lithium moles to SEI moles` (short name z_sei) to fix a bug where this number was incorrectly hardcoded to 1. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
+-   Changed short name of parameter `Inner SEI reaction proportion` from alpha_SEI to inner_sei_proportion, to avoid confusion with transfer coefficients. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
+-   Deleted legacy parameters with short names beta_sei and beta_plating. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
+-   Corrected initial SEI thickness for OKane2022 parameter set. ([#2218](https://github.com/pybamm-team/PyBaMM/pull/2218))
 
 ## Optimizations
 
+-   Simplified scaling for the exchange-current density. The dimensionless parameter `C_r` is kept, but no longer used anywhere ([#2238](https://github.com/pybamm-team/PyBaMM/pull/2238))
 -   Added limits for variables in some functions to avoid division by zero, sqrt(negative number), etc ([#2213](https://github.com/pybamm-team/PyBaMM/pull/2213))
 
 # [v22.7](https://github.com/pybamm-team/PyBaMM/tree/v22.7) - 2022-07-31

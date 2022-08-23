@@ -34,6 +34,8 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain="test")
         self.assertEqual(a.domain, ["test"])
+        # test for updating domain with same as existing domain
+        a.domains = {"primary": ["test"]}
         self.assertEqual(a.domains["primary"], ["test"])
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])

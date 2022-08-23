@@ -139,8 +139,8 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        j0_n = param.n.gamma * param.n.j0(1, c_s_surf_n, T) / param.n.C_r
-        j0_p = param.p.gamma * param.p.j0(1, c_s_surf_p, T) / param.p.C_r
+        j0_n = param.n.j0(1, c_s_surf_n, T)
+        j0_p = param.p.j0(1, c_s_surf_p, T)
         eta_n = (2 / param.n.ne) * pybamm.arcsinh(j_n / (2 * j0_n))
         eta_p = (2 / param.p.ne) * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0
