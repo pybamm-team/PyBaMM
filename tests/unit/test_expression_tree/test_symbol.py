@@ -167,9 +167,7 @@ class TestSymbol(unittest.TestCase):
 
     def test_symbol_create_copy(self):
         a = pybamm.Symbol("a")
-        with self.assertRaisesRegex(
-            NotImplementedError, "method self.new_copy()"
-        ):
+        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
             a.create_copy()
 
     def test_sigmoid(self):
@@ -253,12 +251,10 @@ class TestSymbol(unittest.TestCase):
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVectorDot(slice(0, 1)).evaluate_ignoring_errors())
 
-        M1 = pybamm.Matrix(np.zeros((2, 3)))
-        M2 = pybamm.Matrix(np.ones((4, 5)))
-        with self.assertRaisesRegex(
-            pybamm.ShapeError, "Cannot find shape"
-        ):
-            pybamm.inner(M1, M2).evaluate_ignoring_errors()        
+        with self.assertRaisesRegex(pybamm.ShapeError, "Cannot find shape"):
+            pybamm.inner(
+                pybamm.Matrix(np.zeros((2, 3))), pybamm.Matrix(np.ones((4, 5)))
+            ).evaluate_ignoring_errors()
 
         np.testing.assert_array_equal(
             pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
