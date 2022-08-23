@@ -811,7 +811,7 @@ class Symbol:
                 return None
             elif error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'":
                 return None
-            else:
+            else:  # pragma: no cover
                 raise error
         except ValueError as e:
             # return None if specific ValueError is raised
@@ -891,7 +891,7 @@ class Symbol:
         """
         raise NotImplementedError(
             """method self.new_copy() not implemented
-               for symbol {!s} of type {}""".format(
+            for symbol {!s} of type {}""".format(
                 self, type(self)
             )
         )
