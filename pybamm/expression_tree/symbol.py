@@ -818,8 +818,9 @@ class Symbol:
             # (there is a e.g. Time in the tree)
             if error.args[0] == "t must be provided":
                 return None
-            else:  # pragma: no cover
-                return error
+            raise pybamm.ShapeError(
+                f"Cannot find shape (original error: {error})"
+            )  # pragma: no cover 
         return result
 
     def evaluates_to_number(self):
