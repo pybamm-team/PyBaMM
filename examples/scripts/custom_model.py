@@ -93,10 +93,10 @@ model.submodels[
     model.param, "Positive"
 )
 model.submodels["Negative particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
-    model.param, "Negative", model.options, "primary"
+    model.param, "Negative", model.options
 )
 model.submodels["Positive particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
-    model.param, "Positive", model.options, "primary"
+    model.param, "Positive", model.options
 )
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
 model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
