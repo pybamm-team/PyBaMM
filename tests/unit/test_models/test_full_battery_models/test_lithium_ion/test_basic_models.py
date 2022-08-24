@@ -52,9 +52,6 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFNComposite()
         model.check_well_posedness()
 
-        copy = model.new_copy()
-        copy.check_well_posedness()
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
