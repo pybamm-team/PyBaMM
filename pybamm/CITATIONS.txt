@@ -10,6 +10,18 @@
   doi = {10.1149/2.0122001JES},
 }
 
+@article{Ai2022,
+  title = {A composite electrode model for lithium-ion batteries with silicon/graphite negative electrodes},
+  journal = {Journal of Power Sources},
+  volume = {527},
+  pages = {231142},
+  year = {2022},
+  issn = {0378-7753},
+  doi = {https://doi.org/10.1016/j.jpowsour.2022.231142},
+  url = {https://www.sciencedirect.com/science/article/pii/S0378775322001604},
+  author = {Weilong Ai and Niall Kirkaldy and Yang Jiang and Gregory Offer and Huizhi Wang and Billy Wu},
+}
+
 @article{Andersson2019,
   author = {Andersson, Joel A. E. and Gillis, Joris and Horn, Greg
             and Rawlings, James B. and Diehl, Moritz},

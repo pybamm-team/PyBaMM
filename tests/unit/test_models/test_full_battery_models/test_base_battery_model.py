@@ -30,6 +30,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
+'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
@@ -74,7 +75,7 @@ class TestBaseBatteryModel(unittest.TestCase):
             model.variables["X-averaged negative electrode temperature"],
             ["negative particle"],
         )
-        D = model.param.n.D(c_n, T)
+        D = model.param.n.prim.D(c_n, T)
         N = -D * pybamm.grad(c_n)
 
         flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
@@ -138,7 +139,11 @@ class TestBaseBatteryModel(unittest.TestCase):
             "x_s": 20,
             "x_p": 20,
             "r_n": 20,
+            "r_n_prim": 20,
+            "r_n_sec": 20,
             "r_p": 20,
+            "r_p_prim": 20,
+            "r_p_sec": 20,
             "y": 10,
             "z": 10,
             "R_n": 30,
@@ -280,10 +285,12 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
         with self.assertRaisesRegex(NotImplementedError, "SEI on cracks not yet"):
-            pybamm.BaseBatteryModel({
-                "SEI on cracks": "true",
-                "working electrode": "positive",
-            })
+            pybamm.BaseBatteryModel(
+                {
+                    "SEI on cracks": "true",
+                    "working electrode": "positive",
+                }
+            )
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
@@ -329,6 +336,10 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "working electrode": "positive",
                 }
             )
+
+        # phases
+        with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
+            pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
@@ -379,6 +390,24 @@ class TestOptions(unittest.TestCase):
         # something that is the same in both domains
         self.assertEqual(options.negative["thermal"], "isothermal")
         self.assertEqual(options.positive["thermal"], "isothermal")
+
+    def test_domain_phase_options(self):
+        options = BatteryModelOptions(
+            {"particle mechanics": (("swelling only", "swelling and cracking"), "none")}
+        )
+        self.assertEqual(
+            options.negative["particle mechanics"],
+            ("swelling only", "swelling and cracking"),
+        )
+        self.assertEqual(
+            options.negative.primary["particle mechanics"], "swelling only"
+        )
+        self.assertEqual(
+            options.negative.secondary["particle mechanics"], "swelling and cracking"
+        )
+        self.assertEqual(options.positive["particle mechanics"], "none")
+        self.assertEqual(options.positive.primary["particle mechanics"], "none")
+        self.assertEqual(options.positive.secondary["particle mechanics"], "none")
 
 
 if __name__ == "__main__":

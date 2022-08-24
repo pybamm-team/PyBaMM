@@ -67,11 +67,11 @@ class MPM(SPM):
         for domain in ["negative", "positive"]:
             if self.options["particle"] == "Fickian diffusion":
                 submod = pybamm.particle.FickianDiffusion(
-                    self.param, domain, self.options, x_average=True
+                    self.param, domain, self.options, x_average=True, phase="primary"
                 )
             elif self.options["particle"] == "uniform profile":
                 submod = pybamm.particle.XAveragedPolynomialProfile(
-                    self.param, domain, self.options
+                    self.param, domain, self.options, phase="primary"
                 )
             self.submodels[f"{domain} particle"] = submod
 

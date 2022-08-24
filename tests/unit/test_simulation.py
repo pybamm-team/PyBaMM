@@ -154,7 +154,7 @@ class TestSimulation(unittest.TestCase):
     def test_set_external_variable(self):
         model_options = {
             "thermal": "lumped",
-            "external submodels": ["thermal", "negative particle"],
+            "external submodels": ["thermal", "negative primary particle"],
         }
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
