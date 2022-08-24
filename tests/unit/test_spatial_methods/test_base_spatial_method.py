@@ -7,7 +7,7 @@ import unittest
 from tests import (
     get_mesh_for_testing,
     get_1p1d_mesh_for_testing,
-    get_size_distribution_mesh_for_testing
+    get_size_distribution_mesh_for_testing,
 )
 
 
@@ -133,7 +133,7 @@ class TestSpatialMethod(unittest.TestCase):
         # test also symbol "right"
         symbol = pybamm.BoundaryGradient(child, "right")
         with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
-            spatial_method.boundary_value_or_flux(symbol, child)        
+            spatial_method.boundary_value_or_flux(symbol, child)
 
         mesh = get_1p1d_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod()
