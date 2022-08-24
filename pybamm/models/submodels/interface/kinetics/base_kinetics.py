@@ -20,13 +20,13 @@ class BaseKinetics(BaseInterface):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options, phase):
+    def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):

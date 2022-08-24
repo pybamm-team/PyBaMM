@@ -18,13 +18,13 @@ class SwellingOnly(BaseMechanics):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
-    def __init__(self, param, domain, options, phase):
+    def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):

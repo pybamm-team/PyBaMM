@@ -18,8 +18,8 @@ class NoReaction(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """

@@ -18,15 +18,15 @@ class FickianDiffusion(BaseParticle):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
     x_average : bool
         Whether the particle concentration is averaged over the x-direction
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options, phase=None, x_average=False):
+    def __init__(self, param, domain, options, phase="primary", x_average=False):
         super().__init__(param, domain, options, phase)
         self.x_average = x_average
 
@@ -194,7 +194,7 @@ class FickianDiffusion(BaseParticle):
         variables.update(
             {
                 f"{Domain} {phase_name}particle rhs": -(
-                    1 / (R_broad ** 2 * phase_param.C_diff)
+                    1 / (R_broad**2 * phase_param.C_diff)
                 )
                 * pybamm.div(N_s),
                 f"{Domain} {phase_name}particle bc": -phase_param.C_diff

@@ -105,12 +105,8 @@ class SPM(BaseModel):
                         submod = intercalation_kinetics(
                             self.param, domain, "lithium-ion main", self.options, phase
                         )
-                    else:
-                        submod = pybamm.kinetics.NoReaction(
-                            self.param, domain, "lithium-ion main", phase
-                        )
 
-                    self.submodels[f"{domain} {phase} interface"] = submod
+                        self.submodels[f"{domain} {phase} interface"] = submod
                 if len(phases) > 1:
                     self.submodels[
                         f"total {domain} interface"

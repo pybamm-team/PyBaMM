@@ -20,8 +20,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     References
     ----------
@@ -32,7 +32,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     **Extends:** :class:`pybamm.particle.PolynomialProfile`
     """
 
-    def __init__(self, param, domain, options, phase=None):
+    def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
@@ -182,7 +182,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         A = pybamm.PrimaryBroadcast(A, [f"{domain} particle"])
         B = pybamm.PrimaryBroadcast(B, [f"{domain} particle"])
         C = pybamm.PrimaryBroadcast(C, [f"{domain} particle"])
-        c_s_xav = A + B * r ** 2 + C * r ** 4
+        c_s_xav = A + B * r**2 + C * r**4
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [f"{domain} electrode"])
         c_s_surf = pybamm.PrimaryBroadcast(c_s_surf_xav, [f"{domain} electrode"])
 
@@ -205,7 +205,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * (
                 (-70 * c_s_surf_xav + 20 * q_s_av + 70 * c_s_av) * r
-                + (105 * c_s_surf_xav - 28 * q_s_av - 105 * c_s_av) * r ** 3
+                + (105 * c_s_surf_xav - 28 * q_s_av - 105 * c_s_av) * r**3
             )
 
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])

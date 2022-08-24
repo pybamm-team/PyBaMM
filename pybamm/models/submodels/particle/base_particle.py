@@ -17,13 +17,13 @@ class BaseParticle(pybamm.BaseSubModel):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, options=None, phase=None):
+    def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
         # Read from options to see if we have a particle size distribution
         self.size_distribution = self.options["particle size"] == "distribution"
@@ -188,7 +188,7 @@ class BaseParticle(pybamm.BaseSubModel):
         f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)
 
         # Number-based particle-size distribution
-        f_num_dist = (f_a_dist / R ** 2) / pybamm.Integral(f_a_dist / R ** 2, R)
+        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(f_a_dist / R**2, R)
 
         # True mean radii and standard deviations, calculated from the f_a_dist that
         # was given

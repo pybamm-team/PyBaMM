@@ -235,7 +235,11 @@ class LOQS(BaseModel):
             self.submodels[
                 "leading-order negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="leading"
+                self.param,
+                "Negative",
+                "lead-acid oxygen",
+                self.options,
+                order="leading",
             )
         else:
             self.submodels[
