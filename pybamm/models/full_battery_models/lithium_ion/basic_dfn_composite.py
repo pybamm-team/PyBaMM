@@ -126,7 +126,7 @@ class BasicDFNComposite(BaseModel):
 
         # Tortuosity
         tor = pybamm.concatenation(
-            eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
+            eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
         )
 
         # Open circuit potentials
@@ -256,9 +256,9 @@ class BasicDFNComposite(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.n.sigma(T) * eps_s_n ** param.n.b_s
+        sigma_eff_n = param.n.sigma(T) * eps_s_n**param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.p.sigma(T) * eps_s_p ** param.p.b_s
+        sigma_eff_p = param.p.sigma(T) * eps_s_p**param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -389,7 +389,7 @@ class BasicDFNComposite(BaseModel):
             "Positive electrode open circuit potential [V]": ocp_p_dim,
             "X-averaged positive electrode open circuit potential [V]": ocp_av_p_dim,
             "R-averaged negative primary particle concentration": c_s_rav_n_p1,
-            "R-averaged negative primary particle concentration": c_s_rav_n_p2,
+            "R-averaged negative secondary particle concentration": c_s_rav_n_p2,
             "R-averaged negative primary particle concentration "
             "[mol.m-3]": c_s_rav_n_p1_dim,
             "R-averaged negative secondary particle concentration "
