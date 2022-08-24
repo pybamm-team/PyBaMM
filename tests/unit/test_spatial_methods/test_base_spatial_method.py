@@ -130,6 +130,11 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
+        # test also symbol "right"
+        symbol = pybamm.BoundaryGradient(child, "right")
+        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
+            spatial_method.boundary_value_or_flux(symbol, child)        
+
         mesh = get_1p1d_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod()
         spatial_method.build(mesh)
