@@ -10,7 +10,7 @@ Primary: Negative electrode OCP [V],[data]graphite_ocp_Enertech_Ai2020,Chen 2020
 ,,,
 # Microstructure,,,
 Negative electrode porosity,0.25,Chen 2020,
-Primary: Negative electrode active material volume fraction,0.75,Chen 2020,
+Primary: Negative electrode active material volume fraction,0.735,0.75*0.98
 Primary: Negative particle radius [m],5.86E-6,Chen 2020,
 Negative electrode Bruggeman coefficient (electrolyte),1.5,Chen 2020,theoretical
 Negative electrode Bruggeman coefficient (electrode),1.5,default,
