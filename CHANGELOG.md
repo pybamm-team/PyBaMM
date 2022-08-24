@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Added `CurrentSigmoidOpenCircuitPotential` model to model voltage hysteresis for charge/discharge ([#2256](https://github.com/pybamm-team/PyBaMM/pull/2256))
+-   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. ([#2256](https://github.com/pybamm-team/PyBaMM/pull/2256))
 -   Added new cumulative variables `Throughput capacity [A.h]` and `Throughput energy [W.h]` to standard variables and summary variables, to assist with degradation studies. Throughput variables are only calculated if `calculate discharge energy` is set to `true`. `Time [s]` and `Time [h]` also added to summary variables. ([#2249](https://github.com/pybamm-team/PyBaMM/pull/2249))
 -   Added `lipf6_OKane2022` electrolyte to `OKane2022` parameter set ([#2249](https://github.com/pybamm-team/PyBaMM/pull/2249))
 -   Reformated submodel structure to allow composite electrodes. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2248](https://github.com/pybamm-team/PyBaMM/pull/2248))
@@ -73,11 +75,6 @@
 ## Breaking changes
 
 -   Changed some dictionary keys to `Symbol` instead of `Symbol.id` (internal change only, should not affect external facing functions) ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
-
-## Features
-
--   Reformated submodel structure to allow composite electrodes, with an example for graphite/silicon. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
--   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. Silicon parameters are added as a standard negative electrode parameter set, specified as the "negative electrode secondary" set, which automatically adds "Secondary:" to the start of each parameter name. Primary (graphite) parameter names are unchanged. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
 
 # [v22.5](https://github.com/pybamm-team/PyBaMM/tree/v22.5) - 2022-05-31
 
