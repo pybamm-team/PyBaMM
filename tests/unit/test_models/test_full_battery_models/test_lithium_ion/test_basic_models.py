@@ -10,6 +10,9 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFN()
         model.check_well_posedness()
 
+        copy = model.new_copy()
+        copy.check_well_posedness()
+
     def test_spm_well_posed(self):
         model = pybamm.lithium_ion.BasicSPM()
         model.check_well_posedness()

@@ -46,6 +46,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         param = self.param
         pot_scale = param.potential_scale
+        U_ref = param.n.U_ref
 
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -61,24 +62,23 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         variables = {
             "Negative electrolyte potential": phi_e_n,
-            "Negative electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e_n,
+            "Negative electrolyte potential [V]": -U_ref + pot_scale * phi_e_n,
             "Separator electrolyte potential": phi_e_s,
-            "Separator electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e_s,
+            "Separator electrolyte potential [V]": -U_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential": phi_e_p,
-            "Positive electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e_p,
+            "Positive electrolyte potential [V]": -U_ref + pot_scale * phi_e_p,
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e,
+            "Electrolyte potential [V]": -U_ref + pot_scale * phi_e,
             "X-averaged electrolyte potential": phi_e_av,
-            "X-averaged electrolyte potential [V]": -param.n.U_ref
-            + pot_scale * phi_e_av,
+            "X-averaged electrolyte potential [V]": -U_ref + pot_scale * phi_e_av,
             "X-averaged negative electrolyte potential": phi_e_n_av,
-            "X-averaged negative electrolyte potential [V]": -param.n.U_ref
+            "X-averaged negative electrolyte potential [V]": -U_ref
             + pot_scale * phi_e_n_av,
             "X-averaged separator electrolyte potential": phi_e_s_av,
-            "X-averaged separator electrolyte potential [V]": -param.n.U_ref
+            "X-averaged separator electrolyte potential [V]": -U_ref
             + pot_scale * phi_e_s_av,
             "X-averaged positive electrolyte potential": phi_e_p_av,
-            "X-averaged positive electrolyte potential [V]": -param.n.U_ref
+            "X-averaged positive electrolyte potential [V]": -U_ref
             + pot_scale * phi_e_p_av,
             "X-averaged electrolyte overpotential": eta_e_av,
             "X-averaged electrolyte overpotential [V]": pot_scale * eta_e_av,

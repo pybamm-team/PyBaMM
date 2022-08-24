@@ -33,16 +33,12 @@ class SEIGrowth(BaseModel):
                     "X-averaged inner SEI on cracks thickness",
                     domain="current collector",
                 )
-                L_inner = pybamm.PrimaryBroadcast(
-                    L_inner_av, "negative electrode"
-                )
+                L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
                 L_outer_av = pybamm.Variable(
                     "X-averaged outer SEI on cracks thickness",
                     domain="current collector",
                 )
-                L_outer = pybamm.PrimaryBroadcast(
-                    L_outer_av, "negative electrode"
-                )
+                L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
             elif self.reaction_loc == "full electrode":
                 L_inner = pybamm.Variable(
                     "Inner SEI on cracks thickness",
@@ -201,9 +197,7 @@ class SEIGrowth(BaseModel):
             ]
             # Note a is dimensionless (has a constant value of 1 if the surface
             # area does not change)
-            a = variables[
-                "X-averaged negative electrode surface area to volume ratio"
-            ]
+            a = variables["X-averaged negative electrode surface area to volume ratio"]
         else:
             L_inner = variables[f"Inner {self.reaction} thickness"]
             L_outer = variables[f"Outer {self.reaction} thickness"]
@@ -251,20 +245,12 @@ class SEIGrowth(BaseModel):
         L_inner_0 = self.param.L_inner_0
         L_outer_0 = self.param.L_outer_0
 
+        if self.reaction == "SEI on cracks":
+            # Dividing by 10000 makes initial condition effectively zero
+            # without triggering division by zero errors
+            L_inner_0 = L_inner_0 / 10000
+            L_outer_0 = L_outer_0 / 10000
         if self.options["SEI"] == "ec reaction limited":
-            if self.reaction == "SEI on cracks":
-                # Dividing by 10000 makes initial condition effectively zero
-                # without triggering division by zero errors
-                self.initial_conditions = {L_outer: (L_inner_0 + L_outer_0) / 10000}
-            else:
-                self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
+            self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:
-            if self.reaction == "SEI on cracks":
-                # Dividing by 10000 makes initial condition effectively zero
-                # without triggering division by zero errors
-                self.initial_conditions = {
-                    L_inner: L_inner_0 / 10000,
-                    L_outer: L_outer_0 / 10000,
-                }
-            else:
-                self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}
+            self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}

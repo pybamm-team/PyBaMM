@@ -3,7 +3,7 @@
 #
 
 import pybamm
-from .base_parameters import BaseParameters
+from .base_parameters import BaseParameters, NullParameters
 
 
 class LeadAcidParameters(BaseParameters):
@@ -26,14 +26,10 @@ class LeadAcidParameters(BaseParameters):
         self.elec = pybamm.electrical_parameters
         self.therm = pybamm.thermal_parameters
 
-        # Spatial variables
-        x_n = pybamm.standard_spatial_vars.x_n * self.geo.L_x
-        x_p = pybamm.standard_spatial_vars.x_p * self.geo.L_x
-
         # Initialize domain parameters
-        self.n = DomainLeadAcidParameters("Negative", self, x_n)
-        self.s = DomainLeadAcidParameters("Separator", self, None)
-        self.p = DomainLeadAcidParameters("Positive", self, x_p)
+        self.n = DomainLeadAcidParameters("Negative", self)
+        self.s = DomainLeadAcidParameters("Separator", self)
+        self.p = DomainLeadAcidParameters("Positive", self)
         self.domain_params = [self.n, self.s, self.p]
 
         # Set parameters and scales
@@ -154,7 +150,7 @@ class LeadAcidParameters(BaseParameters):
                 + self.p.L * self.p.eps_max
             )
             / self.L_x
-            / (self.p.s_plus_S - self.n.s_plus_S)
+            / (self.p.prim.s_plus_S - self.n.prim.s_plus_S)
         )
         self.Q_e_max_dimensional = self.Q_e_max * self.c_e_typ * self.F
         self.capacity = (
@@ -370,15 +366,15 @@ class LeadAcidParameters(BaseParameters):
         for domain in self.domain_params:
             domain._set_dimensionless_parameters()
 
-        self.ocv_init = self.p.U_init - self.n.U_init
+        self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
         # Concatenations
         self.s_plus_S = pybamm.concatenation(
             pybamm.FullBroadcast(
-                self.n.s_plus_S, ["negative electrode"], "current collector"
+                self.n.prim.s_plus_S, ["negative electrode"], "current collector"
             ),
             pybamm.FullBroadcast(0, ["separator"], "current collector"),
             pybamm.FullBroadcast(
-                self.p.s_plus_S, ["positive electrode"], "current collector"
+                self.p.prim.s_plus_S, ["positive electrode"], "current collector"
             ),
         )
         self.beta_surf = pybamm.concatenation(
@@ -456,14 +452,19 @@ class LeadAcidParameters(BaseParameters):
 
 
 class DomainLeadAcidParameters(BaseParameters):
-    def __init__(self, domain, main_param, x):
+    def __init__(self, domain, main_param):
         self.domain = domain
         self.main_param = main_param
 
         self.geo = getattr(main_param.geo, domain.lower()[0])
         self.therm = getattr(main_param.therm, domain.lower()[0])
 
-        self.x = x
+        if domain != "Separator":
+            self.prim = PhaseLeadAcidParameters("primary", self)
+        else:
+            self.prim = NullParameters()
+
+        self.phases = [self.prim]
 
     def _set_dimensional_parameters(self):
         Domain = self.domain
@@ -475,6 +476,10 @@ class DomainLeadAcidParameters(BaseParameters):
             self.b_e = self.geo.b_e
             self.epsilon_inactive = pybamm.Scalar(0)
             return
+
+        for phase in self.phases:
+            phase._set_dimensional_parameters()
+
         # Macroscale geometry
         self.L = self.geo.L
 
@@ -484,10 +489,6 @@ class DomainLeadAcidParameters(BaseParameters):
         self.xi = pybamm.Parameter(f"{Domain} electrode morphological parameter")
         # no binder
         self.epsilon_inactive = pybamm.Scalar(0)
-        self.a_dimensional = pybamm.FunctionParameter(
-            f"{Domain} electrode surface area to volume ratio [m-1]",
-            {"Through-cell distance (x) [m]": self.x},
-        )
 
         # Electrode properties
         if self.domain == "Negative":
@@ -510,7 +511,10 @@ class DomainLeadAcidParameters(BaseParameters):
         self.Q_max_dimensional = pybamm.Parameter(
             f"{Domain} electrode volumetric capacity [C.m-3]"
         )
-        self.epsilon_s = 1 - self.eps_max
+
+        self.C_dl_dimensional = pybamm.Parameter(
+            f"{Domain} electrode double-layer capacity [F.m-2]"
+        )
 
         # In lead-acid the current collector and electrodes are the same (same
         # conductivity) but we correct here for Bruggeman. Note that because for
@@ -521,6 +525,141 @@ class DomainLeadAcidParameters(BaseParameters):
             self.sigma_dimensional(main.T_ref) * (1 - self.eps_max) ** self.b_s
         )
 
+    def sigma_dimensional(self, T):
+        """Dimensional electrical conductivity"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{self.domain} electrode conductivity [S.m-1]", inputs
+        )
+
+    def _set_scales(self):
+        """Define the scales used in the non-dimensionalisation scheme"""
+        if self.domain == "Separator":
+            return
+
+        for phase in self.phases:
+            phase._set_scales()
+
+        # Reference OCP
+        inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
+        self.U_ref = pybamm.FunctionParameter(
+            f"{self.domain} electrode open-circuit potential [V]", inputs
+        )
+
+    def _set_dimensionless_parameters(self):
+        """Defines the dimensionless parameters"""
+        main = self.main_param
+
+        if self.domain == "Separator":
+            self.l = self.geo.l
+            self.epsilon_init = self.eps_max
+            self.rho = self.therm.rho
+            self.lambda_ = self.therm.lambda_
+            return
+
+        for phase in self.phases:
+            phase._set_dimensionless_parameters()
+
+        # Macroscale Geometry
+        self.l = self.geo.l
+
+        # In lead-acid the current collector and electrodes are the same (same
+        # thickness)
+        self.l_cc = self.l
+
+        # Tab geometry
+        self.l_tab = self.geo.l_tab
+        self.centre_y_tab = self.geo.centre_y_tab
+        self.centre_z_tab = self.geo.centre_z_tab
+
+        # Electrode Properties
+        self.sigma_cc = (
+            self.sigma_cc_dimensional * main.potential_scale / main.i_typ / main.L_x
+        )
+        self.sigma_cc_prime = self.sigma_cc * main.delta ** 2
+        self.Q_max = self.Q_max_dimensional / (main.c_e_typ * main.F)
+        self.beta_U = 1 / self.Q_max
+
+        # Electrolyte properties
+        self.beta_surf = (
+            -main.c_e_typ * self.DeltaVsurf / self.prim.ne_S
+        )  # Molar volume change (lead)
+        self.beta_liq = (
+            -main.c_e_typ * self.DeltaVliq / self.prim.ne_S
+        )  # Molar volume change (electrolyte, neg)
+        self.beta = (self.beta_surf + self.beta_liq) * pybamm.Parameter(
+            "Volume change factor"
+        )
+
+        self.C_dl = (
+            self.C_dl_dimensional
+            * main.potential_scale
+            / self.prim.j_scale
+            / main.timescale
+        )
+
+        # Thermal
+        self.rho_cc = self.therm.rho_cc
+        self.rho = self.therm.rho
+
+        self.lambda_cc = self.therm.lambda_cc
+        self.lambda_ = self.therm.lambda_
+
+        self.h_tab = self.therm.h_tab
+        self.h_cc = self.therm.h_cc
+
+        # Initial conditions
+        self.c_init = main.c_e_init
+        sgn = -1 if self.domain == "Negative" else 1
+        self.epsilon_init = (
+            self.eps_max
+            + sgn * self.beta_surf * main.Q_e_max / self.l * (1 - main.q_init)
+        )
+        self.curlyU_init = main.Q_e_max * (1.2 - main.q_init) / (self.Q_max * self.l)
+
+    def sigma(self, T):
+        """Dimensionless negative electrode electrical conductivity"""
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
+        return (
+            self.sigma_dimensional(T_dim)
+            * self.main_param.potential_scale
+            / self.main_param.current_scale
+            / self.main_param.L_x
+        )
+
+    def sigma_prime(self, T):
+        """Rescaled dimensionless negative electrode electrical conductivity"""
+        return self.sigma(T) * self.main_param.delta ** 2
+
+
+class PhaseLeadAcidParameters(BaseParameters):
+    def __init__(self, phase, domain_param):
+        self.phase = phase
+
+        self.domain_param = domain_param
+        self.domain = domain_param.domain
+        self.main_param = domain_param.main_param
+        self.geo = domain_param.geo.prim
+
+    def _set_dimensional_parameters(self):
+        Domain = self.domain
+        domain = Domain.lower()
+
+        # Microstructure
+        x = (
+            pybamm.SpatialVariable(
+                f"x_{domain[0]}",
+                domain=[f"{domain} electrode"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian",
+            )
+            * self.main_param.L_x
+        )
+        self.a_dimensional = pybamm.FunctionParameter(
+            f"{Domain} electrode surface area to volume ratio [m-1]",
+            {"Through-cell distance (x) [m]": x},
+        )
+
         # Electrochemical reactions
         # Main
         self.s_plus_S_dim = pybamm.Parameter(
@@ -528,18 +667,8 @@ class DomainLeadAcidParameters(BaseParameters):
         )
         self.ne_S = pybamm.Parameter(f"{Domain} electrode electrons in reaction")
         self.s_plus_S = self.s_plus_S_dim / self.ne_S
-        self.C_dl_dimensional = pybamm.Parameter(
-            f"{Domain} electrode double-layer capacity [F.m-2]"
-        )
         self.alpha_bv = pybamm.Parameter(
             f"{Domain} electrode Butler-Volmer transfer coefficient"
-        )
-
-    def sigma_dimensional(self, T):
-        """Dimensional electrical conductivity"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            f"{self.domain} electrode conductivity [S.m-1]", inputs
         )
 
     def U_dimensional(self, c_e, T):
@@ -567,115 +696,40 @@ class DomainLeadAcidParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        if self.domain == "Separator":
-            return
         # Microscale (typical values at electrode/current collector interface)
         self.a_typ = pybamm.xyz_average(self.a_dimensional)
 
         # Electrical
         self.j_scale = self.main_param.i_typ / (self.a_typ * self.main_param.L_x)
 
-        # Reference OCP
-        inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
-        self.U_ref = pybamm.FunctionParameter(
-            f"{self.domain} electrode open-circuit potential [V]", inputs
-        )
-
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
         main = self.main_param
 
-        if self.domain == "Separator":
-            self.l = self.geo.l
-            self.epsilon_init = self.eps_max
-            self.rho = self.therm.rho
-            self.lambda_ = self.therm.lambda_
-            return
-
-        # Macroscale Geometry
-        self.l = self.geo.l
-
-        # In lead-acid the current collector and electrodes are the same (same
-        # thickness)
-        self.l_cc = self.l
-
-        # Tab geometry
-        self.l_tab = self.geo.l_tab
-        self.centre_y_tab = self.geo.centre_y_tab
-        self.centre_z_tab = self.geo.centre_z_tab
-
-        # Electrode Properties
+        # Microstructure
         self.a = self.a_dimensional / self.a_typ
-        self.sigma_cc = (
-            self.sigma_cc_dimensional * main.potential_scale / main.i_typ / main.L_x
-        )
-        self.sigma_cc_prime = self.sigma_cc * main.delta ** 2
         self.delta_pore = 1 / (self.a_typ * main.L_x)
-        self.Q_max = self.Q_max_dimensional / (main.c_e_typ * main.F)
-        self.beta_U = 1 / self.Q_max
+        self.epsilon_s = 1 - self.domain_param.eps_max
 
         # Electrochemical reactions
         # Main
-        self.C_dl = (
-            self.C_dl_dimensional * main.potential_scale / self.j_scale / main.timescale
-        )
         self.ne = self.ne_S
-        # Oxygen
-        self.U_Ox = (main.U_Ox_dim - self.U_ref) / main.potential_scale
-        self.U_Hy = (main.U_Hy_dim - self.U_ref) / main.potential_scale
-
-        # Electrolyte properties
-        self.beta_surf = (
-            -main.c_e_typ * self.DeltaVsurf / self.ne_S
-        )  # Molar volume change (lead)
-        self.beta_liq = (
-            -main.c_e_typ * self.DeltaVliq / self.ne_S
-        )  # Molar volume change (electrolyte, neg)
-        self.beta = (self.beta_surf + self.beta_liq) * pybamm.Parameter(
-            "Volume change factor"
-        )
-
-        # Thermal
-        self.rho_cc = self.therm.rho_cc
-        self.rho = self.therm.rho
-
-        self.lambda_cc = self.therm.lambda_cc
-        self.lambda_ = self.therm.lambda_
-
-        self.h_tab = self.therm.h_tab
-        self.h_cc = self.therm.h_cc
 
         # Initial conditions
         self.c_init = main.c_e_init
-        sgn = -1 if self.domain == "Negative" else 1
-        self.epsilon_init = (
-            self.eps_max
-            + sgn * self.beta_surf * main.Q_e_max / self.l * (1 - main.q_init)
-        )
-        self.curlyU_init = main.Q_e_max * (1.2 - main.q_init) / (self.Q_max * self.l)
-
         self.U_init = self.U(main.c_e_init, main.T_init)
 
-    def sigma(self, T):
-        """Dimensionless negative electrode electrical conductivity"""
-        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        return (
-            self.sigma_dimensional(T_dim)
-            * self.main_param.potential_scale
-            / self.main_param.current_scale
-            / self.main_param.L_x
-        )
-
-    def sigma_prime(self, T):
-        """Rescaled dimensionless negative electrode electrical conductivity"""
-        return self.sigma(T) * self.main_param.delta ** 2
+        # Electrochemical reactions
+        # Oxygen
+        self.U_Ox = (main.U_Ox_dim - self.domain_param.U_ref) / main.potential_scale
+        self.U_Hy = (main.U_Hy_dim - self.domain_param.U_ref) / main.potential_scale
 
     def U(self, c_e, T):
         """Dimensionless open-circuit voltage in the negative electrode"""
         c_e_dimensional = c_e * self.main_param.c_e_typ
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
         return (
-            self.U_dimensional(c_e_dimensional, T_dim) - self.U_ref
+            self.U_dimensional(c_e_dimensional, T_dim) - self.domain_param.U_ref
         ) / self.main_param.potential_scale
 
     def j0(self, c_e, T):
