@@ -38,12 +38,6 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction in ["SEI", "SEI on cracks", "lithium plating"]:
             self.reaction_name = reaction + " "
 
-        if reaction in ["lithium-ion main", "lithium metal plating"]:
-            # can be "primary " or "secondary "
-            self.reaction_name_phase = self.phase + " "
-        else:
-            self.reaction_name_phase = self.reaction_name
-
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -185,7 +179,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        reaction_name_phase = self.reaction_name
+        reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
 
         if self.reaction == "lithium metal plating":
@@ -208,12 +202,12 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
 
         variables = {
-            f"{Domain} electrode {reaction_name_phase}interfacial current density": j,
-            f"X-averaged {domain} electrode {reaction_name_phase}"
+            f"{Domain} electrode {reaction_name}interfacial current density": j,
+            f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density": j_av,
-            f"{Domain} electrode {reaction_name_phase}"
+            f"{Domain} electrode {reaction_name}"
             "interfacial current density [A.m-2]": j_scale * j,
-            f"X-averaged {domain} electrode {reaction_name_phase}"
+            f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density [A.m-2]": j_scale * j_av,
         }
 
@@ -294,7 +288,6 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        reaction_name_phase = self.reaction_name
         phase_name = self.phase_name
 
         if isinstance(self, pybamm.kinetics.NoReaction):
@@ -303,22 +296,20 @@ class BaseInterface(pybamm.BaseSubModel):
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio"
             ]
-        j = variables[
-            f"{Domain} electrode {reaction_name_phase}interfacial current density"
-        ]
+        j = variables[f"{Domain} electrode {reaction_name}interfacial current density"]
         a_j = a * j
         a_j_av = pybamm.x_average(a_j)
         a_j_scale = self.param.i_typ / self.param.L_x
 
         variables.update(
             {
-                f"{Domain} electrode {reaction_name_phase}volumetric "
+                f"{Domain} electrode {reaction_name}volumetric "
                 "interfacial current density": a_j,
-                f"X-averaged {domain} electrode {reaction_name_phase}volumetric "
+                f"X-averaged {domain} electrode {reaction_name}volumetric "
                 "interfacial current density": a_j_av,
-                f"{Domain} electrode {reaction_name_phase}volumetric "
+                f"{Domain} electrode {reaction_name}volumetric "
                 "interfacial current density [A.m-3]": a_j_scale * a_j,
-                f"X-averaged {domain} electrode {reaction_name_phase}volumetric "
+                f"X-averaged {domain} electrode {reaction_name}volumetric "
                 "interfacial current density [A.m-3]": a_j_scale * a_j_av,
             }
         )
@@ -440,7 +431,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        reaction_name_phase = self.reaction_name
+        reaction_name = self.reaction_name
 
         # X-average and broadcast if necessary
         if j.domains["secondary"] == [f"{domain} electrode"]:
@@ -454,13 +445,13 @@ class BaseInterface(pybamm.BaseSubModel):
         j_scale = self.phase_param.j_scale
 
         variables = {
-            f"{Domain} electrode {reaction_name_phase}"
+            f"{Domain} electrode {reaction_name}"
             "interfacial current density distribution": j,
-            f"X-averaged {domain} electrode {reaction_name_phase}"
+            f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density distribution": j_xav,
-            f"{Domain} electrode {reaction_name_phase}"
+            f"{Domain} electrode {reaction_name}"
             "interfacial current density distribution [A.m-2]": j_scale * j,
-            f"X-averaged {domain} electrode {reaction_name_phase}"
+            f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density distribution [A.m-2]": j_scale * j_xav,
         }
 

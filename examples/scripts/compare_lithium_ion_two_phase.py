@@ -27,7 +27,7 @@ for model in models:
 # plot
 pybamm.dynamic_plot(
     sims,
-    ["
+    [
         [
             "Average negative primary particle concentration",
             "Average negative secondary particle concentration",
@@ -45,5 +45,5 @@ pybamm.dynamic_plot(
         # "Positive electrode potential [V]",
         "Terminal voltage [V]",
         # ["Negative primary particle radius", "Negative secondary particle radius"],
-    ],"
+    ],
 )
