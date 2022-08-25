@@ -99,14 +99,16 @@ class BaseKinetics(BaseInterface):
         )
         # Add SEI resistance in the negative electrode
         if self.domain == "Negative":
-            R_sei = self.param.R_sei
             if self.half_cell:
+                R_sei = self.param.R_sei
                 L_sei = variables["Total SEI thickness"]  # on interface
                 eta_sei = -j_tot_av * L_sei * R_sei
             elif self.options["SEI film resistance"] == "average":
+                R_sei = self.param.R_sei
                 L_sei_av = variables["X-averaged total SEI thickness"]
                 eta_sei = -j_tot_av * L_sei_av * R_sei
             elif self.options["SEI film resistance"] == "distributed":
+                R_sei = self.param.R_sei
                 L_sei = variables["Total SEI thickness"]
                 j_tot = variables[
                     f"Total negative electrode {phase_name}"
