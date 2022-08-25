@@ -38,18 +38,7 @@ class NoReaction(BaseInterface):
         """
         Bypass the phase checks from BaseSubmodel
         """
-        options_phase = getattr(self.options, self.domain.lower())["particle phases"]
-
-        if options_phase == "1" and phase == "primary ":
-            # Only one phase, no need to distinguish between
-            # "primary" and "secondary"
-            self.phase_name = ""
-        else:
-            # add a space so that we can use "" or (e.g.) "primary " interchangeably
-            # when naming variables
-            self.phase_name = phase + " "
-
-        self.phase = phase
+        super().set_phase(phase, check_phases=False)
 
     def get_fundamental_variables(self):
         zero = pybamm.Scalar(0)
