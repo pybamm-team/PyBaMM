@@ -254,11 +254,17 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
+            domain_options = getattr(self.options, domain)
             phases = self.options.phase_number_to_names(
-                getattr(self.options, domain)["particle phases"]
+                domain_options["particle phases"]
             )
             for phase in phases:
-                ocp_model = pybamm.open_circuit_potential.SingleOpenCircuitPotential
+                ocp_option = getattr(domain_options, phase)["open circuit potential"]
+                ocp_submodels = pybamm.open_circuit_potential
+                if ocp_option == "single":
+                    ocp_model = ocp_submodels.SingleOpenCircuitPotential
+                elif ocp_option == "current sigmoid":
+                    ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
                 self.submodels[f"{domain} {phase} open circuit potential"] = ocp_model(
                     self.param, domain, "lithium-ion main", self.options, phase
                 )
