@@ -660,18 +660,16 @@ class CurrentTests(BaseOutputTest):
         self.j0 = solution["Exchange current density"]
 
         self.a_j_n = solution[
-            f"Negative electrode volumetric interfacial current density"
+            "Negative electrode volumetric interfacial current density"
         ]
         self.a_j_p = solution[
-            f"Positive electrode volumetric interfacial current density"
+            "Positive electrode volumetric interfacial current density"
         ]
         self.a_j_n_av = solution[
-            f"X-averaged negative electrode {self.phase_name_n}"
-            "volumetric interfacial current density"
+            "X-averaged negative electrode volumetric interfacial current density"
         ]
         self.a_j_p_av = solution[
-            f"X-averaged positive electrode {self.phase_name_p}"
-            "volumetric interfacial current density"
+            "X-averaged positive electrode volumetric interfacial current density"
         ]
         self.a_j_n_sei = solution[
             "Negative electrode SEI volumetric interfacial current density"
