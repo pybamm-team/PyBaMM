@@ -252,9 +252,9 @@ class BaseModel(BaseInterface):
             n_SEI_cr_av = pybamm.yz_average(pybamm.x_average(n_SEI_cr))
 
             # Calculate change in SEI cracks concentration with respect to initial state
-            rho_cr = param.n.rho_cr
-            n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
-            delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
+            delta_n_SEI_cr = n_SEI_cr_av - (
+                (L_inner_0 + L_outer_0 / v_bar) * pybamm.x_average(roughness) / 10000
+            )
 
             # Q_sei_cr in mol
             Q_sei_cr = (

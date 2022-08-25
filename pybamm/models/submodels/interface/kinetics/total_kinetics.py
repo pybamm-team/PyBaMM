@@ -37,6 +37,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 # no separate plating reaction in a half-cell,
                 # since plating is the main reaction
                 reaction_names.append("lithium plating ")
+                reaction_names.append("SEI on cracks ")
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
 
@@ -96,21 +97,29 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j = pybamm.concatenation(zero_s, j_p)
                 j_dim = pybamm.concatenation(zero_s, j_p_dim)
             else:
+                if reaction_name == "SEI on cracks ":
+                    roughness_n = variables["Negative electrode roughness ratio"] - 1
+                    roughness_n_av = variables[
+                        "X-averaged negative electrode roughness ratio"
+                    ] - 1
+                else:
+                    roughness_n = 1
+                    roughness_n_av = 1
                 j_n_av = variables[
                     f"X-averaged negative electrode {reaction_name}"
                     "interfacial current density"
-                ]
+                ] * roughness_n_av
                 j_n = variables[
                     f"Negative electrode {reaction_name}interfacial current density"
-                ]
+                ] * roughness_n
                 j_n_dim = variables[
                     f"Negative electrode {reaction_name}"
                     "interfacial current density [A.m-2]"
-                ]
+                ] * roughness_n
                 j = pybamm.concatenation(j_n, zero_s, j_p)
                 j_dim = pybamm.concatenation(j_n_dim, zero_s, j_p_dim)
 
-            if reaction_name not in ["SEI ", "lithium plating "]:
+            if reaction_name not in ["SEI ", "lithium plating ", "SEI on cracks "]:
                 j0_p = variables[
                     f"Positive electrode {reaction_name}exchange current density"
                 ]

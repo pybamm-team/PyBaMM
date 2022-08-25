@@ -307,6 +307,15 @@ class BaseInterface(pybamm.BaseSubModel):
         domain = Domain.lower()
         reaction_name = self.reaction_name
 
+        if reaction_name == " SEI on cracks":
+            roughness = variables["Negative electrode roughness ratio"] - 1
+            roughness_av = variables[
+                "X-averaged negative electrode roughness ratio"
+            ] - 1
+        else:
+            roughness = 1
+            roughness_av = 1
+
         a = variables[f"{Domain} electrode surface area to volume ratio"]
         a_av = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
         j = variables[f"{Domain} electrode{reaction_name} interfacial current density"]
@@ -318,13 +327,13 @@ class BaseInterface(pybamm.BaseSubModel):
         variables.update(
             {
                 f"{Domain} electrode{reaction_name} volumetric "
-                "interfacial current density": a * j,
+                "interfacial current density": a * j * roughness,
                 f"X-averaged {domain} electrode{reaction_name} volumetric "
-                "interfacial current density": a_av * j_av,
+                "interfacial current density": a_av * j_av * roughness_av,
                 f"{Domain} electrode{reaction_name} volumetric "
-                "interfacial current density [A.m-3]": scale * a * j,
-                f"X-averaged {domain} electrode{reaction_name} volumetric "
-                "interfacial current density [A.m-3]": scale * a_av * j_av,
+                "interfacial current density [A.m-3]": scale * a * j * roughness,
+                f"X-averaged {domain} electrode{reaction_name} volumetric interfacial "
+                "current density [A.m-3]": scale * a_av * j_av * roughness_av,
             }
         )
         return variables
