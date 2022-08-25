@@ -18,6 +18,7 @@
 
 ## Optimizations
 
+-   Default options for `particle mechanics` now dealt with differently in each electrode ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
 -   Simplified scaling for the exchange-current density. The dimensionless parameter `C_r` is kept, but no longer used anywhere ([#2238](https://github.com/pybamm-team/PyBaMM/pull/2238))
 -   Added limits for variables in some functions to avoid division by zero, sqrt(negative number), etc ([#2213](https://github.com/pybamm-team/PyBaMM/pull/2213))
 
