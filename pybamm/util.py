@@ -88,6 +88,9 @@ class FuzzyDict(dict):
             # Just print keys
             print("\n".join("{}".format(k) for k in results.keys()))
 
+    def copy(self):
+        return FuzzyDict(super().copy())
+
 
 class Timer(object):
     """

@@ -11,7 +11,7 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    phase : str
+    component : str
         The material for the model ('electrolyte' or 'electrode').
     options : dict, optional
         A dictionary of options to be passed to the model.
@@ -19,9 +19,9 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, phase, options=None):
+    def __init__(self, param, component, options=None):
         super().__init__(param, options=options)
-        self.phase = phase
+        self.component = component
 
     def _get_standard_transport_efficiency_variables(
         self, tor_n, tor_s, tor_p, set_leading_order=False
@@ -29,24 +29,22 @@ class BaseModel(pybamm.BaseSubModel):
         tor = pybamm.concatenation(tor_n, tor_s, tor_p)
 
         variables = {
-            self.phase + " transport efficiency": tor,
-            "Positive " + self.phase.lower() + " transport efficiency": tor_p,
-            "X-averaged positive "
-            + self.phase.lower()
-            + " transport efficiency": pybamm.x_average(tor_p),
+            f"{self.component} transport efficiency": tor,
+            f"Positive {self.component.lower()} transport efficiency": tor_p,
+            f"X-averaged positive {self.component.lower()} "
+            "transport efficiency": pybamm.x_average(tor_p),
         }
 
         if not self.half_cell:
             variables.update(
                 {
-                    "Negative " + self.phase.lower() + " transport efficiency": tor_n,
-                    "X-averaged negative "
-                    + self.phase.lower()
-                    + " transport efficiency": pybamm.x_average(tor_n),
+                    f"Negative {self.component.lower()} transport efficiency": tor_n,
+                    f"X-averaged negative {self.component.lower()} "
+                    "transport efficiency": pybamm.x_average(tor_n),
                 }
             )
 
-        if self.phase == "Electrolyte":
+        if self.component == "Electrolyte":
             variables.update(
                 {
                     "Separator transport efficiency": tor_s,

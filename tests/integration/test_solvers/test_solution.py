@@ -54,7 +54,7 @@ class TestSolution(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(
             {
                 "thermal": "lumped",
-                "external submodels": ["thermal", "negative particle"],
+                "external submodels": ["thermal", "negative primary particle"],
             }
         )
         # create geometry

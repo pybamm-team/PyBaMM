@@ -26,6 +26,16 @@ Lithium-ion parameter sets
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+    * Chen2020_composite :
+       - Weilong Ai, Niall Kirkaldy, Yang Jiang, Gregory Offer, Huizhi Wang, and Billy
+         Wu. A composite electrode model for lithium-ion batteries with silicon/graphite
+         negative electrodes. Journal of Power Sources, 527:231142, 2022. URL:
+         https://www.sciencedirect.com/science/article/pii/S0378775322001604,
+         doi:https://doi.org/10.1016/j.jpowsour.2022.231142.
+       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
     * Ecker2015 :
        - Madeleine Ecker, Stefan Käbitz, Izaro Laresgoiti, and Dirk Uwe Sauer.
          Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II.
@@ -160,6 +170,18 @@ Chen2020 = {
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "example",
     "citation": "Chen2020",
+}
+
+Chen2020_composite = {
+    "chemistry": "lithium_ion",
+    "cell": "LGM50_Chen2020",
+    "negative electrode": "graphite_Chen2020_composite",
+    "separator": "separator_Chen2020",
+    "positive electrode": "nmc_Chen2020",
+    "electrolyte": "lipf6_Nyman2008",
+    "experiment": "1C_discharge_from_full_Chen2020",
+    "sei": "example",
+    "citation": ["Chen2020", "Ai2022"],
 }
 
 Mohtat2020 = {

@@ -36,7 +36,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
-        c_e_ref ** alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref ** alpha
+        c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha
     )
     E_r = 3e4
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
@@ -44,7 +44,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     return (
         m_ref
         * arrhenius
-        * c_e ** alpha
-        * c_s_surf ** alpha
+        * c_e**alpha
+        * c_s_surf**alpha
         * (c_s_max - c_s_surf) ** alpha
     )

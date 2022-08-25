@@ -1,12 +1,12 @@
 #
-# Total kinetics class, summing up contributions from all reactions
+# Total interfacial current class, summing up contributions from all reactions
 #
 import pybamm
 
 
-class TotalKinetics(pybamm.BaseSubModel):
+class TotalInterfacialCurrent(pybamm.BaseSubModel):
     """
-    Total kinetics class, summing up contributions from all reactions
+    Total interfacial current, summing up contributions from all reactions
 
     Parameters
     ----------
@@ -36,8 +36,8 @@ class TotalKinetics(pybamm.BaseSubModel):
             if not self.half_cell:
                 # no separate plating reaction in a half-cell,
                 # since plating is the main reaction
-                reaction_names.append("lithium plating ")
-                reaction_names.append("SEI on cracks ")
+                # no SEI on cracks with half-cell model
+                reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
 
@@ -119,7 +119,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j = pybamm.concatenation(j_n, zero_s, j_p)
                 j_dim = pybamm.concatenation(j_n_dim, zero_s, j_p_dim)
 
-            if reaction_name not in ["SEI ", "lithium plating ", "SEI on cracks "]:
+            if reaction_name not in ["SEI ", "SEI on cracks ", "lithium plating "]:
                 j0_p = variables[
                     f"Positive electrode {reaction_name}exchange current density"
                 ]
@@ -166,7 +166,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 s_n, s_p = 1, 1
             elif self.chemistry == "lead-acid":
                 if reaction_name == "":  # main reaction
-                    s_n, s_p = self.param.n.s_plus_S, self.param.p.s_plus_S
+                    s_n, s_p = self.param.n.prim.s_plus_S, self.param.p.prim.s_plus_S
                 elif reaction_name == "oxygen ":
                     s_n, s_p = self.param.s_plus_Ox, self.param.s_plus_Ox
             if self.half_cell:

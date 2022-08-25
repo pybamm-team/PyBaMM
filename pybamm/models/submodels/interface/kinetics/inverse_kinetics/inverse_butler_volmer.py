@@ -31,9 +31,9 @@ class InverseButlerVolmer(BaseInterface):
 
     def get_coupled_variables(self, variables):
         Domain = self.domain
-        rxn = self.reaction_name
+        reaction_name = self.reaction_name
 
-        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
@@ -141,9 +141,8 @@ class CurrentForInverseButlerVolmer(BaseInterface):
 
     def get_coupled_variables(self, variables):
         j_tot = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density"
+            f"X-averaged {self.domain.lower()} electrode "
+            "total interfacial current density"
         ]
         if self.domain == "Negative":
             j_sei = variables["SEI interfacial current density"]

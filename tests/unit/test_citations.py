@@ -123,14 +123,14 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.XAveragedPolynomialProfile(
-            None, "Negative", {"particle": "quadratic profile"}
+            None, "Negative", {"particle": "quadratic profile"}, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.PolynomialProfile(
-            None, "Negative", {"particle": "quadratic profile"}
+            None, "Negative", {"particle": "quadratic profile"}, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
@@ -198,7 +198,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.LossActiveMaterial(None, None, None, True)
+        pybamm.active_material.LossActiveMaterial(None, "Negative", None, True)
         self.assertIn("Reniers2019", citations._papers_to_cite)
 
     def test_mohtat_2019(self):
@@ -227,12 +227,12 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Sripad2020", citations._papers_to_cite)
-        pybamm.kinetics.Marcus(None, None, None, None)
+        pybamm.kinetics.Marcus(None, None, None, None, None)
         self.assertIn("Sripad2020", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Sripad2020", citations._papers_to_cite)
-        pybamm.kinetics.MarcusHushChidsey(None, None, None, None)
+        pybamm.kinetics.MarcusHushChidsey(None, None, None, None, None)
         self.assertIn("Sripad2020", citations._papers_to_cite)
 
     def test_parameter_citations(self):

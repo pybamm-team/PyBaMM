@@ -38,10 +38,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_creation_lithium_ion(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
+        model_n = pybamm.interface.BaseInterface(
+            param, "Negative", "lithium-ion main", {}
+        )
         model_n.options = self.options
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
+        model_p = pybamm.interface.BaseInterface(
+            param, "Positive", "lithium-ion main", {}
+        )
         model_p.options = self.options
         j0_p = model_p._get_exchange_current_density(self.variables)
         self.assertEqual(j0_n.domain, ["negative electrode"])
@@ -49,10 +53,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_set_parameters_lithium_ion(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
+        model_n = pybamm.interface.BaseInterface(
+            param, "Negative", "lithium-ion main", {}
+        )
         model_n.options = self.options
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
+        model_p = pybamm.interface.BaseInterface(
+            param, "Positive", "lithium-ion main", {}
+        )
         model_p.options = self.options
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters
@@ -67,10 +75,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_discretisation_lithium_ion(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
+        model_n = pybamm.interface.BaseInterface(
+            param, "Negative", "lithium-ion main", {}
+        )
         model_n.options = self.options
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
+        model_p = pybamm.interface.BaseInterface(
+            param, "Positive", "lithium-ion main", {}
+        )
         model_p.options = self.options
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters and discretise
@@ -88,7 +100,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         submesh = mesh.combine_submeshes(*whole_cell)
         y = np.concatenate(
             [
-                submesh.nodes ** 2,
+                submesh.nodes**2,
                 mesh["negative particle"].nodes,
                 mesh["positive particle"].nodes,
             ]
