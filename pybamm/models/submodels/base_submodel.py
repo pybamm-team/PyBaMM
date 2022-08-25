@@ -94,10 +94,15 @@ class BaseSubModel(pybamm.BaseModel):
                 self.phase_param = self.domain_param.sec
 
         # Error checks for phase and domain
+        self.set_phase(phase)
+
+    def set_phase(self, phase):
         if phase is not None:
-            if domain is None:
+            if self.domain is None:
                 raise ValueError("Phase must be None if domain is None")
-            options_phase = getattr(self.options, domain.lower())["particle phases"]
+            options_phase = getattr(self.options, self.domain.lower())[
+                "particle phases"
+            ]
             if options_phase == "1" and phase != "primary":
                 raise ValueError("Phase must be 'primary' if there is only one phase")
             elif options_phase == "2" and phase not in ["primary", "secondary"]:
