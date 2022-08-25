@@ -659,16 +659,26 @@ class CurrentTests(BaseOutputTest):
         self.j = solution["Interfacial current density"]
         self.j0 = solution["Exchange current density"]
 
-        self.j_n = solution["Negative electrode interfacial current density"]
-        self.j_p = solution["Positive electrode interfacial current density"]
-        self.j_n_av = solution[
-            "X-averaged negative electrode interfacial current density"
+        self.a_j_n = solution[
+            f"Negative electrode volumetric interfacial current density"
         ]
-        self.j_p_av = solution[
-            "X-averaged positive electrode interfacial current density"
+        self.a_j_p = solution[
+            f"Positive electrode volumetric interfacial current density"
         ]
-        self.j_n_sei = solution["SEI interfacial current density"]
-        self.j_n_sei_av = solution["X-averaged SEI interfacial current density"]
+        self.a_j_n_av = solution[
+            f"X-averaged negative electrode {self.phase_name_n}"
+            "volumetric interfacial current density"
+        ]
+        self.a_j_p_av = solution[
+            f"X-averaged positive electrode {self.phase_name_p}"
+            "volumetric interfacial current density"
+        ]
+        self.a_j_n_sei = solution[
+            "Negative electrode SEI volumetric interfacial current density"
+        ]
+        self.a_j_n_sei_av = solution[
+            "X-averaged negative electrode SEI volumetric interfacial current density"
+        ]
 
         self.j0_n = solution["Negative electrode exchange current density"]
         self.j0_p = solution["Positive electrode exchange current density"]
@@ -678,13 +688,6 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
-        self.a_n = solution[
-            f"Negative electrode {self.phase_name_n}surface area to volume ratio"
-        ]
-        self.a_p = solution[
-            f"Positive electrode {self.phase_name_p}surface area to volume ratio"
-        ]
-
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)
         multiplied by the interfacial current density is equal to the true
@@ -692,18 +695,14 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(self.t, self.x_n)
-                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
+                self.a_j_n(self.t, self.x_n) + self.a_j_n_sei(self.t, self.x_n),
                 axis=0,
             ),
             self.i_cell / self.l_n,
             decimal=3,
         )
         np.testing.assert_array_almost_equal(
-            np.mean(
-                self.a_p(self.t, self.x_p) * self.j_p(self.t, self.x_p),
-                axis=0,
-            ),
+            np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.l_p,
             decimal=4,
         )
