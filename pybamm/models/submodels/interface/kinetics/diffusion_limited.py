@@ -48,7 +48,9 @@ class DiffusionLimited(BaseInterface):
 
         # Get interfacial current densities
         j = self._get_diffusion_limited_current_density(variables)
-        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(variables)
+        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
+            variables
+        )
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(
