@@ -14,7 +14,7 @@ class CasadiSolver
 public:
   CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id,
                int number_of_parameters, int number_of_events,
-               bool use_jacobian, int jac_times_cjmass_nnz,
+               int jac_times_cjmass_nnz,
                std::unique_ptr<CasadiFunctions> functions, const Options& options);
   ~CasadiSolver();
 
@@ -51,7 +51,7 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const int jac_times_cjmass_nnz, const Function &jac_action,
                      const Function &mass_action, const Function &sens,
                      const Function &event, const int number_of_events,
-                     int use_jacobian, np_array rhs_alg_id, np_array atol_np,
+                     np_array rhs_alg_id, np_array atol_np,
                      double rel_tol, int inputs_length, py::dict options);
 
 #endif // PYBAMM_IDAKLU_CASADI_SOLVER_HPP

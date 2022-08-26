@@ -5,6 +5,7 @@
 
 struct Options {
   bool print_stats;
+  bool use_jacobian;
 
   Options(py::dict options);
 

@@ -35,8 +35,9 @@ PYBIND11_MODULE(idaklu, m)
         py::return_value_policy::take_ownership);
 
   py::class_<CasadiSolver>(m, "CasadiSolver")
-      .def("solve", &CasadiSolver::solve, "perform a solve", py::arg("t"), py::arg("y0"), py::arg("yp0"),
-           py::arg("inputs"), py::return_value_policy::take_ownership);
+      .def("solve", &CasadiSolver::solve, "perform a solve", py::arg("t"),
+           py::arg("y0"), py::arg("yp0"), py::arg("inputs"),
+           py::return_value_policy::take_ownership);
 
   m.def("create_casadi_solver", &create_casadi_solver,
         "Create a casadi idaklu solver object", py::arg("number_of_states"),
@@ -44,9 +45,9 @@ PYBIND11_MODULE(idaklu, m)
         py::arg("jac_times_cjmass"), py::arg("jac_times_cjmass_colptrs"),
         py::arg("jac_times_cjmass_rowvals"), py::arg("jac_times_cjmass_nnz"),
         py::arg("jac_action"), py::arg("mass_action"), py::arg("sens"),
-        py::arg("events"), py::arg("number_of_events"), py::arg("use_jacobian"),
-        py::arg("rhs_alg_id"), py::arg("atol"), py::arg("rtol"),
-        py::arg("inputs"), py::arg("options"), py::return_value_policy::take_ownership);
+        py::arg("events"), py::arg("number_of_events"), py::arg("rhs_alg_id"),
+        py::arg("atol"), py::arg("rtol"), py::arg("inputs"), py::arg("options"),
+        py::return_value_policy::take_ownership);
 
   m.def("generate_function", &generate_function, "Generate a casadi function",
         py::arg("string"), py::return_value_policy::take_ownership);

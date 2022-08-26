@@ -46,6 +46,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Addititional options to pass to the solver, by default:
         {
             print_stats: False, # print statistics of the solver after every solve
+            use_jacobian: True, # pass pybamm jacobian to sundials
         }
         Note: These options only have an effect if model.convert_to_format == 'casadi'
 
@@ -62,10 +63,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         options=None,
     ):
 
+        default_options = {
+            "print_stats": False,
+            "use_jacobian": True,
+        }
         if options is None:
-            options = {
-                "print_stats": False,
-            }
+            options = default_options
+        else:
+            for key, value in default_options.items():
+                if key not in options:
+                    options[key] = value
         self._options = options
 
         if idaklu_spec is None:  # pragma: no cover
@@ -213,7 +220,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if not model.use_jacobian:
             raise pybamm.SolverError("KLU requires the Jacobian")
-        use_jac = 1
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
         if model.convert_to_format == "casadi":
@@ -414,7 +420,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 'sensfn': sensfn,
                 'rootfn': rootfn,
                 'num_of_events': num_of_events,
-                'use_jac': use_jac,
                 'ids': ids,
                 'sensitivity_names': sensitivity_names,
                 'number_of_sensitivity_parameters': number_of_sensitivity_parameters,
@@ -433,7 +438,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup['sensfn'],
                 self._setup['rootfn'],
                 self._setup['num_of_events'],
-                self._setup['use_jac'],
                 self._setup['ids'],
                 atol, rtol, len(inputs),
                 self._options
@@ -447,7 +451,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 'sensfn': sensfn,
                 'rootfn': rootfn,
                 'num_of_events': num_of_events,
-                'use_jac': use_jac,
+                'use_jac': 1,
                 'ids': ids,
                 'sensitivity_names': sensitivity_names,
                 'number_of_sensitivity_parameters': number_of_sensitivity_parameters,

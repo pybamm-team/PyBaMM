@@ -10,7 +10,7 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const int jac_times_cjmass_nnz, const Function &jac_action,
                      const Function &mass_action, const Function &sens,
                      const Function &events, const int number_of_events,
-                     int use_jacobian, np_array rhs_alg_id, np_array atol_np,
+                     np_array rhs_alg_id, np_array atol_np,
                      double rel_tol, int inputs_length, py::dict options)
 {
   auto options_cpp = Options(options);
@@ -21,13 +21,13 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
       options_cpp);
 
   return new CasadiSolver(atol_np, rel_tol, rhs_alg_id, number_of_parameters,
-                          number_of_events, use_jacobian, jac_times_cjmass_nnz,
+                          number_of_events, jac_times_cjmass_nnz,
                           std::move(functions), options_cpp);
 }
 
 CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
                            np_array rhs_alg_id, int number_of_parameters,
-                           int number_of_events, bool use_jacobian,
+                           int number_of_events,
                            int jac_times_cjmass_nnz,
                            std::unique_ptr<CasadiFunctions> functions_arg,
                            const Options &options)
@@ -99,7 +99,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 
   // set linear solver
 #if SUNDIALS_VERSION_MAJOR >= 6
-  if (use_jacobian == 1)
+  if (options.use_jacobian)
   {
     J = SUNSparseMatrix(number_of_states, number_of_states,
                         jac_times_cjmass_nnz, CSC_MAT, sunctx);
@@ -111,7 +111,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_Dense(yy, J, sunctx);
   }
 #else
-  if (use_jacobian == 1)
+  if (options.use_jacobian == 1)
   {
     J = SUNSparseMatrix(number_of_states, number_of_states,
                         jac_times_cjmass_nnz, CSC_MAT);
@@ -126,7 +126,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 
   IDASetLinearSolver(ida_mem, LS, J);
 
-  if (use_jacobian == 1)
+  if (options.use_jacobian)
   {
     IDASetJacFn(ida_mem, jacobian_casadi);
   }
