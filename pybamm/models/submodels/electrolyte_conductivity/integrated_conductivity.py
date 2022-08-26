@@ -34,6 +34,8 @@ class Integrated(BaseElectrolyteConductivity):
         pybamm.citations.register("BrosaPlanella2021")
 
     def _higher_order_macinnes_function(self, x):
+        tol = pybamm.settings.tolerances["macinnes__c_e"]
+        x = pybamm.maximum(x, tol)
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
@@ -60,8 +62,8 @@ class Integrated(BaseElectrolyteConductivity):
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
         param = self.param
-        l_n = param.l_n
-        l_p = param.l_p
+        l_n = param.n.l
+        l_p = param.p.l
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p

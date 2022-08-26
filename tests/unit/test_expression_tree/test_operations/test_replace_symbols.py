@@ -21,7 +21,7 @@ class TestSymbolReplacer(unittest.TestCase):
             (a + c, b + d),  # two replacements
         ]:
             replaced_symbol = replacer.process_symbol(symbol_in)
-            self.assertEqual(replaced_symbol.id, symbol_out.id)
+            self.assertEqual(replaced_symbol, symbol_out)
 
         var1 = pybamm.Variable("var 1", domain="dom 1")
         var2 = pybamm.Variable("var 2", domain="dom 2")
@@ -30,7 +30,7 @@ class TestSymbolReplacer(unittest.TestCase):
 
         replacer = pybamm.SymbolReplacer({var1: var3})
         replaced_symbol = replacer.process_symbol(conc)
-        self.assertEqual(replaced_symbol.id, pybamm.concatenation(var3, var2).id)
+        self.assertEqual(replaced_symbol, pybamm.concatenation(var3, var2))
 
     def test_process_model(self):
         model = pybamm.BaseModel()
@@ -88,10 +88,10 @@ class TestSymbolReplacer(unittest.TestCase):
         self.assertIsInstance(bc_value["right"][0], pybamm.Scalar)
         self.assertEqual(bc_value["right"][0].value, 42)
         # variables
-        self.assertEqual(model.variables["var1"].id, var1.id)
+        self.assertEqual(model.variables["var1"], var1)
         self.assertIsInstance(model.variables["grad_var1"], pybamm.Gradient)
         self.assertIsInstance(model.variables["grad_var1"].children[0], pybamm.Variable)
-        self.assertEqual(model.variables["d_var1"].id, (pybamm.Scalar(42) * var1).id)
+        self.assertEqual(model.variables["d_var1"], (pybamm.Scalar(42) * var1))
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
         # timescale and length scales

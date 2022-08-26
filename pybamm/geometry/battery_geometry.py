@@ -32,9 +32,10 @@ def battery_geometry(
         A geometry class for the battery
 
     """
+    options = pybamm.BatteryModelOptions(options or {})
     geo = pybamm.geometric_parameters
-    l_n = geo.l_n
-    l_s = geo.l_s
+    l_n = geo.n.l
+    l_s = geo.s.l
     l_n_l_s = l_n + l_s
     # Override print_name
     l_n_l_s.print_name = "l_n + l_s"
@@ -47,18 +48,28 @@ def battery_geometry(
     }
     # Add particle domains
     if include_particles is True:
+        zero_one = {"min": 0, "max": 1}
         geometry.update(
             {
-                "negative particle": {"r_n": {"min": 0, "max": 1}},
-                "positive particle": {"r_p": {"min": 0, "max": 1}},
+                "negative particle": {"r_n": zero_one},
+                "positive particle": {"r_p": zero_one},
             }
         )
+        for domain in ["negative", "positive"]:
+            phases = int(getattr(options, domain)["particle phases"])
+            if phases >= 2:
+                geometry.update(
+                    {
+                        f"{domain} primary particle": {"r_n_prim": zero_one},
+                        f"{domain} secondary particle": {"r_n_sec": zero_one},
+                    }
+                )
     # Add particle size domains
     if options is not None and options["particle size"] == "distribution":
-        R_min_n = geo.R_min_n
-        R_min_p = geo.R_min_p
-        R_max_n = geo.R_max_n
-        R_max_p = geo.R_max_p
+        R_min_n = geo.n.prim.R_min
+        R_min_p = geo.p.prim.R_min
+        R_max_n = geo.n.prim.R_max
+        R_max_p = geo.p.prim.R_max
         geometry.update(
             {
                 "negative particle size": {"R_n": {"min": R_min_n, "max": R_max_n}},
@@ -73,8 +84,8 @@ def battery_geometry(
             geometry["current collector"] = {
                 "z": {"min": 0, "max": 1},
                 "tabs": {
-                    "negative": {"z_centre": geo.centre_z_tab_n},
-                    "positive": {"z_centre": geo.centre_z_tab_p},
+                    "negative": {"z_centre": geo.n.centre_z_tab},
+                    "positive": {"z_centre": geo.p.centre_z_tab},
                 },
             }
         elif current_collector_dimension == 2:
@@ -83,14 +94,14 @@ def battery_geometry(
                 "z": {"min": 0, "max": geo.l_z},
                 "tabs": {
                     "negative": {
-                        "y_centre": geo.centre_y_tab_n,
-                        "z_centre": geo.centre_z_tab_n,
-                        "width": geo.l_tab_n,
+                        "y_centre": geo.n.centre_y_tab,
+                        "z_centre": geo.n.centre_z_tab,
+                        "width": geo.n.l_tab,
                     },
                     "positive": {
-                        "y_centre": geo.centre_y_tab_p,
-                        "z_centre": geo.centre_z_tab_p,
-                        "width": geo.l_tab_p,
+                        "y_centre": geo.p.centre_y_tab,
+                        "z_centre": geo.p.centre_z_tab,
+                        "width": geo.p.l_tab,
                     },
                 },
             }

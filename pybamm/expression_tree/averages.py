@@ -21,15 +21,9 @@ class _BaseAverage(pybamm.Integral):
 
 class XAverage(_BaseAverage):
     def __init__(self, child):
-        if child.domain in [
-            ["negative particle"],
-            ["negative particle size"],
-        ]:
+        if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif child.domain in [
-            ["positive particle"],
-            ["positive particle size"],
-        ]:
+        elif all(n in child.domain[0] for n in ["positive", "particle"]):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
@@ -99,8 +93,10 @@ def x_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
-    # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges("primary"):
+    # Can't take average if the symbol evaluates on edges (unless it's broadcasted)
+    if symbol.evaluates_on_edges("primary") and not isinstance(
+        symbol, pybamm.Broadcast
+    ):
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have an electrode domain, its x-averaged value is itself
     if not any(
@@ -154,9 +150,9 @@ def x_average(symbol):
         isinstance(child, pybamm.Broadcast) for child in symbol.children
     ):
         geo = pybamm.geometric_parameters
-        l_n = geo.l_n
-        l_s = geo.l_s
-        l_p = geo.l_p
+        l_n = geo.n.l
+        l_s = geo.s.l
+        l_p = geo.p.l
         if symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             a, b, c = [orp.orphans[0] for orp in symbol.orphans]
             out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
@@ -270,12 +266,13 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith("particle")
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
+    elif not has_particle_domain:
         return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
@@ -286,9 +283,10 @@ def r_average(symbol):
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
     # If symbol is a Broadcast onto a particle domain, its average value is its child
-    elif isinstance(
-        symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)
-    ) and symbol.domain in [["positive particle"], ["negative particle"]]:
+    elif (
+        isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast))
+        and has_particle_domain
+    ):
         return symbol.reduce_one_dimension()
     else:
         return RAverage(symbol)
@@ -341,7 +339,7 @@ def size_average(symbol, f_a_dist=None):
                 "R", domains=symbol.domains, coord_sys="cartesian"
             )
             if ["negative particle size"] in symbol.domains.values():
-                f_a_dist = geo.f_a_dist_n(R)
+                f_a_dist = geo.n.prim.f_a_dist(R)
             elif ["positive particle size"] in symbol.domains.values():
-                f_a_dist = geo.f_a_dist_p(R)
+                f_a_dist = geo.p.prim.f_a_dist(R)
         return SizeAverage(symbol, f_a_dist)

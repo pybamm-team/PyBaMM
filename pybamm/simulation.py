@@ -407,11 +407,15 @@ class Simulation:
                 # Keep the min and max voltages as safeguards but add some tolerances
                 # so that they are not triggered before the voltage limits in the
                 # experiment
-                for event in new_model.events:
+                for i, event in enumerate(new_model.events):
                     if event.name == "Minimum voltage":
-                        event._expression += 1
+                        new_model.events[i] = pybamm.Event(
+                            event.name, event.expression + 1, event.event_type
+                        )
                     elif event.name == "Maximum voltage":
-                        event._expression -= 1
+                        new_model.events[i] = pybamm.Event(
+                            event.name, event.expression - 1, event.event_type
+                        )
 
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
@@ -536,6 +540,7 @@ class Simulation:
         calc_esoh=True,
         starting_solution=None,
         initial_soc=None,
+        callbacks=None,
         **kwargs,
     ):
         """
@@ -580,6 +585,9 @@ class Simulation:
             Initial State of Charge (SOC) for the simulation. Must be between 0 and 1.
             If given, overwrites the initial concentrations provided in the parameter
             set.
+        callbacks : list of callbacks, optional
+            A list of callbacks to be called at each time step. Each callback must
+            implement all the methods defined in :class:`pybamm.callbacks.BaseCallback`.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -587,6 +595,9 @@ class Simulation:
         # Setup
         if solver is None:
             solver = self.solver
+
+        callbacks = pybamm.callbacks.setup_callbacks(callbacks)
+        logs = {}
 
         if initial_soc is not None:
             if self._built_initial_soc != initial_soc:
@@ -602,8 +613,8 @@ class Simulation:
                 "Initial concentration in positive electrode [mol.m-3]"
             ]
             param = pybamm.LithiumIonParameters()
-            c_n_max = self.parameter_values.evaluate(param.c_n_max)
-            c_p_max = self.parameter_values.evaluate(param.c_p_max)
+            c_n_max = self.parameter_values.evaluate(param.n.prim.c_max)
+            c_p_max = self.parameter_values.evaluate(param.p.prim.c_max)
             x, y = pybamm.lithium_ion.get_initial_stoichiometries(
                 initial_soc, self.parameter_values
             )
@@ -641,7 +652,12 @@ class Simulation:
                     "starting_solution can only be provided if simulating an Experiment"
                 )
             if self.operating_mode == "without experiment" or isinstance(
-                self.model, pybamm.lithium_ion.ElectrodeSOH
+                self.model,
+                (
+                    pybamm.lithium_ion.ElectrodeSOH,
+                    pybamm.lithium_ion.ElectrodeSOHx0,
+                    pybamm.lithium_ion.ElectrodeSOHx0,
+                ),
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -703,6 +719,7 @@ class Simulation:
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)
 
         elif self.operating_mode == "with experiment":
+            callbacks.on_experiment_start(logs)
             self.build_for_experiment(check_model=check_model)
             if t_eval is not None:
                 pybamm.logger.warning(
@@ -713,13 +730,26 @@ class Simulation:
             self._solution = starting_solution
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
-            pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
+
+            # Set up eSOH solver (for summary variables)
+            esoh_solver = self.get_esoh_solver(calc_esoh)
 
             if starting_solution is None:
                 starting_solution_cycles = []
                 starting_solution_summary_variables = []
                 starting_solution_first_states = []
+            elif not hasattr(starting_solution, "all_summary_variables"):
+                (
+                    cycle_solution,
+                    cycle_sum_vars,
+                    cycle_first_state,
+                ) = pybamm.make_cycle_solution(
+                    starting_solution.steps, esoh_solver, True
+                )
+                starting_solution_cycles = [cycle_solution]
+                starting_solution_summary_variables = [cycle_sum_vars]
+                starting_solution_first_states = [cycle_first_state]
             else:
                 starting_solution_cycles = starting_solution.cycles.copy()
                 starting_solution_summary_variables = (
@@ -735,16 +765,8 @@ class Simulation:
             all_first_states = starting_solution_first_states
             current_solution = starting_solution
 
-            # Set up eSOH model (for summary variables)
-            if calc_esoh is True:
-                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
-                esoh_sim = pybamm.Simulation(
-                    esoh_model, parameter_values=self.parameter_values
-                )
-            else:
-                esoh_sim = None
-
             voltage_stop = self.experiment.termination.get("voltage")
+            logs["stopping conditions"] = {"voltage": voltage_stop}
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -752,10 +774,13 @@ class Simulation:
             for cycle_num, cycle_length in enumerate(
                 self.experiment.cycle_lengths, start=1
             ):
-                pybamm.logger.notice(
-                    f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset} "
-                    f"({timer.time()} elapsed) " + "-" * 20
+                logs["cycle number"] = (
+                    cycle_num + cycle_offset,
+                    num_cycles + cycle_offset,
                 )
+                logs["elapsed time"] = timer.time()
+                callbacks.on_cycle_start(logs)
+
                 steps = []
                 cycle_solution = None
 
@@ -777,6 +802,8 @@ class Simulation:
                     )
                 )
                 for step_num in range(1, cycle_length + 1):
+                    # Use 1-indexing for printing cycle number as it is more
+                    # human-intuitive
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
                     op_conds_str = self.experiment.operating_conditions_strings[idx]
@@ -784,12 +811,11 @@ class Simulation:
                         "electric"
                     ]
                     model = self.op_conds_to_built_models[op_conds_elec]
-                    # Use 1-indexing for printing cycle number as it is more
-                    # human-intuitive
-                    pybamm.logger.notice(
-                        f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
-                        f"step {step_num}/{cycle_length}: {op_conds_str}"
-                    )
+
+                    logs["step number"] = (step_num, cycle_length)
+                    logs["step operating conditions"] = op_conds_str
+                    callbacks.on_step_start(logs)
+
                     inputs.update(exp_inputs)
                     if current_solution is None:
                         start_time = 0
@@ -799,70 +825,70 @@ class Simulation:
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                    step_solution = solver.step(
-                        current_solution,
-                        model,
-                        dt,
-                        npts=npts,
-                        save=False,
-                        **kwargs,
-                    )
+                    try:
+                        step_solution = solver.step(
+                            current_solution,
+                            model,
+                            dt,
+                            npts=npts,
+                            save=False,
+                            **kwargs,
+                        )
+                    except pybamm.SolverError as e:
+                        logs["error"] = e
+                        callbacks.on_experiment_error(logs)
+                        feasible = False
+                        # If none of the cycles worked, raise an error
+                        if cycle_num == 1 and step_num == 1:
+                            raise e
+                        # Otherwise, just stop this cycle
+                        break
+
                     steps.append(step_solution)
                     current_solution = step_solution
 
                     cycle_solution = cycle_solution + step_solution
 
+                    callbacks.on_step_end(logs)
+
+                    logs["termination"] = step_solution.termination
                     # Only allow events specified by experiment
                     if not (
                         step_solution is None
                         or step_solution.termination == "final time"
                         or "[experiment]" in step_solution.termination
                     ):
+                        callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
 
                     # Increment index for next iteration
                     idx += 1
 
-                # Break if the experiment is infeasible
-                if feasible is False:
-                    pybamm.logger.warning(
-                        "\n\n\tExperiment is infeasible: '{}' ".format(
-                            step_solution.termination
-                        )
-                        + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx]
-                        )
-                        + "The returned solution only contains the first "
-                        "{} cycles. ".format(cycle_num - 1 + cycle_offset)
-                        + "Try reducing the current, shortening the time interval, "
-                        "or reducing the period.\n\n"
-                    )
-                    break
-
-                if save_this_cycle:
+                if save_this_cycle or feasible is False:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
-                (
-                    cycle_solution,
-                    cycle_summary_variables,
-                    cycle_first_state,
-                ) = pybamm.make_cycle_solution(
-                    steps,
-                    esoh_sim,
-                    save_this_cycle=save_this_cycle,
-                )
-                all_cycle_solutions.append(cycle_solution)
-                all_summary_variables.append(cycle_summary_variables)
-                all_first_states.append(cycle_first_state)
+                if len(steps) > 0:
+                    cycle_sol = pybamm.make_cycle_solution(
+                        steps,
+                        esoh_solver,
+                        save_this_cycle=save_this_cycle,
+                    )
+                    cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
+                    all_cycle_solutions.append(cycle_solution)
+                    all_summary_variables.append(cycle_sum_vars)
+                    all_first_states.append(cycle_first_state)
+
+                    logs["summary variables"] = cycle_sum_vars
 
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
+                    # Note capacity_start could be defined as
+                    # self.parameter_values["Nominal cell capacity [A.h]"] instead
                     if "capacity" in self.experiment.termination:
-                        # Note capacity_start could be defined as
-                        # self.parameter_values["Nominal cell capacity [A.h]"] instead
                         capacity_start = all_summary_variables[0]["Capacity [A.h]"]
+                        logs["start capacity"] = capacity_start
                         value, typ = self.experiment.termination["capacity"]
                         if typ == "Ah":
                             capacity_stop = value
@@ -870,47 +896,33 @@ class Simulation:
                             capacity_stop = value / 100 * capacity_start
                     else:
                         capacity_stop = None
+                    logs["stopping conditions"]["capacity"] = capacity_stop
 
+                logs["elapsed time"] = timer.time()
+                callbacks.on_cycle_end(logs)
+
+                # Break if stopping conditions are met
+                # Logging is done in the callbacks
                 if capacity_stop is not None:
-                    capacity_now = cycle_summary_variables["Capacity [A.h]"]
-                    if np.isnan(capacity_now) or capacity_now > capacity_stop:
-                        pybamm.logger.notice(
-                            f"Capacity is now {capacity_now:.3f} Ah "
-                            f"(originally {capacity_start:.3f} Ah, "
-                            f"will stop at {capacity_stop:.3f} Ah)"
-                        )
-                    else:
-                        pybamm.logger.notice(
-                            "Stopping experiment since capacity "
-                            f"({capacity_now:.3f} Ah) "
-                            f"is below stopping capacity ({capacity_stop:.3f} Ah)."
-                        )
+                    capacity_now = cycle_sum_vars["Capacity [A.h]"]
+                    if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
                         break
 
-                # Check voltage stop
                 if voltage_stop is not None:
-                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
-                    if min_voltage > voltage_stop[0]:
-                        pybamm.logger.notice(
-                            f"Minimum voltage is now {min_voltage:.3f} V "
-                            f"(will stop at {voltage_stop[0]:.3f} V)"
-                        )
-                    else:
-                        pybamm.logger.notice(
-                            "Stopping experiment since minimum voltage "
-                            f"({min_voltage:.3f} V) "
-                            f"is below stopping voltage ({voltage_stop[0]:.3f} V)."
-                        )
+                    min_voltage = cycle_sum_vars["Minimum voltage [V]"]
+                    if min_voltage <= voltage_stop[0]:
                         break
+
+                # Break if the experiment is infeasible (or errored)
+                if feasible is False:
+                    break
 
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
                 self.solution.set_summary_variables(all_summary_variables)
                 self.solution.all_first_states = all_first_states
 
-            pybamm.logger.notice(
-                "Finish experiment simulation, took {}".format(timer.time())
-            )
+            callbacks.on_experiment_end(logs)
 
         # reset parameter values
         if initial_soc is not None:
@@ -962,6 +974,22 @@ class Simulation:
         )
 
         return self.solution
+
+    def get_esoh_solver(self, calc_esoh):
+        if (
+            calc_esoh is False
+            or isinstance(self.model, pybamm.lead_acid.BaseModel)
+            or self.model.options["working electrode"] != "both"
+        ):
+            return None
+
+        try:
+            return self._esoh_solver
+        except AttributeError:
+            self._esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+                self.parameter_values, self.model.param
+            )
+            return self._esoh_solver
 
     def plot(self, output_variables=None, **kwargs):
         """

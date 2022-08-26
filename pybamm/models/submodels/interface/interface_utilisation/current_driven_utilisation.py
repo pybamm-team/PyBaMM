@@ -89,10 +89,7 @@ class CurrentDriven(BaseModel):
             a = 1
             j = variables["Lithium metal total interfacial current density"]
 
-        if self.domain == "Negative":
-            beta = self.param.beta_utilisation_n
-        else:
-            beta = self.param.beta_utilisation_p
+        beta = self.domain_param.beta_utilisation
 
         self.rhs = {u: beta * a * u * j}
 
@@ -108,10 +105,7 @@ class CurrentDriven(BaseModel):
         else:
             u = variables["Lithium metal interface utilisation variable"]
 
-        if self.domain == "Negative":
-            u_init = self.param.u_n_init
-        else:
-            u_init = self.param.u_p_init
+        u_init = self.domain_param.u_init
 
         self.initial_conditions = {u: u_init}
 

@@ -6,13 +6,15 @@ from .base_lead_acid_model import BaseModel
 
 
 class BaseHigherOrderModel(BaseModel):
-    """Base model for higher-order models for lead-acid, from [1]_.
+    """
+    Base model for higher-order models for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -41,6 +43,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
         # Average interface submodel to get average first-order potential differences
+        self.set_open_circuit_potential_submodel()
         self.set_average_interfacial_submodel()
         # Electrolyte and solid submodels to get full first-order potentials
         self.set_negative_electrode_submodel()
@@ -56,6 +59,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_interface_submodel()
 
         if build:
             self.build_model()
@@ -121,12 +125,18 @@ class BaseHigherOrderModel(BaseModel):
         self.submodels[
             "x-averaged negative interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
-            self.param, "Negative", self.leading_order_reaction_submodels["Negative"]
+            self.param,
+            "Negative",
+            self.leading_order_reaction_submodels["Negative"],
+            self.options,
         )
         self.submodels[
             "x-averaged positive interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
-            self.param, "Positive", self.leading_order_reaction_submodels["Positive"]
+            self.param,
+            "Positive",
+            self.leading_order_reaction_submodels["Positive"],
+            self.options,
         )
 
     def set_electrolyte_conductivity_submodel(self):
@@ -158,6 +168,7 @@ class BaseHigherOrderModel(BaseModel):
             pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Negative", "lead-acid main", self.options
             ),
+            self.options,
         )
         self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
@@ -165,6 +176,7 @@ class BaseHigherOrderModel(BaseModel):
             pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Positive", "lead-acid main", self.options
             ),
+            self.options,
         )
 
         # Oxygen
@@ -177,11 +189,16 @@ class BaseHigherOrderModel(BaseModel):
                 pybamm.kinetics.ForwardTafel(
                     self.param, "Positive", "lead-acid oxygen", self.options
                 ),
+                self.options,
             )
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="composite"
+                self.param,
+                "Negative",
+                "lead-acid oxygen",
+                self.options,
+                order="composite",
             )
 
     def set_full_convection_submodel(self):
@@ -205,13 +222,15 @@ class BaseHigherOrderModel(BaseModel):
 
 
 class FOQS(BaseHigherOrderModel):
-    """First-order quasi-static model for lead-acid, from [1]_.
+    """
+    First-order quasi-static model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -247,7 +266,8 @@ class FOQS(BaseHigherOrderModel):
 
 
 class Composite(BaseHigherOrderModel):
-    """Composite model for lead-acid, from [1]_.
+    """
+    Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
@@ -278,13 +298,15 @@ class Composite(BaseHigherOrderModel):
 
 
 class CompositeExtended(Composite):
-    """Extended composite model for lead-acid.
+    """
+    Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -315,7 +337,8 @@ class CompositeExtended(Composite):
 
 
 class CompositeAverageCorrection(Composite):
-    """Extended composite model for lead-acid.
+    """
+    Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`

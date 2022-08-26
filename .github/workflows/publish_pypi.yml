@@ -1,0 +1,164 @@
+name: Build and publish package to PyPI
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        default: 'pypi'
+
+jobs:
+  build_windows_wheels:
+    name: Build wheels on windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==1.9.0
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+
+      # remove when a new vcpkg version is released
+      - name: Install the latest commit of vcpkg on windows
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
+      - name: Cache packages installed through vcpkg on windows
+        uses: actions/cache@v2
+        env:
+          cache-name: vckpg_binary_cache
+        with:
+          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
+
+      - name: Build 64 bits wheels on Windows
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 17 2022\" CMAKE_GENERATOR_PLATFORM=x64"
+          CIBW_ARCHS: "AMD64"
+
+      - name: Upload windows wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows_wheels
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==1.9.0
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+
+      - name: Install sundials on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          # https://github.com/actions/virtual-environments/issues/1280
+          brew update
+          brew reinstall gcc
+          python -m pip install cmake wget
+          python scripts/install_KLU_Sundials.py
+
+      - name: Build wheels on Linux and MacOS
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
+          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
+          CIBW_BEFORE_BUILD_MACOS: "python -m pip install cmake casadi numpy && python scripts/fix_casadi_rpath_mac.py"
+          # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
+          # it for mac
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}"
+          CIBW_SKIP: pp*
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+
+  build_sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install wheel
+
+      - name: Build sdist
+        run: python setup.py sdist --formats=gztar
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: sdist
+          path: ./dist/*.tar.gz
+          if-no-files-found: error
+
+
+  publish_pypi:
+    name: Upload package to PyPI
+    needs: [build_wheels, build_windows_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Move all package files to files/
+        run: |
+          mkdir files
+          mv windows_wheels/* wheels/* sdist/* files/
+
+      - name: Publish on PyPI
+        if: |
+          github.event.inputs.target == 'pypi' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: files/
+
+      - name: Publish on TestPyPI
+        if: github.event.inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.TESTPYPI_TOKEN }}
+          packages_dir: files/
+          repository_url: https://test.pypi.org/legacy/

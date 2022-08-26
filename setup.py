@@ -5,8 +5,6 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
-import site
-import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -148,16 +146,19 @@ pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
 
-idaklu_ext = Extension("pybamm.solvers.idaklu", [
-    "pybamm/solvers/c_solvers/idaklu.cpp"
-    "pybamm/solvers/c_solvers/idaklu.hpp"
-    "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
-    "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
-    "pybamm/solvers/c_solvers/idaklu_python.cpp"
-    "pybamm/solvers/c_solvers/idaklu_python.hpp"
-    "pybamm/solvers/c_solvers/solution.cpp"
-    "pybamm/solvers/c_solvers/solution.hpp"
-])
+idaklu_ext = Extension(
+    "pybamm.solvers.idaklu",
+    [
+        "pybamm/solvers/c_solvers/idaklu.cpp"
+        "pybamm/solvers/c_solvers/idaklu.hpp"
+        "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
+        "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
+        "pybamm/solvers/c_solvers/idaklu_python.cpp"
+        "pybamm/solvers/c_solvers/idaklu_python.hpp"
+        "pybamm/solvers/c_solvers/solution.cpp"
+        "pybamm/solvers/c_solvers/solution.hpp"
+    ],
+)
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 # Defines __version__
@@ -196,9 +197,12 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "imageio>=2.9.0",
+        # Julia pip packaged can be installed even if
+        # julia programming language is not installed
+        "julia>=0.5.6",
         "jupyter",  # For example notebooks
-        "pybtex",
-        "sympy==1.9",
+        "pybtex>=0.24.0",
+        "sympy>=1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -222,9 +226,3 @@ setup(
         ]
     },
 )
-
-# pybtex adds a folder "tests" to the site packages, so we manually remove this
-path_to_sitepackages = site.getsitepackages()[0]
-path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
-if os.path.exists(path_to_tests_dir):
-    shutil.rmtree(path_to_tests_dir)

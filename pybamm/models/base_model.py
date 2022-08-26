@@ -20,12 +20,14 @@ class BaseModel:
     Attributes
     ----------
     name: str
-        A string giving the name of the model
+        A string giving the name of the model.
     options: dict
-        A dictionary of options to be passed to the model
+        A dictionary of options to be passed to the model.
+    submodels: dict
+        A dictionary of submodels that the model is composed of.
     rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
+        the rhs.
     algebraic: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the algebraic equations. The algebraic expressions are assumed to equate
@@ -38,42 +40,42 @@ class BaseModel:
         that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
+        the boundary conditions.
     variables: dict
         A dictionary that maps strings to expressions that represent
-        the useful variables
+        the useful variables.
     events: list of :class:`pybamm.Event`
         A list of events. Each event can either cause the solver to terminate
         (e.g. concentration goes negative), or be used to inform the solver of the
-        existance of a discontinuity (e.g. discontinuity in the input current)
+        existance of a discontinuity (e.g. discontinuity in the input current).
     concatenated_rhs : :class:`pybamm.Concatenation`
         After discretisation, contains the expressions representing the rhs equations
-        concatenated into a single expression
+        concatenated into a single expression.
     concatenated_algebraic : :class:`pybamm.Concatenation`
         After discretisation, contains the expressions representing the algebraic
-        equations concatenated into a single expression
+        equations concatenated into a single expression.
     concatenated_initial_conditions : :class:`numpy.array`
-        After discretisation, contains the vector of initial conditions
+        After discretisation, contains the vector of initial conditions.
     mass_matrix : :class:`pybamm.Matrix`
         After discretisation, contains the mass matrix for the model. This is computed
-        automatically
+        automatically.
     mass_matrix_inv : :class:`pybamm.Matrix`
         After discretisation, contains the inverse mass matrix for the differential
-        (rhs) part of model. This is computed automatically
+        (rhs) part of model. This is computed automatically.
     jacobian : :class:`pybamm.Concatenation`
         Contains the Jacobian for the model. If model.use_jacobian is True, the
-        Jacobian is computed automatically during solver set up
+        Jacobian is computed automatically during solver set up.
     jacobian_rhs : :class:`pybamm.Concatenation`
         Contains the Jacobian for the part of the model which contains time derivatives.
         If model.use_jacobian is True, the Jacobian is computed automatically during
-        solver set up
+        solver set up.
     jacobian_algebraic : :class:`pybamm.Concatenation`
         Contains the Jacobian for the algebraic part of the model. This may be used
         by the solver when calculating consistent initial conditions. If
         model.use_jacobian is True, the Jacobian is computed automatically during
-        solver set up
+        solver set up.
     use_jacobian : bool
-        Whether to use the Jacobian when solving the model (default is True)
+        Whether to use the Jacobian when solving the model (default is True).
     convert_to_format : str
         Whether to convert the expression trees representing the rhs and
         algebraic equations, Jacobain (if using) and events into a different format:
@@ -89,9 +91,12 @@ class BaseModel:
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self._options = {}
+        self._options = {"external submodels": []}
+        self._built = False
+        self._built_fundamental_and_external = False
 
         # Initialise empty model
+        self.submodels = {}
         self._rhs = {}
         self._algebraic = {}
         self._initial_conditions = {}
@@ -176,7 +181,7 @@ class BaseModel:
                 isinstance(var, pybamm.Variable)
                 and var.name != name
                 # Exception if the variable is also there under its own name
-                and not (var.name in variables and variables[var.name].id == var.id)
+                and not (var.name in variables and variables[var.name] == var)
                 # Exception for the key "Leading-order"
                 and "leading-order" not in var.name.lower()
                 and "leading-order" not in name.lower()
@@ -189,6 +194,20 @@ class BaseModel:
 
     def variable_names(self):
         return list(self._variables.keys())
+
+    @property
+    def variables_and_events(self):
+        """
+        Returns variables and events in a single dictionary
+        """
+        try:
+            return self._variables_and_events
+        except AttributeError:
+            self._variables_and_events = self.variables.copy()
+            self._variables_and_events.update(
+                {f"Event: {event.name}": event.expression for event in self.events}
+            )
+            return self._variables_and_events
 
     @property
     def events(self):
@@ -302,6 +321,38 @@ class BaseModel:
         self._length_scales = values
 
     @property
+    def default_var_pts(self):
+        return {}
+
+    @property
+    def default_geometry(self):
+        return {}
+
+    @property
+    def default_submesh_types(self):
+        return {}
+
+    @property
+    def default_spatial_methods(self):
+        return {}
+
+    @property
+    def default_solver(self):
+        """Return default solver based on whether model is ODE/DAE or algebraic"""
+        if len(self.rhs) == 0 and len(self.algebraic) != 0:
+            return pybamm.CasadiAlgebraicSolver()
+        else:
+            return pybamm.CasadiSolver(mode="safe")
+
+    @property
+    def default_quick_plot_variables(self):
+        return None
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues({})
+
+    @property
     def parameters(self):
         """Returns all the parameters in the model"""
         self._parameters = self._find_symbols(
@@ -358,14 +409,7 @@ class BaseModel:
             + [self.timescale]
             + list(self.length_scales.values())
         )
-        return list(all_input_parameters.values())
-
-    def __getitem__(self, key):
-        return self.rhs[key]
-
-    @property
-    def default_quick_plot_variables(self):
-        return None
+        return list(all_input_parameters)
 
     def new_copy(self):
         """
@@ -405,7 +449,137 @@ class BaseModel:
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
 
-    def set_initial_conditions_from(self, solution, inplace=True):
+    def build_fundamental_and_external(self):
+        # Get the fundamental variables
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Getting fundamental variables for {} submodel ({})".format(
+                    submodel_name, self.name
+                )
+            )
+            self.variables.update(submodel.get_fundamental_variables())
+
+        # Set the submodels that are external
+        for sub in self.options["external submodels"]:
+            self.submodels[sub].external = True
+
+        # Set any external variables
+        self.external_variables = []
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Getting external variables for {} submodel ({})".format(
+                    submodel_name, self.name
+                )
+            )
+            external_variables = submodel.get_external_variables()
+
+            self.external_variables += external_variables
+
+        self._built_fundamental_and_external = True
+
+    def build_coupled_variables(self):
+        # Note: pybamm will try to get the coupled variables for the submodels in the
+        # order they are set by the user. If this fails for a particular submodel,
+        # return to it later and try again. If setting coupled variables fails and
+        # there are no more submodels to try, raise an error.
+        submodels = list(self.submodels.keys())
+        count = 0
+        # For this part the FuzzyDict of variables is briefly converted back into a
+        # normal dictionary for speed with KeyErrors
+        self._variables = dict(self._variables)
+        while len(submodels) > 0:
+            count += 1
+            for submodel_name, submodel in self.submodels.items():
+                if submodel_name in submodels:
+                    pybamm.logger.debug(
+                        "Getting coupled variables for {} submodel ({})".format(
+                            submodel_name, self.name
+                        )
+                    )
+                    try:
+                        self.variables.update(
+                            submodel.get_coupled_variables(self.variables)
+                        )
+                        submodels.remove(submodel_name)
+                    except KeyError as key:
+                        if len(submodels) == 1 or count == 100:
+                            # no more submodels to try
+                            raise pybamm.ModelError(
+                                "Missing variable for submodel '{}': {}.\n".format(
+                                    submodel_name, key
+                                )
+                                + "Check the selected "
+                                "submodels provide all of the required variables."
+                            )
+                        else:
+                            # try setting coupled variables on next loop through
+                            pybamm.logger.debug(
+                                "Can't find {}, trying other submodels first".format(
+                                    key
+                                )
+                            )
+        # Convert variables back into FuzzyDict
+        self.variables = pybamm.FuzzyDict(self._variables)
+
+    def build_model_equations(self):
+        # Set model equations
+        for submodel_name, submodel in self.submodels.items():
+            if submodel.external is False:
+                pybamm.logger.verbose(
+                    "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+                )
+
+                submodel.set_rhs(self.variables)
+                pybamm.logger.verbose(
+                    "Setting algebraic for {} submodel ({})".format(
+                        submodel_name, self.name
+                    )
+                )
+
+                submodel.set_algebraic(self.variables)
+                pybamm.logger.verbose(
+                    "Setting boundary conditions for {} submodel ({})".format(
+                        submodel_name, self.name
+                    )
+                )
+
+                submodel.set_boundary_conditions(self.variables)
+                pybamm.logger.verbose(
+                    "Setting initial conditions for {} submodel ({})".format(
+                        submodel_name, self.name
+                    )
+                )
+                submodel.set_initial_conditions(self.variables)
+                submodel.set_events(self.variables)
+                pybamm.logger.verbose(
+                    "Updating {} submodel ({})".format(submodel_name, self.name)
+                )
+                self.update(submodel)
+                self.check_no_repeated_keys()
+
+    def build_model(self):
+        self._build_model()
+        self._built = True
+        pybamm.logger.info("Finish building {}".format(self.name))
+
+    def _build_model(self):
+        # Check if already built
+        if self._built:
+            raise pybamm.ModelError(
+                """Model already built. If you are adding a new submodel, try using
+                `model.update` instead."""
+            )
+
+        pybamm.logger.info("Start building {}".format(self.name))
+
+        if self._built_fundamental_and_external is False:
+            self.build_fundamental_and_external()
+
+        self.build_coupled_variables()
+
+        self.build_model_equations()
+
+    def set_initial_conditions_from(self, solution, inplace=True, return_type="model"):
         """
         Update initial conditions with the final states from a Solution object or from
         a dictionary.
@@ -416,14 +590,12 @@ class BaseModel:
         ----------
         solution : :class:`pybamm.Solution`, or dict
             The solution to use to initialize the model
-        inplace : bool
-            Whether to modify the model inplace or create a new model
+        inplace : bool, optional
+            Whether to modify the model inplace or create a new model (default True)
+        return_type : str, optional
+            Whether to return the model (default) or initial conditions ("ics")
         """
-        if inplace is True:
-            model = self
-        else:
-            model = self.new_copy()
-
+        initial_conditions = {}
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
         for var in self.initial_conditions:
@@ -449,7 +621,7 @@ class BaseModel:
                     final_state_eval = final_state[:, :, -1].flatten(order="F")
                 else:
                     raise NotImplementedError("Variable must be 0D, 1D, or 2D")
-                model.initial_conditions[var] = pybamm.Vector(final_state_eval)
+                initial_conditions[var] = pybamm.Vector(final_state_eval)
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
@@ -471,7 +643,7 @@ class BaseModel:
                             "Variable in concatenation must be 1D"
                         )
                     children.append(final_state_eval)
-                model.initial_conditions[var] = pybamm.Vector(np.concatenate(children))
+                initial_conditions[var] = pybamm.Vector(np.concatenate(children))
 
             else:
                 raise NotImplementedError(
@@ -482,7 +654,7 @@ class BaseModel:
         # discretised
         if self.is_discretised:
             # Unpack slices for sorting
-            y_slices = {var.id: slce for var, slce in self.y_slices.items()}
+            y_slices = {var: slce for var, slce in self.y_slices.items()}
             slices = []
             for symbol in self.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
@@ -490,27 +662,39 @@ class BaseModel:
                     # equations get sorted correctly
                     slices.append(
                         slice(
-                            y_slices[symbol.children[0].id][0].start,
-                            y_slices[symbol.children[-1].id][0].stop,
+                            y_slices[symbol.children[0]][0].start,
+                            y_slices[symbol.children[-1]][0].stop,
                         )
                     )
                 else:
-                    slices.append(y_slices[symbol.id][0])
-            equations = list(model.initial_conditions.values())
+                    slices.append(y_slices[symbol][0])
+            equations = list(initial_conditions.values())
             # sort equations according to slices
             sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
-            model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+            concatenated_initial_conditions = pybamm.NumpyConcatenation(
                 *sorted_equations
             )
+        else:
+            concatenated_initial_conditions = None
 
-        return model
+        if return_type == "model":
+            if inplace is True:
+                model = self
+            else:
+                model = self.new_copy()
+
+            model.initial_conditions = initial_conditions
+            model.concatenated_initial_conditions = concatenated_initial_conditions
+            return model
+        elif return_type == "ics":
+            return initial_conditions, concatenated_initial_conditions
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
-        ids1 = set(x.id for x in dict1.keys())
-        ids2 = set(x.id for x in dict2.keys())
+        ids1 = set(x for x in dict1.keys())
+        ids2 = set(x for x in dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
-            variables = [x for x in dict1.keys() if x.id in ids1.intersection(ids2)]
+            variables = ids1.intersection(ids2)
             raise pybamm.ModelError(
                 "Submodel incompatible: duplicate variables '{}'".format(variables)
             )
@@ -577,9 +761,9 @@ class BaseModel:
         """Check that the model is not under- or over-determined."""
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
-        vars_in_rhs_keys = set()
-        vars_in_algebraic_keys = set()
-        vars_in_eqns = set()
+        all_vars_in_rhs_keys = set()
+        all_vars_in_algebraic_keys = set()
+        all_vars_in_eqns = set()
         # Get all variables ids from rhs and algebraic keys and equations, and
         # from boundary conditions
         # For equations we look through the whole expression tree.
@@ -589,64 +773,59 @@ class BaseModel:
 
         for var, eqn in self.rhs.items():
             # Find all variables and variabledot objects
-            vars_in_rhs_keys_dict = unpacker.unpack_symbol(var)
-            vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+            vars_in_rhs_keys = unpacker.unpack_symbol(var)
+            vars_in_eqns = unpacker.unpack_symbol(eqn)
 
-            # Store ids only
             # Look only for Variable (not VariableDot) in rhs keys
-            vars_in_rhs_keys.update(
-                [
-                    var_id
-                    for var_id, var in vars_in_rhs_keys_dict.items()
-                    if isinstance(var, pybamm.Variable)
-                ]
+            all_vars_in_rhs_keys.update(
+                [var for var in vars_in_rhs_keys if isinstance(var, pybamm.Variable)]
             )
-            vars_in_eqns.update(vars_in_eqns_dict.keys())
+            all_vars_in_eqns.update(vars_in_eqns)
         for var, eqn in self.algebraic.items():
             # Find all variables and variabledot objects
-            vars_in_algebraic_keys_dict = unpacker.unpack_symbol(var)
-            vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+            vars_in_algebraic_keys = unpacker.unpack_symbol(var)
+            vars_in_eqns = unpacker.unpack_symbol(eqn)
 
             # Store ids only
             # Look only for Variable (not VariableDot) in algebraic keys
-            vars_in_algebraic_keys.update(
+            all_vars_in_algebraic_keys.update(
                 [
-                    var_id
-                    for var_id, var in vars_in_algebraic_keys_dict.items()
+                    var
+                    for var in vars_in_algebraic_keys
                     if isinstance(var, pybamm.Variable)
                 ]
             )
-            vars_in_eqns.update(vars_in_eqns_dict.keys())
+            all_vars_in_eqns.update(vars_in_eqns)
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
-                vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
-                vars_in_eqns.update(vars_in_eqns_dict.keys())
+                vars_in_eqns = unpacker.unpack_symbol(eqn)
+                all_vars_in_eqns.update(vars_in_eqns)
 
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
-        if not set(vars_in_rhs_keys).isdisjoint(vars_in_algebraic_keys):
+        if not set(all_vars_in_rhs_keys).isdisjoint(all_vars_in_algebraic_keys):
             raise pybamm.ModelError("model is overdetermined (repeated keys)")
         # If any algebraic keys don't appear in the eqns (or bcs) then the model is
         # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
         # fine)
         # Skip this step after discretisation, as any variables in the equations will
         # have been discretised to slices but keys will still be variables
-        extra_algebraic_keys = vars_in_algebraic_keys.difference(vars_in_eqns)
+        extra_algebraic_keys = all_vars_in_algebraic_keys.difference(all_vars_in_eqns)
         if extra_algebraic_keys and not post_discretisation:
             raise pybamm.ModelError("model is overdetermined (extra algebraic keys)")
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
-        vars_in_keys = vars_in_rhs_keys.union(vars_in_algebraic_keys)
-        extra_variables_in_equations = vars_in_eqns.difference(vars_in_keys)
+        all_vars_in_keys = all_vars_in_rhs_keys.union(all_vars_in_algebraic_keys)
+        extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
 
-        # get ids of external variables
-        external_ids = {var.id for var in self.external_variables}
+        # get external variables
+        external_vars = set(self.external_variables)
         for var in self.external_variables:
             if isinstance(var, pybamm.Concatenation):
-                child_ids = {child.id for child in var.children}
-                external_ids = external_ids.union(child_ids)
+                child_vars = set(var.children)
+                external_vars = external_vars.union(child_vars)
 
-        extra_variables = extra_variables_in_equations.difference(external_ids)
+        extra_variables = extra_variables_in_equations.difference(external_vars)
 
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
@@ -700,7 +879,7 @@ class BaseModel:
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
 
-        var_ids_in_keys = set()
+        vars_in_keys = set()
 
         model_and_external_variables = (
             list(self.rhs.keys())
@@ -710,13 +889,13 @@ class BaseModel:
 
         for var in model_and_external_variables:
             if isinstance(var, pybamm.Variable):
-                var_ids_in_keys.add(var.id)
+                vars_in_keys.add(var)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                var_ids_in_keys.update([child.id for child in var.children])
+                vars_in_keys.update(var.children)
 
-        for var_id, var in all_vars.items():
-            if var_id not in var_ids_in_keys:
+        for var in all_vars:
+            if var not in vars_in_keys:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
@@ -729,18 +908,15 @@ class BaseModel:
 
     def check_no_repeated_keys(self):
         """Check that no equation keys are repeated."""
-        rhs_alg = {**self.rhs, **self.algebraic}
-        rhs_alg_keys = []
+        rhs_keys = set(self.rhs.keys())
+        alg_keys = set(self.algebraic.keys())
 
-        for var in rhs_alg.keys():
-            # Check the variable has not already been defined
-            if var.id in rhs_alg_keys:
-                raise pybamm.ModelError(
-                    "Multiple equations specified for variable {!r}".format(var)
+        if not rhs_keys.isdisjoint(alg_keys):
+            raise pybamm.ModelError(
+                "Multiple equations specified for variables {}".format(
+                    rhs_keys.intersection(alg_keys)
                 )
-            # Update list of variables
-            else:
-                rhs_alg_keys.append(var.id)
+            )
 
     def info(self, symbol_name):
         """
@@ -750,11 +926,12 @@ class BaseModel:
         ----------
         parameter_name : str
         """
+        # Should we deprecate this? Not really sure how it's used?
 
         div = "-----------------------------------------"
         symbol = find_symbol_in_model(self, symbol_name)
 
-        if not symbol:
+        if symbol is None:
             return None
 
         print(div)
@@ -922,33 +1099,82 @@ class BaseModel:
         C.add(variables_fn)
         C.generate()
 
-    @property
-    def default_parameter_values(self):
-        return pybamm.ParameterValues({})
+    def generate_julia_diffeq(
+        self,
+        input_parameter_order=None,
+        get_consistent_ics_solver=None,
+        dae_type="semi-explicit",
+        **kwargs,
+    ):
+        """
+        Generate a Julia representation of the model, ready to be solved by Julia's
+        DifferentialEquations library.
 
-    @property
-    def default_var_pts(self):
-        return {}
+        Parameters
+        ----------
+        input_parameter_order : list, optional
+            Order in which input parameters will be provided when solving the model
+        get_consistent_ics_solver : pybamm solver, optional
+            Solver to use to get consistent initial conditions. If None, the initial
+            guesses for boundary conditions (non-consistent) are used.
+        dae_type : str, optional
+            How to write the DAEs. Options are "semi-explicit" (default) or "implicit".
 
-    @property
-    def default_geometry(self):
-        return {}
+        Returns
+        -------
+        eqn_str : str
+            The Julia-compatible equations for the model in string format,
+            to be evaluated by eval(Meta.parse(...))
+        ics_str : str
+            The Julia-compatible initial conditions for the model in string format,
+            to be evaluated by eval(Meta.parse(...))
+        """
+        self.check_discretised_or_discretise_inplace_if_0D()
 
-    @property
-    def default_submesh_types(self):
-        return {}
+        name = self.name.replace(" ", "_")
 
-    @property
-    def default_spatial_methods(self):
-        return {}
-
-    @property
-    def default_solver(self):
-        """Return default solver based on whether model is ODE/DAE or algebraic"""
-        if len(self.rhs) == 0 and len(self.algebraic) != 0:
-            return pybamm.CasadiAlgebraicSolver()
+        if self.algebraic == {}:
+            # ODE model: form dy[] = ...
+            eqn_str = pybamm.get_julia_function(
+                self.concatenated_rhs,
+                funcname=name,
+                input_parameter_order=input_parameter_order,
+                **kwargs,
+            )
         else:
-            return pybamm.CasadiSolver(mode="safe")
+            if dae_type == "semi-explicit":
+                len_rhs = None
+            else:
+                len_rhs = self.concatenated_rhs.size
+            # DAE model: form out[] = ... - dy[]
+            eqn_str = pybamm.get_julia_function(
+                pybamm.numpy_concatenation(
+                    self.concatenated_rhs, self.concatenated_algebraic
+                ),
+                funcname=name,
+                input_parameter_order=input_parameter_order,
+                len_rhs=len_rhs,
+                **kwargs,
+            )
+
+        if get_consistent_ics_solver is None or self.algebraic == {}:
+            ics = self.concatenated_initial_conditions
+        else:
+            get_consistent_ics_solver.set_up(self)
+            get_consistent_ics_solver._set_initial_conditions(self, {}, False)
+            ics = pybamm.Vector(self.y0.full())
+
+        ics_str = pybamm.get_julia_function(
+            ics,
+            funcname=name + "_u0",
+            input_parameter_order=input_parameter_order,
+            **kwargs,
+        )
+        # Change the string to a form for u0
+        ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
+        ics_str = ics_str.replace("dy", "u0")
+
+        return eqn_str, ics_str
 
     def latexify(self, filename=None, newline=True):
         # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
@@ -956,6 +1182,46 @@ class BaseModel:
 
     # Set :meth:`latexify` docstring from :class:`Latexify`
     latexify.__doc__ = Latexify.__doc__
+
+    def process_parameters_and_discretise(self, symbol, parameter_values, disc):
+        """
+        Process parameters and discretise a symbol using supplied parameter values
+        and discretisation. Note: care should be taken if using spatial operators
+        on dimensional symbols. Operators in pybamm are written in non-dimensional
+        form, so may need to be scaled by the appropriate length scale. It is
+        recommended to use this method on non-dimensional symbols.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to be processed
+        parameter_values : :class:`pybamm.ParameterValues`
+            The parameter values to use during processing
+        disc : :class:`pybamm.Discretisation`
+            The discrisation to use
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Processed symbol
+        """
+        # Set y slices
+        if disc.y_slices == {}:
+            variables = list(self.rhs.keys()) + list(self.algebraic.keys())
+            disc.set_variable_slices(variables)
+
+        # Set boundary conditions (also requires setting parameter values)
+        if disc.bcs == {}:
+            self.boundary_conditions = parameter_values.process_boundary_conditions(
+                self
+            )
+            disc.bcs = disc.process_boundary_conditions(self)
+
+        # Process
+        param_symbol = parameter_values.process_symbol(symbol)
+        disc_symbol = disc.process_symbol(param_symbol)
+
+        return disc_symbol
 
 
 # helper functions for finding symbols
@@ -965,14 +1231,14 @@ def find_symbol_in_tree(tree, name):
     elif len(tree.children) > 0:
         for child in tree.children:
             child_return = find_symbol_in_tree(child, name)
-            if child_return:
+            if child_return is not None:
                 return child_return
 
 
 def find_symbol_in_dict(dic, name):
     for tree in dic.values():
         tree_return = find_symbol_in_tree(tree, name)
-        if tree_return:
+        if tree_return is not None:
             return tree_return
 
 
@@ -980,7 +1246,7 @@ def find_symbol_in_model(model, name):
     dics = [model.rhs, model.algebraic, model.variables]
     for dic in dics:
         dic_return = find_symbol_in_dict(dic, name)
-        if dic_return:
+        if dic_return is not None:
             return dic_return
 
 
@@ -1023,7 +1289,7 @@ class EquationDict(dict):
             for var, eqn in equations.items():
                 if eqn.has_symbol_of_classes(pybamm.Variable):
                     unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-                    variable_in_equation = list(unpacker.unpack_symbol(eqn).values())[0]
+                    variable_in_equation = list(unpacker.unpack_symbol(eqn))[0]
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
                         "but '{!r}' found in initial conditions for '{}'".format(

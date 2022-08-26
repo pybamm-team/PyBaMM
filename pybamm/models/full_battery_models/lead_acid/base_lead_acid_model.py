@@ -81,13 +81,26 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
 
+    def set_open_circuit_potential_submodel(self):
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                f"{domain.lower()} open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid main", self.options, "primary"
+            )
+            self.submodels[
+                f"{domain.lower()} oxygen open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid oxygen", self.options, "primary"
+            )
+
     def set_active_material_submodel(self):
-        self.submodels["negative active material"] = pybamm.active_material.Constant(
-            self.param, "Negative", self.options
-        )
-        self.submodels["positive active material"] = pybamm.active_material.Constant(
-            self.param, "Positive", self.options
-        )
+        for domain in ["negative", "positive"]:
+            self.submodels[
+                f"{domain} active material"
+            ] = pybamm.active_material.Constant(
+                self.param, domain, self.options, "primary"
+            )
 
     def set_sei_submodel(self):
 
@@ -96,3 +109,8 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_lithium_plating_submodel(self):
 
         self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
+
+    def set_total_interface_submodel(self):
+        self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(
+            self.param, "lead-acid", self.options
+        )

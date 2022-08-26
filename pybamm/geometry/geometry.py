@@ -61,4 +61,4 @@ class Geometry(dict):
                         yield v
 
         all_parameters = unpacker.unpack_list_of_symbols(list(NestedDictValues(self)))
-        return list(all_parameters.values())
+        return list(all_parameters)

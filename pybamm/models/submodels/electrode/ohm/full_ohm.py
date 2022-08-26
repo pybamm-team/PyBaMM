@@ -40,10 +40,7 @@ class Full(BaseModel):
         tor = variables[self.domain + " electrode transport efficiency"]
         T = variables[self.domain + " electrode temperature"]
 
-        if self.domain == "Negative":
-            sigma = self.param.sigma_n(T)
-        elif self.domain == "Positive":
-            sigma = self.param.sigma_p(T)
+        sigma = self.domain_param.sigma(T)
 
         sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
@@ -62,16 +59,13 @@ class Full(BaseModel):
         phi_s = variables[self.domain + " electrode potential"]
         i_s = variables[self.domain + " electrode current density"]
 
-        # Get surface area to volume ratio (could be a distribution in x to
-        # account for graded electrodes)
-        a = variables[self.domain + " electrode surface area to volume ratio"]
-
         # Variable summing all of the interfacial current densities
-        sum_j = variables[
-            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        sum_a_j = variables[
+            f"Sum of {self.domain.lower()} electrode volumetric "
+            "interfacial current densities"
         ]
 
-        self.algebraic[phi_s] = pybamm.div(i_s) + a * sum_j
+        self.algebraic[phi_s] = pybamm.div(i_s) + sum_a_j
 
     def set_boundary_conditions(self, variables):
 
@@ -86,7 +80,7 @@ class Full(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p(T) * tor
+            sigma_eff = self.param.p.sigma(T) * tor
             i_boundary_cc = variables["Current collector current density"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),

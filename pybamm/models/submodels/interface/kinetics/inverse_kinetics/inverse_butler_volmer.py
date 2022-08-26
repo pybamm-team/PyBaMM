@@ -30,7 +30,10 @@ class InverseButlerVolmer(BaseInterface):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        ocp, dUdT = self._get_open_circuit_potential(variables)
+        Domain = self.domain
+        reaction_name = self.reaction_name
+
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
@@ -93,7 +96,6 @@ class InverseButlerVolmer(BaseInterface):
                 pybamm.x_average(delta_phi)
             )
         )
-        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         return variables
 
@@ -139,9 +141,8 @@ class CurrentForInverseButlerVolmer(BaseInterface):
 
     def get_coupled_variables(self, variables):
         j_tot = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density"
+            f"X-averaged {self.domain.lower()} electrode "
+            "total interfacial current density"
         ]
         if self.domain == "Negative":
             j_sei = variables["SEI interfacial current density"]
@@ -151,27 +152,9 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             j = j_tot
 
         variables.update(self._get_standard_interfacial_current_variables(j))
-
-        if (
-            self.half_cell
-            or (
-                "Negative electrode"
-                + self.reaction_name
-                + " interfacial current density"
-                in variables
-            )
-            and "Positive electrode"
-            + self.reaction_name
-            + " interfacial current density"
-            in variables
-            and self.Reaction_icd not in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
 
         return variables
 

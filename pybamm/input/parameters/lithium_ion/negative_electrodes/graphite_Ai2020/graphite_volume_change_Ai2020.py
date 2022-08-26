@@ -1,4 +1,4 @@
-def graphite_volume_change_Ai2020(sto):
+def graphite_volume_change_Ai2020(sto, c_s_max):
     """
     Graphite particle volume change as a function of stochiometry [1, 2].
 
@@ -17,6 +17,9 @@ def graphite_volume_change_Ai2020(sto):
     sto: :class:`pybamm.Symbol`
         Electrode stochiometry, dimensionless
         should be R-averaged particle concentration
+    c_s_max : :class:`pybamm.Symbol`
+        Maximum particle concentration [mol.m-3]
+
     Returns
     -------
     t_change:class:`pybamm.Symbol`

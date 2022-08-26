@@ -30,7 +30,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -48,7 +48,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -89,7 +89,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         )
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -105,7 +105,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(submesh.edges[0]), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -154,7 +154,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # grad(1) = 0
         constant_y = np.ones((total_npts, 1))
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -168,7 +168,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # grad(r) == 1
         y_linear = np.tile(submesh.nodes, sec_npts)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -185,7 +185,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -221,7 +221,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         )
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -239,7 +239,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -269,7 +269,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -287,7 +287,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
@@ -325,7 +325,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -348,7 +348,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # Test gradient and divergence of linear x
         linear_y = combined_submesh.nodes
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -386,7 +386,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # grad(1) = 0
         constant_y = np.ones((npts, 1))
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -400,7 +400,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # grad(r) = 1
         y_linear = submesh.nodes
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
@@ -418,7 +418,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(2 * submesh.edges[0]), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -447,7 +447,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # grad(1) = 0
         constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -462,7 +462,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         # grad(r) == 1
         linear_y = combined_submesh.nodes
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
@@ -480,7 +480,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -514,7 +514,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         )
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -532,7 +532,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -556,7 +556,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -574,7 +574,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(combined_submesh.edges[-1]), "Dirichlet"),
             }
@@ -615,7 +615,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         )
         var = pybamm.concatenation(a, b, c)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
                 "right": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
             }

@@ -19,12 +19,15 @@ class InverseFirstOrderKinetics(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     leading_order_models : :class:`pybamm.interface.kinetics.BaseKinetics`
         The leading-order models with respect to which this is first-order
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, leading_order_models):
-        super().__init__(param, domain, "inverse")
+    def __init__(self, param, domain, leading_order_models, options):
+        super().__init__(param, domain, "inverse", options)
         self.leading_order_models = leading_order_models
 
     def _get_die1dx(self, variables):
@@ -32,10 +35,8 @@ class InverseFirstOrderKinetics(BaseInterface):
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
         i_boundary_cc_1 = (i_boundary_cc - i_boundary_cc_0) / self.param.C_e
 
-        if self.domain == "Negative":
-            return i_boundary_cc_1 / self.param.l_n
-        elif self.domain == "Positive":
-            return -i_boundary_cc_1 / self.param.l_p
+        sgn = 1 if self.domain == "Negative" else -1
+        return sgn * i_boundary_cc_1 / self.domain_param.l
 
     def get_coupled_variables(self, variables):
         # Unpack

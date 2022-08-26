@@ -10,6 +10,9 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFN()
         model.check_well_posedness()
 
+        copy = model.new_copy()
+        copy.check_well_posedness()
+
     def test_spm_well_posed(self):
         model = pybamm.lithium_ion.BasicSPM()
         model.check_well_posedness()
@@ -39,11 +42,15 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFNHalfCell(
             options={"working electrode": "positive"}
         )
-        param = pybamm.ParameterValues("Chen2020_plating")
+        param = pybamm.ParameterValues("OKane2022")
         param["Current function [A]"] = 2.5
         sim = pybamm.Simulation(model=model, parameter_values=param)
         sim.solve([0, 100])
         self.assertTrue(isinstance(sim.solution, pybamm.solvers.solution.Solution))
+
+    def test_dfn_composite_well_posed(self):
+        model = pybamm.lithium_ion.BasicDFNComposite()
+        model.check_well_posedness()
 
 
 if __name__ == "__main__":

@@ -11,16 +11,16 @@ class TestSymbolUnpacker(unittest.TestCase):
         unpacker = pybamm.SymbolUnpacker(pybamm.Scalar)
 
         unpacked = unpacker.unpack_symbol(a)
-        self.assertEqual(unpacked, {a.id: a})
+        self.assertEqual(unpacked, set([a]))
 
         b = pybamm.Parameter("b")
         unpacker_param = pybamm.SymbolUnpacker(pybamm.Parameter)
 
         unpacked = unpacker_param.unpack_symbol(a)
-        self.assertEqual(unpacked, {})
+        self.assertEqual(unpacked, set())
 
         unpacked = unpacker_param.unpack_symbol(b)
-        self.assertEqual(unpacked, {b.id: b})
+        self.assertEqual(unpacked, set([b]))
 
     def test_binary(self):
         a = pybamm.Scalar(1)
@@ -28,15 +28,11 @@ class TestSymbolUnpacker(unittest.TestCase):
 
         unpacker = pybamm.SymbolUnpacker(pybamm.Scalar)
         unpacked = unpacker.unpack_symbol(a + b)
-        # Can't check dictionary directly so check ids
-        self.assertEqual(unpacked.keys(), {a.id: a}.keys())
-        self.assertEqual(unpacked[a.id].id, a.id)
+        self.assertEqual(unpacked, set([a]))
 
         unpacker_param = pybamm.SymbolUnpacker(pybamm.Parameter)
         unpacked = unpacker_param.unpack_symbol(a + b)
-        # Can't check dictionary directly so check ids
-        self.assertEqual(unpacked.keys(), {b.id: b}.keys())
-        self.assertEqual(unpacked[b.id].id, b.id)
+        self.assertEqual(unpacked, set([b]))
 
     def test_unpack_list_of_symbols(self):
         a = pybamm.Scalar(1)
@@ -45,10 +41,7 @@ class TestSymbolUnpacker(unittest.TestCase):
 
         unpacker = pybamm.SymbolUnpacker(pybamm.Parameter)
         unpacked = unpacker.unpack_list_of_symbols([a + b, a - c, b + c])
-        # Can't check dictionary directly so check ids
-        self.assertEqual(unpacked.keys(), {b.id: b, c.id: c}.keys())
-        self.assertEqual(unpacked[b.id].id, b.id)
-        self.assertEqual(unpacked[c.id].id, c.id)
+        self.assertEqual(unpacked, set([b, c]))
 
 
 if __name__ == "__main__":
