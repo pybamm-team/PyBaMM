@@ -34,6 +34,8 @@ class Integrated(BaseElectrolyteConductivity):
         pybamm.citations.register("BrosaPlanella2021")
 
     def _higher_order_macinnes_function(self, x):
+        tol = pybamm.settings.tolerances["macinnes__c_e"]
+        x = pybamm.maximum(x, tol)
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):

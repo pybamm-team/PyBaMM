@@ -109,11 +109,19 @@ class FunctionParameter(pybamm.Symbol):
                 self.print_name = None
             else:
                 if print_name.endswith("_dimensional"):
-                    self.print_name = print_name[: -len("_dimensional")]
+                    print_name = print_name[: -len("_dimensional")]
                 elif print_name.endswith("_dim"):
-                    self.print_name = print_name[: -len("_dim")]
-                else:
-                    self.print_name = print_name
+                    print_name = print_name[: -len("_dim")]
+                try:
+                    parent_param = frame.f_locals["self"]
+                except KeyError:
+                    parent_param = None
+                if hasattr(parent_param, "domain") and parent_param.domain is not None:
+                    # add "_n" or "_s" or "_p" if this comes from a Parameter class with
+                    # a domain
+                    d = parent_param.domain.lower()[0]
+                    print_name += f"_{d}"
+                self.print_name = print_name
 
     @property
     def input_names(self):
@@ -161,7 +169,12 @@ class FunctionParameter(pybamm.Symbol):
 
         input_dict = {input_names[i]: children_list[i] for i in range(len(input_names))}
 
-        return FunctionParameter(self.name, input_dict, diff_variable=variable)
+        return FunctionParameter(
+            self.name,
+            input_dict,
+            diff_variable=variable,
+            print_name=self.print_name + "'",
+        )
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

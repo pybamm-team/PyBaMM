@@ -56,7 +56,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        delta_phi_init = self.domain_param.U_init
+        delta_phi_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
