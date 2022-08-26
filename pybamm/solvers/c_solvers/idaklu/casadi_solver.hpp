@@ -6,6 +6,7 @@ using Function = casadi::Function;
 
 #include "casadi_functions.hpp"
 #include "common.hpp"
+#include "options.hpp"
 #include "solution.hpp"
 
 class CasadiSolver
@@ -14,7 +15,7 @@ public:
   CasadiSolver(np_array atol_np, double rel_tol, np_array rhs_alg_id,
                int number_of_parameters, int number_of_events,
                bool use_jacobian, int jac_times_cjmass_nnz,
-               std::unique_ptr<CasadiFunctions> functions);
+               std::unique_ptr<CasadiFunctions> functions, const Options& options);
   ~CasadiSolver();
 
   void *ida_mem; // pointer to memory
@@ -36,6 +37,7 @@ public:
   SUNLinearSolver LS;
 
   std::unique_ptr<CasadiFunctions> functions;
+  Options options;
 
   Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
                  np_array_dense inputs);
@@ -50,6 +52,6 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &mass_action, const Function &sens,
                      const Function &event, const int number_of_events,
                      int use_jacobian, np_array rhs_alg_id, np_array atol_np,
-                     double rel_tol, int inputs_length);
+                     double rel_tol, int inputs_length, py::dict options);
 
 #endif // PYBAMM_IDAKLU_CASADI_SOLVER_HPP

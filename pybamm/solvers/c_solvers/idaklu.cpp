@@ -46,7 +46,7 @@ PYBIND11_MODULE(idaklu, m)
         py::arg("jac_action"), py::arg("mass_action"), py::arg("sens"),
         py::arg("events"), py::arg("number_of_events"), py::arg("use_jacobian"),
         py::arg("rhs_alg_id"), py::arg("atol"), py::arg("rtol"),
-        py::arg("inputs"), py::return_value_policy::take_ownership);
+        py::arg("inputs"), py::arg("options"), py::return_value_policy::take_ownership);
 
   m.def("generate_function", &generate_function, "Generate a casadi function",
         py::arg("string"), py::return_value_policy::take_ownership);

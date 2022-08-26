@@ -17,6 +17,7 @@
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix           */
 
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 using np_array = py::array_t<realtype>;

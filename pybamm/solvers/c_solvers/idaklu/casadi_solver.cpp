@@ -11,28 +11,31 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &mass_action, const Function &sens,
                      const Function &events, const int number_of_events,
                      int use_jacobian, np_array rhs_alg_id, np_array atol_np,
-                     double rel_tol, int inputs_length)
+                     double rel_tol, int inputs_length, py::dict options)
 {
+  auto options_cpp = Options(options);
   auto functions = std::make_unique<CasadiFunctions>(
       rhs_alg, jac_times_cjmass, jac_times_cjmass_nnz, jac_times_cjmass_rowvals,
       jac_times_cjmass_colptrs, inputs_length, jac_action, mass_action, sens,
-      events, number_of_states, number_of_events, number_of_parameters);
+      events, number_of_states, number_of_events, number_of_parameters,
+      options_cpp);
 
   return new CasadiSolver(atol_np, rel_tol, rhs_alg_id, number_of_parameters,
                           number_of_events, use_jacobian, jac_times_cjmass_nnz,
-                          std::move(functions));
+                          std::move(functions), options_cpp);
 }
 
 CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
                            np_array rhs_alg_id, int number_of_parameters,
                            int number_of_events, bool use_jacobian,
                            int jac_times_cjmass_nnz,
-                           std::unique_ptr<CasadiFunctions> functions_arg)
+                           std::unique_ptr<CasadiFunctions> functions_arg,
+                           const Options &options)
     : number_of_states(atol_np.request().size),
       number_of_parameters(number_of_parameters),
       number_of_events(number_of_events),
       jac_times_cjmass_nnz(jac_times_cjmass_nnz),
-      functions(std::move(functions_arg))
+      functions(std::move(functions_arg)), options(options)
 {
   auto atol = atol_np.unchecked<1>();
 
@@ -310,8 +313,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
   Solution sol(retval, t_ret, y_ret, yS_ret);
 
   // TODO config input to choose stuff like this
-  const bool print_stats = false;
-  if (print_stats)
+  if (options.print_stats)
   {
     long nsteps, nrevals, nlinsetups, netfails;
     int klast, kcur;
@@ -323,23 +325,19 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     long nniters, nncfails;
     IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
 
-    std::cout << "Solver Stats: \n"
-              << "  Number of steps = " << nsteps << "\n"
-              << "  Number of calls to residual function = " << nrevals << "\n"
-              << "  Number of linear solver setup calls = " << nlinsetups
-              << "\n"
-              << "  Number of error test failures = " << netfails << "\n"
-              << "  Method order used on last step = " << klast << "\n"
-              << "  Method order used on next step = " << kcur << "\n"
-              << "  Initial step size = " << hinused << "\n"
-              << "  Step size on last step = " << hlast << "\n"
-              << "  Step size on next step = " << hcur << "\n"
-              << "  Current internal time reached = " << tcur << "\n"
-              << "  Number of nonlinear iterations performed = " << nniters
-              << "\n"
-              << "  Number of nonlinear convergence failures = " << nncfails
-              << "\n"
-              << std::endl;
+    py::print("Solver Stats:");
+    py::print("\tNumber of steps =", nsteps);
+    py::print("\tNumber of calls to residual function =", nrevals);
+    py::print("\tNumber of linear solver setup calls =", nlinsetups);
+    py::print("\tNumber of error test failures =", netfails);
+    py::print("\tMethod order used on last step =", klast);
+    py::print("\tMethod order used on next step =", kcur);
+    py::print("\tInitial step size =", hinused);
+    py::print("\tStep size on last step =", hlast);
+    py::print("\tStep size on next step =", hcur);
+    py::print("\tCurrent internal time reached =", tcur);
+    py::print("\tNumber of nonlinear iterations performed =", nniters);
+    py::print("\tNumber of nonlinear convergence failures =", nncfails);
   }
 
   return sol;

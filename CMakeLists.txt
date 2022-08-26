@@ -46,6 +46,8 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/python.cpp
   pybamm/solvers/c_solvers/idaklu/solution.cpp
   pybamm/solvers/c_solvers/idaklu/solution.hpp
+  pybamm/solvers/c_solvers/idaklu/options.hpp
+  pybamm/solvers/c_solvers/idaklu/options.cpp
   pybamm/solvers/c_solvers/idaklu.cpp
 )
 

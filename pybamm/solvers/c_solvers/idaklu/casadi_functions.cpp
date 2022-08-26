@@ -38,12 +38,13 @@ CasadiFunctions::CasadiFunctions(
     const np_array_int &jac_times_cjmass_colptrs_arg,
     const int inputs_length, const Function &jac_action,
     const Function &mass_action, const Function &sens, const Function &events,
-    const int n_s, int n_e, const int n_p)
+    const int n_s, int n_e, const int n_p, const Options& options)
     : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
       number_of_nnz(jac_times_cjmass_nnz), rhs_alg(rhs_alg),
       jac_times_cjmass(jac_times_cjmass), jac_action(jac_action),
       mass_action(mass_action), sens(sens), events(events),
-      tmp(number_of_states)
+      tmp(number_of_states),
+      options(options)
 {
 
   // copy across numpy array values

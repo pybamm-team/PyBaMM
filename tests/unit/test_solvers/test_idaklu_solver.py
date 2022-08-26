@@ -1,9 +1,13 @@
 #
 # Tests for the KLU Solver class
 #
-import pybamm
-import numpy as np
+from contextlib import redirect_stdout
+import io
 import unittest
+
+import numpy as np
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 
@@ -377,6 +381,32 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)
+
+    def test_options(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -0.1 * u}
+        model.initial_conditions = {u: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # test print_stats
+        solver = pybamm.IDAKLUSolver(options={"print_stats": True})
+        t_eval = np.linspace(0, 1)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            solver.solve(model, t_eval)
+        s = f.getvalue()
+        self.assertIn("Solver Stats", s)
+
+        solver = pybamm.IDAKLUSolver(options={"print_stats": False})
+        f = io.StringIO()
+        with redirect_stdout(f):
+            solver.solve(model, t_eval)
+        s = f.getvalue()
+        self.assertEqual(len(s), 0)
 
 
 if __name__ == "__main__":

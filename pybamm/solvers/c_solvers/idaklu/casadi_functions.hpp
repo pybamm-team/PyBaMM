@@ -2,6 +2,7 @@
 #define PYBAMM_IDAKLU_CASADI_FUNCTIONS_HPP
 
 #include "common.hpp"
+#include "options.hpp"
 #include "solution.hpp"
 #include <casadi/casadi.hpp>
 
@@ -39,6 +40,7 @@ public:
   CasadiFunction jac_action;
   CasadiFunction mass_action;
   CasadiFunction events;
+  Options options;
 
   CasadiFunctions(const Function &rhs_alg, const Function &jac_times_cjmass,
                   const int jac_times_cjmass_nnz,
@@ -47,7 +49,7 @@ public:
                   const int inputs_length, const Function &jac_action,
                   const Function &mass_action, const Function &sens,
                   const Function &events, const int n_s, int n_e,
-                  const int n_p);
+                  const int n_p, const Options& options);
 
   realtype *get_tmp();
 

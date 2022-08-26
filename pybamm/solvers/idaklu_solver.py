@@ -42,6 +42,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    options: dict, optional
+        Addititional options to pass to the solver, by default:
+        {
+            print_stats: False, # print statistics of the solver after every solve
+        }
+        Note: These options only have an effect if model.convert_to_format == 'casadi'
+
+
     """
 
     def __init__(
@@ -51,7 +59,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=0,
+        options=None,
     ):
+
+        if options is None:
+            options = {
+                "print_stats": False,
+            }
+        self._options = options
 
         if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
@@ -421,6 +436,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup['use_jac'],
                 self._setup['ids'],
                 atol, rtol, len(inputs),
+                self._options
             )
 
             self._setup['solver'] = solver
