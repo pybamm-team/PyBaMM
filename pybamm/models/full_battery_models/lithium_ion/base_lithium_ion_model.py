@@ -130,37 +130,35 @@ class BaseModel(pybamm.BaseBatteryModel):
         param = self.param
 
         if self.half_cell:
-            domains = ["positive"]
+            domains = ["positive electrode"]
         else:
-            domains = ["negative", "positive"]
+            domains = ["negative electrode", "positive electrode"]
         for domain in domains:
             phases = self.options.phase_number_to_names(
                 getattr(self.options, domain)["particle phases"]
             )
-            self.variables[f"Total lithium in {domain} electrode [mol]"] = sum(
-                self.variables[
-                    f"Total lithium in {phase} phase in {domain} electrode [mol]"
-                ]
+            self.variables[f"Total lithium in {domain} [mol]"] = sum(
+                self.variables[f"Total lithium in {phase} phase in {domain} [mol]"]
                 for phase in phases
             )
 
         # LAM
-        if self.half_cell:
-            n_Li_n = pybamm.Scalar(0)
-            LAM_ne = pybamm.Scalar(0)
-        else:
-            C_n = self.variables["Negative electrode capacity [A.h]"]
-            n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
-            LAM_ne = (1 - C_n / param.n.cap_init) * 100
-
-        C_p = self.variables["Positive electrode capacity [A.h]"]
-
-        LAM_pe = (1 - C_p / param.p.cap_init) * 100
+        for domain in domains:
+            C_k = self.variables[f"{domain} capacity [A.h]"]
+            n_Li_k = self.variables[f"Total lithium in {domain} [mol]"]
+            LAM_k = (1 - C_k / self.domain_params[domain].cap_init) * 100
+            self.variables.update(
+                {
+                    f"{name} [%]": LAM_k,
+                    f"Loss of active material in {domain} [%]": LAM_k,
+                }
+            )
 
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]
-        n_Li_p = self.variables["Total lithium in positive electrode [mol]"]
-        n_Li_particles = n_Li_n + n_Li_p
+        n_Li_particles = sum(
+            self.variables[f"Total lithium in {domain} [mol]"] for domain in domains
+        )
         n_Li = n_Li_particles + n_Li_e
 
         # LLI is usually defined based only on the percentage lithium lost from
@@ -170,11 +168,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.variables.update(
             {
-                "LAM_ne [%]": LAM_ne,
-                "LAM_pe [%]": LAM_pe,
                 "LLI [%]": LLI,
-                "Loss of active material in negative electrode [%]": LAM_ne,
-                "Loss of active material in positive electrode [%]": LAM_pe,
                 "Loss of lithium inventory [%]": LLI,
                 "Loss of lithium inventory, including electrolyte [%]": LLI_tot,
                 # Total lithium

@@ -22,26 +22,32 @@ class NoConvection(BaseThroughCellModel):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
+        vel_scale = self.param.velocity_scale
+        acc_scale = vel_scale / self.param.L_x
 
-        if self.half_cell:
-            v_box_n = None
-            div_v_box_n = None
-            p_n = None
-        else:
-            v_box_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-            div_v_box_n = pybamm.FullBroadcast(
-                0, "negative electrode", "current collector"
+        variables = {}
+        domains = [domain for domain in self.domains if domain != "Separator"]
+        for domain in domains:
+            v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
+            div_v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
+            div_v_box_k_av = pybamm.x_average(div_v_box_k)
+            p_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
+
+            variables.update(
+                {
+                    f"{domain} volume-averaged velocity": v_box_k,
+                    f"{domain} volume-averaged velocity [m.s-1]": vel_scale * v_box_k,
+                    f"{domain} volume-averaged acceleration": div_v_box_k,
+                    f"{domain} volume-averaged acceleration [m.s-1]": acc_scale
+                    * div_v_box_k,
+                    f"X-averaged {domain.lower()} volume-averaged acceleration"
+                    + "": div_v_box_k_av,
+                    f"X-averaged {domain.lower()} volume-averaged acceleration "
+                    + "[m.s-1]": acc_scale * div_v_box_k_av,
+                    f"{domain} pressure": p_k,
+                    f"X-averaged {domain.lower()} pressure": pybamm.x_average(p_k),
+                }
             )
-            p_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        div_v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        p_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-
-        variables = self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
-        variables.update(
-            self._get_standard_neg_pos_acceleration_variables(div_v_box_n, div_v_box_p)
-        )
-        variables.update(self._get_standard_neg_pos_pressure_variables(p_n, p_p))
 
         return variables
 

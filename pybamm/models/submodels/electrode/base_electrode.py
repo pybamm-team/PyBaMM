@@ -179,7 +179,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
 
-        if self.half_cell:
+        if "Negative electrode" not in self.domains:
             i_s_n = None
         else:
             i_s_n = variables["Negative electrode current density"]

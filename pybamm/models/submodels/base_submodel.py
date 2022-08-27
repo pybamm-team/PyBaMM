@@ -79,6 +79,12 @@ class BaseSubModel(pybamm.BaseModel):
         we = self.options["working electrode"]
         self.half_cell = we != "both"
 
+        if domain is None:
+            if self.half_cell:
+                self.domains = ["Separator", "Positive electrode"]
+            else:
+                self.domains = ["Negative electrode", "Separator", "Positive electrode"]
+
         self.param = param
         if param is None:
             self.domain_param = None
