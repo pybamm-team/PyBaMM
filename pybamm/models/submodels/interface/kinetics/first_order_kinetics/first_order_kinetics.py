@@ -17,22 +17,24 @@ class FirstOrderKinetics(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     leading_order_model : :class:`pybamm.interface.kinetics.BaseKinetics`
         The leading-order model with respect to which this is first-order
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, leading_order_model):
-        super().__init__(param, domain, leading_order_model.reaction)
+    def __init__(self, param, domain, leading_order_model, options):
+        super().__init__(param, domain, leading_order_model.reaction, options)
         self.leading_order_model = leading_order_model
 
     def get_coupled_variables(self, variables):
         Domain = self.domain
-        rxn = self.reaction_name
+        domain = Domain.lower()
+        reaction_name = self.reaction_name
 
         # Unpack
-        c_e_0 = variables[
-            "Leading-order " + self.domain.lower() + " electrolyte concentration"
-        ]
+        c_e_0 = variables[f"Leading-order {domain} electrolyte concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
         c_e_1 = (c_e - c_e_0) / self.param.C_e
 
@@ -53,25 +55,20 @@ class FirstOrderKinetics(BaseInterface):
         )
 
         delta_phi_0 = variables[
-            "Leading-order "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            f"Leading-order {domain} electrode surface potential difference"
         ]
         delta_phi_1 = (delta_phi - delta_phi_0) / self.param.C_e
 
         j_0 = variables[
-            "Leading-order "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " interfacial current density"
+            f"Leading-order {domain} electrode {reaction_name}"
+            "interfacial current density"
         ]
         j_1 = dj_dc_0 * c_e_1 + dj_ddeltaphi_0 * delta_phi_1
         j = j_0 + self.param.C_e * j_1
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
         eta_r = delta_phi - ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))

@@ -140,7 +140,7 @@ class BaseModel(BaseElectrolyteConductivity):
             return
 
         delta_phi_e = variables[self.domain + " electrode surface potential difference"]
-        delta_phi_e_init = self.domain_param.U_init
+        delta_phi_e_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
@@ -229,16 +229,13 @@ class FullAlgebraic(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # Get surface area to volume ratio (could be a distribution in x to
-        # account for graded electrodes)
-        a = variables[self.domain + " electrode surface area to volume ratio"]
-
         # Variable summing all of the interfacial current densities
-        sum_j = variables[
-            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        sum_a_j = variables[
+            f"Sum of {self.domain.lower()} electrode volumetric "
+            "interfacial current densities"
         ]
 
-        self.algebraic[delta_phi] = pybamm.div(i_e) - a * sum_j
+        self.algebraic[delta_phi] = pybamm.div(i_e) - sum_a_j
 
 
 class FullDifferential(BaseModel):
@@ -263,18 +260,18 @@ class FullDifferential(BaseModel):
         if self.domain == "Separator":
             return
 
+        Domain = self.domain
+        domain = Domain.lower()
+
         C_dl = self.domain_param.C_dl
 
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-        i_e = variables[self.domain + " electrolyte current density"]
-
-        # Get surface area to volume ratio (could be a distribution in x to
-        # account for graded electrodes)
-        a = variables[self.domain + " electrode surface area to volume ratio"]
+        delta_phi = variables[f"{Domain} electrode surface potential difference"]
+        i_e = variables[f"{Domain} electrolyte current density"]
 
         # Variable summing all of the interfacial current densities
-        sum_j = variables[
-            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        sum_a_j = variables[
+            f"Sum of {domain} electrode volumetric interfacial current densities"
         ]
+        a = variables[f"{Domain} electrode surface area to volume ratio"]
 
-        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - a * sum_j)
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j)

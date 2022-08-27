@@ -59,7 +59,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
-        self.set_total_kinetics_submodel()
+        self.set_total_interface_submodel()
 
         if build:
             self.build_model()
@@ -125,12 +125,18 @@ class BaseHigherOrderModel(BaseModel):
         self.submodels[
             "x-averaged negative interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
-            self.param, "Negative", self.leading_order_reaction_submodels["Negative"]
+            self.param,
+            "Negative",
+            self.leading_order_reaction_submodels["Negative"],
+            self.options,
         )
         self.submodels[
             "x-averaged positive interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
-            self.param, "Positive", self.leading_order_reaction_submodels["Positive"]
+            self.param,
+            "Positive",
+            self.leading_order_reaction_submodels["Positive"],
+            self.options,
         )
 
     def set_electrolyte_conductivity_submodel(self):
@@ -162,6 +168,7 @@ class BaseHigherOrderModel(BaseModel):
             pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Negative", "lead-acid main", self.options
             ),
+            self.options,
         )
         self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
@@ -169,6 +176,7 @@ class BaseHigherOrderModel(BaseModel):
             pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Positive", "lead-acid main", self.options
             ),
+            self.options,
         )
 
         # Oxygen
@@ -181,11 +189,16 @@ class BaseHigherOrderModel(BaseModel):
                 pybamm.kinetics.ForwardTafel(
                     self.param, "Positive", "lead-acid oxygen", self.options
                 ),
+                self.options,
             )
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="composite"
+                self.param,
+                "Negative",
+                "lead-acid oxygen",
+                self.options,
+                order="composite",
             )
 
     def set_full_convection_submodel(self):

@@ -20,12 +20,14 @@ class BaseKinetics(BaseInterface):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options=options)
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):
         domain = self.domain.lower()
@@ -49,7 +51,7 @@ class BaseKinetics(BaseInterface):
     def get_coupled_variables(self, variables):
         Domain = self.domain
         domain = Domain.lower()
-        rxn = self.reaction_name
+        reaction_name = self.reaction_name
 
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
@@ -73,14 +75,13 @@ class BaseKinetics(BaseInterface):
         # Get open-circuit potential variables and reaction overpotential
         if self.options["particle size"] == "distribution":
             ocp = variables[
-                f"{Domain} electrode{rxn} open circuit potential distribution"
+                f"{Domain} electrode {reaction_name}open circuit potential distribution"
             ]
         else:
-            ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+            ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
         # If ocp was broadcast, take only the orphan.
         if isinstance(ocp, pybamm.Broadcast):
             ocp = ocp.orphans[0]
-
         eta_r = delta_phi - ocp
 
         # Get average interfacial current density
@@ -213,34 +214,6 @@ class BaseKinetics(BaseInterface):
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
 
-    def _get_dj_dc(self, variables):
-        """
-        Default to calculate derivative of interfacial current density with respect to
-        concentration. Can be overwritten by specific kinetic functions.
-        """
-        (
-            c_e,
-            delta_phi,
-            j0,
-            ne,
-            ocp,
-            T,
-            u,
-        ) = self._get_interface_variables_for_first_order(variables)
-        j = self._get_kinetics(j0, ne, delta_phi - ocp, T, u)
-        return j.diff(c_e)
-
-    def _get_dj_ddeltaphi(self, variables):
-        """
-        Default to calculate derivative of interfacial current density with respect to
-        surface potential difference. Can be overwritten by specific kinetic functions.
-        """
-        _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
-            variables
-        )
-        j = self._get_kinetics(j0, ne, delta_phi - ocp, T, u)
-        return j.diff(delta_phi)
-
     def _get_interface_variables_for_first_order(self, variables):
         # This is a bit of a hack, but we need to wrap electrolyte concentration with
         # the NotConstant class
@@ -260,16 +233,13 @@ class BaseKinetics(BaseInterface):
         j0 = self._get_exchange_current_density(hacked_variables)
         ne = self._get_number_of_electrons_in_reaction()
         if self.reaction == "lead-acid main":
-            ocp = self.domain_param.U(c_e_0, self.param.T_init)
+            ocp = self.phase_param.U(c_e_0, self.param.T_init)
         elif self.reaction == "lead-acid oxygen":
-            ocp = self.domain_param.U_Ox
+            ocp = self.phase_param.U_Ox
 
-        if j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature"]
-            u = variables[f"X-averaged {domain} electrode interface utilisation"]
-        else:
-            T = variables[f"{Domain} electrode temperature"]
-            u = variables[f"{Domain} electrode interface utilisation"]
+        T = variables["X-averaged cell temperature"]
+        u = variables[f"X-averaged {domain} electrode interface utilisation"]
+
         return c_e_0, delta_phi, j0, ne, ocp, T, u
 
     def _get_j_diffusion_limited_first_order(self, variables):

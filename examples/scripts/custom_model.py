@@ -29,24 +29,30 @@ model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOr
 model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-particle_n = pybamm.particle.PolynomialProfile(
-    model.param, "Negative", options={**model.options, "particle": "uniform profile"}
+particle_n = pybamm.particle.XAveragedPolynomialProfile(
+    model.param,
+    "Negative",
+    options={**model.options, "particle": "uniform profile"},
+    phase="primary",
 )
 model.submodels["negative particle"] = particle_n
-particle_p = pybamm.particle.PolynomialProfile(
-    model.param, "Positive", options={**model.options, "particle": "uniform profile"}
+particle_p = pybamm.particle.XAveragedPolynomialProfile(
+    model.param,
+    "Positive",
+    options={**model.options, "particle": "uniform profile"},
+    phase="primary",
 )
 model.submodels["positive particle"] = particle_p
 
 model.submodels[
     "negative open circuit potential"
 ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-    model.param, "Negative", "lithium-ion main", options=model.options
+    model.param, "Negative", "lithium-ion main", options=model.options, phase="primary"
 )
 model.submodels[
     "positive open circuit potential"
 ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-    model.param, "Positive", "lithium-ion main", options=model.options
+    model.param, "Positive", "lithium-ion main", options=model.options, phase="primary"
 )
 model.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main", options=model.options
@@ -86,12 +92,12 @@ model.submodels[
 ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
     model.param, "Positive"
 )
-model.submodels[
-    "Negative particle mechanics"
-] = pybamm.particle_mechanics.NoMechanics(model.param, "Negative")
-model.submodels[
-    "Positive particle mechanics"
-] = pybamm.particle_mechanics.NoMechanics(model.param, "Positive")
+model.submodels["Negative particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
+    model.param, "Negative", model.options
+)
+model.submodels["Positive particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
+    model.param, "Positive", model.options
+)
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
 model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
 model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)

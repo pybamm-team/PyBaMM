@@ -59,25 +59,46 @@ class DFN(BaseModel):
     def set_intercalation_kinetics_submodel(self):
         for domain in ["Negative", "Positive"]:
             intercalation_kinetics = self.get_intercalation_kinetics(domain)
-            self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
-                self.param, domain, "lithium-ion main", self.options
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain.lower())["particle phases"]
             )
+            for phase in ["primary", "secondary"]:
+                # Add kinetics for each phase included in the options
+                # If a phase is not included, add "NoReaction"
+                if phase in phases:
+                    submod = intercalation_kinetics(
+                        self.param, domain, "lithium-ion main", self.options, phase
+                    )
+
+                    self.submodels[f"{domain.lower()} {phase} interface"] = submod
+
+            if len(phases) > 1:
+                self.submodels[
+                    f"total {domain} interface"
+                ] = pybamm.kinetics.TotalMainKinetics(
+                    self.param, domain, "lithium-ion main", self.options
+                )
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
             particle = getattr(self.options, domain)["particle"]
-            if particle == "Fickian diffusion":
-                self.submodels[f"{domain} particle"] = pybamm.particle.FickianDiffusion(
-                    self.param, domain, self.options, x_average=False
-                )
-            elif particle in [
-                "uniform profile",
-                "quadratic profile",
-                "quartic profile",
-            ]:
-                self.submodels[
-                    f"{domain} particle"
-                ] = pybamm.particle.PolynomialProfile(self.param, domain, self.options)
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain)["particle phases"]
+            )
+            for phase in phases:
+                if particle == "Fickian diffusion":
+                    submod = pybamm.particle.FickianDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=False
+                    )
+                elif particle in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    submod = pybamm.particle.PolynomialProfile(
+                        self.param, domain, self.options, phase=phase
+                    )
+                self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):
 

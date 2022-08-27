@@ -24,12 +24,14 @@ class SymmetricButlerVolmer(BaseKinetics):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options)
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         prefactor = ne / (2 * (1 + self.param.Theta * T))
@@ -77,15 +79,17 @@ class AsymmetricButlerVolmer(BaseKinetics):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options)
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        alpha = self.domain_param.alpha_bv
+        alpha = self.phase_param.alpha_bv
         arg_ox = ne * alpha * eta_r / (1 + self.param.Theta * T)
         arg_red = -ne * (1 - alpha) * eta_r / (1 + self.param.Theta * T)
         return u * j0 * (pybamm.exp(arg_ox) - pybamm.exp(arg_red))
