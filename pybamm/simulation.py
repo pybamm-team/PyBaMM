@@ -613,8 +613,8 @@ class Simulation:
                 "Initial concentration in positive electrode [mol.m-3]"
             ]
             param = pybamm.LithiumIonParameters()
-            c_n_max = self.parameter_values.evaluate(param.n.c_max)
-            c_p_max = self.parameter_values.evaluate(param.p.c_max)
+            c_n_max = self.parameter_values.evaluate(param.n.prim.c_max)
+            c_p_max = self.parameter_values.evaluate(param.p.prim.c_max)
             x, y = pybamm.lithium_ion.get_initial_stoichiometries(
                 initial_soc, self.parameter_values
             )
@@ -858,6 +858,7 @@ class Simulation:
                         or step_solution.termination == "final time"
                         or "[experiment]" in step_solution.termination
                     ):
+                        callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
 
@@ -897,6 +898,7 @@ class Simulation:
                         capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
+                logs["elapsed time"] = timer.time()
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -913,7 +915,6 @@ class Simulation:
 
                 # Break if the experiment is infeasible (or errored)
                 if feasible is False:
-                    callbacks.on_experiment_infeasible(logs)
                     break
 
             if self.solution is not None and len(all_cycle_solutions) > 0:

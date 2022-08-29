@@ -25,6 +25,15 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
+      # remove when a new vcpkg version is released
+      - name: Install the latest commit of vcpkg on windows
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
       - name: Cache packages installed through vcpkg on windows
         uses: actions/cache@v2
         env:

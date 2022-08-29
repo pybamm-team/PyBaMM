@@ -50,7 +50,7 @@ class LOQS(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
-        self.set_total_kinetics_submodel()
+        self.set_total_interface_submodel()
 
         if build:
             self.build_model()
@@ -167,25 +167,25 @@ class LOQS(BaseModel):
             self.submodels[
                 "leading-order negative interface"
             ] = pybamm.kinetics.SymmetricButlerVolmer(
-                self.param, "Negative", "lead-acid main", self.options
+                self.param, "Negative", "lead-acid main", self.options, "primary"
             )
 
             self.submodels[
                 "leading-order positive interface"
             ] = pybamm.kinetics.SymmetricButlerVolmer(
-                self.param, "Positive", "lead-acid main", self.options
+                self.param, "Positive", "lead-acid main", self.options, "primary"
             )
         # always use forward Butler-Volmer for the reaction submodel to be passed to the
         # higher order model
         self.reaction_submodels = {
             "Negative": [
                 pybamm.kinetics.SymmetricButlerVolmer(
-                    self.param, "Negative", "lead-acid main", self.options
+                    self.param, "Negative", "lead-acid main", self.options, "primary"
                 )
             ],
             "Positive": [
                 pybamm.kinetics.SymmetricButlerVolmer(
-                    self.param, "Positive", "lead-acid main", self.options
+                    self.param, "Positive", "lead-acid main", self.options, "primary"
                 )
             ],
         }
@@ -230,12 +230,16 @@ class LOQS(BaseModel):
             self.submodels[
                 "leading-order positive oxygen interface"
             ] = pybamm.kinetics.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen", self.options
+                self.param, "Positive", "lead-acid oxygen", self.options, "primary"
             )
             self.submodels[
                 "leading-order negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="leading"
+                self.param,
+                "Negative",
+                "lead-acid oxygen",
+                self.options,
+                order="leading",
             )
         else:
             self.submodels[
@@ -243,10 +247,14 @@ class LOQS(BaseModel):
             ] = pybamm.oxygen_diffusion.NoOxygen(self.param)
             self.submodels[
                 "leading-order negative oxygen interface"
-            ] = pybamm.kinetics.NoReaction(self.param, "Negative", "lead-acid oxygen")
+            ] = pybamm.kinetics.NoReaction(
+                self.param, "Negative", "lead-acid oxygen", "primary"
+            )
             self.submodels[
                 "leading-order positive oxygen interface"
-            ] = pybamm.kinetics.NoReaction(self.param, "Positive", "lead-acid oxygen")
+            ] = pybamm.kinetics.NoReaction(
+                self.param, "Positive", "lead-acid oxygen", "primary"
+            )
         self.reaction_submodels["Negative"].append(
             self.submodels["leading-order negative oxygen interface"]
         )

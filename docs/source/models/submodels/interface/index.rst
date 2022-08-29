@@ -10,3 +10,4 @@ Interface
   first_order_kinetics
   diffusion_limited
   sei
+  open_circuit_potential

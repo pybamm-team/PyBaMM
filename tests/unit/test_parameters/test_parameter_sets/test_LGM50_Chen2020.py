@@ -47,6 +47,20 @@ class TestChen(unittest.TestCase):
         sim.set_parameters()
         sim.build()
 
+    def test_standard_lithium_parameters_composite(self):
+
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+
+        model = pybamm.lithium_ion.DFN(
+            {
+                "particle phases": ("2", "1"),
+                "open circuit potential": (("single", "current sigmoid"), "single"),
+            }
+        )
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sim.set_parameters()
+        sim.build()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
