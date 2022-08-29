@@ -339,10 +339,10 @@ class Simulation:
                         # hit during CV
                         new_model.events.append(
                             pybamm.Event(
-                                "Current cut-off (negative) [A] [experiment]",
-                                new_model.variables["Current [A]"]
-                                + abs(pybamm.InputParameter("Current cut-off [A]"))
-                                - 1e4
+                                "Current cut-off (CCCV) [A] [experiment]",
+                                -new_model.variables["Current [A]"]
+                                - abs(pybamm.InputParameter("Current cut-off [A]"))
+                                + 1e4
                                 * (
                                     new_model.variables["Battery voltage [V]"]
                                     < (
@@ -390,10 +390,19 @@ class Simulation:
 
                 # add voltage events to the model
                 if op_inputs["Power switch"] == 1 or op_inputs["Current switch"] == 1:
+                    # The voltage event should be positive at the start of charge/
+                    # discharge. We use the sign of the current or power input to
+                    # figure out whether the voltage event is greater than the starting
+                    # voltage (charge) or less (discharge) and set the sign of the
+                    # event accordingly
                     if op_inputs["Power switch"] == 1:
-                        sign = np.sign(op_inputs["Power input [W]"])
+                        inp = op_inputs["Power input [W]"]
                     else:
-                        sign = np.sign(op_inputs["Current input [A]"])
+                        inp = op_inputs["Current input [A]"]
+                    if isinstance(inp, pybamm.Interpolant):
+                        # drive cycle, pre-calculate the integral of the current
+                        inp = np.trapz(inp.y, inp.x)
+                    sign = np.sign(inp)
                     if sign > 0:
                         name = "Discharge"
                     else:
