@@ -1,0 +1,14 @@
+ci:
+  autoupdate_commit_msg: "chore: update pre-commit hooks"
+  autofix_commit_msg: "style: pre-commit fixes"
+
+repos:
+-   repo: https://github.com/psf/black
+    rev: stable
+    hooks:
+    - id: black
+
+-   repo: https://github.com/PyCQA/flake8
+    rev: 5.0.4
+    hooks:
+    - id: flake8
