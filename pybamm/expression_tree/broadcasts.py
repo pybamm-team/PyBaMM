@@ -89,29 +89,28 @@ class PrimaryBroadcast(Broadcast):
         # Note e.g. current collector to particle *is* allowed
         if child.domain == []:
             pass
-        elif child.domain == ["current collector"] and broadcast_domain[0] not in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-            "negative particle size",
-            "positive particle size",
-            "negative particle",
-            "positive particle",
-        ]:
+        elif child.domain == ["current collector"] and not (
+            broadcast_domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            or "particle" in broadcast_domain[0]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle or particle size domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain[0] not in [
-            "negative particle",
-            "positive particle",
-            "negative particle size",
-            "positive particle size",
-        ]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and "particle" not in broadcast_domain[0]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 or particle size domains"""

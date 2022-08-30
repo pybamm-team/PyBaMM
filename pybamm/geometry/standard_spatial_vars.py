@@ -52,6 +52,42 @@ r_p = pybamm.SpatialVariable(
     },
     coord_sys="spherical polar",
 )
+r_n_prim = pybamm.SpatialVariable(
+    "r_n_prim",
+    domain=["negative primary particle"],
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_p_prim = pybamm.SpatialVariable(
+    "r_p_prim",
+    domain=["positive primary particle"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_n_sec = pybamm.SpatialVariable(
+    "r_n_sec",
+    domain=["negative secondary particle"],
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_p_sec = pybamm.SpatialVariable(
+    "r_p_sec",
+    domain=["positive secondary particle"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
 
 R_n = pybamm.SpatialVariable(
     "R_n",

@@ -80,7 +80,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
 
     def set_initial_conditions(self, variables):
         delta_phi = variables["Lithium metal interface surface potential difference"]
-        delta_phi_init = self.param.n.U_init
+        delta_phi_init = self.param.n.prim.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 

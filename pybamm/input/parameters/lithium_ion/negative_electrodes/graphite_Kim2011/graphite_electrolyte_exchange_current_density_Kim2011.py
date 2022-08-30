@@ -38,7 +38,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
-        c_e_ref ** alpha * (c_s_max - c_s_n_ref) ** alpha * c_s_n_ref ** alpha
+        c_e_ref**alpha * (c_s_max - c_s_n_ref) ** alpha * c_s_n_ref**alpha
     )
 
     E_r = 3e4
@@ -47,7 +47,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     return (
         m_ref
         * arrhenius
-        * c_e ** alpha
-        * c_s_surf ** alpha
+        * c_e**alpha
+        * c_s_surf**alpha
         * (c_s_max - c_s_surf) ** alpha
     )

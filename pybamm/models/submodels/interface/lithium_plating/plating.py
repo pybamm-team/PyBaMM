@@ -129,7 +129,7 @@ class Plating(BasePlating):
 
         self.rhs = {
             c_plated_Li: -Gamma_plating * a * j_stripping - coupling_term,
-            c_dead_Li: coupling_term
+            c_dead_Li: coupling_term,
         }
 
     def set_initial_conditions(self, variables):
