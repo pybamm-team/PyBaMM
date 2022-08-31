@@ -12,33 +12,10 @@ from scipy.signal import find_peaks
 from scipy import interpolate
 from stopit import threading_timeoutable as timeoutable
 
-def set_rc_params(rcParams):
-
-    rcParams["lines.markersize"] = 5
-    rcParams["lines.linewidth"] = 2
-    rcParams["xtick.minor.visible"] = True
-    rcParams["ytick.minor.visible"] = True
-    rcParams["font.size"] = 12
-    rcParams["legend.fontsize"] = 10
-    rcParams["legend.frameon"] = False
-    rcParams["font.family"] = 'serif'
-    rcParams['font.serif'] = 'Times New Roman'
-    rcParams['mathtext.rm'] = 'serif'
-    rcParams['mathtext.it'] = 'serif:italic'
-    rcParams['mathtext.bf'] = 'serif:bold'
-    rcParams['mathtext.fontset'] = 'custom'
-    rcParams["savefig.bbox"] = "tight"
-    rcParams["axes.grid"] = True
-    rcParams["axes.axisbelow"] = True
-    rcParams["grid.linestyle"] = "--"
-    rcParams["grid.color"] = (0.8, 0.8, 0.8)
-    rcParams["grid.alpha"] = 0.5
-    rcParams["grid.linewidth"] = 0.5
-    rcParams['figure.dpi'] = 150
-    rcParams['savefig.dpi'] = 600
-    rcParams['figure.max_open_warning']=False
-    
-    return rcParams
+eSOH_DIR = "C:/Users/spannala/PyBaMM/gmproj/data/esoh_V/"
+oCV_DIR =  "C:/Users/spannala/PyBaMM/gmproj/data/ocv/"
+fig_DIR =  "C:/Users/spannala/PyBaMM/gmproj/figures/figures_sens/"
+fig_DIR =  "C:/Users/spannala/PyBaMM/gmproj/data/results_sens/"
 
 def nmc_volume_change_mohtat(sto,c_s_max):
     t_change = -1.10/100*(1-sto)
@@ -50,7 +27,6 @@ def graphite_volume_change_mohtat(sto,c_s_max):
     x = [sto]
     t_change = pybamm.Interpolant(stoichpoints, thicknesspoints, x, name=None, interpolator='linear', extrapolate=True, entries_string=None)
     return t_change
-
 
 def get_parameter_values():
     parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
@@ -76,15 +52,12 @@ def get_parameter_values():
             "Negative electrode critical stress [Pa]": 60e6,
             # Other
             "Cell thermal expansion coefficient [m.K-1]": 1.48E-6,
-            "Lower voltage cut-off [V]": 3.0,
-            # Initializing Particle Concentration
-            # "Initial concentration in negative electrode [mol.m-3]": x100*parameter_values["Maximum concentration in negative electrode [mol.m-3]"],
-            # "Initial concentration in positive electrode [mol.m-3]": y100*parameter_values["Maximum concentration in positive electrode [mol.m-3]"]
+            "Lower voltage cut-off [V]": 3.0
         },
         check_already_exists=False,
     )
     return parameter_values
-
+parameter_values = get_parameter_values()
 
 def split_long_string(title, max_words=None):
     """Get title in a nice format"""
@@ -214,7 +187,7 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
         if y[0] < 0 or y[1] < 0 or y[2] < 0:
             return 0 * y
 
-        # print(t)
+        print(t)
         # Set up based on current value of y
         y_to_sol(
             y,
@@ -281,95 +254,80 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
     
     return all_sumvars_dict
 
-def plot(all_sumvars_dict,esoh_data):
-    esoh_vars = ["x_0", "y_0", "x_100", "y_100", "C_n", "C_p"]
-    # esoh_vars = ["Capacity [A.h]", "Loss of lithium inventory [%]",
-    #              "Loss of active material in negative electrode [%]",
-    #              "Loss of active material in positive electrode [%]"]
-    fig, axes = plt.subplots(3,2,figsize=(7,7))
-    for k, name in enumerate(esoh_vars):
-        ax = axes.flat[k]
-        ax.plot(all_sumvars_dict["Cycle number"],all_sumvars_dict[name],"ro")
-        ax.plot(esoh_data["N"],esoh_data[name],"kx")
-#         ax.scatter(all_sumvars_dict["Cycle number"],all_sumvars_dict[name],color="r")
-    #     ax.plot(long_sol.summary_variables[name],"b-")
-        ax.set_title(split_long_string(name))
-        if k>3:
-            ax.set_xlabel("Cycle number")
-    # fig.subplots_adjust(bottom=0.4)
-    fig.legend(["Acc Sim"] + ["Reported"], 
-           loc="lower center", ncol=1, fontsize=11)
-    fig.tight_layout()
-    return fig
+cell = 22
 
-def plot1(all_sumvars_dict,esoh_data):
-    esoh_vars = ["Capacity [A.h]","n_Li"]
-    esoh_data["Capacity [A.h]"]=esoh_data["Cap"]
-    param = pybamm.LithiumIonParameters()
-    esoh_data["n_Li"]= 3600/param.F.value*(esoh_data["y_100"]*esoh_data["C_p"]+esoh_data["x_100"]*esoh_data["C_n"])
-    fig, axes = plt.subplots(2,1,figsize=(7,7))
-    for k, name in enumerate(esoh_vars):
-        ax = axes.flat[k]
-        ax.plot(all_sumvars_dict["Cycle number"],all_sumvars_dict[name],"ro")
-        ax.plot(esoh_data["N"],esoh_data[name],"kx")
-        ax.set_title(split_long_string(name))
-        ax.set_xlabel("Cycle number")
-    fig.legend(["Acc Sim"] + ["Reported"], 
-           loc="upper right", ncol=1, fontsize=11)
-    fig.tight_layout()
-    return fig
-def plotc(all_sumvars_dict,esoh_data):
-    esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
-    esoh_data["Capacity [A.h]"]=esoh_data["Cap"]
-    param = pybamm.LithiumIonParameters()
-    esoh_data["n_Li"]= 3600/param.F.value*(esoh_data["y_100"]*esoh_data["C_p"]+esoh_data["x_100"]*esoh_data["C_n"])
-    esoh_data["Loss of lithium inventory [%]"]=(1-esoh_data["n_Li"]/esoh_data["n_Li"][0])*100
-    fig, axes = plt.subplots(3,2,figsize=(7,7))
-    for k, name in enumerate(esoh_vars):
-        ax = axes.flat[k]
-        ax.plot(all_sumvars_dict["Cycle number"],all_sumvars_dict[name],"ro")
-        ax.plot(esoh_data["N"],esoh_data[name],"kx")
-        ax.set_title(split_long_string(name))
-        if k ==2 or k==3:
-            ax.set_ylim([3,6.2])
-        if k>3:
-            ax.set_xlabel("Cycle number")
-    fig.legend(["Acc Sim"] + ["Reported"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
-    fig.tight_layout()
-    return fig
+def load_data(cell): 
+    cell_no = f'{cell:02d}'
+    dfe=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
+    dfe_0=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
+    dfe['N']=dfe['Time']
+    N =dfe.N.unique()
 
-def plotcomp(all_sumvars_dict0,all_sumvars_dict1):
-    esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
-    fig, axes = plt.subplots(3,2,figsize=(7,7))
-    for k, name in enumerate(esoh_vars):
-        ax = axes.flat[k]
-        ax.plot(all_sumvars_dict0["Cycle number"],all_sumvars_dict0[name],"kx")
-        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"b")
-        ax.set_title(split_long_string(name))
-        if k ==2 or k==3:
-            ax.set_ylim([3,6.2])
-        if k>3:
-            ax.set_xlabel("Cycle number")
-    fig.legend(["Baseline"] + ["Sim"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
-    fig.tight_layout()
-    return fig
+    print("Cycle Numbers:")
+    print(*N, sep = ", ") 
 
-def plotcomplong(all_sumvars_dict0,all_sumvars_dict1,all_sumvars_dict2):
-    esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
-    fig, axes = plt.subplots(3,2,figsize=(7,7))
-    for k, name in enumerate(esoh_vars):
-        ax = axes.flat[k]
-        ax.plot(all_sumvars_dict0["Cycle number"],all_sumvars_dict0[name],"kx")
-        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"bo")
-        ax.plot(all_sumvars_dict2["Cycle number"],all_sumvars_dict2[name],"m.")
-        ax.set_title(split_long_string(name))
-        if k ==2 or k==3:
-            ax.set_ylim([3,6.2])
-        if k>3:
-            ax.set_xlabel("Cycle number")
-    fig.legend(["Baseline"] + ["Accl Sim"] + ["Long Sim"], 
-            loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
-    fig.tight_layout()
-    return fig
+    return cell_no,dfe,N
+
+cell_no,dfe,N = load_data(cell)
+
+def init_exp(cell_no,dfe):
+    C_n_init = dfe['C_n'][0]
+    C_p_init = dfe['C_p'][0]
+    y_0_init = dfe['y_0'][0] 
+    if cell_no=='22':
+        SOC_0 = 1
+    elif cell_no=='23':
+        SOC_0 = 0.5
+
+    return C_n_init,C_p_init,SOC_0
+
+C_n_init,C_p_init,SOC_0 = init_exp(cell_no,dfe)
+
+pybamm.set_logging_level("WARNING")
+# pybamm.set_logging_level("NOTICE")
+calendar_time = 24
+experiment = pybamm.Experiment(
+    [
+        ("Rest for "+f'{calendar_time}'+" hours",)
+    ]*250 ,
+    termination="50% capacity",
+)
+spm = pybamm.lithium_ion.SPM(
+    {
+        "SEI": "ec reaction limited",
+        "loss of active material": "stress-driven",
+    }
+)
+# spm.print_parameter_info()
+
+param = spm.param
+eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.c_max * param.F* param.A_cc))
+eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.c_max * param.F* param.A_cc))
+
+Temp = [25,45,-5]
+k_sei = [1,1/1.5,1.5,1/2,2,1/3,3,1/10,10]
+d_sei = [1,1e-1,1e1,1e-2,1e2,1e-3,1e3,1e-4,1e4]
+
+ksei_idx = 0
+dsei_idx = 0
+Temp_idx = 0
+
+parameter_values = get_parameter_values()
+
+parameter_values.update(
+    {
+        "SEI kinetic rate constant [m.s-1]": 1.6827e-16*k_sei[ksei_idx], #1.6827e-16
+        "Positive electrode LAM constant proportional term [s-1]": 5e-3/3600,
+        "Negative electrode LAM constant proportional term [s-1]": 4.3e-2/3600,
+        "EC diffusivity [m2.s-1]": 2e-18*d_sei[dsei_idx],
+        "Positive electrode LAM constant exponential term": 2,
+        "Negative electrode LAM constant exponential term": 2,
+        "Negative electrode active material volume fraction": eps_n_data,
+        "Positive electrode active material volume fraction": eps_p_data,
+        "Initial temperature [K]": 273.15+Temp[Temp_idx],
+        "Ambient temperature [K]": 273.15+Temp[Temp_idx],
+    },
+    check_already_exists=False,
+)
+
+all_sumvars_dict = cycle_adaptive_simulation(spm, parameter_values, experiment,SOC_0, save_at_cycles=1)
