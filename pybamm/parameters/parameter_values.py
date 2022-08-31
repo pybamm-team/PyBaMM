@@ -215,7 +215,11 @@ class ParameterValues:
 
             component_params = {}
             for k, v in component_params_tmp.items():
-                component_params[prefactor +　k] = v
+                # print(prefactor)
+                print("Jason")
+                component_params[prefactor + k] = v
+
+                # component_params[prefactor +　k] = v
 
             # Update parameters, making sure to check any conflicts
             self.update(
