@@ -21,9 +21,7 @@ class BaseThermal(pybamm.BaseSubModel):
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
 
-    def _get_standard_fundamental_variables(
-        self, T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
-    ):
+    def _get_standard_fundamental_variables(self, T_dict):
         """
         Note: here we explicitly pass in the averages for the temperature as computing
         the average temperature in `BaseThermal` using `self._x_average` requires a
@@ -35,55 +33,39 @@ class BaseThermal(pybamm.BaseSubModel):
         """
         param = self.param
 
-        # The variable T is the concatenation of the temperature in the negative
-        # electrode, separator and positive electrode, for use in the electrochemical
-        # models
-        T = pybamm.concatenation(T_n, T_s, T_p)
+        # The variable T is the concatenation of the temperature in the middle domains
+        # (e.g. negative electrode, separator and positive electrode for a full cell),
+        # excluding current collectors, for use in the electrochemical models
+        T_mid = [T_dict[k] for k in self.options.whole_cell_domains]
+        T = pybamm.concatenation(*T_mid)
 
-        # Compute averaged temperatures by domain
-        if self.half_cell:
-            # overwrite T_n to be the boundary value of T_s
-            T_n = pybamm.boundary_value(T_s, "left")
-        T_n_av = pybamm.x_average(T_n)
-        T_s_av = pybamm.x_average(T_s)
-        T_p_av = pybamm.x_average(T_p)
+        # Case where an electrode is not included (half-cell)
+        if "Negative electrode" not in self.options.whole_cell_domains:
+            T_s = T_dict["Separator"]
+            T_dict["Negative electrode"] = pybamm.boundary_value(T_s, "left")
+        if "Positive electrode" not in self.options.whole_cell_domains:
+            T_s = T_dict["Separator"]
+            T_dict["Positive electrode"] = pybamm.boundary_value(T_s, "right")
 
         # Get the ambient temperature, which can be specified as a function of time
-        T_amb_dim = param.T_amb_dim(pybamm.t * param.timescale)
         T_amb = param.T_amb(pybamm.t * param.timescale)
 
-        variables = {
-            "Negative current collector temperature": T_cn,
-            "Negative current collector temperature [K]": param.Delta_T * T_cn
-            + param.T_ref,
-            "X-averaged negative electrode temperature": T_n_av,
-            "X-averaged negative electrode temperature [K]": param.Delta_T * T_n_av
-            + param.T_ref,
-            "Negative electrode temperature": T_n,
-            "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
-            "X-averaged separator temperature": T_s_av,
-            "X-averaged separator temperature [K]": param.Delta_T * T_s_av
-            + param.T_ref,
-            "Separator temperature": T_s,
-            "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
-            "X-averaged positive electrode temperature": T_p_av,
-            "X-averaged positive electrode temperature [K]": param.Delta_T * T_p_av
-            + param.T_ref,
-            "Positive electrode temperature": T_p,
-            "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
-            "Positive current collector temperature": T_cp,
-            "Positive current collector temperature [K]": param.Delta_T * T_cp
-            + param.T_ref,
-            "Cell temperature": T,
-            "Cell temperature [K]": param.Delta_T * T + param.T_ref,
-            "X-averaged cell temperature": T_x_av,
-            "X-averaged cell temperature [K]": param.Delta_T * T_x_av + param.T_ref,
-            "Volume-averaged cell temperature": T_vol_av,
-            "Volume-averaged cell temperature [K]": param.Delta_T * T_vol_av
-            + param.T_ref,
-            "Ambient temperature [K]": T_amb_dim,
-            "Ambient temperature": T_amb,
-        }
+        variables = {"Ambient temperature": T_amb, "Cell temperature": T}
+        for name, var in T_dict.items():
+            if name in ["Negative electrode", "Separator", "Positive electrode"]:
+                name = name, lower()
+                variables[f"X-averaged {name} temperature"] = pybamm.x_average(var)
+            variables[f"{name} temperature"] = var
+
+        # Calculate dimensional variables
+        variables_nondim = variables.copy()
+        for name, var in variables_nondim.items():
+            variables.update(
+                {
+                    f"{name} [K]": param.Delta_T * var + param.T_ref,
+                    f"{name} [C]": param.Delta_T * var + param.T_ref - 273.15,
+                }
+            )
 
         return variables
 
@@ -97,7 +79,7 @@ class BaseThermal(pybamm.BaseSubModel):
         if self.half_cell:
             i_boundary_cc = variables["Current collector current density"]
             T_n = variables["Negative electrode temperature"]
-            Q_ohm_s_n_av = i_boundary_cc ** 2 / param.n.sigma(T_n)
+            Q_ohm_s_n_av = i_boundary_cc**2 / param.n.sigma(T_n)
             Q_ohm_s_n = pybamm.PrimaryBroadcast(Q_ohm_s_n_av, "negative electrode")
         else:
             i_s_n = variables["Negative electrode current density"]
@@ -241,8 +223,8 @@ class BaseThermal(pybamm.BaseSubModel):
         # Compute the Ohmic heating for 0D current collectors
         if cc_dimension == 0:
             i_boundary_cc = variables["Current collector current density"]
-            Q_s_cn = i_boundary_cc ** 2 / self.param.n.sigma_cc
-            Q_s_cp = i_boundary_cc ** 2 / self.param.p.sigma_cc
+            Q_s_cn = i_boundary_cc**2 / self.param.n.sigma_cc
+            Q_s_cp = i_boundary_cc**2 / self.param.p.sigma_cc
         # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
         # In this limit the current flow is all in the y,z direction in the current
         # collectors

@@ -26,7 +26,11 @@ class NoConvection(BaseThroughCellModel):
         acc_scale = vel_scale / self.param.L_x
 
         variables = {}
-        domains = [domain for domain in self.domains if domain != "Separator"]
+        domains = [
+            domain
+            for domain in self.options.whole_cell_domains
+            if domain != "Separator"
+        ]
         for domain in domains:
             v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
             div_v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")

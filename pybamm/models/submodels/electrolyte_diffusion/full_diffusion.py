@@ -26,7 +26,7 @@ class Full(BaseElectrolyteDiffusion):
 
     def get_fundamental_variables(self):
         eps_c_e = []
-        for domain in self.domains:
+        for domain in self.options.whole_cell_domains:
             eps_c_e_k = pybamm.Variable(
                 f"{domain} porosity times concentration",
                 domain=domain.lower(),
@@ -43,7 +43,7 @@ class Full(BaseElectrolyteDiffusion):
     def get_coupled_variables(self, variables):
 
         c_e = []
-        for domaim in self.domains:
+        for domaim in self.options.whole_cell_domains:
             eps_k = variables[f"{domaim} porosity"]
             eps_c_e_k = variables[f"{domaim} porosity times concentration"]
             c_e_k = eps_c_e_k / eps
@@ -99,26 +99,36 @@ class Full(BaseElectrolyteDiffusion):
     def set_boundary_conditions(self, variables):
         param = self.param
         c_e = variables["Electrolyte concentration"]
+        T = variables["Cell temperature"]
+        tor = variables["Electrolyte transport efficiency"]
+        i_boundary_cc = variables["Current collector current density"]
 
-        if self.half_cell:
-            # left bc at anode/separator interface
+        def flux_bc(side):
+            # returns the flux at a separator/electrode interface
             # assuming v_box = 0 for now
-            T = variables["Cell temperature"]
-            tor = variables["Electrolyte transport efficiency"]
-            i_boundary_cc = variables["Current collector current density"]
-            lbc = (
+            return (
                 pybamm.boundary_value(
                     -(1 - param.t_plus(c_e, T))
                     / (tor * param.gamma_e * param.D_e(c_e, T)),
-                    "left",
+                    side,
                 )
                 * i_boundary_cc
                 * param.C_e
             )
-        else:
+
+        if self.options.whole_cell_domains[0] == "Negative electrode":
             # left bc at anode/current collector interface
             lbc = pybamm.Scalar(0)
+        elif self.options.whole_cell_domains[0] == "Separator":
+            # left bc at anode/separator interface
+            lbc = flux_bc("left")
+        if self.options.whole_cell_domains[-1] == "Positive electrode":
+            # right bc at cathode/current collector interface
+            rbc = pybamm.Scalar(0)
+        elif self.options.whole_cell_domains[-1] == "Separator":
+            # right bc at separator/cathode interface
+            rbc = flux_bc("right")
 
         self.boundary_conditions = {
-            c_e: {"left": (lbc, "Neumann"), "right": (pybamm.Scalar(0), "Neumann")},
+            c_e: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")},
         }

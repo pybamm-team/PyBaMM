@@ -47,7 +47,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e = pybamm.concatenation(*phi_e_dict.values())
 
         # Case where negative electrode is not included (half-cell)
-        if "Negative electrode" not in self.domains:
+        if "Negative electrode" not in self.options.whole_cell_domains:
             phi_e_s = phi_e_dict["Separator"]
             phi_e_dict["Negative electrode"] = pybamm.boundary_value(phi_e_s, "left")
 
@@ -78,7 +78,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
                     f"X-averaged {name} [V]": -U_ref + pot_scale * phi_e_k_av,
                 }
             )
-            if domain in self.domains:
+            if domain in self.options.whole_cell_domains:
                 variables[f"Gradient of {name}"] = pybamm.grad(phi_e_k)
 
         return variables

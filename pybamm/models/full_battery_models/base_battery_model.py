@@ -598,6 +598,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # index 1 in a 2-tuple for the positive electrode
         return BatteryModelDomainOptions(self.items(), 1)
 
+    @property
+    def whole_cell_domains(self):
+        try:
+            return self._whole_cell_domains
+        except AttributeError:
+            if self["working electrode"] == "positive":
+                wcd = ["Separator", "Positive electrode"]
+            elif self["working electrode"] == "negative":
+                wcd = ["Negative electrode", "Separator"]
+            elif self["working electrode"] == "both":
+                wcd = ["Negative electrode", "Separator", "Positive electrode"]
+            self._whole_cell_domains = wcd
+            return wcd
 
 class BatteryModelDomainOptions(dict):
     def __init__(self, dict_items, index):

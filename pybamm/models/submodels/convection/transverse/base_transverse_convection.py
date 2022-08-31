@@ -38,7 +38,7 @@ class BaseTransverseModel(BaseModel):
         elif typ == "acceleration":
             scale = self.param.velocity_scale / self.param.L_z
 
-        if "Negative electrode" not in self.domains:
+        if "Negative electrode" not in self.options.whole_cell_domains:
             var_n_av = None
             var_n = None
         else:

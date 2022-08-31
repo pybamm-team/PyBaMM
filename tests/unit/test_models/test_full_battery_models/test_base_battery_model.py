@@ -410,6 +410,23 @@ class TestOptions(unittest.TestCase):
         self.assertEqual(options.positive.primary["particle mechanics"], "none")
         self.assertEqual(options.positive.secondary["particle mechanics"], "none")
 
+    def test_whole_cell_domains(self):
+        options = BatteryModelOptions({"working electrode": "positive"})
+        self.assertEqual(
+            options.whole_cell_domains, ["Separator", "Positive electrode"]
+        )
+
+        options = BatteryModelOptions({"working electrode": "negative"})
+        self.assertEqual(
+            options.whole_cell_domains, ["Negative electrode", "Separator"]
+        )
+
+        options = BatteryModelOptions({})
+        self.assertEqual(
+            options.whole_cell_domains,
+            ["Negative electrode", "Separator", "Positive electrode"],
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

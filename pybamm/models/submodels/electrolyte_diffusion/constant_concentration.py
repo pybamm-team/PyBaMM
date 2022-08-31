@@ -25,12 +25,14 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
     def get_fundamental_variables(self):
         c_e_dict = {
             domain: pybamm.FullBroadcast(1, domain.lower(), "current collector")
-            for domain in self.domains
+            for domain in self.options.whole_cell_domains
         }
         variables = self._get_standard_concentration_variables(c_e_dict)
 
         N_e = pybamm.FullBroadcastToEdges(
-            0, [domain.lower() for domain in self.domains], "current collector"
+            0,
+            [domain.lower() for domain in self.options.whole_cell_domains],
+            "current collector",
         )
 
         variables.update(self._get_standard_flux_variables(N_e))
@@ -39,7 +41,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
 
     def get_coupled_variables(self, variables):
         eps_c_e = {}
-        for domain in self.domains:
+        for domain in self.options.whole_cell_domains:
             eps_k = variables[f"{domain} porosity"]
             c_e_k = variables[f"{domain.split()[0]} electrolyte concentration"]
             eps_c_e[domain] = eps_k * c_e_k

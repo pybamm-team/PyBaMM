@@ -42,33 +42,36 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         # Override print_name
         c_e.print_name = "c_e"
 
-        c_e_av = pybamm.x_average(c_e)
-
         variables = {
             "Electrolyte concentration": c_e,
-            "Electrolyte concentration [mol.m-3]": c_e_typ * c_e,
-            "Electrolyte concentration [Molar]": c_e_typ * c_e / 1000,
-            "X-averaged electrolyte concentration": c_e_av,
-            "X-averaged electrolyte concentration [mol.m-3]": c_e_typ * c_e_av,
-            "X-averaged electrolyte concentration [Molar]": c_e_typ * c_e_av / 1000,
+            "X-averaged electrolyte concentration": pybamm.x_average(c_e),
         }
 
-        # Case where negative electrode is not included (half-cell)
-        if "Negative electrode" not in self.domains:
+        # Case where an electrode is not included (half-cell)
+        if "Negative electrode" not in self.options.whole_cell_domains:
             c_e_s = c_e_dict["Separator"]
             c_e_dict["Negative electrode"] = pybamm.boundary_value(c_e_s, "left")
+        if "Positive electrode" not in self.options.whole_cell_domains:
+            c_e_s = c_e_dict["Separator"]
+            c_e_dict["Positive electrode"] = pybamm.boundary_value(c_e_s, "right")
 
         for domain, c_e_k in c_e_dict.items():
-            Name = f"{domain.split()[0]} electrolyte concentration"
-            name = Name.lower()
+            domain = domain.split()[0]
             c_e_k_av = pybamm.x_average(c_e_k)
             variables.update(
                 {
-                    f"{Name}": c_e_k,
-                    f"{Name} [mol.m-3]": c_e_typ * c_e_k,
-                    f"{Name} [Molar]": c_e_typ * c_e_k / 1000,
-                    f"X-averaged {name}": c_e_k_av,
-                    f"X-averaged {name} [mol.m-3]": c_e_typ * c_e_k_av,
+                    f"{domain} electrolyte concentration": c_e_k,
+                    f"X-averaged {domain} electrolyte concentration": c_e_k_av,
+                }
+            )
+
+        # Calculate dimensional variables
+        variables_nondim = variables.copy()
+        for name, var in variables_nondim.items():
+            variables.update(
+                {
+                    f"{name} [mol.m-3]": c_e_typ * var,
+                    f"{name} [Molar]": c_e_typ * var / 1000,
                 }
             )
 
