@@ -899,6 +899,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def _set_dimensionless_parameters(self):
         main = self.main_param
+        pref = self.phase_prefactor
 
         # Timescale ratios
         self.C_diff = self.tau_diffusion / main.timescale
