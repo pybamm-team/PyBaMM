@@ -373,3 +373,54 @@ def plotcomplong(all_sumvars_dict0,all_sumvars_dict1,all_sumvars_dict2):
             loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
+
+
+def load_data_calendar(cell,eSOH_DIR): 
+    cell_no = f'{cell:02d}'
+    dfe=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
+    dfe_0=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
+    # dfo_0=pd.read_csv(oCV_DIR+"ocv_data_cell_"+cell_no+".csv")
+    # if cell_no=='13':
+    #     dfo_d=dfo_0[dfo_0['N']==dfe['N'].iloc[-5]]
+    #     dfo_0=dfo_0.drop(dfo_d.index.values)
+    #     dfo_0=dfo_0.reset_index(drop=True)
+    #     dfe = dfe.drop(dfe.index[-5])
+    #     dfe = dfe.reset_index(drop=True)
+    # Remove first RPT
+    # dfe = dfe.drop(dfe.index[0])
+    # dfe = dfe.reset_index(drop=True)
+    # dfo_d=dfo_0[dfo_0['N']==0]
+    # dfo_0=dfo_0.drop(dfo_d.index.values)
+    # if cell_no=='13':
+    #     dfe = dfe.drop(dfe.index[-1])
+    #     dfe = dfe.reset_index(drop=True)
+    #     dfe_0 = dfe_0.drop(dfe_0.index[-1])
+    #     dfe_0 = dfe_0.reset_index(drop=True)
+    # dfe['N']=dfe['N']-dfe['N'][0]
+    dfe['N']=dfe['Time']
+    N =dfe.N.unique()
+
+    print("Cycle Numbers:")
+    print(*N, sep = ", ") 
+    # print(len(N_0))
+    # print(len(dfo_0))
+    # rev_exp = []
+    # irrev_exp = []
+
+    return cell_no,dfe,N
+
+def init_exp_calendar(cell_no,dfe):
+    # dfe_0 = dfe[dfe['N']==N[0]]
+    C_n_init = dfe['C_n'][0]
+    C_p_init = dfe['C_p'][0]
+    y_0_init = dfe['y_0'][0] 
+    if cell_no=='22':
+        SOC_0 = 1
+    #     x_init = esoh_sol["x_100"].data[0] 
+    #     y_init = esoh_sol["y_100"].data[0] 
+    elif cell_no=='23':
+        SOC_0 = 0.5
+    #     x_init = 0.5*(esoh_sol["x_100"].data[0]-esoh_sol["x_0"].data[0])
+    #     y_init = 0.5*(esoh_sol["y_0"].data[0]-esoh_sol["y_100"].data[0])
+
+    return C_n_init,C_p_init,SOC_0#,x_init,y_init,c_rate_c,c_rate_d,dis_set
