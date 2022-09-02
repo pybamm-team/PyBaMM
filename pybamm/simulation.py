@@ -147,15 +147,7 @@ class Simulation:
         self._experiment_inputs = []
         self._experiment_times = []
         for op, events in zip(experiment.operating_conditions, experiment.events):
-            operating_inputs = {
-                "Current switch": 0,
-                "Voltage switch": 0,
-                "Power switch": 0,
-                "CCCV switch": 0,
-                "Current input [A]": 0,
-                "Voltage input [V]": 0,
-                "Power input [W]": 0,
-            }
+            operating_inputs = {}
             op_units = op["electric"][1]
             if op["dc_data"] is not None:
                 # If operating condition includes a drive cycle, define the interpolant
@@ -273,7 +265,7 @@ class Simulation:
             # Create model for this operating condition if it has not already been seen
             # before
             if op_cond["electric"] not in self.op_conds_to_model_and_param:
-                if op_inputs["Current switch"] == 1:
+                if op_inputs.get("Current switch") == 1:
                     # Current control
                     # Make a new copy of the model (we will update events later))
                     new_model = model.new_copy()
@@ -285,7 +277,7 @@ class Simulation:
                     # FunctionControl submodel
                     # check which kind of external circuit model we need (differential
                     # or algebraic)
-                    if op_inputs["CCCV switch"] == 1:
+                    if op_inputs.get("CCCV switch") == 1:
                         control = "differential with max"
                     else:
                         control = "algebraic"
@@ -322,41 +314,42 @@ class Simulation:
                     ] = new_model.param.current_with_time
 
                     # add current events to the model
-                    if op_inputs["CCCV switch"] == 1:
-                        # for the CCCV model we need to make sure that the current
-                        # cut-off is only reached at the end of the CV phase
-                        # Current is negative for a charge so this event will be
-                        # negative until it is zero
-                        # So we take away a large number times a heaviside switch
-                        # for the CV phase to make sure that the event can only be
-                        # hit during CV
-                        new_model.events.append(
-                            pybamm.Event(
-                                "Current cut-off (CCCV) [A] [experiment]",
-                                -new_model.variables["Current [A]"]
-                                - abs(pybamm.InputParameter("Current cut-off [A]"))
-                                + 1e4
-                                * (
-                                    new_model.variables["Battery voltage [V]"]
-                                    < (
-                                        pybamm.InputParameter("Voltage input [V]")
-                                        - 1e-4
-                                    )
-                                ),
-                            )
-                        )
-                    else:
-                        # current event
-                        new_model.events.extend(
-                            [
+                    if "Current cut-off [A]" in op_inputs:
+                        if op_inputs.get("CCCV switch") == 1:
+                            # for the CCCV model we need to make sure that the current
+                            # cut-off is only reached at the end of the CV phase
+                            # Current is negative for a charge so this event will be
+                            # negative until it is zero
+                            # So we take away a large number times a heaviside switch
+                            # for the CV phase to make sure that the event can only be
+                            # hit during CV
+                            new_model.events.append(
                                 pybamm.Event(
-                                    "Current cut-off [A] [experiment]",
-                                    abs(new_model.variables["Current [A]"])
-                                    - pybamm.InputParameter("Current cut-off [A]"),
-                                ),
-                            ]
-                        )
-                    if op_inputs["Voltage switch"] == 1:
+                                    "Current cut-off (CCCV) [A] [experiment]",
+                                    -new_model.variables["Current [A]"]
+                                    - abs(pybamm.InputParameter("Current cut-off [A]"))
+                                    + 1e4
+                                    * (
+                                        new_model.variables["Battery voltage [V]"]
+                                        < (
+                                            pybamm.InputParameter("Voltage input [V]")
+                                            - 1e-4
+                                        )
+                                    ),
+                                )
+                            )
+                        else:
+                            # current event
+                            new_model.events.extend(
+                                [
+                                    pybamm.Event(
+                                        "Current cut-off [A] [experiment]",
+                                        abs(new_model.variables["Current [A]"])
+                                        - pybamm.InputParameter("Current cut-off [A]"),
+                                    ),
+                                ]
+                            )
+                    if op_inputs.get("Voltage switch") == 1:
                         new_model.algebraic[
                             i_cell
                         ] = pybamm.external_circuit.VoltageFunctionControl(
@@ -364,7 +357,7 @@ class Simulation:
                         ).constant_voltage(
                             new_model.variables
                         )
-                    elif op_inputs["Power switch"] == 1:
+                    elif op_inputs.get("Power switch") == 1:
                         new_model.algebraic[
                             i_cell
                         ] = pybamm.external_circuit.PowerFunctionControl(
@@ -372,7 +365,7 @@ class Simulation:
                         ).constant_power(
                             new_model.variables
                         )
-                    elif op_inputs["CCCV switch"] == 1:
+                    elif op_inputs.get("CCCV switch") == 1:
                         new_model.rhs[
                             i_cell
                         ] = pybamm.external_circuit.CCCVFunctionControl(
@@ -382,13 +375,13 @@ class Simulation:
                         )
 
                 # add voltage events to the model
-                if op_inputs["Power switch"] == 1 or op_inputs["Current switch"] == 1:
+                if "Voltage cut-off [V]" in op_inputs:
                     # The voltage event should be positive at the start of charge/
                     # discharge. We use the sign of the current or power input to
                     # figure out whether the voltage event is greater than the starting
                     # voltage (charge) or less (discharge) and set the sign of the
                     # event accordingly
-                    if op_inputs["Power switch"] == 1:
+                    if op_inputs.get("Power switch") == 1:
                         inp = op_inputs["Power input [W]"]
                     else:
                         inp = op_inputs["Current input [A]"]
@@ -425,11 +418,11 @@ class Simulation:
 
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
-                if op_inputs["Current switch"] == 1:
+                if op_inputs.get("Current switch") == 1:
                     new_parameter_values.update(
                         {"Current function [A]": op_inputs["Current input [A]"]}
                     )
-                elif op_inputs["Voltage switch"] == 1:
+                elif op_inputs.get("Voltage switch") == 1:
                     new_parameter_values.update(
                         {
                             "Voltage function [V]": op_inputs["Voltage input [V]"]
@@ -437,12 +430,12 @@ class Simulation:
                         },
                         check_already_exists=False,
                     )
-                elif op_inputs["Power switch"] == 1:
+                elif op_inputs.get("Power switch") == 1:
                     new_parameter_values.update(
                         {"Power function [W]": op_inputs["Power input [W]"]},
                         check_already_exists=False,
                     )
-                elif op_inputs["CCCV switch"] == 1:
+                elif op_inputs.get("CCCV switch") == 1:
                     new_parameter_values.update(
                         {
                             "Current function [A]": op_inputs["Current input [A]"],
@@ -735,7 +728,7 @@ class Simulation:
             # inputs without having to build the simulation again
             self._solution = starting_solution
             # Step through all experimental conditions
-            inputs = kwargs.get("inputs", {})
+            user_inputs = kwargs.get("inputs", {})
             timer = pybamm.Timer()
 
             # Set up eSOH solver (for summary variables)
@@ -822,10 +815,12 @@ class Simulation:
                     logs["step operating conditions"] = op_conds_str
                     callbacks.on_step_start(logs)
 
-                    inputs.update(exp_inputs)
                     start_time = current_solution.t[-1]
-                    inputs.update({"start time": start_time})
-                    kwargs["inputs"] = inputs
+                    kwargs["inputs"] = {
+                        **user_inputs,
+                        **exp_inputs,
+                        "start time": start_time,
+                    }
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                     try:
