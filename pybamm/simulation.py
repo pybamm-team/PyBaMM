@@ -225,10 +225,7 @@ class Simulation:
 
             # Update events
             if events is None:
-                # make current and voltage values that won't be hit
-                operating_inputs.update(
-                    {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": -1e10}
-                )
+                pass
             elif events[1] in ["A", "C"]:
                 # update current cut-off, make voltage a value that won't be hit
                 if events[1] == "A":
@@ -237,15 +234,11 @@ class Simulation:
                     # Scale C-rate with capacity to obtain current
                     capacity = self._parameter_values["Nominal cell capacity [A.h]"]
                     I = events[0] * capacity
-                operating_inputs.update(
-                    {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
-                )
+                operating_inputs.update({"Current cut-off [A]": I})
             elif events[1] == "V":
                 # update voltage cut-off, make current a value that won't be hit
                 V = events[0]
-                operating_inputs.update(
-                    {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
-                )
+                operating_inputs.update({"Voltage cut-off [V]": V})
 
             self._experiment_inputs.append(operating_inputs)
             # Add time to the experiment times
@@ -888,6 +881,28 @@ class Simulation:
 
                 # At the final step of the inner loop we save the cycle
                 if len(steps) > 0:
+                    # Check for EmptySolution
+                    if all(isinstance(step, pybamm.EmptySolution) for step in steps):
+                        if len(steps) == 1:
+                            raise pybamm.SolverError(
+                                f"Step '{op_conds_str}' is infeasible "
+                                "due to exceeded bounds at initial conditions. "
+                                "If this step is part of a longer cycle, "
+                                "round brackets should be used to indicate this, "
+                                "e.g.:\n pybamm.Experiment([(\n"
+                                "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
+                                "\tCharge at 1 A until 4.1 V,\n"
+                                "\tHold at 4.1 V until 10 mA\n"
+                                "])"
+                            )
+                        else:
+                            this_cycle = self.experiment.operating_conditions_cycles[
+                                cycle_num - 1
+                            ]
+                            raise pybamm.SolverError(
+                                f"All steps in the cycle {this_cycle} are infeasible "
+                                "due to exceeded bounds at initial conditions."
+                            )
                     cycle_sol = pybamm.make_cycle_solution(
                         steps,
                         esoh_solver,
