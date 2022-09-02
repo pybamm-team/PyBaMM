@@ -344,7 +344,7 @@ def plotcomp(all_sumvars_dict0,all_sumvars_dict1):
     fig, axes = plt.subplots(3,2,figsize=(7,7))
     for k, name in enumerate(esoh_vars):
         ax = axes.flat[k]
-        ax.plot(all_sumvars_dict0["Cycle number"],all_sumvars_dict0[name],"kx")
+        ax.plot(all_sumvars_dict0["Cycle number"],all_sumvars_dict0[name],"k")
         ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"b")
         ax.set_title(split_long_string(name))
         if k ==2 or k==3:
