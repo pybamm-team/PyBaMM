@@ -38,14 +38,18 @@ class InverseButlerVolmer(BaseInterface):
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
 
-        j_tot_av = self._get_average_total_interfacial_current_density(variables)
+        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
+            variables
+        )
         if j0.domain in [[], ["current collector"]]:
             j_tot = j_tot_av
         else:
             j_tot = pybamm.PrimaryBroadcast(
                 j_tot_av, [self.domain.lower() + " electrode"]
             )
-        variables.update(self._get_standard_total_interfacial_current_variables(j_tot))
+        variables.update(
+            self._get_standard_total_interfacial_current_variables(j_tot, a_j_tot_av)
+        )
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r

@@ -69,7 +69,6 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             # Compare two phase model to standard model
             for variable in [
                 "X-averaged negative electrode active material volume fraction",
-                "X-averaged negative electrode interfacial current density",
                 "X-averaged negative electrode volumetric interfacial current density",
                 "Terminal voltage [V]",
             ]:

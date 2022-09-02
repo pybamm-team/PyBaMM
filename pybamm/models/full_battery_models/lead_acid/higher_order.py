@@ -103,24 +103,6 @@ class BaseHigherOrderModel(BaseModel):
             leading_order_model.variables["X-averaged electrolyte concentration"]
         ]
 
-        # Reset sums
-        self.variables.update(
-            {
-                "Sum of electrolyte reaction source terms": 0,
-                "Sum of negative electrode electrolyte reaction source terms": 0,
-                "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged negative electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of x-averaged positive electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of interfacial current densities": 0,
-                "Sum of negative electrode interfacial current densities": 0,
-                "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged negative electrode interfacial current densities": 0,
-                "Sum of x-averaged positive electrode interfacial current densities": 0,
-            }
-        )
-
     def set_average_interfacial_submodel(self):
         self.submodels[
             "x-averaged negative interface"

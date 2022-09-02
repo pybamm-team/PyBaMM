@@ -384,6 +384,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current density as a state' must be 'true'"
                 )
 
+        # If "SEI film resistance" is not "none" and there are multiple phases
+        # then "total interfacial current density as a state" must be "true"
+        if (
+            options["SEI film resistance"] != "none"
+            and options["particle phases"] != "1"
+        ):
+            options["total interfacial current density as a state"] = "true"
+            # Check that extra_options did not try to provide a clashing option
+            if (
+                extra_options.get("total interfacial current density as a state")
+                == "false"
+            ):
+                raise pybamm.OptionError(
+                    "If 'SEI film resistance' is not 'none' "
+                    "and there are multiple phases then 'total interfacial "
+                    "current density as a state' must be 'true'"
+                )
+
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
             if options["lithium plating"] != "none":

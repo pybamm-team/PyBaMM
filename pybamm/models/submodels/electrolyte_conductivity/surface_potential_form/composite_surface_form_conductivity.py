@@ -94,16 +94,16 @@ class CompositeDifferential(BaseModel):
         super().__init__(param, domain)
 
     def set_rhs(self, variables):
-        sum_j = variables[
+        sum_a_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()
-            + " electrode interfacial current densities"
+            + " electrode volumetric interfacial current densities"
         ]
 
-        sum_j_av = variables[
+        sum_a_j_av = variables[
             "X-averaged "
             + self.domain.lower()
-            + " electrode total interfacial current density"
+            + " electrode total volumetric interfacial current density"
         ]
         delta_phi = variables[
             "X-averaged "
@@ -113,7 +113,7 @@ class CompositeDifferential(BaseModel):
 
         C_dl = self.domain_param.C_dl
 
-        self.rhs[delta_phi] = 1 / C_dl * (sum_j_av - sum_j)
+        self.rhs[delta_phi] = 1 / C_dl * (sum_a_j_av - sum_a_j)
 
 
 class CompositeAlgebraic(BaseModel):
@@ -135,16 +135,16 @@ class CompositeAlgebraic(BaseModel):
         super().__init__(param, domain)
 
     def set_algebraic(self, variables):
-        sum_j = variables[
+        sum_a_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()
-            + " electrode interfacial current densities"
+            + " electrode volumetric interfacial current densities"
         ]
 
-        sum_j_av = variables[
+        sum_a_j_av = variables[
             "X-averaged "
             + self.domain.lower()
-            + " electrode total interfacial current density"
+            + " electrode total volumetric interfacial current density"
         ]
         delta_phi = variables[
             "X-averaged "
@@ -152,4 +152,4 @@ class CompositeAlgebraic(BaseModel):
             + " electrode surface potential difference"
         ]
 
-        self.algebraic[delta_phi] = sum_j_av - sum_j
+        self.algebraic[delta_phi] = sum_a_j_av - sum_a_j
