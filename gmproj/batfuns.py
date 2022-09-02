@@ -409,18 +409,113 @@ def load_data_calendar(cell,eSOH_DIR):
 
     return cell_no,dfe,N
 
-def init_exp_calendar(cell_no,dfe):
+def init_exp_calendar(cell_no,dfe,param,parameter_values):
     # dfe_0 = dfe[dfe['N']==N[0]]
     C_n_init = dfe['C_n'][0]
     C_p_init = dfe['C_p'][0]
     y_0_init = dfe['y_0'][0] 
+    eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.c_max * param.F* param.A_cc))
+    eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.c_max * param.F* param.A_cc))
+    # cs_p_init = parameter_values.evaluate(y_0_init* param.c_p_max)
     if cell_no=='22':
         SOC_0 = 1
+        Temp = 45
     #     x_init = esoh_sol["x_100"].data[0] 
     #     y_init = esoh_sol["y_100"].data[0] 
     elif cell_no=='23':
         SOC_0 = 0.5
-    #     x_init = 0.5*(esoh_sol["x_100"].data[0]-esoh_sol["x_0"].data[0])
-    #     y_init = 0.5*(esoh_sol["y_0"].data[0]-esoh_sol["y_100"].data[0])
+        Temp = 45
+    elif cell_no=='24':
+        SOC_0 = 1
+        Temp = -5
+    elif cell_no=='25':
+        SOC_0 = 0.5
+        Temp = -5
+        
+    return eps_n_data,eps_p_data,SOC_0,Temp#,x_init,y_init
 
-    return C_n_init,C_p_init,SOC_0#,x_init,y_init,c_rate_c,c_rate_d,dis_set
+
+def load_data(cell,eSOH_DIR,oCV_DIR): 
+    cell_no = f'{cell:02d}'
+    dfe=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
+    dfe_0=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
+    dfo_0=pd.read_csv(oCV_DIR+"ocv_data_cell_"+cell_no+".csv")
+    # if cell_no=='13':
+    #     dfo_d=dfo_0[dfo_0['N']==dfe['N'].iloc[-5]]
+    #     dfo_0=dfo_0.drop(dfo_d.index.values)
+    #     dfo_0=dfo_0.reset_index(drop=True)
+    #     dfe = dfe.drop(dfe.index[-5])
+    #     dfe = dfe.reset_index(drop=True)
+    # Remove first RPT
+    dfe = dfe.drop(dfe.index[0])
+    dfe = dfe.reset_index(drop=True)
+    # dfo_d=dfo_0[dfo_0['N']==0]
+    # dfo_0=dfo_0.drop(dfo_d.index.values)
+    if cell_no=='13':
+        dfe = dfe.drop(dfe.index[-1])
+        dfe = dfe.reset_index(drop=True)
+        dfe_0 = dfe_0.drop(dfe_0.index[-1])
+        dfe_0 = dfe_0.reset_index(drop=True)
+    dfe['N']=dfe['N']-dfe['N'][0]
+    N =dfe.N.unique()
+    N_0 = dfe_0.N.unique()
+    print("Cycle Numbers:")
+    print(*N, sep = ", ") 
+    print(len(N_0))
+    print(len(dfo_0))
+    rev_exp = []
+    irrev_exp = []
+
+    for i in range(len(N_0)-1):
+        # print(i)
+        dfo = dfo_0[dfo_0['N']==N_0[i+1]]
+        # print(max(dfo['E'])-min(dfo['E']))
+        rev_exp.append(max(dfo['E'])-min(dfo['E']))
+    dfe['rev_exp']=rev_exp
+    print('Reversible Expansion')
+
+    dfo_1 = dfo_0[dfo_0['N']==N_0[1]]
+    for i in range(len(N_0)-1):
+        # print(i)
+        dfo = dfo_0[dfo_0['N']==N_0[i+1]]
+        # print(max(dfo['E'])-min(dfo['E']))
+        irrev_exp.append(min(dfo['E'])-min(dfo_1['E']))
+    dfe['irrev_exp']=irrev_exp
+    print('Irreversible Expansion')
+    return cell_no,dfe,dfe_0,dfo_0,N,N_0
+
+def init_exp(cell_no,dfe,spm,parameter_values):
+    # dfe_0 = dfe[dfe['N']==N[0]]
+    param = spm.param
+    C_n_init = dfe['C_n'][0]
+    C_p_init = dfe['C_p'][0]
+    y_0_init = dfe['y_0'][0] 
+    eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.c_max * param.F* param.A_cc))
+    eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.c_max * param.F* param.A_cc))
+    # cs_p_init = parameter_values.evaluate(y_0_init* param.c_p_max) 
+    if cell_no=='01':
+        c_rate_c = 'C/5'
+        c_rate_d = 'C/5'
+        dis_set = " until 3V"
+    elif cell_no=='04':
+        c_rate_c = '1.5C'
+        c_rate_d = '1.5C'
+        dis_set = " until 3V"
+    elif cell_no=='07':
+        c_rate_c = '2C'
+        c_rate_d = '2C'
+        dis_set = " until 3V"
+    elif cell_no=='10':
+        c_rate_c = 'C/5'
+        c_rate_d = '1.5C'
+        dis_set = " until 3V"
+    elif cell_no=='13':
+        c_rate_c = 'C/5'
+        c_rate_d = 'C/5'
+        dis_set = " for 150 min"
+    elif cell_no=='16':
+        c_rate_c = 'C/5'
+        c_rate_d = '1.5C'
+        dis_set = " for 20 min"
+
+    return eps_n_data,eps_p_data,y_0_init,c_rate_c,c_rate_d,dis_set
