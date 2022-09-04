@@ -16,7 +16,6 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Current function [A]"] = 100
 param.process_model(model)
 param.process_geometry(geometry)
 

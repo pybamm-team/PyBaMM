@@ -782,6 +782,10 @@ class EmptySolution:
 
         self.t = t
 
+    def __add__(self, other):
+        if isinstance(other, (EmptySolution, Solution)):
+            return other.copy()
+
     def __radd__(self, other):
         if other is None:
             return self.copy()
