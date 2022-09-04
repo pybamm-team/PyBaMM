@@ -385,9 +385,6 @@ class Simulation:
                         inp = op_inputs["Power input [W]"]
                     else:
                         inp = op_inputs["Current input [A]"]
-                    if isinstance(inp, pybamm.Interpolant):
-                        # drive cycle, pre-calculate the integral of the current
-                        inp = np.trapz(inp.y, inp.x)
                     sign = np.sign(inp)
                     if sign > 0:
                         name = "Discharge"
