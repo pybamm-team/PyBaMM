@@ -21,35 +21,35 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, experiment=experiment)
+        C = model.default_parameter_values["Nominal cell capacity [A.h]"]
 
         self.assertEqual(sim.experiment, experiment)
         self.assertEqual(
-            sim._experiment_inputs[0]["Current input [A]"],
-            1 / 20 * model.default_parameter_values["Nominal cell capacity [A.h]"],
+            sim._experiment_inputs[0],
+            {"Current switch": 1, "Current input [A]": C / 20, "period": 60},
         )
-        self.assertEqual(sim._experiment_inputs[0]["Current switch"], 1)
-        self.assertEqual(sim._experiment_inputs[0]["Voltage switch"], 0)
-        self.assertEqual(sim._experiment_inputs[0]["Power switch"], 0)
-        self.assertEqual(sim._experiment_inputs[0]["Current cut-off [A]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[0]["Voltage cut-off [V]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[1]["Current input [A]"], -1)
-        self.assertEqual(sim._experiment_inputs[1]["Current switch"], 1)
-        self.assertEqual(sim._experiment_inputs[1]["Voltage switch"], 0)
-        self.assertEqual(sim._experiment_inputs[1]["Power switch"], 0)
-        self.assertEqual(sim._experiment_inputs[1]["Current cut-off [A]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[1]["Voltage cut-off [V]"], 4.1)
-        self.assertEqual(sim._experiment_inputs[2]["Current switch"], 0)
-        self.assertEqual(sim._experiment_inputs[2]["Voltage switch"], 1)
-        self.assertEqual(sim._experiment_inputs[2]["Power switch"], 0)
-        self.assertEqual(sim._experiment_inputs[2]["Voltage input [V]"], 4.1)
-        self.assertEqual(sim._experiment_inputs[2]["Current cut-off [A]"], 0.05)
-        self.assertEqual(sim._experiment_inputs[2]["Voltage cut-off [V]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[3]["Current switch"], 0)
-        self.assertEqual(sim._experiment_inputs[3]["Voltage switch"], 0)
-        self.assertEqual(sim._experiment_inputs[3]["Power switch"], 1)
-        self.assertEqual(sim._experiment_inputs[3]["Power input [W]"], 2)
-        self.assertEqual(sim._experiment_inputs[3]["Current cut-off [A]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[3]["Voltage cut-off [V]"], -1e10)
+        self.assertEqual(
+            sim._experiment_inputs[1],
+            {
+                "Current switch": 1,
+                "Current input [A]": -1,
+                "period": 60,
+                "Voltage cut-off [V]": 4.1,
+            },
+        )
+        self.assertEqual(
+            sim._experiment_inputs[2],
+            {
+                "Voltage switch": 1,
+                "Voltage input [V]": 4.1,
+                "period": 60,
+                "Current cut-off [A]": 0.05,
+            },
+        )
+        self.assertEqual(
+            sim._experiment_inputs[3],
+            {"Power switch": 1, "Power input [W]": 2, "period": 60},
+        )
 
         Crate = 1 / model.default_parameter_values["Nominal cell capacity [A.h]"]
         self.assertEqual(
