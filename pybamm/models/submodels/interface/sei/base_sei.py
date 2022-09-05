@@ -250,7 +250,7 @@ class BaseModel(BaseInterface):
 
             variables.update(
                 {
-                    "Inner SEi thickness": L_inner,
+                    "Inner SEI thickness": L_inner,
                     "Inner SEI thickness [m]": L_inner * L_scale,
                     "Outer SEI thickness": L_outer,
                     "Outer SEI thickness [m]": L_outer * L_scale,
