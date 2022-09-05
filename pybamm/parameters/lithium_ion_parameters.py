@@ -901,6 +901,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.tau_diffusion = self.R_typ**2 / self.D_typ_dim
 
     def _set_dimensionless_parameters(self):
+        domain_param = self.domain_param
         main = self.main_param
         pref = self.phase_prefactor
 
@@ -936,7 +937,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.E_over_RT_sei = self.E_sei_dimensional / self.R / main.T_ref
         self.C_sei_reaction = (
             self.j_scale / self.m_sei_dimensional
-        ) * pybamm.exp(-(main.F * main.U_ref / (2 * self.R * main.T_ref)))
+        ) * pybamm.exp(-(main.F * domain_param.U_ref / (2 * self.R * main.T_ref)))
 
         self.C_sei_solvent = (
             self.j_scale
@@ -999,7 +1000,7 @@ class ParticleLithiumIonParameters(BaseParameters):
                 pybamm.exp(
                     -(
                         main.F
-                        * (self.U_ref - self.U_sei_dim)
+                        * (domain_param.U_ref - self.U_sei_dim)
                         / (2 * self.R * main.T_ref)
                     )
                 )

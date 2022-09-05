@@ -24,7 +24,7 @@ class SEIGrowth(BaseModel):
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, reaction_loc, options=None, phase="primary"):# Jason - needs default argument?
+    def __init__(self, param, reaction_loc, options=None, phase="primary", cracks=False):# Jason - needs default argument?
         super().__init__(param, options=options, phase=phase)
         self.reaction_loc = reaction_loc
 
