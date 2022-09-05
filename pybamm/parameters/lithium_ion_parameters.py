@@ -779,6 +779,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.L_inner_0_dim = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
         self.L_outer_0_dim = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
         self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
+        self.E_sei_dimensional = pybamm.Parameter(
+            f"{pref}SEI growth activation energy [J.mol-1]"
+        )
         
         # EC reaction
         self.c_ec_0_dim = pybamm.Parameter(
@@ -930,10 +933,10 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
 
-        self.E_over_RT_sei = self.E_sei_dimensional / self.R / self.T_ref
+        self.E_over_RT_sei = self.E_sei_dimensional / self.R / main.T_ref
         self.C_sei_reaction = (
             self.j_scale / self.m_sei_dimensional
-        ) * pybamm.exp(-(main.F * self.U_ref / (2 * self.R * main.T_ref)))
+        ) * pybamm.exp(-(main.F * main.U_ref / (2 * self.R * main.T_ref)))
 
         self.C_sei_solvent = (
             self.j_scale
