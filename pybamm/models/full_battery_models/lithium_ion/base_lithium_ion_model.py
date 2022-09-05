@@ -318,7 +318,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             pref = self.phase_prefactor
             
             if self.options["SEI"] == "none":
-                submod = pybamm.sei.NoSEI(self.param, self.options, phase)
+                submod = pybamm.sei.NoSEI(self.param, self.options, phase, cracks=False)
             elif self.options["SEI"] == "constant":
                 submod = pybamm.sei.ConstantSEI(self.param, self.options, phase)
             else:

@@ -184,7 +184,6 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
         # print(f"domain = {domain}")
         # print(f"reaction = {self.reaction}")

@@ -1247,9 +1247,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.half_cell:
             eta_sei_av = self.variables["SEI film overpotential"]
             eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
+            # eta_sei_av = self.variables[f"{phase_n.capitalize()}SEI film overpotential"]  # Mark Jason - add phase_n for these variables?
+            # eta_sei_av_dim = self.variables[f"{phase_n.capitalize()}SEI film overpotential [V]"]
         else:
             eta_sei_av = self.variables["X-averaged SEI film overpotential"]
             eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
+            # eta_sei_av = self.variables[f"X-averaged {phase_n}SEI film overpotential"]
+            # eta_sei_av_dim = self.variables[f"X-averaged {phase_n}SEI film overpotential [V]"]
 
         # TODO: add current collector losses to the voltage in 3D
 
@@ -1266,7 +1270,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
             }
-        )
+        ) # Mark Jason - add phase_n for these variables?
 
         # Battery-wide variables
         V = self.variables["Terminal voltage"]
