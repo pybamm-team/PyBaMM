@@ -72,11 +72,13 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "X-averaged separator transverse volume-averaged acceleration"
         ]
 
-        sum_j_n_0 = variables[
-            "Sum of x-averaged negative electrode interfacial current densities"
+        sum_a_j_n_0 = variables[
+            "Sum of x-averaged negative electrode volumetric "
+            "interfacial current densities"
         ]
-        sum_j_p_0 = variables[
-            "Sum of x-averaged positive electrode interfacial current densities"
+        sum_a_j_p_0 = variables[
+            "Sum of x-averaged positive electrode volumetric "
+            "interfacial current densities"
         ]
         sum_s_j_n_0 = variables[
             "Sum of x-averaged negative electrode electrolyte reaction source terms"
@@ -85,8 +87,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
         ]
         source_terms = (
-            param.n.l * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_j_n_0)
-            + param.p.l * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_j_p_0)
+            param.n.l * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
+            + param.p.l * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
         ) / param.gamma_e
 
         self.rhs = {

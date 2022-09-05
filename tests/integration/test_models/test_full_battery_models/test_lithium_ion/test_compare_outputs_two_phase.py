@@ -7,7 +7,7 @@ import unittest
 
 
 class TestCompareOutputsTwoPhase(unittest.TestCase):
-    def compare_outputs_two_phase(self, model_class):
+    def compare_outputs_two_phase_graphite_graphite(self, model_class):
         """
         Check that a two-phase graphite-graphite model gives the same results as a
         standard one-phase graphite model
@@ -69,7 +69,6 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             # Compare two phase model to standard model
             for variable in [
                 "X-averaged negative electrode active material volume fraction",
-                "X-averaged negative electrode interfacial current density",
                 "X-averaged negative electrode volumetric interfacial current density",
                 "Terminal voltage [V]",
             ]:
@@ -106,17 +105,66 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
                 decimal=6,
             )
 
-    def test_compare_SPM(self):
+    def test_compare_SPM_graphite_graphite(self):
         model_class = pybamm.lithium_ion.SPM
-        self.compare_outputs_two_phase(model_class)
+        self.compare_outputs_two_phase_graphite_graphite(model_class)
 
-    def test_compare_SPMe(self):
+    def test_compare_SPMe_graphite_graphite(self):
         model_class = pybamm.lithium_ion.SPMe
-        self.compare_outputs_two_phase(model_class)
+        self.compare_outputs_two_phase_graphite_graphite(model_class)
 
-    def test_compare_DFN(self):
+    def test_compare_DFN_graphite_graphite(self):
         model_class = pybamm.lithium_ion.DFN
-        self.compare_outputs_two_phase(model_class)
+        self.compare_outputs_two_phase_graphite_graphite(model_class)
+
+    def compare_outputs_two_phase_silicon_graphite(self, model_class):
+        # Check that increasing silicon content has the expected effect
+        options = {
+            "particle phases": ("2", "1"),
+            "open circuit potential": (("single", "current sigmoid"), "single"),
+        }
+        model = model_class(options)
+
+        name = "Negative electrode active material volume fraction"
+        param = pybamm.ParameterValues("Chen2020_composite")
+        x = pybamm.InputParameter("x")
+        param.update(
+            {
+                f"Primary: {name}": (1 - x) * 0.75,
+                f"Secondary: {name}": x * 0.75,
+                "Current function [A]": 5 / 2,
+            }
+        )
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        t_eval = np.linspace(0, 9000, 1000)
+        sol1 = sim.solve(t_eval, inputs={"x": 0.01})
+        sol2 = sim.solve(t_eval, inputs={"x": 0.1})
+
+        # Starting values should be close
+        for var in [
+            "Terminal voltage [V]",
+            "Average negative primary particle concentration",
+            "Average negative secondary particle concentration",
+        ]:
+            np.testing.assert_array_almost_equal(
+                sol1[var].data[:20], sol2[var].data[:20], decimal=2
+            )
+
+        # More silicon means longer sim
+        self.assertLess(sol1["Time [s]"].data[-1], sol2["Time [s]"].data[-1])
+
+    def test_compare_SPM_silicon_graphite(self):
+        model_class = pybamm.lithium_ion.SPM
+        self.compare_outputs_two_phase_silicon_graphite(model_class)
+
+    def test_compare_SPMe_silicon_graphite(self):
+        model_class = pybamm.lithium_ion.SPMe
+        self.compare_outputs_two_phase_silicon_graphite(model_class)
+
+    def test_compare_DFN_silicon_graphite(self):
+        model_class = pybamm.lithium_ion.DFN
+        self.compare_outputs_two_phase_silicon_graphite(model_class)
 
 
 if __name__ == "__main__":

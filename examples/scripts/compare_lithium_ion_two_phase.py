@@ -10,10 +10,9 @@ options = {
     "open circuit potential": (("single", "current sigmoid"), "single"),
 }
 models = [
-    # pybamm.lithium_ion.SPM(options),
-    # pybamm.lithium_ion.SPMe(options),
+    pybamm.lithium_ion.SPM(options),
+    pybamm.lithium_ion.SPMe(options),
     pybamm.lithium_ion.DFN(options),
-    pybamm.lithium_ion.BasicDFNComposite(),
 ]
 
 parameter_values = pybamm.ParameterValues("Chen2020_composite")
@@ -37,14 +36,8 @@ pybamm.dynamic_plot(
         "X-averaged negative electrode secondary interfacial current density [A.m-2]",
         "X-averaged negative electrode primary open circuit potential [V]",
         "X-averaged negative electrode secondary open circuit potential [V]",
-        "X-averaged negative electrode interfacial current density",
-        # "Electrolyte concentration",
+        "X-averaged negative electrode volumetric interfacial current density",
         "Average positive particle concentration [mol.m-3]",
-        # "Current [A]",
-        # "Negative electrode potential [V]",
-        # "Electrolyte potential [V]",
-        # "Positive electrode potential [V]",
         "Terminal voltage [V]",
-        # ["Negative primary particle radius", "Negative secondary particle radius"],
     ],
 )

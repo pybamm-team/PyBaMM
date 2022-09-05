@@ -22,6 +22,15 @@ class TestBaseParameters(unittest.TestCase):
         with self.assertRaisesRegex(AttributeError, "param.p.prim.U_dimensional"):
             getattr(param, "U_p_dimensional")
 
+        # _n_ or _p_ not in name
+        with self.assertRaisesRegex(
+            AttributeError, "has no attribute 'c_n_not_a_parameter"
+        ):
+            getattr(param, "c_n_not_a_parameter")
+
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'c_s_test"):
+            getattr(pybamm.electrical_parameters, "c_s_test")
+
     def test__setattr__(self):
         param = pybamm.ElectricalParameters()
         self.assertEqual(param.I_typ.print_name, r"I{}^{typ}")

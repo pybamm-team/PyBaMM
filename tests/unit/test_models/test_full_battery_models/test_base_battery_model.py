@@ -27,6 +27,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
+'open circuit potential': 'single' (possible: ['single', 'current sigmoid'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -243,22 +244,34 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(
             model.options["total interfacial current density as a state"], "true"
         )
+        model = pybamm.BaseBatteryModel(
+            {"SEI film resistance": "average", "particle phases": "2"}
+        )
+        self.assertEqual(
+            model.options["total interfacial current density as a state"], "true"
+        )
         with self.assertRaisesRegex(pybamm.OptionError, "must be 'true'"):
-            model = pybamm.BaseBatteryModel(
+            pybamm.BaseBatteryModel(
                 {
                     "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "false",
+                }
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "must be 'true'"):
+            pybamm.BaseBatteryModel(
+                {
+                    "SEI film resistance": "average",
+                    "particle phases": "2",
                     "total interfacial current density as a state": "false",
                 }
             )
 
         # loss of active material model
         with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
-            model = pybamm.BaseBatteryModel(
-                {"loss of active material": "bad LAM model"}
-            )
+            pybamm.BaseBatteryModel({"loss of active material": "bad LAM model"})
         with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
             # can't have a 3-tuple
-            model = pybamm.BaseBatteryModel(
+            pybamm.BaseBatteryModel(
                 {
                     "loss of active material": (
                         "bad LAM model",
@@ -337,6 +350,10 @@ class TestBaseBatteryModel(unittest.TestCase):
                 }
             )
 
+        # phases
+        with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
+            pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
@@ -386,6 +403,24 @@ class TestOptions(unittest.TestCase):
         # something that is the same in both domains
         self.assertEqual(options.negative["thermal"], "isothermal")
         self.assertEqual(options.positive["thermal"], "isothermal")
+
+    def test_domain_phase_options(self):
+        options = BatteryModelOptions(
+            {"particle mechanics": (("swelling only", "swelling and cracking"), "none")}
+        )
+        self.assertEqual(
+            options.negative["particle mechanics"],
+            ("swelling only", "swelling and cracking"),
+        )
+        self.assertEqual(
+            options.negative.primary["particle mechanics"], "swelling only"
+        )
+        self.assertEqual(
+            options.negative.secondary["particle mechanics"], "swelling and cracking"
+        )
+        self.assertEqual(options.positive["particle mechanics"], "none")
+        self.assertEqual(options.positive.primary["particle mechanics"], "none")
+        self.assertEqual(options.positive.secondary["particle mechanics"], "none")
 
 
 if __name__ == "__main__":

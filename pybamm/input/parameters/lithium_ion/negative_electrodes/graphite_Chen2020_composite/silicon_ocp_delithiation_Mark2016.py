@@ -1,6 +1,3 @@
-from pybamm import LithiumIonParameters, Parameter, sigmoid
-
-
 def silicon_ocp_delithiation_Mark2016(sto):
     """
     silicon Open Circuit Potential (OCP) as a a function of the
@@ -33,12 +30,12 @@ def silicon_ocp_delithiation_Mark2016(sto):
     p8 = 0.9937
 
     U_delithiation = (
-        p1 * sto ** 7
-        + p2 * sto ** 6
-        + p3 * sto ** 5
-        + p4 * sto ** 4
-        + p5 * sto ** 3
-        + p6 * sto ** 2
+        p1 * sto**7
+        + p2 * sto**6
+        + p3 * sto**5
+        + p4 * sto**4
+        + p5 * sto**3
+        + p6 * sto**2
         + p7 * sto
         + p8
     )

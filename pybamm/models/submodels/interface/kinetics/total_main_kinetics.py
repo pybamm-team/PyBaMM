@@ -31,35 +31,52 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        # Creates "total" active material volume fraction and capacity variables
-        # by summing up all the phases
         Domain = self.domain
         domain = Domain.lower()
 
-        phases = phases = self.options.phase_number_to_names(
-            getattr(self.options, domain)["particle phases"]
-        )
-
-        j = sum(
-            variables[f"{Domain} electrode {phase} interfacial current density"]
-            for phase in phases
-        )
-        j_dim = sum(
-            variables[f"{Domain} electrode {phase} interfacial current density [A.m-2]"]
-            for phase in phases
-        )
-        j_av = sum(
-            variables[
-                f"X-averaged {domain} electrode {phase} interfacial current density"
+        if Domain == "Negative" and self.half_cell is True:
+            return variables
+        elif getattr(self.options, domain)["particle phases"] == "1":
+            j = variables[f"{Domain} electrode interfacial current density"]
+            j_dim = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
+            j0 = variables[f"{Domain} electrode exchange current density"]
+            j0_dim = variables[f"{Domain} electrode exchange current density [A.m-2]"]
+            a_j = variables[
+                f"{Domain} electrode volumetric interfacial current density"
             ]
-            for phase in phases
-        )
+            variables.update(
+                {
+                    f"{Domain} electrode primary interfacial current density": j,
+                    f"{Domain} electrode primary "
+                    "interfacial current density [A.m-2]": j_dim,
+                    f"{Domain} electrode primary exchange current density": j0,
+                    f"{Domain} electrode primary "
+                    "exchange current density [A.m-2]": j0_dim,
+                    f"{Domain} electrode primary volumetric "
+                    "interfacial current density": a_j,
+                }
+            )
+            return variables
+
+        j = variables[f"{Domain} electrode primary interfacial current density"]
+        j_dim = variables[
+            f"{Domain} electrode primary interfacial current density [A.m-2]"
+        ]
+        j0 = variables[f"{Domain} electrode primary exchange current density"]
+        j0_dim = variables[
+            f"{Domain} electrode primary exchange current density [A.m-2]"
+        ]
         variables.update(
             {
                 f"{Domain} electrode interfacial current density": j,
                 f"{Domain} electrode interfacial current density [A.m-2]": j_dim,
-                f"X-averaged {domain} electrode interfacial current density": j_av,
+                f"{Domain} electrode exchange current density": j0,
+                f"{Domain} electrode exchange current density [A.m-2]": j0_dim,
             }
+        )
+
+        phases = self.options.phase_number_to_names(
+            getattr(self.options, domain)["particle phases"]
         )
 
         a_j = sum(
@@ -89,26 +106,6 @@ class TotalMainKinetics(pybamm.BaseSubModel):
                 "interfacial current density [A.m-2]": a_j_dim,
                 f"X-averaged {domain} electrode volumetric "
                 "interfacial current density": a_j_av,
-            }
-        )
-
-        j0 = sum(
-            variables[f"{Domain} electrode {phase} exchange current density"]
-            for phase in phases
-        )
-        j0_dim = sum(
-            variables[f"{Domain} electrode {phase} exchange current density [A.m-2]"]
-            for phase in phases
-        )
-        j0_av = sum(
-            variables[f"X-averaged {domain} electrode {phase} exchange current density"]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode exchange current density": j0,
-                f"{Domain} electrode exchange current density [A.m-2]": j0_dim,
-                f"X-averaged {domain} electrode exchange current density": j0_av,
             }
         )
 

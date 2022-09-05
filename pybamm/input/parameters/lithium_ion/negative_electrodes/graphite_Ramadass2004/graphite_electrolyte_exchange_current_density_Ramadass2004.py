@@ -24,8 +24,6 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
         Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
-    c_s_max : :class:`pybamm.Symbol`
-        Maximum particle concentration [mol.m-3]
 
     Returns
     -------
@@ -37,5 +35,5 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
     return (
-        m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
+        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )

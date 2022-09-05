@@ -20,17 +20,17 @@ class BaseInterface(pybamm.BaseSubModel):
     options: dict
         A dictionary of options to be passed to the model. See
         :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, reaction, options=None, phase="primary"):
+    def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
         if reaction in ["lithium-ion main", "lithium metal plating"]:
-            self.reaction_name = self.phase_name
             # can be "" or "primary " or "secondary "
+            self.reaction_name = self.phase_name
         elif reaction == "lead-acid main":
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid oxygen":
@@ -68,9 +68,7 @@ class BaseInterface(pybamm.BaseSubModel):
         c_e = variables[f"{Domain} electrolyte concentration"]
         T = variables[f"{Domain} electrode temperature"]
 
-        if isinstance(self, pybamm.kinetics.NoReaction):
-            return pybamm.Scalar(0)
-        elif self.reaction == "lithium-ion main":
+        if self.reaction == "lithium-ion main":
             # For "particle-size distribution" submodels, take distribution version
             # of c_s_surf that depends on particle size.
             if self.options["particle size"] == "distribution":
@@ -169,6 +167,7 @@ class BaseInterface(pybamm.BaseSubModel):
             # collector current density, not divided by electrode thickness
             i_boundary_cc = variables["Current collector current density"]
             j_total_average = i_boundary_cc
+            a_j_total_average = i_boundary_cc
         else:
             a_av = variables[
                 f"X-averaged {domain} electrode {self.phase_name}"
@@ -176,13 +175,15 @@ class BaseInterface(pybamm.BaseSubModel):
             ]
             sgn = 1 if self.domain == "Negative" else -1
 
-            j_total_average = sgn * i_boundary_cc / (a_av * self.domain_param.l)
+            a_j_total_average = sgn * i_boundary_cc / (self.domain_param.l)
+            j_total_average = a_j_total_average / a_av
 
-        return j_total_average
+        return j_total_average, a_j_total_average
 
     def _get_standard_interfacial_current_variables(self, j):
         Domain = self.domain
         domain = Domain.lower()
+        reaction_name = self.reaction_name
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
         # print(f"domain = {domain}")
@@ -222,10 +223,11 @@ class BaseInterface(pybamm.BaseSubModel):
         # print(f"Jason-in base_interface._get_standard_interfacial_current_variables:reaction_name = {reaction_name}")
         return variables
 
-    def _get_standard_total_interfacial_current_variables(self, j_tot_av):
+    def _get_standard_total_interfacial_current_variables(self, j_tot_av, a_j_tot_av):
         domain = self.domain.lower()
 
         j_scale = self.phase_param.j_scale
+        a_j_scale = self.param.i_typ / self.param.L_x
 
         if self.half_cell and self.domain == "Negative":
             variables = {
@@ -239,6 +241,10 @@ class BaseInterface(pybamm.BaseSubModel):
                 "current density": j_tot_av,
                 f"X-averaged {domain} electrode total interfacial "
                 "current density [A.m-2]": j_scale * j_tot_av,
+                f"X-averaged {domain} electrode total volumetric interfacial "
+                "current density": a_j_tot_av,
+                f"X-averaged {domain} electrode total volumetric interfacial "
+                "current density [A.m-3]": a_j_scale * j_tot_av,
             }
 
         return variables
@@ -274,7 +280,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
 
         variables = {
-            f"{Domain} electrode {reaction_name}" "exchange current density": j0,
+            f"{Domain} electrode {reaction_name}exchange current density": j0,
             f"X-averaged {domain} electrode {reaction_name}"
             "exchange current density": j0_av,
             f"{Domain} electrode {reaction_name}"
@@ -296,31 +302,25 @@ class BaseInterface(pybamm.BaseSubModel):
 
         if isinstance(self, pybamm.kinetics.NoReaction):
             a = 1
-            a_av = 1
         else:
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio"
             ]
-            a_av = variables[
-                f"X-averaged {domain} electrode {phase_name}"
-                "surface area to volume ratio"
-            ]
         j = variables[f"{Domain} electrode {reaction_name}interfacial current density"]
-        j_av = variables[
-            f"X-averaged {domain} electrode {reaction_name}interfacial current density"
-        ]
-        scale = self.param.i_typ / self.param.L_x
+        a_j = a * j
+        a_j_av = pybamm.x_average(a_j)
+        a_j_scale = self.param.i_typ / self.param.L_x
 
         variables.update(
             {
                 f"{Domain} electrode {reaction_name}volumetric "
-                "interfacial current density": a * j,
+                "interfacial current density": a_j,
                 f"X-averaged {domain} electrode {reaction_name}volumetric "
-                "interfacial current density": a_av * j_av,
+                "interfacial current density": a_j_av,
                 f"{Domain} electrode {reaction_name}volumetric "
-                "interfacial current density [A.m-3]": scale * a * j,
+                "interfacial current density [A.m-3]": a_j_scale * a_j,
                 f"X-averaged {domain} electrode {reaction_name}volumetric "
-                "interfacial current density [A.m-3]": scale * a_av * j_av,
+                "interfacial current density [A.m-3]": a_j_scale * a_j_av,
             }
         )
         return variables
@@ -446,6 +446,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         Domain = self.domain
         domain = Domain.lower()
+        reaction_name = self.reaction_name
         reaction_name = self.reaction_name
 
         # X-average and broadcast if necessary

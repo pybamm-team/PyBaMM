@@ -18,19 +18,22 @@ class DiffusionLimited(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
     order : str
         The order of the model ("leading" or "full")
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, order):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options, order):
+        super().__init__(param, domain, reaction, options)
         self.order = order
 
     def get_coupled_variables(self, variables):
         Domain = self.domain
-        rxn = self.reaction_name
+        reaction_name = self.reaction_name
 
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
@@ -40,16 +43,18 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode {rxn}open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
         j = self._get_diffusion_limited_current_density(variables)
-        j_tot_av = self._get_average_total_interfacial_current_density(variables)
+        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
+            variables
+        )
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(
-            self._get_standard_total_interfacial_current_variables(j_tot_av)
+            self._get_standard_total_interfacial_current_variables(j_tot_av, a_j_tot_av)
         )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))

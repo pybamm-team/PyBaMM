@@ -136,7 +136,7 @@ class Full(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="full"
+                self.param, "Negative", "lead-acid oxygen", self.options, order="full"
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(

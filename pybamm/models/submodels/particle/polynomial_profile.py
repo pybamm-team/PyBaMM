@@ -21,8 +21,8 @@ class PolynomialProfile(BaseParticle):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-    phase : str
-        Phase of the particle
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     References
     ----------
@@ -33,7 +33,7 @@ class PolynomialProfile(BaseParticle):
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options, phase=None):
+    def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
         self.name = getattr(self.options, domain.lower())["particle"]
         if self.name == "Fickian diffusion":
@@ -150,7 +150,7 @@ class PolynomialProfile(BaseParticle):
             },
             coord_sys="spherical polar",
         )
-        c_s = A + B * r ** 2 + C * r ** 4
+        c_s = A + B * r**2 + C * r**4
 
         variables.update(
             self._get_standard_concentration_variables(
@@ -205,7 +205,7 @@ class PolynomialProfile(BaseParticle):
             # The flux may be computed directly from the polynomial for c
             N_s = -D_eff * (
                 (-70 * c_s_surf + 20 * q_s_rav + 70 * c_s_rav) * r
-                + (105 * c_s_surf - 28 * q_s_rav - 105 * c_s_rav) * r ** 3
+                + (105 * c_s_surf - 28 * q_s_rav - 105 * c_s_rav) * r**3
             )
 
         variables.update(self._get_standard_flux_variables(N_s))
