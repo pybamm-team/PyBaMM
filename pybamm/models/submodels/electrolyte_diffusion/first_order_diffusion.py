@@ -59,13 +59,13 @@ class FirstOrder(BaseElectrolyteDiffusion):
         d_epsc_p_0_dt = c_e_0 * deps_p_0_dt + eps_p_0 * dc_e_0_dt
 
         # Right-hand sides
-        sum_j_n_0 = variables[
+        sum_a_j_n_0 = variables[
             "Leading-order sum of x-averaged "
-            "negative electrode interfacial current densities"
+            "negative electrode volumetric interfacial current densities"
         ]
-        sum_j_p_0 = variables[
+        sum_a_j_p_0 = variables[
             "Leading-order sum of x-averaged "
-            "positive electrode interfacial current densities"
+            "positive electrode volumetric interfacial current densities"
         ]
         sum_s_j_n_0 = variables[
             "Leading-order sum of x-averaged "
@@ -77,12 +77,12 @@ class FirstOrder(BaseElectrolyteDiffusion):
         ]
         rhs_n = (
             d_epsc_n_0_dt
-            - (sum_s_j_n_0 - param.t_plus(c_e_0, T_0) * sum_j_n_0) / param.gamma_e
+            - (sum_s_j_n_0 - param.t_plus(c_e_0, T_0) * sum_a_j_n_0) / param.gamma_e
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = (
             d_epsc_p_0_dt
-            - (sum_s_j_p_0 - param.t_plus(c_e_0, T_0) * sum_j_p_0) / param.gamma_e
+            - (sum_s_j_p_0 - param.t_plus(c_e_0, T_0) * sum_a_j_p_0) / param.gamma_e
         )
 
         # Diffusivities
@@ -96,18 +96,18 @@ class FirstOrder(BaseElectrolyteDiffusion):
         N_e_p_1 = -rhs_p * (x_p - 1)
 
         # Concentrations
-        c_e_n_1 = (rhs_n / (2 * D_e_n)) * (x_n ** 2 - l_n ** 2)
+        c_e_n_1 = (rhs_n / (2 * D_e_n)) * (x_n**2 - l_n**2)
         c_e_s_1 = (rhs_s / 2) * ((x_s - l_n) ** 2) + (rhs_n * l_n / D_e_s) * (x_s - l_n)
-        c_e_p_1 = (rhs_p / (2 * D_e_p)) * ((x_p - 1) ** 2 - l_p ** 2) + (
-            (rhs_s * l_s ** 2 / (2 * D_e_s)) + (rhs_n * l_n * l_s / D_e_s)
+        c_e_p_1 = (rhs_p / (2 * D_e_p)) * ((x_p - 1) ** 2 - l_p**2) + (
+            (rhs_s * l_s**2 / (2 * D_e_s)) + (rhs_n * l_n * l_s / D_e_s)
         )
 
         # Correct for integral
-        c_e_n_1_av = -rhs_n * l_n ** 3 / (3 * D_e_n)
-        c_e_s_1_av = (rhs_s * l_s ** 3 / 6 + rhs_n * l_n * l_s ** 2 / 2) / D_e_s
+        c_e_n_1_av = -rhs_n * l_n**3 / (3 * D_e_n)
+        c_e_s_1_av = (rhs_s * l_s**3 / 6 + rhs_n * l_n * l_s**2 / 2) / D_e_s
         c_e_p_1_av = (
-            -rhs_p * l_p ** 3 / (3 * D_e_p)
-            + (rhs_s * l_s ** 2 * l_p / (2 * D_e_s))
+            -rhs_p * l_p**3 / (3 * D_e_p)
+            + (rhs_s * l_s**2 * l_p / (2 * D_e_s))
             + (rhs_n * l_n * l_s * l_p / D_e_s)
         )
         A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
