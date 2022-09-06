@@ -181,7 +181,7 @@ class BaseSolver(object):
         ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
 
         (
-            casadi_terminate_events,
+            casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
             discontinuity_events,
@@ -226,7 +226,7 @@ class BaseSolver(object):
                 model.casadi_rhs = casadi.Function(
                     "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                 )
-            model.casadi_terminate_events = casadi_terminate_events
+            model.casadi_switch_events = casadi_switch_events
             model.casadi_algebraic = algebraic
             model.casadi_sensitivities = jacp_rhs_algebraic
             model.casadi_sensitivities_rhs = jacp_rhs
@@ -493,7 +493,7 @@ class BaseSolver(object):
                                 )
                             )
 
-        casadi_terminate_events = []
+        casadi_switch_events = []
         terminate_events = []
         interpolant_extrapolation_events = []
         discontinuity_events = []
@@ -508,7 +508,7 @@ class BaseSolver(object):
                     and self.mode == "fast with events"
                     and model.algebraic != {}
                 ):
-                    # Save some events to casadi_terminate_events for the 'fast with
+                    # Save some events to casadi_switch_events for the 'fast with
                     # events' mode of the casadi solver
                     # We only need to do this if the model is a DAE model
                     # see #1082
@@ -531,7 +531,7 @@ class BaseSolver(object):
                         use_jacobian=False,
                     )[0]
                     # use the actual casadi object as this will go into the rhs
-                    casadi_terminate_events.append(event_casadi)
+                    casadi_switch_events.append(event_casadi)
             else:
                 # use the function call
                 event_call = process(
@@ -546,7 +546,7 @@ class BaseSolver(object):
                     interpolant_extrapolation_events.append(event_call)
 
         return (
-            casadi_terminate_events,
+            casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
             discontinuity_events,
@@ -830,6 +830,12 @@ class BaseSolver(object):
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
 
+        # Check initial conditions don't violate events
+        self._check_events_with_initial_conditions(
+            t_eval_dimensionless, model, ext_and_inputs_list[0]
+        )
+
+        # Process discontinuities
         (
             start_indices,
             end_indices,
@@ -948,8 +954,8 @@ class BaseSolver(object):
         # solvers, where we may only expect one time in the solution)
         if (
             self.algebraic_solver is False
-            and len(solution.all_ts) == 1
-            and len(solution.all_ts[0]) == 1
+            and len(solutions[0].all_ts) == 1
+            and len(solutions[0].all_ts[0]) == 1
         ):
             raise pybamm.SolverError(
                 "Solution time vector has length 1. "
@@ -1025,6 +1031,34 @@ class BaseSolver(object):
 
         return start_indices, end_indices, t_eval_dimensionless
 
+    def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
+        num_terminate_events = len(model.terminate_events_eval)
+        if num_terminate_events == 0:
+            return
+
+        if model.convert_to_format == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+
+        events_eval = [None] * num_terminate_events
+        for idx, event in enumerate(model.terminate_events_eval):
+            if model.convert_to_format == "casadi":
+                event_eval = event(t_eval[0], model.y0, inputs)
+            elif model.convert_to_format in ["python", "jax"]:
+                event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
+            events_eval[idx] = event_eval
+
+        events_eval = np.array(events_eval)
+        if any(events_eval < 0):
+            # find the events that were triggered by initial conditions
+            termination_events = [
+                x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
+            ]
+            idxs = np.where(events_eval < 0)[0]
+            event_names = [termination_events[idx].name for idx in idxs]
+            raise pybamm.SolverError(
+                f"Events {event_names} are non-positive at initial conditions"
+            )
+
     def step(
         self,
         old_solution,
@@ -1070,9 +1104,12 @@ class BaseSolver(object):
             `model.variables = {}`)
 
         """
+        if old_solution is None:
+            old_solution = pybamm.EmptySolution()
 
-        if old_solution is not None and not (
-            old_solution.termination == "final time"
+        if not (
+            isinstance(old_solution, pybamm.EmptySolution)
+            or old_solution.termination == "final time"
             or "[experiment]" in old_solution.termination
         ):
             # Return same solution as an event has already been triggered
@@ -1106,7 +1143,10 @@ class BaseSolver(object):
             del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
-        if old_solution is None:
+        if (
+            isinstance(old_solution, pybamm.EmptySolution)
+            and old_solution.termination is None
+        ):
             # Run set up on first step
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
@@ -1116,7 +1156,6 @@ class BaseSolver(object):
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
-            t = 0.0
         elif model not in self.models_set_up:
             # Run set up if the model has changed
 
@@ -1124,9 +1163,9 @@ class BaseSolver(object):
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
+        t = old_solution.t[-1]
 
-        if old_solution is not None:
-            t = old_solution.all_ts[-1][-1]
+        if not isinstance(old_solution, pybamm.EmptySolution):
             if old_solution.all_models[-1] == model:
                 # initialize with old solution
                 model.y0 = old_solution.all_ys[-1][:, -1]
@@ -1144,9 +1183,12 @@ class BaseSolver(object):
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
+        t_eval = np.linspace(t, t + dt_dimensionless, npts)
+
+        # Check initial conditions don't violate events
+        self._check_events_with_initial_conditions(t_eval, model, ext_and_inputs)
 
         # Step
-        t_eval = np.linspace(t, t + dt_dimensionless, npts)
         pybamm.logger.verbose(
             "Stepping for {:.0f} < t < {:.0f}".format(
                 t * model.timescale_eval,

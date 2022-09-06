@@ -677,7 +677,7 @@ class Solution(object):
 
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
-        if other is None:
+        if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
             raise pybamm.SolverError(
@@ -730,16 +730,7 @@ class Solution(object):
         return new_sol
 
     def __radd__(self, other):
-        """
-        Right-side adding with special handling for the case None + Solution (returns
-        Solution)
-        """
-        if other is None:
-            return self.copy()
-        else:
-            raise pybamm.SolverError(
-                "Only a Solution or None can be added to a Solution"
-            )
+        return self.__add__(other)
 
     def copy(self):
         new_sol = self.__class__(
@@ -760,6 +751,28 @@ class Solution(object):
         new_sol.set_up_time = self.set_up_time
 
         return new_sol
+
+
+class EmptySolution:
+    def __init__(self, termination=None, t=None):
+        self.termination = termination
+        if t is None:
+            t = np.array([0])
+        elif isinstance(t, numbers.Number):
+            t = np.array([t])
+
+        self.t = t
+
+    def __add__(self, other):
+        if isinstance(other, (EmptySolution, Solution)):
+            return other.copy()
+
+    def __radd__(self, other):
+        if other is None:
+            return self.copy()
+
+    def copy(self):
+        return EmptySolution(self.termination)
 
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):

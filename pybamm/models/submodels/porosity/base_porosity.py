@@ -118,7 +118,7 @@ class BaseModel(pybamm.BaseSubModel):
             self.events.append(
                 pybamm.Event(
                     "Max negative electrode porosity cut-off",
-                    pybamm.max(eps_n) - 1,
+                    1 - pybamm.max(eps_n),
                     pybamm.EventType.TERMINATION,
                 )
             )
@@ -134,7 +134,7 @@ class BaseModel(pybamm.BaseSubModel):
         self.events.append(
             pybamm.Event(
                 "Max positive electrode porosity cut-off",
-                pybamm.max(eps_p) - 1,
+                1 - pybamm.max(eps_p),
                 pybamm.EventType.TERMINATION,
             )
         )
