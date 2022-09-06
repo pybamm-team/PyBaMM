@@ -15,6 +15,11 @@ class BaseMechanics(pybamm.BaseSubModel):
         The parameters to use for this submodel
     domain : dict, optional
         Dictionary of either the electrode for "Positive" or "Nagative"
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     References
     ----------
@@ -28,8 +33,8 @@ class BaseMechanics(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options, phase="primary"):
+        super().__init__(param, domain, options=options, phase=phase)
 
         pybamm.citations.register("Ai2019")
         pybamm.citations.register("Deshpande2012")
@@ -64,16 +69,16 @@ class BaseMechanics(pybamm.BaseSubModel):
             cell_thickness_change = variables["Cell thickness change [m]"]
 
         Omega = domain_param.Omega
-        R0 = domain_param.R
-        c_scale = domain_param.c_max
+        R0 = domain_param.prim.R
+        c_scale = domain_param.prim.c_max
         c_0 = domain_param.c_0
         E0 = domain_param.E
         nu = domain_param.nu
         L0 = domain_param.L
-        c_init = pybamm.r_average(domain_param.c_init)
+        c_init = pybamm.r_average(domain_param.prim.c_init)
         v_change = pybamm.x_average(
-            eps_s * domain_param.t_change(c_s_rav)
-        ) - pybamm.x_average(eps_s * domain_param.t_change(c_init))
+            eps_s * domain_param.prim.t_change(c_s_rav)
+        ) - pybamm.x_average(eps_s * domain_param.prim.t_change(c_init))
 
         cell_thickness_change += self.param.n_electrodes_parallel * v_change * L0
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0) * c_scale
@@ -129,9 +134,13 @@ class BaseMechanics(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the crack length.
         """
-        l_cr = variables[self.domain + " particle crack length"]
-        a0 = variables[self.domain + " electrode surface area to volume ratio"]
-        R0 = self.domain_param.R
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
+        l_cr = variables[f"{Domain} particle crack length"]
+        a0 = variables[f"{Domain} electrode {phase_name}surface area to volume ratio"]
+        R0 = self.domain_param.prim.R
         rho_cr = self.domain_param.rho_cr
         roughness = l_cr * 2 * rho_cr + 1  # the ratio of cracks to normal surface
         a_cr = (roughness - 1) * a0  # normalised crack surface area
@@ -139,10 +148,9 @@ class BaseMechanics(pybamm.BaseSubModel):
 
         roughness_xavg = pybamm.x_average(roughness)
         variables = {
-            self.domain + " crack surface to volume ratio [m-1]": a_cr_dim,
-            self.domain + " crack surface to volume ratio": a_cr,
-            self.domain + " electrode roughness ratio": roughness,
-            f"X-averaged {self.domain.lower()} "
-            "electrode roughness ratio": roughness_xavg,
+            f"{Domain} crack surface to volume ratio [m-1]": a_cr_dim,
+            f"{Domain} crack surface to volume ratio": a_cr,
+            f"{Domain} electrode roughness ratio": roughness,
+            f"X-averaged {domain} electrode roughness ratio": roughness_xavg,
         }
         return variables

@@ -181,7 +181,7 @@ class BaseSolver(object):
         ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
 
         (
-            casadi_terminate_events,
+            casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
             discontinuity_events,
@@ -226,7 +226,7 @@ class BaseSolver(object):
                 model.casadi_rhs = casadi.Function(
                     "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                 )
-            model.casadi_terminate_events = casadi_terminate_events
+            model.casadi_switch_events = casadi_switch_events
             model.casadi_algebraic = algebraic
             model.casadi_sensitivities = jacp_rhs_algebraic
             model.casadi_sensitivities_rhs = jacp_rhs
@@ -493,7 +493,7 @@ class BaseSolver(object):
                                 )
                             )
 
-        casadi_terminate_events = []
+        casadi_switch_events = []
         terminate_events = []
         interpolant_extrapolation_events = []
         discontinuity_events = []
@@ -508,7 +508,7 @@ class BaseSolver(object):
                     and self.mode == "fast with events"
                     and model.algebraic != {}
                 ):
-                    # Save some events to casadi_terminate_events for the 'fast with
+                    # Save some events to casadi_switch_events for the 'fast with
                     # events' mode of the casadi solver
                     # We only need to do this if the model is a DAE model
                     # see #1082
@@ -531,7 +531,7 @@ class BaseSolver(object):
                         use_jacobian=False,
                     )[0]
                     # use the actual casadi object as this will go into the rhs
-                    casadi_terminate_events.append(event_casadi)
+                    casadi_switch_events.append(event_casadi)
             else:
                 # use the function call
                 event_call = process(
@@ -546,7 +546,7 @@ class BaseSolver(object):
                     interpolant_extrapolation_events.append(event_call)
 
         return (
-            casadi_terminate_events,
+            casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
             discontinuity_events,
@@ -837,64 +837,19 @@ class BaseSolver(object):
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
 
-        # Calculate discontinuities
-        discontinuities = [
-            # Assuming that discontinuities do not depend on
-            # input parameters when len(input_list) > 1, only
-            # `input_list[0]` is passed to `evaluate`.
-            # See https://github.com/pybamm-team/PyBaMM/pull/1261
-            event.expression.evaluate(inputs=inputs_list[0])
-            for event in model.discontinuity_events_eval
-        ]
+        # Check initial conditions don't violate events
+        self._check_events_with_initial_conditions(
+            t_eval_dimensionless, model, ext_and_inputs_list[0]
+        )
 
-        # make sure they are increasing in time
-        discontinuities = sorted(discontinuities)
-
-        # remove any identical discontinuities
-        discontinuities = [
-            v
-            for i, v in enumerate(discontinuities)
-            if (
-                i == len(discontinuities) - 1
-                or discontinuities[i] < discontinuities[i + 1]
-            )
-            and v > 0
-        ]
-
-        # remove any discontinuities after end of t_eval
-        discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
-
-        if len(discontinuities) > 0:
-            pybamm.logger.verbose(
-                "Discontinuity events found at t = {}".format(discontinuities)
-            )
-            if isinstance(inputs, list):
-                raise pybamm.SolverError(
-                    "Cannot solve for a list of input parameters"
-                    " sets with discontinuities"
-                )
-        else:
-            pybamm.logger.verbose("No discontinuity events found")
-
-        # insert time points around discontinuities in t_eval
-        # keep track of sub sections to integrate by storing start and end indices
-        start_indices = [0]
-        end_indices = []
-        eps = sys.float_info.epsilon
-        for dtime in discontinuities:
-            dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
-            end_indices.append(dindex + 1)
-            start_indices.append(dindex + 1)
-            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
-                t_eval_dimensionless[dindex] += eps
-                t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, dtime - eps
-                )
-            else:
-                t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
-                )
-        end_indices.append(len(t_eval_dimensionless))
+        # Process discontinuities
+        (
+            start_indices,
+            end_indices,
+            t_eval_dimensionless,
+        ) = self._get_discontinuity_start_end_indices(
+            model, inputs, t_eval_dimensionless
+        )
 
         # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
@@ -1006,8 +961,8 @@ class BaseSolver(object):
         # solvers, where we may only expect one time in the solution)
         if (
             self.algebraic_solver is False
-            and len(solution.all_ts) == 1
-            and len(solution.all_ts[0]) == 1
+            and len(solutions[0].all_ts) == 1
+            and len(solutions[0].all_ts[0]) == 1
         ):
             raise pybamm.SolverError(
                 "Solution time vector has length 1. "
@@ -1019,6 +974,97 @@ class BaseSolver(object):
             return solutions[0]
         else:
             return solutions
+
+    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval_dimensionless):
+        if model.discontinuity_events_eval == []:
+            pybamm.logger.verbose("No discontinuity events found")
+            return [0], [len(t_eval_dimensionless)], t_eval_dimensionless
+
+        # Calculate discontinuities
+        discontinuities = [
+            # Assuming that discontinuities do not depend on
+            # input parameters when len(input_list) > 1, only
+            # `inputs` is passed to `evaluate`.
+            # See https://github.com/pybamm-team/PyBaMM/pull/1261
+            event.expression.evaluate(inputs=inputs)
+            for event in model.discontinuity_events_eval
+        ]
+
+        # make sure they are increasing in time
+        discontinuities = sorted(discontinuities)
+
+        # remove any identical discontinuities
+        discontinuities = [
+            v
+            for i, v in enumerate(discontinuities)
+            if (
+                i == len(discontinuities) - 1
+                or discontinuities[i] < discontinuities[i + 1]
+            )
+            and v > 0
+        ]
+
+        # remove any discontinuities after end of t_eval
+        discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
+
+        pybamm.logger.verbose(
+            "Discontinuity events found at t = {}".format(discontinuities)
+        )
+        if isinstance(inputs, list):
+            raise pybamm.SolverError(
+                "Cannot solve for a list of input parameters"
+                " sets with discontinuities"
+            )
+
+        # insert time points around discontinuities in t_eval
+        # keep track of sub sections to integrate by storing start and end indices
+        start_indices = [0]
+        end_indices = []
+        eps = sys.float_info.epsilon
+        for dtime in discontinuities:
+            dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
+            end_indices.append(dindex + 1)
+            start_indices.append(dindex + 1)
+            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
+                t_eval_dimensionless[dindex] += eps
+                t_eval_dimensionless = np.insert(
+                    t_eval_dimensionless, dindex, dtime - eps
+                )
+            else:
+                t_eval_dimensionless = np.insert(
+                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
+                )
+        end_indices.append(len(t_eval_dimensionless))
+
+        return start_indices, end_indices, t_eval_dimensionless
+
+    def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
+        num_terminate_events = len(model.terminate_events_eval)
+        if num_terminate_events == 0:
+            return
+
+        if model.convert_to_format == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+
+        events_eval = [None] * num_terminate_events
+        for idx, event in enumerate(model.terminate_events_eval):
+            if model.convert_to_format == "casadi":
+                event_eval = event(t_eval[0], model.y0, inputs)
+            elif model.convert_to_format in ["python", "jax"]:
+                event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
+            events_eval[idx] = event_eval
+
+        events_eval = np.array(events_eval)
+        if any(events_eval < 0):
+            # find the events that were triggered by initial conditions
+            termination_events = [
+                x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
+            ]
+            idxs = np.where(events_eval < 0)[0]
+            event_names = [termination_events[idx].name for idx in idxs]
+            raise pybamm.SolverError(
+                f"Events {event_names} are non-positive at initial conditions"
+            )
 
     def step(
         self,
@@ -1065,9 +1111,12 @@ class BaseSolver(object):
             `model.variables = {}`)
 
         """
+        if old_solution is None:
+            old_solution = pybamm.EmptySolution()
 
-        if old_solution is not None and not (
-            old_solution.termination == "final time"
+        if not (
+            isinstance(old_solution, pybamm.EmptySolution)
+            or old_solution.termination == "final time"
             or "[experiment]" in old_solution.termination
         ):
             # Return same solution as an event has already been triggered
@@ -1101,7 +1150,10 @@ class BaseSolver(object):
             del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
-        if old_solution is None:
+        if (
+            isinstance(old_solution, pybamm.EmptySolution)
+            and old_solution.termination is None
+        ):
             # Run set up on first step
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
@@ -1111,7 +1163,6 @@ class BaseSolver(object):
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
-            t = 0.0
         elif model not in self.models_set_up:
             # Run set up if the model has changed
 
@@ -1119,9 +1170,9 @@ class BaseSolver(object):
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
+        t = old_solution.t[-1]
 
-        if old_solution is not None:
-            t = old_solution.all_ts[-1][-1]
+        if not isinstance(old_solution, pybamm.EmptySolution):
             if old_solution.all_models[-1] == model:
                 # initialize with old solution
                 model.y0 = old_solution.all_ys[-1][:, -1]
@@ -1139,9 +1190,12 @@ class BaseSolver(object):
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
+        t_eval = np.linspace(t, t + dt_dimensionless, npts)
+
+        # Check initial conditions don't violate events
+        self._check_events_with_initial_conditions(t_eval, model, ext_and_inputs)
 
         # Step
-        t_eval = np.linspace(t, t + dt_dimensionless, npts)
         pybamm.logger.verbose(
             "Stepping for {:.0f} < t < {:.0f}".format(
                 t * model.timescale_eval,
@@ -1311,20 +1365,11 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Go through all input parameters that can be found in the model
-        # If any of them are *not* provided by "inputs", a symbolic input parameter is
-        # created, with appropriate size
+        # If any of them are *not* provided by "inputs", raise an error
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
-                if not isinstance(
-                    self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
-                ):
-                    raise pybamm.SolverError(
-                        "Only CasadiSolver and CasadiAlgebraicSolver "
-                        "can have symbolic inputs"
-                    )
-                inputs[name] = casadi.MX.sym(name, input_param._expected_size)
+                raise pybamm.SolverError(f"No value provided for input '{name}'")
 
         external_variables = external_variables or {}
 

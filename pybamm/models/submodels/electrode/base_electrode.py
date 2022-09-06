@@ -136,8 +136,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         """
 
         pot_scale = self.param.potential_scale
-        U_ref = self.param.ocv_ref
-        phi_s_cp_dim = U_ref + phi_s_cp * pot_scale
+        phi_s_cp_dim = self.param.ocv_ref + phi_s_cp * pot_scale
 
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
@@ -156,7 +155,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": phi_s_cp_dim,
             "Local voltage": V_cc,
-            "Local voltage [V]": U_ref + V_cc * pot_scale,
+            "Local voltage [V]": self.param.ocv_ref + V_cc * pot_scale,
             "Terminal voltage": V,
             "Terminal voltage [V]": V_dim,
         }

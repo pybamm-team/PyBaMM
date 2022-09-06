@@ -39,6 +39,10 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "cannot be 'false' for SPM"):
             pybamm.lithium_ion.SPM(options)
 
+    def test_distribution_options(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "particle size"):
+            pybamm.lithium_ion.SPM({"particle size": "distribution"})
+
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
@@ -54,9 +58,12 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         options = {"stress-induced diffusion": "false", "thermal": "x-full"}
         model = pybamm.lithium_ion.SPM(options, build=False)
         particle_n = pybamm.particle.XAveragedPolynomialProfile(
-            model.param, "Negative", {**options, "particle": "quadratic profile"}
+            model.param,
+            "Negative",
+            {**options, "particle": "quadratic profile"},
+            "primary",
         )
-        model.submodels["negative particle"] = particle_n
+        model.submodels["negative primary particle"] = particle_n
         model.build_model()
         new_model = model.new_copy()
         new_model_cs_eqn = list(new_model.rhs.values())[1]

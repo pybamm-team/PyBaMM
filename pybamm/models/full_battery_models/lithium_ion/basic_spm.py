@@ -76,10 +76,10 @@ class BasicSPM(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.n.D(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.p.D(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.n.C_diff) * pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -(1 / param.p.C_diff) * pybamm.div(N_s_p)
+        N_s_n = -param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n] = -(1 / param.n.prim.C_diff) * pybamm.div(N_s_n)
+        self.rhs[c_s_p] = -(1 / param.p.prim.C_diff) * pybamm.div(N_s_p)
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
@@ -89,29 +89,29 @@ class BasicSPM(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.n.C_diff
+                -param.n.prim.C_diff
                 * j_n
-                / param.n.a_R
-                / param.n.gamma
-                / param.n.D(c_s_surf_n, T),
+                / param.n.prim.a_R
+                / param.n.prim.gamma
+                / param.n.prim.D(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.p.C_diff
+                -param.p.prim.C_diff
                 * j_p
-                / param.p.a_R
-                / param.p.gamma
-                / param.p.D(c_s_surf_p, T),
+                / param.p.prim.a_R
+                / param.p.prim.gamma
+                / param.p.prim.D(c_s_surf_p, T),
                 "Neumann",
             ),
         }
         # c_n_init and c_p_init are functions of r and x, but for the SPM we
         # take the x-averaged value since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = pybamm.x_average(param.n.c_init)
-        self.initial_conditions[c_s_p] = pybamm.x_average(param.p.c_init)
+        self.initial_conditions[c_s_n] = pybamm.x_average(param.n.prim.c_init)
+        self.initial_conditions[c_s_p] = pybamm.x_average(param.p.prim.c_init)
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -139,13 +139,13 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        j0_n = param.n.gamma * param.n.j0(1, c_s_surf_n, T) / param.n.C_r
-        j0_p = param.p.gamma * param.p.j0(1, c_s_surf_p, T) / param.p.C_r
-        eta_n = (2 / param.n.ne) * pybamm.arcsinh(j_n / (2 * j0_n))
-        eta_p = (2 / param.p.ne) * pybamm.arcsinh(j_p / (2 * j0_p))
+        j0_n = param.n.prim.j0(1, c_s_surf_n, T)
+        j0_p = param.p.prim.j0(1, c_s_surf_p, T)
+        eta_n = (2 / param.n.prim.ne) * pybamm.arcsinh(j_n / (2 * j0_n))
+        eta_p = (2 / param.p.prim.ne) * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0
-        phi_e = -eta_n - param.n.U(c_s_surf_n, T)
-        phi_s_p = eta_p + phi_e + param.p.U(c_s_surf_p, T)
+        phi_e = -eta_n - param.n.prim.U(c_s_surf_n, T)
+        phi_s_p = eta_p + phi_e + param.p.prim.U(c_s_surf_p, T)
         V = phi_s_p
 
         pot_scale = self.param.potential_scale
@@ -179,5 +179,5 @@ class BasicSPM(BaseModel):
         }
         self.events += [
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
+            pybamm.Event("Maximum voltage", param.voltage_high_cut - V),
         ]

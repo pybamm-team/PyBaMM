@@ -145,7 +145,7 @@ class LossActiveMaterial(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        eps_solid_init = self.domain_param.epsilon_s
+        eps_solid_init = self.domain_param.prim.epsilon_s
 
         if self.x_average is True:
             eps_solid_xav = variables[

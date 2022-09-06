@@ -62,8 +62,6 @@ class TestButlerVolmer(unittest.TestCase):
             "Sum of interfacial current densities": pybamm.Scalar(1),
             "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
             "Sum of positive electrode interfacial current densities": pybamm.Scalar(1),
-            "Sum of x-averaged negative electrode interfacial current densities": 1,
-            "Sum of x-averaged positive electrode interfacial current densities": 1,
             "Sum of negative electrode electrolyte reaction source terms": 1,
             "Sum of positive electrode electrolyte reaction source terms": 1,
             "Sum of x-averaged negative electrode electrolyte reaction source terms": 1,
@@ -90,6 +88,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
                 "particle size": "single",
             },
+            "primary",
         )
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -103,6 +102,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
                 "particle size": "single",
             },
+            "primary",
         )
         j_p = model_p.get_coupled_variables(self.variables)[
             "Positive electrode interfacial current density"
@@ -127,6 +127,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
                 "particle size": "single",
             },
+            "primary",
         )
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -140,6 +141,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
                 "particle size": "single",
             },
+            "primary",
         )
         j_p = model_p.get_coupled_variables(self.variables)[
             "Positive electrode interfacial current density"
@@ -167,6 +169,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
                 "particle size": "single",
             },
+            "primary",
         )
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -180,6 +183,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
                 "particle size": "single",
             },
+            "primary",
         )
         j_p = model_p.get_coupled_variables(self.variables)[
             "Positive electrode interfacial current density"
@@ -209,7 +213,7 @@ class TestButlerVolmer(unittest.TestCase):
         submesh = np.concatenate(
             [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
         )
-        y = np.concatenate([submesh ** 2, submesh ** 3, submesh ** 4])
+        y = np.concatenate([submesh**2, submesh**3, submesh**4])
         self.assertEqual(
             j_n.evaluate(None, y).shape, (mesh["negative electrode"].npts, 1)
         )
@@ -234,6 +238,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
+            "primary",
         )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
@@ -243,6 +248,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
+            "primary",
         )
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
 
@@ -303,6 +309,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
+            "primary",
         )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
@@ -312,6 +319,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
+            "primary",
         )
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
 
