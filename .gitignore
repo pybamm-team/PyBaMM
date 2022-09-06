@@ -13,6 +13,7 @@
 !CMakeLists.txt
 !pybamm/CITATIONS.txt
 !pybamm/input/**/*.csv
+!benchmarks/benchmark_images/*.png
 
 # running files
 *.pyc

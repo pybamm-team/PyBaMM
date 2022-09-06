@@ -19,12 +19,15 @@ class InverseFirstOrderKinetics(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     leading_order_models : :class:`pybamm.interface.kinetics.BaseKinetics`
         The leading-order models with respect to which this is first-order
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, leading_order_models):
-        super().__init__(param, domain, "inverse")
+    def __init__(self, param, domain, leading_order_models, options):
+        super().__init__(param, domain, "inverse", options)
         self.leading_order_models = leading_order_models
 
     def _get_die1dx(self, variables):

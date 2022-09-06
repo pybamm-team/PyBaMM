@@ -59,7 +59,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
-        self.set_total_kinetics_submodel()
+        self.set_total_interface_submodel()
 
         if build:
             self.build_model()
@@ -103,34 +103,22 @@ class BaseHigherOrderModel(BaseModel):
             leading_order_model.variables["X-averaged electrolyte concentration"]
         ]
 
-        # Reset sums
-        self.variables.update(
-            {
-                "Sum of electrolyte reaction source terms": 0,
-                "Sum of negative electrode electrolyte reaction source terms": 0,
-                "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged negative electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of x-averaged positive electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of interfacial current densities": 0,
-                "Sum of negative electrode interfacial current densities": 0,
-                "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged negative electrode interfacial current densities": 0,
-                "Sum of x-averaged positive electrode interfacial current densities": 0,
-            }
-        )
-
     def set_average_interfacial_submodel(self):
         self.submodels[
             "x-averaged negative interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
-            self.param, "Negative", self.leading_order_reaction_submodels["Negative"]
+            self.param,
+            "Negative",
+            self.leading_order_reaction_submodels["Negative"],
+            self.options,
         )
         self.submodels[
             "x-averaged positive interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
-            self.param, "Positive", self.leading_order_reaction_submodels["Positive"]
+            self.param,
+            "Positive",
+            self.leading_order_reaction_submodels["Positive"],
+            self.options,
         )
 
     def set_electrolyte_conductivity_submodel(self):
@@ -162,6 +150,7 @@ class BaseHigherOrderModel(BaseModel):
             pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Negative", "lead-acid main", self.options
             ),
+            self.options,
         )
         self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
@@ -169,6 +158,7 @@ class BaseHigherOrderModel(BaseModel):
             pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Positive", "lead-acid main", self.options
             ),
+            self.options,
         )
 
         # Oxygen
@@ -181,11 +171,16 @@ class BaseHigherOrderModel(BaseModel):
                 pybamm.kinetics.ForwardTafel(
                     self.param, "Positive", "lead-acid oxygen", self.options
                 ),
+                self.options,
             )
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="composite"
+                self.param,
+                "Negative",
+                "lead-acid oxygen",
+                self.options,
+                order="composite",
             )
 
     def set_full_convection_submodel(self):

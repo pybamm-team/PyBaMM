@@ -5,8 +5,6 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
-import site
-import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -191,7 +189,7 @@ setup(
     python_requires=">=3.7,<3.10",
     # List of dependencies
     install_requires=[
-        "numpy<=1.22",  # change back to numpy>=1.16 once scikit.odes is fixed
+        "numpy>=1.16",
         "scipy>=1.3",
         "pandas>=0.24",
         "anytree>=2.4.3",
@@ -203,7 +201,7 @@ setup(
         # julia programming language is not installed
         "julia>=0.5.6",
         "jupyter",  # For example notebooks
-        "pybtex",
+        "pybtex>=0.24.0",
         "sympy>=1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
@@ -228,9 +226,3 @@ setup(
         ]
     },
 )
-
-# pybtex adds a folder "tests" to the site packages, so we manually remove this
-path_to_sitepackages = site.getsitepackages()[0]
-path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
-if os.path.exists(path_to_tests_dir):
-    shutil.rmtree(path_to_tests_dir)
