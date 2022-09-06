@@ -125,19 +125,12 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
-        has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in inputs_dict.values()
-        )
 
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         # Calculate initial event signs needed for some of the modes
-        if (
-            has_symbolic_inputs is False
-            and self.mode != "fast"
-            and model.terminate_events_eval
-        ):
+        if self.mode != "fast" and model.terminate_events_eval:
             init_event_signs = np.sign(
                 np.concatenate(
                     [
@@ -148,18 +141,6 @@ class CasadiSolver(pybamm.BaseSolver):
             )
         else:
             init_event_signs = np.sign([])
-
-        if has_symbolic_inputs:
-            # Create integrator without grid to avoid having to create several times
-            self.create_integrator(model, inputs)
-            solution = self._run_integrator(
-                model,
-                model.y0,
-                inputs_dict,
-                inputs,
-                t_eval,
-                use_grid=False,
-            )
 
         if self.mode in ["fast", "fast with events"] or not model.events:
             if not model.events:
