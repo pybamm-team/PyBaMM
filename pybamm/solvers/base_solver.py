@@ -1358,20 +1358,11 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Go through all input parameters that can be found in the model
-        # If any of them are *not* provided by "inputs", a symbolic input parameter is
-        # created, with appropriate size
+        # If any of them are *not* provided by "inputs", raise an error
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
-                if not isinstance(
-                    self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
-                ):
-                    raise pybamm.SolverError(
-                        "Only CasadiSolver and CasadiAlgebraicSolver "
-                        "can have symbolic inputs"
-                    )
-                inputs[name] = casadi.MX.sym(name, input_param._expected_size)
+                raise pybamm.SolverError(f"No value provided for input '{name}'")
 
         external_variables = external_variables or {}
 

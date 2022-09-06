@@ -102,12 +102,8 @@ class Solution(object):
         self._y_event = y_event
         self._termination = termination
 
-        self.has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
-        )
-
         # Check no ys are too large
-        if check_solution and not self.has_symbolic_inputs:
+        if check_solution:
             self.check_ys_are_not_too_large()
 
         # Copy the timescale_eval and lengthscale_evals if they exist
@@ -476,51 +472,36 @@ class Solution(object):
         # Process
         for key in variables:
             pybamm.logger.debug("Post-processing {}".format(key))
-            # If there are symbolic inputs then we need to make a
-            # ProcessedSymbolicVariable
-            if self.has_symbolic_inputs is True:
-                var = pybamm.ProcessedSymbolicVariable(
-                    self.all_models[0].variables_and_events[key], self
-                )
+            vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
-            # Otherwise a standard ProcessedVariable is ok
-            else:
-                vars_pybamm = [
-                    model.variables_and_events[key] for model in self.all_models
-                ]
+            # Iterate through all models, some may be in the list several times and
+            # therefore only get set up once
+            vars_casadi = []
+            for model, ys, inputs, var_pybamm in zip(
+                self.all_models, self.all_ys, self.all_inputs, vars_pybamm
+            ):
+                if key in model._variables_casadi:
+                    var_casadi = model._variables_casadi[key]
+                else:
+                    t_MX = casadi.MX.sym("t")
+                    y_MX = casadi.MX.sym("y", ys.shape[0])
+                    inputs_MX_dict = {
+                        key: casadi.MX.sym("input", value.shape[0])
+                        for key, value in inputs.items()
+                    }
+                    inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
 
-                # Iterate through all models, some may be in the list several times and
-                # therefore only get set up once
-                vars_casadi = []
-                for model, ys, inputs, var_pybamm in zip(
-                    self.all_models, self.all_ys, self.all_inputs, vars_pybamm
-                ):
-                    if key in model._variables_casadi:
-                        var_casadi = model._variables_casadi[key]
-                    else:
-                        t_MX = casadi.MX.sym("t")
-                        y_MX = casadi.MX.sym("y", ys.shape[0])
-                        symbolic_inputs_dict = {
-                            key: casadi.MX.sym("input", value.shape[0])
-                            for key, value in inputs.items()
-                        }
-                        symbolic_inputs = casadi.vertcat(
-                            *[p for p in symbolic_inputs_dict.values()]
-                        )
+                    # Convert variable to casadi
+                    # Make all inputs symbolic first for converting to casadi
+                    var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
 
-                        # Convert variable to casadi
-                        # Make all inputs symbolic first for converting to casadi
-                        var_sym = var_pybamm.to_casadi(
-                            t_MX, y_MX, inputs=symbolic_inputs_dict
-                        )
+                    var_casadi = casadi.Function(
+                        "variable", [t_MX, y_MX, inputs_MX], [var_sym]
+                    )
+                    model._variables_casadi[key] = var_casadi
+                vars_casadi.append(var_casadi)
 
-                        var_casadi = casadi.Function(
-                            "variable", [t_MX, y_MX, symbolic_inputs], [var_sym]
-                        )
-                        model._variables_casadi[key] = var_casadi
-                    vars_casadi.append(var_casadi)
-
-                var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self)
+            var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self)
 
             # Save variable and data
             self._variables[key] = var
