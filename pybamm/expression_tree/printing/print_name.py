@@ -53,13 +53,30 @@ def prettify_print_name(name):
     if name in PRINT_NAME_OVERRIDES:
         return PRINT_NAME_OVERRIDES[name]
 
-    # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
-    sup_re = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
-    if sup_re:
+    # Superscripts with comma separated (U_ref_n --> U_{n}^{ref})
+    sup_re1 = re.search(r"^[\da-zA-Z]+_?((?:init|ref|typ|max|0))_?(.*)", name)
+    if sup_re1:
         sup_str = (
-            r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" + sup_re.group(2) + r"}"
+            r"{"
+            + sup_re1.group(2).replace("_", "\,")
+            + r"}^{"
+            + sup_re1.group(1)
+            + r"}"
         )
-        sup_var = sup_re.group(1) + "_" + sup_re.group(2)
+        sup_var = sup_re1.group(1) + "_" + sup_re1.group(2)
+        name = name.replace(sup_var, sup_str)
+
+    # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
+    sup_re2 = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
+    if sup_re2:
+        sup_str = (
+            r"{"
+            + sup_re2.group(1).replace("_", "\,")
+            + r"}^{"
+            + sup_re2.group(2)
+            + r"}"
+        )
+        sup_var = sup_re2.group(1) + "_" + sup_re2.group(2)
         name = name.replace(sup_var, sup_str)
 
     # Subscripts with comma separated (a_R_p --> a_{R\,p})
@@ -101,5 +118,8 @@ def prettify_print_name(name):
     # Greek letters (delta --> \delta)
     greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
     name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
+
+    if name.endswith("{"):
+        name += "}"
 
     return name

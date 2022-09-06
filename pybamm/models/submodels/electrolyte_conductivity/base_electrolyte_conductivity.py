@@ -46,6 +46,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         param = self.param
         pot_scale = param.potential_scale
+        U_ref = param.n.U_ref
 
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -61,24 +62,23 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         variables = {
             "Negative electrolyte potential": phi_e_n,
-            "Negative electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e_n,
+            "Negative electrolyte potential [V]": -U_ref + pot_scale * phi_e_n,
             "Separator electrolyte potential": phi_e_s,
-            "Separator electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e_s,
+            "Separator electrolyte potential [V]": -U_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential": phi_e_p,
-            "Positive electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e_p,
+            "Positive electrolyte potential [V]": -U_ref + pot_scale * phi_e_p,
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -param.n.U_ref + pot_scale * phi_e,
+            "Electrolyte potential [V]": -U_ref + pot_scale * phi_e,
             "X-averaged electrolyte potential": phi_e_av,
-            "X-averaged electrolyte potential [V]": -param.n.U_ref
-            + pot_scale * phi_e_av,
+            "X-averaged electrolyte potential [V]": -U_ref + pot_scale * phi_e_av,
             "X-averaged negative electrolyte potential": phi_e_n_av,
-            "X-averaged negative electrolyte potential [V]": -param.n.U_ref
+            "X-averaged negative electrolyte potential [V]": -U_ref
             + pot_scale * phi_e_n_av,
             "X-averaged separator electrolyte potential": phi_e_s_av,
-            "X-averaged separator electrolyte potential [V]": -param.n.U_ref
+            "X-averaged separator electrolyte potential [V]": -U_ref
             + pot_scale * phi_e_s_av,
             "X-averaged positive electrolyte potential": phi_e_p_av,
-            "X-averaged positive electrolyte potential [V]": -param.n.U_ref
+            "X-averaged positive electrolyte potential [V]": -U_ref
             + pot_scale * phi_e_p_av,
             "X-averaged electrolyte overpotential": eta_e_av,
             "X-averaged electrolyte overpotential [V]": pot_scale * eta_e_av,
@@ -267,10 +267,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             c_e_n = variables["Negative electrolyte concentration"]
             T_n = variables["Negative electrode temperature"]
             indef_integral_n = pybamm.IndefiniteIntegral(
-                param.chi(c_e_n, T_n)
-                * (1 + param.Theta * T_n)
-                * pybamm.grad(c_e_n)
-                / c_e_n,
+                param.chiT_over_c(c_e_n, T_n) * pybamm.grad(c_e_n),
                 pybamm.standard_spatial_vars.x_n,
             )
 
@@ -284,17 +281,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         # concentration overpotential
         indef_integral_s = pybamm.IndefiniteIntegral(
-            param.chi(c_e_s, T_s)
-            * (1 + param.Theta * T_s)
-            * pybamm.grad(c_e_s)
-            / c_e_s,
+            param.chiT_over_c(c_e_s, T_s) * pybamm.grad(c_e_s),
             pybamm.standard_spatial_vars.x_s,
         )
         indef_integral_p = pybamm.IndefiniteIntegral(
-            param.chi(c_e_p, T_p)
-            * (1 + param.Theta * T_p)
-            * pybamm.grad(c_e_p)
-            / c_e_p,
+            param.chiT_over_c(c_e_p, T_p) * pybamm.grad(c_e_p),
             pybamm.standard_spatial_vars.x_p,
         )
 
