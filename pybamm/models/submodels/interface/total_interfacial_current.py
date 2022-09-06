@@ -108,16 +108,8 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             else:
                 if reaction_name == "SEI on cracks ":
                     roughness_n = variables["Negative electrode roughness ratio"] - 1
-                    roughness_n_av = variables[
-                        "X-averaged negative electrode roughness ratio"
-                    ] - 1
                 else:
                     roughness_n = 1
-                    roughness_n_av = 1
-                j_n_av = variables[
-                    f"X-averaged negative electrode {reaction_name}"
-                    "interfacial current density"
-                ] * roughness_n_av
                 j_n = variables[
                     f"Negative electrode {reaction_name}{phase_name}"
                     "interfacial current density"

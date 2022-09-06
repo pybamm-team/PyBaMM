@@ -127,12 +127,15 @@ class BaseModel(BaseInterface):
             c_inner_av = pybamm.x_average(c_inner)
             c_outer_av = pybamm.x_average(c_outer)
             variables.update({
+                f"Inner {self.reaction} concentration [mol.m-3]": c_inner * c_scale,
+                f"Outer {self.reaction} concentration [mol.m-3]": c_outer
+                * c_outer_scale,
                 f"X-averaged inner {self.reaction} concentration": c_inner_av,
                 f"X-averaged inner {self.reaction} concentration [mol.m-3]": c_inner_av
                 * c_scale,
                 f"X-averaged outer {self.reaction} concentration": c_outer_av,
                 f"X-averaged outer {self.reaction} concentration [mol.m-3]": c_outer_av
-                * c_scale,
+                * c_outer_scale,
             })
         # Get variables related to the total concentration
         c_sei = c_inner + c_outer / v_bar
@@ -197,9 +200,7 @@ class BaseModel(BaseInterface):
 
         variables = {
             f"{self.reaction} concentration": c_sei,
-            f"{self.reaction} concentration [mol.m-3]": c_sei * c_scale,
             f"Total {self.reaction} concentration": c_sei,
-            f"Total {self.reaction} concentration [mol.m-3]": c_sei * c_scale,
             f"Loss of lithium to {self.reaction} [mol]": Q_sei,
             f"Loss of capacity to {self.reaction} [A.h]": Q_sei * param.F / 3600,
         }
@@ -212,6 +213,8 @@ class BaseModel(BaseInterface):
         else:
             variables.update(
                 {
+                    f"{self.reaction} concentration [mol.m-3]": c_sei * c_scale,
+                    f"Total {self.reaction} concentration [mol.m-3]": c_sei * c_scale,
                     f"X-averaged {self.reaction} concentration": c_sei_xav,
                     f"X-averaged {self.reaction} concentration [mol.m-3]": c_sei_xav
                     * c_scale,
@@ -274,13 +277,10 @@ class BaseModel(BaseInterface):
                         "X-averaged SEI thickness [m]": L_sei_av * L_scale,
                         "X-averaged total SEI thickness": L_sei_av,
                         "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
-                    }
-                )
-                if self.reaction == "SEI":
-                    variables.update({
                         f"X-averaged {self.domain.lower()} electrode resistance "
                         "[Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
-                    })
+                    }
+                )
 
         # Thickness variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
