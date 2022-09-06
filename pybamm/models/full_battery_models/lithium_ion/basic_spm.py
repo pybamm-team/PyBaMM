@@ -179,5 +179,5 @@ class BasicSPM(BaseModel):
         }
         self.events += [
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
+            pybamm.Event("Maximum voltage", param.voltage_high_cut - V),
         ]

@@ -47,8 +47,6 @@ class ProcessedVariable(object):
         self.domains = base_variables[0].domains
         self.warn = warn
 
-        self.symbolic_inputs = solution.has_symbolic_inputs
-
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -307,15 +305,11 @@ class ProcessedVariable(object):
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif (
-            self.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and self.domains["secondary"] == ["current collector"]
-        ):
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and self.domains["secondary"] == ["current collector"]:
             self.first_dimension = "x"
             self.second_dimension = "z"
             self.x_sol = first_dim_pts

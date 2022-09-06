@@ -295,7 +295,7 @@ class BasicDFNHalfCell(BaseModel):
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                voltage_dim - self.param.voltage_high_cut_dimensional,
+                self.param.voltage_high_cut_dimensional - voltage_dim,
                 pybamm.EventType.TERMINATION,
             )
         )
