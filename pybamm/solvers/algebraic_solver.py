@@ -69,7 +69,6 @@ class AlgebraicSolver(pybamm.BaseSolver):
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
-        print(y0)
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential

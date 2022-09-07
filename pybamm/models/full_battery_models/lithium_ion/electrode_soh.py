@@ -277,10 +277,11 @@ class ElectrodeSOHSolver:
             # just in case solving one by one works better
             try:
                 sol = self._solve_split(inputs, ics)
-            except pybamm.SolverError as e:
+            except pybamm.SolverError as original_error:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs)
-                raise e
+                # if that didn't raise an error, raise the original error instead
+                raise original_error
 
         return sol
 
