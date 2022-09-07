@@ -34,12 +34,6 @@ class NoReaction(BaseInterface):
         }
         super().__init__(param, domain, reaction, options, phase)
 
-    def set_phase(self, phase):
-        """
-        Bypass the phase checks from BaseSubmodel
-        """
-        super().set_phase(phase, check_phases=False)
-
     def get_fundamental_variables(self):
         zero = pybamm.Scalar(0)
         variables = self._get_standard_interfacial_current_variables(zero)

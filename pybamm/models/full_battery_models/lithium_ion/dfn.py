@@ -62,17 +62,10 @@ class DFN(BaseModel):
             phases = self.options.phase_number_to_names(
                 getattr(self.options, domain.lower())["particle phases"]
             )
-            for phase in ["primary", "secondary"]:
-                # Add kinetics for each phase included in the options
-                # If a phase is not included, add "NoReaction"
-                if phase in phases:
-                    submod = intercalation_kinetics(
-                        self.param, domain, "lithium-ion main", self.options, phase
-                    )
-                else:
-                    submod = pybamm.kinetics.NoReaction(
-                        self.param, domain, "lithium-ion main", self.options, phase
-                    )
+            for phase in phases:
+                submod = intercalation_kinetics(
+                    self.param, domain, "lithium-ion main", self.options, phase
+                )
                 self.submodels[f"{domain.lower()} {phase} interface"] = submod
 
             self.submodels[
