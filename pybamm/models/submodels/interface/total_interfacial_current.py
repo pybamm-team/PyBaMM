@@ -206,7 +206,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         # Override print_name
         a_j.print_name = "aj"
 
-        variables[f"Sum of electrolyte reaction source terms"] = s_a_j
-        variables[f"Sum of volumetric interfacial current densities"] = a_j
+        variables["Sum of electrolyte reaction source terms"] = s_a_j
+        variables["Sum of volumetric interfacial current densities"] = a_j
 
         return variables
