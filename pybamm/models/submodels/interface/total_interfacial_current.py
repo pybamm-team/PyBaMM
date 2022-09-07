@@ -33,8 +33,12 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         Loops over "" (the total over all phases) and also individual phases
         """
         phase_names = [""]
-        if self.options["particle phases"] != "1":
+        print("Jason-particle phases = ",self.options["particle phases"])
+        if (self.options["particle phases"] != "1"):
             phase_names += ["primary ", "secondary "]
+        # if (self.options["particle phases"] != "1") and (self.options["particle phases"] != ("1","1")): # Mark Jason - what if options["particle phases"]==("1","1")
+        #     phase_names = ["primary ", "secondary "]
+        print("Jason-phase_names = ",phase_names)
 
         for phase_name in phase_names:
             variables.update(
@@ -52,7 +56,15 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     # no separate plating reaction in a half-cell,
                     # since plating is the main reaction
                     # no SEI on cracks with half-cell model
-                    reaction_names.extend(["lithium plating ", "SEI on cracks "])
+                    reaction_names.extend(["lithium plating ", "SEI on cracks "]) # Mark Jason - if phase_names != "", which means two phases, reaction_names = ["","SEI ",]
+
+            # reaction_names += [f"{phase_name}SEI "]
+            # if not self.half_cell:
+            #     # no separate plating reaction in a half-cell,
+            #     # since plating is the main reaction
+            #     # no SEI on cracks with half-cell model
+            #     reaction_names.extend(["lithium plating ", "SEI on cracks "])
+
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
 
@@ -94,24 +106,24 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         for reaction_name in reaction_names:
             zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
             j_p = variables[
-                f"Positive electrode {reaction_name}{phase_name}"
+                f"Positive electrode {phase_name}{reaction_name}"
                 "interfacial current density"
             ]
             j_p_dim = variables[
-                f"Positive electrode {reaction_name}{phase_name}"
+                f"Positive electrode {phase_name}{reaction_name}"
                 "interfacial current density [A.m-2]"
-            ]
+            ]  # Mark Jason - calls a missing variable
 
             if self.half_cell:
                 j = pybamm.concatenation(zero_s, j_p)
                 j_dim = pybamm.concatenation(zero_s, j_p_dim)
             else:
                 j_n = variables[
-                    f"Negative electrode {reaction_name}{phase_name}"
+                    f"Negative electrode {phase_name}{reaction_name}"
                     "interfacial current density"
                 ]
                 j_n_dim = variables[
-                    f"Negative electrode {reaction_name}{phase_name}"
+                    f"Negative electrode {phase_name}{reaction_name}"
                     "interfacial current density [A.m-2]"
                 ]
                 j = pybamm.concatenation(j_n, zero_s, j_p)
@@ -141,9 +153,9 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     j0_dim = pybamm.concatenation(j0_n_dim, zero_s, j0_p_dim)
                 new_variables.update(
                     {
-                        f"{reaction_name}{phase_name}interfacial ".capitalize()
+                        f"{phase_name}{reaction_name}interfacial ".capitalize()
                         + "current density": j,
-                        f"{reaction_name}{phase_name}interfacial ".capitalize()
+                        f"{phase_name}{reaction_name}interfacial ".capitalize()
                         + "current density [A.m-2]": j_dim,
                         f"{reaction_name}exchange ".capitalize()
                         + "current density": j0,
@@ -154,7 +166,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
 
             # Sum variables
             a_j_p = new_variables[
-                f"Positive electrode {reaction_name}{phase_name}volumetric "
+                f"Positive electrode {phase_name}{reaction_name}volumetric "
                 "interfacial current density"
             ]
 
@@ -177,7 +189,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 )
             else:
                 a_j_n = new_variables[
-                    f"Negative electrode {reaction_name}{phase_name}volumetric "
+                    f"Negative electrode {phase_name}{reaction_name}volumetric "
                     "interfacial current density"
                 ]
                 a_j = pybamm.concatenation(a_j_n, zero_s, a_j_p)

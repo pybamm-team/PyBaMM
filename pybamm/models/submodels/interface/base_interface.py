@@ -43,6 +43,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = f"{self.phase_name}SEI " # primary SEI or secondary SEI
             # print("Jason-reaction_name = ",self.reaction_name)
 
+        # print("Jason-reaction = ",reaction)
+        # print("Jason-reaction_name = ",self.reaction_name)
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):

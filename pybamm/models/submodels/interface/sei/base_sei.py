@@ -40,19 +40,34 @@ class BaseModel(BaseInterface):
                 {
                     f"X-averaged {domain} electrode {phase_name}SEI interfacial current "
                     "density": variables[f"X-averaged {phase_name}SEI interfacial current density"],
-                    # f"{Domain} {phase_name}electrode SEI interfacial current "
-                    # "density": variables[f"{pre}SEI interfacial current density"],
+                    f"X-averaged {domain} electrode {phase_name}SEI interfacial current "
+                    "density [A.m-2]": variables[f"X-averaged {phase_name}SEI interfacial current density [A.m-2]"],
                     f"{Domain} electrode {phase_name}SEI interfacial current "
                     "density": variables[f"{pre}SEI interfacial current density"],
+                    f"{Domain} electrode {phase_name}SEI interfacial current "
+                    "density [A.m-2]": variables[f"{pre}SEI interfacial current density [A.m-2]"],
                 }
             ) # Jason-whether should the value name be modified as well?
+
+            variables.update(
+                self._get_standard_volumetric_current_density_variables(variables)
+             )
+
+# Mark Jason - provide dimensional "interfacial current density" and volumetric current density variables as well for calling in total_interfacial_current.py
         variables.update(
             {
                 f"X-averaged positive electrode {phase_name}SEI interfacial current "
                 "density": zero_av,
+                f"X-averaged positive electrode {phase_name}SEI interfacial current "
+                "density [A.m-2]": zero_av,
                 f"Positive electrode {phase_name}SEI interfacial current density": zero,
-            } # Jason - does PE also need {phase_name}SEI in its vars
+                f"Positive electrode {phase_name}SEI interfacial current density [A.m-2]": zero,
+
+                f"Positive electrode {phase_name}SEI volumetric interfacial current density": zero,
+                f"Positive electrode {phase_name}SEI volumetric interfacial current density [A.m-3]": zero,
+            } 
         )
+
 
         return variables
 
@@ -290,6 +305,7 @@ class BaseModel(BaseInterface):
         pre = phase_name.capitalize()
         
         j_scale = self.phase_param.j_scale
+        a_j_scale = self.param.i_typ / self.param.L_x
 
         variables = {
             f"{pre}SEI interfacial current density": j_sei,
@@ -297,6 +313,15 @@ class BaseModel(BaseInterface):
             # f"{phase_name}SEI interfacial current density": j_sei,
             # f"{phase_name}SEI interfacial current density [A.m-2]": j_sei * j_scale,
         }# Jason-should the phase_name be changed with a capital letter
+
+        # Mark Jason - add volumetric interfacial current density of SEI
+        # a_av = variables[f"Negative electrode {phase_name}surface area to volume ratio"]
+        # variables.update(
+        #     {
+        #         f"{pre}SEI volumetric interfacial current density": j_sei * a_av,
+        #         f"{pre}SEI volumetric interfacial current density [A.m-3]": j_sei * j_scale * a_j_scale,
+        #     }
+        # )
 
         if self.reaction_loc != "interface":
             j_sei_av = pybamm.x_average(j_sei)
@@ -308,4 +333,14 @@ class BaseModel(BaseInterface):
                 }
             )
 
+        # Mark Jason - update the volumetric SEI interfacial current density
+            # variables.update(
+            #     {
+            #         f"X-averaged {phase_name}SEI volumetric current density": j_sei_av * a_av,
+            #         f"X-averaged {phase_name}SEI volumetric current density [A.m-3]": j_sei_av * j_scale * a_j_scale,
+            #     }
+            # )
+
         return variables
+
+

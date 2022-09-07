@@ -320,7 +320,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             if self.options["SEI"] == "none":
                 submod = pybamm.sei.NoSEI(self.param, self.options, phase, cracks=False)
             elif self.options["SEI"] == "constant":
-                submod = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+                submod = pybamm.sei.ConstantSEI(self.param, self.options, phase) # Mark Jason - why ConstantSEI has cracks option but NoSEI has?
             else:
                 submod = pybamm.sei.SEIGrowth(
                     self.param, reaction_loc, self.options, phase, cracks=False

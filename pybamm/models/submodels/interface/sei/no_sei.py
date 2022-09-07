@@ -21,7 +21,7 @@ class NoSEI(BaseModel):
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None, phase="primary", cracks=True):
+    def __init__(self, param, options=None, phase="primary", cracks=False):
         super().__init__(param, options=options, phase=phase)
         if self.half_cell:
             self.reaction_loc = "interface"
