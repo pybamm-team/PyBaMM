@@ -579,16 +579,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
-    @functools.cached_property
+    @property
     def phases(self):
-        phases_dict = {}
-        for domain in ["negative", "positive"]:
-            number = int(getattr(self, domain)["particle phases"])
-            phases = ["primary"]
-            if number >= 2:
-                phases.append("secondary")
-            phases_dict[domain] = phases
-        return phases_dict
+        try:
+            return self._phases
+        except AttributeError:
+            self._phases = {}
+            for domain in ["negative", "positive"]:
+                number = int(getattr(self, domain)["particle phases"])
+                phases = ["primary"]
+                if number >= 2:
+                    phases.append("secondary")
+                self._phases[domain] = phases
+            return self._phases
 
     def print_options(self):
         """
