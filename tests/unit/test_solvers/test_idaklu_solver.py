@@ -385,9 +385,10 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
         model.rhs = {u: -0.1 * u}
-        model.initial_conditions = {u: 1}
-
+        model.algebraic = {v: v - u}
+        model.initial_conditions = {u: 1, v: 1}
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
@@ -414,7 +415,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         soln1 = solver.solve(model, t_eval)
         solver = pybamm.IDAKLUSolver(options={"use_jacobian": False})
         soln2 = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(soln1.y, soln2.y)
+        np.testing.assert_array_almost_equal(soln1.y, soln2.y)
 
         # test dense_jacobian
         t_eval = np.linspace(0, 1)
@@ -422,7 +423,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         soln1 = solver.solve(model, t_eval)
         solver = pybamm.IDAKLUSolver(options={"dense_jacobian": False})
         soln2 = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(soln1.y, soln2.y)
+        np.testing.assert_array_almost_equal(soln1.y, soln2.y)
 
 
 
