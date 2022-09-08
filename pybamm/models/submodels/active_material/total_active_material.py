@@ -29,51 +29,25 @@ class Total(pybamm.BaseSubModel):
         domain = Domain.lower()
 
         phases = self.options.phases[domain]
-        eps_solid = sum(
-            variables[f"{Domain} electrode {phase} active material volume fraction"]
-            for phase in phases
-        )
-        eps_solid_av = sum(
-            variables[
-                f"X-averaged {domain} electrode {phase} active material volume fraction"
-            ]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode active material volume fraction": eps_solid,
-                f"X-averaged {domain} electrode active material volume fraction"
-                "": eps_solid_av,
-            }
-        )
+        # For each of the variables, the variable name without the phase name
+        # is constructed by summing all of the variable names with the phases
+        for variable_template in [
+            f"{Domain} electrode {{}}active material volume fraction",
+            f"X-averaged {domain} electrode {{}}active material volume fraction",
+            f"{Domain} electrode {{}}active material volume fraction change",
+            f"X-averaged {domain} electrode {{}}active material volume fraction change",
+        ]:
+            sumvar = sum(
+                variables[variable_template.format(phase + " ")] for phase in phases
+            )
+            variables[variable_template.format("")] = sumvar
 
         if self.options["particle shape"] != "no particles":
+            # capacity doesn't fit the template so needs to be done separately
             C = sum(
                 variables[f"{Domain} electrode {phase} phase capacity [A.h]"]
                 for phase in phases
             )
             variables.update({f"{Domain} electrode capacity [A.h]": C})
-
-        deps_solid_dt = sum(
-            variables[
-                f"{Domain} electrode {phase} active material volume fraction change"
-            ]
-            for phase in phases
-        )
-        deps_solid_dt_av = sum(
-            variables[
-                f"X-averaged {domain} electrode {phase} active material "
-                "volume fraction change"
-            ]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode active material volume fraction change"
-                "": deps_solid_dt,
-                f"X-averaged {domain} electrode active material volume fraction change"
-                "": deps_solid_dt_av,
-            }
-        )
 
         return variables
