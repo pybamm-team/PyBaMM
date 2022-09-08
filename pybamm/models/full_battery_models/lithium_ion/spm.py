@@ -95,10 +95,7 @@ class SPM(BaseModel):
                 )
             else:
                 intercalation_kinetics = self.get_intercalation_kinetics(domain)
-                phases = self.options.phase_number_to_names(
-                    getattr(self.options, domain)["particle phases"]
-                )
-                for phase in phases:
+                for phase in self.options.phases[domain]:
                     submod = intercalation_kinetics(
                         self.param, domain, "lithium-ion main", self.options, phase
                     )
@@ -112,10 +109,7 @@ class SPM(BaseModel):
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
             particle = getattr(self.options, domain)["particle"]
-            phases = self.options.phase_number_to_names(
-                getattr(self.options, domain)["particle phases"]
-            )
-            for phase in phases:
+            for phase in self.options.phases[domain]:
                 if particle == "Fickian diffusion":
                     submod = pybamm.particle.FickianDiffusion(
                         self.param, domain, self.options, phase=phase, x_average=True

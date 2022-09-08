@@ -4,6 +4,7 @@
 
 import pybamm
 import numbers
+import functools
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -578,15 +579,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
-    def phase_number_to_names(self, number):
-        """
-        Converts number of phases to a list ["primary", "secondary", ...]
-        """
-        number = int(number)
-        phases = ["primary"]
-        if number >= 2:
-            phases.append("secondary")
-        return phases
+    @functools.cached_property
+    def phases(self):
+        phases_dict = {}
+        for domain in ["negative", "positive"]:
+            number = int(getattr(self, domain)["particle phases"])
+            phases = ["primary"]
+            if number >= 2:
+                phases.append("secondary")
+            phases_dict[domain] = phases
+        return phases_dict
 
     def print_options(self):
         """

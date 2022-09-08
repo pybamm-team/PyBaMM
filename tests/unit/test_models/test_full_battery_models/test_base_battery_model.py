@@ -394,6 +394,12 @@ class TestOptions(unittest.TestCase):
             output = buffer.getvalue()
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
 
+    def test_option_phases(self):
+        options = BatteryModelOptions({})
+        print(options.phases)
+        print(options.phases)
+        print(options.phases)
+
     def test_domain_options(self):
         options = BatteryModelOptions(
             {"particle": ("Fickian diffusion", "quadratic profile")}
