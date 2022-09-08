@@ -47,10 +47,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         {
             print_stats: False, # print statistics of the solver after every solve
             use_jacobian: True, # pass pybamm jacobian to sundials
-            dense_jacobian: False, # use a dense or sparse matrix for jacobian
+            jacobian: "sparse", # jacobian form, can be "none", "dense", "sparse",
+                                # "matrix-free"
             linear_solver: "SUNLinSol_KLU", # name of sundials linear solver to use
                                   # options are: "SUNLinSol_KLU",
                                   # "SUNLinSol_Dense", "SUNLinSol_LapackDense"
+                                  # "SUNLinSol_SPBCGS"
+            linsol_max_iterations: 5, # for iterative linear solvers, max number of
+                                      # iterations
+            precon_half_bandwidth: 5, # for iterative linear solver preconditioner,
+                                      # bandwidth of approximate jacobian
+            precon_half_bandwidth_keep: 5 #for iterative linear solver preconditioner,
+                                      # bandwidth of approximate jacobian that is kept
+
         }
         Note: These options only have an effect if model.convert_to_format == 'casadi'
 
@@ -67,11 +76,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         options=None,
     ):
 
+        # set default options,
+        # (only if user does not supply)
         default_options = {
             "print_stats": False,
-            "use_jacobian": True,
-            "dense_jacobian": False,
+            "jacobian": "sparse",
             "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 5,
+            "precon_half_bandwidth": 5,
+            "precon_half_bandwidth_keep": 5,
         }
         if options is None:
             options = default_options
@@ -209,7 +222,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "jax":
             mass_matrix = model.mass_matrix.entries.toarray()
         elif model.convert_to_format == "casadi":
-            if self._options['dense_jacobian']:
+            if self._options['jacobian'] == "dense":
                 mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
             else:
                 mass_matrix = casadi.DM(model.mass_matrix.entries)

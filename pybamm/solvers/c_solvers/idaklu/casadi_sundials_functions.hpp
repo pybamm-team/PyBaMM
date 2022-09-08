@@ -22,4 +22,6 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
                     N_Vector resvec, SUNMatrix JJ, void *user_data,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3);
 
+int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
+                           N_Vector yp, N_Vector gval, void *user_data);
 #endif // PYBAMM_IDAKLU_CASADI_SUNDIALS_FUNCTIONS_HPP

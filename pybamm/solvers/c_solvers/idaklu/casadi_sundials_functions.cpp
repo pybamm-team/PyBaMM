@@ -1,21 +1,23 @@
 #include "casadi_sundials_functions.hpp"
 #include "casadi_functions.hpp"
+#include "common.hpp"
 
 int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data)
 {
+  DEBUG("residual_casadi");
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
-  // std::cout << "RESIDUAL t = " << tres << " y = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(yy)[i] << " ";
-  // }
-  // std::cout << "] yp = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(yp)[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  std::cout << "RESIDUAL t = " << tres << " y = [";
+  for (int i = 0; i < p_python_functions->number_of_states; i++) {
+    std::cout << NV_DATA_S(yy)[i] << " ";
+  }
+  std::cout << "] yp = [";
+  for (int i = 0; i < p_python_functions->number_of_states; i++) {
+    std::cout << NV_DATA_S(yp)[i] << " ";
+  }
+  std::cout << "]" << std::endl;
   //   args are t, y, put result in rr
 
   p_python_functions->rhs_alg.m_arg[0] = &tres;
@@ -51,15 +53,55 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
 
-  // std::cout << "residual = [";
-  // for (int i = 0; i < p_python_functions->number_of_states; i++) {
-  //   std::cout << NV_DATA_S(rr)[i] << " ";
-  // }
-  // std::cout << "]" << std::endl;
+  std::cout << "residual = [";
+  for (int i = 0; i < p_python_functions->number_of_states; i++) {
+    std::cout << NV_DATA_S(rr)[i] << " ";
+  }
+  std::cout << "]" << std::endl;
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
 
   return 0;
+}
+
+// This Gres function computes G(t, y, yp). It loads the vector gval as a
+// function of tt, yy, and yp.
+//
+// Arguments:
+// Nlocal – is the local vector length.
+//
+// tt – is the value of the independent variable.
+//
+// yy – is the dependent variable.
+//
+// yp – is the derivative of the dependent variable.
+//
+// gval – is the output vector.
+//
+// user_data – is a pointer to user data, the same as the user_data parameter
+// passed to IDASetUserData().
+//
+// Return value:
+//
+// An IDABBDLocalFn function type should return 0 to indicate success, 1 for a
+// recoverable error, or -1 for a non-recoverable error.
+//
+// Notes:
+//
+// This function must assume that all inter-processor communication of data
+// needed to calculate gval has already been done, and this data is accessible
+// within user_data.
+//
+// The case where G is mathematically identical to F is allowed.
+int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
+                           N_Vector yp, N_Vector gval, void *user_data)
+{
+  DEBUG("residual_casadi_approx");
+  CasadiFunctions *p_python_functions =
+      static_cast<CasadiFunctions *>(user_data);
+
+  // Just use true residual for now
+  return residual_casadi(tt, yy, yp, gval, user_data);
 }
 
 // Purpose This function computes the product Jv of the DAE system Jacobian J
@@ -86,6 +128,7 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, realtype cj, void *user_data,
                   N_Vector tmp1, N_Vector tmp2)
 {
+  DEBUG("jtimes_casadi");
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
@@ -132,6 +175,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
                     N_Vector resvec, SUNMatrix JJ, void *user_data,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
 {
+  DEBUG("jacobian_casadi");
 
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
@@ -140,15 +184,15 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   sunindextype *jac_colptrs;
   sunindextype *jac_rowvals;
   realtype *jac_data;
-  if (p_python_functions->options.dense_jacobian)
-  {
-    jac_data = SUNDenseMatrix_Data(JJ);
-  }
-  else
+  if (p_python_functions->options.using_sparse_matrix)
   {
     jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
     jac_rowvals = SUNSparseMatrix_IndexValues(JJ);
     jac_data = SUNSparseMatrix_Data(JJ);
+  }
+  else
+  {
+    jac_data = SUNDenseMatrix_Data(JJ);
   }
 
   // args are t, y, cj, put result in jacobian data matrix
@@ -160,7 +204,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
   p_python_functions->jac_times_cjmass();
 
-  if (!p_python_functions->options.dense_jacobian)
+  if (p_python_functions->options.using_sparse_matrix)
   {
     // row vals and col ptrs
     const int n_row_vals = p_python_functions->jac_times_cjmass_rowvals.size();

@@ -413,15 +413,13 @@ class TestIDAKLUSolver(unittest.TestCase):
         self.assertEqual(len(s), 0)
 
         # test everything else
-        for use_jacobian in [True, False]:
-            for dense_jacobian in [True, False]:
+        for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
                 for linear_solver in [
-                        "SUNLinSol_Dense", "SUNLinSol_LapackDense",
-                        "SUNLinSol_KLU"
+                        "SUNLinSol_SPBCGS", "SUNLinSol_Dense", "SUNLinSol_LapackDense",
+                        "SUNLinSol_KLU", "garbage"
                 ]:
                     options = {
-                        'use_jacobian': use_jacobian,
-                        'dense_jacobian': dense_jacobian,
+                        'jacobian': jacobian,
                         'linear_solver': linear_solver,
                     }
                     solver = pybamm.IDAKLUSolver(options=options)

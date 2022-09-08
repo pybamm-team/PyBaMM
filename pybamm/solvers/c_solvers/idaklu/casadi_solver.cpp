@@ -1,5 +1,6 @@
 #include "casadi_solver.hpp"
 #include "casadi_sundials_functions.hpp"
+#include "common.hpp"
 #include <memory>
 
 CasadiSolver *
@@ -96,7 +97,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   IDASetUserData(ida_mem, user_data);
 
   // set matrix
-  if (options.use_jacobian && !options.dense_jacobian)
+  if (options.jacobian == "sparse")
   {
     DEBUG("\tsetting sparse matrix");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -107,7 +108,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
                         jac_times_cjmass_nnz, CSC_MAT);
 #endif
   }
-  else
+  else if (options.jacobian == "dense" || options.jacobian == "none")
   {
     DEBUG("\tsetting dense matrix");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -116,51 +117,70 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     J = SUNDenseMatrix(number_of_states, number_of_states);
 #endif
   }
+  else if (options.jacobian == "matrix-free")
+  {
+    J = NULL;
+  }
 
   // set linear solver
-  if (options.linear_solver == "SUNLinSol_Dense" && (options.dense_jacobian || !options.use_jacobian)) {
+  if (options.linear_solver == "SUNLinSol_Dense" &&
+      options.jacobian == "dense")
+  {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
-    #if SUNDIALS_VERSION_MAJOR >= 6
-      LS = SUNLinSol_Dense(yy, J, sunctx);
-    #else
-      LS = SUNLinSol_Dense(yy, J);
-    #endif
-  } else if (options.linear_solver == "SUNLinSol_LapackDense" && (options.dense_jacobian || !options.use_jacobian)) {
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_Dense(yy, J, sunctx);
+#else
+    LS = SUNLinSol_Dense(yy, J);
+#endif
+  }
+  else if (options.linear_solver == "SUNLinSol_LapackDense" &&
+           options.jacobian == "dense")
+  {
     DEBUG("\tsetting SUNLinSol_LapackDense linear solver");
-    #if SUNDIALS_VERSION_MAJOR >= 6
-      LS = SUNLinSol_LapackDense(yy, J, sunctx);
-    #else
-      LS = SUNLinSol_LapackDense(yy, J);
-    #endif
-  } else if (options.linear_solver == "SUNLinSol_KLU" && (!options.dense_jacobian && options.use_jacobian)) {
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_LapackDense(yy, J, sunctx);
+#else
+    LS = SUNLinSol_LapackDense(yy, J);
+#endif
+  }
+  else if (options.linear_solver == "SUNLinSol_KLU" &&
+           options.jacobian == "sparse")
+  {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
-    #if SUNDIALS_VERSION_MAJOR >= 6
-      LS = SUNLinSol_KLU(yy, J, sunctx);
-    #else
-      LS = SUNLinSol_KLU(yy, J);
-    #endif
-  } else if (options.use_jacobian && !options.dense_jacobian) {
-    std::cout << "Unknown linear solver or incompatible options, using SUNLinSol_KLU by default" << std::endl;
-    DEBUG("\tsetting SUNLinSol_KLU linear solver");
-    #if SUNDIALS_VERSION_MAJOR >= 6
-      LS = SUNLinSol_KLU(yy, J, sunctx);
-    #else
-      LS = SUNLinSol_KLU(yy, J);
-    #endif
-  } else {
-    DEBUG("\tsetting SUNLinSol_Dense linear solver");
-    std::cout << "Unknown linear solver or incompatible options, using SUNLinSol_Dense by default" << std::endl;
-    #if SUNDIALS_VERSION_MAJOR >= 6
-      LS = SUNLinSol_Dense(yy, J, sunctx);
-    #else
-      LS = SUNLinSol_Dense(yy, J);
-    #endif
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_KLU(yy, J, sunctx);
+#else
+    LS = SUNLinSol_KLU(yy, J);
+#endif
+  }
+  else if (options.linear_solver == "SUNLinSol_SPBCGS" &&
+           (options.jacobian == "sparse" || options.jacobian == "matrix-free"))
+  {
+    DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_SPBCGS(yy, SUN_PREC_LEFT, options.linsol_max_iterations,
+                          sunctx);
+#else
+    LS = SUNLinSol_SPBCGS(yy, PREC_LEFT, options.linsol_max_iterations);
+#endif
   }
 
   IDASetLinearSolver(ida_mem, LS, J);
 
+  if (options.using_iterative_solver)
+  {
+    DEBUG("\tsetting IDADDB preconditioner");
+    // setup preconditioner
+    IDABBDPrecInit(
+        ida_mem, number_of_states, options.precon_half_bandwidth,
+        options.precon_half_bandwidth, options.precon_half_bandwidth_keep,
+        options.precon_half_bandwidth_keep, 0.0, residual_casadi_approx, NULL);
+
+    IDASetJacTimes(ida_mem, NULL, jtimes_casadi);
+  }
+
   // set jacobian function
-  if (options.use_jacobian)
+  if (options.jacobian != "none" && options.jacobian != "matrix-free")
   {
     IDASetJacFn(ida_mem, jacobian_casadi);
   }
@@ -294,6 +314,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   // calculate consistent initial conditions
+  DEBUG("IDACalcIC");
   IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
 
   int retval;
@@ -301,6 +322,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
   {
     t_next = t(t_i);
     IDASetStopTime(ida_mem, t_next);
+    DEBUG("IDASolve");
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
 
     if (retval == IDA_TSTOP_RETURN || retval == IDA_SUCCESS ||
@@ -347,7 +369,6 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   Solution sol(retval, t_ret, y_ret, yS_ret);
 
-  // TODO config input to choose stuff like this
   if (options.print_stats)
   {
     long nsteps, nrevals, nlinsetups, netfails;
@@ -360,9 +381,17 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     long nniters, nncfails;
     IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
 
+    long int ngevalsBBDP = 0;
+    if (options.using_iterative_solver)
+    {
+      IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP);
+    }
+
     py::print("Solver Stats:");
     py::print("\tNumber of steps =", nsteps);
     py::print("\tNumber of calls to residual function =", nrevals);
+    py::print("\tNumber of calls to residual function in preconditioner =",
+              ngevalsBBDP);
     py::print("\tNumber of linear solver setup calls =", nlinsetups);
     py::print("\tNumber of error test failures =", netfails);
     py::print("\tMethod order used on last step =", klast);
