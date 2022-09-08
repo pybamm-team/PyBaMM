@@ -185,7 +185,8 @@ class SEIGrowth(BaseModel):
             # Note a is dimensionless (has a constant value of 1 if the surface
             # area does not change)
             a = variables[
-                f"X-averaged negative electrode {phase_name}surface area to volume ratio"
+                f"X-averaged negative electrode {phase_name}"
+                "surface area to volume ratio"
             ]
         else:
             L_inner = variables[f"Inner {self.reaction_name}thickness"]

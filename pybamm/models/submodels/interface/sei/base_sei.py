@@ -90,8 +90,6 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
-        param = self.param
-
         # Set length scale to one for the "no SEI" model so that it is not
         # required by parameter values in general
         if isinstance(self, pybamm.sei.NoSEI):
