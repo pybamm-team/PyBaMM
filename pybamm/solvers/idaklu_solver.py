@@ -47,6 +47,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         {
             print_stats: False, # print statistics of the solver after every solve
             use_jacobian: True, # pass pybamm jacobian to sundials
+            dense_jacobian: False, # use a dense or sparse matrix for jacobian
         }
         Note: These options only have an effect if model.convert_to_format == 'casadi'
 
@@ -66,6 +67,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         default_options = {
             "print_stats": False,
             "use_jacobian": True,
+            "dense_jacobian": False,
+            "linear_solver": "klu",
         }
         if options is None:
             options = default_options
@@ -203,7 +206,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "jax":
             mass_matrix = model.mass_matrix.entries.toarray()
         elif model.convert_to_format == "casadi":
-            mass_matrix = casadi.DM(model.mass_matrix.entries)
+            if self._options['dense_jacobian']:
+                mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
+            else:
+                mass_matrix = casadi.DM(model.mass_matrix.entries)
         else:
             mass_matrix = model.mass_matrix.entries
 

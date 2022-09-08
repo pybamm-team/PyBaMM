@@ -416,6 +416,15 @@ class TestIDAKLUSolver(unittest.TestCase):
         soln2 = solver.solve(model, t_eval)
         np.testing.assert_array_equal(soln1.y, soln2.y)
 
+        # test dense_jacobian
+        t_eval = np.linspace(0, 1)
+        solver = pybamm.IDAKLUSolver(options={"dense_jacobian": True})
+        soln1 = solver.solve(model, t_eval)
+        solver = pybamm.IDAKLUSolver(options={"dense_jacobian": False})
+        soln2 = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(soln1.y, soln2.y)
+
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

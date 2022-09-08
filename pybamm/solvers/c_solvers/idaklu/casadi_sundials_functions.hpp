@@ -1,12 +1,10 @@
 #ifndef PYBAMM_IDAKLU_CASADI_SUNDIALS_FUNCTIONS_HPP
 #define PYBAMM_IDAKLU_CASADI_SUNDIALS_FUNCTIONS_HPP
 
-
 #include "common.hpp"
 
 int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data);
-
 
 int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, realtype cj, void *user_data,

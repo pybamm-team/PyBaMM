@@ -10,8 +10,8 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const int jac_times_cjmass_nnz, const Function &jac_action,
                      const Function &mass_action, const Function &sens,
                      const Function &events, const int number_of_events,
-                     np_array rhs_alg_id, np_array atol_np,
-                     double rel_tol, int inputs_length, py::dict options)
+                     np_array rhs_alg_id, np_array atol_np, double rel_tol,
+                     int inputs_length, py::dict options)
 {
   auto options_cpp = Options(options);
   auto functions = std::make_unique<CasadiFunctions>(
@@ -27,8 +27,7 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
 
 CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
                            np_array rhs_alg_id, int number_of_parameters,
-                           int number_of_events,
-                           int jac_times_cjmass_nnz,
+                           int number_of_events, int jac_times_cjmass_nnz,
                            std::unique_ptr<CasadiFunctions> functions_arg,
                            const Options &options)
     : number_of_states(atol_np.request().size),
@@ -37,6 +36,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
       jac_times_cjmass_nnz(jac_times_cjmass_nnz),
       functions(std::move(functions_arg)), options(options)
 {
+  DEBUG("CasadiSolver::CasadiSolver");
   auto atol = atol_np.unchecked<1>();
 
   // allocate memory for solver
@@ -67,9 +67,6 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   }
 
   // set initial value
-  if (number_of_parameters > 0)
-  {
-  }
   realtype *ypval = N_VGetArrayPointer(yp);
   realtype *atval = N_VGetArrayPointer(avtol);
   for (int i = 0; i < number_of_states; i++)
@@ -84,6 +81,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   }
 
   // initialise solver
+
   IDAInit(ida_mem, residual_casadi, 0, yy, yp);
 
   // set tolerances
@@ -97,35 +95,52 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
 
-  // set linear solver
-#if SUNDIALS_VERSION_MAJOR >= 6
-  if (options.use_jacobian)
+  // set matrix
+  if (options.use_jacobian && !options.dense_jacobian)
   {
+    DEBUG("\tsetting sparse matrix");
+#if SUNDIALS_VERSION_MAJOR >= 6
     J = SUNSparseMatrix(number_of_states, number_of_states,
                         jac_times_cjmass_nnz, CSC_MAT, sunctx);
-    LS = SUNLinSol_KLU(yy, J, sunctx);
-  }
-  else
-  {
-    J = SUNDenseMatrix(number_of_states, number_of_states, sunctx);
-    LS = SUNLinSol_Dense(yy, J, sunctx);
-  }
 #else
-  if (options.use_jacobian == 1)
-  {
     J = SUNSparseMatrix(number_of_states, number_of_states,
                         jac_times_cjmass_nnz, CSC_MAT);
-    LS = SUNLinSol_KLU(yy, J);
+#endif
   }
   else
   {
+    DEBUG("\tsetting dense matrix");
+#if SUNDIALS_VERSION_MAJOR >= 6
+    J = SUNDenseMatrix(number_of_states, number_of_states, sunctx);
+#else
     J = SUNDenseMatrix(number_of_states, number_of_states);
-    LS = SUNLinSol_Dense(yy, J);
-  }
 #endif
+  }
+
+  // set linear solver
+  if (options.use_jacobian && !options.dense_jacobian)
+  {
+    DEBUG("\tsetting SUNLinSol_KLU linear solver");
+    // if sparse just use klu
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_KLU(yy, J, sunctx);
+#else
+    LS = SUNLinSol_KLU(yy, J);
+#endif
+  }
+  else
+  {
+    DEBUG("\tsetting SUNLinSol_Dense linear solver");
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_Dense(yy, J, sunctx);
+#else
+    LS = SUNLinSol_Dense(yy, J);
+#endif
+  }
 
   IDASetLinearSolver(ida_mem, LS, J);
 
+  // set jacobian function
   if (options.use_jacobian)
   {
     IDASetJacFn(ida_mem, jacobian_casadi);
@@ -182,6 +197,7 @@ CasadiSolver::~CasadiSolver()
 Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
                              np_array_dense inputs)
 {
+  DEBUG("CasadiSolver::solve");
   int number_of_timesteps = t_np.request().size;
 
   // set inputs

@@ -24,5 +24,10 @@ using np_array = py::array_t<realtype>;
 using np_array_dense = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
 using np_array_int = py::array_t<int64_t>;
 
+#ifdef NDEBUG
+#define DEBUG(x) 
+#else
+#define DEBUG(x) do { std::cerr << __FILE__ << ':' << __LINE__ << ' ' << x << std::endl; } while (0)
+#endif
 
 #endif // PYBAMM_IDAKLU_COMMON_HPP
