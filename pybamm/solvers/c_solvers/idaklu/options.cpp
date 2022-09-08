@@ -48,6 +48,7 @@ Options::Options(py::dict options)
     py::print("Unknown linear solver or incompatible options using "
               "SUNLinSol_SPBCGS by default");
     linear_solver = "SUNLinSol_SPBCGS";
+    using_iterative_solver = true;
   }
   else
   {

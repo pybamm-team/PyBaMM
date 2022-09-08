@@ -119,12 +119,12 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   }
   else if (options.jacobian == "matrix-free")
   {
+    DEBUG("\tsetting matrix-free");
     J = NULL;
   }
 
   // set linear solver
-  if (options.linear_solver == "SUNLinSol_Dense" &&
-      options.jacobian == "dense")
+  if (options.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -133,8 +133,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_Dense(yy, J);
 #endif
   }
-  else if (options.linear_solver == "SUNLinSol_LapackDense" &&
-           options.jacobian == "dense")
+  else if (options.linear_solver == "SUNLinSol_LapackDense")
   {
     DEBUG("\tsetting SUNLinSol_LapackDense linear solver");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -143,8 +142,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_LapackDense(yy, J);
 #endif
   }
-  else if (options.linear_solver == "SUNLinSol_KLU" &&
-           options.jacobian == "sparse")
+  else if (options.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -153,8 +151,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_KLU(yy, J);
 #endif
   }
-  else if (options.linear_solver == "SUNLinSol_SPBCGS" &&
-           (options.jacobian == "sparse" || options.jacobian == "matrix-free"))
+  else if (options.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -176,14 +173,13 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
         options.precon_half_bandwidth, options.precon_half_bandwidth_keep,
         options.precon_half_bandwidth_keep, 0.0, residual_casadi_approx, NULL);
 
-    IDASetJacTimes(ida_mem, NULL, jtimes_casadi);
   }
 
-  // set jacobian function
-  if (options.jacobian != "none" && options.jacobian != "matrix-free")
-  {
+  if (options.jacobian == "matrix-free") {
+    IDASetJacTimes(ida_mem, NULL, jtimes_casadi);
+  } else if (options.jacobian != "none") {
     IDASetJacFn(ida_mem, jacobian_casadi);
-  }
+  } 
 
   if (number_of_parameters > 0)
   {
