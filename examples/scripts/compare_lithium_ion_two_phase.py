@@ -8,7 +8,6 @@ pybamm.set_logging_level("INFO")
 options = {
     "particle phases": ("2", "1"),
     "open circuit potential": (("single", "current sigmoid"), "single"),
-    "SEI": "ec reaction limited",
 }
 models = [
     pybamm.lithium_ion.SPM(options),
