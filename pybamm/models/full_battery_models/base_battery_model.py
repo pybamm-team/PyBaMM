@@ -514,7 +514,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'false', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'SEI', 'particle mechanics', "
+                    "be 'none': 'particle mechanics', "
                     "'loss of active material', 'lithium plating'"
                 )
 
