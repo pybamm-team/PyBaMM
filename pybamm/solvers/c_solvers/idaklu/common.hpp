@@ -13,6 +13,7 @@
 
 #include <sunlinsol/sunlinsol_klu.h> /* access to KLU linear solver          */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense linear solver          */
+#include <sunlinsol/sunlinsol_lapackdense.h> /* access to lapack linear solver          */
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix           */
 

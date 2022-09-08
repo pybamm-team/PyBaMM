@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 
 import pybamm
+from pybamm.models.submodels.interface.kinetics import linear
 from tests import get_discretisation_for_testing
 
 
@@ -392,10 +393,12 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
+        t_eval = np.linspace(0, 1)
+        solver = pybamm.IDAKLUSolver()
+        soln_base = solver.solve(model, t_eval)
+
         # test print_stats
         solver = pybamm.IDAKLUSolver(options={"print_stats": True})
-        t_eval = np.linspace(0, 1)
-
         f = io.StringIO()
         with redirect_stdout(f):
             solver.solve(model, t_eval)
@@ -409,21 +412,21 @@ class TestIDAKLUSolver(unittest.TestCase):
         s = f.getvalue()
         self.assertEqual(len(s), 0)
 
-        # test use_jacobian
-        t_eval = np.linspace(0, 1)
-        solver = pybamm.IDAKLUSolver(options={"use_jacobian": True})
-        soln1 = solver.solve(model, t_eval)
-        solver = pybamm.IDAKLUSolver(options={"use_jacobian": False})
-        soln2 = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(soln1.y, soln2.y)
-
-        # test dense_jacobian
-        t_eval = np.linspace(0, 1)
-        solver = pybamm.IDAKLUSolver(options={"dense_jacobian": True})
-        soln1 = solver.solve(model, t_eval)
-        solver = pybamm.IDAKLUSolver(options={"dense_jacobian": False})
-        soln2 = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(soln1.y, soln2.y)
+        # test everything else
+        for use_jacobian in [True, False]:
+            for dense_jacobian in [True, False]:
+                for linear_solver in [
+                        "SUNLinSol_Dense", "SUNLinSol_LapackDense",
+                        "SUNLinSol_KLU"
+                ]:
+                    options = {
+                        'use_jacobian': use_jacobian,
+                        'dense_jacobian': dense_jacobian,
+                        'linear_solver': linear_solver,
+                    }
+                    solver = pybamm.IDAKLUSolver(options=options)
+                    soln = solver.solve(model, t_eval)
+                    np.testing.assert_array_almost_equal(soln.y, soln_base.y)
 
 
 

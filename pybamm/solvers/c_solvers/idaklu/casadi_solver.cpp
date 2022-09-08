@@ -118,24 +118,43 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   }
 
   // set linear solver
-  if (options.use_jacobian && !options.dense_jacobian)
-  {
-    DEBUG("\tsetting SUNLinSol_KLU linear solver");
-    // if sparse just use klu
-#if SUNDIALS_VERSION_MAJOR >= 6
-    LS = SUNLinSol_KLU(yy, J, sunctx);
-#else
-    LS = SUNLinSol_KLU(yy, J);
-#endif
-  }
-  else
-  {
+  if (options.linear_solver == "SUNLinSol_Dense" && (options.dense_jacobian || !options.use_jacobian)) {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
-    LS = SUNLinSol_Dense(yy, J, sunctx);
-#else
-    LS = SUNLinSol_Dense(yy, J);
-#endif
+    #if SUNDIALS_VERSION_MAJOR >= 6
+      LS = SUNLinSol_Dense(yy, J, sunctx);
+    #else
+      LS = SUNLinSol_Dense(yy, J);
+    #endif
+  } else if (options.linear_solver == "SUNLinSol_LapackDense" && (options.dense_jacobian || !options.use_jacobian)) {
+    DEBUG("\tsetting SUNLinSol_LapackDense linear solver");
+    #if SUNDIALS_VERSION_MAJOR >= 6
+      LS = SUNLinSol_LapackDense(yy, J, sunctx);
+    #else
+      LS = SUNLinSol_LapackDense(yy, J);
+    #endif
+  } else if (options.linear_solver == "SUNLinSol_KLU" && (!options.dense_jacobian && options.use_jacobian)) {
+    DEBUG("\tsetting SUNLinSol_KLU linear solver");
+    #if SUNDIALS_VERSION_MAJOR >= 6
+      LS = SUNLinSol_KLU(yy, J, sunctx);
+    #else
+      LS = SUNLinSol_KLU(yy, J);
+    #endif
+  } else if (options.use_jacobian && !options.dense_jacobian) {
+    std::cout << "Unknown linear solver or incompatible options, using SUNLinSol_KLU by default" << std::endl;
+    DEBUG("\tsetting SUNLinSol_KLU linear solver");
+    #if SUNDIALS_VERSION_MAJOR >= 6
+      LS = SUNLinSol_KLU(yy, J, sunctx);
+    #else
+      LS = SUNLinSol_KLU(yy, J);
+    #endif
+  } else {
+    DEBUG("\tsetting SUNLinSol_Dense linear solver");
+    std::cout << "Unknown linear solver or incompatible options, using SUNLinSol_Dense by default" << std::endl;
+    #if SUNDIALS_VERSION_MAJOR >= 6
+      LS = SUNLinSol_Dense(yy, J, sunctx);
+    #else
+      LS = SUNLinSol_Dense(yy, J);
+    #endif
   }
 
   IDASetLinearSolver(ida_mem, LS, J);

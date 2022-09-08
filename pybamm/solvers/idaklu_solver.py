@@ -48,6 +48,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             print_stats: False, # print statistics of the solver after every solve
             use_jacobian: True, # pass pybamm jacobian to sundials
             dense_jacobian: False, # use a dense or sparse matrix for jacobian
+            linear_solver: "SUNLinSol_KLU", # name of sundials linear solver to use
+                                  # options are: "SUNLinSol_KLU",
+                                  # "SUNLinSol_Dense", "SUNLinSol_LapackDense"
         }
         Note: These options only have an effect if model.convert_to_format == 'casadi'
 
@@ -68,7 +71,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "print_stats": False,
             "use_jacobian": True,
             "dense_jacobian": False,
-            "linear_solver": "klu",
+            "linear_solver": "SUNLinSol_KLU",
         }
         if options is None:
             options = default_options
