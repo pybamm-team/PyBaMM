@@ -13,6 +13,8 @@
 ## Bug fixes
 
 -   Added `SEI on cracks` to loop over all interfacial reactions ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+-   Fixed `X-averaged SEI on cracks concentration` so it's an average over x only, not y and z ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+-   Corrected initial state for SEI on cracks ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
 -   Added new parameter `Ratio of lithium moles to SEI moles` (short name z_sei) to fix a bug where this number was incorrectly hardcoded to 1. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
 -   Changed short name of parameter `Inner SEI reaction proportion` from alpha_SEI to inner_sei_proportion, to avoid confusion with transfer coefficients. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
 -   Deleted legacy parameters with short names beta_sei and beta_plating. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
