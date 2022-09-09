@@ -35,6 +35,25 @@ class TestElectrodeSOH(unittest.TestCase):
         for key in sol.all_models[0].variables:
             self.assertAlmostEqual(sol[key].data[0], sol_split[key].data[0], places=5)
 
+    def test_error(self):
+
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+
+        Vmin = 3
+        Vmax = 4.2
+        Cn = parameter_values.evaluate(param.n.cap_init)
+        Cp = parameter_values.evaluate(param.p.cap_init)
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init) * 10
+
+        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
+
+        # Solve the model and check outputs
+        with self.assertRaisesRegex(ValueError, "should be between 0 and 1"):
+            esoh_solver.solve(inputs)
+
 
 class TestElectrodeSOHHalfCell(unittest.TestCase):
     def test_known_solution(self):

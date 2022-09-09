@@ -281,7 +281,7 @@ class ElectrodeSOHSolver:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs)
                 # if that didn't raise an error, raise the original error instead
-                raise original_error
+                raise original_error  # pragma: no cover (don't know how to get here)
 
         return sol
 
