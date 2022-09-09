@@ -394,6 +394,17 @@ class TestOptions(unittest.TestCase):
             output = buffer.getvalue()
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
 
+    def test_option_phases(self):
+        options = BatteryModelOptions({})
+        self.assertEqual(
+            options.phases, {"negative": ["primary"], "positive": ["primary"]}
+        )
+        options = BatteryModelOptions({"particle phases": ("1", "2")})
+        self.assertEqual(
+            options.phases,
+            {"negative": ["primary"], "positive": ["primary", "secondary"]},
+        )
+
     def test_domain_options(self):
         options = BatteryModelOptions(
             {"particle": ("Fickian diffusion", "quadratic profile")}
