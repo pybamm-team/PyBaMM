@@ -37,10 +37,7 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         if Domain == "Negative" and self.half_cell is True:
             return variables
 
-        phases = self.options.phase_number_to_names(
-            getattr(self.options, domain)["particle phases"]
-        )
-
+        phases = self.options.phases[domain]
         if len(phases) > 1:
             a_j = sum(
                 variables[
