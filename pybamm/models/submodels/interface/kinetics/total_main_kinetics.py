@@ -32,9 +32,6 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
 
-        if Domain == "Negative" and self.half_cell is True:
-            return variables
-
         phases = self.options.phases[domain]
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases

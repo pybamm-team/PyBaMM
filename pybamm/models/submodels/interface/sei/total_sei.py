@@ -29,9 +29,6 @@ class TotalSEI(pybamm.BaseSubModel):
         super().__init__(param, options=options)
 
     def get_coupled_variables(self, variables):
-        if self.half_cell is True:
-            return variables
-
         phases = self.options.phases["negative"]
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
