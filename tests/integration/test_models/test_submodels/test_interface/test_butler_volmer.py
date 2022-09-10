@@ -62,8 +62,6 @@ class TestButlerVolmer(unittest.TestCase):
             "Sum of interfacial current densities": pybamm.Scalar(1),
             "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
             "Sum of positive electrode interfacial current densities": pybamm.Scalar(1),
-            "Sum of x-averaged negative electrode interfacial current densities": 1,
-            "Sum of x-averaged positive electrode interfacial current densities": 1,
             "Sum of negative electrode electrolyte reaction source terms": 1,
             "Sum of positive electrode electrolyte reaction source terms": 1,
             "Sum of x-averaged negative electrode electrolyte reaction source terms": 1,
@@ -215,7 +213,7 @@ class TestButlerVolmer(unittest.TestCase):
         submesh = np.concatenate(
             [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
         )
-        y = np.concatenate([submesh ** 2, submesh ** 3, submesh ** 4])
+        y = np.concatenate([submesh**2, submesh**3, submesh**4])
         self.assertEqual(
             j_n.evaluate(None, y).shape, (mesh["negative electrode"].npts, 1)
         )

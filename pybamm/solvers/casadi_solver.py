@@ -126,38 +126,11 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
-        has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in inputs_dict.values()
-        )
 
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
-        # Calculate initial event signs needed for some of the modes
-        if has_symbolic_inputs is False and model.events != []:
-            t0 = t_eval[0]
-            y0 = model.y0
-            init_event_signs = casadi.sign(
-                casadi.vcat(
-                    [event(t0, y0, inputs) for event in model.terminate_events_eval]
-                )
-            )
-        else:
-            init_event_signs = casadi.sign([])
-
-        if has_symbolic_inputs:
-            # Create integrator without grid to avoid having to create several times
-            self.create_integrator(model, inputs)
-            solution = self._run_integrator(
-                model,
-                model.y0,
-                inputs_dict,
-                inputs,
-                t_eval,
-                use_grid=False,
-            )
-
-        if self.mode in ["fast", "fast with events"] or model.events == []:
+        if self.mode in ["fast", "fast with events"] or not model.events:
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
             if self.mode == "fast with events":
@@ -175,8 +148,7 @@ class CasadiSolver(pybamm.BaseSolver):
             )
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
-            if model.events != []:
-                solution = self._solve_for_event(solution, init_event_signs)
+            solution = self._solve_for_event(solution)
             solution.check_ys_are_not_too_large()
             self.check_interpolant_extrapolation(model, solution)
             return solution
@@ -269,9 +241,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         )
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
-                current_step_sol = self._solve_for_event(
-                    current_step_sol, init_event_signs
-                )
+                current_step_sol = self._solve_for_event(current_step_sol)
                 self.check_interpolant_extrapolation(model, current_step_sol)
                 # assign temporary solve time
                 current_step_sol.solve_time = np.nan
@@ -292,7 +262,7 @@ class CasadiSolver(pybamm.BaseSolver):
             solution.check_ys_are_not_too_large()
             return solution
 
-    def _solve_for_event(self, solution, init_event_signs):
+    def _solve_for_event(self, solution):
         """
         Check if the sign of an event changes, if so find an accurate
         termination point and exit
@@ -306,8 +276,6 @@ class CasadiSolver(pybamm.BaseSolver):
         model = solution.all_models[-1]
         inputs_dict = solution.all_inputs[-1]
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
-        init_event_signs = casadi.DM(init_event_signs)
-        events_all_ones = casadi.DM.ones(init_event_signs.shape)
         sol_t = solution.all_ts[-1]
         sol_y = solution.all_ys[-1]
 
@@ -316,8 +284,7 @@ class CasadiSolver(pybamm.BaseSolver):
             y_last = solution.y_last
             t_last = sol_t[-1]
             crossed_events = casadi.sign(
-                init_event_signs
-                * casadi.vcat(
+                casadi.vcat(
                     [
                         event(t_last, y_last, inputs)
                         for event in model.terminate_events_eval
@@ -348,14 +315,13 @@ class CasadiSolver(pybamm.BaseSolver):
         t0 = sol_t[0]
         dt = sol_t[-1] - sol_t[0]
         for i, event in enumerate(active_events):
-            init_event_sign = init_event_signs[crossed_event_idx[i]]
 
             def rootfun(t_scaled):
                 # scale time between 0 and 1 for more accurate root finding
                 t = t0 + dt * t_scaled
-                return (
-                    (init_event_sign * event(t, y_interp(t), inputs)).full().flatten()
-                ) - 1e-5 * (t_scaled + 1)
+                return event(t, y_interp(t), inputs).full().flatten() - 1e-5 * (
+                    t_scaled + 1
+                )
 
             pybamm.logger.verbose(f"Start rootfind for event {i}")
             rootsol = root(rootfun, 0.1, method="lm")
@@ -490,7 +456,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # see #1082
             event_switch = 1
             if use_event_switch is True and not algebraic(0, y0, p).is_empty():
-                for event in model.casadi_terminate_events:
+                for event in model.casadi_switch_events:
                     event_switch *= event(t_scaled, y_full, p)
 
             problem = {

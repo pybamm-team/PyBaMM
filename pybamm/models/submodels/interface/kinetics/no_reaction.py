@@ -18,13 +18,16 @@ class NoReaction(BaseInterface):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, phase):
+    def __init__(self, param, domain, reaction, options, phase="primary"):
         options = {
             "SEI film resistance": "none",
             "total interfacial current density as a state": "false",

@@ -270,5 +270,5 @@ class BasicDFN(BaseModel):
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+            pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
         ]
