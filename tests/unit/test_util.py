@@ -153,7 +153,6 @@ class TestUtil(unittest.TestCase):
         git_commit_info = pybamm.get_git_commit_info()
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
-        self.assertIn("-g", git_commit_info)
 
 
 class TestSearch(unittest.TestCase):
