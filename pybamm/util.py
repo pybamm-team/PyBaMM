@@ -33,7 +33,10 @@ def root_dir():
 
 
 def get_git_commit_info():
-    """Get the git commit info for the current PyBaMM version"""
+    """
+    Get the git commit info for the current PyBaMM version, e.g. v22.8-39-gb25ce8c41
+    (version 22.8, commit b25ce8c41)
+    """
     try:
         # Get the latest git commit hash
         return str(
