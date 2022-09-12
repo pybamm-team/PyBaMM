@@ -4,6 +4,10 @@
 
 -   For experiments, the simulation now automatically checks and skips steps that cannot be performed (e.g. "Charge at 1C until 4.2V" from 100% SOC) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
 
+## Optimizations
+
+-   Sped up calculations of Electrode SOH variables for summary variables ([#2210](https://github.com/pybamm-team/PyBaMM/pull/2210))
+
 ## Breaking changes
 
 -   Events must now be defined in such a way that they are positive at the initial conditions (events will be triggered when they become negative, instead of when they change sign in either direction) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
