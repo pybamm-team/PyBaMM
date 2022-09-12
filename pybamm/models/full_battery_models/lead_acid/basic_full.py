@@ -231,13 +231,13 @@ class BasicFull(BaseModel):
                     "Zero negative electrode porosity cut-off", pybamm.min(eps_n)
                 ),
                 pybamm.Event(
-                    "Max negative electrode porosity cut-off", pybamm.max(eps_n) - 1
+                    "Max negative electrode porosity cut-off", 1 - pybamm.max(eps_n)
                 ),
                 pybamm.Event(
                     "Zero positive electrode porosity cut-off", pybamm.min(eps_p)
                 ),
                 pybamm.Event(
-                    "Max positive electrode porosity cut-off", pybamm.max(eps_p) - 1
+                    "Max positive electrode porosity cut-off", 1 - pybamm.max(eps_p)
                 ),
             ]
         )
@@ -294,6 +294,6 @@ class BasicFull(BaseModel):
         self.events.extend(
             [
                 pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-                pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+                pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
             ]
         )

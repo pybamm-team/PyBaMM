@@ -578,15 +578,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
-    def phase_number_to_names(self, number):
-        """
-        Converts number of phases to a list ["primary", "secondary", ...]
-        """
-        number = int(number)
-        phases = ["primary"]
-        if number >= 2:
-            phases.append("secondary")
-        return phases
+    @property
+    def phases(self):
+        try:
+            return self._phases
+        except AttributeError:
+            self._phases = {}
+            for domain in ["negative", "positive"]:
+                number = int(getattr(self, domain)["particle phases"])
+                phases = ["primary"]
+                if number >= 2:
+                    phases.append("secondary")
+                self._phases[domain] = phases
+            return self._phases
 
     def print_options(self):
         """
@@ -1340,7 +1344,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                V - self.param.voltage_high_cut,
+                self.param.voltage_high_cut - V,
                 pybamm.EventType.TERMINATION,
             )
         )

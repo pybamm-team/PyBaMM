@@ -125,41 +125,9 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
-        has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in inputs_dict.values()
-        )
 
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
-
-        # Calculate initial event signs needed for some of the modes
-        if (
-            has_symbolic_inputs is False
-            and self.mode != "fast"
-            and model.terminate_events_eval
-        ):
-            init_event_signs = np.sign(
-                np.concatenate(
-                    [
-                        event(t_eval[0], model.y0, inputs)
-                        for event in model.terminate_events_eval
-                    ]
-                )
-            )
-        else:
-            init_event_signs = np.sign([])
-
-        if has_symbolic_inputs:
-            # Create integrator without grid to avoid having to create several times
-            self.create_integrator(model, inputs)
-            solution = self._run_integrator(
-                model,
-                model.y0,
-                inputs_dict,
-                inputs,
-                t_eval,
-                use_grid=False,
-            )
 
         if self.mode in ["fast", "fast with events"] or not model.events:
             if not model.events:
@@ -179,7 +147,7 @@ class CasadiSolver(pybamm.BaseSolver):
             )
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
-            solution = self._solve_for_event(solution, init_event_signs)
+            solution = self._solve_for_event(solution)
             solution.check_ys_are_not_too_large()
             return solution
         elif self.mode in ["safe", "safe without grid"]:
@@ -271,9 +239,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         )
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
-                current_step_sol = self._solve_for_event(
-                    current_step_sol, init_event_signs
-                )
+                current_step_sol = self._solve_for_event(current_step_sol)
                 # assign temporary solve time
                 current_step_sol.solve_time = np.nan
                 # append solution from the current step to solution
@@ -293,7 +259,7 @@ class CasadiSolver(pybamm.BaseSolver):
             solution.check_ys_are_not_too_large()
             return solution
 
-    def _solve_for_event(self, coarse_solution, init_event_signs):
+    def _solve_for_event(self, coarse_solution):
         """
         Check if the sign of an event changes, if so find an accurate
         termination point and exit
@@ -314,8 +280,7 @@ class CasadiSolver(pybamm.BaseSolver):
             if model.terminate_events_eval:
                 y_last = sol.all_ys[-1][:, -1]
                 crossed_events = np.sign(
-                    init_event_signs
-                    * np.concatenate(
+                    np.concatenate(
                         [
                             event(sol.t[-1], y_last, inputs)
                             for event in model.terminate_events_eval
@@ -341,8 +306,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Implement our own bisection algorithm for speed
                 # This is used to find the time range in which the event is triggered
                 # Evaluations of the "event" function are (relatively) expensive
-                init_event_sign = init_event_signs[event_idx[i]][0]
-
                 f_eval = {}
 
                 def f(idx):
@@ -352,10 +315,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         # We take away 1e-5 to deal with the case where the event sits
                         # exactly on zero, as can happen when the event switch is used
                         # (fast with events mode)
-                        f_eval[idx] = (
-                            init_event_sign * event(sol.t[idx], sol.y[:, idx], inputs)
-                            - 1e-5
-                        )
+                        f_eval[idx] = event(sol.t[idx], sol.y[:, idx], inputs) - 1e-5
                         return f_eval[idx]
 
                 def integer_bisect():
@@ -585,7 +545,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # see #1082
             event_switch = 1
             if use_event_switch is True and not algebraic(0, y0, p).is_empty():
-                for event in model.casadi_terminate_events:
+                for event in model.casadi_switch_events:
                     event_switch *= event(t_scaled, y_full, p)
 
             problem = {
