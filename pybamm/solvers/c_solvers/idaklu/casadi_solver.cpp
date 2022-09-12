@@ -123,6 +123,18 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     J = NULL;
   }
 
+  #if SUNDIALS_VERSION_MAJOR >= 6
+  int precon_type = SUN_PREC_NONE;
+  if (options.preconditioner != "none") {
+    precon_type = SUN_PREC_LEFT;
+  }
+  #else
+  int precon_type = PREC_NONE;
+  if (options.preconditioner != "none") {
+    precon_type = PREC_LEFT;
+  }
+  #endif
+
   // set linear solver
   if (options.linear_solver == "SUNLinSol_Dense")
   {
@@ -155,16 +167,16 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
 #if SUNDIALS_VERSION_MAJOR >= 6
-    LS = SUNLinSol_SPBCGS(yy, SUN_PREC_LEFT, options.linsol_max_iterations,
+    LS = SUNLinSol_SPBCGS(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
 #else
-    LS = SUNLinSol_SPBCGS(yy, PREC_LEFT, options.linsol_max_iterations);
+    LS = SUNLinSol_SPBCGS(yy, precon_type, options.linsol_max_iterations);
 #endif
   }
 
   IDASetLinearSolver(ida_mem, LS, J);
 
-  if (options.using_iterative_solver)
+  if (options.preconditioner != "none")
   {
     DEBUG("\tsetting IDADDB preconditioner");
     // setup preconditioner
@@ -172,14 +184,16 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
         ida_mem, number_of_states, options.precon_half_bandwidth,
         options.precon_half_bandwidth, options.precon_half_bandwidth_keep,
         options.precon_half_bandwidth_keep, 0.0, residual_casadi_approx, NULL);
-
   }
 
-  if (options.jacobian == "matrix-free") {
+  if (options.jacobian == "matrix-free")
+  {
     IDASetJacTimes(ida_mem, NULL, jtimes_casadi);
-  } else if (options.jacobian != "none") {
+  }
+  else if (options.jacobian != "none")
+  {
     IDASetJacFn(ida_mem, jacobian_casadi);
-  } 
+  }
 
   if (number_of_parameters > 0)
   {

@@ -9,15 +9,15 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
-  std::cout << "RESIDUAL t = " << tres << " y = [";
-  for (int i = 0; i < p_python_functions->number_of_states; i++) {
-    std::cout << NV_DATA_S(yy)[i] << " ";
-  }
-  std::cout << "] yp = [";
-  for (int i = 0; i < p_python_functions->number_of_states; i++) {
-    std::cout << NV_DATA_S(yp)[i] << " ";
-  }
-  std::cout << "]" << std::endl;
+  //std::cout << "RESIDUAL t = " << tres << " y = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(yy)[i] << " ";
+  //}
+  //std::cout << "] yp = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(yp)[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
   //   args are t, y, put result in rr
 
   p_python_functions->rhs_alg.m_arg[0] = &tres;
@@ -53,11 +53,11 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
 
-  std::cout << "residual = [";
-  for (int i = 0; i < p_python_functions->number_of_states; i++) {
-    std::cout << NV_DATA_S(rr)[i] << " ";
-  }
-  std::cout << "]" << std::endl;
+  //std::cout << "residual = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << NV_DATA_S(rr)[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
 
@@ -132,12 +132,12 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
-  // rr has ∂F/∂y v
+  // Jv has ∂F/∂y v
   p_python_functions->jac_action.m_arg[0] = &tt;
   p_python_functions->jac_action.m_arg[1] = NV_DATA_S(yy);
   p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
   p_python_functions->jac_action.m_arg[3] = NV_DATA_S(v);
-  p_python_functions->jac_action.m_res[0] = NV_DATA_S(rr);
+  p_python_functions->jac_action.m_res[0] = NV_DATA_S(Jv);
   p_python_functions->jac_action();
 
   // tmp has -∂F/∂y˙ v
@@ -147,9 +147,9 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   p_python_functions->mass_action();
 
   // AXPY: y <- a*x + y
-  // rr has ∂F/∂y v + cj ∂F/∂y˙ v
+  // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
-  casadi::casadi_axpy(ns, -cj, tmp, NV_DATA_S(rr));
+  casadi::casadi_axpy(ns, -cj, tmp, NV_DATA_S(Jv));
 
   return 0;
 }

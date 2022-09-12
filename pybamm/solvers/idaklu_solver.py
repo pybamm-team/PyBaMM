@@ -53,6 +53,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                                   # options are: "SUNLinSol_KLU",
                                   # "SUNLinSol_Dense", "SUNLinSol_LapackDense"
                                   # "SUNLinSol_SPBCGS"
+            preconditioner: "BBDP", # preconditioner for iterative solvers,
+                                    # can be "none", "BBDP"
             linsol_max_iterations: 5, # for iterative linear solvers, max number of
                                       # iterations
             precon_half_bandwidth: 5, # for iterative linear solver preconditioner,
@@ -82,6 +84,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "print_stats": False,
             "jacobian": "sparse",
             "linear_solver": "SUNLinSol_KLU",
+            "preconditioner": "BBDP",
             "linsol_max_iterations": 5,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,

@@ -418,13 +418,15 @@ class TestIDAKLUSolver(unittest.TestCase):
                         "SUNLinSol_SPBCGS", "SUNLinSol_Dense", "SUNLinSol_LapackDense",
                         "SUNLinSol_KLU", "garbage"
                 ]:
-                    options = {
-                        'jacobian': jacobian,
-                        'linear_solver': linear_solver,
-                    }
-                    solver = pybamm.IDAKLUSolver(options=options)
-                    soln = solver.solve(model, t_eval)
-                    np.testing.assert_array_almost_equal(soln.y, soln_base.y)
+                    for precon in ["none", "BBDP"]:
+                        options = {
+                            'jacobian': jacobian,
+                            'linear_solver': linear_solver,
+                            'preconditioner': precon,
+                        }
+                        solver = pybamm.IDAKLUSolver(options=options)
+                        soln = solver.solve(model, t_eval)
+                        np.testing.assert_array_almost_equal(soln.y, soln_base.y)
 
 
 
