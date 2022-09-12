@@ -8,9 +8,25 @@ If you're already familiar with our workflow, maybe have a quick look at the [pr
 
 Before you commit any code, please perform the following checks:
 
-- [No style issues](#coding-style-guidelines): `$ flake8`
 - [All tests pass](#testing): `$ tox -e unit` (GNU/Linux and MacOS), `$ python -m tox -e windows-unit` (Windows)
 - [The documentation builds](#building-the-documentation): `$ python -m tox -e docs`
+
+### Installing and using pre-commit
+
+`PyBaMM` uses a set of `pre-commit` hooks and the `pre-commit` bot to format and prettify the codebase. The hooks can be installed locally using -
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+This would run the checks every time a commit is created locally. The checks will only run on the files modified by that commit, but the checks can be triggered for all the files using -
+
+```bash
+pre-commit run --all-files
+```
+
+If you would like to skip the failing checks and push the code for further discussion, use the `--no-verify` option with `git commit`.
 
 ## Workflow
 
@@ -46,7 +62,7 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Coding style guidelines
 
-PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them.
+PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and using-pre-commit) section for more details.
 
 ### Flake8
 
