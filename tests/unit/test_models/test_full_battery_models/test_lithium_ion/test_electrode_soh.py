@@ -30,10 +30,29 @@ class TestElectrodeSOH(unittest.TestCase):
         self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li, places=5)
 
         # Solve with split esoh and check outputs
-        ics = esoh_solver.set_up_solve(inputs)
-        sol_split = esoh_solver.solve_split(inputs, ics)
+        ics = esoh_solver._set_up_solve(inputs)
+        sol_split = esoh_solver._solve_split(inputs, ics)
         for key in sol.all_models[0].variables:
             self.assertAlmostEqual(sol[key].data[0], sol_split[key].data[0], places=5)
+
+    def test_error(self):
+
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+
+        Vmin = 3
+        Vmax = 4.2
+        Cn = parameter_values.evaluate(param.n.cap_init)
+        Cp = parameter_values.evaluate(param.p.cap_init)
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init) * 10
+
+        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
+
+        # Solve the model and check outputs
+        with self.assertRaisesRegex(ValueError, "should be between 0 and 1"):
+            esoh_solver.solve(inputs)
 
 
 class TestElectrodeSOHHalfCell(unittest.TestCase):
@@ -96,10 +115,10 @@ class TestSetInitialSOC(unittest.TestCase):
 
         inputs = {"V_min": 0, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
         with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
-            esoh_solver.check_esoh_feasible(inputs)
+            esoh_solver._check_esoh_feasible(inputs)
         inputs = {"V_min": 3, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
         with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
-            esoh_solver.check_esoh_feasible(inputs)
+            esoh_solver._check_esoh_feasible(inputs)
 
 
 if __name__ == "__main__":

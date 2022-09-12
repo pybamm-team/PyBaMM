@@ -741,7 +741,9 @@ class Simulation:
                     cycle_sum_vars,
                     cycle_first_state,
                 ) = pybamm.make_cycle_solution(
-                    starting_solution.steps, esoh_solver, True
+                    starting_solution.steps,
+                    esoh_solver=esoh_solver,
+                    save_this_cycle=True
                 )
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
@@ -896,9 +898,7 @@ class Simulation:
                                 "due to exceeded bounds at initial conditions."
                             )
                     cycle_sol = pybamm.make_cycle_solution(
-                        steps,
-                        esoh_solver,
-                        save_this_cycle=save_this_cycle,
+                        steps, esoh_solver=esoh_solver, save_this_cycle=save_this_cycle
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
                     all_cycle_solutions.append(cycle_solution)
