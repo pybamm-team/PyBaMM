@@ -81,13 +81,13 @@ plt.gca().legend(
 )
 
 plt.savefig(
-    f"benchmarks/benchmark_images/time_vs_no_of_states_{pybamm.__version__}.png"
+    f"../benchmarks/benchmark_images/time_vs_no_of_states_{pybamm.__version__}.png"
 )
 
 
-content = f"## Solve Time vs Number of states\n<img src='./benchmark_images/time_vs_no_of_states_{pybamm.__version__}.png'>\n"  # noqa
+# content = f"## Solve Time vs Number of states\n<img src='./benchmark_images/time_vs_no_of_states_{pybamm.__version__}.png'>\n"  # noqa
 
-with open("./benchmarks/release_work_precision_sets.md", "r") as original:
-    data = original.read()
-with open("./benchmarks/release_work_precision_sets.md", "w") as modified:
-    modified.write(f"{content}\n{data}")
+# with open("./benchmarks/release_work_precision_sets.md", "r") as original:
+#     data = original.read()
+# with open("./benchmarks/release_work_precision_sets.md", "w") as modified:
+#     modified.write(f"{content}\n{data}")
