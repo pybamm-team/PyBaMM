@@ -173,6 +173,38 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_SPBCGS(yy, precon_type, options.linsol_max_iterations);
 #endif
   }
+  else if (options.linear_solver == "SUNLinSol_SPFGMR")
+  {
+    DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_SPFGMR(yy, precon_type, options.linsol_max_iterations,
+                          sunctx);
+#else
+    LS = SUNLinSol_SPFGMR(yy, precon_type, options.linsol_max_iterations);
+#endif
+  }
+  else if (options.linear_solver == "SUNLinSol_SPGMR")
+  {
+    DEBUG("\tsetting SUNLinSol_SPGMR solver");
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_SPGMR(yy, precon_type, options.linsol_max_iterations,
+                          sunctx);
+#else
+    LS = SUNLinSol_SPGMR(yy, precon_type, options.linsol_max_iterations);
+#endif
+  }
+  else if (options.linear_solver == "SUNLinSol_SPTFQMR")
+  {
+    DEBUG("\tsetting SUNLinSol_SPGMR solver");
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_SPTFQMR(yy, precon_type, options.linsol_max_iterations,
+                          sunctx);
+#else
+    LS = SUNLinSol_SPTFQMR(yy, precon_type, options.linsol_max_iterations);
+#endif
+  }
+
+
 
   IDASetLinearSolver(ida_mem, LS, J);
 

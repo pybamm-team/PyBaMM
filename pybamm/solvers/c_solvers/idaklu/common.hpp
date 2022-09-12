@@ -18,6 +18,10 @@
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense linear solver          */
 #include <sunlinsol/sunlinsol_lapackdense.h> /* access to lapack linear solver          */
 #include <sunlinsol/sunlinsol_spbcgs.h> /* access to spbcgs iterative linear solver          */
+#include <sunlinsol/sunlinsol_spfgmr.h>
+#include <sunlinsol/sunlinsol_spgmr.h>
+#include <sunlinsol/sunlinsol_sptfqmr.h>
+
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix           */
 

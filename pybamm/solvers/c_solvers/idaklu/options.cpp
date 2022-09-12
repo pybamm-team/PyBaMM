@@ -35,7 +35,10 @@ Options::Options(py::dict options)
   else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
   {
   }
-  else if (linear_solver == "SUNLinSol_SPBCGS" &&
+  else if ((linear_solver == "SUNLinSol_SPBCGS" ||
+            linear_solver == "SUNLinSol_SPFGMR" ||
+            linear_solver == "SUNLinSol_SPGMR" ||
+            linear_solver == "SUNLinSol_SPTFQMR") &&
            (jacobian == "sparse" || jacobian == "matrix-free"))
   {
     using_iterative_solver = true;
