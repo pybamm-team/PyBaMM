@@ -228,6 +228,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
+            "open circuit potential": ["single", "current sigmoid"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -383,6 +384,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current density as a state' must be 'true'"
                 )
 
+        # If "SEI film resistance" is not "none" and there are multiple phases
+        # then "total interfacial current density as a state" must be "true"
+        if (
+            options["SEI film resistance"] != "none"
+            and options["particle phases"] != "1"
+        ):
+            options["total interfacial current density as a state"] = "true"
+            # Check that extra_options did not try to provide a clashing option
+            if (
+                extra_options.get("total interfacial current density as a state")
+                == "false"
+            ):
+                raise pybamm.OptionError(
+                    "If 'SEI film resistance' is not 'none' "
+                    "and there are multiple phases then 'total interfacial "
+                    "current density as a state' must be 'true'"
+                )
+
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
             if options["lithium plating"] != "none":
@@ -519,6 +538,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",
+                                "open circuit potential",
                                 "particle mechanics",
                                 "particle",
                                 "particle phases",
@@ -558,15 +578,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
-    def phase_number_to_names(self, number):
-        """
-        Converts number of phases to a list ["primary", "secondary", ...]
-        """
-        number = int(number)
-        phases = ["primary"]
-        if number >= 2:
-            phases.append("secondary")
-        return phases
+    @property
+    def phases(self):
+        try:
+            return self._phases
+        except AttributeError:
+            self._phases = {}
+            for domain in ["negative", "positive"]:
+                number = int(getattr(self, domain)["particle phases"])
+                phases = ["primary"]
+                if number >= 2:
+                    phases.append("secondary")
+                self._phases[domain] = phases
+            return self._phases
 
     def print_options(self):
         """
@@ -1320,7 +1344,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                V - self.param.voltage_high_cut,
+                self.param.voltage_high_cut - V,
                 pybamm.EventType.TERMINATION,
             )
         )

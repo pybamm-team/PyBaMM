@@ -27,6 +27,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
+'open circuit potential': 'single' (possible: ['single', 'current sigmoid'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -243,22 +244,34 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(
             model.options["total interfacial current density as a state"], "true"
         )
+        model = pybamm.BaseBatteryModel(
+            {"SEI film resistance": "average", "particle phases": "2"}
+        )
+        self.assertEqual(
+            model.options["total interfacial current density as a state"], "true"
+        )
         with self.assertRaisesRegex(pybamm.OptionError, "must be 'true'"):
-            model = pybamm.BaseBatteryModel(
+            pybamm.BaseBatteryModel(
                 {
                     "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "false",
+                }
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "must be 'true'"):
+            pybamm.BaseBatteryModel(
+                {
+                    "SEI film resistance": "average",
+                    "particle phases": "2",
                     "total interfacial current density as a state": "false",
                 }
             )
 
         # loss of active material model
         with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
-            model = pybamm.BaseBatteryModel(
-                {"loss of active material": "bad LAM model"}
-            )
+            pybamm.BaseBatteryModel({"loss of active material": "bad LAM model"})
         with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
             # can't have a 3-tuple
-            model = pybamm.BaseBatteryModel(
+            pybamm.BaseBatteryModel(
                 {
                     "loss of active material": (
                         "bad LAM model",
@@ -380,6 +393,17 @@ class TestOptions(unittest.TestCase):
             BatteryModelOptions(OPTIONS_DICT).print_options()
             output = buffer.getvalue()
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
+
+    def test_option_phases(self):
+        options = BatteryModelOptions({})
+        self.assertEqual(
+            options.phases, {"negative": ["primary"], "positive": ["primary"]}
+        )
+        options = BatteryModelOptions({"particle phases": ("1", "2")})
+        self.assertEqual(
+            options.phases,
+            {"negative": ["primary"], "positive": ["primary", "secondary"]},
+        )
 
     def test_domain_options(self):
         options = BatteryModelOptions(

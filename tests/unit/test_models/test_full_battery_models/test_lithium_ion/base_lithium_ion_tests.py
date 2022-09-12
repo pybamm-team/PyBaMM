@@ -323,3 +323,7 @@ class BaseUnitTestLithiumIon:
 
         options = {"particle phases": ("1", "2")}
         self.check_well_posedness(options)
+
+    def test_well_posed_current_sigmoid_ocp(self):
+        options = {"open circuit potential": "current sigmoid"}
+        self.check_well_posedness(options)

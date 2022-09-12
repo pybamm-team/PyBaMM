@@ -31,85 +31,42 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        # Creates "total" active material volume fraction and capacity variables
-        # by summing up all the phases
         Domain = self.domain
         domain = Domain.lower()
 
-        phases = self.options.phase_number_to_names(
-            getattr(self.options, domain)["particle phases"]
-        )
+        if Domain == "Negative" and self.half_cell is True:
+            return variables
 
-        j = sum(
-            variables[f"{Domain} electrode {phase} interfacial current density"]
-            for phase in phases
-        )
-        j_dim = sum(
-            variables[f"{Domain} electrode {phase} interfacial current density [A.m-2]"]
-            for phase in phases
-        )
-        j_av = sum(
-            variables[
-                f"X-averaged {domain} electrode {phase} interfacial current density"
-            ]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode interfacial current density": j,
-                f"{Domain} electrode interfacial current density [A.m-2]": j_dim,
-                f"X-averaged {domain} electrode interfacial current density": j_av,
-            }
-        )
-
-        a_j = sum(
-            variables[
-                f"{Domain} electrode {phase} volumetric interfacial current density"
-            ]
-            for phase in phases
-        )
-        a_j_dim = sum(
-            variables[
-                f"{Domain} electrode {phase} volumetric "
-                "interfacial current density [A.m-3]"
-            ]
-            for phase in phases
-        )
-        a_j_av = sum(
-            variables[
-                f"X-averaged {domain} electrode {phase} volumetric "
-                "interfacial current density"
-            ]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode volumetric interfacial current density": a_j,
-                f"{Domain} electrode volumetric "
-                "interfacial current density [A.m-2]": a_j_dim,
-                f"X-averaged {domain} electrode volumetric "
-                "interfacial current density": a_j_av,
-            }
-        )
-
-        j0 = sum(
-            variables[f"{Domain} electrode {phase} exchange current density"]
-            for phase in phases
-        )
-        j0_dim = sum(
-            variables[f"{Domain} electrode {phase} exchange current density [A.m-2]"]
-            for phase in phases
-        )
-        j0_av = sum(
-            variables[f"X-averaged {domain} electrode {phase} exchange current density"]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode exchange current density": j0,
-                f"{Domain} electrode exchange current density [A.m-2]": j0_dim,
-                f"X-averaged {domain} electrode exchange current density": j0_av,
-            }
-        )
+        phases = self.options.phases[domain]
+        if len(phases) > 1:
+            a_j = sum(
+                variables[
+                    f"{Domain} electrode {phase} volumetric interfacial current density"
+                ]
+                for phase in phases
+            )
+            a_j_dim = sum(
+                variables[
+                    f"{Domain} electrode {phase} volumetric "
+                    "interfacial current density [A.m-3]"
+                ]
+                for phase in phases
+            )
+            a_j_av = sum(
+                variables[
+                    f"X-averaged {domain} electrode {phase} volumetric "
+                    "interfacial current density"
+                ]
+                for phase in phases
+            )
+            variables.update(
+                {
+                    f"{Domain} electrode volumetric interfacial current density": a_j,
+                    f"{Domain} electrode volumetric "
+                    "interfacial current density [A.m-2]": a_j_dim,
+                    f"X-averaged {domain} electrode volumetric "
+                    "interfacial current density": a_j_av,
+                }
+            )
 
         return variables

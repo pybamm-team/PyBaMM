@@ -48,6 +48,10 @@ class TestBasicModels(unittest.TestCase):
         sim.solve([0, 100])
         self.assertTrue(isinstance(sim.solution, pybamm.solvers.solution.Solution))
 
+    def test_dfn_composite_well_posed(self):
+        model = pybamm.lithium_ion.BasicDFNComposite()
+        model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
