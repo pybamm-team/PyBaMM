@@ -28,6 +28,4 @@ Utility functions
 
 .. autofunction:: pybamm.have_jax
 
-.. autofunction:: pybamm.is_jax_compatabile
-
-.. autofunction:: pybamm.install_jax
+.. autofunction:: pybamm.is_jax_compatible
