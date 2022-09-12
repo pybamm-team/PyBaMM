@@ -24,22 +24,6 @@ jobs:
           cancel_others: 'true'
           paths_ignore: '["**/README.md"]'
 
-  style:
-    needs: pre_job
-    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.7
-
-    - name: Check style
-      run: |
-        python -m pip install tox
-        tox -e flake8
-
   build:
     needs: style
     runs-on: ${{ matrix.os }}
