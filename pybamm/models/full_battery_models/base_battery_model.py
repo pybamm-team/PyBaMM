@@ -299,17 +299,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for particle mechanics based on which SEI on cracks option
-        # is provided
-        # return "false" if option not given
+        # Change the default for particle mechanics based on which SEI on cracks and LAM
+        # options are provided
+        # return "false" and "none" respectively if options not given
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
+        LAM_opt = extra_options.get("loss of active material", "none")
         if SEI_cracks_option == "true":
-            default_options["particle mechanics"] = "swelling and cracking"
+            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+                default_options["particle mechanics"] = (
+                    "swelling and cracking", "swelling only"
+                )
+            else:
+                default_options["particle mechanics"] = (
+                    "swelling and cracking", "none"
+                )
         else:
-            # Change the default for particle mechanics based on which LAM option is
-            # provided
-            # return "none" if option not given
-            LAM_opt = extra_options.get("loss of active material", "none")
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = "swelling only"
             else:
