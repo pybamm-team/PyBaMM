@@ -101,11 +101,3 @@ plt.gca().legend(
     loc="upper right",
 )
 plt.savefig(f"../benchmarks/benchmark_images/time_vs_dt_max_{pybamm.__version__}.png")
-
-
-# content = f"## Solve Time vs dt_max\n<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>\n"  # noqa
-
-# with open("./benchmarks/release_work_precision_sets.md", "r") as original:
-#     data = original.read()
-# with open("./benchmarks/release_work_precision_sets.md", "w") as modified:
-#     modified.write(f"{content}\n{data}")

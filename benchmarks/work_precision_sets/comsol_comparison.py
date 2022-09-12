@@ -1,5 +1,4 @@
 import pybamm
-import os
 import pickle
 import scipy.interpolate as interp
 
@@ -148,12 +147,6 @@ plot.plot(500)
 
 
 plot.fig.savefig(
-    f"../benchmarks/benchmark_images/comsol_comparison_{pybamm.__version__}.png", dpi=300
+    f"../benchmarks/benchmark_images/comsol_comparison_{pybamm.__version__}.png",
+    dpi=300,
 )
-
-# content = f"## Comsol comparison\n<img src='./benchmark_images/comsol_comparison_{pybamm.__version__}.png'>\n"  # noqa
-
-# with open("./benchmarks/validation.md", "r") as original:
-#     data = original.read()
-# with open("./benchmarks/validation.md", "w") as modified:
-#     modified.write(f"{content}\n{data}")
