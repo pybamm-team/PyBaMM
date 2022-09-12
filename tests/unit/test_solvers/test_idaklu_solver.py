@@ -27,7 +27,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.rhs = {u: 0.1 * v}
             model.algebraic = {v: 1 - v}
             model.initial_conditions = {u: 0, v: 1}
-            model.events = [pybamm.Event("1", u - 0.2), pybamm.Event("2", v)]
+            model.events = [pybamm.Event("1", 0.2 - u), pybamm.Event("2", v)]
 
             disc = pybamm.Discretisation()
             disc.process_model(model)
@@ -72,9 +72,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             disc = pybamm.Discretisation()
             model_disc = disc.process_model(model, inplace=False)
             # Solve
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-8, atol=1e-8, root_method=root_method
-            )
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
             t_eval = np.linspace(0, 1, 100)
             solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_equal(solution.t, t_eval)
@@ -85,9 +83,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             # enforce events that won't be triggered
             model.events = [pybamm.Event("an event", var + 1)]
             model_disc = disc.process_model(model, inplace=False)
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-8, atol=1e-8, root_method=root_method
-            )
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
             solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_equal(solution.t, t_eval)
             np.testing.assert_array_almost_equal(
@@ -95,11 +91,9 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # enforce events that will be triggered
-            model.events = [pybamm.Event("an event", var - 1.01)]
+            model.events = [pybamm.Event("an event", 1.01 - var)]
             model_disc = disc.process_model(model, inplace=False)
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-8, atol=1e-8, root_method=root_method
-            )
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
             solution = solver.solve(model_disc, t_eval)
             self.assertLess(len(solution.t), len(t_eval))
             np.testing.assert_array_almost_equal(
@@ -115,15 +109,13 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.algebraic = {var2: 2 * var1 - var2}
             model.initial_conditions = {var1: 1, var2: 2}
             model.events = [
-                pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-                pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+                pybamm.Event("var1 = 1.5", pybamm.min(1.5 - var1)),
+                pybamm.Event("var2 = 2.5", pybamm.min(2.5 - var2)),
             ]
             disc = get_discretisation_for_testing()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-8, atol=1e-8, root_method=root_method
-            )
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
             t_eval = np.linspace(0, 5, 100)
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_less(solution.y[0, :-1], 1.5)
@@ -168,13 +160,13 @@ class TestIDAKLUSolver(unittest.TestCase):
             b_value = np.array([[0.2], [0.3]])
 
             sol = solver.solve(
-                model, t_eval, inputs={"a": a_value, "b": b_value},
+                model,
+                t_eval,
+                inputs={"a": a_value, "b": b_value},
             )
 
             # test that y[3] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[3, :], np.ones(sol.t.shape)
-            )
+            np.testing.assert_array_almost_equal(sol.y[3, :], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
@@ -214,13 +206,13 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             # solve first without sensitivities
             sol = solver.solve(
-                model, t_eval, inputs={"a": a_value},
+                model,
+                t_eval,
+                inputs={"a": a_value},
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape)
-            )
+            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
@@ -232,14 +224,11 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             # now solve with sensitivities (this should cause set_up to be run again)
             sol = solver.solve(
-                model, t_eval, inputs={"a": a_value},
-                calculate_sensitivities=True
+                model, t_eval, inputs={"a": a_value}, calculate_sensitivities=True
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape)
-            )
+            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
@@ -255,9 +244,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             dyda_fd = (sol_plus.y - sol_neg.y) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(
-                dyda_ida, dyda_fd
-            )
+            np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
 
     def test_set_atol(self):
         model = pybamm.lithium_ion.DFN()
@@ -295,7 +282,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # wrong size (should fail)
         atol = [1, 2]
         solver = pybamm.IDAKLUSolver(atol=atol)
-        with self.assertRaisesRegex(pybamm.SolverError, 'Absolute tolerances'):
+        with self.assertRaisesRegex(pybamm.SolverError, "Absolute tolerances"):
             solver.solve(model, t_eval)
 
     def test_failures(self):
@@ -330,7 +317,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # will give solver error
         t_eval = np.linspace(0, -3, 100)
         with self.assertRaisesRegex(
-            pybamm.SolverError, 't_eval must increase monotonically'
+            pybamm.SolverError, "t_eval must increase monotonically"
         ):
             solver.solve(model, t_eval)
 
@@ -346,9 +333,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         solver = pybamm.IDAKLUSolver()
 
         t_eval = np.linspace(0, 3, 100)
-        with self.assertRaisesRegex(
-            pybamm.SolverError, 'idaklu solver failed'
-        ):
+        with self.assertRaisesRegex(pybamm.SolverError, "idaklu solver failed"):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):

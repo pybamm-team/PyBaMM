@@ -656,9 +656,6 @@ class CurrentTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.j = solution["Interfacial current density"]
-        self.j0 = solution["Exchange current density"]
-
         self.a_j_n = solution[
             "Negative electrode volumetric interfacial current density"
         ]
@@ -677,9 +674,6 @@ class CurrentTests(BaseOutputTest):
         self.a_j_n_sei_av = solution[
             "X-averaged negative electrode SEI volumetric interfacial current density"
         ]
-
-        self.j0_n = solution["Negative electrode exchange current density"]
-        self.j0_p = solution["Positive electrode exchange current density"]
 
         self.i_s_n = solution["Negative electrode current density"]
         self.i_s_p = solution["Positive electrode current density"]

@@ -91,7 +91,7 @@ class TestBaseSolver(unittest.TestCase):
         model.rhs = {a: a * p}
         with self.assertRaisesRegex(
             pybamm.SolverError,
-            "Only CasadiSolver and CasadiAlgebraicSolver can have symbolic inputs",
+            "No value provided for input 'p'"
         ):
             solver.solve(model, np.array([1, 2, 3]))
 
@@ -217,7 +217,7 @@ class TestBaseSolver(unittest.TestCase):
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no root
-                return y ** 2 + 1
+                return y**2 + 1
 
         solver = pybamm.BaseSolver(root_method="hybr")
 
@@ -349,7 +349,7 @@ class TestBaseSolver(unittest.TestCase):
             u = pybamm.Variable("u")
             a = pybamm.InputParameter("a")
             b = pybamm.InputParameter("b")
-            model.rhs = {v: a * v ** 2 + b * v + a ** 2}
+            model.rhs = {v: a * v**2 + b * v + a**2}
             model.algebraic = {u: a * v - u}
             model.initial_conditions = {v: 1, u: a * 1}
             model.convert_to_format = convert_to_format
