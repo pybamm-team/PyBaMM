@@ -827,7 +827,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_solver)
+    cycle_summary_variables = _get_cycle_summary_variables(cycle_solution, esoh_solver)
 
     cycle_first_state = cycle_solution.first_state
 
@@ -839,7 +839,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
-def get_cycle_summary_variables(cycle_solution, esoh_solver):
+def _get_cycle_summary_variables(cycle_solution, esoh_solver):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
