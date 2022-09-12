@@ -38,17 +38,15 @@ class TestEvaluate(unittest.TestCase):
             input_parameter_order = list(inputs.keys())
             p = list(inputs.values())
 
-        pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs).flatten()
+        pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs)
         for preallocate in [True, False]:
             kwargs["funcname"] = (
                 kwargs.get("funcname", "f") + "_" + str(int(preallocate))
             )
-            evaluator_str = pybamm.get_julia_function(
-                expr,
-                input_parameter_order=input_parameter_order,
-                preallocate=preallocate,
-                **kwargs,
-            )
+            funcname = kwargs["funcname"]
+            myconverter = pybamm.JuliaConverter()
+            myconverter.convert_tree_to_intermediate(expr)
+            evaluator_str = myconverter.build_julia_code(funcname=funcname)
             Main.eval(evaluator_str)
             funcname = kwargs.get("funcname", "f")
             Main.p = p
@@ -57,11 +55,11 @@ class TestEvaluate(unittest.TestCase):
                 Main.y = y_test
                 Main.t = t_test
                 try:
-                    Main.eval(f"{funcname}!(dy,y,p,t)")
+                    Main.eval(f"{funcname}(dy,y,p,t)")
                 except JuliaError as e:
                     # debugging
-                    print(Main.dy, y_test, p, t_test)
-                    print(evaluator_str)
+                    #print(Main.dy, y_test, p, t_test)
+                    #print(evaluator_str)
                     raise e
                 pybamm_eval = expr.evaluate(t=t_test, y=y_test, inputs=inputs).flatten()
                 try:
@@ -72,14 +70,16 @@ class TestEvaluate(unittest.TestCase):
                     )
                 except AssertionError as e:
                     # debugging
-                    print(Main.dy, y_test, p, t_test)
-                    print(evaluator_str)
+                    #print(Main.dy, y_test, p, t_test)
+                    #print(evaluator_str)
                     raise e
 
     def test_exceptions(self):
         a = pybamm.Symbol("a")
         with self.assertRaisesRegex(NotImplementedError, "Conversion to Julia"):
-            pybamm.get_julia_function(a)
+            myconverter = pybamm.JuliaConverter()
+            myconverter.convert_tree_to_intermediate(a)
+            myconverter.build_julia_code()
 
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -308,7 +308,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [nodes ** 2 + 1, np.cos(nodes)]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=10)
+            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=8)
 
     def test_evaluator_julia_discretised_microscale(self):
         # create discretisation
@@ -353,7 +353,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [np.linspace(0, 1, total_npts) ** 2]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=11)
+            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=8)
 
 
 if __name__ == "__main__":

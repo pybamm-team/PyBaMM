@@ -1,24 +1,14 @@
 #
-# Write a symbol to Julia
+# Compile a PyBaMM expression tree to Julia Code
 #
 import pybamm
-
 import numpy as np
-import scipy.sparse
+import numpy
+from scipy import special
+import scipy
 from collections import OrderedDict
-
-import numbers
-
-
-def id_to_julia_variable(symbol_id, prefix):
-    """
-    This function defines the format for the julia variable names used in find_symbols
-    and to_julia. Variable names are based on a nodes' id to make them unique
-    """
-    var_format = prefix + "_{:05d}"
-    # Need to replace "-" character to make them valid julia variable names
-    return var_format.format(symbol_id).replace("-", "m")
-
+from multimethod import multimethod
+from math import floor
 
 def is_constant_and_can_evaluate(symbol):
     """
@@ -35,1097 +25,803 @@ def is_constant_and_can_evaluate(symbol):
     else:
         return False
 
+#BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
+class JuliaBinaryOperation(object):
+    def __init__(self,left_input,right_input,output,shape):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
 
-def find_symbols(
-    symbol,
-    constant_symbols,
-    variable_symbols,
-    variable_symbol_sizes,
-    round_constants=True,
-):
-    """
-    This function converts an expression tree to a dictionary of node id's and strings
-    specifying valid julia code to calculate that nodes value, given y and t.
+#MatMul and Inner Product are not really the same as the bitwisebinary operations.
+class JuliaMatrixMultiplication(JuliaBinaryOperation):
+    def __init__(self,left_input,right_input,output,shape):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
 
-    The function distinguishes between nodes that represent constant nodes in the tree
-    (e.g. a pybamm.Matrix), and those that are variable (e.g. subtrees that contain
-    pybamm.StateVector). The former are put in `constant_symbols`, the latter in
-    `variable_symbols`
+class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
+    def __init__(self,left_input,right_input,output,shape,operator):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
+        self.operator = operator
 
-    Note that it is important that the arguments `constant_symbols` and
-    `variable_symbols` be and *ordered* dict, since the final ordering of the code lines
-    are important for the calculations. A dict is specified rather than a list so that
-    identical subtrees (which give identical id's) are not recalculated in the code
+class JuliaAddition(JuliaBinaryOperation):
+    pass
 
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The symbol or expression tree to convert
+class JuliaSubtraction(JuliaBinaryOperation):
+    pass
 
-    constant_symbol : collections.OrderedDict
-        The output dictionary of constant symbol ids to lines of code
+class JuliaMultiplication(JuliaBinaryOperation):
+    pass
 
-    variable_symbol : collections.OrderedDict
-        The output dictionary of variable (with y or t) symbol ids to lines of code
+class JuliaDivision(JuliaBinaryOperation):
+    pass
 
-    variable_symbol_sizes : collections.OrderedDict
-        The output dictionary of variable (with y or t) symbol ids to size of that
-        variable, for caching
+class JuliaPower(JuliaBinaryOperation):
+    pass
 
-    """
-    # ignore broadcasts for now
-    if isinstance(symbol, pybamm.Broadcast):
-        symbol = symbol.child
-    if is_constant_and_can_evaluate(symbol):
+#MinMax is special because it does both min and max. Could be folded into JuliaBitwiseBinaryOperation once I do that
+class JuliaMinMax(JuliaBinaryOperation):
+    def __init__(self,left_input,right_input,output,shape,name):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
+        self.name = name
+
+#FUNCTIONS
+##All Functions Return the same number of arguments they take in, except for minimum and maximum.
+class JuliaFunction(object):
+    pass
+
+class JuliaBroadcastableFunction(JuliaFunction):
+    def __init__(self,name,input,output,shape):
+        self.name = name
+        self.input = input
+        self.output = output
+        self.shape = shape
+
+class JuliaMinimumMaximum(JuliaBroadcastableFunction):
+    pass
+
+
+#Index is a little weird, so it just sits on its own.
+class JuliaIndex(object):
+    def __init__(self,input,output,index):
+        self.input = input
+        self.output = output
+        self.index = index
+        if type(index) is slice:
+            if type(index.step) is None:
+                self.shape = (slice.start-slice.stop,1)
+            elif type(index.step) is int:
+                self.shape = (floor((slice.stop-slice.start)/slice.step),1)
+        elif type(index) is int:
+            self.shape = (1,1)
+        else:
+            raise NotImplementedError("index must be slice or int")
+
+
+
+#Values and Constants -- I will need to change this to inputs, due to t, y, and p.
+class JuliaValue(object):
+    pass
+
+class JuliaConstant(JuliaValue):
+    def __init__(self,id,value):
+        self.id = id
+        self.value = value
+        self.shape = value.shape
+
+class JuliaStateVector(JuliaValue):
+    def __init__(self,id,loc,shape):
+        self.id = id
+        self.loc = loc
+        self.shape = shape
+
+class JuliaScalar(JuliaConstant):
+    def __init__(self,id,value):
+        self.id = id
+        self.value = float(value)
+        self.shape = (1,1)
+
+class JuliaTime(JuliaScalar):
+    def __init__(self,id):
+        self.id = id
+        self.shape = (1,1)
+
+class JuliaInput(JuliaScalar):
+    def __init__(self,id,name):
+        self.id = id
+        self.shape = (1,1)
+        self.name = name
+
+
+
+#CONCATENATIONS
+class JuliaConcatenation(object):
+    def __init__(self,output,shape,children):
+        self.output = output
+        self.shape = shape
+        self.children = children
+
+class JuliaNumpyConcatenation(JuliaConcatenation):
+    pass
+
+#NOTE: CURRENTLY THIS BEHAVES EXACTLY LIKE NUMPYCONCATENATION
+class JuliaSparseStack(JuliaConcatenation):
+    pass
+
+
+class JuliaDomainConcatenation(JuliaConcatenation):
+    def __init__(self,output,shape,children,secondary_dimension_npts,children_slices):
+        self.output = output
+        self.shape = shape
+        self.children = children
+        self.secondary_dimension_npts = secondary_dimension_npts
+        self.children_slices = children_slices
+
+
+
+
+class JuliaConverter(object):
+    def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit"): 
+        assert not ismtk
+
+        #Characteristics
+        self._cache_type = cache_type
+        self._ismtk=ismtk
+        self._jacobian_type=jacobian_type
+        self._preallocate=preallocate
+        self._dae_type = dae_type
+
+        #"Caches"
+        #Stores Constants to be Declared in the initial cache
+        #insight: everything is just a line of code
+        
+        #INTERMEDIATE: A List of Stuff to do. Keys are ID's and lists are variable names.
+        self._intermediate = OrderedDict()
+
+        #Cache Dict and Const Dict Host Julia Variable Names to be used to generate the code. 
+        self._cache_dict = OrderedDict()
+        self._const_dict = OrderedDict()
+
+        self._parameter_dict = OrderedDict()
+        
+        self._cache_id = 0
+        self._const_id = 0
+        
+        self._cache_and_const_string = ""
+        self.function_definition = ""
+        self._function_string = ""
+        self._return_string = ""
+    
+    #know where to go to find a variable. this could be smoother, there will need to be a ton of boilerplate here.
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaConcatenation):
+        return self._cache_dict[julia_symbol.output]
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaMinimumMaximum):
+        return self._cache_dict[julia_symbol.output]
+    
+    @multimethod
+    def get_result_variable_name(self, julia_symbol:JuliaBinaryOperation):
+        return self._cache_dict[julia_symbol.output]
+    
+    @multimethod 
+    def get_result_variable_name(self,julia_symbol:JuliaConstant):
+        return self._const_dict[julia_symbol.id]
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaScalar):
+        return julia_symbol.value
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaTime):
+        return "t"
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaInput):
+        return julia_symbol.name
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaStateVector):
+        start = julia_symbol.loc[0]+1
+        end = julia_symbol.loc[1]
+        return "(@view y[{}:{}])".format(start,end)
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaBroadcastableFunction):
+        return self._cache_dict[julia_symbol.output]
+
+    @multimethod 
+    def get_result_variable_name(self,julia_symbol:JuliaIndex):
+        lower_var = self.get_result_variable_name(self._intermediate[julia_symbol.input])
+        index = julia_symbol.index
+        if type(index) is int:
+            return "{}[{}]".format(lower_var,index+1)
+        elif type(index) is slice:
+            if index.step is None:
+                return "(@view {}[{}:{}])".format(lower_var,index.start+1,index.stop)
+            elif type(index.step) is int:
+                return "(@view {}[{}:{}:{}])".format(lower_var,index.start+1,index.step,index.stop)
+            else:
+                raise NotImplementedError("Step has to be an integer.")
+        else:
+            raise NotImplementedError("Step must be a slice or an int")
+    
+    #This function breaks down and analyzes any binary tree. Will fail if used on a non-binary tree.
+    def break_down_binary(self,symbol):
+        #Check for constant
+        #assert not is_constant_and_can_evaluate(symbol)
+        
+        #We know that this should only have 2 children
+        assert len(symbol.children)==2
+
+        #take care of the kids first (this is recursive but multiple-dispatch recursive which is cool)
+        id_left = self.convert_tree_to_intermediate(symbol.children[0])
+        id_right = self.convert_tree_to_intermediate(symbol.children[1])
+        my_id = symbol.id
+        return id_left,id_right,my_id
+    
+    def break_down_concatenation(self,symbol):
+        child_ids = []
+        for child in symbol.children:
+            child_id = self.convert_tree_to_intermediate(child)
+            child_ids.append(child_id)
+        first_id = child_ids[0]
+        num_cols = self._intermediate[first_id].shape[1]
+        num_rows = 0
+        for child_id in child_ids:
+            child_shape = self._intermediate[child_id].shape
+            assert num_cols == child_shape[1]
+            num_rows+=child_shape[0]
+        shape = (num_rows,num_cols)
+        return child_ids,shape
+
+    
+    #Convert-Trees go here  
+
+    #Binary trees constructors. All follow the pattern of mat-mul. They need to find their shapes, assuming that the shapes of the nodes one level below them in the expression tree have already been computed.
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.NumpyConcatenation):
+        my_id = symbol.id
+        children_julia,shape = self.break_down_concatenation(symbol)
+        self._intermediate[my_id] = JuliaNumpyConcatenation(my_id,shape,children_julia)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.SparseStack):
+        my_id = symbol.id
+        children_julia,shape = self.break_down_concatenation(symbol)
+        self._intermediate[my_id] = JuliaSparseStack(my_id,shape,children_julia)
+        return my_id
+
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.DomainConcatenation):
+        my_id = symbol.id
+        children_julia,shape = self.break_down_concatenation(symbol)
+        self._intermediate[my_id] = JuliaDomainConcatenation(my_id,shape,children_julia,symbol.secondary_dimensions_npts,symbol._children_slices)
+        return my_id
+
+
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol: pybamm.MatrixMultiplication):
+        #Break down the binary tree
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        left_shape = self._intermediate[id_left].shape
+        right_shape = self._intermediate[id_right].shape
+        my_shape = (left_shape[0],right_shape[1])
+        #Cache the result.
+        self._intermediate[my_id] = JuliaMatrixMultiplication(id_left,id_right,my_id,my_shape)
+        return my_id
+    
+    @multimethod 
+    def convert_tree_to_intermediate(self,symbol:pybamm.Multiplication):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
+        return my_id
+    
+    #Apparently an inner product is a hadamard product in pybamm
+    @multimethod 
+    def convert_tree_to_intermediate(self,symbol:pybamm.Inner):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
+        return my_id
+    
+    @multimethod 
+    def convert_tree_to_intermediate(self,symbol:pybamm.Division):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaDivision(id_left,id_right,my_id,my_shape)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol: pybamm.Addition):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaAddition(id_left,id_right,my_id,my_shape)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol: pybamm.Subtraction):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaSubtraction(id_left,id_right,my_id,my_shape)
+        return my_id
+
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Minimum):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"min")
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Maximum):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max")
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Power):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaPower(id_left,id_right,my_id,my_shape)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.EqualHeaviside):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaBitwiseBinaryOperation(id_left,id_right,my_id,my_shape,"<=")
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.NotEqualHeaviside):
+        id_left,id_right,my_id = self.break_down_binary(symbol)
+        my_shape = self.find_the_nonscalar(id_left,id_right)
+        self._intermediate[my_id] = JuliaBitwiseBinaryOperation(id_left,id_right,my_id,my_shape,"<")
+        return my_id
+    
+    @multimethod 
+    def convert_tree_to_intermediate(self,symbol:pybamm.Index):
+        assert len(symbol.children)==1
+        id_lower = self.convert_tree_to_intermediate(symbol.children[0])
+        my_id = symbol.id
+        index = symbol.index
+        self._intermediate[my_id] = JuliaIndex(id_lower,my_id,index)
+        return my_id
+
+
+
+    #Convenience function for operations which can have 
+    def find_the_nonscalar(self,id_left,id_right):
+        left_type = type(self._intermediate[id_left])
+        right_type = type(self._intermediate[id_right])
+        if issubclass(left_type,JuliaScalar):
+            return self._intermediate[id_right].shape
+        elif issubclass(right_type,JuliaScalar):
+            return self._intermediate[id_left].shape
+        else:
+            return self.same_shape(id_left,id_right)
+    
+    #to find the shape, there are a number of elements that should just have the shame shape as their children. This function removes boilerplate by implementing those cases
+    def same_shape(self,id_left,id_right):
+        left_shape = self._intermediate[id_left].shape
+        right_shape = self._intermediate[id_right].shape
+        assert left_shape==right_shape
+        return left_shape   
+    
+
+    #Functions
+    #Broadcastable functions have 1 input and 1 output, and the input and output have the same shape. The hard part is that we have to know which is which and pybamm doesn't differentiate between the two. So, we have to do that with an if statement.
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol):
+            raise NotImplementedError(
+            "Conversion to Julia not implemented for a symbol of type '{}'".format(
+                type(symbol)
+            )
+        )
+
+    @multimethod 
+    def convert_tree_to_intermediate(self,symbol:pybamm.Min):
+        my_jl_name = symbol.julia_name
+        assert len(symbol.children)==1
+        my_shape = (1,1)
+        input = self.convert_tree_to_intermediate(symbol.children[0])
+        my_id = symbol.id
+        self._intermediate[my_id] = JuliaMinimumMaximum(my_jl_name,input,my_id,my_shape)
+        return my_id
+    
+    @multimethod 
+    def convert_tree_to_intermediate(self,symbol:pybamm.Max):
+        my_jl_name = symbol.julia_name
+        assert len(symbol.children)==1
+        my_shape = (1,1)
+        input = self.convert_tree_to_intermediate(symbol.children[0])
+        my_id = symbol.id
+        self._intermediate[my_id] = JuliaMinimumMaximum(my_jl_name,input,my_id,my_shape)
+        return my_id
+
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Function):
+        my_jl_name = symbol.julia_name
+        assert len(symbol.children)==1
+        my_shape = symbol.children[0].shape
+        input = self.convert_tree_to_intermediate(symbol.children[0])
+        my_id = symbol.id
+        self._intermediate[my_id] = JuliaBroadcastableFunction(my_jl_name,input,my_id,my_shape)
+        return my_id
+
+
+
+    #Constants and Values. There are only 2 of these. They must know their own shapes.
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Matrix):
+        assert is_constant_and_can_evaluate(symbol)
+        my_id = symbol.id
         value = symbol.evaluate()
-        if round_constants:
-            value = np.round(value, decimals=11)
-        if not isinstance(value, numbers.Number):
-            if scipy.sparse.issparse(value):
-                # Create Julia SparseArray
-                row, col, data = scipy.sparse.find(value)
-                if round_constants:
-                    data = np.round(data, decimals=11)
-                m, n = value.shape
-                # Set print options large enough to avoid ellipsis
-                # at least as big is len(row) = len(col) = len(data)
-                np.set_printoptions(
-                    threshold=max(np.get_printoptions()["threshold"], len(row) + 10)
-                )
-                # increase precision for printing
-                np.set_printoptions(precision=20)
-                # add 1 to correct for 1-indexing in Julia
-                # use array2string so that commas are included
-                constant_symbols[symbol.id] = "sparse({}, {}, {}, {}, {})".format(
+        if value.shape==(1,1):
+            self._intermediate[my_id] = JuliaScalar(my_id,value)
+        else:
+            self._intermediate[my_id] = JuliaConstant(my_id,value)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Vector):
+        assert is_constant_and_can_evaluate(symbol)
+        my_id = symbol.id
+        value = symbol.evaluate()
+        if value.shape==(1,1):
+            self._intermediate[my_id] = JuliaScalar(my_id,value)
+        else:
+            self._intermediate[my_id] = JuliaConstant(my_id,value)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Scalar):
+        assert is_constant_and_can_evaluate(symbol)
+        my_id = symbol.id
+        value = symbol.evaluate()
+        self._intermediate[my_id] = JuliaScalar(my_id,value)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Time):
+        my_id = symbol.id
+        self._intermediate[my_id] = JuliaTime(my_id)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.InputParameter):
+        my_id = symbol.id
+        name = symbol.name
+        self._intermediate[my_id] = JuliaInput(my_id,name)
+        self._parameter_dict[my_id] = name
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.StateVector):
+        my_id = symbol.id
+        first_point = symbol.first_point
+        last_point = symbol.last_point
+        points = (first_point,last_point)
+        shape = symbol.shape
+        self._intermediate[my_id] = JuliaStateVector(id,points,shape)
+        return my_id
+        
+    #utilities for code conversion
+    def get_variables_for_binary_tree(self,julia_symbol):
+        left_input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.left_input])
+        right_input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.right_input])
+        result_var_name = self.get_result_variable_name(julia_symbol)
+        return left_input_var_name,right_input_var_name,result_var_name
+    
+    #convert intermediates to code. Again, all binary trees follow the same pattern so we just define a function to break them down, and then use the MD to find out what code to generate.
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaConcatenation):
+        input_var_names = []
+        num_cols = julia_symbol.shape[1]
+        my_name = self.get_result_variable_name(julia_symbol)
+
+        #assume we don't have tensors. Already asserted that concatenations have to have the same width.
+        if num_cols==1:
+            right_parenthesis = "]"
+            vec=True
+        else:
+            right_parenthesis = ",:]"
+            vec=False
+        #do the 0th one outside of the loop to initialize
+        child = julia_symbol.children[0]
+        child_var = self._intermediate[child]
+        child_var_name = self.get_result_variable_name(self._intermediate[child])
+        start_row = 1
+        if child_var.shape[0] == 0:
+            end_row = 1
+            code = ""
+        elif child_var.shape[0] == 1:
+            end_row = 1
+            if vec:
+                code = "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+            else:
+                code = "{}[{}{} .= {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+        else:
+            start_row = 1
+            end_row = child_var.shape[0]
+            code = "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+        
+        for child in julia_symbol.children[1:]:
+            child_var = self._intermediate[child]
+            child_var_name = self.get_result_variable_name(self._intermediate[child])
+            if child_var.shape[0] == 0:
+                continue
+            elif child_var.shape[0] == 1:
+                start_row = end_row+1
+                end_row = start_row+1
+                if vec:
+                    code += "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                else:
+                    code += "{}[{}{} .= {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+            else:
+                start_row = end_row+1
+                end_row = start_row+child_var.shape[0]-1  
+                code += "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+        
+        self._function_string+=code
+        return 0
+    
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaDomainConcatenation):
+        input_var_names = []
+        num_cols = julia_symbol.shape[1]
+        my_name = self.get_result_variable_name(julia_symbol)
+
+        #assume we don't have tensors. Already asserted that concatenations have to have the same width.
+        if num_cols==1:
+            right_parenthesis = "]"
+            vec=True
+        else:
+            right_parenthesis = ",:]"
+            vec=False
+        #do the 0th one outside of the loop to initialize
+        end_row = 0
+        code = ""
+        for i in range(julia_symbol.secondary_dimension_npts):
+            for c in range(len(julia_symbol.children)):
+                child_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.children[c]])
+                this_slice = list(julia_symbol.children_slices[c].values())[0][i]
+                start = this_slice.start
+                stop = this_slice.stop
+                start_row = end_row+1
+                end_row = start_row+(stop-start)-1
+                code += "{}[{}:{}{} .= {}[{}:{}{}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+        
+        self._function_string+=code
+        return 0
+
+
+    
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaMatrixMultiplication):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0
+
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaAddition):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {} .+ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {} .+ {}".format(result_var_name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0
+    
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaSubtraction):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {} .- {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {} .- {}".format(result_var_name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0
+
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaMultiplication):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {} .* {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {} .* {}".format(result_var_name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0 
+    
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaDivision):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {} ./ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {} ./ {}".format(result_var_name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0  
+
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaBroadcastableFunction):
+        result_var_name = self.get_result_variable_name(julia_symbol)
+        input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
+        code = "{} .= {}.({})\n".format(result_var_name,julia_symbol.name,input_var_name)
+        self._function_string+=code
+        return 0
+    
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaMinimumMaximum):
+        result_var_name = self.get_result_variable_name(julia_symbol)
+        input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
+        code = "{} .= {}({})\n".format(result_var_name,julia_symbol.name,input_var_name)
+        self._function_string+=code
+        return 0
+
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaMinMax):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {}({},{})\n".format(result_var_name,julia_symbol.name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {}({},{})\n".format(result_var_name,julia_symbol.name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0 
+
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaPower):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {}.^{}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {}.^{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        self._function_string+=code
+        return 0
+    
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaBitwiseBinaryOperation):
+        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
+        if self._preallocate:
+            code = "{} .= {}.{}{}\n".format(result_var_name,left_input_var_name,julia_symbol.operator,right_input_var_name)
+        else:
+            code = "{} = {}.{}{})\n".format(result_var_name,left_input_var_name,julia_symbol.operator,right_input_var_name)
+        self._function_string+=code
+        return 0   
+
+    #Cache and Const Creation
+    @multimethod
+    def create_cache(self,symbol):
+        my_id = symbol.output
+
+        cache_shape = self._intermediate[my_id].shape
+
+        cache_id = self._cache_id+1
+        self._cache_id = cache_id
+
+        cache_name = "cache_{}".format(cache_id)
+        self._cache_dict[symbol.output] = "cs."+cache_name
+
+        if self._cache_type=="standard":
+            if cache_shape[1] == 1:
+                cache_shape = "({})".format(cache_shape[0])
+            self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape)
+            return 0
+        else:
+            raise NotImplementedError("uh oh")
+
+    
+
+    def create_const(self,symbol):
+        my_id = symbol.id
+        const_id = self._const_id+1
+        self._const_id = const_id
+        const_name = "const_{}".format(const_id)
+        self._const_dict[my_id] = "cs."+const_name
+        mat_value = symbol.value
+        val_line = self.write_const(mat_value)
+        const_line = const_name+" = {},\n".format(val_line)
+        self._cache_and_const_string+=const_line
+        return 0
+    
+    @multimethod
+    def write_const(self,mat_value:numpy.ndarray):
+        return mat_value
+
+    @multimethod
+    def write_const(self,value:scipy.sparse._csr.csr_matrix):
+        row, col, data = scipy.sparse.find(value)
+        m, n = value.shape
+        np.set_printoptions(
+            threshold=max(np.get_printoptions()["threshold"], len(row) + 10)
+        )
+
+        val_string = "sparse({}, {}, {}, {}, {})".format(
                     np.array2string(row + 1, separator=","),
                     np.array2string(col + 1, separator=","),
                     np.array2string(data, separator=","),
                     m,
                     n,
                 )
-                variable_symbol_sizes[symbol.id] = -1
-            elif value.shape == (1, 1):
-                # Extract value if array has only one entry
-                constant_symbols[symbol.id] = value[0, 0]
-                variable_symbol_sizes[symbol.id] = 1
-            elif value.shape[1] == 1:
-                # Set print options large enough to avoid ellipsis
-                # at least as big as len(row) = len(col) = len(data)
-                np.set_printoptions(
-                    threshold=max(
-                        np.get_printoptions()["threshold"], value.shape[0] + 10
-                    )
-                )
-                # Flatten a 1D array
-                constant_symbols[symbol.id] = np.array2string(
-                    value.flatten(), separator=","
-                )
-                variable_symbol_sizes[symbol.id] = symbol.shape[0]
-            else:
-                constant_symbols[symbol.id] = value
-                # No need to save the size as it will not need to be used
-        return
-
-    # process children recursively
-    for child in symbol.children:
-        find_symbols(
-            child,
-            constant_symbols,
-            variable_symbols,
-            variable_symbol_sizes,
-            round_constants=round_constants,
-        )
-
-    # calculate the variable names that will hold the result of calculating the
-    # children variables
-    children_vars = []
-    for child in symbol.children:
-        if isinstance(child, pybamm.Broadcast):
-            child = child.child
-        if is_constant_and_can_evaluate(child):
-            child_eval = child.evaluate()
-            if isinstance(child_eval, numbers.Number):
-                children_vars.append(str(child_eval))
-            else:
-                children_vars.append(id_to_julia_variable(child.id, "const"))
-        else:
-            children_vars.append(id_to_julia_variable(child.id, "cache"))
-
-    if isinstance(symbol, pybamm.BinaryOperator):
-        # TODO: we can pass through a dummy y and t to get the type and then hardcode
-        # the right line, avoiding these checks
-        if isinstance(symbol, pybamm.MatrixMultiplication):
-            symbol_str = "{0} @ {1}".format(children_vars[0], children_vars[1])
-        elif isinstance(symbol, pybamm.Inner):
-            symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
-        elif isinstance(symbol, pybamm.Minimum):
-            symbol_str = "min({},{})".format(children_vars[0], children_vars[1])
-        elif isinstance(symbol, pybamm.Maximum):
-            symbol_str = "max({},{})".format(children_vars[0], children_vars[1])
-        elif isinstance(symbol, pybamm.Power):
-            # julia uses ^ instead of ** for power
-            # include dot for elementwise operations
-            symbol_str = children_vars[0] + " .^ " + children_vars[1]
-        else:
-            # all other operations use the same symbol
-            symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
-
-    elif isinstance(symbol, pybamm.UnaryOperator):
-        # Index has a different syntax than other univariate operations
-        if isinstance(symbol, pybamm.Index):
-            # Because of how julia indexing works, add 1 to the start, but not to the
-            # stop
-            symbol_str = "{}[{}:{}]".format(
-                children_vars[0], symbol.slice.start + 1, symbol.slice.stop
-            )
-        elif isinstance(symbol, pybamm.Gradient):
-            symbol_str = "grad_{}({})".format(tuple(symbol.domain), children_vars[0])
-        elif isinstance(symbol, pybamm.Divergence):
-            symbol_str = "div_{}({})".format(tuple(symbol.domain), children_vars[0])
-        elif isinstance(symbol, pybamm.Broadcast):
-            # ignore broadcasts for now
-            symbol_str = children_vars[0]
-        elif isinstance(symbol, pybamm.BoundaryValue):
-            symbol_str = "boundary_value_{}({})".format(symbol.side, children_vars[0])
-        else:
-            symbol_str = symbol.name + children_vars[0]
-
-    elif isinstance(symbol, pybamm.Function):
-        # write functions directly
-        symbol_str = "{}({})".format(symbol.julia_name, ", ".join(children_vars))
-
-    elif isinstance(symbol, (pybamm.Variable, pybamm.ConcatenationVariable)):
-        # No need to do anything if a Variable is found
-        return
-
-    elif isinstance(symbol, pybamm.Concatenation):
-        if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
-            # return a list of the children variables, which will be converted to a
-            # line by line assignment
-            # return this as a string so that other functionality still works
-            # also save sizes
-            symbol_str = "["
-            for child in children_vars:
-                child_id = child[6:].replace("m", "-")
-                size = variable_symbol_sizes[int(child_id)]
-                symbol_str += "{}::{}, ".format(size, child)
-            symbol_str = symbol_str[:-2] + "]"
-
-        # DomainConcatenation specifies a particular ordering for the concatenation,
-        # which we must follow
-        elif isinstance(symbol, pybamm.DomainConcatenation):
-            if symbol.secondary_dimensions_npts == 1:
-                all_child_vectors = children_vars
-                all_child_sizes = [
-                    variable_symbol_sizes[int(child[6:].replace("m", "-"))]
-                    for child in children_vars
-                ]
-            else:
-                slice_starts = []
-                all_child_vectors = []
-                all_child_sizes = []
-                for i in range(symbol.secondary_dimensions_npts):
-                    child_vectors = []
-                    child_sizes = []
-                    for child_var, slices in zip(
-                        children_vars, symbol._children_slices
-                    ):
-                        for child_dom, child_slice in slices.items():
-                            slice_starts.append(symbol._slices[child_dom][i].start)
-                            # add 1 to slice start to account for julia indexing
-                            child_vectors.append(
-                                "@view {}[{}:{}]".format(
-                                    child_var,
-                                    child_slice[i].start + 1,
-                                    child_slice[i].stop,
-                                )
-                            )
-                            child_sizes.append(
-                                child_slice[i].stop - child_slice[i].start
-                            )
-                    all_child_vectors.extend(
-                        [v for _, v in sorted(zip(slice_starts, child_vectors))]
-                    )
-                    all_child_sizes.extend(
-                        [v for _, v in sorted(zip(slice_starts, child_sizes))]
-                    )
-            # return a list of the children variables, which will be converted to a
-            # line by line assignment
-            # return this as a string so that other functionality still works
-            # also save sizes
-            symbol_str = "["
-            for child, size in zip(all_child_vectors, all_child_sizes):
-                symbol_str += "{}::{}, ".format(size, child)
-            symbol_str = symbol_str[:-2] + "]"
-
-        else:
-            # A regular Concatenation for the MTK model
-            # We will define the concatenation function separately
-            symbol_str = "concatenation(" + ", ".join(children_vars) + ")"
-
-    # Note: we assume that y is being passed as a column vector
-    elif isinstance(symbol, pybamm.StateVectorBase):
-        if isinstance(symbol, pybamm.StateVector):
-            name = "@view y"
-        elif isinstance(symbol, pybamm.StateVectorDot):
-            name = "@view dy"
-        indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
-        # add 1 since julia uses 1-indexing
-        indices += 1
-        if len(indices) == 1:
-            symbol_str = "{}[{}]".format(name, indices[0])
-        else:
-            # julia does include the final value
-            symbol_str = "{}[{}:{}]".format(name, indices[0], indices[-1])
-
-    elif isinstance(symbol, pybamm.Time):
-        symbol_str = "t"
-
-    elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = "inputs['{}']".format(symbol.name)
-
-    elif isinstance(symbol, pybamm.SpatialVariable):
-        symbol_str = symbol.name
-
-    elif isinstance(symbol, pybamm.FunctionParameter):
-        symbol_str = "{}({})".format(symbol.name, ", ".join(children_vars))
-
-    else:
-        raise NotImplementedError(
-            "Conversion to Julia not implemented for a symbol of type '{}'".format(
-                type(symbol)
-            )
-        )
-
-    variable_symbols[symbol.id] = symbol_str
-
-    # Save the size of the symbol
-    try:
-        if symbol.shape == ():
-            variable_symbol_sizes[symbol.id] = 1
-        else:
-            variable_symbol_sizes[symbol.id] = symbol.shape[0]
-    except NotImplementedError:
-        pass
-
-
-def to_julia(symbol, round_constants=True):
-    """
-    This function converts an expression tree into a dict of constant input values, and
-    valid julia code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
-
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The symbol to convert to julia code
-
-    Returns
-    -------
-    constant_values : collections.OrderedDict
-        dict mapping node id to a constant value. Represents all the constant nodes in
-        the expression tree
-    str
-        valid julia code that will evaluate all the variable nodes in the tree.
-
-    """
-
-    constant_values = OrderedDict()
-    variable_symbols = OrderedDict()
-    variable_symbol_sizes = OrderedDict()
-    find_symbols(
-        symbol,
-        constant_values,
-        variable_symbols,
-        variable_symbol_sizes,
-        round_constants=round_constants,
-    )
-
-    return constant_values, variable_symbols, variable_symbol_sizes
-
-
-def get_julia_function(
-    symbol,
-    funcname="f",
-    input_parameter_order=None,
-    len_rhs=None,
-    preallocate=True,
-    round_constants=True,
-    cache_type="standard"
-):
-    """
-    Converts a pybamm expression tree into pure julia code that will calculate the
-    result of calling `evaluate(t, y)` on the given expression tree.
-
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The symbol to convert to julia code
-    funcname : str, optional
-        The name to give to the function (default 'f')
-    input_parameter_order : list, optional
-        List of input parameter names. Defines the order in which the input parameters
-        are extracted from 'p' in the julia function that is created
-    len_rhs : int, optional
-        The number of ODEs in the discretized differential equations. This also
-        determines whether the model has any algebraic equations: if None (default),
-        the model is assume to have no algebraic parts and ``julia_str`` is compatible
-        with an ODE solver. If not None, ``julia_str`` is compatible with a DAE solver
-    preallocate : bool, optional
-        Whether to write the function in a way that preallocates memory for the output.
-        Default is True, which is faster. Must be False for the function to be
-        modelingtoolkitized.
-    cache_type : str, optional
-        The type of cache to use for the function. Must be one of 'standard', 'dual', 'symbolic',
-        or 'gpu'. If 'standard', the function will be cached in the standard way,
-        If 'dual', the function will use the dualcache provided by preallocationtools.jl,
-        and if 'symbolic', the function will use the symcache provided by PyBaMM.jl. Default 
-        is standard, and as of so far, I haven't been able to beat it with performance yet.
-
-    Returns
-    -------
-    julia_str : str
-        String of julia code, to be evaluated by ``julia.Main.eval``
-
-    """
-    if len_rhs is None:
-        typ = "ode"
-    else:
-        typ = "dae"
-        # Take away dy from the differential states
-        # we will return a function of the form
-        # out[] = .. - dy[] for the differential states
-        # out[] = .. for the algebraic states
-        symbol_minus_dy = []
-        end = 0
-        for child in symbol.orphans:
-            start = end
-            end += child.size
-            if end <= len_rhs:
-                symbol_minus_dy.append(child - pybamm.StateVectorDot(slice(start, end)))
-            else:
-                symbol_minus_dy.append(child)
-        symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
-    constants, var_symbols, var_symbol_sizes = to_julia(
-        symbol, round_constants=round_constants
-    )
-
-    # extract constants in generated function
-    const_and_cache_str = "cs = (\n"
-    shorter_const_names = {}
-    for i_const, (symbol_id, const_value) in enumerate(constants.items()):
-        const_name = id_to_julia_variable(symbol_id, "const")
-        const_name_short = "const_{}".format(i_const)
-        if cache_type=="gpu":
-            const_and_cache_str += "   {} = cu({}),\n".format(const_name_short, const_value)
-        else:
-            const_and_cache_str += "   {} = {},\n".format(const_name_short, const_value)
-        shorter_const_names[const_name] = const_name_short
+        return val_string
     
-    # Pop (get and remove) items from the dictionary of symbols one by one
-    # If they are simple operations (@view, +, -, *, /), replace all future
-    # occurences instead of assigning them. This "inlining" speeds up the computation
-    inlineable_symbols = ["@view", "+", "-", "*", "/"]
-    var_str = ""
-    input_parameters = {}
-    while var_symbols:
-        var_symbol_id, symbol_line = var_symbols.popitem(last=False)
-        julia_var = id_to_julia_variable(var_symbol_id, "cache")
-        # Look for lists in the variable symbols. These correpsond to concatenations, so
-        # assign the children to the right parts of the vector
-        #symbol_line_split = symbol_line.split(", ")
-        #var_str += "{} = get_tmp(cs.{},{})\n".format(julia_var,julia_var,symbol_line)
-        if symbol_line[0] == "[" and symbol_line[-1] == "]":
-            # convert to actual list
-            symbol_line = symbol_line[1:-1].split(", ")
-            start = 0
-            if preallocate is True or var_symbol_id == symbol.id:
-                for child_size_and_name in symbol_line:
-                    child_size, child_name = child_size_and_name.split("::")
-                    end = start + int(child_size)
-                    # add 1 to start to account for julia 1-indexing
-                    var_str += "@. {}[{}:{}] = {}\n".format(
-                        julia_var, start + 1, end, child_name
-                    )
-                    start = end
+    #Just get something working here, so can start actual testing
+    def write_function_easy(self,funcname):
+        #start with the closure
+        self._cache_and_const_string = "begin\ncs = (\n" + self._cache_and_const_string
+        self._cache_and_const_string += ")\n"
+
+
+        top = self._intermediate[next(reversed(self._intermediate))]
+        top_var_name = self.get_result_variable_name(top)
+        my_shape = top.shape
+        if len(self._parameter_dict) != 0:
+            parameter_string = ""
+            for parameter in self._parameter_dict.items():
+                parameter_string+="{},".format(parameter[1])
+            parameter_string = parameter_string[0:-1]
+            parameter_string += "= p\n"
+            self._function_string = parameter_string + self._function_string
+        if my_shape[1] != 1:
+            self._function_string += "J[:,:] .= {}\nend\nend".format(top_var_name)
+            self._function_string = "function {}(J,y,p,t)\n".format(funcname) + self._function_string
+        else:
+            self._function_string+= "dy[:] .= {}\nend\nend".format(top_var_name)
+            self._function_string = "function {}(dy,y,p,t)\n".format(funcname) + self._function_string
+        
+        
+
+        return 0
+        
+
+
+    
+
+    #rework this at some point
+    def build_julia_code(self,funcname="f"):
+        for entry in self._intermediate.values():
+            if issubclass(type(entry),JuliaBinaryOperation):
+                self.create_cache(entry)
+                self.convert_intermediate_to_code(entry)
+            elif type(entry) is JuliaConstant:
+                self.create_const(entry)
+            elif type(entry) is JuliaIndex:
+                continue
+            elif type(entry) is JuliaStateVector:
+                continue
+            elif type(entry) is JuliaScalar:
+                continue
+            elif type(entry) is JuliaBroadcastableFunction:
+                self.create_cache(entry)
+                self.convert_intermediate_to_code(entry)
+            elif type(entry) is JuliaMinimumMaximum:
+                self.create_cache(entry)
+                self.convert_intermediate_to_code(entry)
+            elif type(entry) is JuliaTime:
+                continue
+            elif type(entry) is JuliaInput:
+                continue
+            elif issubclass(type(entry),JuliaConcatenation):
+                self.create_cache(entry)
+                self.convert_intermediate_to_code(entry)
             else:
-                concat_str = "{} = vcat(".format(julia_var)
-                for i, child_size_and_name in enumerate(symbol_line):
-                    child_size, child_name = child_size_and_name.split("::")
-                    var_str += "x{} = @. {}\n".format(i + 1, child_name)
-                    concat_str += "x{}, ".format(i + 1)
-                var_str += concat_str[:-2] + ")\n"
-        # use mul! for matrix multiplications (requires LinearAlgebra library)
-        elif " @ " in symbol_line:
-            if preallocate is False:
-                symbol_line = symbol_line.replace(" @ ", " * ")
-                var_str += "{} = {}\n".format(julia_var, symbol_line)
-            else:
-                symbol_line = symbol_line.replace(" @ ", ", ")
-                var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
-        # find input parameters
-        elif symbol_line.startswith("inputs"):
-            input_parameters[julia_var] = symbol_line[8:-2]
-        elif "minimum" in symbol_line or "maximum" in symbol_line:
-            var_str += "{} .= {}\n".format(julia_var, symbol_line)
-        else:
-            # don't replace the matrix multiplication cases (which will be
-            # turned into a mul!), since it is faster to assign to a cache array
-            # first in that case
-            # e.g. mul!(cs.cache_1, cs.cache_2, cs.cache_3)
-            # unless it is a @view in which case we don't
-            # need to cache
-            # e.g. mul!(cs.cache_1, cs.cache_2, @view y[1:10])
-            # also don't replace the minimum() or maximum() cases as we can't
-            # broadcast them
-            any_matmul_min_max = any(
-                julia_var in next_symbol_line
-                and (
-                    any(
-                        x in next_symbol_line
-                        for x in [" @ ", "mul!", "minimum", "maximum"]
-                    )
-                    and not symbol_line.startswith("@view")
-                )
-                for next_symbol_line in var_symbols.values()
-            )
-            # inline operation if it can be inlined
-            if (
-                any(x in symbol_line for x in inlineable_symbols) or symbol_line == "t"
-            ) and not any_matmul_min_max:
-                found_replacement = False
-                # replace all other occurrences of the variable
-                # in the dictionary with the symbol line
-                for next_var_id, next_symbol_line in var_symbols.items():
-                    if julia_var in next_symbol_line:
-                        if symbol_line == "t":
-                            # no brackets needed
-                            var_symbols[next_var_id] = next_symbol_line.replace(
-                                julia_var, symbol_line
-                            )
-                        else:
-                            # add brackets so that the order of operations is maintained
-                            var_symbols[next_var_id] = next_symbol_line.replace(
-                                julia_var, "({})".format(symbol_line)
-                            )
-                        found_replacement = True
-                if not found_replacement:
-                    var_str += "@. {} = {}\n".format(julia_var, symbol_line)
-
-            # otherwise assign
-            else:
-                var_str += "@. {} = {}\n".format(julia_var, symbol_line)
-    # Replace all input parameter names
-    for input_parameter_id, input_parameter_name in input_parameters.items():
-        var_str = var_str.replace(input_parameter_id, input_parameter_name)
-
-    # indent code
-    var_str = "   " + var_str
-    var_str = var_str.replace("\n", "\n   ")
-
-
-    cache_initialization_str = ""
-
-    # add the cache variables to the cache NamedTuple
-    i_cache = 0
-    for var_symbol_id, var_symbol_size in var_symbol_sizes.items():
-        # Skip caching the result variable since this is provided as dy
-        # Also skip caching the result variable if it doesn't appear in the var_str,
-        # since it has been inlined and does not need to be assigned to
-        julia_var = id_to_julia_variable(var_symbol_id, "cache")
-        if var_symbol_id != symbol.id and julia_var in var_str:
-            julia_var_short = "cache_{}".format(i_cache)
-            var_str = var_str.replace(julia_var, julia_var_short)
-            i_cache += 1
-            if preallocate is True:
-                if cache_type == "symbolic":
-                    const_and_cache_str += "   {} = symcache(zeros({}),Vector{{Num}}(undef,{})),\n".format(
-                        julia_var_short, var_symbol_size,var_symbol_size
-                    )
-                    cache_initialization_str += "   {} = get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
-                elif cache_type == "standard":
-                    const_and_cache_str += "   {} = zeros({}),\n".format(
-                        julia_var_short, var_symbol_size
-                    )
-                elif cache_type == "dual":
-                    const_and_cache_str += "   {} = dualcache(zeros({}),12),\n".format(
-                        julia_var_short, var_symbol_size
-                    )
-                    cache_initialization_str += "   {} = PreallocationTools.get_tmp(cs.{},(@view y[1:{}]))\n".format(julia_var_short,julia_var_short,var_symbol_size)
-                elif cache_type == "gpu":
-                    const_and_cache_str+="  {} = CUDA.zeros({}),\n".format(julia_var_short,var_symbol_size)
-                
-            else:
-                # Cache variables have not been preallocated
-                var_str = var_str.replace(
-                    "@. {} = ".format(julia_var_short),
-                    "{} = @. ".format(julia_var_short),
-                )
-
-    # Shorten the name of the constants from id to const_0, const_1, etc.
-    for long, short in shorter_const_names.items():
-        var_str = var_str.replace(long, "cs." + short)
-
-    # close the constants and cache string
-    const_and_cache_str += ")\n"
-
-    # remove the constant and cache sring if it is empty
-    const_and_cache_str = const_and_cache_str.replace("cs = (\n)\n", "")
-
-    # calculate the final variable that will output the result
-    if symbol.is_constant():
-        result_var = id_to_julia_variable(symbol.id, "const")
-        if result_var in shorter_const_names:
-            result_var = shorter_const_names[result_var]
-        result_value = symbol.evaluate()
-        if isinstance(result_value, numbers.Number):
-            var_str = var_str + "\n   dy .= " + str(result_value) + "\n"
-        else:
-            var_str = var_str + "\n   dy .= cs." + result_var + "\n"
-    else:
-        result_var = id_to_julia_variable(symbol.id, "cache")
-        if typ == "ode":
-            out = "dy"
-        elif typ == "dae":
-            out = "out"
-        # replace "cache_123 = ..." with "dy .= ..." (ensure we allocate to the
-        # variable that was passed in)
-        var_str = var_str.replace(f"   {result_var} =", f"   {out} .=")
-        # catch other cases for dy
-        var_str = var_str.replace(result_var, out)
-
-    # add "cs." to cache names
-    if preallocate is True:
-        if cache_type in ["standard","gpu"]:
-            var_str = var_str.replace("cache", "cs.cache")
-
-    # line that extracts the input parameters in the right order
-    if input_parameter_order is None:
-        input_parameter_extraction = ""
-    elif len(input_parameter_order) == 1:
-        # extract the single parameter
-        input_parameter_extraction = "   " + input_parameter_order[0] + " = p[1]\n"
-    else:
-        # extract all parameters
-        input_parameter_extraction = "   " + ", ".join(input_parameter_order) + " = p\n"
-
-    if preallocate is False or const_and_cache_str == "":
-        func_def = f"{funcname}!"
-    else:
-        func_def = f"{funcname}_with_consts!"
-
-    # add function def
-    if typ == "ode":
-        function_def = f"\nfunction {func_def}(dy, y, p, t)\n"
-    elif typ == "dae":
-        function_def = f"\nfunction {func_def}(out, dy, y, p, t)\n"
-    julia_str = (
-        "begin\n"
-        + const_and_cache_str
-        + function_def
-        + cache_initialization_str
-        + input_parameter_extraction
-        + var_str
-    )
-
-    # close the function, with a 'nothing' to avoid allocations
-    julia_str += "nothing\nend\n\n"
-    julia_str = julia_str.replace("\n   \n", "\n")
-
-    if not (preallocate is False or const_and_cache_str == ""):
-        # Use a let block for the cached variables
-        # open the let block
-        julia_str = julia_str.replace("cs = (", f"{funcname}! = let cs = (")
-        # close the let block
-        julia_str += "end\n"
-
-    # close the "begin"
-    julia_str += "end"
-
-    return julia_str
-
-
-def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, typ):
-    """
-    Converts a variable and its equation to a julia string
-
-    Parameters
-    ----------
-    var : :class:`pybamm.Symbol`
-        The variable (key in the dictionary of rhs/algebraic/initial conditions)
-    eqn : :class:`pybamm.Symbol`
-        The equation (value in the dictionary of rhs/algebraic/initial conditions)
-    all_constants_str : str
-        String containing all the constants defined so far
-    all_variables_str : str
-        String containing all the variables defined so far
-    typ : str
-        The type of the variable/equation pair being converted ("equation", "initial
-        condition", or "boundary condition")
-
-    Returns
-    -------
-    all_constants_str : str
-        Updated string of all constants
-    all_variables_str : str
-        Updated string of all variables
-    eqn_str : str
-        The string describing the final equation result, perhaps as a function of some
-        variables and/or constants in all_constants_str and all_variables_str
-
-    """
-    if isinstance(eqn, pybamm.Broadcast):
-        # ignore broadcasts for now
-        eqn = eqn.child
-
-    var_symbols = to_julia(eqn)[1]
-
-    # var_str = ""
-    # for symbol_id, symbol_line in var_symbols.items():
-    #     var_str += f"{id_to_julia_variable(symbol_id)} = {symbol_line}\n"
-    # Pop (get and remove) items from the dictionary of symbols one by one
-    # If they are simple operations (+, -, *, /), replace all future
-    # occurences instead of assigning them.
-    inlineable_symbols = [" + ", " - ", " * ", " / "]
-    var_str = ""
-    while var_symbols:
-        var_symbol_id, symbol_line = var_symbols.popitem(last=False)
-        julia_var = id_to_julia_variable(var_symbol_id, "cache")
-        # inline operation if it can be inlined
-        if "concatenation" not in symbol_line:
-            found_replacement = False
-            # replace all other occurrences of the variable
-            # in the dictionary with the symbol line
-            for next_var_id, next_symbol_line in var_symbols.items():
-                if (
-                    symbol_line == "t"
-                    or " " not in symbol_line
-                    or symbol_line.startswith("grad")
-                    or not any(x in next_symbol_line for x in inlineable_symbols)
-                ):
-                    # cases that don't need brackets
-                    var_symbols[next_var_id] = next_symbol_line.replace(
-                        julia_var, symbol_line
-                    )
-                elif next_symbol_line.startswith("concatenation"):
-                    var_symbols[next_var_id] = next_symbol_line.replace(
-                        julia_var, f"\n   {symbol_line}\n"
-                    )
-                else:
-                    # add brackets so that the order of operations is maintained
-                    var_symbols[next_var_id] = next_symbol_line.replace(
-                        julia_var, "({})".format(symbol_line)
-                    )
-                found_replacement = True
-            if not found_replacement:
-                var_str += "{} = {}\n".format(julia_var, symbol_line)
-
-        # otherwise assign
-        else:
-            var_str += "{} = {}\n".format(julia_var, symbol_line)
-
-    # If we have created a concatenation we need to define it
-    # Hardcoded to the negative electrode, separator, positive electrode case for now
-    if "concatenation" in var_str and "function concatenation" not in all_variables_str:
-        concatenation_def = (
-            "\nfunction concatenation(n, s, p)\n"
-            + "   # A concatenation in the electrolyte domain\n"
-            + "   IfElse.ifelse(\n"
-            + "      x < neg_width, n, IfElse.ifelse(\n"
-            + "         x < neg_plus_sep_width, s, p\n"
-            + "      )\n"
-            + "   )\n"
-            + "end\n"
-        )
-    else:
-        concatenation_def = ""
-
-    # Define the FunctionParameter objects that have not yet been defined
-    function_defs = ""
-    for x in eqn.pre_order():
-        if (
-            isinstance(x, pybamm.FunctionParameter)
-            and f"function {x.name}" not in all_variables_str
-            and typ == "equation"
-        ):
-            function_def = (
-                f"\nfunction {x.name}("
-                + ", ".join(x.arg_names)
-                + ")\n"
-                + "   {}\n".format(str(x.callable).replace("**", "^"))
-                + "end\n"
-            )
-            function_defs += function_def
-
-    if concatenation_def + function_defs != "":
-        function_defs += "\n"
-
-    var_str = concatenation_def + function_defs + var_str
-
-    # add a comment labeling the equation, and the equation itself
-    if var_str == "":
-        all_variables_str += ""
-    else:
-        all_variables_str += f"# '{var.name}' {typ}\n" + var_str + "\n"
-
-    # calculate the final variable that will output the result
-    if eqn.is_constant():
-        result_var = id_to_julia_variable(eqn.id, "const")
-    else:
-        result_var = id_to_julia_variable(eqn.id, "cache")
-    if is_constant_and_can_evaluate(eqn):
-        result_value = eqn.evaluate()
-    else:
-        result_value = None
-
-    # define the variable that goes into the equation
-    if eqn.is_constant() and isinstance(result_value, numbers.Number):
-        eqn_str = str(result_value)
-    else:
-        eqn_str = result_var
-
-    return all_constants_str, all_variables_str, eqn_str
-
-
-def get_julia_mtk_model(model, geometry=None, tspan=None):
-    """
-    Converts a pybamm model into a Julia ModelingToolkit model
-
-    Parameters
-    ----------
-    model : :class:`pybamm.BaseModel`
-        The model to be converted
-    geometry : dict, optional
-        Dictionary defining the geometry. Must be provided if the model is a PDE model
-    tspan : array-like, optional
-        Time for which to solve the model. Must be provided if the model is a PDE model
-
-    Returns
-    -------
-    mtk_str : str
-        String of julia code representing a model in MTK,
-        to be evaluated by ``julia.Main.eval``
-    """
-    # Extract variables
-    variables = {**model.rhs, **model.algebraic}.keys()
-    variable_to_print_name = {}
-    for i, var in enumerate(variables):
-        if var.print_name is not None:
-            print_name = var._raw_print_name
-        else:
-            print_name = f"u{i+1}"
-        variable_to_print_name[var] = print_name
-        if isinstance(var, pybamm.ConcatenationVariable):
-            for child in var.children:
-                variable_to_print_name[child] = print_name
-
-    # Extract domain and auxiliary domains
-    all_domains = set(
-        [tuple(dom) for var in variables for dom in var.domains.values() if dom != []]
-    )
-    is_pde = bool(all_domains)
-
-    # Check geometry and tspan have been provided if a PDE
-    if is_pde:
-        if geometry is None:
-            raise ValueError("must provide geometry if the model is a PDE model")
-        if tspan is None:
-            raise ValueError("must provide tspan if the model is a PDE model")
-
-    # Read domain names
-    domain_name_to_symbol = {}
-    long_domain_symbol_to_short = {}
-    for dom in all_domains:
-        # Read domain name from geometry
-        domain_symbol = list(geometry[dom[0]].keys())[0]
-        if len(dom) > 1:
-            domain_symbol = domain_symbol[0]
-            # For multi-domain variables keep only the first letter of the domain
-            domain_name_to_symbol[tuple(dom)] = domain_symbol
-            # Record which domain symbols we shortened
-            for d in dom:
-                long = list(geometry[d].keys())[0]
-                long_domain_symbol_to_short[long] = domain_symbol
-        else:
-            # Otherwise keep the whole domain
-            domain_name_to_symbol[tuple(dom)] = domain_symbol
-
-    # Read domain limits
-    domain_name_to_limits = {(): None}
-    for dom in all_domains:
-        limits = list(geometry[dom[0]].values())[0].values()
-        if len(limits) > 1:
-            lower_limit, _ = list(geometry[dom[0]].values())[0].values()
-            _, upper_limit = list(geometry[dom[-1]].values())[0].values()
-            domain_name_to_limits[tuple(dom)] = (
-                lower_limit.evaluate(),
-                upper_limit.evaluate(),
-            )
-        else:
-            # Don't record limits for variables that have "limits" of length 1 i.e.
-            # a zero-dimensional domain
-            domain_name_to_limits[tuple(dom)] = None
-
-    # Define independent variables for each variable
-    var_to_ind_vars = {}
-    var_to_ind_vars_left_boundary = {}
-    var_to_ind_vars_right_boundary = {}
-    for var in variables:
-        if var.domain in [[], ["current collector"]]:
-            var_to_ind_vars[var] = "(t)"
-        else:
-            # all independent variables e.g. (t, x) or (t, rn, xn)
-            domain_symbols = ", ".join(
-                domain_name_to_symbol[tuple(dom)]
-                for dom in var.domains.values()
-                if domain_name_to_limits[tuple(dom)] is not None
-            )
-            var_to_ind_vars[var] = f"(t, {domain_symbols})"
-            if isinstance(var, pybamm.ConcatenationVariable):
-                for child in var.children:
-                    var_to_ind_vars[child] = f"(t, {domain_symbols})"
-            aux_domain_symbols = ", ".join(
-                domain_name_to_symbol[tuple(dom)]
-                for level, dom in var.domains.items()
-                if level != "primary" and domain_name_to_limits[tuple(dom)] is not None
-            )
-            if aux_domain_symbols != "":
-                aux_domain_symbols = ", " + aux_domain_symbols
-
-            limits = domain_name_to_limits[tuple(var.domain)]
-            # left bc e.g. (t, 0) or (t, 0, xn)
-            var_to_ind_vars_left_boundary[var] = f"(t, {limits[0]}{aux_domain_symbols})"
-            # right bc e.g. (t, 1) or (t, 1, xn)
-            var_to_ind_vars_right_boundary[
-                var
-            ] = f"(t, {limits[1]}{aux_domain_symbols})"
-
-    mtk_str = "begin\n"
-    # Define parameters (including independent variables)
-    # Makes a line of the form '@parameters t x1 x2 x3 a b c d'
-    ind_vars = ["t"] + [
-        sym
-        for dom, sym in domain_name_to_symbol.items()
-        if domain_name_to_limits[dom] is not None
-    ]
-    for domain_name, domain_symbol in domain_name_to_symbol.items():
-        if domain_name_to_limits[domain_name] is not None:
-            mtk_str += f"# {domain_name} -> {domain_symbol}\n"
-    mtk_str += "@parameters " + " ".join(ind_vars)
-    if len(model.input_parameters) > 0:
-        mtk_str += "\n# Input parameters\n@parameters"
-        for param in model.input_parameters:
-            mtk_str += f" {param.name}"
-    mtk_str += "\n"
-
-    # Add a comment with the variable names
-    for var in variables:
-        mtk_str += f"# '{var.name}' -> {variable_to_print_name[var]}\n"
-    # Makes a line of the form '@variables u1(t) u2(t)'
-    dep_vars = []
-    mtk_str += "@variables"
-    for var in variables:
-        mtk_str += f" {variable_to_print_name[var]}(..)"
-        dep_var = variable_to_print_name[var] + var_to_ind_vars[var]
-        dep_vars.append(dep_var)
-    mtk_str += "\n"
-
-    # Define derivatives
-    for domain_symbol in ind_vars:
-        mtk_str += f"D{domain_symbol} = Differential({domain_symbol})\n"
-    mtk_str += "\n"
-
-    # Define equations
-    all_eqns_str = ""
-    all_constants_str = ""
-    all_julia_str = ""
-    for var, eqn in {**model.rhs, **model.algebraic}.items():
-        all_constants_str, all_julia_str, eqn_str = convert_var_and_eqn_to_str(
-            var, eqn, all_constants_str, all_julia_str, "equation"
-        )
-
-        if var in model.rhs:
-            all_eqns_str += (
-                f"   Dt({variable_to_print_name[var]}{var_to_ind_vars[var]}) "
-                + f"~ {eqn_str},\n"
-            )
-        elif var in model.algebraic:
-            all_eqns_str += f"   0 ~ {eqn_str},\n"
-
-    # Replace any long domain symbols with the short version
-    # e.g. "xn" gets replaced with "x"
-    for long, short in long_domain_symbol_to_short.items():
-        # we need to add a space to avoid accidentally replacing 'exp' with 'ex'
-        all_julia_str = all_julia_str.replace(" " + long, " " + short)
-
-    # Replace variables in the julia strings that correspond to pybamm variables with
-    # their julia equivalent
-    for var, julia_id in variable_to_print_name.items():
-        # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
-        cache_var_id = id_to_julia_variable(var.id, "cache")
-        if f"boundary_value_right({cache_var_id})" in all_julia_str:
-            all_julia_str = all_julia_str.replace(
-                f"boundary_value_right({cache_var_id})",
-                julia_id + var_to_ind_vars_right_boundary[var],
-            )
-        # e.g. cache_123456789 gets replaced with u1(t, x)
-        all_julia_str = all_julia_str.replace(
-            cache_var_id, julia_id + var_to_ind_vars[var]
-        )
-
-    # Replace independent variables (domain names) in julia strings with the
-    # corresponding symbol
-    for domain_name, domain_symbol in domain_name_to_symbol.items():
-        all_julia_str = all_julia_str.replace(
-            f"grad_{domain_name}", f"D{domain_symbol}"
-        )
-        # Different divergence depending on the coordinate system
-        coord_sys = getattr(pybamm.standard_spatial_vars, domain_symbol).coord_sys
-        if coord_sys == "cartesian":
-            all_julia_str = all_julia_str.replace(
-                f"div_{domain_name}", f"D{domain_symbol}"
-            )
-        elif coord_sys == "spherical polar":
-            all_julia_str = all_julia_str.replace(
-                f"div_{domain_name}(",
-                f"1 / {domain_symbol}^2 * D{domain_symbol}({domain_symbol}^2 * ",
-            )
-
-    # Replace the thicknesses in the concatenation with the actual thickness from the
-    # geometry
-    if "neg_width" in all_julia_str or "neg_plus_sep_width" in all_julia_str:
-        var = pybamm.standard_spatial_vars
-        x_n = geometry["negative electrode"]["x_n"]["max"].evaluate()
-        x_s = geometry["separator"]["x_s"]["max"].evaluate()
-        all_julia_str = all_julia_str.replace("neg_width", str(x_n))
-        all_julia_str = all_julia_str.replace("neg_plus_sep_width", str(x_s))
-
-    # Update the MTK string
-    mtk_str += all_constants_str + all_julia_str + "\n" + f"eqs = [\n{all_eqns_str}]\n"
-
-    ####################################################################################
-    # Initial and boundary conditions
-    ####################################################################################
-    # Initial conditions
-    all_ic_bc_str = "   # initial conditions\n"
-    all_ic_bc_constants_str = ""
-    all_ic_bc_julia_str = ""
-    for var, eqn in model.initial_conditions.items():
-        (
-            all_ic_bc_constants_str,
-            all_ic_bc_julia_str,
-            eqn_str,
-        ) = convert_var_and_eqn_to_str(
-            var, eqn, all_ic_bc_constants_str, all_ic_bc_julia_str, "initial condition"
-        )
-
-        if not is_pde:
-            all_ic_bc_str += f"   {variable_to_print_name[var]}(t) => {eqn_str},\n"
-        else:
-            if var.domain == []:
-                doms = ""
-            else:
-                doms = ", " + domain_name_to_symbol[tuple(var.domain)]
-
-            all_ic_bc_str += f"   {variable_to_print_name[var]}(0{doms}) ~ {eqn_str},\n"
-    # Boundary conditions
-    if is_pde:
-        all_ic_bc_str += "   # boundary conditions\n"
-        for var, eqn_side in model.boundary_conditions.items():
-            if isinstance(var, (pybamm.Variable, pybamm.ConcatenationVariable)):
-                for side, (eqn, typ) in eqn_side.items():
-                    (
-                        all_ic_bc_constants_str,
-                        all_ic_bc_julia_str,
-                        eqn_str,
-                    ) = convert_var_and_eqn_to_str(
-                        var,
-                        eqn,
-                        all_ic_bc_constants_str,
-                        all_ic_bc_julia_str,
-                        "boundary condition",
-                    )
-
-                    if side == "left":
-                        limit = var_to_ind_vars_left_boundary[var]
-                    elif side == "right":
-                        limit = var_to_ind_vars_right_boundary[var]
-
-                    bc = f"{variable_to_print_name[var]}{limit}"
-                    if typ == "Dirichlet":
-                        bc = bc
-                    elif typ == "Neumann":
-                        bc = f"D{domain_name_to_symbol[tuple(var.domain)]}({bc})"
-                    all_ic_bc_str += f"   {bc} ~ {eqn_str},\n"
-
-    # Replace variables in the julia strings that correspond to pybamm variables with
-    # their julia equivalent
-    for var, julia_id in variable_to_print_name.items():
-        # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
-        cache_var_id = id_to_julia_variable(var.id, "cache")
-        if f"boundary_value_right({cache_var_id})" in all_ic_bc_julia_str:
-            all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
-                f"boundary_value_right({cache_var_id})",
-                julia_id + var_to_ind_vars_right_boundary[var],
-            )
-        # e.g. cache_123456789 gets replaced with u1(t, x)
-        all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
-            cache_var_id, julia_id + var_to_ind_vars[var]
-        )
-
-    ####################################################################################
-
-    # Create ODESystem or PDESystem
-    if not is_pde:
-        mtk_str += "sys = ODESystem(eqs, t)\n\n"
-        mtk_str += (
-            all_ic_bc_constants_str
-            + all_ic_bc_julia_str
-            + "\n"
-            + f"u0 = [\n{all_ic_bc_str}]\n"
-        )
-    else:
-        # Initial and boundary conditions
-        mtk_str += (
-            all_ic_bc_constants_str
-            + all_ic_bc_julia_str
-            + "\n"
-            + f"ics_bcs = [\n{all_ic_bc_str}]\n"
-        )
-
-        # Domains
-        mtk_str += "\n"
-        tpsan_str = ",".join(
-            map(lambda x: f"{x / model.timescale.evaluate():.3f}", tspan)
-        )
-        mtk_str += f"t_domain = Interval({tpsan_str})\n"
-        domains = "domains = [\n   t in t_domain,\n"
-        for domain, symbol in domain_name_to_symbol.items():
-            limits = domain_name_to_limits[tuple(domain)]
-            if limits is not None:
-                mtk_str += f"{symbol}_domain = Interval{limits}\n"
-                domains += f"   {symbol} in {symbol}_domain,\n"
-        domains += "]\n"
-
-        mtk_str += "\n"
-        mtk_str += domains
-
-        # Independent and dependent variables
-        mtk_str += "ind_vars = [{}]\n".format(", ".join(ind_vars))
-        mtk_str += "dep_vars = [{}]\n\n".format(", ".join(dep_vars))
-
-        name = model.name.replace(" ", "_").replace("-", "_")
-        mtk_str += (
-            name
-            + "_pde_system = PDESystem(eqs, ics_bcs, domains, ind_vars, dep_vars)\n\n"
-        )
-
-    # Replace parameters in the julia strings in the form "inputs[name]"
-    # with just "name"
-    for param in model.input_parameters:
-        mtk_str = mtk_str.replace(f"inputs['{param.name}']", param.name)
-
-    # Need to add 'nothing' to the end of the mtk string to avoid errors in MTK v4
-    # See https://github.com/SciML/diffeqpy/issues/82
-    mtk_str += "nothing\nend\n"
-
-    return mtk_str
+                raise NotImplementedError("uh oh")
+        self.write_function_easy(funcname)
+        string = self._cache_and_const_string+self._function_string
+        return string
