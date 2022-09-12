@@ -13,6 +13,7 @@
 ## Optimizations
 
 -   Default options for `particle mechanics` now dealt with differently in each electrode ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+-   Sped up calculations of Electrode SOH variables for summary variables ([#2210](https://github.com/pybamm-team/PyBaMM/pull/2210))
 
 ## Breaking changes
 
