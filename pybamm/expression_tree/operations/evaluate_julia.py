@@ -85,6 +85,9 @@ class JuliaBroadcastableFunction(JuliaFunction):
         self.output = output
         self.shape = shape
 
+class JuliaNegation(JuliaBroadcastableFunction):
+    pass
+
 class JuliaMinimumMaximum(JuliaBroadcastableFunction):
     pass
 
@@ -258,7 +261,7 @@ class JuliaConverter(object):
     #This function breaks down and analyzes any binary tree. Will fail if used on a non-binary tree.
     def break_down_binary(self,symbol):
         #Check for constant
-        #assert not is_constant_and_can_evaluate(symbol)
+        assert not is_constant_and_can_evaluate(symbol)
         
         #We know that this should only have 2 children
         assert len(symbol.children)==2
@@ -369,6 +372,7 @@ class JuliaConverter(object):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_the_nonscalar(id_left,id_right)
         self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max")
+        return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol:pybamm.Power):
@@ -459,6 +463,16 @@ class JuliaConverter(object):
         input = self.convert_tree_to_intermediate(symbol.children[0])
         my_id = symbol.id
         self._intermediate[my_id] = JuliaBroadcastableFunction(my_jl_name,input,my_id,my_shape)
+        return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.Negate):
+        my_jl_name = "-"
+        assert len(symbol.children)==1
+        my_shape = symbol.children[0].shape
+        input = self.convert_tree_to_intermediate(symbol.children[0])
+        my_id = symbol.id
+        self._intermediate[my_id] = JuliaNegation(my_jl_name,input,my_id,my_shape)
         return my_id
 
 
@@ -666,6 +680,14 @@ class JuliaConverter(object):
         code = "{} .= {}.({})\n".format(result_var_name,julia_symbol.name,input_var_name)
         self._function_string+=code
         return 0
+
+    @multimethod
+    def convert_intermediate_to_code(self,julia_symbol:JuliaNegation):
+        result_var_name = self.get_result_variable_name(julia_symbol)
+        input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
+        code = "{} .= -{}\n".format(result_var_name,input_var_name)
+        self._function_string+=code
+        return 0
     
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaMinimumMaximum):
@@ -761,6 +783,15 @@ class JuliaConverter(object):
                 )
         return val_string
     
+    def clear(self):
+        self._intermediate = OrderedDict()
+        self._function_string = ""
+        self._cache_dict = OrderedDict()
+        self._cache_and_const_string = ""
+        self._const_dict = OrderedDict()
+        self._cache_id = 0
+        self._const_id = 0
+    
     #Just get something working here, so can start actual testing
     def write_function_easy(self,funcname):
         #start with the closure
@@ -808,6 +839,9 @@ class JuliaConverter(object):
             elif type(entry) is JuliaScalar:
                 continue
             elif type(entry) is JuliaBroadcastableFunction:
+                self.create_cache(entry)
+                self.convert_intermediate_to_code(entry)
+            elif type(entry) is JuliaNegation:
                 self.create_cache(entry)
                 self.convert_intermediate_to_code(entry)
             elif type(entry) is JuliaMinimumMaximum:

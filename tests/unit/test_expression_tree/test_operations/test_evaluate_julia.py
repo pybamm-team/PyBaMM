@@ -93,6 +93,10 @@ class TestEvaluate(unittest.TestCase):
         self.evaluate_and_test_equal(expr, np.array([2.0, 3.0]))
         self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]))
 
+        # test negation
+        expr = pybamm.Negate(a * b)
+        self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]))
+
         # test function(a*b)
         expr = pybamm.cos(a * b)
         self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]), funcname="g")
