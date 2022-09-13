@@ -25,7 +25,6 @@ jobs:
           paths_ignore: '["**/README.md"]'
 
   build:
-    needs: style
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
