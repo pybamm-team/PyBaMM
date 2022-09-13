@@ -149,6 +149,11 @@ class TestUtil(unittest.TestCase):
             compatible = pybamm.is_jax_compatible()
             self.assertTrue(compatible)
 
+    def test_git_commit_info(self):
+        git_commit_info = pybamm.get_git_commit_info()
+        self.assertIsInstance(git_commit_info, str)
+        self.assertEqual(git_commit_info[:2], "v2")
+
 
 class TestSearch(unittest.TestCase):
     def test_url_gets_to_stdout(self):

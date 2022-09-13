@@ -48,7 +48,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         the FiniteVolume method.
 
         Parameters
-        -----------
+        ----------
         symbol : :class:`pybamm.SpatialVariable`
             The spatial variable to be discretised.
 
