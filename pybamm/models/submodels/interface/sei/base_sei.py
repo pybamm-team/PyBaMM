@@ -206,7 +206,8 @@ class BaseModel(BaseInterface):
             n_outer_av = pybamm.x_average(n_outer)
 
             n_SEI = n_inner + n_outer / v_bar  # SEI concentration
-            n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
+            n_SEI_xav = pybamm.x_average(n_SEI)
+            n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
             delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
@@ -230,7 +231,7 @@ class BaseModel(BaseInterface):
                     "X-averaged outer SEI concentration [mol.m-3]": n_outer_av
                     * n_outer_scale,
                     "SEI concentration [mol.m-3]": n_SEI * n_scale,
-                    "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
+                    "X-averaged SEI concentration [mol.m-3]": n_SEI_xav * n_scale,
                     "Loss of lithium to SEI [mol]": Q_sei,
                     "Loss of capacity to SEI [A.h]": Q_sei * self.param.F / 3600,
                 }
@@ -248,11 +249,13 @@ class BaseModel(BaseInterface):
             n_outer_cr_av = pybamm.x_average(n_outer_cr)
 
             n_SEI_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
-            n_SEI_cr_av = pybamm.yz_average(pybamm.x_average(n_SEI_cr))
+            n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+            n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
-            # Calculate change in SEI cracks concentration with respect to initial state
-            rho_cr = param.n.rho_cr
-            n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
+            # Calculate change in SEI cracks concentration
+            # Initial state depends on roughness (to avoid division by zero)
+            roughness_av = pybamm.x_average(roughness)
+            n_SEI_cr_init = (L_inner_0 + L_outer_0 / v_bar) * (roughness_av - 1) / 10000
             delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
             # Q_sei_cr in mol
@@ -275,7 +278,7 @@ class BaseModel(BaseInterface):
                     "X-averaged outer SEI on cracks "
                     "concentration [mol.m-3]": n_outer_cr_av * n_outer_scale,
                     "SEI on cracks concentration [mol.m-3]": n_SEI_cr * n_scale,
-                    "X-averaged SEI on cracks concentration [mol.m-3]": n_SEI_cr_av
+                    "X-averaged SEI on cracks concentration [mol.m-3]": n_SEI_cr_xav
                     * n_scale,
                     "Loss of lithium to SEI on cracks [mol]": Q_sei_cr,
                     "Loss of capacity to SEI on cracks [A.h]": Q_sei_cr

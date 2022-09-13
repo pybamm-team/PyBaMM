@@ -280,12 +280,15 @@ class TestBaseBatteryModel(unittest.TestCase):
                     )
                 }
             )
+
         # check default options change
-        model = pybamm.BaseBatteryModel({"loss of active material": "stress-driven"})
-        self.assertEqual(model.options["particle mechanics"], "swelling only")
-        self.assertEqual(model.options["stress-induced diffusion"], "true")
-        model = pybamm.BaseBatteryModel({"SEI on cracks": "true"})
-        self.assertEqual(model.options["particle mechanics"], "swelling and cracking")
+        model = pybamm.BaseBatteryModel({
+            "loss of active material": "stress-driven",
+            "SEI on cracks": "true"
+        })
+        self.assertEqual(model.options["particle mechanics"], (
+            "swelling and cracking", "swelling only"
+        ))
         self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
