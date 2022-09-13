@@ -37,7 +37,7 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
             f"{Domain} electrode {{}}volumetric interfacial current density",
-            f"{Domain} electrode {{}}volumetric " "interfacial current density [A.m-3]",
+            f"{Domain} electrode {{}}volumetric interfacial current density [A.m-3]",
             f"X-averaged {domain} electrode {{}}volumetric "
             "interfacial current density",
         ]:

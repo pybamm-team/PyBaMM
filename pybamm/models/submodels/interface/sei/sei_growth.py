@@ -214,10 +214,10 @@ class SEIGrowth(BaseModel):
                 l_cr = variables["Negative particle crack length"]
                 dl_cr = variables["Negative particle cracking rate"]
             spreading_outer = (
-                dl_cr / l_cr * (self.phase_param.L_outer_0 / 10000 - L_outer)
+                dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)
             )
             spreading_inner = (
-                dl_cr / l_cr * (self.phase_param.L_inner_0 / 10000 - L_inner)
+                dl_cr / l_cr * (self.phase_param.L_inner_crack_0 - L_inner)
             )
         else:
             spreading_outer = 0
@@ -242,14 +242,12 @@ class SEIGrowth(BaseModel):
             L_inner = variables[f"Inner {self.reaction_name}thickness"]
             L_outer = variables[f"Outer {self.reaction_name}thickness"]
 
-        L_inner_0 = self.phase_param.L_inner_0
-        L_outer_0 = self.phase_param.L_outer_0
-
         if self.reaction == "SEI on cracks":
-            # Dividing by 10000 makes initial condition effectively zero
-            # without triggering division by zero errors
-            L_inner_0 = L_inner_0 / 10000
-            L_outer_0 = L_outer_0 / 10000
+            L_inner_0 = self.phase_param.L_inner_crack_0
+            L_outer_0 = self.phase_param.L_outer_crack_0
+        else:
+            L_inner_0 = self.phase_param.L_inner_0
+            L_outer_0 = self.phase_param.L_outer_0
         if self.options["SEI"] == "ec reaction limited":
             self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:

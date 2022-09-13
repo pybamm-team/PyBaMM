@@ -197,9 +197,15 @@ class BaseModel(BaseInterface):
             if self.options["SEI"] == "ec reaction limited":
                 L_inner_0 = 0
                 L_outer_0 = 1
+                L_inner_crack_0 = 0
+                # Dividing by 10000 makes initial condition effectively zero
+                # without triggering division by zero errors
+                L_outer_crack_0 = 1 / 10000
             else:
                 L_inner_0 = phase_param.L_inner_0
                 L_outer_0 = phase_param.L_outer_0
+                L_inner_crack_0 = phase_param.L_inner_crack_0
+                L_outer_crack_0 = phase_param.L_outer_crack_0
 
         if self.reaction == "SEI":
             L_inner = variables[f"Inner {reaction_name}thickness"]
@@ -212,7 +218,8 @@ class BaseModel(BaseInterface):
             n_outer_av = pybamm.x_average(n_outer)
 
             n_SEI = n_inner + n_outer / v_bar  # SEI concentration
-            n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
+            n_SEI_xav = pybamm.x_average(n_SEI)
+            n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
             delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
@@ -238,7 +245,7 @@ class BaseModel(BaseInterface):
                     "concentration [mol.m-3]": n_outer_av * n_outer_scale,
                     f"{reaction_name}concentration [mol.m-3]": n_SEI * n_scale,
                     f"X-averaged {reaction_name}"
-                    "concentration [mol.m-3]": n_SEI_av * n_scale,
+                    "concentration [mol.m-3]": n_SEI_xav * n_scale,
                     f"Loss of lithium to {reaction_name}[mol]": Q_sei,
                     f"Loss of capacity to {reaction_name}[A.h]": Q_sei
                     * self.param.F
@@ -258,11 +265,17 @@ class BaseModel(BaseInterface):
             n_outer_cr_av = pybamm.x_average(n_outer_cr)
 
             n_SEI_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
-            n_SEI_cr_av = pybamm.yz_average(pybamm.x_average(n_SEI_cr))
+            n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+            n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
-            # Calculate change in SEI cracks concentration with respect to initial state
-            rho_cr = self.param.n.rho_cr
-            n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
+            # Calculate change in SEI cracks concentration
+            # Initial state depends on roughness (to avoid division by zero)
+            roughness_av = pybamm.x_average(roughness)
+            # choose an initial condition that is as close to zero to get the
+            # physics right, but doesn't cause a division by zero error
+            n_SEI_cr_init = (L_inner_crack_0 + L_outer_crack_0 / v_bar) * (
+                roughness_av - 1
+            )
             delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
             # Q_sei_cr in mol
@@ -287,7 +300,7 @@ class BaseModel(BaseInterface):
                     "concentration [mol.m-3]": n_outer_cr_av * n_outer_scale,
                     f"{reaction_name}" "concentration [mol.m-3]": n_SEI_cr * n_scale,
                     f"X-averaged {reaction_name}"
-                    "concentration [mol.m-3]": n_SEI_cr_av * n_scale,
+                    "concentration [mol.m-3]": n_SEI_cr_xav * n_scale,
                     f"Loss of lithium to {reaction_name}[mol]": Q_sei_cr,
                     f"Loss of capacity to {reaction_name}[A.h]": Q_sei_cr
                     * self.param.F
