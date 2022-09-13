@@ -18,6 +18,7 @@
 
 ## Breaking changes
 
+-   When creating a `pybamm.Interpolant` the default interpolator is now "linear". Passing data directly to `ParameterValues` using the ``[data]`` tag will be still used to create a cubic spline interpolant, as before ([#2258](https://github.com/pybamm-team/PyBaMM/pull/2258))
 -   Events must now be defined in such a way that they are positive at the initial conditions (events will be triggered when they become negative, instead of when they change sign in either direction) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
 
 # [v22.8](https://github.com/pybamm-team/PyBaMM/tree/v22.8) - 2022-08-31

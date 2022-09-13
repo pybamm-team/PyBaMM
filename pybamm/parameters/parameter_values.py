@@ -617,8 +617,14 @@ class ParameterValues:
                     else:
                         input_data = data
 
+                    # For parameters provided as data we use a cubic interpolant
+                    # Note: the cubic interpolant can be differentiated
                     function = pybamm.Interpolant(
-                        input_data[0], input_data[-1], new_children, name=name
+                        input_data[0],
+                        input_data[-1],
+                        new_children,
+                        interpolator="cubic",
+                        name=name,
                     )
                     # Define event to catch extrapolation. In these events the sign is
                     # important: it should be positive inside of the range and negative
