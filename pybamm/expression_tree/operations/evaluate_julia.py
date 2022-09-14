@@ -798,7 +798,7 @@ class JuliaConverter(object):
         cache_id = self._cache_id+1
         self._cache_id = cache_id
         cache_name = "cache_{}".format(cache_id)
-        if cache_shape!=(1,1):
+        if (cache_shape!=(1,1)) | (type(symbol)==JuliaMatrixMultiplication):
             self._cache_dict[symbol.output] = "cs."+cache_name
             if self._cache_type=="standard":
                 if cache_shape[1] == 1:
