@@ -46,11 +46,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
         # Add relevant secondary length scales
-        phases_p = int(getattr(self.options, "positive")["particle phases"])
-        if phases_p >= 2:
+        if len(self.options.phases["positive"]) >= 2:
             self._length_scales["positive secondary particle"] = self.param.p.sec.R_typ
-        phases_n = int(getattr(self.options, "negative")["particle phases"])
-        if not self.half_cell and phases_n >= 2:
+        if not self.half_cell and len(self.options.phases["negative"]) >= 2:
             self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
 
         self.set_standard_output_variables()
@@ -132,12 +130,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         domains = [d for d in self.options.whole_cell_domains if d != "Separator"]
         for Domain in domains:
             domain = Domain.lower()
-            phases = self.options.phase_number_to_names(
-                getattr(self.options, domain.split()[0])["particle phases"]
-            )
             self.variables[f"Total lithium in {domain} [mol]"] = sum(
                 self.variables[f"Total lithium in {phase} phase in {domain} [mol]"]
-                for phase in phases
+                for phase in self.options.phases[domain]
             )
 
             # LAM
@@ -246,10 +241,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
             domain_options = getattr(self.options, domain)
-            phases = self.options.phase_number_to_names(
-                domain_options["particle phases"]
-            )
-            for phase in phases:
+            for phase in self.options.phases[domain]:
                 ocp_option = getattr(domain_options, phase)["open circuit potential"]
                 ocp_submodels = pybamm.open_circuit_potential
                 if ocp_option == "single":
@@ -336,9 +328,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:
             lam = getattr(self.options, domain)["loss of active material"]
-            phases = self.options.phase_number_to_names(
-                getattr(self.options, domain)["particle phases"]
-            )
+            phases = self.options.phases[domain]
             for phase in phases:
                 if lam == "none":
                     submod = pybamm.active_material.Constant(

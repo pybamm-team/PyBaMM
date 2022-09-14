@@ -28,9 +28,7 @@ class Total(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
 
-        phases = self.options.phase_number_to_names(
-            getattr(self.options, domain)["particle phases"]
-        )
+        phases = self.options.phases[domain]
         eps_solid = sum(
             variables[f"{Domain} electrode {phase} active material volume fraction"]
             for phase in phases

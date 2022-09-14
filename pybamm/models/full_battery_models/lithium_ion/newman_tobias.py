@@ -59,10 +59,7 @@ class NewmanTobias(DFN):
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
             particle = getattr(self.options, domain)["particle"]
-            phases = self.options.phase_number_to_names(
-                getattr(self.options, domain)["particle phases"]
-            )
-            for phase in phases:
+            for phase in self.options.phases[domain]:
                 if particle == "Fickian diffusion":
                     submod = pybamm.particle.FickianDiffusion(
                         self.param, domain, self.options, phase=phase, x_average=True
