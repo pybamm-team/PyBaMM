@@ -243,13 +243,19 @@ class JuliaConverter(object):
     def get_result_variable_name(self,julia_symbol:JuliaStateVector):
         start = julia_symbol.loc[0]+1
         end = julia_symbol.loc[1]
-        return "y[{}:{}]".format(start,end)
+        if start==end:
+            return "y[{}]".format(start)
+        else:
+            return "y[{}:{}]".format(start,end)
     
     @multimethod
     def get_result_variable_name(self,julia_symbol:JuliaStateVectorDot):
         start = julia_symbol.loc[0]+1
         end = julia_symbol.loc[1]
-        return "dy[{}:{}]".format(start,end)
+        if start==end:
+            return "dy[{}]".format(start)
+        else:
+            return "dy[{}:{}]".format(start,end)
     
     @multimethod
     def get_result_variable_name(self,julia_symbol:JuliaBroadcastableFunction):
