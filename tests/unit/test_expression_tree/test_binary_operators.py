@@ -267,19 +267,6 @@ class TestBinaryOperators(unittest.TestCase):
         # check doesn't evaluate on edges anymore
         self.assertEqual(model.variables["inner"].evaluates_on_edges("primary"), False)
 
-        # check _binary_jac
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-
-        inner = pybamm.inner(2, i)
-        self.assertEqual(inner._binary_jac(a, b), 2 * b)
-
-        inner = pybamm.inner(i, 2)
-        self.assertEqual(inner._binary_jac(a, b), 2 * a)
-
-        inner = pybamm.inner(i, i)
-        self.assertEqual(inner._binary_jac(a, b), i * a + i * b)
-
     def test_source(self):
         u = pybamm.Variable("u", domain="current collector")
         v = pybamm.Variable("v", domain="current collector")
