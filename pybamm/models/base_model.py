@@ -1136,20 +1136,20 @@ class BaseModel:
 
         if self.algebraic == {}:
             # ODE model: form dy[] = ...
-            eqn_str = pybamm.get_julia_function(
-                self.concatenated_rhs,
-                funcname=name,
-                input_parameter_order=input_parameter_order,
-                **kwargs,
-            )
+            converter = pybamm.JuliaConverter()
+            converter.convert_tree_to_intermediate(self.concatenated_rhs)
+            eqn_str = converter.build_julia_code(funcname=name)
         else:
             if dae_type == "semi-explicit":
                 len_rhs = None
+                converter = pybamm.JuliaConverter()
+                converter.convert_tree_to_intermediate(self.concatenated_rhs)
+                eqn_str = converter.build_julia_code(funcname=name)
             else:
                 len_rhs = self.concatenated_rhs.size
                 symbol_minus_dy = []
                 end = 0
-                for child in symbol.orphans:
+                for child in self.orphans:
                     start = end
                     end += child.size
                     if end <= len_rhs:
@@ -1157,12 +1157,9 @@ class BaseModel:
                     else:
                         symbol_minus_dy.append(child)
                 symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
-            # DAE model: form out[] = ... - dy[]
-            converter = pybamm.JuliaConverter()
-            converter.convert_tree_to_intermediate(
-                pybamm.numpy_concatenation(self.concatenated_rhs, self.concatenated_algebraic)
-            )
-            eqn_str = converter.build_julia_code(funcname=name)
+                converter = pybamm.JuliaConverter(dae_type="implicit")
+                converter.convert_tree_to_intermediate(symbol)
+                eqn_str = converter.build_julia_code()
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
             ics = self.concatenated_initial_conditions
