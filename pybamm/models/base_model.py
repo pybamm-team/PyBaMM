@@ -1147,16 +1147,13 @@ class BaseModel:
                 len_rhs = None
             else:
                 len_rhs = self.concatenated_rhs.size
+                raise NotImplementedError("can't do this yet")
             # DAE model: form out[] = ... - dy[]
-            eqn_str = pybamm.get_julia_function(
-                pybamm.numpy_concatenation(
-                    self.concatenated_rhs, self.concatenated_algebraic
-                ),
-                funcname=name,
-                input_parameter_order=input_parameter_order,
-                len_rhs=len_rhs,
-                **kwargs,
+            converter = pybamm.JuliaConverter()
+            converter.convert_tree_to_intermediate(
+                pybamm.numpy_concatenation(self.concatenated_rhs, self.concatenated_algebraic)
             )
+            eqn_str = converter.build_julia_code(funcname=name)
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
             ics = self.concatenated_initial_conditions
@@ -1164,13 +1161,9 @@ class BaseModel:
             get_consistent_ics_solver.set_up(self)
             get_consistent_ics_solver._set_initial_conditions(self, {}, False)
             ics = pybamm.Vector(self.y0.full())
-
-        ics_str = pybamm.get_julia_function(
-            ics,
-            funcname=name + "_u0",
-            input_parameter_order=input_parameter_order,
-            **kwargs,
-        )
+        ics_converter = pybamm.JuliaConverter()
+        ics_converter.convert_tree_to_intermediate(ics)
+        ics_str = ics_converter.build_julia_code(funcname=name+"_u0")
         # Change the string to a form for u0
         ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
         ics_str = ics_str.replace("dy", "u0")
@@ -1179,13 +1172,9 @@ class BaseModel:
             size_state = self.concatenated_initial_conditions.size
             state_vector = pybamm.StateVector(slice(0,(size_state-1)))
             expr = pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic).jac(state_vector)
-            jac_str = pybamm.get_julia_function(
-                expr,
-                funcname="jac_"+name,
-                input_parameter_order=input_parameter_order,
-                **kwargs,
-            )
-            jac_str.replace("dy","J")
+            jac_converter = pybamm.JuliaConverter()
+            jac_converter.convert_tree_to_intermediate(expr)
+            jac_str = jac_converter.build_julia_code(funcname="jac_"+name)
             return eqn_str,ics_str,jac_str
 
         return eqn_str, ics_str

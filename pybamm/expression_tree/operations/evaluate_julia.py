@@ -99,10 +99,13 @@ class JuliaIndex(object):
         self.output = output
         self.index = index
         if type(index) is slice:
-            if type(index.step) is None:
-                self.shape = (slice.start-slice.stop,1)
-            elif type(index.step) is int:
-                self.shape = (floor((slice.stop-slice.start)/slice.step),1)
+            if index.step == None:
+                self.shape = ((index.stop)-(index.start),1)
+            elif type(index.step) == int:
+                self.shape = (floor((index.stop-index.start)/index.step),1)
+            else:
+                print(index.step)
+                raise NotImplementedError("asldhfjwaes")
         elif type(index) is int:
             self.shape = (1,1)
         else:
@@ -182,6 +185,7 @@ class JuliaConverter(object):
         self._preallocate=preallocate
         self._dae_type = dae_type
 
+        self._type = "Float64"
         #"Caches"
         #Stores Constants to be Declared in the initial cache
         #insight: everything is just a line of code
@@ -236,7 +240,7 @@ class JuliaConverter(object):
     def get_result_variable_name(self,julia_symbol:JuliaStateVector):
         start = julia_symbol.loc[0]+1
         end = julia_symbol.loc[1]
-        return "(@view y[{}:{}])".format(start,end)
+        return "y[{}:{}]".format(start,end)
     
     @multimethod
     def get_result_variable_name(self,julia_symbol:JuliaBroadcastableFunction):
@@ -250,9 +254,9 @@ class JuliaConverter(object):
             return "{}[{}]".format(lower_var,index+1)
         elif type(index) is slice:
             if index.step is None:
-                return "(@view {}[{}:{}])".format(lower_var,index.start+1,index.stop)
+                return "{}[{}:{}]".format(lower_var,index.start+1,index.stop)
             elif type(index.step) is int:
-                return "(@view {}[{}:{}:{}])".format(lower_var,index.start+1,index.step,index.stop)
+                return "{}[{}:{}:{}]".format(lower_var,index.start+1,index.step,index.stop)
             else:
                 raise NotImplementedError("Step has to be an integer.")
         else:
@@ -261,7 +265,7 @@ class JuliaConverter(object):
     #This function breaks down and analyzes any binary tree. Will fail if used on a non-binary tree.
     def break_down_binary(self,symbol):
         #Check for constant
-        assert not is_constant_and_can_evaluate(symbol)
+        #assert not is_constant_and_can_evaluate(symbol)
         
         #We know that this should only have 2 children
         assert len(symbol.children)==2
@@ -327,7 +331,7 @@ class JuliaConverter(object):
     @multimethod 
     def convert_tree_to_intermediate(self,symbol:pybamm.Multiplication):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
         return my_id
     
@@ -335,63 +339,63 @@ class JuliaConverter(object):
     @multimethod 
     def convert_tree_to_intermediate(self,symbol:pybamm.Inner):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod 
     def convert_tree_to_intermediate(self,symbol:pybamm.Division):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaDivision(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol: pybamm.Addition):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaAddition(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol: pybamm.Subtraction):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaSubtraction(id_left,id_right,my_id,my_shape)
         return my_id
 
     @multimethod
     def convert_tree_to_intermediate(self,symbol:pybamm.Minimum):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
-        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"min")
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
+        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"min.")
         return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol:pybamm.Maximum):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
-        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max")
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
+        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max.")
         return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol:pybamm.Power):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaPower(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol:pybamm.EqualHeaviside):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaBitwiseBinaryOperation(id_left,id_right,my_id,my_shape,"<=")
         return my_id
     
     @multimethod
     def convert_tree_to_intermediate(self,symbol:pybamm.NotEqualHeaviside):
         id_left,id_right,my_id = self.break_down_binary(symbol)
-        my_shape = self.find_the_nonscalar(id_left,id_right)
+        my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaBitwiseBinaryOperation(id_left,id_right,my_id,my_shape,"<")
         return my_id
     
@@ -404,18 +408,34 @@ class JuliaConverter(object):
         self._intermediate[my_id] = JuliaIndex(id_lower,my_id,index)
         return my_id
 
-
-
-    #Convenience function for operations which can have 
-    def find_the_nonscalar(self,id_left,id_right):
-        left_type = type(self._intermediate[id_left])
-        right_type = type(self._intermediate[id_right])
-        if issubclass(left_type,JuliaScalar):
-            return self._intermediate[id_right].shape
-        elif issubclass(right_type,JuliaScalar):
-            return self._intermediate[id_left].shape
+    def find_broadcastable_shape(self,id_left,id_right):
+        left_shape = self._intermediate[id_left].shape
+        right_shape = self._intermediate[id_right].shape
+        #check if either is a scalar
+        if left_shape == (1,1):
+            return right_shape
+        elif right_shape==(1,1):
+            return left_shape
+        elif left_shape==right_shape:
+            return left_shape
+        elif (left_shape[0]==1) & (right_shape[1]==1):
+            return (right_shape[0],left_shape[1])
+        elif (right_shape[0]==1) & (left_shape[1]==1):
+            return (left_shape[0],right_shape[1])
+        elif (right_shape[0]==1) & (right_shape[1]==left_shape[1]):
+            return left_shape
+        elif (left_shape[0]==1) & (right_shape[1]==left_shape[1]):
+            return right_shape
+        elif (right_shape[1]==1) & (right_shape[0]==left_shape[0]):
+            return left_shape
+        elif (left_shape[1]==1) & (right_shape[0]==left_shape[0]):
+            return right_shape
         else:
-            return self.same_shape(id_left,id_right)
+            print("Right type is {}".format(type(self._intermediate[id_right])))
+            print("Right Shape is {}".format(right_shape))
+            print("Left Shape is {}".format(left_shape))
+            raise NotImplementedError("multiplication for the shapes youve requested doesnt work.")
+                
     
     #to find the shape, there are a number of elements that should just have the shame shape as their children. This function removes boilerplate by implementing those cases
     def same_shape(self,id_left,id_right):
@@ -564,9 +584,9 @@ class JuliaConverter(object):
         elif child_var.shape[0] == 1:
             end_row = 1
             if vec:
-                code = "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                code = "{}[{}{} =  {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
             else:
-                code = "{}[{}{} .= {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                code = "{}[{}{} = (@view {})\n".format(my_name,start_row,right_parenthesis,child_var_name)
         else:
             start_row = 1
             end_row = child_var.shape[0]
@@ -616,11 +636,10 @@ class JuliaConverter(object):
                 stop = this_slice.stop
                 start_row = end_row+1
                 end_row = start_row+(stop-start)-1
-                code += "{}[{}:{}{} .= {}[{}:{}{}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+                code += "{}[{}:{}{} .= (@view {}[{}:{}{})\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
         
         self._function_string+=code
         return 0
-
 
     
     @multimethod
@@ -774,9 +793,10 @@ class JuliaConverter(object):
             threshold=max(np.get_printoptions()["threshold"], len(row) + 10)
         )
 
-        val_string = "sparse({}, {}, {}, {}, {})".format(
+        val_string = "sparse({}, {}, {}{}, {}, {})".format(
                     np.array2string(row + 1, separator=","),
                     np.array2string(col + 1, separator=","),
+                    self._type,
                     np.array2string(data, separator=","),
                     m,
                     n,
