@@ -171,6 +171,8 @@ class BaseModel(BaseInterface):
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
+            L_inner_crack_0 = 0
+            L_outer_crack_0 = 0
             z_sei = 1
         else:
             if self.reaction_loc == "interface":
