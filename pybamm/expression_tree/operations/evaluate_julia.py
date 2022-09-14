@@ -609,7 +609,7 @@ class JuliaConverter(object):
         elif child_var.shape[0] == 1:
             end_row = 1
             if vec:
-                code = "{}[{}{} .=  {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                code = "{}[{}:{}{} .=  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
             else:
                 code = "{}[{}{} = (@view {})\n".format(my_name,start_row,right_parenthesis,child_var_name)
         else:
