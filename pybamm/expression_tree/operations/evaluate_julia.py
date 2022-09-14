@@ -129,6 +129,9 @@ class JuliaStateVector(JuliaValue):
         self.loc = loc
         self.shape = shape
 
+class JuliaStateVectorDot(JuliaStateVector):
+    pass
+
 class JuliaScalar(JuliaConstant):
     def __init__(self,id,value):
         self.id = id
@@ -241,6 +244,12 @@ class JuliaConverter(object):
         start = julia_symbol.loc[0]+1
         end = julia_symbol.loc[1]
         return "y[{}:{}]".format(start,end)
+    
+    @multimethod
+    def get_result_variable_name(self,julia_symbol:JuliaStateVectorDot):
+        start = julia_symbol.loc[0]+1
+        end = julia_symbol.loc[1]
+        return "dy[{}:{}]".format(start,end)
     
     @multimethod
     def get_result_variable_name(self,julia_symbol:JuliaBroadcastableFunction):
@@ -551,6 +560,16 @@ class JuliaConverter(object):
         shape = symbol.shape
         self._intermediate[my_id] = JuliaStateVector(id,points,shape)
         return my_id
+    
+    @multimethod
+    def convert_tree_to_intermediate(self,symbol:pybamm.StateVectorDot):
+        my_id = symbol.id
+        first_point = symbol.first_point
+        last_point = symbol.last_point
+        points = (first_point,last_point)
+        shape = symbol.shape
+        self._intermediate[my_id] = JuliaStateVectorDot(id,points,shape)
+        return my_id
         
     #utilities for code conversion
     def get_variables_for_binary_tree(self,julia_symbol):
@@ -855,6 +874,8 @@ class JuliaConverter(object):
             elif type(entry) is JuliaIndex:
                 continue
             elif type(entry) is JuliaStateVector:
+                continue
+            elif type(entry) is JuliaStateVectorDot:
                 continue
             elif type(entry) is JuliaScalar:
                 continue
