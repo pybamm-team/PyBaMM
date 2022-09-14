@@ -771,20 +771,21 @@ class JuliaConverter(object):
         my_id = symbol.output
 
         cache_shape = self._intermediate[my_id].shape
-
         cache_id = self._cache_id+1
         self._cache_id = cache_id
-
         cache_name = "cache_{}".format(cache_id)
-        self._cache_dict[symbol.output] = "cs."+cache_name
-
-        if self._cache_type=="standard":
-            if cache_shape[1] == 1:
-                cache_shape = "({})".format(cache_shape[0])
-            self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape)
+        if cache_shape!=(1,1):
+            self._cache_dict[symbol.output] = "cs."+cache_name
+            if self._cache_type=="standard":
+                if cache_shape[1] == 1:
+                    cache_shape = "({})".format(cache_shape[0])
+                self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape)
+            else:
+                raise NotImplementedError("The cache type you've specified has not yet been implemented")
             return 0
         else:
-            raise NotImplementedError("uh oh")
+            self._cache_dict[symbol.output] = cache_name
+            return 0
 
     
 
