@@ -1146,7 +1146,7 @@ class BaseModel:
                 len_rhs = self.concatenated_rhs.size
                 
             converter = pybamm.JuliaConverter(dae_type=dae_type)
-            converter.convert_tree_to_intermediate(pybamm.numpy_concatenation(pybamm.concatenated_rhs,pybamm.concatenated_algebraic),len_rhs=len_rhs)
+            converter.convert_tree_to_intermediate(pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic),len_rhs=len_rhs)
             eqn_string = converter.build_julia_code(funcname=name)
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
