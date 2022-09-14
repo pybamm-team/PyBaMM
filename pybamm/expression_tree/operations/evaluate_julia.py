@@ -280,15 +280,15 @@ class JuliaConverter(object):
         assert len(symbol.children)==2
 
         #take care of the kids first (this is recursive but multiple-dispatch recursive which is cool)
-        id_left = self.convert_tree_to_intermediate(symbol.children[0])
-        id_right = self.convert_tree_to_intermediate(symbol.children[1])
+        id_left = self._convert_tree_to_intermediate(symbol.children[0])
+        id_right = self._convert_tree_to_intermediate(symbol.children[1])
         my_id = symbol.id
         return id_left,id_right,my_id
     
     def break_down_concatenation(self,symbol):
         child_ids = []
         for child in symbol.children:
-            child_id = self.convert_tree_to_intermediate(child)
+            child_id = self._convert_tree_to_intermediate(child)
             child_ids.append(child_id)
         first_id = child_ids[0]
         num_cols = self._intermediate[first_id].shape[1]
@@ -305,21 +305,21 @@ class JuliaConverter(object):
 
     #Binary trees constructors. All follow the pattern of mat-mul. They need to find their shapes, assuming that the shapes of the nodes one level below them in the expression tree have already been computed.
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.NumpyConcatenation):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.NumpyConcatenation):
         my_id = symbol.id
         children_julia,shape = self.break_down_concatenation(symbol)
         self._intermediate[my_id] = JuliaNumpyConcatenation(my_id,shape,children_julia)
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.SparseStack):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.SparseStack):
         my_id = symbol.id
         children_julia,shape = self.break_down_concatenation(symbol)
         self._intermediate[my_id] = JuliaSparseStack(my_id,shape,children_julia)
         return my_id
 
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.DomainConcatenation):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.DomainConcatenation):
         my_id = symbol.id
         children_julia,shape = self.break_down_concatenation(symbol)
         self._intermediate[my_id] = JuliaDomainConcatenation(my_id,shape,children_julia,symbol.secondary_dimensions_npts,symbol._children_slices)
@@ -327,7 +327,7 @@ class JuliaConverter(object):
 
 
     @multimethod
-    def convert_tree_to_intermediate(self,symbol: pybamm.MatrixMultiplication):
+    def _convert_tree_to_intermediate(self,symbol: pybamm.MatrixMultiplication):
         #Break down the binary tree
         id_left,id_right,my_id = self.break_down_binary(symbol)
         left_shape = self._intermediate[id_left].shape
@@ -338,7 +338,7 @@ class JuliaConverter(object):
         return my_id
     
     @multimethod 
-    def convert_tree_to_intermediate(self,symbol:pybamm.Multiplication):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Multiplication):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
@@ -346,72 +346,72 @@ class JuliaConverter(object):
     
     #Apparently an inner product is a hadamard product in pybamm
     @multimethod 
-    def convert_tree_to_intermediate(self,symbol:pybamm.Inner):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Inner):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod 
-    def convert_tree_to_intermediate(self,symbol:pybamm.Division):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Division):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaDivision(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol: pybamm.Addition):
+    def _convert_tree_to_intermediate(self,symbol: pybamm.Addition):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaAddition(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol: pybamm.Subtraction):
+    def _convert_tree_to_intermediate(self,symbol: pybamm.Subtraction):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaSubtraction(id_left,id_right,my_id,my_shape)
         return my_id
 
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Minimum):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Minimum):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"min.")
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Maximum):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Maximum):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max.")
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Power):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Power):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaPower(id_left,id_right,my_id,my_shape)
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.EqualHeaviside):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.EqualHeaviside):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaBitwiseBinaryOperation(id_left,id_right,my_id,my_shape,"<=")
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.NotEqualHeaviside):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.NotEqualHeaviside):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
         self._intermediate[my_id] = JuliaBitwiseBinaryOperation(id_left,id_right,my_id,my_shape,"<")
         return my_id
     
     @multimethod 
-    def convert_tree_to_intermediate(self,symbol:pybamm.Index):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Index):
         assert len(symbol.children)==1
-        id_lower = self.convert_tree_to_intermediate(symbol.children[0])
+        id_lower = self._convert_tree_to_intermediate(symbol.children[0])
         my_id = symbol.id
         index = symbol.index
         self._intermediate[my_id] = JuliaIndex(id_lower,my_id,index)
@@ -457,7 +457,7 @@ class JuliaConverter(object):
     #Functions
     #Broadcastable functions have 1 input and 1 output, and the input and output have the same shape. The hard part is that we have to know which is which and pybamm doesn't differentiate between the two. So, we have to do that with an if statement.
     @multimethod
-    def convert_tree_to_intermediate(self,symbol):
+    def _convert_tree_to_intermediate(self,symbol):
             raise NotImplementedError(
             "Conversion to Julia not implemented for a symbol of type '{}'".format(
                 type(symbol)
@@ -465,41 +465,41 @@ class JuliaConverter(object):
         )
 
     @multimethod 
-    def convert_tree_to_intermediate(self,symbol:pybamm.Min):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Min):
         my_jl_name = symbol.julia_name
         assert len(symbol.children)==1
         my_shape = (1,1)
-        input = self.convert_tree_to_intermediate(symbol.children[0])
+        input = self._convert_tree_to_intermediate(symbol.children[0])
         my_id = symbol.id
         self._intermediate[my_id] = JuliaMinimumMaximum(my_jl_name,input,my_id,my_shape)
         return my_id
     
     @multimethod 
-    def convert_tree_to_intermediate(self,symbol:pybamm.Max):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Max):
         my_jl_name = symbol.julia_name
         assert len(symbol.children)==1
         my_shape = (1,1)
-        input = self.convert_tree_to_intermediate(symbol.children[0])
+        input = self._convert_tree_to_intermediate(symbol.children[0])
         my_id = symbol.id
         self._intermediate[my_id] = JuliaMinimumMaximum(my_jl_name,input,my_id,my_shape)
         return my_id
 
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Function):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Function):
         my_jl_name = symbol.julia_name
         assert len(symbol.children)==1
         my_shape = symbol.children[0].shape
-        input = self.convert_tree_to_intermediate(symbol.children[0])
+        input = self._convert_tree_to_intermediate(symbol.children[0])
         my_id = symbol.id
         self._intermediate[my_id] = JuliaBroadcastableFunction(my_jl_name,input,my_id,my_shape)
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Negate):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Negate):
         my_jl_name = "-"
         assert len(symbol.children)==1
         my_shape = symbol.children[0].shape
-        input = self.convert_tree_to_intermediate(symbol.children[0])
+        input = self._convert_tree_to_intermediate(symbol.children[0])
         my_id = symbol.id
         self._intermediate[my_id] = JuliaNegation(my_jl_name,input,my_id,my_shape)
         return my_id
@@ -508,7 +508,7 @@ class JuliaConverter(object):
 
     #Constants and Values. There are only 2 of these. They must know their own shapes.
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Matrix):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Matrix):
         assert is_constant_and_can_evaluate(symbol)
         my_id = symbol.id
         value = symbol.evaluate()
@@ -519,7 +519,7 @@ class JuliaConverter(object):
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Vector):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Vector):
         assert is_constant_and_can_evaluate(symbol)
         my_id = symbol.id
         value = symbol.evaluate()
@@ -530,7 +530,7 @@ class JuliaConverter(object):
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Scalar):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Scalar):
         assert is_constant_and_can_evaluate(symbol)
         my_id = symbol.id
         value = symbol.evaluate()
@@ -538,13 +538,13 @@ class JuliaConverter(object):
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.Time):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.Time):
         my_id = symbol.id
         self._intermediate[my_id] = JuliaTime(my_id)
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.InputParameter):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.InputParameter):
         my_id = symbol.id
         name = symbol.name
         self._intermediate[my_id] = JuliaInput(my_id,name)
@@ -552,7 +552,7 @@ class JuliaConverter(object):
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.StateVector):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.StateVector):
         my_id = symbol.id
         first_point = symbol.first_point
         last_point = symbol.last_point
@@ -562,7 +562,7 @@ class JuliaConverter(object):
         return my_id
     
     @multimethod
-    def convert_tree_to_intermediate(self,symbol:pybamm.StateVectorDot):
+    def _convert_tree_to_intermediate(self,symbol:pybamm.StateVectorDot):
         my_id = symbol.id
         first_point = symbol.first_point
         last_point = symbol.last_point
@@ -860,8 +860,22 @@ class JuliaConverter(object):
         return 0
         
 
-
-    
+    #this function will be the top level. 
+    def convert_tree_to_intermediate(self,symbol):
+        if self._dae_type == "implicit":
+            len_rhs = symbol.concatenated_rhs.size
+            symbol_minus_dy = []
+            end = 0
+            for child in symbol.orphans:
+                start = end
+                end += child.size
+                if end <= len_rhs:
+                    symbol_minus_dy.append(child - pybamm.StateVectorDot(slice(start, end)))
+                else:
+                    symbol_minus_dy.append(child)
+            symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
+        self._convert_tree_to_intermediate(symbol)
+        return 0
 
     #rework this at some point
     def build_julia_code(self,funcname="f"):

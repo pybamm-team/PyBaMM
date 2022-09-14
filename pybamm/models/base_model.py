@@ -1147,7 +1147,16 @@ class BaseModel:
                 len_rhs = None
             else:
                 len_rhs = self.concatenated_rhs.size
-                raise NotImplementedError("can't do this yet")
+                symbol_minus_dy = []
+                end = 0
+                for child in symbol.orphans:
+                    start = end
+                    end += child.size
+                    if end <= len_rhs:
+                        symbol_minus_dy.append(child - pybamm.StateVectorDot(slice(start, end)))
+                    else:
+                        symbol_minus_dy.append(child)
+                symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
             # DAE model: form out[] = ... - dy[]
             converter = pybamm.JuliaConverter()
             converter.convert_tree_to_intermediate(
