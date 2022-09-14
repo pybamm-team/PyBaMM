@@ -861,9 +861,9 @@ class JuliaConverter(object):
         
 
     #this function will be the top level. 
-    def convert_tree_to_intermediate(self,symbol):
+    def convert_tree_to_intermediate(self,symbol,len_rhs=None):
         if self._dae_type == "implicit":
-            len_rhs = symbol.concatenated_rhs.size
+            assert len_rhs != None
             symbol_minus_dy = []
             end = 0
             for child in symbol.orphans:

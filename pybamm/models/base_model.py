@@ -1142,24 +1142,12 @@ class BaseModel:
         else:
             if dae_type == "semi-explicit":
                 len_rhs = None
-                converter = pybamm.JuliaConverter()
-                converter.convert_tree_to_intermediate(self.concatenated_rhs)
-                eqn_str = converter.build_julia_code(funcname=name)
             else:
                 len_rhs = self.concatenated_rhs.size
-                symbol_minus_dy = []
-                end = 0
-                for child in self.orphans:
-                    start = end
-                    end += child.size
-                    if end <= len_rhs:
-                        symbol_minus_dy.append(child - pybamm.StateVectorDot(slice(start, end)))
-                    else:
-                        symbol_minus_dy.append(child)
-                symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
-                converter = pybamm.JuliaConverter(dae_type="implicit")
-                converter.convert_tree_to_intermediate(symbol)
-                eqn_str = converter.build_julia_code()
+                
+            converter = pybamm.JuliaConverter(dae_type=dae_type)
+            converter.convert_tree_to_intermediate(pybamm.numpy_concatenation(pybamm.concatenated_rhs,pybamm.concatenated_algebraic),len_rhs=len_rhs)
+            eqn_string = converter.build_julia_code(funcname=name)
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
             ics = self.concatenated_initial_conditions
