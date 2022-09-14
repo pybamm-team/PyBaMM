@@ -670,10 +670,13 @@ class JuliaConverter(object):
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaMatrixMultiplication):
         left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        if julia_symbol.shape==(1,1):
+            code = "{} = {} * {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            if self._preallocate:
+                code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
+            else:
+                code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
         self._function_string+=code
         return 0
 
@@ -798,7 +801,7 @@ class JuliaConverter(object):
         cache_id = self._cache_id+1
         self._cache_id = cache_id
         cache_name = "cache_{}".format(cache_id)
-        if (cache_shape!=(1,1)) | (type(symbol)==JuliaMatrixMultiplication):
+        if (cache_shape!=(1,1)):
             self._cache_dict[symbol.output] = "cs."+cache_name
             if self._cache_type=="standard":
                 if cache_shape[1] == 1:
