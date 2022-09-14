@@ -670,65 +670,50 @@ class JuliaConverter(object):
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaMatrixMultiplication):
         left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if julia_symbol.shape==(1,1):
-            code = "{} = {} * {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        if self._preallocate:
+            code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            if self._preallocate:
-                code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
-            else:
-                code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
         self._function_string+=code
         return 0
 
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaAddition):
         left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if julia_symbol.shape==(1,1):
-            code = "{} = {} + {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        if self._preallocate:
+            code = "{} .= {} .+ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            if self._preallocate:
-                code = "{} .= {} .+ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-            else:
-                code = "{} = {} .+ {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            code = "{} = {} .+ {}".format(result_var_name,left_input_var_name,right_input_var_name)
         self._function_string+=code
         return 0
     
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaSubtraction):
         left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if julia_symbol.shape==(1,1):
-            code = "{} = {} - {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        if self._preallocate:
+            code = "{} .= {} .- {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            if self._preallocate:
-                code = "{} .= {} .- {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-            else:
-                code = "{} = {} .- {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            code = "{} = {} .- {}".format(result_var_name,left_input_var_name,right_input_var_name)
         self._function_string+=code
         return 0
 
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaMultiplication):
         left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if julia_symbol.shape==(1,1):
-            code = "{} = {} * {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        if self._preallocate:
+            code = "{} .= {} .* {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            if self._preallocate:
-                code = "{} .= {} .* {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-            else:
-                code = "{} = {} .* {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            code = "{} = {} .* {}".format(result_var_name,left_input_var_name,right_input_var_name)
         self._function_string+=code
         return 0 
     
     @multimethod
     def convert_intermediate_to_code(self,julia_symbol:JuliaDivision):
         left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if julia_symbol.shape==(1,1):
-            code = "{} = {} / {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        if self._preallocate:
+            code = "{} .= {} ./ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            if self._preallocate:
-                code = "{} .= {} ./ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-            else:
-                code = "{} = {} ./ {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            code = "{} = {} ./ {}".format(result_var_name,left_input_var_name,right_input_var_name)
         self._function_string+=code
         return 0  
 
@@ -736,10 +721,7 @@ class JuliaConverter(object):
     def convert_intermediate_to_code(self,julia_symbol:JuliaBroadcastableFunction):
         result_var_name = self.get_result_variable_name(julia_symbol)
         input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
-        if julia_symbol.shape==(1,1):
-            code = "{} = {}({})\n".format(result_var_name,julia_symbol.name,input_var_name)
-        else:
-            code = "{} .= {}.({})\n".format(result_var_name,julia_symbol.name,input_var_name)
+        code = "{} .= {}.({})\n".format(result_var_name,julia_symbol.name,input_var_name)
         self._function_string+=code
         return 0
 
@@ -747,10 +729,7 @@ class JuliaConverter(object):
     def convert_intermediate_to_code(self,julia_symbol:JuliaNegation):
         result_var_name = self.get_result_variable_name(julia_symbol)
         input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
-        if julia_symbol.shape==(1,1):
-            code = "{} = -{}\n".format(result_var_name,input_var_name)
-        else:
-            code = "{} .= -{}\n".format(result_var_name,input_var_name)
+        code = "{} .= -{}\n".format(result_var_name,input_var_name)
         self._function_string+=code
         return 0
     
