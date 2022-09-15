@@ -1101,7 +1101,7 @@ class BaseModel:
 
     def generate_julia_diffeq(
         self,
-        input_parameter_order=None,
+        input_parameter_order=[],
         get_consistent_ics_solver=None,
         dae_type="semi-explicit",
         generate_jacobian=False,
