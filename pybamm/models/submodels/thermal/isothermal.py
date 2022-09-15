@@ -28,16 +28,13 @@ class Isothermal(BaseThermal):
         T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
 
         T_dict = {
-            "Negative current collector": T_x_av,
-            "Positive current collector": T_x_av,
-            "X-averaged cell": T_x_av,
-            "Volume-averaged cell": T_x_av,
+            "negative current collector": T_x_av,
+            "positive current collector": T_x_av,
+            "x-averaged cell": T_x_av,
+            "volume-averaged cell": T_x_av,
         }
         for domain in ["negative electrode", "separator", "positive electrode"]:
-            if domain in self.options.whole_cell_domains:
-                T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
-            else:
-                T_dict[domain] = None
+            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
         variables = self._get_standard_fundamental_variables(T_dict)
 

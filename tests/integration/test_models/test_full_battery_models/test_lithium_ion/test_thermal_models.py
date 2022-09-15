@@ -40,16 +40,16 @@ class TestThermal(unittest.TestCase):
             # high thermal and electrical conductivity in current collectors
             parameter_values.update(
                 {
-                    "Negative current collector"
+                    "negative current collector"
                     + " surface heat transfer coefficient [W.m-2.K-1]": 10,
-                    "Positive current collector"
+                    "positive current collector"
                     + " surface heat transfer coefficient [W.m-2.K-1]": 5,
                     "Negative tab heat transfer coefficient [W.m-2.K-1]": 250,
                     "Positive tab heat transfer coefficient [W.m-2.K-1]": 250,
                     "Edge heat transfer coefficient [W.m-2.K-1]": 100,
-                    "Negative current collector"
+                    "negative current collector"
                     + " thermal conductivity [W.m-1.K-1]": 267.467 * 100000,
-                    "Positive current collector"
+                    "positive current collector"
                     + " thermal conductivity [W.m-1.K-1]": 158.079 * 100000,
                     "Negative current collector conductivity [S.m-1]": 1e10,
                     "Positive current collector conductivity [S.m-1]": 1e10,

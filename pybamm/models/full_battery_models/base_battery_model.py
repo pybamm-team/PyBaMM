@@ -1126,36 +1126,21 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_thermal_submodel(self):
 
         if self.options["thermal"] == "isothermal":
-            thermal_submodel = pybamm.thermal.isothermal.Isothermal(
-                self.param, self.options
-            )
-
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal
         elif self.options["thermal"] == "lumped":
-            thermal_submodel = pybamm.thermal.Lumped(
-                self.param,
-                self.options,
-            )
-
+            thermal_submodel = pybamm.thermal.Lumped
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.Lumped(self.param, self.options)
+                thermal_submodel = pybamm.thermal.Lumped
             elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
-                    self.param,
-                    self.options,
-                )
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D
             elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
-                    self.param,
-                    self.options,
-                )
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.OneDimensionalX(
-                    self.param, self.options
-                )
+                thermal_submodel = pybamm.thermal.OneDimensionalX
 
-        self.submodels["thermal"] = thermal_submodel
+        self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
     def set_current_collector_submodel(self):
 

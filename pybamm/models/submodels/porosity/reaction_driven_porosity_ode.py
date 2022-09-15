@@ -51,19 +51,20 @@ class ReactionDrivenODE(BaseModel):
 
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
-            domain_param = self.param.domain_params[domain]
+            domain_param = self.param.domain_params[domain.split()[0]]
             if domain == "separator":
-                if self.x_average is True:
-                    depsdt_k = pybamm.PrimaryBroadcast(0, "current collector")
-                else:
-                    depsdt_k = pybamm.FullBroadcast(0, domain, "current collector")
+                depsdt_k = pybamm.FullBroadcast(0, domain, "current collector")
             else:
                 if self.x_average is True:
-                    j_k = variables[f"X-averaged {domain} interfacial current density"]
+                    j_k_av = variables[
+                        f"X-averaged {domain} interfacial current density"
+                    ]
+                    depsdt_k_av = -domain_param.beta_surf * j_k_av
+                    depsdt_k = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
                 else:
                     Domain = domain.capitalize()
                     j_k = variables[f"{Domain} interfacial current density"]
-                depsdt_k = -domain_param.beta_surf * j_k
+                    depsdt_k = -domain_param.beta_surf * j_k
 
             depsdt_dict[domain] = depsdt_k
         variables.update(self._get_standard_porosity_change_variables(depsdt_dict))
@@ -85,7 +86,7 @@ class ReactionDrivenODE(BaseModel):
         if self.x_average is True:
             for domain in self.options.whole_cell_domains:
                 eps_k_av = variables[f"X-averaged {domain} porosity"]
-                domain_param = self.param.domain_params[domain]
+                domain_param = self.param.domain_params[domain.split()[0]]
                 self.initial_conditions[eps_k_av] = domain_param.epsilon_init
         else:
             eps = variables["Porosity"]

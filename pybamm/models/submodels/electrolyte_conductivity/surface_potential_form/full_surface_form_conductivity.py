@@ -98,22 +98,16 @@ class BaseModel(BaseElectrolyteConductivity):
         variables[f"{Domain} electrolyte potential"] = phi_e
 
         if self.domain == "positive":
-            phi_e_s = variables["Separator electrolyte potential"]
-            phi_e_p = variables["Positive electrolyte potential"]
+            phi_e_dict = {}
+            i_e_dict = {}
+            for domain in self.options.whole_cell_domains:
+                Domain = domain.capitalize().split()[0]
+                phi_e_dict[domain] = variables[f"{Domain} electrolyte potential"]
+                i_e_dict[domain] = variables[f"{Domain} electrolyte current density"]
 
-            if self.options.electrode_types["negative"] == "planar":
-                phi_e_n = None
-                i_e_n = None
-            else:
-                phi_e_n = variables["Negative electrolyte potential"]
-                i_e_n = variables["Negative electrolyte current density"]
-            i_e_s = variables["Separator electrolyte current density"]
-            i_e_p = variables["Positive electrolyte current density"]
-            i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
+            variables.update(self._get_standard_potential_variables(phi_e_dict))
 
-            variables.update(
-                self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-            )
+            i_e = pybamm.concatenation(*i_e_dict.values())
             variables.update(self._get_standard_current_variables(i_e))
             variables.update(self._get_electrolyte_overpotentials(variables))
 

@@ -215,7 +215,7 @@ class LOQS(BaseModel):
 
         for domain in ["negative", "positive"]:
             self.submodels[f"{domain} surface potential difference"] = surf_model(
-                self.param, domain
+                self.param, domain, self.options
             )
 
         self.submodels[

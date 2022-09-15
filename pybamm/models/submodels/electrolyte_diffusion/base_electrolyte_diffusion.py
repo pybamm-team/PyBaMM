@@ -87,16 +87,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             variables[f"{Domain} porosity times concentration"] = eps_c_e_k
 
         # Total lithium concentration in electrolyte
-        c_e_typ = self.param.c_e_typ
-        L_x = self.param.L_x
-        A = self.param.A_cc
-        eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
-        variables.update(
-            {
-                "Total lithium in electrolyte": eps_c_e_av,
-                "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av,
-            }
-        )
+        variables.update(self._get_total_concentration_electrolyte(eps_c_e))
 
         return variables
 
@@ -123,6 +114,32 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables = {
             "Electrolyte flux": N_e,
             "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
+        }
+
+        return variables
+
+    def _get_total_concentration_electrolyte(self, eps_c_e):
+        """
+        A private function to obtain the total ion concentration in the electrolyte.
+        Parameters
+        ----------
+        eps_c_e : :class:`pybamm.Symbol`
+            Porosity times electrolyte concentration
+        Returns
+        -------
+        variables : dict
+            The "Total lithium in electrolyte [mol]" variable.
+        """
+
+        c_e_typ = self.param.c_e_typ
+        L_x = self.param.L_x
+        A = self.param.A_cc
+
+        eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
+
+        variables = {
+            "Total lithium in electrolyte": eps_c_e_av,
+            "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av,
         }
 
         return variables

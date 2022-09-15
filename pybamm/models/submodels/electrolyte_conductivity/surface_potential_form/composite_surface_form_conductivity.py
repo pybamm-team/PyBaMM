@@ -18,13 +18,14 @@ class BaseModel(Composite):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
-
+    options : dict
+        Additional options to pass to the model
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.Composite`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
 
@@ -85,13 +86,16 @@ class CompositeDifferential(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    domain : str
+        The domain in which the model holds
+    options : dict
+        Additional options to pass to the model
 
     **Extends:** :class:`BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
         domain = self.domain
@@ -124,13 +128,16 @@ class CompositeAlgebraic(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    domain : str
+        The domain in which the model holds
+    options : dict
+        Additional options to pass to the model
 
     **Extends:** :class:`BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
         domain = self.domain

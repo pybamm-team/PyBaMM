@@ -532,12 +532,14 @@ class DomainLeadAcidParameters(BaseParameters):
     def sigma_dimensional(self, T):
         """Dimensional electrical conductivity"""
         inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode conductivity [S.m-1]", inputs
         )
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
+        Domain = self.domain.capitalize()
         if self.domain == "separator":
             return
 
@@ -680,6 +682,7 @@ class PhaseLeadAcidParameters(BaseParameters):
         inputs = {
             "Electrolyte molar mass [mol.kg-1]": self.main_param.m_dimensional(c_e)
         }
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode open-circuit potential [V]", inputs
         )
@@ -687,6 +690,7 @@ class PhaseLeadAcidParameters(BaseParameters):
     def j0_dimensional(self, c_e, T):
         """Dimensional exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode exchange-current density [A.m-2]", inputs
         )
@@ -694,6 +698,7 @@ class PhaseLeadAcidParameters(BaseParameters):
     def j0_Ox_dimensional(self, c_e, T):
         """Dimensional oxygen electrode exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode oxygen exchange-current density [A.m-2]", inputs
         )

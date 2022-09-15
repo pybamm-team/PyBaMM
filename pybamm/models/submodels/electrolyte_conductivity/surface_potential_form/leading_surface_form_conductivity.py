@@ -50,9 +50,9 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             return variables
 
     def set_initial_conditions(self, variables):
-
+        domain = self.domain
         delta_phi = variables[
-            "X-averaged {domain} electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference"
         ]
         delta_phi_init = self.domain_param.prim.U_init
 
@@ -89,19 +89,18 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
+        domain = self.domain
         sum_a_j = variables[
-            "Sum of x-averaged "
-            + self.domain
-            + " electrode volumetric interfacial current densities"
+            f"Sum of x-averaged {domain} electrode volumetric "
+            "interfacial current densities"
         ]
 
         sum_a_j_av = variables[
-            "X-averaged "
-            + self.domain
-            + " electrode total volumetric interfacial current density"
+            f"X-averaged {domain} electrode total volumetric "
+            "interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged {domain} electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference"
         ]
 
         C_dl = self.domain_param.C_dl
@@ -129,19 +128,18 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
+        domain = self.domain
         sum_a_j = variables[
-            "Sum of x-averaged "
-            + self.domain
-            + " electrode volumetric interfacial current densities"
+            f"Sum of x-averaged {domain} electrode volumetric "
+            "interfacial current densities"
         ]
 
         sum_a_j_av = variables[
-            "X-averaged "
-            + self.domain
-            + " electrode total volumetric interfacial current density"
+            f"X-averaged {domain} electrode total volumetric "
+            "interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged {domain} electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference"
         ]
 
         self.algebraic[delta_phi] = sum_a_j_av - sum_a_j

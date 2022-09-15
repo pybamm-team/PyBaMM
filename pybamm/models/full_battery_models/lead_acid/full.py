@@ -122,7 +122,7 @@ class Full(BaseModel):
 
         for domain in ["negative", "separator", "positive"]:
             self.submodels[f"{domain} surface potential difference"] = surf_model(
-                self.param, domain
+                self.param, domain, self.options
             )
 
     def set_side_reaction_submodels(self):

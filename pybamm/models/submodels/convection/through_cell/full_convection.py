@@ -21,34 +21,27 @@ class Full(BaseThroughCellModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
+        variables = {}
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                Domain = domain.capitalize()
+                # Electrolyte pressure
+                p_k = pybamm.Variable(
+                    f"{Domain} pressure",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                # TODO: add permeability and viscosity, and other terms
+                v_mass_k = -pybamm.grad(p_k)
+                v_box_k = v_mass_k
 
-        # Electrolyte pressure
-        p_n = pybamm.Variable(
-            "Negative electrode pressure",
-            domain="negative electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        p_p = pybamm.Variable(
-            "Positive electrode pressure",
-            domain="positive electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        variables = self._get_standard_neg_pos_pressure_variables(p_n, p_p)
+                div_v_box_k = pybamm.div(v_box_k)
 
-        # TODO: add permeability and viscosity, and other terms
-        v_mass_n = -pybamm.grad(p_n)
-        v_mass_p = -pybamm.grad(p_p)
-        v_box_n = v_mass_n
-        v_box_p = v_mass_p
-        variables.update(
-            self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
-        )
-
-        div_v_box_n = pybamm.div(v_box_n)
-        div_v_box_p = pybamm.div(v_box_p)
-        variables.update(
-            self._get_standard_neg_pos_acceleration_variables(div_v_box_n, div_v_box_p)
-        )
+                variables.update(
+                    self._get_standard_convection_variables(
+                        domain, v_box_k, div_v_box_k, p_k
+                    )
+                )
 
         return variables
 

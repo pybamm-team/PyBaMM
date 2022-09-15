@@ -105,7 +105,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 s_k = 1
             elif self.chemistry == "lead-acid":
                 if reaction_name == "":  # main reaction
-                    s_k = self.param.domain_params[domain].s_plus_S
+                    s_k = self.param.domain_params[domain].prim.s_plus_S
                 elif reaction_name == "oxygen ":
                     s_k = self.param.s_plus_Ox
 
@@ -155,7 +155,9 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                             variable_template.format(Domain + " ")
                         ]
                 var = pybamm.concatenation(*var_dict.values())
-            variables.update({variable_template.format("").capitalize(): var})
+                var_name = variable_template.format("")
+                var_name = var_name[0].upper() + var_name[1:]  # capitalise first letter
+                variables.update({var_name: var})
 
         # Sum variables
         for variable_template in [

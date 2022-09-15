@@ -22,37 +22,18 @@ class NoConvection(BaseThroughCellModel):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-        vel_scale = self.param.velocity_scale
-        acc_scale = vel_scale / self.param.L_x
-
         variables = {}
-        domains = [
-            domain
-            for domain in self.options.whole_cell_domains
-            if domain != "separator"
-        ]
-        for domain in domains:
-            Domain = domain.capitalize()
-            v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
-            div_v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
-            div_v_box_k_av = pybamm.x_average(div_v_box_k)
-            p_k = pybamm.FullBroadcast(0, domain, "current collector")
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
+                div_v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
+                p_k = pybamm.FullBroadcast(0, domain, "current collector")
 
-            variables.update(
-                {
-                    f"{Domain} volume-averaged velocity": v_box_k,
-                    f"{Domain} volume-averaged velocity [m.s-1]": vel_scale * v_box_k,
-                    f"{Domain} volume-averaged acceleration": div_v_box_k,
-                    f"{Domain} volume-averaged acceleration [m.s-1]": acc_scale
-                    * div_v_box_k,
-                    f"X-averaged {domain} volume-averaged acceleration"
-                    + "": div_v_box_k_av,
-                    f"X-averaged {domain} volume-averaged acceleration "
-                    + "[m.s-1]": acc_scale * div_v_box_k_av,
-                    f"{Domain} pressure": p_k,
-                    f"X-averaged {domain} pressure": pybamm.x_average(p_k),
-                }
-            )
+                variables.update(
+                    self._get_standard_convection_variables(
+                        domain, v_box_k, div_v_box_k, p_k
+                    )
+                )
 
         return variables
 

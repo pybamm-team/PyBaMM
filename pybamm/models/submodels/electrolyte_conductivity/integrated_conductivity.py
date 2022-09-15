@@ -53,7 +53,7 @@ class Integrated(BaseElectrolyteConductivity):
         phi_s_n_av = variables["X-averaged negative electrode potential"]
 
         tor_n = variables["Negative electrolyte transport efficiency"]
-        tor_s = variables["Separator transport efficiency"]
+        tor_s = variables["Separator electrolyte transport efficiency"]
         tor_p = variables["Positive electrolyte transport efficiency"]
 
         T_av = variables["X-averaged cell temperature"]
@@ -166,9 +166,12 @@ class Integrated(BaseElectrolyteConductivity):
         # average electrolyte ohmic losses
         delta_phi_e_av = -(pybamm.x_average(integral_p) - pybamm.x_average(integral_n))
 
-        variables.update(
-            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-        )
+        phi_e_dict = {
+            "negative electrode": phi_e_n,
+            "separator": phi_e_s,
+            "positive electrode": phi_e_p,
+        }
+        variables.update(self._get_standard_potential_variables(phi_e_dict))
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 

@@ -96,7 +96,7 @@ class DiffusionLimited(BaseInterface):
                 ]
                 j = -self.param.p.l * j_p / self.param.n.l
             elif self.order in ["composite", "full"]:
-                tor_s = variables["Separator transport efficiency"]
+                tor_s = variables["Separator electrolyte transport efficiency"]
                 c_ox_s = variables["Separator oxygen concentration"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")

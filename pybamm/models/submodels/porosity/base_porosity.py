@@ -51,8 +51,6 @@ class BaseModel(pybamm.BaseSubModel):
         for domain, depsdt_k in depsdt_dict.items():
             Domain = domain.capitalize()
             depsdt_k_av = pybamm.x_average(depsdt_k)
-            if depsdt_k.domain == ["current collector"]:
-                depsdt_k_av = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
             variables.update(
                 {
                     f"{Domain} porosity change": depsdt_k,
@@ -72,7 +70,8 @@ class BaseModel(pybamm.BaseSubModel):
 
     def set_events(self, variables):
         for domain in self.options.whole_cell_domains:
-            eps_k = variables[f"{domain} porosity"]
+            Domain = domain.capitalize()
+            eps_k = variables[f"{Domain} porosity"]
             if not eps_k.is_constant():
                 self.events.append(
                     pybamm.Event(

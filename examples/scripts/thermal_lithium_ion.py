@@ -23,9 +23,9 @@ param = models[0].default_parameter_values
 # so set other forms of cooling to zero for comparison.
 param.update(
     {
-        "Negative current collector"
+        "negative current collector"
         + " surface heat transfer coefficient [W.m-2.K-1]": 5,
-        "Positive current collector"
+        "positive current collector"
         + " surface heat transfer coefficient [W.m-2.K-1]": 5,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,

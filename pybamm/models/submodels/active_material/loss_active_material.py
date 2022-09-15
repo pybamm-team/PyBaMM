@@ -46,11 +46,11 @@ class LossActiveMaterial(BaseModel):
                 f"X-averaged {domain} electrode active material volume fraction",
                 domain="current collector",
             )
-            eps_solid = pybamm.PrimaryBroadcast(eps_solid_xav, domain)
+            eps_solid = pybamm.PrimaryBroadcast(eps_solid_xav, f"{domain} electrode")
         else:
             eps_solid = pybamm.Variable(
                 f"{Domain} electrode active material volume fraction",
-                domain=domain,
+                domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
         variables = self._get_standard_active_material_variables(eps_solid)

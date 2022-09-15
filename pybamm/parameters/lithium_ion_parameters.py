@@ -1049,6 +1049,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         Dimensionless volume change for the electrode;
         sto should be R-averaged
         """
+        domain = self.domain
+        Domain = domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode volume change",
             {
