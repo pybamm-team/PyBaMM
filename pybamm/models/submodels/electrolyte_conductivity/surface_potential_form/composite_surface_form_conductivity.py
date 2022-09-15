@@ -28,11 +28,11 @@ class BaseModel(Composite):
 
     def get_fundamental_variables(self):
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             delta_phi_av = pybamm.standard_variables.delta_phi_n_av
-        elif self.domain == "Separator":
+        elif self.domain == "separator":
             return {}
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             delta_phi_av = pybamm.standard_variables.delta_phi_p_av
 
         variables = self._get_standard_average_surface_potential_difference_variables(
@@ -42,7 +42,7 @@ class BaseModel(Composite):
 
     def get_coupled_variables(self, variables):
         # Only update coupled variables once
-        if self.domain == "Negative":
+        if self.domain == "negative":
             variables.update(super().get_coupled_variables(variables))
 
         phi_s = variables[self.domain + " electrode potential"]
@@ -65,7 +65,7 @@ class BaseModel(Composite):
         self.initial_conditions = {delta_phi: delta_phi_init}
 
     def set_boundary_conditions(self, variables):
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_e = variables["Electrolyte potential"]
             self.boundary_conditions = {
                 phi_e: {

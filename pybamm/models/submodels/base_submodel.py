@@ -121,13 +121,13 @@ class BaseSubModel(pybamm.BaseModel):
         if domain is not None:
             domain = domain.capitalize()
         ok_domain_list = [
-            "Negative",
-            "Separator",
-            "Positive",
-            "Negative electrode",
+            "negative",
+            "separator",
+            "positive",
+            "negative electrode",
             "Negative electrolyte",
             "Separator electrolyte",
-            "Positive electrode",
+            "positive electrode",
             "Positive electrolyte",
             None,
         ]
@@ -142,9 +142,9 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_domain_for_broadcast(self):
         if hasattr(self, "_domain"):
-            if self.domain in ["Negative", "Positive"]:
+            if self.domain in ["negative", "positive"]:
                 self.domain_for_broadcast = self.domain.lower() + " electrode"
-            elif self.domain == "Separator":
+            elif self.domain == "separator":
                 self.domain_for_broadcast = "separator"
 
     def get_fundamental_variables(self):

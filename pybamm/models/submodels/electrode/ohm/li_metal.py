@@ -39,7 +39,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        The domain of the submodel, can be "Negative" or "Positive"
+        The domain of the submodel, can be "negative" or "positive"
     options : dict, optional
         A dictionary of options to be passed to the model.
 

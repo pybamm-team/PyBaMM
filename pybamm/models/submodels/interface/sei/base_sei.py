@@ -27,7 +27,7 @@ class BaseModel(BaseInterface):
             reaction = "SEI on cracks"
         else:
             reaction = "SEI"
-        domain = "Negative"
+        domain = "negative"
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_coupled_variables(self, variables):

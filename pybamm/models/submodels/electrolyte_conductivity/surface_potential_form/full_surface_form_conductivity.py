@@ -27,11 +27,11 @@ class BaseModel(BaseElectrolyteConductivity):
         super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
-        if self.domain == "Negative":
+        if self.domain == "negative":
             delta_phi = pybamm.standard_variables.delta_phi_n
-        elif self.domain == "Separator":
+        elif self.domain == "separator":
             return {}
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
 
         variables = self._get_standard_average_surface_potential_difference_variables(
@@ -46,7 +46,7 @@ class BaseModel(BaseElectrolyteConductivity):
     def get_coupled_variables(self, variables):
         param = self.param
 
-        if self.domain in ["Negative", "Positive"]:
+        if self.domain in ["negative", "positive"]:
 
             conductivity, sigma_eff = self._get_conductivities(variables)
             i_boundary_cc = variables["Current collector current density"]
@@ -66,7 +66,7 @@ class BaseModel(BaseElectrolyteConductivity):
             phi_s = variables[self.domain + " electrode potential"]
             phi_e = phi_s - delta_phi
 
-        elif self.domain == "Separator":
+        elif self.domain == "separator":
             x_s = pybamm.standard_spatial_vars.x_s
 
             i_boundary_cc = variables["Current collector current density"]
@@ -99,7 +99,7 @@ class BaseModel(BaseElectrolyteConductivity):
 
         variables[self.domain + " electrolyte potential"] = phi_e
 
-        if self.domain == "Positive":
+        if self.domain == "positive":
             phi_e_s = variables["Separator electrolyte potential"]
             phi_e_p = variables["Positive electrolyte potential"]
 
@@ -136,7 +136,7 @@ class BaseModel(BaseElectrolyteConductivity):
         return conductivity, sigma_eff
 
     def set_initial_conditions(self, variables):
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
         delta_phi_e = variables[self.domain + " electrode surface potential difference"]
@@ -145,7 +145,7 @@ class BaseModel(BaseElectrolyteConductivity):
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
     def set_boundary_conditions(self, variables):
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return None
 
         param = self.param
@@ -155,7 +155,7 @@ class BaseModel(BaseElectrolyteConductivity):
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             T = variables["Negative electrode temperature"]
             c_e_flux = pybamm.BoundaryGradient(c_e, "right")
             flux_left = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
@@ -170,7 +170,7 @@ class BaseModel(BaseElectrolyteConductivity):
             lbc_c_e = (pybamm.Scalar(0), "Neumann")
             rbc_c_e = (c_e_flux, "Neumann")
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             T = variables["Positive electrode temperature"]
             c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
@@ -192,7 +192,7 @@ class BaseModel(BaseElectrolyteConductivity):
             c_e: {"left": lbc_c_e, "right": rbc_c_e},
         }
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_e = variables["Electrolyte potential"]
             self.boundary_conditions.update(
                 {
@@ -223,7 +223,7 @@ class FullAlgebraic(BaseModel):
         super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
         delta_phi = variables[self.domain + " electrode surface potential difference"]
@@ -257,7 +257,7 @@ class FullDifferential(BaseModel):
         super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
         Domain = self.domain

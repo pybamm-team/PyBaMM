@@ -127,9 +127,9 @@ class BaseInterface(pybamm.BaseSubModel):
             if isinstance(c_e, pybamm.Broadcast) and isinstance(T, pybamm.Broadcast):
                 c_e = c_e.orphans[0]
                 T = T.orphans[0]
-            if self.domain == "Negative":
+            if self.domain == "negative":
                 j0 = pybamm.Scalar(0)
-            elif self.domain == "Positive":
+            elif self.domain == "positive":
                 j0 = param.p.prim.j0_Ox(c_e, T)
 
         return j0
@@ -176,7 +176,7 @@ class BaseInterface(pybamm.BaseSubModel):
                 f"X-averaged {domain} electrode {self.phase_name}"
                 "surface area to volume ratio"
             ]
-            sgn = 1 if self.domain == "Negative" else -1
+            sgn = 1 if self.domain == "negative" else -1
 
             a_j_total_average = sgn * i_boundary_cc / (self.domain_param.l)
             j_total_average = a_j_total_average / a_av

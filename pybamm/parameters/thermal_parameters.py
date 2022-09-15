@@ -21,13 +21,13 @@ class ThermalParameters(BaseParameters):
         # Get geometric parameters
         self.geo = pybamm.geometric_parameters
 
-        self.n = DomainThermalParameters("Negative", self)
-        self.s = DomainThermalParameters("Separator", self)
-        self.p = DomainThermalParameters("Positive", self)
+        self.n = DomainThermalParameters("negative", self)
+        self.s = DomainThermalParameters("separator", self)
+        self.p = DomainThermalParameters("positive", self)
         self.domain_params = {
-            "Negative": self.n,
-            "Separator": self.s,
-            "Positive": self.p,
+            "negative": self.n,
+            "separator": self.s,
+            "positive": self.p,
         }
 
         # Set parameters
@@ -137,7 +137,7 @@ class DomainThermalParameters(BaseParameters):
     def c_p_dim(self, T):
         """Electrode specific heat capacity [J.kg-1.K-1]"""
         inputs = {"Temperature [K]": T}
-        if self.domain == "Separator":
+        if self.domain == "separator":
             name = "Separator specific heat capacity [J.kg-1.K-1]"
         else:
             name = f"{self.domain} electrode specific heat capacity [J.kg-1.K-1]"
@@ -154,7 +154,7 @@ class DomainThermalParameters(BaseParameters):
     def lambda_dim(self, T):
         """Electrode thermal conductivity [W.m-1.K-1]"""
         inputs = {"Temperature [K]": T}
-        if self.domain == "Separator":
+        if self.domain == "separator":
             name = "Separator thermal conductivity [W.m-1.K-1]"
         else:
             name = f"{self.domain} electrode thermal conductivity [W.m-1.K-1]"
@@ -170,7 +170,7 @@ class DomainThermalParameters(BaseParameters):
     def rho_dim(self, T):
         """Electrode density [kg.m-3]"""
         inputs = {"Temperature [K]": T}
-        if self.domain == "Separator":
+        if self.domain == "separator":
             name = "Separator density [kg.m-3]"
         else:
             name = f"{self.domain} electrode density [kg.m-3]"

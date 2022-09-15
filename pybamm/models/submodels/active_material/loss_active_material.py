@@ -107,7 +107,7 @@ class LossActiveMaterial(BaseModel):
                 a = variables[self.domain + " electrode surface area to volume ratio"]
 
             beta_LAM_sei = self.domain_param.beta_LAM_sei
-            if self.domain == "Negative":
+            if self.domain == "negative":
                 if self.x_average is True:
                     j_sei = variables["X-averaged SEI interfacial current density"]
                 else:

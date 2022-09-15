@@ -116,16 +116,16 @@ class Full(BaseElectrolyteDiffusion):
                 * param.C_e
             )
 
-        if self.options.whole_cell_domains[0] == "Negative electrode":
+        if self.options.whole_cell_domains[0] == "negative electrode":
             # left bc at anode/current collector interface
             lbc = pybamm.Scalar(0)
-        elif self.options.whole_cell_domains[0] == "Separator":
+        elif self.options.whole_cell_domains[0] == "separator":
             # left bc at anode/separator interface
             lbc = flux_bc("left")
-        if self.options.whole_cell_domains[-1] == "Positive electrode":
+        if self.options.whole_cell_domains[-1] == "positive electrode":
             # right bc at cathode/current collector interface
             rbc = pybamm.Scalar(0)
-        elif self.options.whole_cell_domains[-1] == "Separator":
+        elif self.options.whole_cell_domains[-1] == "separator":
             # right bc at separator/cathode interface
             rbc = flux_bc("right")
 

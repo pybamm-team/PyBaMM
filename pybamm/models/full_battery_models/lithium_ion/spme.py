@@ -72,10 +72,10 @@ class SPMe(SPM):
     def set_solid_submodel(self):
 
         self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Negative", options=self.options
+            self.param, "negative", options=self.options
         )
         self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Positive", options=self.options
+            self.param, "positive", options=self.options
         )
 
     def set_electrolyte_submodel(self):
@@ -102,7 +102,7 @@ class SPMe(SPM):
         elif self.options["surface form"] == "algebraic":
             surf_model = surf_form.CompositeAlgebraic
 
-        for domain in ["Negative", "Positive"]:
+        for domain in ["negative", "positive"]:
             self.submodels[
                 domain.lower() + " surface potential difference"
             ] = surf_model(self.param, domain)

@@ -40,12 +40,12 @@ class BaseThermal(pybamm.BaseSubModel):
         T = pybamm.concatenation(*T_mid)
 
         # Case where an electrode is not included (half-cell)
-        if "Negative electrode" not in self.options.whole_cell_domains:
-            T_s = T_dict["Separator"]
-            T_dict["Negative electrode"] = pybamm.boundary_value(T_s, "left")
-        if "Positive electrode" not in self.options.whole_cell_domains:
-            T_s = T_dict["Separator"]
-            T_dict["Positive electrode"] = pybamm.boundary_value(T_s, "right")
+        if "negative electrode" not in self.options.whole_cell_domains:
+            T_s = T_dict["separator"]
+            T_dict["negative electrode"] = pybamm.boundary_value(T_s, "left")
+        if "positive electrode" not in self.options.whole_cell_domains:
+            T_s = T_dict["separator"]
+            T_dict["positive electrode"] = pybamm.boundary_value(T_s, "right")
 
         # Get the ambient temperature, which can be specified as a function of time
         T_amb = param.T_amb(pybamm.t * param.timescale)
@@ -53,7 +53,7 @@ class BaseThermal(pybamm.BaseSubModel):
         variables = {"Ambient temperature": T_amb, "Cell temperature": T}
         for name, var in T_dict.items():
             variables[f"{name} temperature"] = var
-            if name in ["Negative electrode", "Separator", "Positive electrode"]:
+            if name in ["negative electrode", "separator", "positive electrode"]:
                 name = name.lower()
                 variables[f"X-averaged {name} temperature"] = pybamm.x_average(var)
 

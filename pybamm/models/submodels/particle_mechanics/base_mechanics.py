@@ -14,7 +14,7 @@ class BaseMechanics(pybamm.BaseSubModel):
     param : parameter class
         The parameters to use for this submodel
     domain : dict, optional
-        Dictionary of either the electrode for "Positive" or "Nagative"
+        Dictionary of either the electrode for "positive" or "Nagative"
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`

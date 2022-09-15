@@ -37,7 +37,7 @@ class Bruggeman(BaseModel):
         elif self.component == "Electrode":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:
-                if domain != "Separator":
+                if domain != "separator":
                     eps_k = variables[f"{domain} active material volume fraction"]
                     b_k = self.param.domain_params[domain.split()[0]].b_s
             tor_dict[domain] = eps_k**b_k

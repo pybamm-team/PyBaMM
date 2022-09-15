@@ -81,7 +81,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.initial_conditions[fci] = self.param.q_init * 100
 
     def set_open_circuit_potential_submodel(self):
-        for domain in ["Negative", "Positive"]:
+        for domain in ["negative", "positive"]:
             self.submodels[
                 f"{domain.lower()} open circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(

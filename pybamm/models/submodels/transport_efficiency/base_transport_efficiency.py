@@ -31,7 +31,7 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {f"{self.component} transport efficiency": tor}
 
         for domain, tor_k in tor_dict.items():
-            if not (domain == "Separator" and self.component == "Electrode"):
+            if not (domain == "separator" and self.component == "Electrode"):
                 Domain = domain.split()[0]
                 domain = Domain.lower()
 

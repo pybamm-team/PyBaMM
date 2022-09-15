@@ -29,7 +29,7 @@ class BasePlating(BaseInterface):
 
     def __init__(self, param, options=None):
         reaction = "lithium plating"
-        domain = "Negative"
+        domain = "negative"
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):

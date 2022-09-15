@@ -32,7 +32,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         the reactions.
         """
         for domain in self.options.whole_cell_domains:
-            if domain != "Separator":
+            if domain != "separator":
                 variables.update(
                     self._get_coupled_variables_by_domain(variables, domain.split()[0])
                 )
@@ -147,7 +147,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             ]:
                 var_dict = {}
                 for domain in self.options.whole_cell_domains:
-                    if domain == "Separator":
+                    if domain == "separator":
                         var_dict[domain] = zero_s
                     else:
                         var_dict[domain] = variables[
@@ -163,7 +163,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         ]:
             var_dict = {}
             for domain in self.options.whole_cell_domains:
-                if domain == "Separator":
+                if domain == "separator":
                     var_dict[domain] = zero_s
                 else:
                     var_dict[domain] = variables[variable_template.format(domain + " ")]

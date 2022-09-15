@@ -25,9 +25,9 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s = pybamm.standard_variables.phi_s_n
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             phi_s = pybamm.standard_variables.phi_s_p
 
         variables = self._get_standard_potential_variables(phi_s)
@@ -49,7 +49,7 @@ class Full(BaseModel):
 
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
@@ -74,11 +74,11 @@ class Full(BaseModel):
         tor = variables[self.domain + " electrode transport efficiency"]
         T = variables[self.domain + " electrode temperature"]
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             sigma_eff = self.param.p.sigma(T) * tor
             i_boundary_cc = variables["Current collector current density"]
@@ -93,9 +93,9 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s_init = pybamm.Scalar(0)
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             phi_s_init = self.param.ocv_init
 
         self.initial_conditions[phi_s] = phi_s_init

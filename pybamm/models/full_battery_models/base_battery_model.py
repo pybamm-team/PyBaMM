@@ -603,11 +603,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             return self._whole_cell_domains
         except AttributeError:
             if self["working electrode"] == "positive":
-                wcd = ["Separator", "Positive electrode"]
+                wcd = ["separator", "positive electrode"]
             elif self["working electrode"] == "negative":
-                wcd = ["Negative electrode", "Separator"]
+                wcd = ["negative electrode", "separator"]
             elif self["working electrode"] == "both":
-                wcd = ["Negative electrode", "Separator", "Positive electrode"]
+                wcd = ["negative electrode", "separator", "positive electrode"]
             self._whole_cell_domains = wcd
             return wcd
 
@@ -1169,7 +1169,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["current collector"] = submodel
 
     def set_interface_utilisation_submodel(self):
-        for Domain in ["Negative", "Positive"]:
+        for Domain in ["negative", "positive"]:
             domain = Domain.lower()
             util = getattr(self.options, domain)["interface utilisation"]
             if util == "full":

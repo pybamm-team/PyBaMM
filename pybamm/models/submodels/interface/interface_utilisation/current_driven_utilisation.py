@@ -30,7 +30,7 @@ class CurrentDriven(BaseModel):
 
     def get_fundamental_variables(self):
         if self.reaction_loc == "full electrode":
-            if self.domain == "Negative":
+            if self.domain == "negative":
                 u = pybamm.Variable(
                     "Negative electrode interface utilisation variable",
                     domain="negative electrode",
@@ -43,7 +43,7 @@ class CurrentDriven(BaseModel):
                     auxiliary_domains={"secondary": "current collector"},
                 )
         elif self.reaction_loc == "x-average":
-            if self.domain == "Negative":
+            if self.domain == "negative":
                 u_xav = pybamm.Variable(
                     "X-averaged negative electrode interface utilisation variable",
                     domain="current collector",

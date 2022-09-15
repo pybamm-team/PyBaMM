@@ -48,11 +48,11 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")
             i_s = i_boundary_cc * (1 - x_n / l_n)
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             # recall delta_phi = phi_s - phi_e
             delta_phi_p_av = variables[
                 "X-averaged positive electrode surface potential difference"
@@ -67,7 +67,7 @@ class LeadingOrder(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables

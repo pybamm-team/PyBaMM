@@ -113,7 +113,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             a_av = variables[
                 f"X-averaged {domain} electrode surface area to volume ratio"
             ]
-            sgn = 1 if self.domain == "Negative" else -1
+            sgn = 1 if self.domain == "negative" else -1
 
             j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
 

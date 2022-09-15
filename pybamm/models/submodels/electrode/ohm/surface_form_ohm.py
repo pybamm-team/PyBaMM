@@ -39,10 +39,10 @@ class SurfaceForm(BaseModel):
         conductivity = self.domain_param.sigma(T) * tor
         i_s = i_boundary_cc - i_e
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s = phi_s_cn - pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
 
             phi_e_s = variables["Separator electrolyte potential"]
             delta_phi_p = variables["Positive electrode surface potential difference"]

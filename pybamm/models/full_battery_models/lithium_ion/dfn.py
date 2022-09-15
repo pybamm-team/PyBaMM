@@ -94,14 +94,14 @@ class DFN(BaseModel):
     def set_solid_submodel(self):
 
         if self.options["surface form"] == "false":
-            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.options)
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.options)
+            submod_n = pybamm.electrode.ohm.Full(self.param, "negative", self.options)
+            submod_p = pybamm.electrode.ohm.Full(self.param, "positive", self.options)
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(
-                self.param, "Negative", self.options
+                self.param, "negative", self.options
             )
             submod_p = pybamm.electrode.ohm.SurfaceForm(
-                self.param, "Positive", self.options
+                self.param, "positive", self.options
             )
 
         self.submodels["negative electrode potential"] = submod_n
@@ -133,7 +133,7 @@ class DFN(BaseModel):
         elif self.options["surface form"] == "algebraic":
             surf_model = surf_form.FullAlgebraic
 
-        for domain in ["Negative", "Separator", "Positive"]:
+        for domain in ["negative", "separator", "positive"]:
             self.submodels[
                 domain.lower() + " surface potential difference"
             ] = surf_model(self.param, domain, self.options)

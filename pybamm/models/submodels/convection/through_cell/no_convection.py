@@ -29,7 +29,7 @@ class NoConvection(BaseThroughCellModel):
         domains = [
             domain
             for domain in self.options.whole_cell_domains
-            if domain != "Separator"
+            if domain != "separator"
         ]
         for domain in domains:
             v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")

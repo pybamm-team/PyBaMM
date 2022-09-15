@@ -33,7 +33,7 @@ class Isothermal(BaseThermal):
             "X-averaged cell": T_x_av,
             "Volume-averaged cell": T_x_av,
         }
-        for domain in ["Negative electrode", "Separator", "Positive electrode"]:
+        for domain in ["negative electrode", "separator", "positive electrode"]:
             if domain in self.options.whole_cell_domains:
                 T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain.lower())
             else:

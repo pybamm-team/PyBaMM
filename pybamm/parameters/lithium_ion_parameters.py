@@ -44,13 +44,13 @@ class LithiumIonParameters(BaseParameters):
         self.therm = pybamm.thermal_parameters
 
         # Initialize domain parameters
-        self.n = DomainLithiumIonParameters("Negative", self)
-        self.s = DomainLithiumIonParameters("Separator", self)
-        self.p = DomainLithiumIonParameters("Positive", self)
+        self.n = DomainLithiumIonParameters("negative", self)
+        self.s = DomainLithiumIonParameters("separator", self)
+        self.p = DomainLithiumIonParameters("positive", self)
         self.domain_params = {
-            "Negative": self.n,
-            "Separator": self.s,
-            "Positive": self.p,
+            "negative": self.n,
+            "separator": self.s,
+            "positive": self.p,
         }
 
         # Set parameters and scales
@@ -391,7 +391,7 @@ class DomainLithiumIonParameters(BaseParameters):
         self.geo = getattr(main_param.geo, domain.lower()[0])
         self.therm = getattr(main_param.therm, domain.lower()[0])
 
-        if domain != "Separator":
+        if domain != "separator":
             self.prim = ParticleLithiumIonParameters("primary", self)
             phases_option = int(
                 getattr(main_param.options, domain.lower())["particle phases"]
@@ -411,7 +411,7 @@ class DomainLithiumIonParameters(BaseParameters):
         Domain = self.domain
         domain = Domain.lower()
 
-        if Domain == "Separator":
+        if Domain == "separator":
             x = pybamm.standard_spatial_vars.x_s * main.L_x
             self.epsilon_init = pybamm.FunctionParameter(
                 "Separator porosity", {"Through-cell distance (x) [m]": x}
@@ -530,7 +530,7 @@ class DomainLithiumIonParameters(BaseParameters):
         for phase in self.phase_params.values():
             phase._set_scales()
 
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
     def _set_dimensionless_parameters(self):
@@ -539,7 +539,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         main = self.main_param
 
-        if self.domain == "Separator":
+        if self.domain == "separator":
             self.l = self.geo.l
             self.rho = self.therm.rho
             self.lambda_ = self.therm.lambda_

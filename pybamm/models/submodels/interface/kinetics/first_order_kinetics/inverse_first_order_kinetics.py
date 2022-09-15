@@ -35,7 +35,7 @@ class InverseFirstOrderKinetics(BaseInterface):
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
         i_boundary_cc_1 = (i_boundary_cc - i_boundary_cc_0) / self.param.C_e
 
-        sgn = 1 if self.domain == "Negative" else -1
+        sgn = 1 if self.domain == "negative" else -1
         return sgn * i_boundary_cc_1 / self.domain_param.l
 
     def get_coupled_variables(self, variables):

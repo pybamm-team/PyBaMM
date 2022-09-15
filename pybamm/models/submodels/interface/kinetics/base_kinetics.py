@@ -98,7 +98,7 @@ class BaseKinetics(BaseInterface):
             variables
         )
         # Add SEI resistance in the negative electrode
-        if self.domain == "Negative":
+        if self.domain == "negative":
             if self.half_cell:
                 R_sei = self.phase_param.R_sei
                 L_sei = variables[f"Total {phase_name}SEI thickness"]  # on interface
@@ -176,7 +176,7 @@ class BaseKinetics(BaseInterface):
             self._get_standard_volumetric_current_density_variables(variables)
         )
 
-        if self.domain == "Negative" and self.reaction in [
+        if self.domain == "negative" and self.reaction in [
             "lithium-ion main",
             "lithium metal plating",
             "lead-acid main",
@@ -234,7 +234,7 @@ class BaseKinetics(BaseInterface):
                 / param.I_typ
                 * pybamm.sign(param.I_typ)
             )
-            sgn = 1 if self.domain == "Negative" else -1
+            sgn = 1 if self.domain == "negative" else -1
             # i / (a*l), assuming a=1 initially
             j_tot_av_init = sgn * current_at_0 / self.domain_param.l
 

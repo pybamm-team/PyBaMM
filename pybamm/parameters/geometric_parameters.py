@@ -19,13 +19,13 @@ class GeometricParameters(BaseParameters):
 
     def __init__(self, options=None):
         self.options = options
-        self.n = DomainGeometricParameters("Negative", self)
-        self.s = DomainGeometricParameters("Separator", self)
-        self.p = DomainGeometricParameters("Positive", self)
+        self.n = DomainGeometricParameters("negative", self)
+        self.s = DomainGeometricParameters("separator", self)
+        self.p = DomainGeometricParameters("positive", self)
         self.domain_params = {
-            "Negative": self.n,
-            "Separator": self.s,
-            "Positive": self.p,
+            "negative": self.n,
+            "separator": self.s,
+            "positive": self.p,
         }
 
         # Set parameters and scales
@@ -84,7 +84,7 @@ class DomainGeometricParameters(BaseParameters):
         self.domain = domain
         self.main_param = main_param
 
-        if self.domain != "Separator":
+        if self.domain != "separator":
             self.prim = ParticleGeometricParameters(domain, "primary", main_param)
             self.sec = ParticleGeometricParameters(domain, "secondary", main_param)
             self.phase_params = {"primary": self.prim, "secondary": self.sec}
@@ -96,7 +96,7 @@ class DomainGeometricParameters(BaseParameters):
         for phase in self.phase_params.values():
             phase._set_dimensional_parameters()
 
-        if self.domain == "Separator":
+        if self.domain == "separator":
             self.L = pybamm.Parameter("Separator thickness [m]")
             self.b_e = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
             return
@@ -134,7 +134,7 @@ class DomainGeometricParameters(BaseParameters):
 
         # Macroscale Geometry
         self.l = self.L / main.L_x
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
         self.l_cc = self.L_cc / main.L_x
@@ -174,9 +174,9 @@ class ParticleGeometricParameters(BaseParameters):
 
     @property
     def R_dimensional(self):
-        if self.domain == "Negative":
+        if self.domain == "negative":
             x = pybamm.standard_spatial_vars.x_n
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             x = pybamm.standard_spatial_vars.x_p
 
         inputs = {"Through-cell distance (x) [m]": x * self.main_param.L_x}

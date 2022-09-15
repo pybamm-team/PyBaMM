@@ -91,9 +91,9 @@ class BaseModel(pybamm.BaseSubModel):
                 R = self.phase_param.R
                 R_dim = self.phase_param.R_dimensional
             elif self.options["particle size"] == "distribution":
-                if self.domain == "Negative":
+                if self.domain == "negative":
                     R_ = pybamm.standard_spatial_vars.R_n
-                elif self.domain == "Positive":
+                elif self.domain == "positive":
                     R_ = pybamm.standard_spatial_vars.R_p
                 R = pybamm.size_average(R_)
                 R_dim = R * self.phase_param.R_typ

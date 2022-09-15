@@ -74,7 +74,7 @@ class InverseButlerVolmer(BaseInterface):
         eta_r = self._get_overpotential(j_tot, j0, ne, T, u)
 
         # With SEI resistance (distributed and averaged have the same effect here)
-        if self.domain == "Negative":
+        if self.domain == "negative":
             if self.options["SEI film resistance"] != "none":
                 R_sei = self.phase_param.R_sei
                 if self.half_cell:
@@ -148,7 +148,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             f"X-averaged {self.domain.lower()} electrode "
             "total interfacial current density"
         ]
-        if self.domain == "Negative":
+        if self.domain == "negative":
             j_sei = variables["SEI interfacial current density"]
             j_stripping = variables["Lithium plating interfacial current density"]
             j = j_tot - j_sei - j_stripping

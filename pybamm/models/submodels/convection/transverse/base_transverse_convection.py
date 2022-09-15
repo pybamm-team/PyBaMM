@@ -43,7 +43,7 @@ class BaseTransverseModel(BaseModel):
         var_dict = {}
         variables = {}
         for domain in self.options.whole_cell_domains:
-            if domain == "Separator":
+            if domain == "separator":
                 var_k_av = var_s_av
             else:
                 var_k_av = pybamm.PrimaryBroadcast(0, "current collector")

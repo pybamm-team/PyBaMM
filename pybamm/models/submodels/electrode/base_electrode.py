@@ -46,12 +46,12 @@ class BaseElectrode(pybamm.BaseSubModel):
         pot = param.potential_scale
         phi_s_av = pybamm.x_average(phi_s)
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s_dim = pot * phi_s
             phi_s_av_dim = pot * phi_s_av
             delta_phi_s = phi_s
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             phi_s_dim = param.ocv_ref + pot * phi_s
             phi_s_av_dim = param.ocv_ref + pot * phi_s_av
 
@@ -179,7 +179,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
 
-        if "Negative electrode" not in self.options.whole_cell_domains:
+        if "negative electrode" not in self.options.whole_cell_domains:
             i_s_n = None
         else:
             i_s_n = variables["Negative electrode current density"]

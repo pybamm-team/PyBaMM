@@ -123,14 +123,14 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.XAveragedPolynomialProfile(
-            None, "Negative", {"particle": "quadratic profile"}, "primary"
+            None, "negative", {"particle": "quadratic profile"}, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.PolynomialProfile(
-            None, "Negative", {"particle": "quadratic profile"}, "primary"
+            None, "negative", {"particle": "quadratic profile"}, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
@@ -198,7 +198,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.LossActiveMaterial(None, "Negative", None, True)
+        pybamm.active_material.LossActiveMaterial(None, "negative", None, True)
         self.assertIn("Reniers2019", citations._papers_to_cite)
 
     def test_mohtat_2019(self):

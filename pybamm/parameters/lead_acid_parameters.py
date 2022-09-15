@@ -27,13 +27,13 @@ class LeadAcidParameters(BaseParameters):
         self.therm = pybamm.thermal_parameters
 
         # Initialize domain parameters
-        self.n = DomainLeadAcidParameters("Negative", self)
-        self.s = DomainLeadAcidParameters("Separator", self)
-        self.p = DomainLeadAcidParameters("Positive", self)
+        self.n = DomainLeadAcidParameters("negative", self)
+        self.s = DomainLeadAcidParameters("separator", self)
+        self.p = DomainLeadAcidParameters("positive", self)
         self.domain_params = {
-            "Negative": self.n,
-            "Separator": self.s,
-            "Positive": self.p,
+            "negative": self.n,
+            "separator": self.s,
+            "positive": self.p,
         }
 
         # Set parameters and scales
@@ -463,7 +463,7 @@ class DomainLeadAcidParameters(BaseParameters):
         self.geo = getattr(main_param.geo, domain.lower()[0])
         self.therm = getattr(main_param.therm, domain.lower()[0])
 
-        if domain != "Separator":
+        if domain != "separator":
             self.prim = PhaseLeadAcidParameters("primary", self)
         else:
             self.prim = NullParameters()
@@ -474,7 +474,7 @@ class DomainLeadAcidParameters(BaseParameters):
         Domain = self.domain
         main = self.main_param
 
-        if self.domain == "Separator":
+        if self.domain == "separator":
             self.eps_max = pybamm.Parameter("Maximum porosity of separator")
             self.L = self.geo.L
             self.b_e = self.geo.b_e
@@ -495,14 +495,14 @@ class DomainLeadAcidParameters(BaseParameters):
         self.epsilon_inactive = pybamm.Scalar(0)
 
         # Electrode properties
-        if self.domain == "Negative":
+        if self.domain == "negative":
             self.DeltaVsurf = (
                 main.V_Pb - main.V_PbSO4
             )  # Net Molar Volume consumed in neg electrode [m3.mol-1]
             self.DeltaVliq = (
                 main.V_minus - main.V_plus
             )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             self.DeltaVsurf = (
                 main.V_PbSO4 - main.V_PbO2
             )  # Net Molar Volume consumed in pos electrode [m3.mol-1]
@@ -538,7 +538,7 @@ class DomainLeadAcidParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
         for phase in self.phase_params.values():
@@ -554,7 +554,7 @@ class DomainLeadAcidParameters(BaseParameters):
         """Defines the dimensionless parameters"""
         main = self.main_param
 
-        if self.domain == "Separator":
+        if self.domain == "separator":
             self.l = self.geo.l
             self.epsilon_init = self.eps_max
             self.rho = self.therm.rho
@@ -614,7 +614,7 @@ class DomainLeadAcidParameters(BaseParameters):
 
         # Initial conditions
         self.c_init = main.c_e_init
-        sgn = -1 if self.domain == "Negative" else 1
+        sgn = -1 if self.domain == "negative" else 1
         self.epsilon_init = (
             self.eps_max
             + sgn * self.beta_surf * main.Q_e_max / self.l * (1 - main.q_init)

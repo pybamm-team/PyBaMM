@@ -85,7 +85,7 @@ class Full(BaseModel):
             ] = pybamm.convection.through_cell.Full(self.param)
 
     def set_intercalation_kinetics_submodel(self):
-        for domain in ["Negative", "Positive"]:
+        for domain in ["negative", "positive"]:
             intercalation_kinetics = self.get_intercalation_kinetics(domain)
             self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
                 self.param, domain, "lead-acid main", self.options, "primary"
@@ -93,11 +93,11 @@ class Full(BaseModel):
 
     def set_solid_submodel(self):
         if self.options["surface form"] == "false":
-            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
+            submod_n = pybamm.electrode.ohm.Full(self.param, "negative")
+            submod_p = pybamm.electrode.ohm.Full(self.param, "positive")
         else:
-            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "negative")
+            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "positive")
 
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p
@@ -120,7 +120,7 @@ class Full(BaseModel):
         elif self.options["surface form"] == "algebraic":
             surf_model = surf_form.FullAlgebraic
 
-        for domain in ["Negative", "Separator", "Positive"]:
+        for domain in ["negative", "separator", "positive"]:
             self.submodels[
                 domain.lower() + " surface potential difference"
             ] = surf_model(self.param, domain)
@@ -131,20 +131,20 @@ class Full(BaseModel):
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.kinetics.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen", self.options, "primary"
+                self.param, "positive", "lead-acid oxygen", self.options, "primary"
             )
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", self.options, order="full"
+                self.param, "negative", "lead-acid oxygen", self.options, order="full"
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.kinetics.NoReaction(
-                self.param, "Positive", "lead-acid oxygen", "primary"
+                self.param, "positive", "lead-acid oxygen", "primary"
             )
             self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
-                self.param, "Negative", "lead-acid oxygen", "primary"
+                self.param, "negative", "lead-acid oxygen", "primary"
             )

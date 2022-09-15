@@ -282,13 +282,13 @@ class TestBaseBatteryModel(unittest.TestCase):
             )
 
         # check default options change
-        model = pybamm.BaseBatteryModel({
-            "loss of active material": "stress-driven",
-            "SEI on cracks": "true"
-        })
-        self.assertEqual(model.options["particle mechanics"], (
-            "swelling and cracking", "swelling only"
-        ))
+        model = pybamm.BaseBatteryModel(
+            {"loss of active material": "stress-driven", "SEI on cracks": "true"}
+        )
+        self.assertEqual(
+            model.options["particle mechanics"],
+            ("swelling and cracking", "swelling only"),
+        )
         self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
@@ -439,18 +439,18 @@ class TestOptions(unittest.TestCase):
     def test_whole_cell_domains(self):
         options = BatteryModelOptions({"working electrode": "positive"})
         self.assertEqual(
-            options.whole_cell_domains, ["Separator", "Positive electrode"]
+            options.whole_cell_domains, ["separator", "positive electrode"]
         )
 
         options = BatteryModelOptions({"working electrode": "negative"})
         self.assertEqual(
-            options.whole_cell_domains, ["Negative electrode", "Separator"]
+            options.whole_cell_domains, ["negative electrode", "separator"]
         )
 
         options = BatteryModelOptions({})
         self.assertEqual(
             options.whole_cell_domains,
-            ["Negative electrode", "Separator", "Positive electrode"],
+            ["negative electrode", "separator", "positive electrode"],
         )
 
 

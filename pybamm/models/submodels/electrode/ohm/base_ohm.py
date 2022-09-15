@@ -28,12 +28,12 @@ class BaseModel(BaseElectrode):
         if self.options.electrode_types["negative"] == "planar":
             return
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s_cn = variables["Negative current collector potential"]
             lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             i_boundary_cc = variables["Current collector current density"]
             T_p = variables["Positive electrode temperature"]

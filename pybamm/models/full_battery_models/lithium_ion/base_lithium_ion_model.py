@@ -29,7 +29,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "current collector z": self.param.L_z,
         }
 
-        for domain in ["Negative", "Positive"]:
+        for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain.lower()] == "porous":
                 domain_param = self.param.domain_params[domain]
                 self.length_scales.update(
@@ -74,9 +74,9 @@ class BaseModel(pybamm.BaseBatteryModel):
     @property
     def default_parameter_values(self):
         if self.options.whole_cell_domains == [
-            "Negative electrode",
-            "Separator",
-            "Positive electrode",
+            "negative electrode",
+            "separator",
+            "positive electrode",
         ]:
             return pybamm.ParameterValues("Marquis2019")
         else:
@@ -84,7 +84,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_quick_plot_variables(self):
-        if self.whole_cell_domains == ["Separator", "Positive electrode"]:
+        if self.whole_cell_domains == ["separator", "positive electrode"]:
             return [
                 "Electrolyte concentration [mol.m-3]",
                 "Positive particle surface concentration [mol.m-3]",
@@ -123,7 +123,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""
         param = self.param
 
-        domains = [d for d in self.options.whole_cell_domains if d != "Separator"]
+        domains = [d for d in self.options.whole_cell_domains if d != "separator"]
         for Domain in domains:
             domain = Domain.lower()
             self.variables[f"Total lithium in {domain} [mol]"] = sum(
@@ -176,7 +176,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Different way of measuring LLI but should give same value
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
         LLI_reactions = LLI_sei
-        if "Negative electrode" in domains:
+        if "negative electrode" in domains:
             LLI_sei_cracks = self.variables["Loss of lithium to SEI on cracks [mol]"]
             LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
             LLI_reactions += LLI_sei_cracks + LLI_pl
@@ -314,7 +314,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_crack_submodel(self):
         for domain in self.options.whole_cell_domains:
-            if domain != "Separator":
+            if domain != "separator":
                 domain = domain.split()[0].lower()
                 crack = getattr(self.options, domain)["particle mechanics"]
                 if crack == "none":

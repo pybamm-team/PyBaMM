@@ -47,13 +47,13 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e = pybamm.concatenation(*phi_e_dict.values())
 
         # Case where negative electrode is not included (half-cell)
-        if "Negative electrode" not in self.options.whole_cell_domains:
-            phi_e_s = phi_e_dict["Separator"]
-            phi_e_dict["Negative electrode"] = pybamm.boundary_value(phi_e_s, "left")
+        if "negative electrode" not in self.options.whole_cell_domains:
+            phi_e_s = phi_e_dict["separator"]
+            phi_e_dict["negative electrode"] = pybamm.boundary_value(phi_e_s, "left")
 
         eta_e_av = pybamm.x_average(
-            phi_e_dict["Positive electrode"]
-        ) - pybamm.x_average(phi_e_dict["Negative electrode"])
+            phi_e_dict["positive electrode"]
+        ) - pybamm.x_average(phi_e_dict["negative electrode"])
         phi_e_av = pybamm.x_average(phi_e)
 
         variables = {
@@ -108,15 +108,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         if isinstance(i_e, pybamm.Concatenation):
             if self.options.whole_cell_domains == [
-                "Negative electrode",
-                "Separator",
-                "Positive electrode",
+                "negative electrode",
+                "separator",
+                "positive electrode",
             ]:
                 i_e_n, _, i_e_p = i_e.orphans
-            elif self.options.whole_cell_domains == ["Negative electrode", "Separator"]:
+            elif self.options.whole_cell_domains == ["negative electrode", "separator"]:
                 i_e_n, _ = i_e.orphans
                 i_e_p = None
-            elif self.options.whole_cell_domains == ["Separator", "Positive electrode"]:
+            elif self.options.whole_cell_domains == ["separator", "positive electrode"]:
                 _, i_e_p = i_e.orphans
                 i_e_n = None
 

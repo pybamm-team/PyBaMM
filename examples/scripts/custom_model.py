@@ -18,27 +18,27 @@ model.submodels["current collector"] = pybamm.current_collector.Uniform(model.pa
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
 model.submodels["porosity"] = pybamm.porosity.Constant(model.param, model.options)
 model.submodels["negative active material"] = pybamm.active_material.Constant(
-    model.param, "Negative", model.options
+    model.param, "negative", model.options
 )
 model.submodels["positive active material"] = pybamm.active_material.Constant(
-    model.param, "Positive", model.options
+    model.param, "positive", model.options
 )
 model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
-    model.param, "Negative"
+    model.param, "negative"
 )
 model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
-    model.param, "Positive"
+    model.param, "positive"
 )
 particle_n = pybamm.particle.XAveragedPolynomialProfile(
     model.param,
-    "Negative",
+    "negative",
     options={**model.options, "particle": "uniform profile"},
     phase="primary",
 )
 model.submodels["negative particle"] = particle_n
 particle_p = pybamm.particle.XAveragedPolynomialProfile(
     model.param,
-    "Positive",
+    "positive",
     options={**model.options, "particle": "uniform profile"},
     phase="primary",
 )
@@ -47,34 +47,34 @@ model.submodels["positive particle"] = particle_p
 model.submodels[
     "negative open circuit potential"
 ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-    model.param, "Negative", "lithium-ion main", options=model.options, phase="primary"
+    model.param, "negative", "lithium-ion main", options=model.options, phase="primary"
 )
 model.submodels[
     "positive open circuit potential"
 ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-    model.param, "Positive", "lithium-ion main", options=model.options, phase="primary"
+    model.param, "positive", "lithium-ion main", options=model.options, phase="primary"
 )
 model.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
-    model.param, "Negative", "lithium-ion main", options=model.options
+    model.param, "negative", "lithium-ion main", options=model.options
 )
 model.submodels["positive interface"] = pybamm.kinetics.InverseButlerVolmer(
-    model.param, "Positive", "lithium-ion main", options=model.options
+    model.param, "positive", "lithium-ion main", options=model.options
 )
 model.submodels["negative interface utilisation"] = pybamm.interface_utilisation.Full(
-    model.param, "Negative", model.options
+    model.param, "negative", model.options
 )
 model.submodels["positive interface utilisation"] = pybamm.interface_utilisation.Full(
-    model.param, "Positive", model.options
+    model.param, "positive", model.options
 )
 model.submodels[
     "negative interface current"
 ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-    model.param, "Negative", "lithium-ion main"
+    model.param, "negative", "lithium-ion main"
 )
 model.submodels[
     "positive interface current"
 ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-    model.param, "Positive", "lithium-ion main"
+    model.param, "positive", "lithium-ion main"
 )
 model.submodels[
     "electrolyte diffusion"
@@ -85,18 +85,18 @@ model.submodels[
 model.submodels[
     "negative surface potential difference"
 ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-    model.param, "Negative"
+    model.param, "negative"
 )
 model.submodels[
     "positive surface potential difference"
 ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-    model.param, "Positive"
+    model.param, "positive"
 )
 model.submodels["Negative particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
-    model.param, "Negative", model.options
+    model.param, "negative", model.options
 )
 model.submodels["Positive particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
-    model.param, "Positive", model.options
+    model.param, "positive", model.options
 )
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param, model.options)
 model.submodels["sei on cracks"] = pybamm.sei.NoSEI(

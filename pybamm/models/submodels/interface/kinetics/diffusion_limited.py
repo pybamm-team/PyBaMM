@@ -87,7 +87,7 @@ class DiffusionLimited(BaseInterface):
 
     def _get_diffusion_limited_current_density(self, variables):
         param = self.param
-        if self.domain == "Negative":
+        if self.domain == "negative":
             if self.order == "leading":
                 j_p = variables[
                     f"X-averaged positive electrode {self.reaction_name}"
@@ -126,7 +126,7 @@ class DiffusionLimited(BaseInterface):
                 f"{self.reaction_name}interfacial current density"
             ]
             param = self.param
-            if self.domain == "Negative":
+            if self.domain == "negative":
                 N_ox_s_p = variables["Oxygen flux"].orphans[1]
                 N_ox_neg_sep_interface = pybamm.Index(N_ox_s_p, slice(0, 1))
 

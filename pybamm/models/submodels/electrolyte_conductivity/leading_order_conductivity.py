@@ -26,7 +26,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
         super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
-        if "Negative electrode" not in self.options.whole_cell_domains:
+        if "negative electrode" not in self.options.whole_cell_domains:
             phi_e_av = variables["Lithium metal interface electrolyte potential"]
         else:
             # delta_phi = phi_s - phi_e
@@ -44,7 +44,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        if "Negative electrode" not in self.options.whole_cell_domains:
+        if "negative electrode" not in self.options.whole_cell_domains:
             i_e_n = None
         else:
             i_e_n = i_boundary_cc * x_n / l_n

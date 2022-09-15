@@ -46,13 +46,13 @@ class Composite(BaseModel):
         T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
 
         sigma_eff_0 = self.domain_param.sigma(T) * tor_0
-        if self._domain == "Negative":
+        if self._domain == "negative":
             phi_s = phi_s_cn + (i_boundary_cc_0 / sigma_eff_0) * (
                 x_n * (x_n - 2 * l_n) / (2 * l_n)
             )
             i_s = i_boundary_cc_0 * (1 - x_n / l_n)
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             delta_phi_p_av = variables[
                 "X-averaged positive electrode surface potential difference"
             ]
@@ -72,7 +72,7 @@ class Composite(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
@@ -88,11 +88,11 @@ class Composite(BaseModel):
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
         T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             sigma_eff_0 = self.param.p.sigma(T) * tor_0
             rbc = (-i_boundary_cc_0 / sigma_eff_0, "Neumann")

@@ -26,7 +26,7 @@ class Explicit(BaseElectrolyteConductivity):
 
     def get_coupled_variables(self, variables):
         # skip for separator
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return variables
 
         if self.options.electrode_types[self.domain.lower()] == "planar":
