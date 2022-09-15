@@ -648,10 +648,7 @@ class PhaseLeadAcidParameters(BaseParameters):
         self.geo = domain_param.geo.prim
 
     def _set_dimensional_parameters(self):
-        domain = self.domain
-        Domain = domain.capitalize()
-
-        # Microstructure
+        domain, Domain = self.domain_Domain  # Microstructure
         x = (
             pybamm.SpatialVariable(
                 f"x_{domain[0]}",

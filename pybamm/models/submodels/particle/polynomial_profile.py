@@ -45,8 +45,7 @@ class PolynomialProfile(BaseParticle):
         pybamm.citations.register("Subramanian2005")
 
     def get_fundamental_variables(self):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         variables = {}
         # For all orders we solve an equation for the average concentration
@@ -161,8 +160,7 @@ class PolynomialProfile(BaseParticle):
         return variables
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.size_distribution is False:
             c_s = variables[f"{Domain} particle concentration"]
@@ -214,8 +212,7 @@ class PolynomialProfile(BaseParticle):
         return variables
 
     def set_rhs(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_param = self.phase_param
 
         if self.size_distribution is False:
@@ -254,8 +251,7 @@ class PolynomialProfile(BaseParticle):
             # No algebraic equations since we only solve for the average concentration
             return
 
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_param = self.phase_param
 
         c_s_surf = variables[f"{Domain} particle surface concentration"]
@@ -281,8 +277,7 @@ class PolynomialProfile(BaseParticle):
             }
 
     def set_initial_conditions(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         c_init = pybamm.r_average(self.phase_param.c_init)
 

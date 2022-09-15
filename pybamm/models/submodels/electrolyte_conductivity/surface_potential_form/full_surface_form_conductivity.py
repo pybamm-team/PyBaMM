@@ -141,8 +141,7 @@ class BaseModel(BaseElectrolyteConductivity):
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
     def set_boundary_conditions(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.domain == "separator":
             return None
@@ -222,8 +221,7 @@ class FullAlgebraic(BaseModel):
         super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.domain == "separator":
             return
@@ -261,8 +259,7 @@ class FullDifferential(BaseModel):
         if self.domain == "separator":
             return
 
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         C_dl = self.domain_param.C_dl
 

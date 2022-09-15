@@ -32,8 +32,7 @@ class DiffusionLimited(BaseInterface):
         self.order = order
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         delta_phi_s = variables[f"{Domain} electrode surface potential difference"]

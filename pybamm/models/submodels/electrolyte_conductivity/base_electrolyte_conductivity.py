@@ -213,8 +213,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the surface potential difference.
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         ocp_ref = self.domain_param.U_ref
 

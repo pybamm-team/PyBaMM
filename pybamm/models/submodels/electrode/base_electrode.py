@@ -42,8 +42,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             electrode.
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         param = self.param
         pot = param.potential_scale

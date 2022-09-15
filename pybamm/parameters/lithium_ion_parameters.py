@@ -406,8 +406,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         main = self.main_param
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if domain == "separator":
             x = pybamm.standard_spatial_vars.x_s * main.L_x
@@ -645,8 +644,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         main = self.main_param
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         pref = self.phase_prefactor
 
@@ -797,8 +795,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def j0_dimensional(self, c_e, c_s_surf, T):
         """Dimensional exchange-current density [A.m-2]"""
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             f"{Domain} particle surface concentration [mol.m-3]": c_s_surf,
@@ -843,8 +840,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         inputs = {
             f"{Domain} particle stoichiometry": sto,
             f"{self.phase_prefactor}Maximum {domain} particle "
@@ -1049,8 +1045,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         Dimensionless volume change for the electrode;
         sto should be R-averaged
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         return pybamm.FunctionParameter(
             f"{Domain} electrode volume change",
             {

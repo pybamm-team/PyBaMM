@@ -27,8 +27,7 @@ class BaseModel(pybamm.BaseSubModel):
     def _get_standard_active_material_variables(self, eps_solid):
         param = self.param
         phase_name = self.phase_name
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if eps_solid.domain == []:
             eps_solid = pybamm.PrimaryBroadcast(eps_solid, "current collector")
@@ -125,8 +124,7 @@ class BaseModel(pybamm.BaseSubModel):
             return variables
 
     def _get_standard_active_material_change_variables(self, deps_solid_dt):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if deps_solid_dt.domain == ["current collector"]:
             deps_solid_dt_av = deps_solid_dt

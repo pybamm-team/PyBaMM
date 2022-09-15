@@ -28,8 +28,7 @@ class SwellingOnly(BaseMechanics):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         zero = pybamm.FullBroadcast(
             pybamm.Scalar(0), f"{domain} electrode", "current collector"

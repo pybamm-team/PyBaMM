@@ -47,8 +47,7 @@ class BaseOpenCircuitPotential(BaseInterface):
             The variables dictionary including the open circuit potentials
             and related standard variables.
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         # Update size variables then size average.
@@ -104,8 +103,7 @@ class BaseOpenCircuitPotential(BaseInterface):
         A private function to obtain the open circuit potential and
         related standard variables when there is a distribution of particle sizes.
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         # X-average or broadcast to electrode if necessary

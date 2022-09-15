@@ -10,8 +10,7 @@ class LithiumMetalBaseModel(BaseModel):
         super().__init__(param, domain, options=options)
 
     def _get_li_metal_interface_variables(self, delta_phi_s, phi_s, phi_e):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         domain_param = self.domain_param
         pot_scale = self.param.potential_scale
         delta_phi_s_dim = pot_scale * delta_phi_s

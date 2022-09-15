@@ -56,8 +56,7 @@ class Full(BaseModel):
         return variables
 
     def set_algebraic(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         phi_s = variables[f"{Domain} electrode potential"]
         i_s = variables[f"{Domain} electrode current density"]

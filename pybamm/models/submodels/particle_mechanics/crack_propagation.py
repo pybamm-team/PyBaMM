@@ -38,8 +38,7 @@ class CrackPropagation(BaseMechanics):
         self.x_average = x_average
 
     def get_fundamental_variables(self):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.x_average is True:
             l_cr_av = pybamm.Variable(
@@ -56,8 +55,7 @@ class CrackPropagation(BaseMechanics):
         return self._get_standard_variables(l_cr)
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
@@ -79,8 +77,7 @@ class CrackPropagation(BaseMechanics):
         return variables
 
     def set_rhs(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.x_average is True:
             l_cr = variables[f"X-averaged {domain} particle crack length"]
@@ -91,8 +88,7 @@ class CrackPropagation(BaseMechanics):
         self.rhs = {l_cr: dl_cr}
 
     def set_initial_conditions(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.x_average is True:
             l_cr = variables[f"X-averaged {domain} particle crack length"]
@@ -103,8 +99,7 @@ class CrackPropagation(BaseMechanics):
         self.initial_conditions = {l_cr: l0}
 
     def set_events(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.x_average is True:
             l_cr = variables[f"X-averaged {domain} particle crack length"]

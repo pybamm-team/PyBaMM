@@ -7,8 +7,7 @@ from . import BaseOpenCircuitPotential
 
 class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":

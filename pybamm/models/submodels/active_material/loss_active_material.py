@@ -38,8 +38,7 @@ class LossActiveMaterial(BaseModel):
         self.x_average = x_average
 
     def get_fundamental_variables(self):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.x_average is True:
             eps_solid_xav = pybamm.Variable(
@@ -57,8 +56,7 @@ class LossActiveMaterial(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         deps_solid_dt = 0
         lam_option = getattr(self.options, self.domain)["loss of active material"]
@@ -120,8 +118,7 @@ class LossActiveMaterial(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.x_average is True:
             eps_solid = variables[
@@ -139,8 +136,7 @@ class LossActiveMaterial(BaseModel):
         self.rhs = {eps_solid: deps_solid_dt}
 
     def set_initial_conditions(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         eps_solid_init = self.domain_param.prim.epsilon_s
 

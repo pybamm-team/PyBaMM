@@ -77,8 +77,7 @@ class Composite(BaseModel):
         return variables
 
     def set_boundary_conditions(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         phi_s = variables[f"{Domain} electrode potential"]
         tor_0 = variables[

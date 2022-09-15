@@ -116,7 +116,7 @@ class BaseSubModel(pybamm.BaseModel):
     @domain.setter
     def domain(self, domain):
         if domain is not None:
-            domain = domain
+            domain = domain.lower()
         ok_domain_list = [
             "negative",
             "separator",
@@ -130,12 +130,18 @@ class BaseSubModel(pybamm.BaseModel):
         ]
         if domain in ok_domain_list:
             self._domain = domain
+            if domain is not None:
+                self._Domain = domain.capitalize()
         else:
             raise pybamm.DomainError(
                 "Domain '{}' not recognised (must be one of {})".format(
                     domain, ok_domain_list
                 )
             )
+
+    @property
+    def domain_Domain(self):
+        return self._domain, self._Domain
 
     def get_fundamental_variables(self):
         """

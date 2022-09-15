@@ -57,8 +57,7 @@ class BaseKinetics(BaseInterface):
             return {}
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         phase_name = self.phase_name
 
@@ -188,8 +187,7 @@ class BaseKinetics(BaseInterface):
         return variables
 
     def set_algebraic(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         if (
@@ -245,8 +243,7 @@ class BaseKinetics(BaseInterface):
         # the NotConstant class
         # to differentiate it from the electrolyte concentration inside the
         # surface potential difference when taking j.diff(c_e) later on
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         c_e_0 = pybamm.NotConstant(
             variables["Leading-order x-averaged electrolyte concentration"]

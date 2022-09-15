@@ -29,8 +29,7 @@ class CurrentDriven(BaseModel):
         self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":
             u = pybamm.Variable(
@@ -54,8 +53,7 @@ class CurrentDriven(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":
             u = variables[f"{Domain} electrode interface utilisation variable"]
@@ -77,8 +75,7 @@ class CurrentDriven(BaseModel):
         self.rhs = {u: beta * a * u * j}
 
     def set_initial_conditions(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":
             u = variables[f"{Domain} electrode interface utilisation variable"]
@@ -94,8 +91,7 @@ class CurrentDriven(BaseModel):
         self.initial_conditions = {u: u_init}
 
     def set_events(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":
             u = variables[f"{Domain} electrode interface utilisation"]

@@ -23,8 +23,7 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, domain, options=options)
 
     def _get_standard_interface_utilisation_variables(self, u_var):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         u = pybamm.maximum(u_var, 1e-8)
         u_var_av = pybamm.x_average(u_var)

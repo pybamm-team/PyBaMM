@@ -30,8 +30,7 @@ class InverseButlerVolmer(BaseInterface):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]

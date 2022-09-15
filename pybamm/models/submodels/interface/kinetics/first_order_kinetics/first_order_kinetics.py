@@ -29,8 +29,7 @@ class FirstOrderKinetics(BaseInterface):
         self.leading_order_model = leading_order_model
 
     def get_coupled_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         # Unpack

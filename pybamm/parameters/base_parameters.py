@@ -60,6 +60,20 @@ class BaseParameters:
     def options(self, extra_options):
         self._options = pybamm.BatteryModelOptions(extra_options)
 
+    @property
+    def domain(self):
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        self._domain = domain
+        if domain is not None:
+            self._Domain = domain.capitalize()
+
+    @property
+    def domain_Domain(self):
+        return self.domain, self._Domain
+
     def set_phase_name(self):
         if (
             self.phase == "primary"

@@ -64,8 +64,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         param = self.param
         phase_param = self.phase_param
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         c_e = variables[f"{Domain} electrolyte concentration"]
@@ -184,8 +183,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return j_total_average, a_j_total_average
 
     def _get_standard_interfacial_current_variables(self, j):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
@@ -248,8 +246,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_exchange_current_variables(self, j0):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
 
@@ -288,8 +285,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_volumetric_current_density_variables(self, variables):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         if self.options.electrode_types[domain] == "planar":
             return variables
@@ -333,8 +329,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_overpotential_variables(self, eta_r):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         pot_scale = self.param.potential_scale
 
@@ -426,8 +421,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
@@ -450,8 +444,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Interfacial current density variables that depend on particle size R,
         relevant if "particle size" option is "distribution".
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         reaction_name = self.reaction_name
 
@@ -483,8 +476,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         Exchange current variables that depend on particle size.
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
 
@@ -513,8 +505,7 @@ class BaseInterface(pybamm.BaseSubModel):
         Overpotential variables that depend on particle size.
         """
         pot_scale = self.param.potential_scale
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         # X-average or broadcast to electrode if necessary

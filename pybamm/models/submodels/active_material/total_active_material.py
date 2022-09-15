@@ -25,8 +25,7 @@ class Total(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
         # Creates "total" active material volume fraction and capacity variables
         # by summing up all the phases
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         phases = self.options.phases[domain]
         # For each of the variables, the variable name without the phase name

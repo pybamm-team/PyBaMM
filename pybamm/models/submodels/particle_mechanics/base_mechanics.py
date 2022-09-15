@@ -40,8 +40,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         pybamm.citations.register("Deshpande2012")
 
     def _get_standard_variables(self, l_cr):
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         l_cr0 = self.domain_param.l_cr_0
         l_cr_av = pybamm.x_average(l_cr)
         variables = {
@@ -54,8 +53,7 @@ class BaseMechanics(pybamm.BaseSubModel):
 
     def _get_mechanical_results(self, variables):
         domain_param = self.domain_param
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
 
         c_s_rav = variables[f"R-averaged {domain} particle concentration"]
         c_s_surf = variables[f"{Domain} particle surface concentration"]
@@ -129,8 +127,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the crack length.
         """
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         l_cr = variables[f"{Domain} particle crack length"]
