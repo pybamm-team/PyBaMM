@@ -2,7 +2,6 @@
 # Standard variables for the models
 #
 import pybamm
-import numpy as np
 
 
 class StandardVariables:

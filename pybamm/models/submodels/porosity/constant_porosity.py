@@ -22,7 +22,6 @@ class Constant(BaseModel):
         eps_dict = {}
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
-            Domain = domain.capitalize()
             eps_dict[domain] = self.param.domain_params[domain.split()[0]].epsilon_init
             depsdt_dict[domain] = pybamm.FullBroadcast(0, domain, "current collector")
 
