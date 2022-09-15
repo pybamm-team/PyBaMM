@@ -783,19 +783,25 @@ class JuliaConverter(object):
         
         if self._cache_type=="standard":
             if cache_shape[1] == 1:
-                cache_shape = "({})".format(cache_shape[0])
-            self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape)
+                cache_shape_st = "({})".format(cache_shape[0])
+            else:
+                cache_shape_st = cache_shape
+            self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape_st)
             self._cache_dict[symbol.output] = "cs."+cache_name
         elif self._cache_type=="dual":
             if cache_shape[1] == 1:
-                cache_shape = "({})".format(cache_shape[0])
-            self._cache_and_const_string+="{} = dualcache(zeros{},12),".format(cache_name,cache_shape)
+                cache_shape_st = "({})".format(cache_shape[0])
+            else:
+                cache_shape_st = cache_shape
+            self._cache_and_const_string+="{} = dualcache(zeros{},12),\n".format(cache_name,cache_shape_st)
             self._cache_initialization_string+="   {} = PreallocationTools.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
         elif self._cache_type=="symbolic":
             if cache_shape[1]==1:
-                cache_shape = "({})".format(cache_shape[0])
-            self._cache_and_const_string+="   {} = symcache(zeros{},Vector{{Num}}(undef,{})),\n".format(cache_name, cache_shape,cache_shape[0])
+                cache_shape_st = "({})".format(cache_shape[0])
+            else:
+                cache_shape_st = cache_shape
+            self._cache_and_const_string+="   {} = symcache(zeros{},Vector{{Num}}(undef,{})),\n".format(cache_name, cache_shape_st,cache_shape[0])
             self._cache_initialization_string+="   {} = PyBaMM.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
         else:
