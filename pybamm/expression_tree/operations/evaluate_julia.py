@@ -209,6 +209,7 @@ class JuliaConverter(object):
         self.function_definition = ""
         self._function_string = ""
         self._return_string = ""
+        self._cache_initialization_string = ""
     
     #know where to go to find a variable. this could be smoother, there will need to be a ton of boilerplate here.
     @multimethod
@@ -784,7 +785,12 @@ class JuliaConverter(object):
             if cache_shape[1] == 1:
                 cache_shape = "({})".format(cache_shape[0])
             self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape)
-        else:
+        elif self._cache_type=="dual":
+            if cache_shape[1] == 1:
+                cache_shape = "({})".format(cache_shape[0])
+            self._cache_and_const_string+="{} = dualcache(zeros({}),12)".format(cache_shape)
+            self._cache_initialization_string+="   {} = PreallocationTools.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
         return 0
 
