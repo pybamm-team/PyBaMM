@@ -53,7 +53,7 @@ class InverseButlerVolmer(BaseInterface):
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[Domain.lower()] == "planar":
             T = variables["X-averaged cell temperature"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:

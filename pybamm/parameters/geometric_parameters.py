@@ -22,7 +22,11 @@ class GeometricParameters(BaseParameters):
         self.n = DomainGeometricParameters("Negative", self)
         self.s = DomainGeometricParameters("Separator", self)
         self.p = DomainGeometricParameters("Positive", self)
-        self.domain_params = [self.n, self.s, self.p]
+        self.domain_params = {
+            "Negative": self.n,
+            "Separator": self.s,
+            "Positive": self.p,
+        }
 
         # Set parameters and scales
         self._set_dimensional_parameters()
@@ -31,7 +35,7 @@ class GeometricParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensional_parameters()
 
         # Macroscale geometry
@@ -52,12 +56,12 @@ class GeometricParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_scales()
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensionless_parameters()
 
         # Macroscale Geometry
@@ -68,8 +72,8 @@ class GeometricParameters(BaseParameters):
         self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
         self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z
-        self.a_cooling = self.A_cooling / (self.L_z ** 2)
-        self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
+        self.a_cooling = self.A_cooling / (self.L_z**2)
+        self.v_cell = self.V_cell / (self.L_x * self.L_z**2)
 
         self.l = self.L / self.L_x
         self.delta = self.L_x / self.L_z  # Pouch cell aspect ratio
@@ -83,13 +87,13 @@ class DomainGeometricParameters(BaseParameters):
         if self.domain != "Separator":
             self.prim = ParticleGeometricParameters(domain, "primary", main_param)
             self.sec = ParticleGeometricParameters(domain, "secondary", main_param)
-            self.phases = [self.prim, self.sec]
+            self.phase_params = {"primary": self.prim, "secondary": self.sec}
         else:
-            self.phases = []
+            self.phase_params = {}
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_dimensional_parameters()
 
         if self.domain == "Separator":
@@ -119,12 +123,12 @@ class DomainGeometricParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_scales()
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_dimensionless_parameters()
         main = self.main_param
 

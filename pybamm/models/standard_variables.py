@@ -35,11 +35,11 @@ class StandardVariables:
             bounds=(0, np.inf),
         )
 
-        self.c_e_av = pybamm.Variable(
-            "X-averaged electrolyte concentration",
-            domain="current collector",
-            bounds=(0, np.inf),
-        )
+        # self.c_e_av = pybamm.Variable(
+        #     "X-averaged electrolyte concentration",
+        #     domain="current collector",
+        #     bounds=(0, np.inf),
+        # )
 
         # Electrolyte porosity times concentration
         # self.eps_c_e_n = pybamm.Variable(

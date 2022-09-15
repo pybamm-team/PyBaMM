@@ -26,7 +26,7 @@ class BaseModel(pybamm.BaseSubModel):
         u = pybamm.maximum(u_var, 1e-8)
         u_var_av = pybamm.x_average(u_var)
         u_av = pybamm.maximum(u_var_av, 1e-8)
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[self.domain.lower()] == "planar":
             variables = {
                 "Lithium metal interface utilisation variable": u_var_av,
                 "Lithium metal interface utilisation": u_av,

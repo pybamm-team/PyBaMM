@@ -82,60 +82,75 @@ class SPM(BaseModel):
     def set_intercalation_kinetics_submodel(self):
 
         for domain in ["negative", "positive"]:
+            electrode_type = self.options.electrode_types[domain]
+            if electrode_type == "porous":
+                reaction = "lithium-ion main"
+            elif electrode_type == "planar":
+                reaction = "lithium metal plating"
+
             if self.options["surface form"] == "false":
                 self.submodels[
                     f"{domain} interface"
                 ] = self.inverse_intercalation_kinetics(
-                    self.param, domain, "lithium-ion main", self.options
+                    self.param, domain, reaction, self.options
                 )
-                self.submodels[
-                    f"{domain} interface current"
-                ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-                    self.param, domain, "lithium-ion main", self.options
+                if electrode_type == "porous":
+                    current_model = pybamm.kinetics.CurrentForInverseButlerVolmer
+                elif electrode_type == "planar":
+                    current_model = (
+                        pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal
+                    )
+                self.submodels[f"{domain} interface current"] = current_model(
+                    self.param, domain, reaction, self.options
                 )
             else:
                 intercalation_kinetics = self.get_intercalation_kinetics(domain)
                 for phase in self.options.phases[domain]:
                     submod = intercalation_kinetics(
-                        self.param, domain, "lithium-ion main", self.options, phase
+                        self.param, domain, reaction, self.options, phase
                     )
                     self.submodels[f"{domain} {phase} interface"] = submod
                 self.submodels[
                     f"total {domain} interface"
                 ] = pybamm.kinetics.TotalMainKinetics(
-                    self.param, domain, "lithium-ion main", self.options
+                    self.param, domain, reaction, self.options
                 )
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
-            particle = getattr(self.options, domain)["particle"]
-            for phase in self.options.phases[domain]:
-                if particle == "Fickian diffusion":
-                    submod = pybamm.particle.FickianDiffusion(
-                        self.param, domain, self.options, phase=phase, x_average=True
-                    )
-                elif particle in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    submod = pybamm.particle.XAveragedPolynomialProfile(
-                        self.param, domain, self.options, phase=phase
-                    )
-                self.submodels[f"{domain} {phase} particle"] = submod
+            if self.options.electrode_types[domain] == "porous":
+                particle = getattr(self.options, domain)["particle"]
+                for phase in self.options.phases[domain]:
+                    if particle == "Fickian diffusion":
+                        submod = pybamm.particle.FickianDiffusion(
+                            self.param,
+                            domain,
+                            self.options,
+                            phase=phase,
+                            x_average=True,
+                        )
+                    elif particle in [
+                        "uniform profile",
+                        "quadratic profile",
+                        "quartic profile",
+                    ]:
+                        submod = pybamm.particle.XAveragedPolynomialProfile(
+                            self.param, domain, self.options, phase=phase
+                        )
+                    self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):
-
-        self.submodels[
-            "negative electrode potential"
-        ] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Negative", options=self.options
-        )
-        self.submodels[
-            "positive electrode potential"
-        ] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive", options=self.options
-        )
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                solid_submodel = pybamm.electrode.ohm.LeadingOrder
+            elif self.options.electrode_types[domain] == "planar":
+                if self.options["surface form"] == "false":
+                    solid_submodel = pybamm.electrode.ohm.LithiumMetalExplicit
+                else:
+                    solid_submodel = pybamm.electrode.ohm.LithiumMetalSurfaceForm
+            self.submodels[f"{domain} electrode potential"] = solid_submodel(
+                self.param, domain, self.options
+            )
 
     def set_electrolyte_submodel(self):
 
@@ -164,7 +179,7 @@ class SPM(BaseModel):
         for domain in ["Negative", "Positive"]:
             self.submodels[
                 domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain)
+            ] = surf_model(self.param, domain, options=self.options)
 
         self.submodels[
             "electrolyte diffusion"

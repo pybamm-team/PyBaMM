@@ -157,7 +157,7 @@ class BaseInterface(pybamm.BaseSubModel):
         domain = self.domain.lower()
         i_boundary_cc = variables["Current collector current density"]
 
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             # In a half-cell the total interfacial current density is the current
             # collector current density, not divided by electrode thickness
             i_boundary_cc = variables["Current collector current density"]
@@ -219,7 +219,7 @@ class BaseInterface(pybamm.BaseSubModel):
         j_scale = self.phase_param.j_scale
         a_j_scale = self.param.i_typ / self.param.L_x
 
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             variables = {
                 "Lithium metal total interfacial current density": j_tot_av,
                 "Lithium metal total interfacial current density [A.m-2]": j_scale
@@ -282,11 +282,12 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_volumetric_current_density_variables(self, variables):
-        if self.half_cell and self.domain == "Negative":
-            return variables
-
         Domain = self.domain
         domain = Domain.lower()
+
+        if self.options.electrode_types[domain] == "planar":
+            return variables
+
         reaction_name = self.reaction_name
         phase_name = self.phase_name
 
@@ -303,9 +304,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
         if reaction_name == "SEI on cracks ":
             roughness = variables["Negative electrode roughness ratio"] - 1
-            roughness_av = variables[
-                "X-averaged negative electrode roughness ratio"
-            ] - 1
+            roughness_av = (
+                variables["X-averaged negative electrode roughness ratio"] - 1
+            )
         else:
             roughness = 1
             roughness_av = 1
@@ -397,7 +398,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         delta_phi_av_dim = ocp_ref + delta_phi_av * self.param.potential_scale
 
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             variables = {
                 "Lithium metal interface surface potential difference": delta_phi_av,
                 "Lithium metal interface surface potential difference [V]"

@@ -6,23 +6,25 @@ from .base_ohm import BaseModel
 
 
 class LithiumMetalBaseModel(BaseModel):
-    def __init__(self, param, options=None):
-        super().__init__(param, "Negative", options=options)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def _get_li_metal_interface_variables(self, delta_phi_s, phi_s, phi_e):
-        param = self.param
-        pot_scale = param.potential_scale
+        Domain = self.domain
+        domain = Domain.lower()
+        domain_param = self.domain_param
+        pot_scale = self.param.potential_scale
         delta_phi_s_dim = pot_scale * delta_phi_s
 
         variables = {
-            "Negative electrode potential drop": delta_phi_s,
-            "Negative electrode potential drop [V]": delta_phi_s_dim,
-            "X-averaged negative electrode ohmic losses": delta_phi_s / 2,
-            "X-averaged negative electrode ohmic losses [V]": delta_phi_s_dim / 2,
+            f"{Domain} electrode potential drop": delta_phi_s,
+            f"{Domain} electrode potential drop [V]": delta_phi_s_dim,
+            f"X-averaged {domain} electrode ohmic losses": delta_phi_s / 2,
+            f"X-averaged {domain} electrode ohmic losses [V]": delta_phi_s_dim / 2,
             "Lithium metal interface electrode potential": phi_s,
             "Lithium metal interface electrode potential [V]": pot_scale * phi_s,
             "Lithium metal interface electrolyte potential": phi_e,
-            "Lithium metal interface electrolyte potential [V]": param.n.U_ref
+            "Lithium metal interface electrolyte potential [V]": domain_param.U_ref
             + pot_scale * phi_e,
         }
         return variables
@@ -36,6 +38,8 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    domain : str
+        The domain of the submodel, can be "Negative" or "Positive"
     options : dict, optional
         A dictionary of options to be passed to the model.
 
@@ -43,7 +47,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """
 
     def get_fundamental_variables(self):
-        ocp_ref = self.param.n.U_ref
+        ocp_ref = self.domain_param.U_ref
         pot_scale = self.param.potential_scale
 
         delta_phi = pybamm.Variable(
@@ -59,18 +63,19 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        param = self.param
+        Domain = self.domain
+        domain_param = self.domain_param
 
         i_boundary_cc = variables["Current collector current density"]
-        T_n = variables["Negative current collector temperature"]
-        l_n = param.n.l
-        delta_phi_s = i_boundary_cc * l_n / param.n.sigma(T_n)
+        T = variables[f"{Domain} current collector temperature"]
+        l = domain_param.l
+        delta_phi_s = i_boundary_cc * l / domain_param.sigma(T)
 
-        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cc = variables[f"{Domain} current collector potential"]
         delta_phi = variables["Lithium metal interface surface potential difference"]
 
         # Potentials at the anode/separator interface
-        phi_s = phi_s_cn - delta_phi_s
+        phi_s = phi_s_cc - delta_phi_s
         phi_e = phi_s - delta_phi
 
         variables.update(
@@ -80,7 +85,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
 
     def set_initial_conditions(self, variables):
         delta_phi = variables["Lithium metal interface surface potential difference"]
-        delta_phi_init = self.param.n.prim.U_init
+        delta_phi_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
@@ -95,7 +100,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
                 "Lithium metal interface surface potential difference"
             ]
 
-            C_dl = self.param.n.C_dl
+            C_dl = self.domain_param.C_dl
 
             self.rhs[delta_phi] = 1 / C_dl * (i_cc - sum_j)
 
@@ -127,17 +132,18 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
     """
 
     def get_coupled_variables(self, variables):
-        param = self.param
+        Domain = self.domain
+        domain_param = self.domain_param
 
         i_boundary_cc = variables["Current collector current density"]
-        T_n = variables["Negative current collector temperature"]
-        l_n = param.n.l
-        delta_phi_s = i_boundary_cc * l_n / param.n.sigma(T_n)
+        T = variables[f"{Domain} current collector temperature"]
+        l = domain_param.l
+        delta_phi_s = i_boundary_cc * l / domain_param.sigma(T)
 
-        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cc = variables[f"{Domain} current collector potential"]
         delta_phi = variables["Lithium metal interface surface potential difference"]
 
-        phi_s = phi_s_cn - delta_phi_s
+        phi_s = phi_s_cc - delta_phi_s
         phi_e = phi_s - delta_phi
 
         variables.update(

@@ -52,10 +52,10 @@ class BaseThermal(pybamm.BaseSubModel):
 
         variables = {"Ambient temperature": T_amb, "Cell temperature": T}
         for name, var in T_dict.items():
-            if name in ["Negative electrode", "Separator", "Positive electrode"]:
-                name = name, lower()
-                variables[f"X-averaged {name} temperature"] = pybamm.x_average(var)
             variables[f"{name} temperature"] = var
+            if name in ["Negative electrode", "Separator", "Positive electrode"]:
+                name = name.lower()
+                variables[f"X-averaged {name} temperature"] = pybamm.x_average(var)
 
         # Calculate dimensional variables
         variables_nondim = variables.copy()

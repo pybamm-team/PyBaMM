@@ -62,7 +62,7 @@ class BaseOpenCircuitPotential(BaseInterface):
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)
         ocp_av = pybamm.x_average(ocp)
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             # Half-cell domain, ocp should not be broadcast
             pass
         elif ocp.domain == []:

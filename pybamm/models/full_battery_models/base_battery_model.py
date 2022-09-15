@@ -307,11 +307,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if SEI_cracks_option == "true":
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = (
-                    "swelling and cracking", "swelling only"
+                    "swelling and cracking",
+                    "swelling only",
                 )
             else:
                 default_options["particle mechanics"] = (
-                    "swelling and cracking", "none"
+                    "swelling and cracking",
+                    "none",
                 )
         else:
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
@@ -596,6 +598,33 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 self._phases[domain] = phases
             return self._phases
 
+    @property
+    def whole_cell_domains(self):
+        try:
+            return self._whole_cell_domains
+        except AttributeError:
+            if self["working electrode"] == "positive":
+                wcd = ["Separator", "Positive electrode"]
+            elif self["working electrode"] == "negative":
+                wcd = ["Negative electrode", "Separator"]
+            elif self["working electrode"] == "both":
+                wcd = ["Negative electrode", "Separator", "Positive electrode"]
+            self._whole_cell_domains = wcd
+            return wcd
+
+    @property
+    def electrode_types(self):
+        try:
+            return self._electrode_types
+        except AttributeError:
+            self._electrode_types = {}
+            for domain in ["negative", "positive"]:
+                if domain.capitalize() + " electrode" in self.whole_cell_domains:
+                    self._electrode_types[domain] = "porous"
+                else:
+                    self._electrode_types[domain] = "planar"
+            return self._electrode_types
+
     def print_options(self):
         """
         Print the possible options with the ones currently selected
@@ -624,19 +653,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # index 1 in a 2-tuple for the positive electrode
         return BatteryModelDomainOptions(self.items(), 1)
 
-    @property
-    def whole_cell_domains(self):
-        try:
-            return self._whole_cell_domains
-        except AttributeError:
-            if self["working electrode"] == "positive":
-                wcd = ["Separator", "Positive electrode"]
-            elif self["working electrode"] == "negative":
-                wcd = ["Negative electrode", "Separator"]
-            elif self["working electrode"] == "both":
-                wcd = ["Negative electrode", "Separator", "Positive electrode"]
-            self._whole_cell_domains = wcd
-            return wcd
 
 class BatteryModelDomainOptions(dict):
     def __init__(self, dict_items, index):
@@ -1154,33 +1170,28 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["current collector"] = submodel
 
     def set_interface_utilisation_submodel(self):
-        if self.half_cell:
-            domains = ["Counter", "Positive"]
-        else:
-            domains = ["Negative", "Positive"]
-        for domain in domains:
-            name = domain.lower() + " interface utilisation"
-            if domain == "Counter":
-                domain = "Negative"
-            util = getattr(self.options, domain.lower())["interface utilisation"]
+        for Domain in ["Negative", "Positive"]:
+            domain = Domain.lower()
+            util = getattr(self.options, domain)["interface utilisation"]
             if util == "full":
-                self.submodels[name] = pybamm.interface_utilisation.Full(
+                submodel = pybamm.interface_utilisation.Full(
                     self.param, domain, self.options
                 )
             elif util == "constant":
-                self.submodels[name] = pybamm.interface_utilisation.Constant(
+                submodel = pybamm.interface_utilisation.Constant(
                     self.param, domain, self.options
                 )
             elif util == "current-driven":
-                if self.half_cell and domain == "Negative":
+                if self.options.electrode_types[domain] == "planar":
                     reaction_loc = "interface"
                 elif self.x_average:
                     reaction_loc = "x-average"
                 else:
                     reaction_loc = "full electrode"
-                self.submodels[name] = pybamm.interface_utilisation.CurrentDriven(
+                submodel = pybamm.interface_utilisation.CurrentDriven(
                     self.param, domain, self.options, reaction_loc
                 )
+            self.submodels[f"{Domain} interface utilisation"] = submodel
 
     def set_voltage_variables(self):
         if self.options.negative["particle phases"] == "1":

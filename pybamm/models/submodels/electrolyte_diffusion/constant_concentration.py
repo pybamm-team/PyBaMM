@@ -40,13 +40,13 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         return variables
 
     def get_coupled_variables(self, variables):
-        eps_c_e = {}
+        eps_c_e_dict = {}
         for domain in self.options.whole_cell_domains:
             eps_k = variables[f"{domain} porosity"]
             c_e_k = variables[f"{domain.split()[0]} electrolyte concentration"]
-            eps_c_e[domain] = eps_k * c_e_k
+            eps_c_e_dict[domain] = eps_k * c_e_k
         variables.update(
-            self._get_standard_porosity_times_concentration_variables(eps_c_e)
+            self._get_standard_porosity_times_concentration_variables(eps_c_e_dict)
         )
 
         return variables

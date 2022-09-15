@@ -17,9 +17,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(options)
 
-        # Assess whether the submodel is a half-cell model
-        self.half_cell = self.options["working electrode"] != "both"
-
         # Default timescale
         self._timescale = self.param.timescale
 
@@ -28,28 +25,26 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "positive particle": self.param.p.prim.R_typ,
-            "positive primary particle": self.param.p.prim.R_typ,
-            "positive particle size": self.param.p.prim.R_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
-        # Add negative particle domains only if not a half cell model
-        if not self.half_cell:
-            self.length_scales.update(
-                {
-                    "negative particle": self.param.n.prim.R_typ,
-                    "negative primary particle": self.param.n.prim.R_typ,
-                    "negative particle size": self.param.n.prim.R_typ,
-                }
-            )
+        for domain in ["Negative", "Positive"]:
+            if self.options.electrode_types[domain.lower()] == "porous":
+                domain_param = self.param.domain_params[domain]
+                self.length_scales.update(
+                    {
+                        f"{domain} particle": domain_param.prim.R_typ,
+                        f"{domain} primary particle": domain_param.prim.R_typ,
+                        f"{domain} particle size": domain_param.prim.R_typ,
+                    }
+                )
 
-        # Add relevant secondary length scales
-        if len(self.options.phases["positive"]) >= 2:
-            self._length_scales["positive secondary particle"] = self.param.p.sec.R_typ
-        if not self.half_cell and len(self.options.phases["negative"]) >= 2:
-            self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
+                # Add relevant secondary length scales
+                if len(self.options.phases[domain.lower()]) >= 2:
+                    self._length_scales[
+                        f"{domain} secondary particle"
+                    ] = domain_param.sec.R_typ
 
         self.set_standard_output_variables()
 
@@ -73,23 +68,23 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_lithium_plating_submodel()
         self.set_total_interface_submodel()
 
-        if self.half_cell:
-            # This also removes "negative electrode" submodels, so should be done last
-            self.set_li_metal_counter_electrode_submodels()
-
         if build:
             self.build_model()
 
     @property
     def default_parameter_values(self):
-        if self.half_cell:
-            return pybamm.ParameterValues("Xu2019")
-        else:
+        if self.whole_cell_domains == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
             return pybamm.ParameterValues("Marquis2019")
+        else:
+            return pybamm.ParameterValues("Xu2019")
 
     @property
     def default_quick_plot_variables(self):
-        if self.half_cell:
+        if self.whole_cell_domains == ["separator", "positive electrode"]:
             return [
                 "Electrolyte concentration [mol.m-3]",
                 "Positive particle surface concentration [mol.m-3]",
@@ -115,12 +110,13 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Particle concentration position
         var = pybamm.standard_spatial_vars
-        self.variables.update(
-            {"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.prim.R_typ}
-        )
-        if not self.half_cell:
+        if self.options.electrode_types["negative"] == "porous":
             self.variables.update(
                 {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.n.prim.R_typ}
+            )
+        if self.options.electrode_types["positive"] == "porous":
+            self.variables.update(
+                {"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.prim.R_typ}
             )
 
     def set_degradation_variables(self):
@@ -132,7 +128,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             domain = Domain.lower()
             self.variables[f"Total lithium in {domain} [mol]"] = sum(
                 self.variables[f"Total lithium in {phase} phase in {domain} [mol]"]
-                for phase in self.options.phases[domain]
+                for phase in self.options.phases[domain.split()[0]]
             )
 
             # LAM
@@ -203,15 +199,12 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Time [h]",
             "Throughput capacity [A.h]",
             "Throughput energy [W.h]",
-            "Positive electrode capacity [A.h]",
             # LAM, LLI
-            "Loss of active material in positive electrode [%]",
             "Loss of lithium inventory [%]",
             "Loss of lithium inventory, including electrolyte [%]",
             # Total lithium
             "Total lithium [mol]",
             "Total lithium in electrolyte [mol]",
-            "Total lithium in positive electrode [mol]",
             "Total lithium in particles [mol]",
             # Lithium lost
             "Total lithium lost [mol]",
@@ -225,7 +218,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Local ECM resistance [Ohm]",
         ]
 
-        if not self.half_cell:
+        if self.options.electrode_types["negative"] == "porous":
             summary_variables += [
                 "Negative electrode capacity [A.h]",
                 "Loss of active material in negative electrode [%]",
@@ -234,6 +227,12 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Loss of capacity to lithium plating [A.h]",
                 "Loss of lithium to SEI on cracks [mol]",
                 "Loss of capacity to SEI on cracks [A.h]",
+            ]
+        if self.options.electrode_types["positive"] == "porous":
+            summary_variables += [
+                "Positive electrode capacity [A.h]",
+                "Loss of active material in positive electrode [%]",
+                "Total lithium in positive electrode [mol]",
             ]
 
         self.summary_variables = summary_variables
@@ -253,7 +252,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_sei_submodel(self):
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             reaction_loc = "interface"
         elif self.options["x-average side reactions"] == "true":
             reaction_loc = "x-average"
@@ -327,24 +326,25 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:
-            lam = getattr(self.options, domain)["loss of active material"]
-            phases = self.options.phases[domain]
-            for phase in phases:
-                if lam == "none":
-                    submod = pybamm.active_material.Constant(
-                        self.param, domain, self.options, phase
-                    )
-                else:
-                    submod = pybamm.active_material.LossActiveMaterial(
-                        self.param, domain, self.options, self.x_average
-                    )
-                self.submodels[f"{domain} {phase} active material"] = submod
+            if self.options.electrode_types[domain] == "porous":
+                lam = getattr(self.options, domain)["loss of active material"]
+                phases = self.options.phases[domain]
+                for phase in phases:
+                    if lam == "none":
+                        submod = pybamm.active_material.Constant(
+                            self.param, domain, self.options, phase
+                        )
+                    else:
+                        submod = pybamm.active_material.LossActiveMaterial(
+                            self.param, domain, self.options, self.x_average
+                        )
+                    self.submodels[f"{domain} {phase} active material"] = submod
 
-            # Submodel for the total active material, summing up each phase
-            if len(phases) > 1:
-                self.submodels[
-                    f"{domain} total active material"
-                ] = pybamm.active_material.Total(self.param, domain, self.options)
+                # Submodel for the total active material, summing up each phase
+                if len(phases) > 1:
+                    self.submodels[
+                        f"{domain} total active material"
+                    ] = pybamm.active_material.Total(self.param, domain, self.options)
 
     def set_porosity_submodel(self):
         if (
@@ -362,54 +362,3 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, x_average
             )
-
-    def set_li_metal_counter_electrode_submodels(self):
-        self.submodels[
-            "counter electrode open circuit potential"
-        ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-            self.param, "Negative", "lithium metal plating", self.options, "primary"
-        )
-
-        if (
-            self.options["SEI"] in ["none", "constant"]
-            and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
-            and self.options["surface form"] == "false"
-        ):
-            # only symmetric Butler-Volmer can be inverted
-            self.submodels[
-                "counter electrode potential"
-            ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
-            self.submodels[
-                "counter electrode interface"
-            ] = pybamm.kinetics.InverseButlerVolmer(
-                self.param, "Negative", "lithium metal plating", self.options
-            )  # assuming symmetric reaction for now so we can take the inverse
-            self.submodels[
-                "counter electrode interface current"
-            ] = pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
-                self.param, "Negative", "lithium metal plating", self.options
-            )
-        else:
-            self.submodels[
-                "counter electrode potential"
-            ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
-            neg_intercalation_kinetics = self.get_intercalation_kinetics("Negative")
-            self.submodels["counter electrode interface"] = neg_intercalation_kinetics(
-                self.param, "Negative", "lithium metal plating", self.options, "primary"
-            )
-
-        # For half-cell models, remove negative electrode submodels
-        # that are not needed before building
-        # We do this whether the working electrode is 'positive' or 'negative' since
-        # the half-cell models are always defined assuming the positive electrode is
-        # the working electrode
-
-        # This should be done before `self.build_model`, which is the expensive part
-
-        # Models added specifically for the counter electrode have been labelled with
-        # "counter electrode" so as not to be caught by this check
-        self.submodels = {
-            k: v
-            for k, v in self.submodels.items()
-            if not (k.startswith("negative") or k == "lithium plating")
-        }

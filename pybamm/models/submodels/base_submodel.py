@@ -75,23 +75,13 @@ class BaseSubModel(pybamm.BaseModel):
         self.external = external
         self.options = pybamm.BatteryModelOptions(options or {})
 
-        # Save whether the submodel is a half-cell submodel
-        we = self.options["working electrode"]
-        self.half_cell = we != "both"
-
         self.param = param
-        if param is None:
+        if param is None or domain is None:
             self.domain_param = None
         else:
-            if self.domain == "Negative":
-                self.domain_param = param.n
-            elif self.domain == "Positive":
-                self.domain_param = param.p
-
-            if phase == "primary":
-                self.phase_param = self.domain_param.prim
-            elif phase == "secondary":
-                self.phase_param = self.domain_param.sec
+            self.domain_param = param.domain_params[self.domain]
+            if phase is not None:
+                self.phase_param = self.domain_param.phase_params[phase]
 
         # Error checks for phase and domain
         self.set_phase(phase)

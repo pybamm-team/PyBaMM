@@ -24,7 +24,11 @@ class ThermalParameters(BaseParameters):
         self.n = DomainThermalParameters("Negative", self)
         self.s = DomainThermalParameters("Separator", self)
         self.p = DomainThermalParameters("Positive", self)
-        self.domain_params = [self.n, self.s, self.p]
+        self.domain_params = {
+            "Negative": self.n,
+            "Separator": self.s,
+            "Positive": self.p,
+        }
 
         # Set parameters
         self._set_dimensional_parameters()
@@ -32,7 +36,7 @@ class ThermalParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensional_parameters()
 
         # Reference temperature
@@ -56,7 +60,7 @@ class ThermalParameters(BaseParameters):
 
         # Planar (y,z) thermal diffusion timescale
         self.tau_th_yz = (
-            self.rho_eff_dim_ref * (self.geo.L_z ** 2) / self.lambda_eff_dim_ref
+            self.rho_eff_dim_ref * (self.geo.L_z**2) / self.lambda_eff_dim_ref
         )
 
     def T_amb_dim(self, t):
@@ -85,7 +89,7 @@ class ThermalParameters(BaseParameters):
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensionless_parameters()
 
         # Relative temperature rise

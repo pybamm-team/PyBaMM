@@ -30,7 +30,11 @@ class LeadAcidParameters(BaseParameters):
         self.n = DomainLeadAcidParameters("Negative", self)
         self.s = DomainLeadAcidParameters("Separator", self)
         self.p = DomainLeadAcidParameters("Positive", self)
-        self.domain_params = [self.n, self.s, self.p]
+        self.domain_params = {
+            "Negative": self.n,
+            "Separator": self.s,
+            "Positive": self.p,
+        }
 
         # Set parameters and scales
         self._set_dimensional_parameters()
@@ -139,7 +143,7 @@ class LeadAcidParameters(BaseParameters):
         self.R_sei_dimensional = pybamm.Scalar(0)
         self.beta_sei = pybamm.Scalar(0)
 
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensional_parameters()
 
         # Electrolyte volumetric capacity
@@ -215,7 +219,7 @@ class LeadAcidParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_scales()
 
         # Concentrations
@@ -233,7 +237,7 @@ class LeadAcidParameters(BaseParameters):
 
         # Electrolyte diffusion timescale
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
-        self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
+        self.tau_diffusion_e = self.L_x**2 / self.D_e_typ
 
         # Thermal diffusion timescale
         self.tau_th_yz = self.therm.tau_th_yz
@@ -283,7 +287,7 @@ class LeadAcidParameters(BaseParameters):
             self.mu_typ
             * self.velocity_scale
             * self.L_x
-            / (self.n.d ** 2 * self.R * self.T_ref * self.c_e_typ)
+            / (self.n.d**2 * self.R * self.T_ref * self.c_e_typ)
         )
         # ratio of electrolyte concentration to electrode concentration, undefined
         self.gamma_e = pybamm.Scalar(1)
@@ -363,7 +367,7 @@ class LeadAcidParameters(BaseParameters):
         self.c_e_init = self.q_init
         self.c_ox_init = self.c_ox_init_dim / self.c_ox_typ
 
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensionless_parameters()
 
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
@@ -415,7 +419,7 @@ class LeadAcidParameters(BaseParameters):
     def kappa_e(self, c_e, T):
         """Dimensionless electrolyte conductivity"""
         c_e_dimensional = c_e * self.c_e_typ
-        kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
+        kappa_scale = self.F**2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         return self.kappa_e_dimensional(c_e_dimensional, self.T_ref) / kappa_scale
 
     def chiT_over_c(self, c_e, T):
@@ -464,7 +468,7 @@ class DomainLeadAcidParameters(BaseParameters):
         else:
             self.prim = NullParameters()
 
-        self.phases = [self.prim]
+        self.phase_params = {"primary": self.prim}
 
     def _set_dimensional_parameters(self):
         Domain = self.domain
@@ -477,7 +481,7 @@ class DomainLeadAcidParameters(BaseParameters):
             self.epsilon_inactive = pybamm.Scalar(0)
             return
 
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_dimensional_parameters()
 
         # Macroscale geometry
@@ -537,7 +541,7 @@ class DomainLeadAcidParameters(BaseParameters):
         if self.domain == "Separator":
             return
 
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_scales()
 
         # Reference OCP
@@ -557,7 +561,7 @@ class DomainLeadAcidParameters(BaseParameters):
             self.lambda_ = self.therm.lambda_
             return
 
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_dimensionless_parameters()
 
         # Macroscale Geometry
@@ -576,7 +580,7 @@ class DomainLeadAcidParameters(BaseParameters):
         self.sigma_cc = (
             self.sigma_cc_dimensional * main.potential_scale / main.i_typ / main.L_x
         )
-        self.sigma_cc_prime = self.sigma_cc * main.delta ** 2
+        self.sigma_cc_prime = self.sigma_cc * main.delta**2
         self.Q_max = self.Q_max_dimensional / (main.c_e_typ * main.F)
         self.beta_U = 1 / self.Q_max
 
@@ -629,7 +633,7 @@ class DomainLeadAcidParameters(BaseParameters):
 
     def sigma_prime(self, T):
         """Rescaled dimensionless negative electrode electrical conductivity"""
-        return self.sigma(T) * self.main_param.delta ** 2
+        return self.sigma(T) * self.main_param.delta**2
 
 
 class PhaseLeadAcidParameters(BaseParameters):

@@ -31,12 +31,11 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         This function also creates the "total source term" variables by summing all
         the reactions.
         """
-        if self.half_cell:
-            domains = ["positive"]
-        else:
-            domains = ["negative", "positive"]
-        for domain in domains:
-            variables.update(self._get_coupled_variables_by_domain(variables, domain))
+        for domain in self.options.whole_cell_domains:
+            if domain != "Separator":
+                variables.update(
+                    self._get_coupled_variables_by_domain(variables, domain.split()[0])
+                )
 
         variables.update(self._get_whole_cell_coupled_variables(variables))
 
@@ -65,10 +64,10 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             reaction_names = [""]
             if phase_name == "":
                 reaction_names += ["SEI "]
-                if not self.half_cell:
-                    # no separate plating reaction in a half-cell,
-                    # since plating is the main reaction
-                    # no SEI on cracks with half-cell model
+                if self.options.electrode_types["negative"] == "porous":
+                    # separate plating reaction only if the negative electrode is
+                    # porous, since plating is the main reaction
+                    # SEI on cracks only in a porous negative electrode
                     reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]

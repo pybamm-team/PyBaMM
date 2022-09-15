@@ -126,7 +126,7 @@ class BaseKinetics(BaseInterface):
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             T = variables["X-averaged cell temperature"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:
