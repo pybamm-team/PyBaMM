@@ -105,16 +105,18 @@ class SPM(BaseModel):
                 )
             else:
                 intercalation_kinetics = self.get_intercalation_kinetics(domain)
-                for phase in self.options.phases[domain]:
+                phases = self.options.phases[domain]
+                for phase in phases:
                     submod = intercalation_kinetics(
                         self.param, domain, reaction, self.options, phase
                     )
                     self.submodels[f"{domain} {phase} interface"] = submod
-                self.submodels[
-                    f"total {domain} interface"
-                ] = pybamm.kinetics.TotalMainKinetics(
-                    self.param, domain, reaction, self.options
-                )
+                if len(phases) > 1:
+                    self.submodels[
+                        f"total {domain} interface"
+                    ] = pybamm.kinetics.TotalMainKinetics(
+                        self.param, domain, reaction, self.options
+                    )
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:

@@ -108,55 +108,6 @@ class LithiumIonParameters(BaseParameters):
             ]
         )
 
-        # SEI parameters
-        self.V_bar_inner_dimensional = pybamm.Parameter(
-            "Inner SEI partial molar volume [m3.mol-1]"
-        )
-        self.V_bar_outer_dimensional = pybamm.Parameter(
-            "Outer SEI partial molar volume [m3.mol-1]"
-        )
-
-        self.m_sei_dimensional = pybamm.Parameter(
-            "SEI reaction exchange current density [A.m-2]"
-        )
-
-        self.R_sei_dimensional = pybamm.Parameter("SEI resistivity [Ohm.m]")
-        self.D_sol_dimensional = pybamm.Parameter(
-            "Outer SEI solvent diffusivity [m2.s-1]"
-        )
-        self.c_sol_dimensional = pybamm.Parameter(
-            "Bulk solvent concentration [mol.m-3]"
-        )
-        self.U_inner_dimensional = pybamm.Parameter(
-            "Inner SEI open-circuit potential [V]"
-        )
-        self.U_outer_dimensional = pybamm.Parameter(
-            "Outer SEI open-circuit potential [V]"
-        )
-        self.kappa_inner_dimensional = pybamm.Parameter(
-            "Inner SEI electron conductivity [S.m-1]"
-        )
-        self.D_li_dimensional = pybamm.Parameter(
-            "Inner SEI lithium interstitial diffusivity [m2.s-1]"
-        )
-        self.c_li_0_dimensional = pybamm.Parameter(
-            "Lithium interstitial reference concentration [mol.m-3]"
-        )
-        self.L_inner_0_dim = pybamm.Parameter("Initial inner SEI thickness [m]")
-        self.L_outer_0_dim = pybamm.Parameter("Initial outer SEI thickness [m]")
-        self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
-        self.E_sei_dimensional = pybamm.Parameter(
-            "SEI growth activation energy [J.mol-1]"
-        )
-
-        # EC reaction
-        self.c_ec_0_dim = pybamm.Parameter(
-            "EC initial concentration in electrolyte [mol.m-3]"
-        )
-        self.D_ec_dim = pybamm.Parameter("EC diffusivity [m2.s-1]")
-        self.k_sei_dim = pybamm.Parameter("SEI kinetic rate constant [m.s-1]")
-        self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
-
         # Lithium plating parameters
         self.V_bar_plated_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
@@ -325,86 +276,6 @@ class LithiumIonParameters(BaseParameters):
             / (self.therm.rho_eff_dim_ref * self.F * self.Delta_T * self.L_x)
         )
 
-        # SEI parameters
-        self.inner_sei_proportion = pybamm.Parameter("Inner SEI reaction proportion")
-
-        self.z_sei = pybamm.Parameter("Ratio of lithium moles to SEI moles")
-
-        self.E_over_RT_sei = self.E_sei_dimensional / self.R / self.T_ref
-
-        self.C_sei_reaction = (
-            self.n.prim.j_scale / self.m_sei_dimensional
-        ) * pybamm.exp(-(self.F * self.n.U_ref / (2 * self.R * self.T_ref)))
-
-        self.C_sei_solvent = (
-            self.n.prim.j_scale
-            * self.L_sei_0_dim
-            / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
-        )
-
-        self.C_sei_electron = (
-            self.n.prim.j_scale
-            * self.F
-            * self.L_sei_0_dim
-            / (self.kappa_inner_dimensional * self.R * self.T_ref)
-        )
-
-        self.C_sei_inter = (
-            self.n.prim.j_scale
-            * self.L_sei_0_dim
-            / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
-        )
-
-        self.U_inner_electron = self.F * self.U_inner_dimensional / self.R / self.T_ref
-
-        self.R_sei = (
-            self.F
-            * self.n.prim.j_scale
-            * self.R_sei_dimensional
-            * self.L_sei_0_dim
-            / self.R
-            / self.T_ref
-        )
-
-        self.v_bar = self.V_bar_outer_dimensional / self.V_bar_inner_dimensional
-        self.c_sei_scale = (
-            self.L_sei_0_dim * self.n.prim.a_typ / self.V_bar_inner_dimensional
-        )
-        self.c_sei_outer_scale = (
-            self.L_sei_0_dim * self.n.prim.a_typ / self.V_bar_outer_dimensional
-        )
-
-        self.L_inner_0 = self.L_inner_0_dim / self.L_sei_0_dim
-        self.L_outer_0 = self.L_outer_0_dim / self.L_sei_0_dim
-
-        # ratio of SEI reaction scale to intercalation reaction
-        self.Gamma_SEI = (
-            self.V_bar_inner_dimensional * self.n.prim.j_scale * self.timescale
-        ) / (self.F * self.z_sei * self.L_sei_0_dim)
-
-        # EC reaction
-        self.C_ec = (
-            self.L_sei_0_dim
-            * self.n.prim.j_scale
-            / (self.F * self.c_ec_0_dim * self.D_ec_dim)
-        )
-        self.C_sei_ec = (
-            self.F
-            * self.k_sei_dim
-            * self.c_ec_0_dim
-            / self.n.prim.j_scale
-            * (
-                pybamm.exp(
-                    -(
-                        self.F
-                        * (self.n.U_ref - self.U_sei_dim)
-                        / (2 * self.R * self.T_ref)
-                    )
-                )
-            )
-        )
-        self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
-
         # lithium plating parameters
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
@@ -493,7 +364,7 @@ class LithiumIonParameters(BaseParameters):
 
     def dead_lithium_decay_rate(self, L_sei):
         """Dimensionless exchange-current density for stripping"""
-        L_sei_dim = L_sei * self.L_sei_0_dim
+        L_sei_dim = L_sei * self.n.prim.L_sei_0_dim
 
         return self.dead_lithium_decay_rate_dimensional(L_sei_dim) * self.timescale
 
@@ -862,6 +733,55 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         self.U_init_dim = self.U_dimensional(self.c_init_av, main.T_init_dim)
 
+        # SEI parameters
+        self.V_bar_inner_dimensional = pybamm.Parameter(
+            f"{pref}Inner SEI partial molar volume [m3.mol-1]"
+        )
+        self.V_bar_outer_dimensional = pybamm.Parameter(
+            f"{pref}Outer SEI partial molar volume [m3.mol-1]"
+        )
+
+        self.m_sei_dimensional = pybamm.Parameter(
+            f"{pref}SEI reaction exchange current density [A.m-2]"
+        )
+
+        self.R_sei_dimensional = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
+        self.D_sol_dimensional = pybamm.Parameter(
+            f"{pref}Outer SEI solvent diffusivity [m2.s-1]"
+        )
+        self.c_sol_dimensional = pybamm.Parameter(
+            f"{pref}Bulk solvent concentration [mol.m-3]"
+        )
+        self.U_inner_dimensional = pybamm.Parameter(
+            f"{pref}Inner SEI open-circuit potential [V]"
+        )
+        self.U_outer_dimensional = pybamm.Parameter(
+            f"{pref}Outer SEI open-circuit potential [V]"
+        )
+        self.kappa_inner_dimensional = pybamm.Parameter(
+            f"{pref}Inner SEI electron conductivity [S.m-1]"
+        )
+        self.D_li_dimensional = pybamm.Parameter(
+            f"{pref}Inner SEI lithium interstitial diffusivity [m2.s-1]"
+        )
+        self.c_li_0_dimensional = pybamm.Parameter(
+            f"{pref}Lithium interstitial reference concentration [mol.m-3]"
+        )
+        self.L_inner_0_dim = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
+        self.L_outer_0_dim = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
+        self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
+        self.E_sei_dimensional = pybamm.Parameter(
+            f"{pref}SEI growth activation energy [J.mol-1]"
+        )
+
+        # EC reaction
+        self.c_ec_0_dim = pybamm.Parameter(
+            f"{pref}EC initial concentration in electrolyte [mol.m-3]"
+        )
+        self.D_ec_dim = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
+        self.k_sei_dim = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
+        self.U_sei_dim = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
+
     def D_dimensional(self, sto, T):
         """Dimensional diffusivity in particle. Note this is defined as a
         function of stochiometry"""
@@ -967,6 +887,8 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def _set_dimensionless_parameters(self):
         main = self.main_param
+        domain_param = self.domain_param
+        pref = self.phase_prefactor
 
         # Intercalation kinetics
         self.mhc_lambda = self.mhc_lambda_dimensional / main.potential_scale_eV
@@ -1000,6 +922,89 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         # Electrolyte Properties
         self.beta_surf = pybamm.Scalar(0)
+
+        # SEI parameters
+        self.inner_sei_proportion = pybamm.Parameter(
+            f"{pref}Inner SEI reaction proportion"
+        )
+
+        self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
+
+        self.E_over_RT_sei = self.E_sei_dimensional / main.R / main.T_ref
+
+        self.C_sei_reaction = (self.j_scale / self.m_sei_dimensional) * pybamm.exp(
+            -(main.F * domain_param.U_ref / (2 * main.R * main.T_ref))
+        )
+
+        self.C_sei_solvent = (
+            self.j_scale
+            * self.L_sei_0_dim
+            / (self.c_sol_dimensional * main.F * self.D_sol_dimensional)
+        )
+
+        self.C_sei_electron = (
+            self.j_scale
+            * main.F
+            * self.L_sei_0_dim
+            / (self.kappa_inner_dimensional * main.R * main.T_ref)
+        )
+
+        self.C_sei_inter = (
+            self.j_scale
+            * self.L_sei_0_dim
+            / (self.D_li_dimensional * self.c_li_0_dimensional * main.F)
+        )
+
+        self.U_inner_electron = main.F * self.U_inner_dimensional / main.R / main.T_ref
+
+        self.R_sei = (
+            main.F
+            * self.j_scale
+            * self.R_sei_dimensional
+            * self.L_sei_0_dim
+            / main.R
+            / main.T_ref
+        )
+
+        self.v_bar = self.V_bar_outer_dimensional / self.V_bar_inner_dimensional
+        self.c_sei_scale = self.L_sei_0_dim * self.a_typ / self.V_bar_inner_dimensional
+        self.c_sei_outer_scale = (
+            self.L_sei_0_dim * self.a_typ / self.V_bar_outer_dimensional
+        )
+
+        self.L_inner_0 = self.L_inner_0_dim / self.L_sei_0_dim
+        self.L_outer_0 = self.L_outer_0_dim / self.L_sei_0_dim
+
+        # Dividing by 10000 makes initial condition effectively zero
+        # without triggering division by zero errors
+        self.L_inner_crack_0 = self.L_inner_0 / 10000
+        self.L_outer_crack_0 = self.L_outer_0 / 10000
+
+        # ratio of SEI reaction scale to intercalation reaction
+        self.Gamma_SEI = (
+            self.V_bar_inner_dimensional * self.j_scale * main.timescale
+        ) / (main.F * self.z_sei * self.L_sei_0_dim)
+
+        # EC reaction
+        self.C_ec = (
+            self.L_sei_0_dim * self.j_scale / (main.F * self.c_ec_0_dim * self.D_ec_dim)
+        )
+        self.C_sei_ec = (
+            main.F
+            * self.k_sei_dim
+            * self.c_ec_0_dim
+            / self.j_scale
+            * (
+                pybamm.exp(
+                    -(
+                        main.F
+                        * (domain_param.U_ref - self.U_sei_dim)
+                        / (2 * main.R * main.T_ref)
+                    )
+                )
+            )
+        )
+        self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
     def D(self, c_s, T):
         """Dimensionless particle diffusivity"""

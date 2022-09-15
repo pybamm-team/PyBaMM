@@ -23,6 +23,9 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon, unittest.TestCase):
     def test_composite_graphite_silicon(self):
         pass  # skip this test
 
+    def test_composite_graphite_silicon_sei(self):
+        pass  # skip this test
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
