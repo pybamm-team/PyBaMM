@@ -788,12 +788,13 @@ class JuliaConverter(object):
         elif self._cache_type=="dual":
             if cache_shape[1] == 1:
                 cache_shape = "({})".format(cache_shape[0])
-            self._cache_and_const_string+="{} = dualcache(zeros{},12)".format(cache_name,cache_shape)
+            self._cache_and_const_string+="{} = dualcache(zeros{},12),".format(cache_name,cache_shape)
             self._cache_initialization_string+="   {} = PreallocationTools.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
         elif self._cache_type=="symbolic":
             if cache_shape[1]==1:
                 cache_shape = "({})".format(cache_shape[0])
             self._cache_and_const_string+="   {} = symcache(zeros{},Vector{{Num}}(undef,{})),\n".format(cache_name, cache_shape,cache_shape[0])
+            self._cache_initialization_string+="   {} = PyBaMM.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
         else:
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
         return 0
