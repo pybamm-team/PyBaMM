@@ -510,7 +510,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                and options["SEI"] == "none"
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
                 and options["lithium plating"] == "none"
@@ -519,7 +518,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'false', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'SEI', 'particle mechanics', "
+                    "be 'none': 'particle mechanics', "
                     "'loss of active material', 'lithium plating'"
                 )
 
@@ -1256,8 +1255,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             eta_sei_av = self.variables["SEI film overpotential"]
             eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
         else:
-            eta_sei_av = self.variables["X-averaged SEI film overpotential"]
-            eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
+            eta_sei_av = self.variables[f"X-averaged {phase_n}SEI film overpotential"]
+            eta_sei_av_dim = self.variables[
+                f"X-averaged {phase_n}SEI film overpotential [V]"
+            ]
 
         # TODO: add current collector losses to the voltage in 3D
 
