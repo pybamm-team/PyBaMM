@@ -28,14 +28,18 @@ class Bruggeman(BaseModel):
     def get_coupled_variables(self, variables):
         param = self.param
 
-        tor_dict = {}
-        for domain in self.options.whole_cell_domains:
-            if self.component == "Electrolyte":
+        if self.component == "Electrolyte":
+            tor_dict = {}
+            for domain in self.options.whole_cell_domains:
                 eps_k = variables[f"{domain} porosity"]
-                b_k = self.param.domain_params[domain.lower()].b_e
-            elif self.component == "Electrode":
-                eps_k = variables[f"{domain} active material volume fraction"]
-                b_k = self.param.domain_params[domain.lower()].b_s
+                b_k = self.param.domain_params[domain.split()[0]].b_e
+            tor_dict[domain] = eps_k**b_k
+        elif self.component == "Electrode":
+            tor_dict = {}
+            for domain in self.options.whole_cell_domains:
+                if domain != "Separator":
+                    eps_k = variables[f"{domain} active material volume fraction"]
+                    b_k = self.param.domain_params[domain.split()[0]].b_s
             tor_dict[domain] = eps_k**b_k
 
         variables.update(self._get_standard_transport_efficiency_variables(tor_dict))

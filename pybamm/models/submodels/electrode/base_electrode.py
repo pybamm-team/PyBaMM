@@ -78,7 +78,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
 
-        if not self.half_cell:
+        if self.options.electrode_types[self.domain.lower()] == "porous":
             variables.update(
                 {
                     "Gradient of "

@@ -1238,7 +1238,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # overpotentials
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             eta_r_n_av = self.variables[
                 "Lithium metal interface reaction overpotential"
             ]
@@ -1275,7 +1275,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             eta_sei_av = self.variables["SEI film overpotential"]
             eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
         else:

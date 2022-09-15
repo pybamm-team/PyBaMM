@@ -107,22 +107,33 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         }
 
         if isinstance(i_e, pybamm.Concatenation):
-            if self.half_cell:
-                _, i_e_p = i_e.orphans
-            else:
+            if self.options.whole_cell_domains == [
+                "Negative electrode",
+                "Separator",
+                "Positive electrode",
+            ]:
                 i_e_n, _, i_e_p = i_e.orphans
+            elif self.options.whole_cell_domains == ["Negative electrode", "Separator"]:
+                i_e_n, _ = i_e.orphans
+                i_e_p = None
+            elif self.options.whole_cell_domains == ["Separator", "Positive electrode"]:
+                _, i_e_p = i_e.orphans
+                i_e_n = None
+
+            if i_e_n is not None:
                 variables.update(
                     {
                         "Negative electrolyte current density": i_e_n,
                         "Negative electrolyte current density [A.m-2]": i_e_n * i_typ,
                     }
                 )
-            variables.update(
-                {
-                    "Positive electrolyte current density": i_e_p,
-                    "Positive electrolyte current density [A.m-2]": i_e_p * i_typ,
-                }
-            )
+            if i_e_p is not None:
+                variables.update(
+                    {
+                        "Positive electrolyte current density": i_e_p,
+                        "Positive electrolyte current density [A.m-2]": i_e_p * i_typ,
+                    }
+                )
 
         return variables
 
@@ -295,7 +306,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     def set_boundary_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]
 
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             phi_e_ref = variables["Lithium metal interface electrolyte potential"]
             lbc = (phi_e_ref, "Dirichlet")
         else:

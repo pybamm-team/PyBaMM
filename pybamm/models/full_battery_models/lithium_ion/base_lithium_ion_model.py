@@ -73,10 +73,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_parameter_values(self):
-        if self.whole_cell_domains == [
-            "negative electrode",
-            "separator",
-            "positive electrode",
+        if self.options.whole_cell_domains == [
+            "Negative electrode",
+            "Separator",
+            "Positive electrode",
         ]:
             return pybamm.ParameterValues("Marquis2019")
         else:
@@ -84,7 +84,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_quick_plot_variables(self):
-        if self.whole_cell_domains == ["separator", "positive electrode"]:
+        if self.whole_cell_domains == ["Separator", "Positive electrode"]:
             return [
                 "Electrolyte concentration [mol.m-3]",
                 "Positive particle surface concentration [mol.m-3]",
@@ -239,6 +239,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                reaction = "lithium-ion main"
+            elif self.options.electrode_types[domain] == "planar":
+                reaction = "lithium metal plating"
             domain_options = getattr(self.options, domain)
             for phase in self.options.phases[domain]:
                 ocp_option = getattr(domain_options, phase)["open circuit potential"]
@@ -248,7 +252,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
                 self.submodels[f"{domain} {phase} open circuit potential"] = ocp_model(
-                    self.param, domain, "lithium-ion main", self.options, phase
+                    self.param, domain, reaction, self.options, phase
                 )
 
     def set_sei_submodel(self):
@@ -309,30 +313,32 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     def set_crack_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            crack = getattr(self.options, domain.lower())["particle mechanics"]
-            if crack == "none":
-                self.submodels[
-                    domain.lower() + " particle mechanics"
-                ] = pybamm.particle_mechanics.NoMechanics(
-                    self.param, domain, options=self.options, phase="primary"
-                )
-            elif crack == "swelling only":
-                self.submodels[
-                    domain.lower() + " particle mechanics"
-                ] = pybamm.particle_mechanics.SwellingOnly(
-                    self.param, domain, options=self.options, phase="primary"
-                )
-            elif crack == "swelling and cracking":
-                self.submodels[
-                    domain.lower() + " particle mechanics"
-                ] = pybamm.particle_mechanics.CrackPropagation(
-                    self.param,
-                    domain,
-                    self.x_average,
-                    options=self.options,
-                    phase="primary",
-                )
+        for domain in self.options.whole_cell_domains:
+            if domain != "Separator":
+                domain = domain.split()[0].lower()
+                crack = getattr(self.options, domain)["particle mechanics"]
+                if crack == "none":
+                    self.submodels[
+                        f"{domain} particle mechanics"
+                    ] = pybamm.particle_mechanics.NoMechanics(
+                        self.param, domain, options=self.options, phase="primary"
+                    )
+                elif crack == "swelling only":
+                    self.submodels[
+                        f"{domain} particle mechanics"
+                    ] = pybamm.particle_mechanics.SwellingOnly(
+                        self.param, domain, options=self.options, phase="primary"
+                    )
+                elif crack == "swelling and cracking":
+                    self.submodels[
+                        f"{domain} particle mechanics"
+                    ] = pybamm.particle_mechanics.CrackPropagation(
+                        self.param,
+                        domain,
+                        self.x_average,
+                        options=self.options,
+                        phase="primary",
+                    )
 
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:

@@ -25,7 +25,7 @@ class BaseModel(BaseElectrode):
         super().__init__(param, domain, options, set_positive_potential)
 
     def set_boundary_conditions(self, variables):
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             return
 
         if self.domain == "Negative":

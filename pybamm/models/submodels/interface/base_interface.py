@@ -373,7 +373,7 @@ class BaseInterface(pybamm.BaseSubModel):
         phase_name = self.phase_name
         Phase_name = phase_name.capitalize()
 
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             # half-cell domain
             variables = {
                 f"{Phase_name}SEI film overpotential": eta_sei,
