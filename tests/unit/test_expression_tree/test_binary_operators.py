@@ -22,6 +22,8 @@ class TestBinaryOperators(unittest.TestCase):
         bin2 = pybamm.BinaryOperator("binary test", c, d)
         with self.assertRaises(NotImplementedError):
             bin2.evaluate()
+        with self.assertRaises(NotImplementedError):
+            bin2._binary_jac(a, b)
 
     def test_binary_operator_domains(self):
         # same domain
@@ -303,6 +305,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(equal.evaluate(y=np.array([1])), 1)
         self.assertEqual(equal.evaluate(y=np.array([2])), 0)
         self.assertEqual(str(equal), "1.0 == y[0:1]")
+        self.assertEqual(equal.diff(b), 0)
 
     def test_sigmoid(self):
         a = pybamm.Scalar(1)

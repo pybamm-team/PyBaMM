@@ -170,21 +170,34 @@ class TestScikitsSolvers(unittest.TestCase):
         )
         N = combined_submesh.npts
 
-        # Solve
-        solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
+        # Solve testing various linear solvers
+        linsolvers = [
+            "dense",
+            "lapackdense",
+            "spgmr",
+            "spbcgs",
+            "sptfqmr",
+        ]
 
-        T, Y = solution.t, solution.y
-        np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(T, Y),
-            np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["var2"].evaluate(T, Y),
-            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
-        )
+        for linsolver in linsolvers:
+            solver = pybamm.ScikitsOdeSolver(
+                rtol=1e-9,
+                atol=1e-9,
+                extra_options={"linsolver": linsolver}
+            )
+            t_eval = np.linspace(0, 1, 100)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_equal(solution.t, t_eval)
+
+            T, Y = solution.t, solution.y
+            np.testing.assert_array_almost_equal(
+                model.variables["var1"].evaluate(T, Y),
+                np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
+            )
+            np.testing.assert_array_almost_equal(
+                model.variables["var2"].evaluate(T, Y),
+                np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
+            )
 
     def test_model_solver_dae_python(self):
         model = pybamm.BaseModel()

@@ -45,6 +45,15 @@ class TestSimulation(unittest.TestCase):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
+        self.assertEqual(sim.submesh_types, model.default_submesh_types)
+        self.assertEqual(sim.var_pts, model.default_var_pts)
+        self.assertIsNone(sim.mesh)
+        for key in sim.spatial_methods.keys():
+            self.assertEqual(
+                sim.spatial_methods[key].__class__,
+                model.default_spatial_methods[key].__class__
+            )
+
         sim.build()
         self.assertFalse(sim._mesh is None)
         self.assertFalse(sim._disc is None)
@@ -416,7 +425,7 @@ class TestSimulation(unittest.TestCase):
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
         with self.assertWarns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, 1, 100))
+            sim.solve(t_eval=np.linspace(0, 10, 3))
 
         # check warning raised if t_eval doesnt contain time_data , but has a finer
         # resolution (can still solve, but good for users to know they dont have
