@@ -1105,6 +1105,7 @@ class BaseModel:
         get_consistent_ics_solver=None,
         dae_type="semi-explicit",
         generate_jacobian=False,
+        cache_type="standard",
         **kwargs,
     ):
         """
@@ -1136,7 +1137,7 @@ class BaseModel:
 
         if self.algebraic == {}:
             # ODE model: form dy[] = ...
-            converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order)
+            converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type)
             converter.convert_tree_to_intermediate(self.concatenated_rhs)
             eqn_str = converter.build_julia_code(funcname=name)
         else:
@@ -1145,7 +1146,7 @@ class BaseModel:
             else:
                 len_rhs = self.concatenated_rhs.size
                 
-            converter = pybamm.JuliaConverter(dae_type=dae_type,input_parameter_order=input_parameter_order)
+            converter = pybamm.JuliaConverter(dae_type=dae_type,input_parameter_order=input_parameter_order,cache_type=cache_type)
             converter.convert_tree_to_intermediate(pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic),len_rhs=len_rhs)
             eqn_str = converter.build_julia_code(funcname=name)
 
@@ -1155,7 +1156,7 @@ class BaseModel:
             get_consistent_ics_solver.set_up(self)
             get_consistent_ics_solver._set_initial_conditions(self, {}, False)
             ics = pybamm.Vector(self.y0.full())
-        ics_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order)
+        ics_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type)
         ics_converter.convert_tree_to_intermediate(ics)
         ics_str = ics_converter.build_julia_code(funcname=name+"_u0")
         # Change the string to a form for u0
