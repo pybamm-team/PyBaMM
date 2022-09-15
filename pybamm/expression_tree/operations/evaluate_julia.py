@@ -178,7 +178,7 @@ class JuliaDomainConcatenation(JuliaConcatenation):
 
 
 class JuliaConverter(object):
-    def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit"): 
+    def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit",input_parameter_order=[]): 
         assert not ismtk
 
         #Characteristics
@@ -200,7 +200,7 @@ class JuliaConverter(object):
         self._cache_dict = OrderedDict()
         self._const_dict = OrderedDict()
 
-        self._parameter_dict = OrderedDict()
+        self.input_parameter_order = input_parameter_order
         
         self._cache_id = 0
         self._const_id = 0
@@ -554,7 +554,6 @@ class JuliaConverter(object):
         my_id = symbol.id
         name = symbol.name
         self._intermediate[my_id] = JuliaInput(my_id,name)
-        self._parameter_dict[my_id] = name
         return my_id
     
     @multimethod
@@ -844,10 +843,10 @@ class JuliaConverter(object):
         top = self._intermediate[next(reversed(self._intermediate))]
         top_var_name = self.get_result_variable_name(top)
         my_shape = top.shape
-        if len(self._parameter_dict) != 0:
+        if len(self.input_parameter_order) != 0:
             parameter_string = ""
-            for parameter in self._parameter_dict.items():
-                parameter_string+="{},".format(parameter[1])
+            for parameter in self.input_parameter_order:
+                parameter_string+="{},".format(parameter)
             parameter_string = parameter_string[0:-1]
             parameter_string += "= p\n"
             self._function_string = parameter_string + self._function_string
