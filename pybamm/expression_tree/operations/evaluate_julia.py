@@ -864,6 +864,7 @@ class JuliaConverter(object):
             parameter_string = parameter_string[0:-1]
             parameter_string += "= p\n"
             self._function_string = parameter_string + self._function_string
+        self._function_string = self._cache_initialization_string + self._function_string
         if my_shape[1] != 1:
             self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend".format(top_var_name)
             self._function_string = "function {}(J, y, p, t)\n".format(funcname) + self._function_string
