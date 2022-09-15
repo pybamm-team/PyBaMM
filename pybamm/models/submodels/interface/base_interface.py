@@ -112,6 +112,8 @@ class BaseInterface(pybamm.BaseSubModel):
             j0 = phase_param.j0(c_e, c_s_surf, T)
 
         elif self.reaction == "lithium metal plating":
+            # compute T on the surface of the anode (interface with separator)
+            T = pybamm.boundary_value(T, "right")
             j0 = param.j0_plating(c_e, 1, T)
 
         elif self.reaction == "lead-acid main":

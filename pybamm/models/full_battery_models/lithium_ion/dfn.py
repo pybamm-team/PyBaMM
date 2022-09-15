@@ -60,24 +60,20 @@ class DFN(BaseModel):
         for domain in ["negative", "positive"]:
             electrode_type = self.options.electrode_types[domain]
             if electrode_type == "porous":
-                reaction = "lithium-ion main"
-            elif electrode_type == "planar":
-                reaction = "lithium metal plating"
+                intercalation_kinetics = self.get_intercalation_kinetics(domain)
+                phases = self.options.phases[domain]
+                for phase in phases:
+                    submod = intercalation_kinetics(
+                        self.param, domain, "lithium-ion main", self.options, phase
+                    )
+                    self.submodels[f"{domain} {phase} interface"] = submod
 
-            intercalation_kinetics = self.get_intercalation_kinetics(domain)
-            phases = self.options.phases[domain]
-            for phase in phases:
-                submod = intercalation_kinetics(
-                    self.param, domain, reaction, self.options, phase
-                )
-                self.submodels[f"{domain} {phase} interface"] = submod
-
-            if len(phases) > 1:
-                self.submodels[
-                    f"total {domain} interface"
-                ] = pybamm.kinetics.TotalMainKinetics(
-                    self.param, domain, "lithium-ion main", self.options
-                )
+                if len(phases) > 1:
+                    self.submodels[
+                        f"total {domain} interface"
+                    ] = pybamm.kinetics.TotalMainKinetics(
+                        self.param, domain, "lithium-ion main", self.options
+                    )
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
@@ -105,15 +101,9 @@ class DFN(BaseModel):
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
-                solid_submodel = pybamm.electrode.ohm.Full
-            elif self.options.electrode_types[domain] == "planar":
-                if self.options["surface form"] == "false":
-                    solid_submodel = pybamm.electrode.ohm.LithiumMetalExplicit
-                else:
-                    solid_submodel = pybamm.electrode.ohm.LithiumMetalSurfaceForm
-            self.submodels[f"{domain} electrode potential"] = solid_submodel(
-                self.param, domain, self.options
-            )
+                self.submodels[
+                    f"{domain} electrode potential"
+                ] = pybamm.electrode.ohm.Full(self.param, domain, self.options)
 
     def set_electrolyte_submodel(self):
 

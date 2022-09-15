@@ -85,11 +85,8 @@ class FirstOrderKinetics(BaseInterface):
 
         variables.update(
             {
-                "First-order x-averaged "
-                + self.domain
-                + " electrode"
-                + self.reaction_name
-                + " interfacial current density": j_1_bar
+                f"First-order x-averaged {domain} electrode {reaction_name} "
+                "interfacial current density": j_1_bar
             }
         )
 

@@ -66,6 +66,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_li_metal_counter_electrode_submodels()
         self.set_total_interface_submodel()
 
         if build:
@@ -376,3 +377,41 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, x_average
             )
+
+    def set_li_metal_counter_electrode_submodels(self):
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                continue
+            if (
+                self.options["SEI"] in ["none", "constant"]
+                and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
+                and self.options["surface form"] == "false"
+            ):
+                # only symmetric Butler-Volmer can be inverted
+                self.submodels[
+                    f"{domain} electrode potential"
+                ] = pybamm.electrode.ohm.LithiumMetalExplicit(
+                    self.param, domain, self.options
+                )
+                self.submodels[
+                    f"{domain} electrode interface"
+                ] = pybamm.kinetics.InverseButlerVolmer(
+                    self.param, domain, "lithium metal plating", self.options
+                )  # assuming symmetric reaction for now so we can take the inverse
+                self.submodels[
+                    f"{domain} electrode interface current"
+                ] = pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
+                    self.param, domain, "lithium metal plating", self.options
+                )
+            else:
+                self.submodels[
+                    f"{domain} electrode potential"
+                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
+                    self.param, domain, self.options
+                )
+                neg_intercalation_kinetics = self.get_intercalation_kinetics(domain)
+                self.submodels[
+                    f"{domain} electrode interface"
+                ] = neg_intercalation_kinetics(
+                    self.param, domain, "lithium metal plating", self.options, "primary"
+                )

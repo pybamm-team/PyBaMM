@@ -1055,8 +1055,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
 
-    @property
-    def inverse_intercalation_kinetics(self):
+    def get_inverse_intercalation_kinetics(self):
         if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.InverseButlerVolmer
         else:
