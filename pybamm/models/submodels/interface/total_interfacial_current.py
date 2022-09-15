@@ -44,7 +44,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
     def _get_coupled_variables_by_domain(self, variables, domain):
         phase_names = [""]
 
-        num_phases = int(getattr(self.options, domain.lower())["particle phases"])
+        num_phases = int(getattr(self.options, domain)["particle phases"])
         if num_phases > 1:
             phase_names += ["primary ", "secondary "]
 
@@ -150,8 +150,9 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     if domain == "separator":
                         var_dict[domain] = zero_s
                     else:
+                        Domain = domain.capitalize()
                         var_dict[domain] = variables[
-                            variable_template.format(domain + " ")
+                            variable_template.format(Domain + " ")
                         ]
                 var = pybamm.concatenation(*var_dict.values())
             variables.update({variable_template.format("").capitalize(): var})

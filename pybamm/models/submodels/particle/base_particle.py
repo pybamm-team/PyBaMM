@@ -30,7 +30,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def _get_effective_diffusivity(self, c, T):
         param = self.param
-        domain = self.domain.lower()
+        domain = self.domain
         domain_param = self.domain_param
         phase_param = self.phase_param
 
@@ -62,8 +62,8 @@ class BaseParticle(pybamm.BaseSubModel):
         passed as keyword arguments, the various average concentrations and surface
         concentration are computed automatically from the particle concentration.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         # Get surface concentration if not provided as fundamental variable to
@@ -124,8 +124,8 @@ class BaseParticle(pybamm.BaseSubModel):
         return variables
 
     def _get_total_concentration_variables(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase = self.phase
         phase_name = self.phase_name
 
@@ -153,8 +153,8 @@ class BaseParticle(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_flux_variables(self, N_s):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         variables = {f"{Domain} {phase_name}particle flux": N_s}
@@ -172,8 +172,8 @@ class BaseParticle(pybamm.BaseSubModel):
         R. The domains of R will be different depending on the submodel, e.g. for the
         `SingleSizeDistribution` classes R does not have an "electrode" domain.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         R_typ = self.phase_param.R_typ
@@ -280,8 +280,8 @@ class BaseParticle(pybamm.BaseSubModel):
         Forms standard concentration variables that depend on particle size R given
         the fundamental concentration distribution variable c_s from the submodel.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         c_scale = self.phase_param.c_max
@@ -388,8 +388,8 @@ class BaseParticle(pybamm.BaseSubModel):
         Forms standard flux variables that depend on particle size R given
         the flux variable N_s from the distribution submodel.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         if [f"{domain} electrode"] in N_s.domains.values():
@@ -419,8 +419,8 @@ class BaseParticle(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_diffusivity_variables(self, D_eff):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         D_scale = self.phase_param.D_typ_dim
@@ -437,8 +437,8 @@ class BaseParticle(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_diffusivity_distribution_variables(self, D_eff):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         D_scale = self.phase_param.D_typ_dim

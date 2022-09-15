@@ -10,8 +10,8 @@ class LithiumMetalBaseModel(BaseModel):
         super().__init__(param, domain, options=options)
 
     def _get_li_metal_interface_variables(self, delta_phi_s, phi_s, phi_e):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         domain_param = self.domain_param
         pot_scale = self.param.potential_scale
         delta_phi_s_dim = pot_scale * delta_phi_s
@@ -63,7 +63,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
+        Domain = self.domain.capitalize()
         domain_param = self.domain_param
 
         i_boundary_cc = variables["Current collector current density"]
@@ -132,7 +132,7 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
     """
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
+        Domain = self.domain.capitalize()
         domain_param = self.domain_param
 
         i_boundary_cc = variables["Current collector current density"]

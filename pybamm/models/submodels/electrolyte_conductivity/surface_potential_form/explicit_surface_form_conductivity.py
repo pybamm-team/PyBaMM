@@ -29,12 +29,12 @@ class Explicit(BaseElectrolyteConductivity):
         if self.domain == "separator":
             return variables
 
-        if self.options.electrode_types[self.domain.lower()] == "planar":
-            domain = "Lithium metal interface"
+        if self.options.electrode_types[self.domain] == "planar":
+            Domain = "Lithium metal interface"
         else:
-            domain = self.domain
-        phi_s = variables[domain + " electrode potential"]
-        phi_e = variables[domain + " electrolyte potential"]
+            Domain = self.domain.capitalize()
+        phi_s = variables[f"{Domain} electrode potential"]
+        phi_e = variables[f"{Domain} electrolyte potential"]
         delta_phi = phi_s - phi_e
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)

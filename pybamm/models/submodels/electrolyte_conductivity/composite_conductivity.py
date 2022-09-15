@@ -45,7 +45,7 @@ class Composite(BaseElectrolyteConductivity):
             c_e_av = variables["Leading-order x-averaged electrolyte concentration"]
 
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        if not self.half_cell:
+        if self.options.electrode_types["negative"] == "porous":
             c_e_n = variables["Negative electrolyte concentration"]
             delta_phi_n_av = variables[
                 "X-averaged negative electrode surface potential difference"
@@ -58,7 +58,9 @@ class Composite(BaseElectrolyteConductivity):
         c_e_s = variables["Separator electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
 
-        tor_s_av = variables["Leading-order x-averaged separator transport efficiency"]
+        tor_s_av = variables[
+            "Leading-order x-averaged separator electrolyte transport efficiency"
+        ]
         tor_p_av = variables[
             "Leading-order x-averaged positive electrolyte transport efficiency"
         ]
@@ -82,7 +84,7 @@ class Composite(BaseElectrolyteConductivity):
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
 
         # electrolyte current
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             i_e_n = None
         else:
             x_n = pybamm.standard_spatial_vars.x_n
@@ -94,8 +96,10 @@ class Composite(BaseElectrolyteConductivity):
         i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
+        phi_e_dict = {}
+
         # electrolyte potential
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             phi_e_li = variables["Lithium metal interface electrolyte potential"]
             c_e_n = pybamm.boundary_value(c_e_s, "left")
             phi_e_const = (
@@ -105,7 +109,6 @@ class Composite(BaseElectrolyteConductivity):
                 * self._higher_order_macinnes_function(c_e_n / c_e_av)
                 + (i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av) * l_n
             )
-            phi_e_n = None
         else:
             phi_e_const = (
                 -delta_phi_n_av
@@ -131,10 +134,11 @@ class Composite(BaseElectrolyteConductivity):
                     * self._higher_order_macinnes_function(c_e_n / c_e_av)
                 )
                 - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av)
-                * (x_n ** 2 - l_n ** 2)
+                * (x_n**2 - l_n**2)
                 / (2 * l_n)
                 - i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av
             )
+            phi_e_dict["negative electrode"] = phi_e_n
 
         phi_e_s = (
             phi_e_const
@@ -154,16 +158,19 @@ class Composite(BaseElectrolyteConductivity):
                 * self._higher_order_macinnes_function(c_e_p / c_e_av)
             )
             - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av)
-            * (x_p * (2 - x_p) + l_p ** 2 - 1)
+            * (x_p * (2 - x_p) + l_p**2 - 1)
             / (2 * l_p)
             - i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av
         )
+
+        phi_e_dict["separator"] = phi_e_s
+        phi_e_dict["positive electrode"] = phi_e_p
 
         # concentration overpotential
         macinnes_c_e_p = pybamm.x_average(
             self._higher_order_macinnes_function(c_e_p / c_e_av)
         )
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             macinnes_c_e_n = 0
             ohmic_n = 0
         else:
@@ -179,9 +186,7 @@ class Composite(BaseElectrolyteConductivity):
             ohmic_n + param.s.l / (kappa_s_av) + param.p.l / (3 * kappa_p_av)
         )
 
-        variables.update(
-            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-        )
+        variables.update(self._get_standard_potential_variables(phi_e_dict))
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 

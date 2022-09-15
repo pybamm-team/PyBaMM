@@ -14,7 +14,7 @@ class BaseModel(BaseElectrode):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
 
@@ -25,6 +25,8 @@ class BaseModel(BaseElectrode):
         super().__init__(param, domain, options, set_positive_potential)
 
     def set_boundary_conditions(self, variables):
+        Domain = self.domain.capitalize()
+
         if self.options.electrode_types["negative"] == "planar":
             return
 
@@ -46,5 +48,5 @@ class BaseModel(BaseElectrode):
                 "Neumann",
             )
 
-        phi_s = variables[self.domain + " electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential"]
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}

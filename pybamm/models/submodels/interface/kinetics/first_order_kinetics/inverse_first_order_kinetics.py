@@ -39,16 +39,13 @@ class InverseFirstOrderKinetics(BaseInterface):
         return sgn * i_boundary_cc_1 / self.domain_param.l
 
     def get_coupled_variables(self, variables):
+        domain = self.domain
         # Unpack
         delta_phi_0 = variables[
-            "Leading-order x-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            f"Leading-order x-averaged {domain} electrode surface potential difference"
         ]
         c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
-        c_e_av = variables[
-            "X-averaged " + self.domain.lower() + " electrolyte concentration"
-        ]
+        c_e_av = variables[f"X-averaged {domain} electrolyte concentration"]
         c_e_1_av = (c_e_av - c_e_0) / self.param.C_e
 
         # Get first-order current (this is zero in 1D)

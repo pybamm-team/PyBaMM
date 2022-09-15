@@ -101,7 +101,7 @@ class DomainGeometricParameters(BaseParameters):
             self.b_e = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
             return
 
-        Domain = self.domain
+        Domain = self.domain.capitalize()
 
         # Macroscale geometry
         self.L_cc = pybamm.Parameter(f"{Domain} current collector thickness [m]")
@@ -154,7 +154,7 @@ class ParticleGeometricParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        Domain = self.domain
+        Domain = self.domain.capitalize()
         pref = self.phase_prefactor
 
         # Microscale geometry
@@ -180,8 +180,9 @@ class ParticleGeometricParameters(BaseParameters):
             x = pybamm.standard_spatial_vars.x_p
 
         inputs = {"Through-cell distance (x) [m]": x * self.main_param.L_x}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{self.domain} particle radius [m]", inputs
+            f"{self.phase_prefactor}{Domain} particle radius [m]", inputs
         )
 
     def f_a_dist_dimensional(self, R):

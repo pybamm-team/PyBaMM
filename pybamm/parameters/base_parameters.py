@@ -44,7 +44,7 @@ class BaseParameters:
 
     def __setattr__(self, name, value):
         if hasattr(self, "domain"):
-            d = self.domain.lower()[0]
+            d = self.domain[0]
             print_name = f"{name}_{d}"
         else:
             print_name = name
@@ -63,8 +63,7 @@ class BaseParameters:
     def set_phase_name(self):
         if (
             self.phase == "primary"
-            and getattr(self.main_param.options, self.domain.lower())["particle phases"]
-            == "1"
+            and getattr(self.main_param.options, self.domain)["particle phases"] == "1"
         ):
             # Only one phase, no need to distinguish between
             # "primary" and "secondary"

@@ -69,7 +69,6 @@ class BaseSubModel(pybamm.BaseModel):
     ):
         super().__init__(name)
         self.domain = domain
-        self.set_domain_for_broadcast()
         self.name = name
 
         self.external = external
@@ -90,9 +89,7 @@ class BaseSubModel(pybamm.BaseModel):
         if phase is not None:
             if self.domain is None:
                 raise ValueError("Phase must be None if domain is None")
-            options_phase = getattr(self.options, self.domain.lower())[
-                "particle phases"
-            ]
+            options_phase = getattr(self.options, self.domain)["particle phases"]
             if options_phase == "1" and phase != "primary":
                 raise ValueError("Phase must be 'primary' if there is only one phase")
             elif options_phase == "2" and phase not in ["primary", "secondary"]:
@@ -119,7 +116,7 @@ class BaseSubModel(pybamm.BaseModel):
     @domain.setter
     def domain(self, domain):
         if domain is not None:
-            domain = domain.capitalize()
+            domain = domain
         ok_domain_list = [
             "negative",
             "separator",
@@ -139,13 +136,6 @@ class BaseSubModel(pybamm.BaseModel):
                     domain, ok_domain_list
                 )
             )
-
-    def set_domain_for_broadcast(self):
-        if hasattr(self, "_domain"):
-            if self.domain in ["negative", "positive"]:
-                self.domain_for_broadcast = self.domain.lower() + " electrode"
-            elif self.domain == "separator":
-                self.domain_for_broadcast = "separator"
 
     def get_fundamental_variables(self):
         """

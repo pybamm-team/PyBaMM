@@ -12,7 +12,7 @@ class BaseElectrode(pybamm.BaseSubModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
@@ -42,6 +42,9 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             electrode.
         """
+        domain = self.domain
+        Domain = domain.capitalize()
+
         param = self.param
         pot = param.potential_scale
         phi_s_av = pybamm.x_average(phi_s)
@@ -62,28 +65,20 @@ class BaseElectrode(pybamm.BaseSubModel):
         delta_phi_s_av_dim = delta_phi_s_av * pot
 
         variables = {
-            self.domain + " electrode potential": phi_s,
-            self.domain + " electrode potential [V]": phi_s_dim,
-            "X-averaged " + self.domain.lower() + " electrode potential": phi_s_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode potential [V]": phi_s_av_dim,
-            self.domain + " electrode ohmic losses": delta_phi_s,
-            self.domain + " electrode ohmic losses [V]": delta_phi_s_dim,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode ohmic losses": delta_phi_s_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode ohmic losses [V]": delta_phi_s_av_dim,
+            f"{Domain} electrode potential": phi_s,
+            f"{Domain} electrode potential [V]": phi_s_dim,
+            f"X-averaged {domain} electrode potential": phi_s_av,
+            f"X-averaged {domain} electrode potential [V]": phi_s_av_dim,
+            f"{Domain} electrode ohmic losses": delta_phi_s,
+            f"{Domain} electrode ohmic losses [V]": delta_phi_s_dim,
+            f"X-averaged {domain} electrode ohmic losses": delta_phi_s_av,
+            f"X-averaged {domain} electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
 
-        if self.options.electrode_types[self.domain.lower()] == "porous":
+        if self.options.electrode_types[self.domain] == "porous":
             variables.update(
                 {
-                    "Gradient of "
-                    + self.domain.lower()
-                    + " electrode potential": pybamm.grad(phi_s),
+                    f"Gradient of {domain} electrode potential": pybamm.grad(phi_s),
                 }
             )
 
@@ -105,13 +100,14 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables which can be derived from the current in the
             electrode.
         """
+        Domain = self.domain.capitalize()
         param = self.param
 
         i_s_dim = param.i_typ * i_s
 
         variables = {
-            self.domain + " electrode current density": i_s,
-            self.domain + " electrode current density [A.m-2]": i_s_dim,
+            f"{Domain} electrode current density": i_s,
+            f"{Domain} electrode current density [A.m-2]": i_s_dim,
         }
 
         return variables

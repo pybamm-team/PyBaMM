@@ -52,9 +52,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     def set_initial_conditions(self, variables):
 
         delta_phi = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            "X-averaged {domain} electrode surface potential difference"
         ]
         delta_phi_init = self.domain_param.prim.U_init
 
@@ -93,19 +91,17 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     def set_rhs(self, variables):
         sum_a_j = variables[
             "Sum of x-averaged "
-            + self.domain.lower()
+            + self.domain
             + " electrode volumetric interfacial current densities"
         ]
 
         sum_a_j_av = variables[
             "X-averaged "
-            + self.domain.lower()
+            + self.domain
             + " electrode total volumetric interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            "X-averaged {domain} electrode surface potential difference"
         ]
 
         C_dl = self.domain_param.C_dl
@@ -135,19 +131,17 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     def set_algebraic(self, variables):
         sum_a_j = variables[
             "Sum of x-averaged "
-            + self.domain.lower()
+            + self.domain
             + " electrode volumetric interfacial current densities"
         ]
 
         sum_a_j_av = variables[
             "X-averaged "
-            + self.domain.lower()
+            + self.domain
             + " electrode total volumetric interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            "X-averaged {domain} electrode surface potential difference"
         ]
 
         self.algebraic[delta_phi] = sum_a_j_av - sum_a_j

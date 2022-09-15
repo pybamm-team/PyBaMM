@@ -25,11 +25,12 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {"Porosity": eps}
 
         for domain, eps_k in eps_dict.items():
+            Domain = domain.capitalize()
             eps_k_av = pybamm.x_average(eps_k)
             variables.update(
                 {
-                    f"{domain} porosity": eps_k,
-                    f"X-averaged {domain.lower()} porosity": eps_k_av,
+                    f"{Domain} porosity": eps_k,
+                    f"X-averaged {domain} porosity": eps_k_av,
                 }
             )
 
@@ -48,20 +49,21 @@ class BaseModel(pybamm.BaseSubModel):
 
         variables = {"Porosity change": deps_dt}
         for domain, depsdt_k in depsdt_dict.items():
+            Domain = domain.capitalize()
             depsdt_k_av = pybamm.x_average(depsdt_k)
             if depsdt_k.domain == ["current collector"]:
                 depsdt_k_av = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
             variables.update(
                 {
-                    f"{domain} porosity change": depsdt_k,
-                    f"X-averaged {domain.lower()} porosity change": depsdt_k_av,
+                    f"{Domain} porosity change": depsdt_k,
+                    f"X-averaged {domain} porosity change": depsdt_k_av,
                 }
             )
 
             if set_leading_order is True:
                 variables.update(
                     {
-                        f"Leading-order x-averaged {domain.lower()}"
+                        f"Leading-order x-averaged {domain}"
                         " porosity change": depsdt_k_av,
                     }
                 )

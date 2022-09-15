@@ -52,9 +52,9 @@ class BaseThermal(pybamm.BaseSubModel):
 
         variables = {"Ambient temperature": T_amb, "Cell temperature": T}
         for name, var in T_dict.items():
-            variables[f"{name} temperature"] = var
+            Name = name.capitalize()
+            variables[f"{Name} temperature"] = var
             if name in ["negative electrode", "separator", "positive electrode"]:
-                name = name.lower()
                 variables[f"X-averaged {name} temperature"] = pybamm.x_average(var)
 
         # Calculate dimensional variables
@@ -76,7 +76,7 @@ class BaseThermal(pybamm.BaseSubModel):
         i_s_p = variables["Positive electrode current density"]
         phi_s_p = variables["Positive electrode potential"]
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             i_boundary_cc = variables["Current collector current density"]
             T_n = variables["Negative electrode temperature"]
             Q_ohm_s_n_av = i_boundary_cc**2 / param.n.sigma(T_n)
@@ -98,7 +98,7 @@ class BaseThermal(pybamm.BaseSubModel):
             # compute by domain if possible
             phi_e_s = variables["Separator electrolyte potential"]
             phi_e_p = variables["Positive electrolyte potential"]
-            if self.half_cell:
+            if self.options.electrode_types["negative"] == "planar":
                 i_e_s, i_e_p = i_e.orphans
                 Q_ohm_e_n = pybamm.FullBroadcast(
                     0, ["negative electrode"], "current collector"
@@ -112,7 +112,7 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_ohm_e = pybamm.concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
         else:
             # else compute using i_e across all domains
-            if self.half_cell:
+            if self.options.electrode_types["negative"] == "planar":
                 Q_ohm_e_n = pybamm.FullBroadcast(
                     0, ["negative electrode"], "current collector"
                 )
@@ -128,7 +128,7 @@ class BaseThermal(pybamm.BaseSubModel):
         a_p = variables["Positive electrode surface area to volume ratio"]
         j_p = variables["Positive electrode interfacial current density"]
         eta_r_p = variables["Positive electrode reaction overpotential"]
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
@@ -149,7 +149,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # Reversible electrochemical heating
         T_p = variables["Positive electrode temperature"]
         dUdT_p = variables["Positive electrode entropic change"]
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )

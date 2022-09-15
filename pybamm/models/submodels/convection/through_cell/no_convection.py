@@ -32,24 +32,25 @@ class NoConvection(BaseThroughCellModel):
             if domain != "separator"
         ]
         for domain in domains:
-            v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
-            div_v_box_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
+            Domain = domain.capitalize()
+            v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
+            div_v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
             div_v_box_k_av = pybamm.x_average(div_v_box_k)
-            p_k = pybamm.FullBroadcast(0, domain.lower(), "current collector")
+            p_k = pybamm.FullBroadcast(0, domain, "current collector")
 
             variables.update(
                 {
-                    f"{domain} volume-averaged velocity": v_box_k,
-                    f"{domain} volume-averaged velocity [m.s-1]": vel_scale * v_box_k,
-                    f"{domain} volume-averaged acceleration": div_v_box_k,
-                    f"{domain} volume-averaged acceleration [m.s-1]": acc_scale
+                    f"{Domain} volume-averaged velocity": v_box_k,
+                    f"{Domain} volume-averaged velocity [m.s-1]": vel_scale * v_box_k,
+                    f"{Domain} volume-averaged acceleration": div_v_box_k,
+                    f"{Domain} volume-averaged acceleration [m.s-1]": acc_scale
                     * div_v_box_k,
-                    f"X-averaged {domain.lower()} volume-averaged acceleration"
+                    f"X-averaged {domain} volume-averaged acceleration"
                     + "": div_v_box_k_av,
-                    f"X-averaged {domain.lower()} volume-averaged acceleration "
+                    f"X-averaged {domain} volume-averaged acceleration "
                     + "[m.s-1]": acc_scale * div_v_box_k_av,
-                    f"{domain} pressure": p_k,
-                    f"X-averaged {domain.lower()} pressure": pybamm.x_average(p_k),
+                    f"{Domain} pressure": p_k,
+                    f"X-averaged {domain} pressure": pybamm.x_average(p_k),
                 }
             )
 

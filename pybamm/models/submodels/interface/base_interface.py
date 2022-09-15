@@ -64,8 +64,8 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         param = self.param
         phase_param = self.phase_param
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         c_e = variables[f"{Domain} electrolyte concentration"]
@@ -162,7 +162,7 @@ class BaseInterface(pybamm.BaseSubModel):
         For "leading-order" and "composite" submodels (as used in the SPM and SPMe)
         there is only a single particle radius, so this method returns correct result.
         """
-        domain = self.domain.lower()
+        domain = self.domain
         i_boundary_cc = variables["Current collector current density"]
 
         if self.options.electrode_types[domain] == "planar":
@@ -184,8 +184,8 @@ class BaseInterface(pybamm.BaseSubModel):
         return j_total_average, a_j_total_average
 
     def _get_standard_interfacial_current_variables(self, j):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
@@ -205,9 +205,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         j_av = pybamm.x_average(j)
         if j.domain == []:
-            j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
+            j = pybamm.FullBroadcast(j, f"{domain} electrode", "current collector")
         elif j.domain == ["current collector"]:
-            j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
+            j = pybamm.PrimaryBroadcast(j, f"{domain} electrode")
 
         variables = {
             f"{Domain} electrode {reaction_name}interfacial current density": j,
@@ -222,7 +222,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_total_interfacial_current_variables(self, j_tot_av, a_j_tot_av):
-        domain = self.domain.lower()
+        domain = self.domain
 
         j_scale = self.phase_param.j_scale
         a_j_scale = self.param.i_typ / self.param.L_x
@@ -248,8 +248,8 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_exchange_current_variables(self, j0):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
 
@@ -271,11 +271,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # X-average, and broadcast if necessary
         if j0.domain == []:
-            j0 = pybamm.FullBroadcast(
-                j0, self.domain_for_broadcast, "current collector"
-            )
+            j0 = pybamm.FullBroadcast(j0, f"{domain} electrode", "current collector")
         elif j0.domain == ["current collector"]:
-            j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
+            j0 = pybamm.PrimaryBroadcast(j0, f"{domain} electrode")
 
         variables = {
             f"{Domain} electrode {reaction_name}exchange current density": j0,
@@ -290,8 +288,8 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_volumetric_current_density_variables(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
 
         if self.options.electrode_types[domain] == "planar":
             return variables
@@ -335,7 +333,8 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_overpotential_variables(self, eta_r):
-        Domain = self.domain
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
         pot_scale = self.param.potential_scale
 
@@ -355,7 +354,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
         if eta_r.domain == ["current collector"]:
-            eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
+            eta_r = pybamm.PrimaryBroadcast(eta_r, f"{domain} electrode")
 
         domain_reaction = f"{Domain} electrode {reaction_name}reaction overpotential"
 
@@ -369,6 +368,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
+        domain = self.domain
         pot_scale = self.param.potential_scale
         phase_name = self.phase_name
         Phase_name = phase_name.capitalize()
@@ -385,10 +385,10 @@ class BaseInterface(pybamm.BaseSubModel):
         eta_sei_av = pybamm.x_average(eta_sei)
         if eta_sei.domain == []:
             eta_sei = pybamm.FullBroadcast(
-                eta_sei, self.domain_for_broadcast, "current collector"
+                eta_sei, f"{domain} electrode", "current collector"
             )
         elif eta_sei.domain == ["current collector"]:
-            eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
+            eta_sei = pybamm.PrimaryBroadcast(eta_sei, f"{domain} electrode")
 
         variables = {
             f"{Phase_name}SEI film overpotential": eta_sei,
@@ -403,7 +403,7 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_average_surface_potential_difference_variables(
         self, delta_phi_av
     ):
-        domain = self.domain.lower()
+        domain = self.domain
 
         ocp_ref = self.domain_param.U_ref
 
@@ -426,20 +426,21 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
-
+        domain = self.domain
+        Domain = domain.capitalize()
         ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
         delta_phi_dim = ocp_ref + delta_phi * self.param.potential_scale
         if delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, f"{domain} electrode")
             delta_phi_dim = pybamm.PrimaryBroadcast(
-                delta_phi_dim, self.domain_for_broadcast
+                delta_phi_dim, f"{domain} electrode"
             )
 
         variables = {
-            f"{self.domain} electrode surface potential difference": delta_phi,
-            f"{self.domain} electrode surface potential difference [V]": delta_phi_dim,
+            f"{Domain} electrode surface potential difference": delta_phi,
+            f"{Domain} electrode surface potential difference [V]": delta_phi_dim,
         }
 
         return variables
@@ -449,8 +450,8 @@ class BaseInterface(pybamm.BaseSubModel):
         Interfacial current density variables that depend on particle size R,
         relevant if "particle size" option is "distribution".
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
         reaction_name = self.reaction_name
 
@@ -482,15 +483,15 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         Exchange current variables that depend on particle size.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
         j_scale = self.phase_param.j_scale
 
         # X-average or broadcast to electrode if necessary
         if j0.domains["secondary"] != [f"{domain} electrode"]:
             j0_av = j0
-            j0 = pybamm.SecondaryBroadcast(j0, self.domain_for_broadcast)
+            j0 = pybamm.SecondaryBroadcast(j0, f"{domain} electrode")
         else:
             j0_av = pybamm.x_average(j0)
 
@@ -512,14 +513,14 @@ class BaseInterface(pybamm.BaseSubModel):
         Overpotential variables that depend on particle size.
         """
         pot_scale = self.param.potential_scale
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
 
         # X-average or broadcast to electrode if necessary
         if eta_r.domains["secondary"] != [f"{domain} electrode"]:
             eta_r_av = eta_r
-            eta_r = pybamm.SecondaryBroadcast(eta_r, self.domain_for_broadcast)
+            eta_r = pybamm.SecondaryBroadcast(eta_r, f"{domain} electrode")
         else:
             eta_r_av = pybamm.x_average(eta_r)
 

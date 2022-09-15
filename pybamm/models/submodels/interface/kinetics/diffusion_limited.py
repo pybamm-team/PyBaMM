@@ -32,10 +32,11 @@ class DiffusionLimited(BaseInterface):
         self.order = order
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
+        domain = self.domain
+        Domain = domain.capitalize()
         reaction_name = self.reaction_name
 
-        delta_phi_s = variables[self.domain + " electrode surface potential difference"]
+        delta_phi_s = variables[f"{Domain} electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
             delta_phi_s = delta_phi_s.orphans[0]
@@ -71,14 +72,14 @@ class DiffusionLimited(BaseInterface):
             # For the composite model, adds the first-order x-averaged interfacial
             # current density to the dictionary of variables.
             j_0 = variables[
-                f"Leading-order {self.domain.lower()} electrode {self.reaction_name}"
+                f"Leading-order {domain} electrode {self.reaction_name}"
                 "interfacial current density"
             ]
             j_1_bar = (pybamm.x_average(j) - pybamm.x_average(j_0)) / self.param.C_e
 
             variables.update(
                 {
-                    f"First-order x-averaged {self.domain.lower()} electrode"
+                    f"First-order x-averaged {domain} electrode"
                     f" {self.reaction_name}interfacial current density": j_1_bar
                 }
             )
@@ -120,9 +121,10 @@ class DiffusionLimited(BaseInterface):
         diffusion-limited effects. For a general model the correction term is zero,
         since the reaction is not diffusion-limited
         """
+        domain = self.domain
         if self.order == "leading":
             j_leading_order = variables[
-                f"Leading-order x-averaged {self.domain.lower()} electrode "
+                f"Leading-order x-averaged {domain} electrode "
                 f"{self.reaction_name}interfacial current density"
             ]
             param = self.param

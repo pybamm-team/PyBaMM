@@ -50,7 +50,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
             i_e_n = i_boundary_cc * x_n / l_n
 
         phi_e_dict = {
-            domain: pybamm.PrimaryBroadcast(phi_e_av, domain.lower())
+            domain: pybamm.PrimaryBroadcast(phi_e_av, domain)
             for domain in self.options.whole_cell_domains
         }
 

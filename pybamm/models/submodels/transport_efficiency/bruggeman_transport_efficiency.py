@@ -2,7 +2,6 @@
 # Class for Bruggemantransport_efficiency
 #
 import pybamm
-
 from .base_transport_efficiency import BaseModel
 
 
@@ -26,21 +25,24 @@ class Bruggeman(BaseModel):
         self.set_leading_order = set_leading_order
 
     def get_coupled_variables(self, variables):
-        param = self.param
-
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:
-                eps_k = variables[f"{domain} porosity"]
+                Domain = domain.capitalize()
+                eps_k = variables[f"{Domain} porosity"]
                 b_k = self.param.domain_params[domain.split()[0]].b_e
-            tor_dict[domain] = eps_k**b_k
+                tor_dict[domain] = eps_k**b_k
         elif self.component == "Electrode":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:
-                if domain != "separator":
-                    eps_k = variables[f"{domain} active material volume fraction"]
+                if domain == "separator":
+                    tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
+                else:
+                    Domain = domain.capitalize()
+                    eps_k = variables[f"{Domain} active material volume fraction"]
                     b_k = self.param.domain_params[domain.split()[0]].b_s
-            tor_dict[domain] = eps_k**b_k
+                    tor_k = eps_k**b_k
+                tor_dict[domain] = tor_k
 
         variables.update(self._get_standard_transport_efficiency_variables(tor_dict))
 

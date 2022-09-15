@@ -460,8 +460,8 @@ class DomainLeadAcidParameters(BaseParameters):
         self.domain = domain
         self.main_param = main_param
 
-        self.geo = getattr(main_param.geo, domain.lower()[0])
-        self.therm = getattr(main_param.therm, domain.lower()[0])
+        self.geo = getattr(main_param.geo, domain[0])
+        self.therm = getattr(main_param.therm, domain[0])
 
         if domain != "separator":
             self.prim = PhaseLeadAcidParameters("primary", self)
@@ -471,7 +471,7 @@ class DomainLeadAcidParameters(BaseParameters):
         self.phase_params = {"primary": self.prim}
 
     def _set_dimensional_parameters(self):
-        Domain = self.domain
+        Domain = self.domain.capitalize()
         main = self.main_param
 
         if self.domain == "separator":
@@ -533,7 +533,7 @@ class DomainLeadAcidParameters(BaseParameters):
         """Dimensional electrical conductivity"""
         inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode conductivity [S.m-1]", inputs
+            f"{Domain} electrode conductivity [S.m-1]", inputs
         )
 
     def _set_scales(self):
@@ -547,7 +547,7 @@ class DomainLeadAcidParameters(BaseParameters):
         # Reference OCP
         inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
         self.U_ref = pybamm.FunctionParameter(
-            f"{self.domain} electrode open-circuit potential [V]", inputs
+            f"{Domain} electrode open-circuit potential [V]", inputs
         )
 
     def _set_dimensionless_parameters(self):
@@ -646,8 +646,8 @@ class PhaseLeadAcidParameters(BaseParameters):
         self.geo = domain_param.geo.prim
 
     def _set_dimensional_parameters(self):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
 
         # Microstructure
         x = (
@@ -681,21 +681,21 @@ class PhaseLeadAcidParameters(BaseParameters):
             "Electrolyte molar mass [mol.kg-1]": self.main_param.m_dimensional(c_e)
         }
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode open-circuit potential [V]", inputs
+            f"{Domain} electrode open-circuit potential [V]", inputs
         )
 
     def j0_dimensional(self, c_e, T):
         """Dimensional exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode exchange-current density [A.m-2]", inputs
+            f"{Domain} electrode exchange-current density [A.m-2]", inputs
         )
 
     def j0_Ox_dimensional(self, c_e, T):
         """Dimensional oxygen electrode exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode oxygen exchange-current density [A.m-2]", inputs
+            f"{Domain} electrode oxygen exchange-current density [A.m-2]", inputs
         )
 
     def _set_scales(self):

@@ -31,17 +31,16 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {f"{self.component} transport efficiency": tor}
 
         for domain, tor_k in tor_dict.items():
-            if not (domain == "separator" and self.component == "Electrode"):
-                Domain = domain.split()[0]
-                domain = Domain.lower()
+            domain = domain.split()[0]
+            Domain = domain.capitalize()
+            tor_k_av = pybamm.x_average(tor_k)
 
-                variables.update(
-                    {
-                        f"{Domain} {component} transport efficiency": tor_k,
-                        f"X-averaged {domain} {component} "
-                        "transport efficiency": pybamm.x_average(tor_k),
-                    }
-                )
+            variables.update(
+                {
+                    f"{Domain} {component} transport efficiency": tor_k,
+                    f"X-averaged {domain} {component} transport efficiency": tor_k_av,
+                }
+            )
 
         if self.set_leading_order is True:
             leading_order_variables = {

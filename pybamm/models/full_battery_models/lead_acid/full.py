@@ -87,7 +87,7 @@ class Full(BaseModel):
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:
             intercalation_kinetics = self.get_intercalation_kinetics(domain)
-            self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+            self.submodels[f"{domain} interface"] = intercalation_kinetics(
                 self.param, domain, "lead-acid main", self.options, "primary"
             )
 
@@ -121,9 +121,9 @@ class Full(BaseModel):
             surf_model = surf_form.FullAlgebraic
 
         for domain in ["negative", "separator", "positive"]:
-            self.submodels[
-                domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain)
+            self.submodels[f"{domain} surface potential difference"] = surf_model(
+                self.param, domain
+            )
 
     def set_side_reaction_submodels(self):
         if self.options["hydrolysis"] == "true":

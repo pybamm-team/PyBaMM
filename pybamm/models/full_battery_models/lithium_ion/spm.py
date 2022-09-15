@@ -165,7 +165,10 @@ class SPM(BaseModel):
                 )
             )
 
-        if self.options["surface form"] == "false" or self.half_cell:
+        if (
+            self.options["surface form"] == "false"
+            or self.options.electrode_types["negative"] == "planar"
+        ):
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(
@@ -179,9 +182,9 @@ class SPM(BaseModel):
             surf_model = surf_form.LeadingOrderAlgebraic
 
         for domain in ["negative", "positive"]:
-            self.submodels[
-                domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain, options=self.options)
+            self.submodels[f"{domain} surface potential difference"] = surf_model(
+                self.param, domain, options=self.options
+            )
 
         self.submodels[
             "electrolyte diffusion"

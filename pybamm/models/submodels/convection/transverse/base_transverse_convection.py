@@ -47,16 +47,16 @@ class BaseTransverseModel(BaseModel):
                 var_k_av = var_s_av
             else:
                 var_k_av = pybamm.PrimaryBroadcast(0, "current collector")
-            var_k = pybamm.PrimaryBroadcast(var_k_av, domain.lower())
+            var_k = pybamm.PrimaryBroadcast(var_k_av, domain)
             var_dict[domain] = var_k
 
             variables.update(
                 {
                     f"{domain} transverse volume-averaged {typ}": var_k,
                     f"{domain} transverse volume-averaged {typ_dim}": scale * var_k,
-                    f"X-averaged {domain.lower()} transverse volume-averaged "
+                    f"X-averaged {domain} transverse volume-averaged "
                     f"{typ}": var_k_av,
-                    f"X-averaged {domain.lower()} transverse volume-averaged "
+                    f"X-averaged {domain} transverse volume-averaged "
                     f"{typ_dim}": scale * var_k_av,
                 }
             )

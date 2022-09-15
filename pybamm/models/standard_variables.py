@@ -68,21 +68,21 @@ class StandardVariables:
         # )
 
         # Electrolyte potential
-        self.phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential",
-            domain="negative electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        self.phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential",
-            domain="separator",
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        self.phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential",
-            domain="positive electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
+        # self.phi_e_n = pybamm.Variable(
+        #     "Negative electrolyte potential",
+        #     domain="negative electrode",
+        #     auxiliary_domains={"secondary": "current collector"},
+        # )
+        # self.phi_e_s = pybamm.Variable(
+        #     "Separator electrolyte potential",
+        #     domain="separator",
+        #     auxiliary_domains={"secondary": "current collector"},
+        # )
+        # self.phi_e_p = pybamm.Variable(
+        #     "Positive electrolyte potential",
+        #     domain="positive electrode",
+        #     auxiliary_domains={"secondary": "current collector"},
+        # )
 
         # Electrode potential
         self.phi_s_n = pybamm.Variable(
@@ -137,40 +137,40 @@ class StandardVariables:
             "Composite current collector current density", domain="current collector"
         )
 
-        # Porosity
-        self.eps_n = pybamm.Variable(
-            "Negative electrode porosity",
-            domain="negative electrode",
-            auxiliary_domains={"secondary": "current collector"},
-            bounds=(0, 1),
-        )
-        self.eps_s = pybamm.Variable(
-            "Separator porosity",
-            domain="separator",
-            auxiliary_domains={"secondary": "current collector"},
-            bounds=(0, 1),
-        )
-        self.eps_p = pybamm.Variable(
-            "Positive electrode porosity",
-            domain="positive electrode",
-            auxiliary_domains={"secondary": "current collector"},
-            bounds=(0, 1),
-        )
+        # # Porosity
+        # self.eps_n = pybamm.Variable(
+        #     "Negative electrode porosity",
+        #     domain="negative electrode",
+        #     auxiliary_domains={"secondary": "current collector"},
+        #     bounds=(0, 1),
+        # )
+        # self.eps_s = pybamm.Variable(
+        #     "Separator porosity",
+        #     domain="separator",
+        #     auxiliary_domains={"secondary": "current collector"},
+        #     bounds=(0, 1),
+        # )
+        # self.eps_p = pybamm.Variable(
+        #     "Positive electrode porosity",
+        #     domain="positive electrode",
+        #     auxiliary_domains={"secondary": "current collector"},
+        #     bounds=(0, 1),
+        # )
 
-        # Piecewise constant (for asymptotic models)
-        self.eps_n_pc = pybamm.Variable(
-            "X-averaged negative electrode porosity",
-            domain="current collector",
-            bounds=(0, 1),
-        )
-        self.eps_s_pc = pybamm.Variable(
-            "X-averaged separator porosity", domain="current collector", bounds=(0, 1)
-        )
-        self.eps_p_pc = pybamm.Variable(
-            "X-averaged positive electrode porosity",
-            domain="current collector",
-            bounds=(0, 1),
-        )
+        # # Piecewise constant (for asymptotic models)
+        # self.eps_n_pc = pybamm.Variable(
+        #     "X-averaged negative electrode porosity",
+        #     domain="current collector",
+        #     bounds=(0, 1),
+        # )
+        # self.eps_s_pc = pybamm.Variable(
+        #     "X-averaged separator porosity", domain="current collector", bounds=(0, 1)
+        # )
+        # self.eps_p_pc = pybamm.Variable(
+        #     "X-averaged positive electrode porosity",
+        #     domain="current collector",
+        #     bounds=(0, 1),
+        # )
 
         # Temperature
         self.T_cn = pybamm.Variable(

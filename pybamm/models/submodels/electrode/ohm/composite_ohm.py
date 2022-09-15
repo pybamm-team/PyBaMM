@@ -27,6 +27,7 @@ class Composite(BaseModel):
         super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
+        domain = self.domain
         param = self.param
 
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
@@ -38,12 +39,10 @@ class Composite(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         tor_0 = variables[
-            "Leading-order x-averaged "
-            + self.domain.lower()
-            + " electrode transport efficiency"
+            f"Leading-order x-averaged {domain} electrode transport efficiency"
         ]
         phi_s_cn = variables["Negative current collector potential"]
-        T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
+        T = variables[f"X-averaged {domain} electrode temperature"]
 
         sigma_eff_0 = self.domain_param.sigma(T) * tor_0
         if self._domain == "negative":
@@ -78,15 +77,15 @@ class Composite(BaseModel):
         return variables
 
     def set_boundary_conditions(self, variables):
+        domain = self.domain
+        Domain = domain.capitalize()
 
-        phi_s = variables[self.domain + " electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential"]
         tor_0 = variables[
-            "Leading-order x-averaged "
-            + self.domain.lower()
-            + " electrode transport efficiency"
+            f"Leading-order x-averaged {domain} electrode transport efficiency"
         ]
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
+        T = variables[f"X-averaged {domain} electrode temperature"]
 
         if self.domain == "negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")

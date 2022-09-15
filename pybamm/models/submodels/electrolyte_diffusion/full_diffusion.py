@@ -25,34 +25,37 @@ class Full(BaseElectrolyteDiffusion):
         super().__init__(param, options)
 
     def get_fundamental_variables(self):
-        eps_c_e = []
+        eps_c_e_dict = {}
         for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
             eps_c_e_k = pybamm.Variable(
-                f"{domain} porosity times concentration",
-                domain=domain.lower(),
+                f"{Domain} porosity times concentration",
+                domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, np.inf),
             )
-            eps_c_e_k.print_name = f"eps_c_e_{domain.lower()[0]}"
-            eps_c_e.append(eps_c_e_k)
+            eps_c_e_k.print_name = f"eps_c_e_{domain[0]}"
+            eps_c_e_dict[domain] = eps_c_e_k
 
-        variables = self._get_standard_porosity_times_concentration_variables(eps_c_e)
+        variables = self._get_standard_porosity_times_concentration_variables(
+            eps_c_e_dict
+        )
 
         return variables
 
     def get_coupled_variables(self, variables):
 
-        c_e = []
-        for domaim in self.options.whole_cell_domains:
-            eps_k = variables[f"{domaim} porosity"]
-            eps_c_e_k = variables[f"{domaim} porosity times concentration"]
-            c_e_k = eps_c_e_k / eps
-            c_e.append(c_e_k)
+        c_e_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            eps_k = variables[f"{Domain} porosity"]
+            eps_c_e_k = variables[f"{Domain} porosity times concentration"]
+            c_e_k = eps_c_e_k / eps_k
+            c_e_dict[domain] = c_e_k
 
-        variables.update(self._get_standard_concentration_variables(c_e))
+        variables.update(self._get_standard_concentration_variables(c_e_dict))
 
         # Whole domain
-        eps_c_e = variables["Porosity times concentration"]
         c_e = variables["Electrolyte concentration"]
         tor = variables["Electrolyte transport efficiency"]
         i_e = variables["Electrolyte current density"]

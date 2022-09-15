@@ -30,7 +30,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         }
 
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain.lower()] == "porous":
+            if self.options.electrode_types[domain] == "porous":
                 domain_param = self.param.domain_params[domain]
                 self.length_scales.update(
                     {
@@ -41,7 +41,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
                 # Add relevant secondary length scales
-                if len(self.options.phases[domain.lower()]) >= 2:
+                if len(self.options.phases[domain]) >= 2:
                     self._length_scales[
                         f"{domain} secondary particle"
                     ] = domain_param.sec.R_typ
@@ -84,7 +84,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_quick_plot_variables(self):
-        if self.whole_cell_domains == ["separator", "positive electrode"]:
+        if self.options.whole_cell_domains == ["separator", "positive electrode"]:
             return [
                 "Electrolyte concentration [mol.m-3]",
                 "Positive particle surface concentration [mol.m-3]",
@@ -124,8 +124,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         param = self.param
 
         domains = [d for d in self.options.whole_cell_domains if d != "separator"]
-        for Domain in domains:
-            domain = Domain.lower()
+        for domain in domains:
+            Domain = domain.capitalize()
             self.variables[f"Total lithium in {domain} [mol]"] = sum(
                 self.variables[f"Total lithium in {phase} phase in {domain} [mol]"]
                 for phase in self.options.phases[domain.split()[0]]
@@ -133,7 +133,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
             # LAM
             C_k = self.variables[f"{Domain} capacity [A.h]"]
-            n_Li_k = self.variables[f"Total lithium in {domain} [mol]"]
             domain_param = getattr(self.param, domain[0])  # param.n or param.p
             LAM_k = (1 - C_k / domain_param.cap_init) * 100
             self.variables.update(
@@ -146,8 +145,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]
         n_Li_particles = sum(
-            self.variables[f"Total lithium in {domain.lower()} [mol]"]
-            for domain in domains
+            self.variables[f"Total lithium in {domain} [mol]"] for domain in domains
         )
         n_Li = n_Li_particles + n_Li_e
 

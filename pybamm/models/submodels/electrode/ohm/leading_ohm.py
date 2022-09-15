@@ -15,7 +15,7 @@ class LeadingOrder(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
@@ -73,8 +73,9 @@ class LeadingOrder(BaseModel):
         return variables
 
     def set_boundary_conditions(self, variables):
+        Domain = self.domain.capitalize()
 
-        phi_s = variables[self.domain + " electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential"]
 
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")

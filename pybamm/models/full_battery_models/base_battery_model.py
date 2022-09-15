@@ -618,7 +618,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         except AttributeError:
             self._electrode_types = {}
             for domain in ["negative", "positive"]:
-                if domain.capitalize() + " electrode" in self.whole_cell_domains:
+                if f"{domain} electrode" in self.whole_cell_domains:
                     self._electrode_types[domain] = "porous"
                 else:
                     self._electrode_types[domain] = "planar"
@@ -1043,7 +1043,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._summary_variables = []
 
     def get_intercalation_kinetics(self, domain):
-        options = getattr(self.options, domain.lower())
+        options = getattr(self.options, domain)
         if options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.SymmetricButlerVolmer
         elif options["intercalation kinetics"] == "asymmetric Butler-Volmer":
@@ -1169,8 +1169,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["current collector"] = submodel
 
     def set_interface_utilisation_submodel(self):
-        for Domain in ["negative", "positive"]:
-            domain = Domain.lower()
+        for domain in ["negative", "positive"]:
+            Domain = domain.capitalize()
             util = getattr(self.options, domain)["interface utilisation"]
             if util == "full":
                 submodel = pybamm.interface_utilisation.Full(

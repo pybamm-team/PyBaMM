@@ -35,7 +35,7 @@ class Isothermal(BaseThermal):
         }
         for domain in ["negative electrode", "separator", "positive electrode"]:
             if domain in self.options.whole_cell_domains:
-                T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain.lower())
+                T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
             else:
                 T_dict[domain] = None
 

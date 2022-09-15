@@ -31,8 +31,8 @@ class FickianDiffusion(BaseParticle):
         self.x_average = x_average
 
     def get_fundamental_variables(self):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         variables = {}
@@ -123,8 +123,8 @@ class FickianDiffusion(BaseParticle):
         return variables
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
         phase_param = self.phase_param
 
@@ -234,8 +234,8 @@ class FickianDiffusion(BaseParticle):
         return variables
 
     def set_rhs(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         if self.size_distribution is False:
@@ -258,8 +258,8 @@ class FickianDiffusion(BaseParticle):
         self.rhs = {c_s: variables[f"{Domain} {phase_name}particle rhs"]}
 
     def set_boundary_conditions(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         if self.size_distribution is False:
@@ -286,8 +286,8 @@ class FickianDiffusion(BaseParticle):
         }
 
     def set_initial_conditions(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
         phase_name = self.phase_name
 
         c_init = self.phase_param.c_init

@@ -58,13 +58,19 @@ class DFN(BaseModel):
 
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:
+            electrode_type = self.options.electrode_types[domain]
+            if electrode_type == "porous":
+                reaction = "lithium-ion main"
+            elif electrode_type == "planar":
+                reaction = "lithium metal plating"
+
             intercalation_kinetics = self.get_intercalation_kinetics(domain)
             phases = self.options.phases[domain]
             for phase in phases:
                 submod = intercalation_kinetics(
-                    self.param, domain, "lithium-ion main", self.options, phase
+                    self.param, domain, reaction, self.options, phase
                 )
-                self.submodels[f"{domain.lower()} {phase} interface"] = submod
+                self.submodels[f"{domain} {phase} interface"] = submod
 
             if len(phases) > 1:
                 self.submodels[
@@ -75,37 +81,39 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
-            particle = getattr(self.options, domain)["particle"]
-            for phase in self.options.phases[domain]:
-                if particle == "Fickian diffusion":
-                    submod = pybamm.particle.FickianDiffusion(
-                        self.param, domain, self.options, phase=phase, x_average=False
-                    )
-                elif particle in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    submod = pybamm.particle.PolynomialProfile(
-                        self.param, domain, self.options, phase=phase
-                    )
-                self.submodels[f"{domain} {phase} particle"] = submod
+            if self.options.electrode_types[domain] == "porous":
+                particle = getattr(self.options, domain)["particle"]
+                for phase in self.options.phases[domain]:
+                    if particle == "Fickian diffusion":
+                        submod = pybamm.particle.FickianDiffusion(
+                            self.param,
+                            domain,
+                            self.options,
+                            phase=phase,
+                            x_average=False,
+                        )
+                    elif particle in [
+                        "uniform profile",
+                        "quadratic profile",
+                        "quartic profile",
+                    ]:
+                        submod = pybamm.particle.PolynomialProfile(
+                            self.param, domain, self.options, phase=phase
+                        )
+                    self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):
-
-        if self.options["surface form"] == "false":
-            submod_n = pybamm.electrode.ohm.Full(self.param, "negative", self.options)
-            submod_p = pybamm.electrode.ohm.Full(self.param, "positive", self.options)
-        else:
-            submod_n = pybamm.electrode.ohm.SurfaceForm(
-                self.param, "negative", self.options
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                solid_submodel = pybamm.electrode.ohm.Full
+            elif self.options.electrode_types[domain] == "planar":
+                if self.options["surface form"] == "false":
+                    solid_submodel = pybamm.electrode.ohm.LithiumMetalExplicit
+                else:
+                    solid_submodel = pybamm.electrode.ohm.LithiumMetalSurfaceForm
+            self.submodels[f"{domain} electrode potential"] = solid_submodel(
+                self.param, domain, self.options
             )
-            submod_p = pybamm.electrode.ohm.SurfaceForm(
-                self.param, "positive", self.options
-            )
-
-        self.submodels["negative electrode potential"] = submod_n
-        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 
@@ -134,6 +142,6 @@ class DFN(BaseModel):
             surf_model = surf_form.FullAlgebraic
 
         for domain in ["negative", "separator", "positive"]:
-            self.submodels[
-                domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain, self.options)
+            self.submodels[f"{domain} surface potential difference"] = surf_model(
+                self.param, domain, self.options
+            )

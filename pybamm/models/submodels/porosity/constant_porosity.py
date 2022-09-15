@@ -19,14 +19,12 @@ class Constant(BaseModel):
     """
 
     def get_fundamental_variables(self):
-        eps_dict = {
-            domain: self.param.domain_params[domain.split()[0]].epsilon_init
-            for domain in self.options.whole_cell_domains
-        }
-        depsdt_dict = {
-            domain: pybamm.FullBroadcast(0, domain, "current collector")
-            for domain in self.options.whole_cell_domains
-        }
+        eps_dict = {}
+        depsdt_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            eps_dict[domain] = self.param.domain_params[domain.split()[0]].epsilon_init
+            depsdt_dict[domain] = pybamm.FullBroadcast(0, domain, "current collector")
 
         variables = self._get_standard_porosity_variables(
             eps_dict, set_leading_order=True

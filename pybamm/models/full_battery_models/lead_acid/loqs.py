@@ -214,9 +214,9 @@ class LOQS(BaseModel):
             surf_model = surf_form.LeadingOrderAlgebraic
 
         for domain in ["negative", "positive"]:
-            self.submodels[
-                domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain)
+            self.submodels[f"{domain} surface potential difference"] = surf_model(
+                self.param, domain
+            )
 
         self.submodels[
             "electrolyte diffusion"

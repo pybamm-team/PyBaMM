@@ -67,8 +67,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         }
 
         for domain, phi_e_k in phi_e_dict.items():
-            Name = f"{domain.split()[0]} electrolyte potential"
-            name = Name.lower()
+            name = f"{domain.split()[0]} electrolyte potential"
+            Name = name.capitalize()
             phi_e_k_av = pybamm.x_average(phi_e_k)
             variables.update(
                 {
@@ -187,16 +187,12 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the surface potential difference.
         """
-
+        domain = self.domain
         ocp_ref = self.domain_param.U_ref
 
         variables = {
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference [V]": ocp_ref
+            f"X-averaged {domain} electrode surface potential difference": delta_phi_av,
+            f"X-averaged {domain} electrode surface potential difference [V]": ocp_ref
             + delta_phi_av * self.param.potential_scale,
         }
 
@@ -217,21 +213,22 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the surface potential difference.
         """
+        domain = self.domain
+        Domain = domain.capitalize()
 
         ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
         if delta_phi.domain == []:
             delta_phi = pybamm.FullBroadcast(
-                delta_phi, self.domain_for_broadcast, "current collector"
+                delta_phi, f"{domain} electrode", "current collector"
             )
         elif delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, f"{domain} electrode")
 
         variables = {
-            self.domain + " electrode surface potential difference": delta_phi,
-            self.domain
-            + " electrode surface potential difference [V]": ocp_ref
+            f"{Domain} electrode surface potential difference": delta_phi,
+            f"{Domain} electrode surface potential difference [V]": ocp_ref
             + delta_phi * self.param.potential_scale,
         }
 
@@ -257,7 +254,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         """
         param = self.param
 
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             # No concentration overpotential in the counter electrode
             phi_e_n = pybamm.Scalar(0)
             indef_integral_n = pybamm.Scalar(0)

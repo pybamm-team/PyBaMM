@@ -39,11 +39,11 @@ class BaseModel(pybamm.BaseSubModel):
 
         vel_scale = self.param.velocity_scale
 
-        v_box_list = [
-            variables[f"{domain} volume-averaged velocity"]
-            for domain in self.options.whole_cell_domains
-        ]
-        v_box = pybamm.concatenation(*v_box_list)
+        v_box_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            v_box_dict[domain] = variables[f"{Domain} volume-averaged velocity"]
+        v_box = pybamm.concatenation(*v_box_dict.values())
 
         variables = {
             "Volume-averaged velocity": v_box,
@@ -71,11 +71,11 @@ class BaseModel(pybamm.BaseSubModel):
 
         acc_scale = self.param.velocity_scale / self.param.L_x
 
-        div_v_box_list = [
-            variables[f"{domain} volume-averaged acceleration"]
-            for domain in self.options.whole_cell_domains
-        ]
-        div_v_box = pybamm.concatenation(*div_v_box_list)
+        div_v_box_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            div_v_box_dict[domain] = variables[f"{Domain} volume-averaged acceleration"]
+        div_v_box = pybamm.concatenation(*div_v_box_dict.values())
         div_v_box_av = pybamm.x_average(div_v_box)
 
         variables = {
@@ -102,10 +102,10 @@ class BaseModel(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the pressure.
         """
-        p_list = [
-            variables[f"{domain} pressure"]
-            for domain in self.options.whole_cell_domains
-        ]
-        p = pybamm.concatenation(*p_list)
+        p_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            p_dict[domain] = variables[f"{Domain} pressure"]
+        p = pybamm.concatenation(*p_dict.values())
         variables = {"Pressure": p}
         return variables

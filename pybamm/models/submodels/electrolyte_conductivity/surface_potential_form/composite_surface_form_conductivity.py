@@ -41,12 +41,13 @@ class BaseModel(Composite):
         return variables
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain.capitalize()
         # Only update coupled variables once
         if self.domain == "negative":
             variables.update(super().get_coupled_variables(variables))
 
-        phi_s = variables[self.domain + " electrode potential"]
-        phi_e = variables[self.domain + " electrolyte potential"]
+        phi_s = variables[f"{Domain} electrode potential"]
+        phi_e = variables[f"{Domain} electrolyte potential"]
         delta_phi = phi_s - phi_e
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
@@ -54,11 +55,10 @@ class BaseModel(Composite):
         return variables
 
     def set_initial_conditions(self, variables):
+        domain = self.domain
 
         delta_phi = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference"
         ]
         delta_phi_init = self.domain_param.prim.U_init
 
@@ -94,21 +94,19 @@ class CompositeDifferential(BaseModel):
         super().__init__(param, domain)
 
     def set_rhs(self, variables):
+        domain = self.domain
+
         sum_a_j = variables[
-            "Sum of x-averaged "
-            + self.domain.lower()
-            + " electrode volumetric interfacial current densities"
+            f"Sum of x-averaged {domain} electrode volumetric "
+            "interfacial current densities"
         ]
 
         sum_a_j_av = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total volumetric interfacial current density"
+            f"X-averaged {domain} electrode total volumetric "
+            "interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference"
         ]
 
         C_dl = self.domain_param.C_dl
@@ -135,21 +133,19 @@ class CompositeAlgebraic(BaseModel):
         super().__init__(param, domain)
 
     def set_algebraic(self, variables):
+        domain = self.domain
+
         sum_a_j = variables[
-            "Sum of x-averaged "
-            + self.domain.lower()
-            + " electrode volumetric interfacial current densities"
+            f"Sum of x-averaged {domain} electrode volumetric "
+            "interfacial current densities"
         ]
 
         sum_a_j_av = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total volumetric interfacial current density"
+            f"X-averaged {domain} electrode total volumetric "
+            "interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference"
         ]
 
         self.algebraic[delta_phi] = sum_a_j_av - sum_a_j

@@ -87,7 +87,7 @@ class SEIGrowth(BaseModel):
         else:
             j = variables[
                 "X-averaged "
-                + self.domain.lower()
+                + self.domain
                 + " electrode total interfacial current density"
             ]
 

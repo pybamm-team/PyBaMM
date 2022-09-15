@@ -44,26 +44,24 @@ class BaseModel(BaseElectrolyteConductivity):
         return variables
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain.capitalize()
         param = self.param
 
         if self.domain in ["negative", "positive"]:
-
             conductivity, sigma_eff = self._get_conductivities(variables)
             i_boundary_cc = variables["Current collector current density"]
-            c_e = variables[self.domain + " electrolyte concentration"]
-            delta_phi = variables[
-                self.domain + " electrode surface potential difference"
-            ]
-            T = variables[self.domain + " electrode temperature"]
+            c_e = variables[f"{Domain} electrolyte concentration"]
+            delta_phi = variables[f"{Domain} electrode surface potential difference"]
+            T = variables[f"{Domain} electrode temperature"]
 
             i_e = conductivity * (
                 param.chiT_over_c(c_e, T) * pybamm.grad(c_e)
                 + pybamm.grad(delta_phi)
                 + i_boundary_cc / sigma_eff
             )
-            variables[self.domain + " electrolyte current density"] = i_e
+            variables[f"{Domain} electrolyte current density"] = i_e
 
-            phi_s = variables[self.domain + " electrode potential"]
+            phi_s = variables[f"{Domain} electrode potential"]
             phi_e = phi_s - delta_phi
 
         elif self.domain == "separator":
@@ -71,7 +69,7 @@ class BaseModel(BaseElectrolyteConductivity):
 
             i_boundary_cc = variables["Current collector current density"]
             c_e_s = variables["Separator electrolyte concentration"]
-            if self.half_cell:
+            if self.options.electrode_types["negative"] == "planar":
                 phi_e_n_s = variables["Lithium metal interface electrolyte potential"]
             else:
                 phi_e_n = variables["Negative electrolyte potential"]
@@ -89,7 +87,7 @@ class BaseModel(BaseElectrolyteConductivity):
             )
 
             i_e = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
-            variables[self.domain + " electrolyte current density"] = i_e
+            variables[f"{Domain} electrolyte current density"] = i_e
 
             # Update boundary conditions (for indefinite integral)
             self.boundary_conditions[c_e_s] = {
@@ -97,13 +95,13 @@ class BaseModel(BaseElectrolyteConductivity):
                 "right": (pybamm.BoundaryGradient(c_e_s, "right"), "Neumann"),
             }
 
-        variables[self.domain + " electrolyte potential"] = phi_e
+        variables[f"{Domain} electrolyte potential"] = phi_e
 
         if self.domain == "positive":
             phi_e_s = variables["Separator electrolyte potential"]
             phi_e_p = variables["Positive electrolyte potential"]
 
-            if self.half_cell:
+            if self.options.electrode_types["negative"] == "planar":
                 phi_e_n = None
                 i_e_n = None
             else:
@@ -122,11 +120,13 @@ class BaseModel(BaseElectrolyteConductivity):
         return variables
 
     def _get_conductivities(self, variables):
+        Domain = self.domain.capitalize()
+
         param = self.param
-        tor_e = variables[self.domain + " electrolyte transport efficiency"]
-        tor_s = variables[self.domain + " electrode transport efficiency"]
-        c_e = variables[self.domain + " electrolyte concentration"]
-        T = variables[self.domain + " electrode temperature"]
+        tor_e = variables[f"{Domain} electrolyte transport efficiency"]
+        tor_s = variables[f"{Domain} electrode transport efficiency"]
+        c_e = variables[f"{Domain} electrolyte concentration"]
+        T = variables[f"{Domain} electrode temperature"]
         sigma = self.domain_param.sigma(T)
 
         kappa_eff = param.kappa_e(c_e, T) * tor_e
@@ -136,15 +136,20 @@ class BaseModel(BaseElectrolyteConductivity):
         return conductivity, sigma_eff
 
     def set_initial_conditions(self, variables):
+        Domain = self.domain.capitalize()
+
         if self.domain == "separator":
             return
 
-        delta_phi_e = variables[self.domain + " electrode surface potential difference"]
+        delta_phi_e = variables[f"{Domain} electrode surface potential difference"]
         delta_phi_e_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
     def set_boundary_conditions(self, variables):
+        domain = self.domain
+        Domain = domain.capitalize()
+
         if self.domain == "separator":
             return None
 
@@ -152,8 +157,8 @@ class BaseModel(BaseElectrolyteConductivity):
 
         conductivity, sigma_eff = self._get_conductivities(variables)
         i_boundary_cc = variables["Current collector current density"]
-        c_e = variables[self.domain + " electrolyte concentration"]
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
+        c_e = variables[f"{Domain} electrolyte concentration"]
+        delta_phi = variables[f"{Domain} electrode surface potential difference"]
 
         if self.domain == "negative":
             T = variables["Negative electrode temperature"]
@@ -223,16 +228,18 @@ class FullAlgebraic(BaseModel):
         super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
+        domain = self.domain
+        Domain = domain.capitalize()
+
         if self.domain == "separator":
             return
 
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-        i_e = variables[self.domain + " electrolyte current density"]
+        delta_phi = variables[f"{Domain} electrode surface potential difference"]
+        i_e = variables[f"{Domain} electrolyte current density"]
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of {self.domain.lower()} electrode volumetric "
-            "interfacial current densities"
+            f"Sum of {domain} electrode volumetric " "interfacial current densities"
         ]
 
         self.algebraic[delta_phi] = pybamm.div(i_e) - sum_a_j
@@ -260,8 +267,8 @@ class FullDifferential(BaseModel):
         if self.domain == "separator":
             return
 
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
+        Domain = domain.capitalize()
 
         C_dl = self.domain_param.C_dl
 
