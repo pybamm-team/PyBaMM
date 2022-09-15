@@ -38,6 +38,11 @@ class TestScalar(unittest.TestCase):
         b.print_name = "test"
         self.assertEqual(str(b.to_equation()), "test")
 
+    def test_copy(self):
+        a = pybamm.Scalar(5)
+        b = a.create_copy()
+        self.assertEqual(a, b)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
