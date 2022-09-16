@@ -78,6 +78,13 @@ class TestStateVectorDot(unittest.TestCase):
         ):
             sv.evaluate(y_dot=y_dot2)
 
+        # Try evaluating with y_dot=None
+        with self.assertRaisesRegex(
+            TypeError,
+            "StateVectorDot cannot evaluate input 'y_dot=None'",
+        ):
+            sv.evaluate(y_dot=None)
+
     def test_name(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
         self.assertEqual(sv.name, "y_dot[0:10]")

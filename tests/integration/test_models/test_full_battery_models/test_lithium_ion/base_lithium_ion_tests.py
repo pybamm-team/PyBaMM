@@ -253,3 +253,17 @@ class BaseIntegrationTestLithiumIon:
             {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_composite_graphite_silicon_sei(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open circuit potential": (("single", "current sigmoid"), "single"),
+            "SEI": "ec reaction limited",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        name = "Negative electrode active material volume fraction"
+        x = 0.1
+        parameter_values.update(
+            {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)

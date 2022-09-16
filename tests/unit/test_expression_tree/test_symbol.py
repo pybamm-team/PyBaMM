@@ -165,6 +165,11 @@ class TestSymbol(unittest.TestCase):
         ):
             a + "two"
 
+    def test_symbol_create_copy(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
+            a.create_copy()
+
     def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed
         a = pybamm.Symbol("a")
@@ -244,6 +249,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
+        self.assertIsNone(pybamm.StateVectorDot(slice(0, 1)).evaluate_ignoring_errors())
+
         np.testing.assert_array_equal(
             pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
         )

@@ -3,6 +3,7 @@
 #
 import numpy as np
 from scipy import interpolate
+import warnings
 
 import pybamm
 
@@ -24,7 +25,8 @@ class Interpolant(pybamm.Function):
         Name of the interpolant. Default is None, in which case the name "interpolating
         function" is given.
     interpolator : str, optional
-        Which interpolator to use ("linear", "pchip", or "cubic spline").
+        Which interpolator to use. Can be "linear", "cubic", or "pchip". Default is
+        "linear".
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -38,20 +40,24 @@ class Interpolant(pybamm.Function):
         y,
         children,
         name=None,
-        interpolator=None,
+        interpolator="linear",
         extrapolate=True,
         entries_string=None,
     ):
+        # "cubic spline" has been renamed to "cubic"
+        if interpolator == "cubic spline":
+            interpolator = "cubic"
+            warnings.warn(
+                "The 'cubic spline' interpolator has been renamed to 'cubic'.",
+                DeprecationWarning,
+            )
 
-        # set default dimension value
-        self.dimension = 1
+        # Check interpolator is valid
+        if interpolator not in ["linear", "cubic", "pchip"]:
+            raise ValueError("interpolator '{}' not recognised".format(interpolator))
 
+        # Perform some checks on the data
         if isinstance(x, (tuple, list)) and len(x) == 2:
-            interpolator = interpolator or "linear"
-            if interpolator != "linear":
-                raise ValueError(
-                    "interpolator should be 'linear' if x is two-dimensional"
-                )
             x1, x2 = x
             if y.ndim != 2:
                 raise ValueError("y should be two-dimensional if len(x)=2")
@@ -66,7 +72,6 @@ class Interpolant(pybamm.Function):
                     f"but x2.shape={x2.shape} and y.shape={y.shape}"
                 )
         else:
-            interpolator = interpolator or "cubic spline"
             if isinstance(x, (tuple, list)):
                 x1 = x[0]
             else:
@@ -78,7 +83,7 @@ class Interpolant(pybamm.Function):
                     "len(x1) should equal y=shape[0], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
-
+        # children should be a list not a symbol
         if isinstance(children, pybamm.Symbol):
             children = [children]
         # Either a single x is provided and there is one child
@@ -92,32 +97,41 @@ class Interpolant(pybamm.Function):
                 "child should have size 1 if y is two-dimensional and len(x)==1"
             )
 
-        if interpolator == "linear":
-            if len(x) == 1:
-                self.dimension = 1
+        # Create interpolating function
+        if len(x) == 1:
+            self.dimension = 1
+            if interpolator == "linear":
                 if extrapolate is False:
-                    interpolating_function = interpolate.interp1d(
-                        x1, y.T, bounds_error=False, fill_value=np.nan
-                    )
+                    fill_value = np.nan
                 elif extrapolate is True:
-                    interpolating_function = interpolate.interp1d(
-                        x1, y.T, bounds_error=False, fill_value="extrapolate"
-                    )
-            elif len(x) == 2:
-                self.dimension = 2
-                interpolating_function = interpolate.interp2d(x1, x2, y)
+                    fill_value = "extrapolate"
+                interpolating_function = interpolate.interp1d(
+                    x1,
+                    y.T,
+                    bounds_error=False,
+                    fill_value=fill_value,
+                )
+            elif interpolator == "cubic":
+                interpolating_function = interpolate.CubicSpline(
+                    x1, y, extrapolate=extrapolate
+                )
+            elif interpolator == "pchip":
+                interpolating_function = interpolate.PchipInterpolator(
+                    x1, y, extrapolate=extrapolate
+                )
+        elif len(x) == 2:
+            self.dimension = 2
+            if interpolator == "pchip":
+                raise ValueError(
+                    "interpolator should be 'linear' or 'cubic' if x is two-dimensional"
+                )
             else:
-                raise ValueError("Invalid dimension of x: {0}".format(len(x)))
-        elif interpolator == "pchip":
-            interpolating_function = interpolate.PchipInterpolator(
-                x1, y, extrapolate=extrapolate
-            )
-        elif interpolator == "cubic spline":
-            interpolating_function = interpolate.CubicSpline(
-                x1, y, extrapolate=extrapolate
-            )
+                interpolating_function = interpolate.interp2d(
+                    x1, x2, y, kind=interpolator
+                )
         else:
-            raise ValueError("interpolator '{}' not recognised".format(interpolator))
+            raise ValueError("Invalid dimension of x: {0}".format(len(x)))
+
         # Set name
         if name is None:
             name = "interpolating_function"
@@ -127,6 +141,7 @@ class Interpolant(pybamm.Function):
         super().__init__(
             interpolating_function, *children, name=name, derivative="derivative"
         )
+
         # Store information as attributes
         self.interpolator = interpolator
         self.extrapolate = extrapolate
