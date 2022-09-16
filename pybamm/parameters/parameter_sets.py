@@ -201,7 +201,7 @@ Siegel2022 = {
     "chemistry": "lithium_ion",
     "cell": "UMBL_Siegel2022",
     "negative electrode": "graphite_UMBL_Mohtat2020",
-    "separator": "separator_Mohtat2020",
+    "separator": "separator_Siegel2022",
     "positive electrode": "NMC_UMBL_Mohtat2020",
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
