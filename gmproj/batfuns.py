@@ -320,10 +320,6 @@ def plot1(all_sumvars_dict,esoh_data):
     return fig
 def plotc(all_sumvars_dict,esoh_data):
     esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
-    esoh_data["Capacity [A.h]"]=esoh_data["Cap"]
-    param = pybamm.LithiumIonParameters()
-    esoh_data["n_Li"]= 3600/param.F.value*(esoh_data["y_100"]*esoh_data["C_p"]+esoh_data["x_100"]*esoh_data["C_n"])
-    esoh_data["Loss of lithium inventory [%]"]=(1-esoh_data["n_Li"]/esoh_data["n_Li"][0])*100
     fig, axes = plt.subplots(3,2,figsize=(7,7))
     for k, name in enumerate(esoh_vars):
         ax = axes.flat[k]
@@ -335,6 +331,24 @@ def plotc(all_sumvars_dict,esoh_data):
         if k>3:
             ax.set_xlabel("Cycle number")
     fig.legend(["Acc Sim"] + ["Reported"], 
+           loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
+    fig.tight_layout()
+    return fig
+
+def plotc2(all_sumvars_dict1,all_sumvars_dict2,esoh_data):
+    esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
+    fig, axes = plt.subplots(3,2,figsize=(7,7))
+    for k, name in enumerate(esoh_vars):
+        ax = axes.flat[k]
+        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"r.")
+        ax.plot(all_sumvars_dict2["Cycle number"],all_sumvars_dict2[name],"bv")
+        ax.plot(esoh_data["N"],esoh_data[name],"kx")
+        ax.set_title(split_long_string(name))
+        if k ==2 or k==3:
+            ax.set_ylim([3,6.2])
+        if k>3:
+            ax.set_xlabel("Cycle number")
+    fig.legend(["Old", "New" , "Data"], 
            loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
@@ -375,39 +389,29 @@ def plotcomplong(all_sumvars_dict0,all_sumvars_dict1,all_sumvars_dict2):
     return fig
 
 
-def load_data_calendar(cell,eSOH_DIR): 
+def load_data_calendar(cell,eSOH_DIR,oCV_DIR):
+    param = pybamm.LithiumIonParameters() 
     cell_no = f'{cell:02d}'
     dfe=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
-    dfe_0=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
-    # dfo_0=pd.read_csv(oCV_DIR+"ocv_data_cell_"+cell_no+".csv")
-    # if cell_no=='13':
-    #     dfo_d=dfo_0[dfo_0['N']==dfe['N'].iloc[-5]]
-    #     dfo_0=dfo_0.drop(dfo_d.index.values)
-    #     dfo_0=dfo_0.reset_index(drop=True)
-    #     dfe = dfe.drop(dfe.index[-5])
+    dfo=pd.read_csv(oCV_DIR+"ocv_data_cell_"+cell_no+".csv")
+    # if cell_no=='24':
+    #     dfe = dfe.drop(dfe.index[0])
     #     dfe = dfe.reset_index(drop=True)
-    # Remove first RPT
-    # dfe = dfe.drop(dfe.index[0])
-    # dfe = dfe.reset_index(drop=True)
-    # dfo_d=dfo_0[dfo_0['N']==0]
-    # dfo_0=dfo_0.drop(dfo_d.index.values)
-    # if cell_no=='13':
-    #     dfe = dfe.drop(dfe.index[-1])
-    #     dfe = dfe.reset_index(drop=True)
-    #     dfe_0 = dfe_0.drop(dfe_0.index[-1])
-    #     dfe_0 = dfe_0.reset_index(drop=True)
-    # dfe['N']=dfe['N']-dfe['N'][0]
+    #     dfe['Time']=dfe['Time']-dfe['Time'][0]
     dfe['N']=dfe['Time']
+    dfe["Capacity [A.h]"]=dfe["Cap"]
+    dfe["n_Li"]= 3600/param.F.value*(dfe["y_100"]*dfe["C_p"]+dfe["x_100"]*dfe["C_n"])
+    dfe["Loss of lithium inventory [%]"]=(1-dfe["n_Li"]/dfe["n_Li"][0])*100
     N =dfe.N.unique()
 
-    print("Cycle Numbers:")
-    print(*N, sep = ", ") 
+    # print("Cycle Numbers:")
+    # print(*N, sep = ", ") 
     # print(len(N_0))
     # print(len(dfo_0))
     # rev_exp = []
     # irrev_exp = []
 
-    return cell_no,dfe,N
+    return cell_no,dfe,N,dfo
 
 def init_exp_calendar(cell_no,dfe,param,parameter_values):
     # dfe_0 = dfe[dfe['N']==N[0]]
@@ -436,6 +440,7 @@ def init_exp_calendar(cell_no,dfe,param,parameter_values):
 
 
 def load_data(cell,eSOH_DIR,oCV_DIR): 
+    param = pybamm.LithiumIonParameters() 
     cell_no = f'{cell:02d}'
     dfe=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
     dfe_0=pd.read_csv(eSOH_DIR+"aging_param_cell_"+cell_no+".csv")
@@ -462,9 +467,12 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
     print("Cycle Numbers:")
     print(*N, sep = ", ") 
     print(len(N_0))
-    print(len(dfo_0))
+    # print(len(dfo_0))
     rev_exp = []
     irrev_exp = []
+    dfe["Capacity [A.h]"]=dfe["Cap"]
+    dfe["n_Li"]= 3600/param.F.value*(dfe["y_100"]*dfe["C_p"]+dfe["x_100"]*dfe["C_n"])
+    dfe["Loss of lithium inventory [%]"]=(1-dfe["n_Li"]/dfe["n_Li"][0])*100
 
     for i in range(len(N_0)-1):
         # print(i)
@@ -497,25 +505,31 @@ def init_exp(cell_no,dfe,spm,parameter_values):
         c_rate_c = 'C/5'
         c_rate_d = 'C/5'
         dis_set = " until 3V"
+        Temp = 25
     elif cell_no=='04':
         c_rate_c = '1.5C'
         c_rate_d = '1.5C'
         dis_set = " until 3V"
+        Temp = 25
     elif cell_no=='07':
         c_rate_c = '2C'
         c_rate_d = '2C'
         dis_set = " until 3V"
+        Temp = 25
     elif cell_no=='10':
         c_rate_c = 'C/5'
         c_rate_d = '1.5C'
         dis_set = " until 3V"
+        Temp = 25
     elif cell_no=='13':
         c_rate_c = 'C/5'
         c_rate_d = 'C/5'
         dis_set = " for 150 min"
+        Temp = 25
     elif cell_no=='16':
         c_rate_c = 'C/5'
         c_rate_d = '1.5C'
         dis_set = " for 20 min"
-
-    return eps_n_data,eps_p_data,y_0_init,c_rate_c,c_rate_d,dis_set
+        Temp = 25
+    SOC_0 = 1
+    return eps_n_data,eps_p_data,c_rate_c,c_rate_d,dis_set,Temp,SOC_0
