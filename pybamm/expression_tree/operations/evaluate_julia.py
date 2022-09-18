@@ -25,157 +25,6 @@ def is_constant_and_can_evaluate(symbol):
     else:
         return False
 
-#BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
-class JuliaBinaryOperation(object):
-    def __init__(self,left_input,right_input,output,shape):
-        self.left_input = left_input
-        self.right_input = right_input
-        self.output = output
-        self.shape = shape
-
-#MatMul and Inner Product are not really the same as the bitwisebinary operations.
-class JuliaMatrixMultiplication(JuliaBinaryOperation):
-    def __init__(self,left_input,right_input,output,shape):
-        self.left_input = left_input
-        self.right_input = right_input
-        self.output = output
-        self.shape = shape
-
-class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
-    def __init__(self,left_input,right_input,output,shape,operator):
-        self.left_input = left_input
-        self.right_input = right_input
-        self.output = output
-        self.shape = shape
-        self.operator = operator
-
-class JuliaAddition(JuliaBinaryOperation):
-    pass
-
-class JuliaSubtraction(JuliaBinaryOperation):
-    pass
-
-class JuliaMultiplication(JuliaBinaryOperation):
-    pass
-
-class JuliaDivision(JuliaBinaryOperation):
-    pass
-
-class JuliaPower(JuliaBinaryOperation):
-    pass
-
-#MinMax is special because it does both min and max. Could be folded into JuliaBitwiseBinaryOperation once I do that
-class JuliaMinMax(JuliaBinaryOperation):
-    def __init__(self,left_input,right_input,output,shape,name):
-        self.left_input = left_input
-        self.right_input = right_input
-        self.output = output
-        self.shape = shape
-        self.name = name
-
-#FUNCTIONS
-##All Functions Return the same number of arguments they take in, except for minimum and maximum.
-class JuliaFunction(object):
-    pass
-
-class JuliaBroadcastableFunction(JuliaFunction):
-    def __init__(self,name,input,output,shape):
-        self.name = name
-        self.input = input
-        self.output = output
-        self.shape = shape
-
-class JuliaNegation(JuliaBroadcastableFunction):
-    pass
-
-class JuliaMinimumMaximum(JuliaBroadcastableFunction):
-    pass
-
-
-#Index is a little weird, so it just sits on its own.
-class JuliaIndex(object):
-    def __init__(self,input,output,index):
-        self.input = input
-        self.output = output
-        self.index = index
-        if type(index) is slice:
-            if index.step == None:
-                self.shape = ((index.stop)-(index.start),1)
-            elif type(index.step) == int:
-                self.shape = (floor((index.stop-index.start)/index.step),1)
-            else:
-                print(index.step)
-                raise NotImplementedError("asldhfjwaes")
-        elif type(index) is int:
-            self.shape = (1,1)
-        else:
-            raise NotImplementedError("index must be slice or int")
-
-
-
-#Values and Constants -- I will need to change this to inputs, due to t, y, and p.
-class JuliaValue(object):
-    pass
-
-class JuliaConstant(JuliaValue):
-    def __init__(self,id,value):
-        self.id = id
-        self.value = value
-        self.shape = value.shape
-
-class JuliaStateVector(JuliaValue):
-    def __init__(self,id,loc,shape):
-        self.id = id
-        self.loc = loc
-        self.shape = shape
-
-class JuliaStateVectorDot(JuliaStateVector):
-    pass
-
-class JuliaScalar(JuliaConstant):
-    def __init__(self,id,value):
-        self.id = id
-        self.value = float(value)
-        self.shape = (1,1)
-
-class JuliaTime(JuliaScalar):
-    def __init__(self,id):
-        self.id = id
-        self.shape = (1,1)
-
-class JuliaInput(JuliaScalar):
-    def __init__(self,id,name):
-        self.id = id
-        self.shape = (1,1)
-        self.name = name
-
-
-
-#CONCATENATIONS
-class JuliaConcatenation(object):
-    def __init__(self,output,shape,children):
-        self.output = output
-        self.shape = shape
-        self.children = children
-
-class JuliaNumpyConcatenation(JuliaConcatenation):
-    pass
-
-#NOTE: CURRENTLY THIS BEHAVES EXACTLY LIKE NUMPYCONCATENATION
-class JuliaSparseStack(JuliaConcatenation):
-    pass
-
-
-class JuliaDomainConcatenation(JuliaConcatenation):
-    def __init__(self,output,shape,children,secondary_dimension_npts,children_slices):
-        self.output = output
-        self.shape = shape
-        self.children = children
-        self.secondary_dimension_npts = secondary_dimension_npts
-        self.children_slices = children_slices
-
-
-
 
 class JuliaConverter(object):
     def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit",input_parameter_order=[]): 
@@ -189,6 +38,7 @@ class JuliaConverter(object):
         self._dae_type = dae_type
 
         self._type = "Float64"
+        self._inline = True
         #"Caches"
         #Stores Constants to be Declared in the initial cache
         #insight: everything is just a line of code
@@ -212,72 +62,6 @@ class JuliaConverter(object):
         self._cache_initialization_string = ""
     
     #know where to go to find a variable. this could be smoother, there will need to be a ton of boilerplate here.
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaConcatenation):
-        return self._cache_dict[julia_symbol.output]
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaMinimumMaximum):
-        return self._cache_dict[julia_symbol.output]
-    
-    @multimethod
-    def get_result_variable_name(self, julia_symbol:JuliaBinaryOperation):
-        return self._cache_dict[julia_symbol.output]
-    
-    @multimethod 
-    def get_result_variable_name(self,julia_symbol:JuliaConstant):
-        return self._const_dict[julia_symbol.id]
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaScalar):
-        return julia_symbol.value
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaTime):
-        return "t"
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaInput):
-        return julia_symbol.name
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaStateVector):
-        start = julia_symbol.loc[0]+1
-        end = julia_symbol.loc[1]
-        if start==end:
-            return "y[{}]".format(start)
-        else:
-            return "y[{}:{}]".format(start,end)
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaStateVectorDot):
-        start = julia_symbol.loc[0]+1
-        end = julia_symbol.loc[1]
-        if start==end:
-            return "dy[{}]".format(start)
-        else:
-            return "dy[{}:{}]".format(start,end)
-    
-    @multimethod
-    def get_result_variable_name(self,julia_symbol:JuliaBroadcastableFunction):
-        return self._cache_dict[julia_symbol.output]
-
-    @multimethod 
-    def get_result_variable_name(self,julia_symbol:JuliaIndex):
-        lower_var = self.get_result_variable_name(self._intermediate[julia_symbol.input])
-        index = julia_symbol.index
-        if type(index) is int:
-            return "{}[{}]".format(lower_var,index+1)
-        elif type(index) is slice:
-            if index.step is None:
-                return "{}[{}:{}]".format(lower_var,index.start+1,index.stop)
-            elif type(index.step) is int:
-                return "{}[{}:{}:{}]".format(lower_var,index.start+1,index.step,index.stop)
-            else:
-                raise NotImplementedError("Step has to be an integer.")
-        else:
-            raise NotImplementedError("Step must be a slice or an int")
-    
     #This function breaks down and analyzes any binary tree. Will fail if used on a non-binary tree.
     def break_down_binary(self,symbol):
         #Check for constant
@@ -348,7 +132,7 @@ class JuliaConverter(object):
     def _convert_tree_to_intermediate(self,symbol:pybamm.Multiplication):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
+        self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape,"*")
         return my_id
     
     #Apparently an inner product is a hadamard product in pybamm
@@ -356,28 +140,28 @@ class JuliaConverter(object):
     def _convert_tree_to_intermediate(self,symbol:pybamm.Inner):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape)
+        self._intermediate[my_id] = JuliaMultiplication(id_left,id_right,my_id,my_shape,"*")
         return my_id
     
     @multimethod 
     def _convert_tree_to_intermediate(self,symbol:pybamm.Division):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaDivision(id_left,id_right,my_id,my_shape)
+        self._intermediate[my_id] = JuliaDivision(id_left,id_right,my_id,my_shape,"/")
         return my_id
     
     @multimethod
     def _convert_tree_to_intermediate(self,symbol: pybamm.Addition):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaAddition(id_left,id_right,my_id,my_shape)
+        self._intermediate[my_id] = JuliaAddition(id_left,id_right,my_id,my_shape,"+")
         return my_id
     
     @multimethod
     def _convert_tree_to_intermediate(self,symbol: pybamm.Subtraction):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaSubtraction(id_left,id_right,my_id,my_shape)
+        self._intermediate[my_id] = JuliaSubtraction(id_left,id_right,my_id,my_shape,"-")
         return my_id
 
     @multimethod
@@ -398,7 +182,7 @@ class JuliaConverter(object):
     def _convert_tree_to_intermediate(self,symbol:pybamm.Power):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaPower(id_left,id_right,my_id,my_shape)
+        self._intermediate[my_id] = JuliaPower(id_left,id_right,my_id,my_shape,"^")
         return my_id
     
     @multimethod
@@ -576,203 +360,10 @@ class JuliaConverter(object):
         shape = symbol.shape
         self._intermediate[my_id] = JuliaStateVectorDot(id,points,shape)
         return my_id
-        
-    #utilities for code conversion
-    def get_variables_for_binary_tree(self,julia_symbol):
-        left_input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.left_input])
-        right_input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.right_input])
-        result_var_name = self.get_result_variable_name(julia_symbol)
-        return left_input_var_name,right_input_var_name,result_var_name
     
     #convert intermediates to code. Again, all binary trees follow the same pattern so we just define a function to break them down, and then use the MD to find out what code to generate.
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaConcatenation):
-        input_var_names = []
-        num_cols = julia_symbol.shape[1]
-        my_name = self.get_result_variable_name(julia_symbol)
-
-        #assume we don't have tensors. Already asserted that concatenations have to have the same width.
-        if num_cols==1:
-            right_parenthesis = "]"
-            vec=True
-        else:
-            right_parenthesis = ",:]"
-            vec=False
-        #do the 0th one outside of the loop to initialize
-        child = julia_symbol.children[0]
-        child_var = self._intermediate[child]
-        child_var_name = self.get_result_variable_name(self._intermediate[child])
-        start_row = 1
-        if child_var.shape[0] == 0:
-            end_row = 1
-            code = ""
-        elif child_var.shape[0] == 1:
-            end_row = 1
-            if vec:
-                code = "{}[{}:{}{} .=  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
-            else:
-                code = "{}[{}{} = (@view {})\n".format(my_name,start_row,right_parenthesis,child_var_name)
-        else:
-            start_row = 1
-            end_row = child_var.shape[0]
-            code = "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
-        
-        for child in julia_symbol.children[1:]:
-            child_var = self._intermediate[child]
-            child_var_name = self.get_result_variable_name(self._intermediate[child])
-            if child_var.shape[0] == 0:
-                continue
-            elif child_var.shape[0] == 1:
-                start_row = end_row+1
-                end_row = start_row+1
-                if vec:
-                    code += "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
-                else:
-                    code += "{}[{}{} .= {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
-            else:
-                start_row = end_row+1
-                end_row = start_row+child_var.shape[0]-1  
-                code += "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
-        
-        self._function_string+=code
-        return 0
-    
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaDomainConcatenation):
-        input_var_names = []
-        num_cols = julia_symbol.shape[1]
-        my_name = self.get_result_variable_name(julia_symbol)
-
-        #assume we don't have tensors. Already asserted that concatenations have to have the same width.
-        if num_cols==1:
-            right_parenthesis = "]"
-            vec=True
-        else:
-            right_parenthesis = ",:]"
-            vec=False
-        #do the 0th one outside of the loop to initialize
-        end_row = 0
-        code = ""
-        for i in range(julia_symbol.secondary_dimension_npts):
-            for c in range(len(julia_symbol.children)):
-                child_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.children[c]])
-                this_slice = list(julia_symbol.children_slices[c].values())[0][i]
-                start = this_slice.start
-                stop = this_slice.stop
-                start_row = end_row+1
-                end_row = start_row+(stop-start)-1
-                code += "{}[{}:{}{} .= (@view {}[{}:{}{})\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
-        
-        self._function_string+=code
-        return 0
-
-    
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaMatrixMultiplication):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0
-
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaAddition):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {} .+ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {} .+ {}".format(result_var_name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0
-    
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaSubtraction):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {} .- {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {} .- {}".format(result_var_name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0
-
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaMultiplication):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {} .* {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {} .* {}".format(result_var_name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0 
-    
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaDivision):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {} ./ {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {} ./ {}".format(result_var_name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0  
-
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaBroadcastableFunction):
-        result_var_name = self.get_result_variable_name(julia_symbol)
-        input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
-        code = "{} .= {}.({})\n".format(result_var_name,julia_symbol.name,input_var_name)
-        self._function_string+=code
-        return 0
-
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaNegation):
-        result_var_name = self.get_result_variable_name(julia_symbol)
-        input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
-        code = "{} .= -{}\n".format(result_var_name,input_var_name)
-        self._function_string+=code
-        return 0
-    
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaMinimumMaximum):
-        result_var_name = self.get_result_variable_name(julia_symbol)
-        input_var_name = self.get_result_variable_name(self._intermediate[julia_symbol.input])
-        code = "{} .= {}({})\n".format(result_var_name,julia_symbol.name,input_var_name)
-        self._function_string+=code
-        return 0
-
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaMinMax):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {}({},{})\n".format(result_var_name,julia_symbol.name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {}({},{})\n".format(result_var_name,julia_symbol.name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0 
-
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaPower):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {}.^{}\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        else:
-            code = "{} = {}.^{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
-        self._function_string+=code
-        return 0
-    
-    @multimethod
-    def convert_intermediate_to_code(self,julia_symbol:JuliaBitwiseBinaryOperation):
-        left_input_var_name,right_input_var_name,result_var_name = self.get_variables_for_binary_tree(julia_symbol)
-        if self._preallocate:
-            code = "{} .= {}.{}{}\n".format(result_var_name,left_input_var_name,julia_symbol.operator,right_input_var_name)
-        else:
-            code = "{} = {}.{}{})\n".format(result_var_name,left_input_var_name,julia_symbol.operator,right_input_var_name)
-        self._function_string+=code
-        return 0   
 
     #Cache and Const Creation
-    @multimethod
     def create_cache(self,symbol):
         my_id = symbol.output
 
@@ -806,7 +397,7 @@ class JuliaConverter(object):
             self._cache_dict[symbol.output] = cache_name
         else:
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
-        return 0
+        return cache_name
 
     
 
@@ -854,14 +445,14 @@ class JuliaConverter(object):
         self._const_id = 0
     
     #Just get something working here, so can start actual testing
-    def write_function_easy(self,funcname):
+    def write_function_easy(self,funcname,inline=True):
         #start with the closure
         self._cache_and_const_string = "begin\ncs = (\n" + self._cache_and_const_string
         self._cache_and_const_string += ")\n"
 
 
         top = self._intermediate[next(reversed(self._intermediate))]
-        top_var_name = self.get_result_variable_name(top)
+        top_var_name = top._convert_intermediate_to_code(self,inline=inline)
         my_shape = top.shape
         if len(self.input_parameter_order) != 0:
             parameter_string = ""
@@ -880,9 +471,6 @@ class JuliaConverter(object):
         elif self._dae_type=="implicit":
             self._function_string+="out[:] .= {}\nreturn nothing\nend\nend".format(top_var_name)
             self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname) + self._function_string
-        
-        
-
         return 0
         
 
@@ -904,39 +492,354 @@ class JuliaConverter(object):
         return 0
 
     #rework this at some point
-    def build_julia_code(self,funcname="f"):
-        for entry in self._intermediate.values():
-            if issubclass(type(entry),JuliaBinaryOperation):
-                self.create_cache(entry)
-                self.convert_intermediate_to_code(entry)
-            elif type(entry) is JuliaConstant:
-                self.create_const(entry)
-            elif type(entry) is JuliaIndex:
-                continue
-            elif type(entry) is JuliaStateVector:
-                continue
-            elif type(entry) is JuliaStateVectorDot:
-                continue
-            elif type(entry) is JuliaScalar:
-                continue
-            elif type(entry) is JuliaBroadcastableFunction:
-                self.create_cache(entry)
-                self.convert_intermediate_to_code(entry)
-            elif type(entry) is JuliaNegation:
-                self.create_cache(entry)
-                self.convert_intermediate_to_code(entry)
-            elif type(entry) is JuliaMinimumMaximum:
-                self.create_cache(entry)
-                self.convert_intermediate_to_code(entry)
-            elif type(entry) is JuliaTime:
-                continue
-            elif type(entry) is JuliaInput:
-                continue
-            elif issubclass(type(entry),JuliaConcatenation):
-                self.create_cache(entry)
-                self.convert_intermediate_to_code(entry)
-            else:
-                raise NotImplementedError("uh oh")
-        self.write_function_easy(funcname)
+    def build_julia_code(self,funcname="f",inline=True):
+        #get top node of tree
+        self.write_function_easy(funcname,inline=inline)
         string = self._cache_and_const_string+self._function_string
         return string
+
+
+#BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
+class JuliaBinaryOperation(object):
+    def __init__(self,left_input,right_input,output,shape):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
+    def get_binary_inputs(self,converter:JuliaConverter,inline=True):
+        left_input_var_name = converter._intermediate[self.left_input]._convert_intermediate_to_code(converter,inline=inline)
+        right_input_var_name = converter._intermediate[self.right_input]._convert_intermediate_to_code(converter,inline=inline)
+        return left_input_var_name,right_input_var_name
+
+#MatMul and Inner Product are not really the same as the bitwisebinary operations.
+class JuliaMatrixMultiplication(JuliaBinaryOperation):
+    def __init__(self,left_input,right_input,output,shape):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=False):
+        result_var_name = converter.create_cache(self)
+        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=inline)
+        result_var_name = converter._cache_dict[self.output]
+        if converter._preallocate:
+            code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
+        else:
+            code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
+        converter._function_string+=code
+        return result_var_name
+
+
+#Includes Addition, subtraction, multiplication, division, power, minimum, and maximum
+class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
+    def __init__(self,left_input,right_input,output,shape,operator):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
+        self.operator = operator
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        inline = inline & converter._inline
+        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=inline)
+
+        if not inline:
+            result_var_name = converter.create_cache(self)
+            if converter._preallocate:
+                code = "{} .= {}.{}{}\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
+            else:
+                code = "{} = {}.{}{})\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
+            converter._function_string+=code
+        elif inline:
+            result_var_name = "({} .{} {})".format(left_input_var_name,self.operator,right_input_var_name)
+        return result_var_name
+
+class JuliaAddition(JuliaBitwiseBinaryOperation):
+    pass
+
+class JuliaSubtraction(JuliaBitwiseBinaryOperation):
+    pass
+
+class JuliaMultiplication(JuliaBitwiseBinaryOperation):
+    pass
+
+class JuliaDivision(JuliaBitwiseBinaryOperation):
+    pass
+
+class JuliaPower(JuliaBitwiseBinaryOperation):
+    pass
+
+#MinMax is special because it does both min and max. Could be folded into JuliaBitwiseBinaryOperation once I do that
+class JuliaMinMax(JuliaBinaryOperation):
+    def __init__(self,left_input,right_input,output,shape,name):
+        self.left_input = left_input
+        self.right_input = right_input
+        self.output = output
+        self.shape = shape
+        self.name = name
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        inline = inline & converter._inline
+        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=inline)
+
+        if not inline:
+            result_var_name = converter.create_cache(self)
+            if converter._preallocate:
+                code = "{} .= {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
+            else:
+                code = "{} = {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
+            converter._function_string+=code
+        elif inline:
+            result_var_name = "{}({},{})".format(self.name,left_input_var_name,right_input_var_name)
+        return result_var_name
+
+#FUNCTIONS
+##All Functions Return the same number of arguments they take in, except for minimum and maximum.
+class JuliaFunction(object):
+    pass
+
+class JuliaBroadcastableFunction(JuliaFunction):
+    def __init__(self,name,input,output,shape):
+        self.name = name
+        self.input = input
+        self.output = output
+        self.shape = shape
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        inline = inline & converter._inline
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
+        if not inline:
+            result_var_name = converter.create_cache(self)
+            if converter._preallocate:
+                code = "{} .= {}.({})\n".format(result_var_name,self.name,input_var_name)
+            else:
+                code = "{} = {}.({})\n".format(result_var_name,self.name,input_var_name)
+            converter._function_string+=code
+        else:
+            result_var_name = "({}.({}))".format(self.name,input_var_name) 
+        return result_var_name
+
+class JuliaNegation(JuliaBroadcastableFunction):
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        inline = inline & converter._inline
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
+        if not inline:
+            result_var_name = converter.create_cache(self)
+            if converter._preallocate:
+                code = "{} .= -{}\n".format(result_var_name,input_var_name)
+            else:
+                code = "{} = -{}\n".format(result_var_name,input_var_name)
+            converter._function_string+=code
+        else:
+            result_var_name = "(-{})".format(input_var_name)
+        return result_var_name
+
+class JuliaMinimumMaximum(JuliaBroadcastableFunction):
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        inline = inline & converter._inline
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
+        if not inline:
+            result_var_name = converter.create_cache(self)
+            if converter._preallocate:
+                code = "{} .= {}({})\n".format(result_var_name,self.name,input_var_name)
+            else:
+                code = "{} = {}({})\n".format(result_var_name,self.name,input_var_name)
+            converter._function_string+=code
+        else:
+            result_var_name = "{}({})".format(self.name,input_var_name)
+        return result_var_name
+    pass
+
+
+#Index is a little weird, so it just sits on its own.
+class JuliaIndex(object):
+    def __init__(self,input,output,index):
+        self.input = input
+        self.output = output
+        self.index = index
+        if type(index) is slice:
+            if index.step == None:
+                self.shape = ((index.stop)-(index.start),1)
+            elif type(index.step) == int:
+                self.shape = (floor((index.stop-index.start)/index.step),1)
+            else:
+                print(index.step)
+                raise NotImplementedError("asldhfjwaes")
+        elif type(index) is int:
+            self.shape = (1,1)
+        else:
+            raise NotImplementedError("index must be slice or int")
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
+        index = self.index
+        if type(index) is int:
+            return "{}[{}]".format(input_var_name,index+1)
+        elif type(index) is slice:
+            if index.step is None:
+                return "(@view {}[{}:{}])".format(input_var_name,index.start+1,index.stop)
+            elif type(index.step) is int:
+                return "(@view {}[{}:{}:{}])".format(input_var_name,index.start+1,index.step,index.stop)
+            else:
+                raise NotImplementedError("Step has to be an integer.")
+        else:
+            raise NotImplementedError("Step must be a slice or an int")
+
+
+
+#Values and Constants -- I will need to change this to inputs, due to t, y, and p.
+class JuliaValue(object):
+    pass
+
+class JuliaConstant(JuliaValue):
+    def __init__(self,id,value):
+        self.id = id
+        self.value = value
+        self.shape = value.shape
+    def _convert_intermediate_to_code(self,converter,inline=True):
+        converter.create_const(self)
+        return converter._const_dict[self.id]
+
+class JuliaStateVector(JuliaValue):
+    def __init__(self,id,loc,shape):
+        self.id = id
+        self.loc = loc
+        self.shape = shape
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        start = self.loc[0]+1
+        end = self.loc[1]
+        if start==end:
+            return "(@view y[{}])".format(start)
+        else:
+            return "(@view y[{}:{}])".format(start,end)
+
+class JuliaStateVectorDot(JuliaStateVector):
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        start = self.loc[0]+1
+        end = self.loc[1]
+        if start==end:
+            return "(@view dy[{}])".format(start)
+        else:
+            return "(@view dy[{}:{}])".format(start,end)
+
+class JuliaScalar(JuliaConstant):
+    def __init__(self,id,value):
+        self.id = id
+        self.value = float(value)
+        self.shape = (1,1)
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        return self.value
+
+class JuliaTime(JuliaScalar):
+    def __init__(self,id):
+        self.id = id
+        self.shape = (1,1)
+    def _convert_intermediate_to_code(self,converter,inline=True):
+        return "t"
+
+class JuliaInput(JuliaScalar):
+    def __init__(self,id,name):
+        self.id = id
+        self.shape = (1,1)
+        self.name = name
+    def _convert_intermediate_to_code(self,converter,inline=True):
+        return self.name
+
+
+
+#CONCATENATIONS
+class JuliaConcatenation(object):
+    def __init__(self,output,shape,children):
+        self.output = output
+        self.shape = shape
+        self.children = children
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        input_var_names = []
+        num_cols = self.shape[1]
+        my_name = converter.create_cache(self)
+
+        #assume we don't have tensors. Already asserted that concatenations have to have the same width.
+        if num_cols==1:
+            right_parenthesis = "]"
+            vec=True
+        else:
+            right_parenthesis = ",:]"
+            vec=False
+        
+        #do the 0th one outside of the loop to initialize
+        child = self.children[0]
+        child_var = converter._intermediate[child]
+        child_var_name = child_var._convert_intermediate_to_code(converter,inline=False)
+        start_row = 1
+        if child_var.shape[0] == 0:
+            end_row = 1
+            code = ""
+        elif child_var.shape[0] == 1:
+            end_row = 1
+            if vec:
+                code = "{}[{}:{}{} .=  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
+            else:
+                code = "{}[{}{} = (@view {})\n".format(my_name,start_row,right_parenthesis,child_var_name)
+        else:
+            start_row = 1
+            end_row = child_var.shape[0]
+            code = "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+        
+        for child in self.children[1:]:
+            child_var = converter._intermediate[child]
+            child_var_name = child_var._convert_intermediate_to_code(converter,inline=False)
+            if child_var.shape[0] == 0:
+                continue
+            elif child_var.shape[0] == 1:
+                start_row = end_row+1
+                end_row = start_row+1
+                if vec:
+                    code += "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                else:
+                    code += "{}[{}{} .= {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+            else:
+                start_row = end_row+1
+                end_row = start_row+child_var.shape[0]-1  
+                code += "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+        
+        converter._function_string+=code
+        return my_name
+
+class JuliaNumpyConcatenation(JuliaConcatenation):
+    pass
+
+#NOTE: CURRENTLY THIS BEHAVES EXACTLY LIKE NUMPYCONCATENATION
+class JuliaSparseStack(JuliaConcatenation):
+    pass
+
+class JuliaDomainConcatenation(JuliaConcatenation):
+    def __init__(self,output,shape,children,secondary_dimension_npts,children_slices):
+        self.output = output
+        self.shape = shape
+        self.children = children
+        self.secondary_dimension_npts = secondary_dimension_npts
+        self.children_slices = children_slices
+    def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        input_var_names = []
+        num_cols = self.shape[1]
+        result_var_name = converter.create_cache(self)
+
+        #assume we don't have tensors. Already asserted that concatenations have to have the same width.
+        if num_cols==1:
+            right_parenthesis = "]"
+            vec=True
+        else:
+            right_parenthesis = ",:]"
+            vec=False
+        #do the 0th one outside of the loop to initialize
+        end_row = 0
+        code = ""
+        for i in range(self.secondary_dimension_npts):
+            for c in range(len(self.children)):
+                child = converter._intermediate[self.children[c]]
+                child_var_name = child._convert_intermediate_to_code(converter,inline=False)
+                this_slice = list(self.children_slices[c].values())[0][i]
+                start = this_slice.start
+                stop = this_slice.stop
+                start_row = end_row+1
+                end_row = start_row+(stop-start)-1
+                code += "{}[{}:{}{} .= (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+        
+        converter._function_string+=code
+        return result_var_name
