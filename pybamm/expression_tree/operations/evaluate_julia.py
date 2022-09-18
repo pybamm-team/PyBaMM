@@ -397,7 +397,7 @@ class JuliaConverter(object):
             self._cache_dict[symbol.output] = cache_name
         else:
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
-        return cache_name
+        return self._cache_dict[my_id]
 
     
 
@@ -447,12 +447,10 @@ class JuliaConverter(object):
     #Just get something working here, so can start actual testing
     def write_function_easy(self,funcname,inline=True):
         #start with the closure
-        self._cache_and_const_string = "begin\ncs = (\n" + self._cache_and_const_string
-        self._cache_and_const_string += ")\n"
-
-
         top = self._intermediate[next(reversed(self._intermediate))]
         top_var_name = top._convert_intermediate_to_code(self,inline=inline)
+        self._cache_and_const_string = "begin\ncs = (\n" + self._cache_and_const_string
+        self._cache_and_const_string += ")\n"
         my_shape = top.shape
         if len(self.input_parameter_order) != 0:
             parameter_string = ""
