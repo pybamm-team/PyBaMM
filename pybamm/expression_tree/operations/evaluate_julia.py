@@ -168,14 +168,14 @@ class JuliaConverter(object):
     def _convert_tree_to_intermediate(self,symbol:pybamm.Minimum):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"min.")
+        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"min")
         return my_id
     
     @multimethod
     def _convert_tree_to_intermediate(self,symbol:pybamm.Maximum):
         id_left,id_right,my_id = self.break_down_binary(symbol)
         my_shape = self.find_broadcastable_shape(id_left,id_right)
-        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max.")
+        self._intermediate[my_id] = JuliaMinMax(id_left,id_right,my_id,my_shape,"max")
         return my_id
     
     @multimethod
@@ -543,12 +543,12 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
-                code = "{} .= {}.{}{}\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
+                code = "@. {} = {}{}{}\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
             else:
                 code = "{} = {}.{}{})\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
             converter._function_string+=code
         elif inline:
-            result_var_name = "({} .{} {})".format(left_input_var_name,self.operator,right_input_var_name)
+            result_var_name = "({} {} {})".format(left_input_var_name,self.operator,right_input_var_name)
         return result_var_name
 
 class JuliaAddition(JuliaBitwiseBinaryOperation):
@@ -581,7 +581,7 @@ class JuliaMinMax(JuliaBinaryOperation):
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
-                code = "{} .= {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
+                code = "@. {} = {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
             else:
                 code = "{} = {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
             converter._function_string+=code
@@ -606,12 +606,13 @@ class JuliaBroadcastableFunction(JuliaFunction):
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
-                code = "{} .= {}.({})\n".format(result_var_name,self.name,input_var_name)
+                code = "@. {} = {}({})\n".format(result_var_name,self.name,input_var_name)
             else:
                 code = "{} = {}.({})\n".format(result_var_name,self.name,input_var_name)
             converter._function_string+=code
         else:
-            result_var_name = "({}.({}))".format(self.name,input_var_name) 
+            #assume an @. has already been issued
+            result_var_name = "({}({}))".format(self.name,input_var_name) 
         return result_var_name
 
 class JuliaNegation(JuliaBroadcastableFunction):
@@ -621,7 +622,7 @@ class JuliaNegation(JuliaBroadcastableFunction):
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
-                code = "{} .= -{}\n".format(result_var_name,input_var_name)
+                code = "@. {} = -{}\n".format(result_var_name,input_var_name)
             else:
                 code = "{} = -{}\n".format(result_var_name,input_var_name)
             converter._function_string+=code
@@ -636,7 +637,7 @@ class JuliaMinimumMaximum(JuliaBroadcastableFunction):
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
-                code = "{} .= {}({})\n".format(result_var_name,self.name,input_var_name)
+                code = "@. {} = {}({})\n".format(result_var_name,self.name,input_var_name)
             else:
                 code = "{} = {}({})\n".format(result_var_name,self.name,input_var_name)
             converter._function_string+=code
@@ -771,13 +772,13 @@ class JuliaConcatenation(object):
         elif child_var.shape[0] == 1:
             end_row = 1
             if vec:
-                code = "{}[{}:{}{} .=  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
+                code = "@. {}[{}:{}{} =  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
             else:
                 code = "{}[{}{} = (@view {})\n".format(my_name,start_row,right_parenthesis,child_var_name)
         else:
             start_row = 1
             end_row = child_var.shape[0]
-            code = "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+            code = "@. {}[{}:{}{} = {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
         
         for child in self.children[1:]:
             child_var = converter._intermediate[child]
@@ -790,11 +791,11 @@ class JuliaConcatenation(object):
                 if vec:
                     code += "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
                 else:
-                    code += "{}[{}{} .= {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                    code += "@. {}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
             else:
                 start_row = end_row+1
                 end_row = start_row+child_var.shape[0]-1  
-                code += "{}[{}:{}{} .= {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+                code += "@. {}[{}:{}{} = {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
         
         converter._function_string+=code
         return my_name
@@ -837,7 +838,7 @@ class JuliaDomainConcatenation(JuliaConcatenation):
                 stop = this_slice.stop
                 start_row = end_row+1
                 end_row = start_row+(stop-start)-1
-                code += "{}[{}:{}{} .= (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+                code += "@. {}[{}:{}{} = (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
         
         converter._function_string+=code
         return result_var_name
