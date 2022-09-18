@@ -3,13 +3,6 @@ ci:
   autofix_commit_msg: "style: pre-commit fixes"
 
 repos:
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0-alpha.0
-    hooks:
-      - id: prettier
-        types_or: [yaml, markdown, html, css, scss, javascript, json]
-        exclude: assets/js/webapp\.js
-
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
