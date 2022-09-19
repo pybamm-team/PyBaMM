@@ -372,8 +372,8 @@ class JuliaConverter(object):
         my_id = symbol.output
 
         cache_shape = self._intermediate[my_id].shape
-        cache_id = self._cache_id+1
-        self._cache_id = cache_id
+        cache_id = self._cache_id
+        self._cache_id +=1
         cache_name = "cache_{}".format(cache_id)
         
         if self._cache_type=="standard":
@@ -463,6 +463,8 @@ class JuliaConverter(object):
             parameter_string = parameter_string[0:-1]
             parameter_string += "= p\n"
             self._function_string = parameter_string + self._function_string
+        self._function_string.replace("cache_0","dy")
+        self._function_string.replace("cs.dy","dy")
         self._function_string = self._cache_initialization_string + self._function_string
         if my_shape[1] != 1:
             self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
