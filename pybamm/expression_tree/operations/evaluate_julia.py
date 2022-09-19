@@ -465,13 +465,13 @@ class JuliaConverter(object):
             self._function_string = parameter_string + self._function_string
         self._function_string = self._cache_initialization_string + self._function_string
         if my_shape[1] != 1:
-            self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend".format(top_var_name)
+            self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
             self._function_string = "function {}(J, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         elif self._dae_type=="semi-explicit":
-            self._function_string+= "dy[:] .= {}\nreturn nothing\nend\nend".format(top_var_name)
+            self._function_string+= "dy[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
             self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         elif self._dae_type=="implicit":
-            self._function_string+="out[:] .= {}\nreturn nothing\nend\nend".format(top_var_name)
+            self._function_string+="out[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
             self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         return 0
         
