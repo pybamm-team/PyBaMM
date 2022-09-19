@@ -103,7 +103,7 @@ class BasicFull(BaseModel):
 
         # transport_efficiency
         tor = pybamm.concatenation(
-            eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
+            eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
         )
 
         # Interfacial reactions

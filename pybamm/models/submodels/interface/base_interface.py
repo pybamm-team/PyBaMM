@@ -312,9 +312,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
         if reaction_name == "SEI on cracks ":
             roughness = variables["Negative electrode roughness ratio"] - 1
-            roughness_av = variables[
-                "X-averaged negative electrode roughness ratio"
-            ] - 1
+            roughness_av = (
+                variables["X-averaged negative electrode roughness ratio"] - 1
+            )
         else:
             roughness = 1
             roughness_av = 1

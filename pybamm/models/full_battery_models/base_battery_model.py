@@ -307,11 +307,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if SEI_cracks_option == "true":
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = (
-                    "swelling and cracking", "swelling only"
+                    "swelling and cracking",
+                    "swelling only",
                 )
             else:
                 default_options["particle mechanics"] = (
-                    "swelling and cracking", "none"
+                    "swelling and cracking",
+                    "none",
                 )
         else:
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:

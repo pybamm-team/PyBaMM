@@ -85,7 +85,7 @@ class OneDimensionalX(BaseThermal):
 
         # N.B only y-z surface cooling is implemented for this model
         self.rhs = {
-            T: (-pybamm.div(q) / self.param.delta ** 2 + self.param.B * Q)
+            T: (-pybamm.div(q) / self.param.delta**2 + self.param.B * Q)
             / (self.param.C_th * rho_k)
         }
 

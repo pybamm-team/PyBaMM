@@ -18,6 +18,6 @@ def aluminium_heat_capacity_CRC(T):
        Specific heat capacity
     """
 
-    cp = 4.503e-6 * T ** 3 - 6.256e-3 * T ** 2 + 3.281 * T + 355.7
+    cp = 4.503e-6 * T**3 - 6.256e-3 * T**2 + 3.281 * T + 355.7
 
     return cp

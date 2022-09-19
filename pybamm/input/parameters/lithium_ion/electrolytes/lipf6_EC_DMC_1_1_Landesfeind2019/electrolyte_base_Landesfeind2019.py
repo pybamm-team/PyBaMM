@@ -30,7 +30,7 @@ def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     p1, p2, p3, p4, p5, p6 = coeffs
     A = p1 * (1 + (T - p2))
     B = 1 + p3 * sqrt(c) + p4 * (1 + p5 * exp(1000 / T)) * c
-    C = 1 + c ** 4 * (p6 * exp(1000 / T))
+    C = 1 + c**4 * (p6 * exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
 
     return sigma_e / 10
@@ -102,12 +102,12 @@ def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
         p1
         + p2 * c
         + p3 * T
-        + p4 * c ** 2
+        + p4 * c**2
         + p5 * c * T
-        + p6 * T ** 2
-        + p7 * c ** 3
-        + p8 * c ** 2 * T
-        + p9 * c * T ** 2
+        + p6 * T**2
+        + p7 * c**3
+        + p8 * c**2 * T
+        + p9 * c * T**2
     )
 
     return tdf
@@ -144,12 +144,12 @@ def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
         p1
         + p2 * c
         + p3 * T
-        + p4 * c ** 2
+        + p4 * c**2
         + p5 * c * T
-        + p6 * T ** 2
-        + p7 * c ** 3
-        + p8 * c ** 2 * T
-        + p9 * c * T ** 2
+        + p6 * T**2
+        + p7 * c**3
+        + p8 * c**2 * T
+        + p9 * c * T**2
     )
 
     return tplus

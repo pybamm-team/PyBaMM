@@ -33,8 +33,8 @@ class Explicit(BaseThroughCellModel):
         j_n_av = variables["X-averaged negative electrode interfacial current density"]
         j_p_av = variables["X-averaged positive electrode interfacial current density"]
 
-        p_n = param.n.beta * j_n_av * (-(x_n ** 2) + param.n.l ** 2) / 2 + p_s
-        p_p = param.n.beta * j_n_av * ((x_p - 1) ** 2 - param.p.l ** 2) / 2 + p_s
+        p_n = param.n.beta * j_n_av * (-(x_n**2) + param.n.l**2) / 2 + p_s
+        p_p = param.n.beta * j_n_av * ((x_p - 1) ** 2 - param.p.l**2) / 2 + p_s
         variables.update(self._get_standard_neg_pos_pressure_variables(p_n, p_p))
 
         # Volume-averaged velocity

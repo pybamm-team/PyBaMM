@@ -29,4 +29,4 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
     """
     m_ref = 3.5e-8 * constants.F  # (A/m2)(mol/m3) - includes ref concentrations
 
-    return m_ref * c_Li ** 0.7 * c_e ** 0.3
+    return m_ref * c_Li**0.7 * c_e**0.3

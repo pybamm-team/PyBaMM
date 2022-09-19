@@ -118,7 +118,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
             grad_eqn_disc.evaluate(None, y_linear), np.ones((npts_edges, 1))
         )
         # div(grad r^2) = 4
-        y_squared = submesh.nodes ** 2
+        y_squared = submesh.nodes**2
         div_eqn_disc = disc.process_symbol(div_eqn)
         div_eval = div_eqn_disc.evaluate(None, y_squared)
         np.testing.assert_array_almost_equal(
@@ -181,7 +181,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
 
         # Test divergence of gradient
         # div(grad r^2) = 6
-        y_squared = np.tile(submesh.nodes ** 2, sec_npts)
+        y_squared = np.tile(submesh.nodes**2, sec_npts)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -414,7 +414,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
 
         # Test divergence
         # div(grad(r^2)) = 4 , N_left = 2*r_inner, N_right = 2
-        y_squared = submesh.nodes ** 2
+        y_squared = submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -476,7 +476,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
 
         # Test divergence of gradient
         # div(grad(r^2)) = 6 , N_left = 0, N_right = 2
-        quadratic_y = combined_submesh.nodes ** 2
+        quadratic_y = combined_submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {

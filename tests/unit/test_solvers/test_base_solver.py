@@ -90,8 +90,7 @@ class TestBaseSolver(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
         with self.assertRaisesRegex(
-            pybamm.SolverError,
-            "No value provided for input 'p'"
+            pybamm.SolverError, "No value provided for input 'p'"
         ):
             solver.solve(model, np.array([1, 2, 3]))
 

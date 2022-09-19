@@ -18,6 +18,6 @@ def copper_heat_capacity_CRC(T):
        Specific heat capacity
     """
 
-    cp = 1.445e-6 * T ** 3 - 1.946e-3 * T ** 2 + 0.9633 * T + 236
+    cp = 1.445e-6 * T**3 - 1.946e-3 * T**2 + 0.9633 * T + 236
 
     return cp

@@ -72,7 +72,7 @@ class Lumped(BaseThermal):
                 -(self.param.n.h_cc + self.param.p.h_cc)
                 * yz_cell_surface_area
                 / cell_volume
-                / (self.param.delta ** 2)
+                / (self.param.delta**2)
             )
 
             negative_tab_area = self.param.n.l_tab * self.param.n.l_cc
@@ -108,7 +108,7 @@ class Lumped(BaseThermal):
                 -self.param.h_total
                 * cell_surface_area
                 / cell_volume
-                / (self.param.delta ** 2)
+                / (self.param.delta**2)
             )
 
         self.rhs = {

@@ -97,7 +97,7 @@ class BaseThermal(pybamm.BaseSubModel):
         if self.half_cell:
             i_boundary_cc = variables["Current collector current density"]
             T_n = variables["Negative electrode temperature"]
-            Q_ohm_s_n_av = i_boundary_cc ** 2 / param.n.sigma(T_n)
+            Q_ohm_s_n_av = i_boundary_cc**2 / param.n.sigma(T_n)
             Q_ohm_s_n = pybamm.PrimaryBroadcast(Q_ohm_s_n_av, "negative electrode")
         else:
             i_s_n = variables["Negative electrode current density"]
@@ -241,8 +241,8 @@ class BaseThermal(pybamm.BaseSubModel):
         # Compute the Ohmic heating for 0D current collectors
         if cc_dimension == 0:
             i_boundary_cc = variables["Current collector current density"]
-            Q_s_cn = i_boundary_cc ** 2 / self.param.n.sigma_cc
-            Q_s_cp = i_boundary_cc ** 2 / self.param.p.sigma_cc
+            Q_s_cn = i_boundary_cc**2 / self.param.n.sigma_cc
+            Q_s_cp = i_boundary_cc**2 / self.param.p.sigma_cc
         # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
         # In this limit the current flow is all in the y,z direction in the current
         # collectors
