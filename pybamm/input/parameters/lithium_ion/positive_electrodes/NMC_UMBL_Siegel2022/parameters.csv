@@ -4,8 +4,8 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],100,Scott Moura FastDFN,no info from Peyman MPM
 Maximum concentration in positive electrode [mol.m-3],35380,Peyman MPM, nickel manganese cobalt oxide
-Positive electrode diffusivity [m2.s-1],[function]NMC_diffusivity_PeymanMPM,,
-Positive electrode OCP [V],[function]NMC_ocp_PeymanMPM,,
+Positive electrode diffusivity [m2.s-1],[function]NMC_diffusivity_Siegel,Peyman MPM,
+Positive electrode OCP [V],[function]NMC_ocp_Siegel,,
 ,,,
 # Microstructure,,,
 Positive electrode porosity,0.3,Siegel2022,
@@ -21,7 +21,7 @@ Positive electrode electrons in reaction,1,,no info from Peyman MPM
 Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5],4.824E-06,Peyman MPM,converted unit
 Positive electrode charge transfer coefficient,0.5,Peyman MPM,
 Positive electrode double-layer capacity [F.m-2],0.2,,no info from Peyman MPM
-Positive electrode exchange-current density [A.m-2],[function]NMC_electrolyte_exchange_current_density_PeymanMPM,,
+Positive electrode exchange-current density [A.m-2],[function]NMC_electrolyte_exchange_current_density_Siegel,Peyman MPM,
 ,,,
 # Density,,,
 Positive electrode density [kg.m-3],3100,Peyman MPM, cell lumped value
@@ -29,4 +29,4 @@ Positive electrode density [kg.m-3],3100,Peyman MPM, cell lumped value
 # Thermal parameters,,,
 Positive electrode specific heat capacity [J.kg-1.K-1],1100,Peyman MPM, cell lumped value
 Positive electrode thermal conductivity [W.m-1.K-1],2.1,,no info from Peyman MPM
-Positive electrode OCP entropic change [V.K-1],[function]NMC_entropic_change_PeymanMPM,
+Positive electrode OCP entropic change [V.K-1],[function]NMC_entropic_change_Siegel,Peyman MPM

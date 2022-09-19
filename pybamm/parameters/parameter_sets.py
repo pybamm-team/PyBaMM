@@ -200,14 +200,14 @@ Mohtat2020 = {
 Siegel2022 = {
     "chemistry": "lithium_ion",
     "cell": "UMBL_Siegel2022",
-    "negative electrode": "graphite_UMBL_Mohtat2020",
+    "negative electrode": "graphite_UMBL_Siegel2022",
     "separator": "separator_Siegel2022",
-    "positive electrode": "NMC_UMBL_Mohtat2020",
-    "electrolyte": "LiPF6_Mohtat2020",
+    "positive electrode": "NMC_UMBL_Siegel2022",
+    "electrolyte": "LiPF6_Siegel2022",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
     "lithium plating": "yang2017_Li_plating",
-    "citation": "Mohtat2020",
+    "citation": "Siegel2022",
 }
 
 Ramadass2004 = {
