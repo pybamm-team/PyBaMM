@@ -622,7 +622,7 @@ class JuliaNegation(JuliaBroadcastableFunction):
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
-                code = "@. {} = -{}\n".format(result_var_name,input_var_name)
+                code = "@. {} = - {}\n".format(result_var_name,input_var_name)
             else:
                 code = "{} = -{}\n".format(result_var_name,input_var_name)
             converter._function_string+=code
