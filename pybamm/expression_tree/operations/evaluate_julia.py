@@ -759,7 +759,7 @@ class JuliaConcatenation(object):
         #do the 0th one outside of the loop to initialize
         child = self.children[0]
         child_var = converter._intermediate[child]
-        child_var_name = child_var._convert_intermediate_to_code(converter,inline=False)
+        child_var_name = child_var._convert_intermediate_to_code(converter,inline=True)
         start_row = 1
         if child_var.shape[0] == 0:
             end_row = 1
@@ -769,7 +769,7 @@ class JuliaConcatenation(object):
             if vec:
                 code = "@. {}[{}:{}{} =  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
             else:
-                code = "{}[{}{} = (@view {})\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                code = "@. {}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
         else:
             start_row = 1
             end_row = child_var.shape[0]
