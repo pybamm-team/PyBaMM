@@ -61,6 +61,10 @@ class JuliaConverter(object):
         self._return_string = ""
         self._cache_initialization_string = ""
     
+    def cache_exists(self,id):
+        return (self._cache_dict.get(id)!=None)
+
+    
     #know where to go to find a variable. this could be smoother, there will need to be a ton of boilerplate here.
     #This function breaks down and analyzes any binary tree. Will fail if used on a non-binary tree.
     def break_down_binary(self,symbol):
@@ -517,6 +521,8 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
         self.output = output
         self.shape = shape
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=False):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         result_var_name = converter.create_cache(self)
         left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=False)
         result_var_name = converter._cache_dict[self.output]
@@ -537,6 +543,8 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         self.shape = shape
         self.operator = operator
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         inline = inline & converter._inline
         left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
         if not inline:
@@ -574,6 +582,8 @@ class JuliaMinMax(JuliaBinaryOperation):
         self.shape = shape
         self.name = name
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         inline = inline & converter._inline
         left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
 
@@ -600,6 +610,8 @@ class JuliaBroadcastableFunction(JuliaFunction):
         self.output = output
         self.shape = shape
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         inline = inline & converter._inline
         input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
         if not inline:
@@ -616,6 +628,8 @@ class JuliaBroadcastableFunction(JuliaFunction):
 
 class JuliaNegation(JuliaBroadcastableFunction):
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         inline = inline & converter._inline
         input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
         if not inline:
@@ -631,6 +645,8 @@ class JuliaNegation(JuliaBroadcastableFunction):
 
 class JuliaMinimumMaximum(JuliaBroadcastableFunction):
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
         result_var_name = converter.create_cache(self)
         if converter._preallocate:
@@ -660,6 +676,8 @@ class JuliaIndex(object):
         else:
             raise NotImplementedError("index must be slice or int")
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
         index = self.index
         if type(index) is int:
@@ -743,6 +761,8 @@ class JuliaConcatenation(object):
         self.shape = shape
         self.children = children
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         input_var_names = []
         num_cols = self.shape[1]
         my_name = converter.create_cache(self)
@@ -809,6 +829,8 @@ class JuliaDomainConcatenation(JuliaConcatenation):
         self.secondary_dimension_npts = secondary_dimension_npts
         self.children_slices = children_slices
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
+        if converter.cache_exists(self.output):
+            return converter._cache_dict[self.output]
         input_var_names = []
         num_cols = self.shape[1]
         result_var_name = converter.create_cache(self)
