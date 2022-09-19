@@ -769,7 +769,7 @@ class JuliaConcatenation(object):
             if vec:
                 code = "@. {}[{}:{}{} =  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
             else:
-                code = "@. {}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                code = "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
         else:
             start_row = 1
             end_row = child_var.shape[0]
