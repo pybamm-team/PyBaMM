@@ -678,7 +678,7 @@ class JuliaIndex(object):
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
-        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
         index = self.index
         if type(index) is int:
             return "{}[{}]".format(input_var_name,index+1)
@@ -845,16 +845,27 @@ class JuliaDomainConcatenation(JuliaConcatenation):
         #do the 0th one outside of the loop to initialize
         end_row = 0
         code = ""
-        for i in range(self.secondary_dimension_npts):
+        if self.secondary_dimension_npts == 1:
             for c in range(len(self.children)):
                 child = converter._intermediate[self.children[c]]
                 child_var_name = child._convert_intermediate_to_code(converter,inline=True)
-                this_slice = list(self.children_slices[c].values())[0][i]
+                this_slice = list(self.children_slices[c].values())[0][0]
                 start = this_slice.start
                 stop = this_slice.stop
                 start_row = end_row+1
                 end_row = start_row+(stop-start)-1
-                code += "@. {}[{}:{}{} = (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+                code += "@. {}[{}:{}{} = {}\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name)
+        else:
+            for i in range(self.secondary_dimension_npts):
+                for c in range(len(self.children)):
+                    child = converter._intermediate[self.children[c]]
+                    child_var_name = child._convert_intermediate_to_code(converter,inline=True)
+                    this_slice = list(self.children_slices[c].values())[0][i]
+                    start = this_slice.start
+                    stop = this_slice.stop
+                    start_row = end_row+1
+                    end_row = start_row+(stop-start)-1
+                    code += "@. {}[{}:{}{} = (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
         
         converter._function_string+=code
         return result_var_name
