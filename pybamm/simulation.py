@@ -743,7 +743,7 @@ class Simulation:
                 ) = pybamm.make_cycle_solution(
                     starting_solution.steps,
                     esoh_solver=esoh_solver,
-                    save_this_cycle=True
+                    save_this_cycle=True,
                 )
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
