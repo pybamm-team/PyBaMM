@@ -471,7 +471,7 @@ class JuliaConverter(object):
             self._function_string+= "dy[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
             self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         elif self._dae_type=="implicit":
-            self._function_string+="out[:] .= {}\nreturn nothing\nend\nend\end".format(top_var_name)
+            self._function_string+="out[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
             self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         return 0
         
