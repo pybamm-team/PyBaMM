@@ -372,8 +372,8 @@ class JuliaConverter(object):
         my_id = symbol.output
 
         cache_shape = self._intermediate[my_id].shape
-        cache_id = self._cache_id
-        self._cache_id +=1
+        cache_id = self._cache_id+1
+        self._cache_id = cache_id
         cache_name = "cache_{}".format(cache_id)
         
         if self._cache_type=="standard":
@@ -465,17 +465,14 @@ class JuliaConverter(object):
             self._function_string = parameter_string + self._function_string
         self._function_string = self._cache_initialization_string + self._function_string
         if my_shape[1] != 1:
-            self._function_string = self._function_string.replace(top_var_name,"J")
-            self._function_string += "\nreturn nothing\nend\nend\nend"
-            self._function_string = "function {}(J, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
+            self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
+            self._function_string = "function {}(J, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         elif self._dae_type=="semi-explicit":
-            self._function_string = self._function_string.replace(top_var_name,"dy")
-            self._function_string += "\nreturn nothing\nend\nend\nend"
-            self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
+            self._function_string+= "dy[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
+            self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         elif self._dae_type=="implicit":
-            self._function_string = self._function_string.replace(top_var_name,"out")
-            self._function_string += "\nreturn nothing\nend\nend\nend"
-            self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
+            self._function_string+="out[:] .= {}\nreturn nothing\nend\nend\end".format(top_var_name)
+            self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
         return 0
         
 
@@ -681,30 +678,19 @@ class JuliaIndex(object):
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
-        inline = converter._inline & inline
         input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
         index = self.index
         if type(index) is int:
-            rhs= "{}[{}]".format(input_var_name,index+1)
+            return "{}[{}]".format(input_var_name,index+1)
         elif type(index) is slice:
             if index.step is None:
-                rhs= "(@view {}[{}:{}])".format(input_var_name,index.start+1,index.stop)
+                return "(@view {}[{}:{}])".format(input_var_name,index.start+1,index.stop)
             elif type(index.step) is int:
-                rhs= "(@view {}[{}:{}:{}])".format(input_var_name,index.start+1,index.step,index.stop)
+                return "(@view {}[{}:{}:{}])".format(input_var_name,index.start+1,index.step,index.stop)
             else:
                 raise NotImplementedError("Step has to be an integer.")
         else:
             raise NotImplementedError("Step must be a slice or an int")
-        
-        if inline:
-            return rhs
-        else:
-            result_var_name = converter.create_cache(self)
-            code = "@. {} = {}\n".format(result_var_name,rhs)
-            converter._function_string+=code
-            return result_var_name
-
-
 
 
 
