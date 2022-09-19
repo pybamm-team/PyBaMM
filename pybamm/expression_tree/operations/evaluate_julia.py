@@ -538,8 +538,7 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         self.operator = operator
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
         inline = inline & converter._inline
-        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=inline)
-
+        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
         if not inline:
             result_var_name = converter.create_cache(self)
             if converter._preallocate:
@@ -576,7 +575,7 @@ class JuliaMinMax(JuliaBinaryOperation):
         self.name = name
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
         inline = inline & converter._inline
-        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=inline)
+        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
 
         if not inline:
             result_var_name = converter.create_cache(self)
@@ -777,7 +776,7 @@ class JuliaConcatenation(object):
         
         for child in self.children[1:]:
             child_var = converter._intermediate[child]
-            child_var_name = child_var._convert_intermediate_to_code(converter,inline=False)
+            child_var_name = child_var._convert_intermediate_to_code(converter,inline=True)
             if child_var.shape[0] == 0:
                 continue
             elif child_var.shape[0] == 1:
@@ -827,7 +826,7 @@ class JuliaDomainConcatenation(JuliaConcatenation):
         for i in range(self.secondary_dimension_npts):
             for c in range(len(self.children)):
                 child = converter._intermediate[self.children[c]]
-                child_var_name = child._convert_intermediate_to_code(converter,inline=False)
+                child_var_name = child._convert_intermediate_to_code(converter,inline=True)
                 this_slice = list(self.children_slices[c].values())[0][i]
                 start = this_slice.start
                 stop = this_slice.stop
