@@ -660,7 +660,7 @@ class JuliaIndex(object):
         else:
             raise NotImplementedError("index must be slice or int")
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
-        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
         index = self.index
         if type(index) is int:
             return "{}[{}]".format(input_var_name,index+1)
