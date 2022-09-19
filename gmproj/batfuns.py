@@ -462,11 +462,15 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
         dfe_0 = dfe_0.drop(dfe_0.index[-1])
         dfe_0 = dfe_0.reset_index(drop=True)
     dfe['N']=dfe['N']-dfe['N'][0]
+    cycles = np.array(dfe['N'].astype('int'))
+    cycles=cycles-1
+    cycles[0]=cycles[0]+1
+    dfe['N_mod'] = cycles
     N =dfe.N.unique()
     N_0 = dfe_0.N.unique()
-    print("Cycle Numbers:")
-    print(*N, sep = ", ") 
-    print(len(N_0))
+    # print("Cycle Numbers:")
+    # print(*N, sep = ", ") 
+    # print(len(N_0))
     # print(len(dfo_0))
     rev_exp = []
     irrev_exp = []
@@ -480,7 +484,7 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
         # print(max(dfo['E'])-min(dfo['E']))
         rev_exp.append(max(dfo['E'])-min(dfo['E']))
     dfe['rev_exp']=rev_exp
-    print('Reversible Expansion')
+    # print('Reversible Expansion')
 
     dfo_1 = dfo_0[dfo_0['N']==N_0[1]]
     for i in range(len(N_0)-1):
@@ -489,7 +493,7 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
         # print(max(dfo['E'])-min(dfo['E']))
         irrev_exp.append(min(dfo['E'])-min(dfo_1['E']))
     dfe['irrev_exp']=irrev_exp
-    print('Irreversible Expansion')
+    # print('Irreversible Expansion')
     return cell_no,dfe,dfe_0,dfo_0,N,N_0
 
 def init_exp(cell_no,dfe,spm,parameter_values):
