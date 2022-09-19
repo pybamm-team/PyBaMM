@@ -518,7 +518,7 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
         self.shape = shape
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=False):
         result_var_name = converter.create_cache(self)
-        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=inline)
+        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=False)
         result_var_name = converter._cache_dict[self.output]
         if converter._preallocate:
             code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
@@ -583,7 +583,7 @@ class JuliaMinMax(JuliaBinaryOperation):
             if converter._preallocate:
                 code = "@. {} = {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
             else:
-                code = "{} = {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
+                code = "{} = {}.({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
             converter._function_string+=code
         elif inline:
             result_var_name = "{}({},{})".format(self.name,left_input_var_name,right_input_var_name)
