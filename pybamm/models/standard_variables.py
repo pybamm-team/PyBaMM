@@ -11,6 +11,10 @@ class StandardVariables:
         self.Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
         self.Q_Wh = pybamm.Variable("Discharge energy [W.h]")
 
+        # Throughput capacity and energy (cumulative)
+        self.Qt_Ah = pybamm.Variable("Throughput capacity [A.h]")
+        self.Qt_Wh = pybamm.Variable("Throughput energy [W.h]")
+
         # Electrolyte concentration
         self.c_e_n = pybamm.Variable(
             "Negative electrolyte concentration",
@@ -194,35 +198,6 @@ class StandardVariables:
             "X-averaged cell temperature", domain="current collector"
         )
         self.T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
-
-        # SEI variables
-        self.L_inner_av = pybamm.Variable(
-            "X-averaged inner SEI thickness",
-            domain="current collector",
-        )
-        self.L_inner = pybamm.Variable(
-            "Inner SEI thickness",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        self.L_outer_av = pybamm.Variable(
-            "X-averaged outer SEI thickness",
-            domain="current collector",
-        )
-        self.L_outer = pybamm.Variable(
-            "Outer SEI thickness",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        # For SEI reaction at the li metal/separator interface in a li metal model
-        self.L_inner_interface = pybamm.Variable(
-            "Inner SEI thickness",
-            domain=["current collector"],
-        )
-        self.L_outer_interface = pybamm.Variable(
-            "Outer SEI thickness",
-            domain=["current collector"],
-        )
 
         # Interface utilisation
         self.u_n = pybamm.Variable(

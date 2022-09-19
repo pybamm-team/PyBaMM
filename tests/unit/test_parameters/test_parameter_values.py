@@ -420,7 +420,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_inline_function_parameters(self):
         def D(c):
-            return c ** 2
+            return c**2
 
         parameter_values = pybamm.ParameterValues({"Diffusivity": D})
 
@@ -534,7 +534,7 @@ class TestParameterValues(unittest.TestCase):
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
-        self.assertEqual(processed_func.evaluate(), 14.82)
+        self.assertAlmostEqual(processed_func.evaluate()[0][0], 14.82)
 
         # process differentiated function parameter
         # diff_func = func.diff(a)
@@ -600,7 +600,7 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=3
         )
 
         # process differentiated function parameter
@@ -807,7 +807,7 @@ class TestParameterValues(unittest.TestCase):
         var_av = pybamm.size_average(var)
 
         def dist(R):
-            return R ** 2
+            return R**2
 
         param = pybamm.ParameterValues(
             {
@@ -836,7 +836,7 @@ class TestParameterValues(unittest.TestCase):
         var2 = pybamm.Variable("var2")
         par1 = pybamm.Parameter("par1")
         par2 = pybamm.Parameter("par2")
-        expression = (3 * (par1 ** var2)) / ((var1 - par2) + var2)
+        expression = (3 * (par1**var2)) / ((var1 - par2) + var2)
 
         param = pybamm.ParameterValues({"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)

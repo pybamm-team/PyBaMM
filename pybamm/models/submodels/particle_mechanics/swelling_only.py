@@ -15,12 +15,17 @@ class SwellingOnly(BaseMechanics):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options, phase="primary"):
+        super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
         zero = pybamm.FullBroadcast(

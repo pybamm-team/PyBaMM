@@ -16,58 +16,59 @@ class TestSimulationExperiment(unittest.TestCase):
                 "Discharge at C/20 for 1 hour",
                 "Charge at 1 A until 4.1 V",
                 "Hold at 4.1 V until 50 mA",
-                "Discharge at 2 W for 1 hour",
+                "Discharge at 2 W until 3.5 V",
             ]
         )
-        model = pybamm.lithium_ion.DFN()
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
+        C = model.default_parameter_values["Nominal cell capacity [A.h]"]
 
         self.assertEqual(sim.experiment, experiment)
         self.assertEqual(
-            sim._experiment_inputs[0]["Current input [A]"],
-            1 / 20 * model.default_parameter_values["Nominal cell capacity [A.h]"],
+            sim._experiment_inputs[0],
+            {"Current switch": 1, "Current input [A]": C / 20, "period": 60},
         )
-        self.assertEqual(sim._experiment_inputs[0]["Current switch"], 1)
-        self.assertEqual(sim._experiment_inputs[0]["Voltage switch"], 0)
-        self.assertEqual(sim._experiment_inputs[0]["Power switch"], 0)
-        self.assertEqual(sim._experiment_inputs[0]["Current cut-off [A]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[0]["Voltage cut-off [V]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[1]["Current input [A]"], -1)
-        self.assertEqual(sim._experiment_inputs[1]["Current switch"], 1)
-        self.assertEqual(sim._experiment_inputs[1]["Voltage switch"], 0)
-        self.assertEqual(sim._experiment_inputs[1]["Power switch"], 0)
-        self.assertEqual(sim._experiment_inputs[1]["Current cut-off [A]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[1]["Voltage cut-off [V]"], 4.1)
-        self.assertEqual(sim._experiment_inputs[2]["Current switch"], 0)
-        self.assertEqual(sim._experiment_inputs[2]["Voltage switch"], 1)
-        self.assertEqual(sim._experiment_inputs[2]["Power switch"], 0)
-        self.assertEqual(sim._experiment_inputs[2]["Voltage input [V]"], 4.1)
-        self.assertEqual(sim._experiment_inputs[2]["Current cut-off [A]"], 0.05)
-        self.assertEqual(sim._experiment_inputs[2]["Voltage cut-off [V]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[3]["Current switch"], 0)
-        self.assertEqual(sim._experiment_inputs[3]["Voltage switch"], 0)
-        self.assertEqual(sim._experiment_inputs[3]["Power switch"], 1)
-        self.assertEqual(sim._experiment_inputs[3]["Power input [W]"], 2)
-        self.assertEqual(sim._experiment_inputs[3]["Current cut-off [A]"], -1e10)
-        self.assertEqual(sim._experiment_inputs[3]["Voltage cut-off [V]"], -1e10)
-
-        Crate = 1 / model.default_parameter_values["Nominal cell capacity [A.h]"]
         self.assertEqual(
-            sim._experiment_times, [3600, 3 / Crate * 3600, 24 * 3600, 3600]
+            sim._experiment_inputs[1],
+            {
+                "Current switch": 1,
+                "Current input [A]": -1,
+                "period": 60,
+                "Voltage cut-off [V]": 4.1,
+            },
+        )
+        self.assertEqual(
+            sim._experiment_inputs[2],
+            {
+                "Voltage switch": 1,
+                "Voltage input [V]": 4.1,
+                "period": 60,
+                "Current cut-off [A]": 0.05,
+            },
+        )
+        self.assertEqual(
+            sim._experiment_inputs[3],
+            {
+                "Power switch": 1,
+                "Power input [W]": 2,
+                "period": 60,
+                "Voltage cut-off [V]": 3.5,
+            },
+        )
+
+        Crate = 1 / C
+        self.assertEqual(
+            sim._experiment_times, [3600, 3 / Crate * 3600, 24 * 3600, 24 * 3600]
         )
 
         model_I = sim.op_conds_to_model_and_param[(-1.0, "A")][0]
         model_V = sim.op_conds_to_model_and_param[(4.1, "V")][0]
         self.assertIn(
-            "Current cut-off (positive) [A] [experiment]",
+            "Current cut-off [A] [experiment]",
             [event.name for event in model_V.events],
         )
         self.assertIn(
-            "Current cut-off (negative) [A] [experiment]",
-            [event.name for event in model_V.events],
-        )
-        self.assertIn(
-            "Voltage cut-off [V] [experiment]",
+            "Charge voltage cut-off [V] [experiment]",
             [event.name for event in model_I.events],
         )
 
@@ -86,7 +87,7 @@ class TestSimulationExperiment(unittest.TestCase):
                 )
             ]
         )
-        model = pybamm.lithium_ion.DFN()
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         # test the callback here
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
@@ -134,7 +135,7 @@ class TestSimulationExperiment(unittest.TestCase):
             ]
             * 3
         )
-        model = pybamm.lithium_ion.DFN()
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
 
         # Test that solving twice gives the same solution (see #2193)
@@ -197,7 +198,7 @@ class TestSimulationExperiment(unittest.TestCase):
             ],
             drive_cycles={"drive_cycle": drive_cycle},
         )
-        model = pybamm.lithium_ion.DFN()
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         self.assertIn(("drive_cycle", "A"), sim.op_conds_to_model_and_param)
         self.assertIn(("drive_cycle", "V"), sim.op_conds_to_model_and_param)
@@ -446,11 +447,83 @@ class TestSimulationExperiment(unittest.TestCase):
         sim.solve(inputs={"Dsn": 2})
         np.testing.assert_array_equal(sim.solution.all_inputs[0]["Dsn"], 2)
 
+    def test_run_experiment_skip_steps(self):
+        # Test experiment with steps being skipped due to initial conditions
+        # already satisfying the events
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Charge at 1C until 4.2V",
+                    "Hold at 4.2V until 10 mA",
+                    "Discharge at 1C for 1 hour",
+                    "Charge at 20C until 3V",
+                    "Hold at 3V until 10 mA",
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sol = sim.solve()
+        self.assertIsInstance(sol.cycles[0].steps[0], pybamm.EmptySolution)
+        self.assertIsInstance(sol.cycles[0].steps[3], pybamm.EmptySolution)
+
+        # Should get the same result if we run without the charge steps
+        # since they are skipped
+        experiment2 = pybamm.Experiment(
+            [
+                (
+                    "Hold at 4.2V until 10 mA",
+                    "Discharge at 1C for 1 hour",
+                    "Hold at 3V until 10 mA",
+                ),
+            ]
+        )
+        sim2 = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment2
+        )
+        sol2 = sim2.solve()
+        np.testing.assert_array_equal(
+            sol["Terminal voltage [V]"].data, sol2["Terminal voltage [V]"].data
+        )
+        for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
+            np.testing.assert_array_equal(
+                sol.cycles[0].steps[idx1]["Terminal voltage [V]"].data,
+                sol2.cycles[0].steps[idx2]["Terminal voltage [V]"].data,
+            )
+
+    def test_all_empty_solution_errors(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # One step exceeded, suggests making a cycle
+        experiment = pybamm.Experiment([("Charge at 1C until 4.2V")])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Step 'Charge at 1C until 4.2V' is infeasible due to exceeded bounds",
+        ):
+            sim.solve()
+
+        # Two steps exceeded, different error
+        experiment = pybamm.Experiment(
+            [("Charge at 1C until 4.2V", "Charge at 1C until 4.2V")]
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        with self.assertRaisesRegex(pybamm.SolverError, "All steps in the cycle"):
+            sim.solve()
+
     def test_run_experiment_half_cell(self):
         experiment = pybamm.Experiment(
             [("Discharge at C/20 until 3.5V", "Charge at 1C until 3.8 V")]
         )
-        model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
+        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
         sim = pybamm.Simulation(
             model,
             experiment=experiment,

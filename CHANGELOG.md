@@ -1,5 +1,37 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   Added function `pybamm.get_git_commit_info()`, which returns information about the last git commit, useful for reproducibility ([#2293](https://github.com/pybamm-team/PyBaMM/pull/2293))
+-   Added SEI model for composite electrodes ([#2290](https://github.com/pybamm-team/PyBaMM/pull/2290))
+-   For experiments, the simulation now automatically checks and skips steps that cannot be performed (e.g. "Charge at 1C until 4.2V" from 100% SOC) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
+
+## Bug fixes
+
+-   Added `SEI on cracks` to loop over all interfacial reactions ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+-   Fixed `X-averaged SEI on cracks concentration` so it's an average over x only, not y and z ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+-   Corrected initial state for SEI on cracks ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+
+## Optimizations
+
+-   Default options for `particle mechanics` now dealt with differently in each electrode ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
+-   Sped up calculations of Electrode SOH variables for summary variables ([#2210](https://github.com/pybamm-team/PyBaMM/pull/2210))
+
+## Breaking changes
+
+-   When creating a `pybamm.Interpolant` the default interpolator is now "linear". Passing data directly to `ParameterValues` using the ``[data]`` tag will be still used to create a cubic spline interpolant, as before ([#2258](https://github.com/pybamm-team/PyBaMM/pull/2258))
+-   Events must now be defined in such a way that they are positive at the initial conditions (events will be triggered when they become negative, instead of when they change sign in either direction) ([#2212](https://github.com/pybamm-team/PyBaMM/pull/2212))
+
+# [v22.8](https://github.com/pybamm-team/PyBaMM/tree/v22.8) - 2022-08-31
+
+## Features
+
+-   Added `CurrentSigmoidOpenCircuitPotential` model to model voltage hysteresis for charge/discharge ([#2256](https://github.com/pybamm-team/PyBaMM/pull/2256))
+-   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. ([#2256](https://github.com/pybamm-team/PyBaMM/pull/2256))
+-   Added new cumulative variables `Throughput capacity [A.h]` and `Throughput energy [W.h]` to standard variables and summary variables, to assist with degradation studies. Throughput variables are only calculated if `calculate discharge energy` is set to `true`. `Time [s]` and `Time [h]` also added to summary variables. ([#2249](https://github.com/pybamm-team/PyBaMM/pull/2249))
+-   Added `lipf6_OKane2022` electrolyte to `OKane2022` parameter set ([#2249](https://github.com/pybamm-team/PyBaMM/pull/2249))
+-   Reformated submodel structure to allow composite electrodes. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2248](https://github.com/pybamm-team/PyBaMM/pull/2248))
+
 ## Bug fixes
 
 -   Added new parameter `Ratio of lithium moles to SEI moles` (short name z_sei) to fix a bug where this number was incorrectly hardcoded to 1. ([#2222](https://github.com/pybamm-team/PyBaMM/pull/2222))
@@ -9,7 +41,12 @@
 
 ## Optimizations
 
+-   Simplified scaling for the exchange-current density. The dimensionless parameter `C_r` is kept, but no longer used anywhere ([#2238](https://github.com/pybamm-team/PyBaMM/pull/2238))
 -   Added limits for variables in some functions to avoid division by zero, sqrt(negative number), etc ([#2213](https://github.com/pybamm-team/PyBaMM/pull/2213))
+
+## Breaking changes
+
+-   Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2248](https://github.com/pybamm-team/PyBaMM/pull/2248))
 
 # [v22.7](https://github.com/pybamm-team/PyBaMM/tree/v22.7) - 2022-07-31
 
@@ -45,7 +82,7 @@
 ## Breaking changes
 
 -   Exchange-current density functions (and some other functions) now take an additional argument, the maximum particle concentration for that phase ([#2134](https://github.com/pybamm-team/PyBaMM/pull/2134))
--   Loss of lithium to SEI on cracks is now a degradation variable, so setting a particle mechanics submodel is now compulsory (NoMechanics will suffice)
+-   Loss of lithium to SEI on cracks is now a degradation variable, so setting a particle mechanics submodel is now compulsory (NoMechanics will suffice) ([#2104](https://github.com/pybamm-team/PyBaMM/pull/2104))
 
 # [v22.6](https://github.com/pybamm-team/PyBaMM/tree/v22.6) - 2022-06-30
 
@@ -67,6 +104,7 @@
 
 ## Features
 
+-   Added a casadi version of the IDKLU solver, which is used for `model.convert_to_format = "casadi"` ([#2002](https://github.com/pybamm-team/PyBaMM/pull/2002))
 -   Added functionality to generate Julia expressions from a model. See [PyBaMM.jl](https://github.com/tinosulzer/PyBaMM.jl) for how to use these ([#1942](https://github.com/pybamm-team/PyBaMM/pull/1942)))
 -   Added basic callbacks to the Simulation class, and a LoggingCallback ([#1880](https://github.com/pybamm-team/PyBaMM/pull/1880)))
 
@@ -76,7 +114,7 @@
 
 ## Breaking changes
 
--   Changed domain-specific parameter names to a nested attribute, e.g. `param.c_n_max` is now `param.n.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
+-   Changed domain-specific parameter names to a nested attribute. `param.n.l_n` is now `param.n.l` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
 
 # [v22.4](https://github.com/pybamm-team/PyBaMM/tree/v22.4) - 2022-04-30
 
@@ -278,7 +316,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 ## Breaking changes
 
 -   Refactored the `particle` submodel module, with the models having no size distribution now found in `particle.no_distribution`, and those with a size distribution in `particle.size_distribution`. Renamed submodels to indicate the transport model (Fickian diffusion, polynomial profile) and if they are "x-averaged". E.g., `FickianManyParticles` and `FickianSingleParticle` are now `no_distribution.FickianDiffusion` and `no_distribution.XAveragedFickianDiffusion` ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
--   Changed sensitivity API. Removed `ProcessedSymbolicVariable`, all sensitivity now handled within the solvers and `ProcessedVariable` ()  ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
+-   Changed sensitivity API. Removed `ProcessedSymbolicVariable`, all sensitivity now handled within the solvers and `ProcessedVariable` ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552),[#2276](https://github.com/pybamm-team/PyBaMM/pull/2276))
 -   The `Yang2017` parameter set has been removed as the complete parameter set is not publicly available in the literature ([#1577](https://github.com/pybamm-team/PyBaMM/pull/1577))
 -   Changed how options are specified for the "loss of active material" and "particle cracking" submodels. "loss of active material" can now be one of "none", "stress-driven", or "reaction-driven", or a 2-tuple for different options in negative and positive electrode. Similarly "particle cracking" (now called "particle mechanics") can now be "none", "swelling only", "swelling and cracking", or a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Changed the variable in the full diffusion model from "Electrolyte concentration" to "Porosity times concentration" ([#1476](https://github.com/pybamm-team/PyBaMM/pull/1476))

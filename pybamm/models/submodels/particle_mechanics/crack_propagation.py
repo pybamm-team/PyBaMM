@@ -18,6 +18,11 @@ class CrackPropagation(BaseMechanics):
         The domain of the model either 'Negative' or 'Positive'
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     References
     ----------
@@ -28,8 +33,8 @@ class CrackPropagation(BaseMechanics):
     **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
-    def __init__(self, param, domain, x_average):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, x_average, options, phase="primary"):
+        super().__init__(param, domain, options, phase)
         self.x_average = x_average
 
     def get_fundamental_variables(self):
@@ -58,7 +63,7 @@ class CrackPropagation(BaseMechanics):
         l_cr = variables[self.domain + " particle crack length"]
         # # compressive stress will not lead to crack propagation
         dK_SIF = stress_t_surf * b_cr * pybamm.Sqrt(np.pi * l_cr) * (stress_t_surf >= 0)
-        dl_cr = k_cr * (dK_SIF ** m_cr) / self.param.t0_cr
+        dl_cr = k_cr * (dK_SIF**m_cr) / self.param.t0_cr
         variables.update(
             {
                 self.domain + " particle cracking rate": dl_cr,
@@ -102,7 +107,8 @@ class CrackPropagation(BaseMechanics):
         self.events.append(
             pybamm.Event(
                 f"{domain} particle crack length larger than particle radius",
-                pybamm.max(l_cr) - self.domain_param.R_typ / self.domain_param.l_cr_0,
+                self.domain_param.prim.R_typ / self.domain_param.l_cr_0
+                - pybamm.max(l_cr),
                 pybamm.EventType.TERMINATION,
             )
         )

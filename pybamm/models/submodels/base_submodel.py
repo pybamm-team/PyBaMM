@@ -26,6 +26,8 @@ class BaseSubModel(pybamm.BaseModel):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is None).
 
     Attributes
     ----------
@@ -57,12 +59,25 @@ class BaseSubModel(pybamm.BaseModel):
     """
 
     def __init__(
-        self, param, domain=None, name="Unnamed submodel", external=False, options=None
+        self,
+        param,
+        domain=None,
+        name="Unnamed submodel",
+        external=False,
+        options=None,
+        phase=None,
     ):
         super().__init__(name)
         self.domain = domain
         self.set_domain_for_broadcast()
         self.name = name
+
+        self.external = external
+        self.options = pybamm.BatteryModelOptions(options or {})
+
+        # Save whether the submodel is a half-cell submodel
+        we = self.options["working electrode"]
+        self.half_cell = we != "both"
 
         self.param = param
         if param is None:
@@ -73,12 +88,39 @@ class BaseSubModel(pybamm.BaseModel):
             elif self.domain == "Positive":
                 self.domain_param = param.p
 
-        self.external = external
-        self.options = pybamm.BatteryModelOptions(options or {})
+            if phase == "primary":
+                self.phase_param = self.domain_param.prim
+            elif phase == "secondary":
+                self.phase_param = self.domain_param.sec
 
-        # Save whether the submodel is a half-cell submodel
-        we = self.options["working electrode"]
-        self.half_cell = we != "both"
+        # Error checks for phase and domain
+        self.set_phase(phase)
+
+    def set_phase(self, phase):
+        if phase is not None:
+            if self.domain is None:
+                raise ValueError("Phase must be None if domain is None")
+            options_phase = getattr(self.options, self.domain.lower())[
+                "particle phases"
+            ]
+            if options_phase == "1" and phase != "primary":
+                raise ValueError("Phase must be 'primary' if there is only one phase")
+            elif options_phase == "2" and phase not in ["primary", "secondary"]:
+                raise ValueError(
+                    "Phase must be either 'primary' or 'secondary' "
+                    "if there are two phases"
+                )
+
+            if options_phase == "1" and phase == "primary":
+                # Only one phase, no need to distinguish between
+                # "primary" and "secondary"
+                self.phase_name = ""
+            else:
+                # add a space so that we can use "" or (e.g.) "primary " interchangeably
+                # when naming variables
+                self.phase_name = phase + " "
+
+        self.phase = phase
 
     @property
     def domain(self):

@@ -36,8 +36,8 @@ class ElectrodeSOH(pybamm.BaseModel):
 
         param = param or pybamm.LithiumIonParameters()
 
-        Un = param.n.U_dimensional
-        Up = param.p.U_dimensional
+        Un = param.n.prim.U_dimensional
+        Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li")
@@ -53,10 +53,12 @@ class ElectrodeSOH(pybamm.BaseModel):
         C = Cn * (x_100 - x_0)
         y_0 = y_100 + C / Cp
 
-        self.algebraic = {
-            x_100: Up(y_100, T_ref) - Un(x_100, T_ref) - V_max,
-            x_0: Up(y_0, T_ref) - Un(x_0, T_ref) - V_min,
-        }
+        Un_0 = Un(x_0, T_ref)
+        Up_0 = Up(y_0, T_ref)
+        Un_100 = Un(x_100, T_ref)
+        Up_100 = Up(y_100, T_ref)
+
+        self.algebraic = {x_100: Up_100 - Un_100 - V_max, x_0: Up_0 - Un_0 - V_min}
 
         self.initial_conditions = {x_0: pybamm.Scalar(0.1), x_100: pybamm.Scalar(0.9)}
 
@@ -67,12 +69,12 @@ class ElectrodeSOH(pybamm.BaseModel):
             "y_100": y_100,
             "x_0": x_0,
             "y_0": y_0,
-            "Un(x_100)": Un(x_100, T_ref),
-            "Up(y_100)": Up(y_100, T_ref),
-            "Un(x_0)": Un(x_0, T_ref),
-            "Up(y_0)": Up(y_0, T_ref),
-            "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
-            "Up(y_100) - Un(x_100)": Up(y_100, T_ref) - Un(x_100, T_ref),
+            "Un(x_100)": Un_100,
+            "Up(y_100)": Up_100,
+            "Un(x_0)": Un_0,
+            "Up(y_0)": Up_0,
+            "Up(y_0) - Un(x_0)": Up_0 - Un_0,
+            "Up(y_100) - Un(x_100)": Up_100 - Un_100,
             "n_Li_100": 3600 / param.F * (y_100 * Cp + x_100 * Cn),
             "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
             "n_Li": n_Li,
@@ -107,8 +109,8 @@ class ElectrodeSOHx100(pybamm.BaseModel):
 
         param = param or pybamm.LithiumIonParameters()
 
-        Un = param.n.U_dimensional
-        Up = param.p.U_dimensional
+        Un = param.n.prim.U_dimensional
+        Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li")
@@ -117,12 +119,12 @@ class ElectrodeSOHx100(pybamm.BaseModel):
         Cp = pybamm.InputParameter("C_p")
 
         x_100 = pybamm.Variable("x_100")
-
         y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
 
-        self.algebraic = {
-            x_100: Up(y_100, T_ref) - Un(x_100, T_ref) - V_max,
-        }
+        Un_100 = Un(x_100, T_ref)
+        Up_100 = Up(y_100, T_ref)
+
+        self.algebraic = {x_100: Up_100 - Un_100 - V_max}
 
         self.initial_conditions = {x_100: pybamm.Scalar(0.9)}
 
@@ -155,8 +157,8 @@ class ElectrodeSOHx0(pybamm.BaseModel):
 
         param = param or pybamm.LithiumIonParameters()
 
-        Un = param.n.U_dimensional
-        Up = param.p.U_dimensional
+        Un = param.n.prim.U_dimensional
+        Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li")
@@ -170,7 +172,12 @@ class ElectrodeSOHx0(pybamm.BaseModel):
         C = Cn * (x_100 - x_0)
         y_0 = y_100 + C / Cp
 
-        self.algebraic = {x_0: Up(y_0, T_ref) - Un(x_0, T_ref) - V_min}
+        Un_0 = Un(x_0, T_ref)
+        Up_0 = Up(y_0, T_ref)
+        Un_100 = Un(x_100, T_ref)
+        Up_100 = Up(y_100, T_ref)
+
+        self.algebraic = {x_0: Up_0 - Un_0 - V_min}
 
         self.initial_conditions = {x_0: pybamm.Scalar(0.1)}
 
@@ -179,12 +186,12 @@ class ElectrodeSOHx0(pybamm.BaseModel):
             "Capacity [A.h]": C,
             "x_0": x_0,
             "y_0": y_0,
-            "Un(x_100)": Un(x_100, T_ref),
-            "Up(y_100)": Up(y_100, T_ref),
-            "Un(x_0)": Un(x_0, T_ref),
-            "Up(y_0)": Up(y_0, T_ref),
-            "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
-            "Up(y_100) - Un(x_100)": Up(y_100, T_ref) - Un(x_100, T_ref),
+            "Un(x_100)": Un_100,
+            "Up(y_100)": Up_100,
+            "Un(x_0)": Un_0,
+            "Up(y_0)": Up_0,
+            "Up(y_0) - Un(x_0)": Up_0 - Un_0,
+            "Up(y_100) - Un(x_100)": Up_100 - Un_100,
             "n_Li_100": 3600 / param.F * (y_100 * Cp + x_100 * Cn),
             "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
             "n_Li": n_Li,
@@ -206,7 +213,6 @@ class ElectrodeSOHSolver:
     def __init__(self, parameter_values, param=None):
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters()
-        self.sims = self.create_electrode_soh_sims(parameter_values, self.param)
 
         # Check whether each electrode OCP is a function (False) or data (True)
         OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
@@ -236,30 +242,52 @@ class ElectrodeSOHSolver:
         x = pybamm.InputParameter("x")
         y = pybamm.InputParameter("y")
         self.OCV_function = parameter_values.process_symbol(
-            self.param.p.U_dimensional(y, T) - self.param.n.U_dimensional(x, T)
+            self.param.p.prim.U_dimensional(y, T)
+            - self.param.n.prim.U_dimensional(x, T)
         )
 
-    def create_electrode_soh_sims(self, parameter_values, param):
-        full_model = ElectrodeSOH(param=param)
-        full_sim = pybamm.Simulation(full_model, parameter_values=parameter_values)
-        x100_model = ElectrodeSOHx100(param=param)
-        x100_sim = pybamm.Simulation(x100_model, parameter_values=parameter_values)
-        x0_model = ElectrodeSOHx0(param=param)
-        x0_sim = pybamm.Simulation(x0_model, parameter_values=parameter_values)
-        return {"combined": full_sim, "split": [x100_sim, x0_sim]}
+    def _get_electrode_soh_sims_full(self):
+        try:
+            return self._full_sim
+        except AttributeError:
+            full_model = ElectrodeSOH(param=self.param)
+            self._full_sim = pybamm.Simulation(
+                full_model, parameter_values=self.parameter_values
+            )
+            return self._full_sim
+
+    def _get_electrode_soh_sims_split(self):
+        try:
+            return self._split_sims
+        except AttributeError:
+            x100_model = ElectrodeSOHx100(param=self.param)
+            x100_sim = pybamm.Simulation(
+                x100_model, parameter_values=self.parameter_values
+            )
+            x0_model = ElectrodeSOHx0(param=self.param)
+            x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
+            self._split_sims = [x100_sim, x0_sim]
+            return self._split_sims
 
     def solve(self, inputs):
-        ics = self.set_up_solve(inputs)
+        ics = self._set_up_solve(inputs)
         try:
-            sol = self.solve_full(inputs, ics)
+            sol = self._solve_full(inputs, ics)
         except pybamm.SolverError:
             # just in case solving one by one works better
-            sol = self.solve_split(inputs, ics)
+            try:
+                sol = self._solve_split(inputs, ics)
+            except pybamm.SolverError as original_error:
+                # check if the error is due to the simulation not being feasible
+                self._check_esoh_feasible(inputs)
+                # if that didn't raise an error, raise the original error instead
+                raise original_error  # pragma: no cover (don't know how to get here)
+
         return sol
 
-    def set_up_solve(self, inputs):
-        sim = self.sims["combined"]
-        x0_min, x100_max, _, _ = self.check_esoh_feasible(inputs)
+    def _set_up_solve(self, inputs):
+        sim = self._get_electrode_soh_sims_full()
+        x0_min, x100_max, _, _ = self._get_lims(inputs)
 
         x100_init = x100_max
         x0_init = x0_min
@@ -273,15 +301,15 @@ class ElectrodeSOHSolver:
                 x0_init = x0_init_sol
         return {"x_100": np.array(x100_init), "x_0": np.array(x0_init)}
 
-    def solve_full(self, inputs, ics):
-        sim = self.sims["combined"]
+    def _solve_full(self, inputs, ics):
+        sim = self._get_electrode_soh_sims_full()
         sim.build()
         sim.built_model.set_initial_conditions_from(ics)
         sol = sim.solve([0], inputs=inputs)
         return sol
 
-    def solve_split(self, inputs, ics):
-        x100_sim, x0_sim = self.sims["split"]
+    def _solve_split(self, inputs, ics):
+        x100_sim, x0_sim = self._get_electrode_soh_sims_split()
         x100_sim.build()
         x100_sim.built_model.set_initial_conditions_from(ics)
         x100_sol = x100_sim.solve([0], inputs=inputs)
@@ -294,9 +322,10 @@ class ElectrodeSOHSolver:
 
         return x0_sol
 
-    def check_esoh_feasible(self, inputs):
-        Vmax = inputs["V_max"]
-        Vmin = inputs["V_min"]
+    def _get_lims(self, inputs):
+        """
+        Get stoichiometry limits based on n_Li, C_n, and C_p
+        """
         Cp = inputs["C_p"]
         Cn = inputs["C_n"]
         n_Li = inputs["n_Li"]
@@ -315,6 +344,15 @@ class ElectrodeSOHSolver:
         x0_min = max(x0_min_from_y0_max, x0_min)
         y100_min = max(y100_min_from_x100_max, y100_min)
         y0_max = min(y0_max_from_x0_min, y0_max)
+        return (x0_min, x100_max, y100_min, y0_max)
+
+    def _check_esoh_feasible(self, inputs):
+        """
+        Check that the electrode SOH calculation is feasible, based on voltage limits
+        """
+        x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
+        Vmax = inputs["V_max"]
+        Vmin = inputs["V_min"]
 
         # Check stoich limits are between 0 and 1
         for x in ["x0_min", "x100_max", "y100_min", "y0_max"]:
@@ -346,8 +384,6 @@ class ElectrodeSOHSolver:
                     f"y:[{y100_min:.4f}, {y0_max:.4f}]."
                 )
             )
-
-        return (x0_min, x100_max, y100_min, y0_max)
 
 
 def get_initial_stoichiometries(initial_soc, parameter_values):

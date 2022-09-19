@@ -44,6 +44,7 @@ from .util import (
     install_jax,
     is_jax_compatible,
     have_julia,
+    get_git_commit_info,
 )
 from .logger import logger, set_logging_level
 from .logger import logger, set_logging_level, get_new_logger
@@ -198,9 +199,8 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution, make_cycle_solution
+from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
-from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver

@@ -431,6 +431,11 @@ class Max(SpecificFunction):
         """See :meth:`pybamm.Function.julia_name`"""
         return "maximum"
 
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        # Max will always return a scalar
+        return np.nan * np.ones((1, 1))
+
 
 def max(child):
     """
@@ -450,6 +455,11 @@ class Min(SpecificFunction):
     def julia_name(self):
         """See :meth:`pybamm.Function.julia_name`"""
         return "minimum"
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        # Min will always return a scalar
+        return np.nan * np.ones((1, 1))
 
 
 def min(child):
