@@ -750,6 +750,7 @@ class JuliaConstant(JuliaValue):
     def _convert_intermediate_to_code(self,converter,inline=True):
         converter.create_const(self)
         my_name = converter._const_dict[self.output]
+        inline=True
         if inline:
             return converter._const_dict[self.output]
         else:
