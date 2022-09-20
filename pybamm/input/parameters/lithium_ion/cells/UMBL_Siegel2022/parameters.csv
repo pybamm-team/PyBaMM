@@ -8,7 +8,7 @@ Separator thickness [m],12E-06,MPM Etek 12EPH,
 Positive electrode thickness [m],55.65E-06,Siegel2022,
 Positive current collector thickness [m],1.5E-05,Scott Moura FastDFN,no info from Peyman MPM
 Electrode height [m],106e-3,UMBL Pouch,Not needed for 1D
-Electrode width [m],1.6320,UMBL Pouch,Not needed for 1D 24*68e-3 12 layer pouch
+Electrode width [m],1.224,UMBL Pouch,Not needed for 1D 18*68e-3 12 layer pouch
 Cell cooling surface area [m2],0.41,,pouch
 Cell volume [m3],3.92E-5,,pouch
 ,,,
