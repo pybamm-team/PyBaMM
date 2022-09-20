@@ -372,8 +372,8 @@ class JuliaConverter(object):
         my_id = symbol.output
 
         cache_shape = self._intermediate[my_id].shape
-        cache_id = self._cache_id+1
-        self._cache_id = cache_id
+        cache_id = self._cache_id
+        self._cache_id += 1
         cache_name = "cache_{}".format(cache_id)
         
         if self._cache_type=="standard":
@@ -452,7 +452,9 @@ class JuliaConverter(object):
     def write_function_easy(self,funcname,inline=True):
         #start with the closure
         top = self._intermediate[next(reversed(self._intermediate))]
+        #this line actually writes the code
         top_var_name = top._convert_intermediate_to_code(self,inline=False)
+        #write the cache initialization
         self._cache_and_const_string = "begin\n{} = let cs = (\n".format(funcname) + self._cache_and_const_string
         self._cache_and_const_string += ")\n"
         my_shape = top.shape
@@ -465,14 +467,20 @@ class JuliaConverter(object):
             self._function_string = parameter_string + self._function_string
         self._function_string = self._cache_initialization_string + self._function_string
         if my_shape[1] != 1:
-            self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
-            self._function_string = "function {}(J, y, p, t)\n".format(funcname+"with_consts") + self._function_string
+            self._function_string = self._function_string.replace(top_var_name,"J")
+            self._function_string += "\nreturn nothing\nend\nend\nend"
+            #self._function_string += "J[:,:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
+            self._function_string = "function {}(J, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
         elif self._dae_type=="semi-explicit":
-            self._function_string+= "dy[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
-            self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
+            self._function_string = self._function_string.replace(top_var_name,"dy")
+            self._function_string += "\nreturn nothing\nend\nend\nend"
+            #self._function_string+= "dy[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
+            self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
         elif self._dae_type=="implicit":
-            self._function_string+="out[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
-            self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"with_consts") + self._function_string
+            self._function_string = self._function_string.replace(top_var_name,"out")
+            self._function_string += "\nreturn nothing\nend\nend\nend"
+            #self._function_string+="out[:] .= {}\nreturn nothing\nend\nend\nend".format(top_var_name)
+            self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
         return 0
         
 
@@ -546,15 +554,16 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
-        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
         if not inline:
             result_var_name = converter.create_cache(self)
+            left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
             if converter._preallocate:
                 code = "@. {} = {} {} {}\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
             else:
                 code = "{} = {} .{} {})\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
             converter._function_string+=code
         elif inline:
+            left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
             result_var_name = "({} {} {})".format(left_input_var_name,self.operator,right_input_var_name)
         return result_var_name
 
@@ -585,16 +594,17 @@ class JuliaMinMax(JuliaBinaryOperation):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
-        left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
 
         if not inline:
             result_var_name = converter.create_cache(self)
+            left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
             if converter._preallocate:
                 code = "@. {} = {}({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
             else:
                 code = "{} = {}.({},{})\n".format(result_var_name,self.name,left_input_var_name,right_input_var_name)
             converter._function_string+=code
         elif inline:
+            left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
             result_var_name = "{}({},{})".format(self.name,left_input_var_name,right_input_var_name)
         return result_var_name
 
@@ -613,9 +623,9 @@ class JuliaBroadcastableFunction(JuliaFunction):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
-        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
         if not inline:
             result_var_name = converter.create_cache(self)
+            input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
             if converter._preallocate:
                 code = "@. {} = {}({})\n".format(result_var_name,self.name,input_var_name)
             else:
@@ -623,6 +633,7 @@ class JuliaBroadcastableFunction(JuliaFunction):
             converter._function_string+=code
         else:
             #assume an @. has already been issued
+            input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
             result_var_name = "({}({}))".format(self.name,input_var_name) 
         return result_var_name
 
@@ -631,15 +642,17 @@ class JuliaNegation(JuliaBroadcastableFunction):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
-        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
+        
         if not inline:
             result_var_name = converter.create_cache(self)
+            input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
             if converter._preallocate:
                 code = "@. {} = - {}\n".format(result_var_name,input_var_name)
             else:
                 code = "{} = -{}\n".format(result_var_name,input_var_name)
             converter._function_string+=code
         else:
+            input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=True)
             result_var_name = "(- {})".format(input_var_name)
         return result_var_name
 
@@ -647,8 +660,8 @@ class JuliaMinimumMaximum(JuliaBroadcastableFunction):
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
-        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
         result_var_name = converter.create_cache(self)
+        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
         if converter._preallocate:
             code = "{} .= {}({})\n".format(result_var_name,self.name,input_var_name)
         else:
@@ -678,19 +691,38 @@ class JuliaIndex(object):
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
-        input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
         index = self.index
-        if type(index) is int:
-            return "{}[{}]".format(input_var_name,index+1)
-        elif type(index) is slice:
-            if index.step is None:
-                return "(@view {}[{}:{}])".format(input_var_name,index.start+1,index.stop)
-            elif type(index.step) is int:
-                return "(@view {}[{}:{}:{}])".format(input_var_name,index.start+1,index.step,index.stop)
+        inline = inline & converter._inline
+        if inline:
+            input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
+            if type(index) is int:
+                return "{}[{}]".format(input_var_name,index+1)
+            elif type(index) is slice:
+                if index.step is None:
+                    return "(@view {}[{}:{}])".format(input_var_name,index.start+1,index.stop)
+                elif type(index.step) is int:
+                    return "(@view {}[{}:{}:{}])".format(input_var_name,index.start+1,index.step,index.stop)
+                else:
+                    raise NotImplementedError("Step has to be an integer.")
             else:
-                raise NotImplementedError("Step has to be an integer.")
+                raise NotImplementedError("Step must be a slice or an int")
         else:
-            raise NotImplementedError("Step must be a slice or an int")
+            result_var_name = converter.create_cache(self)
+            input_var_name = converter._intermediate[self.input]._convert_intermediate_to_code(converter,inline=False)
+            if type(index) is int:
+                code =  "@. {} = {}[{}]".format(result_var_name,input_var_name,index+1)
+            elif type(index) is slice:
+                if index.step is None:
+                    code = "@. {} = (@view {}[{}:{}])".format(result_var_name,input_var_name,index.start+1,index.stop)
+                elif type(index.step) is int:
+                    code =  "@. {} = (@view {}[{}:{}:{}])".format(result_var_name,input_var_name,index.start+1,index.step,index.stop)
+                else:
+                    raise NotImplementedError("Step has to be an integer.")
+            else:
+                raise NotImplementedError("Step must be a slice or an int")
+            converter._function_string+=code
+            return result_var_name
+
 
 
 
