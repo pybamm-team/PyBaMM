@@ -392,23 +392,23 @@ class JuliaConverter(object):
                 cache_shape_st = "({})".format(cache_shape[0])
             else:
                 cache_shape_st = cache_shape
-            self._cache_and_const_string+="{} = zeros{},\n".format(cache_name,cache_shape_st)
-            self._cache_dict[symbol.output] = "cs."+cache_name
+            self._cache_and_const_string+="{} = zeros{}\n".format(cache_name,cache_shape_st)
+            self._cache_dict[symbol.output] = cache_name
         elif self._cache_type=="dual":
             if cache_shape[1] == 1:
                 cache_shape_st = "({})".format(cache_shape[0])
             else:
                 cache_shape_st = cache_shape
-            self._cache_and_const_string+="{} = dualcache(zeros{},12),\n".format(cache_name,cache_shape_st)
-            self._cache_initialization_string+="   {} = PreallocationTools.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+            self._cache_and_const_string+="{} = dualcache(zeros{},12)\n".format(cache_name,cache_shape_st)
+            self._cache_initialization_string+="   {} = PreallocationTools.get_tmp({},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
         elif self._cache_type=="symbolic":
             if cache_shape[1]==1:
                 cache_shape_st = "({})".format(cache_shape[0])
             else:
                 cache_shape_st = cache_shape
-            self._cache_and_const_string+="   {} = symcache(zeros{},Vector{{Num}}(undef,{})),\n".format(cache_name, cache_shape_st,cache_shape[0])
-            self._cache_initialization_string+="   {} = PyBaMM.get_tmp(cs.{},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+            self._cache_and_const_string+="   {} = symcache(zeros{},Vector{{Num}}(undef,{}))\n".format(cache_name, cache_shape_st,cache_shape[0])
+            self._cache_initialization_string+="   {} = PyBaMM.get_tmp({},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
         else:
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
@@ -421,10 +421,10 @@ class JuliaConverter(object):
         const_id = self._const_id+1
         self._const_id = const_id
         const_name = "const_{}".format(const_id)
-        self._const_dict[my_id] = "cs."+const_name
+        self._const_dict[my_id] = const_name
         mat_value = symbol.value
         val_line = self.write_const(mat_value)
-        const_line = const_name+" = {},\n".format(val_line)
+        const_line = const_name+" = {}\n".format(val_line)
         self._cache_and_const_string+=const_line
         return 0
     
@@ -466,8 +466,7 @@ class JuliaConverter(object):
         #this line actually writes the code
         top_var_name = top._convert_intermediate_to_code(self,inline=False)
         #write the cache initialization
-        self._cache_and_const_string = "begin\n{} = let cs = (\n".format(funcname) + self._cache_and_const_string
-        self._cache_and_const_string += ")\n"
+        self._cache_and_const_string = "begin\n{} = let \n".format(funcname) + self._cache_and_const_string
         self._cache_and_const_string = remove_lines_with(self._cache_and_const_string,top_var_name)
         self._cache_initialization_string = remove_lines_with(self._cache_initialization_string,top_var_name)
         my_shape = top.shape
