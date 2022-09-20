@@ -1167,7 +1167,7 @@ class BaseModel:
             size_state = self.concatenated_initial_conditions.size
             state_vector = pybamm.StateVector(slice(0,size_state))
             expr = pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic).jac(state_vector)
-            jac_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order)
+            jac_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type)
             jac_converter.convert_tree_to_intermediate(expr)
             jac_str = jac_converter.build_julia_code(funcname="jac_"+name)
             return eqn_str,ics_str,jac_str
