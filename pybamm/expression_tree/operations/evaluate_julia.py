@@ -25,6 +25,17 @@ def is_constant_and_can_evaluate(symbol):
     else:
         return False
 
+def remove_lines_with(input_string,pattern):
+    string_list = input_string.split("\n")
+    my_string = ""
+    for s in string_list:
+        if pattern not in s:
+            my_string = my_string+s+"\n"
+    return my_string
+    
+
+
+
 
 class JuliaConverter(object):
     def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit",input_parameter_order=[]): 
@@ -457,6 +468,8 @@ class JuliaConverter(object):
         #write the cache initialization
         self._cache_and_const_string = "begin\n{} = let cs = (\n".format(funcname) + self._cache_and_const_string
         self._cache_and_const_string += ")\n"
+        self._cache_and_const_string = remove_lines_with(self._cache_and_const_string,top_var_name)
+        self._cache_initialization_string = remove_lines_with(self._cache_initialization_string,top_var_name)
         my_shape = top.shape
         if len(self.input_parameter_order) != 0:
             parameter_string = ""
