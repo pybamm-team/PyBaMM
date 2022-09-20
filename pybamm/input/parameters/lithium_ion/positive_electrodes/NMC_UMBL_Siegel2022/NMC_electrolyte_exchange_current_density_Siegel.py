@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T):
+def NMC_electrolyte_exchange_current_density_Siegel(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between NMC and LiPF6 in
     EC:DMC.

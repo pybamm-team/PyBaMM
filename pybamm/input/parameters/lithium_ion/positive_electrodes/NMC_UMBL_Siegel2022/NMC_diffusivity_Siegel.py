@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def NMC_diffusivity_PeymanMPM(sto, T):
+def NMC_diffusivity_Siegel(sto, T):
     """
     NMC diffusivity as a function of stochiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Peyman MPM.

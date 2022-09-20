@@ -1,7 +1,7 @@
 import pybamm
 
 
-def NMC_ocp_PeymanMPM(sto):
+def NMC_ocp_Siegel(sto):
     """
     Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
     function of the stochiometry. The fit is taken from Peyman MPM.

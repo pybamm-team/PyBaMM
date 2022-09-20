@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def electrolyte_conductivity_PeymanMPM(c_e, T):
+def electrolyte_conductivity_Siegel(c_e, T):
     """
     Conductivity of LiPF6 in EC:DMC as a function of ion concentration. The original
     data is from [1]. The fit is from Dualfoil [2].

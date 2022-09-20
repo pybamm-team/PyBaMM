@@ -1,7 +1,7 @@
 import pybamm
 
 
-def graphite_ocp_PeymanMPM(sto):
+def graphite_ocp_Siegel(sto):
     """
     Graphite Open Circuit Potential (OCP) as a function of the
     stochiometry. The fit is taken from Peyman MPM [1].

@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def graphite_diffusivity_PeymanMPM(sto, T):
+def graphite_diffusivity_Siegel(sto, T):
     """
     Graphite diffusivity as a function of stochiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Peyman MPM.

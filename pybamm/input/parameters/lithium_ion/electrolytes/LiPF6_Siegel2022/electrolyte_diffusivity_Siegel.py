@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def electrolyte_diffusivity_PeymanMPM(c_e, T):
+def electrolyte_diffusivity_Siegel(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration. The original data
     is from [1]. The fit from Dualfoil [2].
