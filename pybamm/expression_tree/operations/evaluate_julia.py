@@ -406,7 +406,7 @@ class JuliaConverter(object):
     
 
     def create_const(self,symbol):
-        my_id = symbol.id
+        my_id = symbol.output
         const_id = self._const_id+1
         self._const_id = const_id
         const_name = "const_{}".format(const_id)
@@ -732,16 +732,23 @@ class JuliaValue(object):
 
 class JuliaConstant(JuliaValue):
     def __init__(self,id,value):
-        self.id = id
+        self.output = id
         self.value = value
         self.shape = value.shape
     def _convert_intermediate_to_code(self,converter,inline=True):
         converter.create_const(self)
-        return converter._const_dict[self.id]
+        my_name = converter._const_dict[self.output]
+        if inline:
+            return converter._const_dict[self.output]
+        else:
+            result_var_name = converter.create_cache(self)
+            code = "{} .= {}\n".format(result_var_name,my_name)
+            converter._function_string+=code
+            return result_var_name
 
 class JuliaStateVector(JuliaValue):
     def __init__(self,id,loc,shape):
-        self.id = id
+        self.output = id
         self.loc = loc
         self.shape = shape
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
@@ -763,7 +770,7 @@ class JuliaStateVectorDot(JuliaStateVector):
 
 class JuliaScalar(JuliaConstant):
     def __init__(self,id,value):
-        self.id = id
+        self.output = id
         self.value = float(value)
         self.shape = (1,1)
     def _convert_intermediate_to_code(self,converter:JuliaConverter,inline=True):
@@ -771,14 +778,14 @@ class JuliaScalar(JuliaConstant):
 
 class JuliaTime(JuliaScalar):
     def __init__(self,id):
-        self.id = id
+        self.output = id
         self.shape = (1,1)
     def _convert_intermediate_to_code(self,converter,inline=True):
         return "t"
 
 class JuliaInput(JuliaScalar):
     def __init__(self,id,name):
-        self.id = id
+        self.output = id
         self.shape = (1,1)
         self.name = name
     def _convert_intermediate_to_code(self,converter,inline=True):
