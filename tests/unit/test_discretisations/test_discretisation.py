@@ -850,6 +850,58 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
+    def test_process_model_algebraic(self):
+        # TODO: implement this based on test_process_model_dae
+        # one rhs equation and one algebraic
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        Q = pybamm.Scalar(1)
+        model = pybamm.BaseModel()
+        model.algebraic = {c: pybamm.div(N) - Q}
+        model.initial_conditions = {c: pybamm.Scalar(0)}
+
+        model.boundary_conditions = {
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        disc.process_model(model)
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
+        y0 = model.concatenated_initial_conditions.evaluate()
+        np.testing.assert_array_equal(
+            y0,
+            np.zeros_like(combined_submesh.nodes)[:, np.newaxis],
+        )
+
+        # grad and div are identity operators here
+        np.testing.assert_array_equal(
+            model.concatenated_rhs.evaluate(None, y0), np.ones([0, 1])
+        )
+
+        np.testing.assert_array_equal(
+            model.concatenated_algebraic.evaluate(None, y0),
+            -np.ones_like(combined_submesh.nodes[:, np.newaxis]),
+        )
+
+        # mass matrix is identity upper left, zeros elsewhere
+        mass = np.zeros(
+            (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes))
+        )
+        np.testing.assert_array_equal(
+            mass, model.mass_matrix.entries.toarray()
+        )
+
+        # jacobian
+        y = pybamm.StateVector(slice(0, np.size(y0)))
+        jacobian = model.concatenated_algebraic.jac(y).evaluate(0, y0)
+        np.testing.assert_array_equal(np.eye(combined_submesh.npts), jacobian.toarray())
+
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
         cn = pybamm.Variable("c", domain=["negative electrode"])

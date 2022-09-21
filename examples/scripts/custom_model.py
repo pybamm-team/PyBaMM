@@ -98,8 +98,10 @@ model.submodels["Negative particle mechanics"] = pybamm.particle_mechanics.NoMec
 model.submodels["Positive particle mechanics"] = pybamm.particle_mechanics.NoMechanics(
     model.param, "Positive", model.options
 )
-model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
-model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
+model.submodels["sei"] = pybamm.sei.NoSEI(model.param, model.options)
+model.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+    model.param, model.options, cracks=True
+)
 model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
 
 # build model

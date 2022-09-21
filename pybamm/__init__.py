@@ -44,6 +44,7 @@ from .util import (
     install_jax,
     is_jax_compatible,
     have_julia,
+    get_git_commit_info,
 )
 from .logger import logger, set_logging_level
 from .logger import logger, set_logging_level, get_new_logger

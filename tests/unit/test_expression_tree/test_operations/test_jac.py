@@ -279,6 +279,22 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             b.jac(y)
 
+    def test_jac_of_binary_operator(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+
+        phi_s = pybamm.standard_variables.phi_s_n
+        i = pybamm.grad(phi_s)
+
+        inner = pybamm.inner(2, i)
+        self.assertEqual(inner._binary_jac(a, b), 2 * b)
+
+        inner = pybamm.inner(i, 2)
+        self.assertEqual(inner._binary_jac(a, b), 2 * a)
+
+        inner = pybamm.inner(i, i)
+        self.assertEqual(inner._binary_jac(a, b), i * a + i * b)
+
     def test_jac_of_independent_variable(self):
         a = pybamm.IndependentVariable("Variable")
         y = pybamm.StateVector(slice(0, 1))

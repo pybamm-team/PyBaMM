@@ -12,6 +12,10 @@ class EventType(Enum):
     should return the time that the discontinuity occurs. The solver will integrate up
     to the discontinuity and then restart just after the discontinuity.
 
+    INTERPOLANT_EXTRAPOLATION indicates that a pybamm.Interpolant object has been
+    evaluated outside of the range.
+
+    SWITCH indicates an event switch that is used in CasADI "fast with events" model.
     """
 
     TERMINATION = 0
@@ -29,12 +33,11 @@ class Event:
     ----------
 
     name: str
-        A string giving the name of the event
-    event_type: :class:`pybamm.EventType`
-        An enum defining the type of event
+        A string giving the name of the event.
     expression: :class:`pybamm.Symbol`
-        An expression that defines when the event occurs
-
+        An expression that defines when the event occurs.
+    event_type: :class:`pybamm.EventType` (optional)
+        An enum defining the type of event. By default it is set to TERMINATION.
 
     """
 
