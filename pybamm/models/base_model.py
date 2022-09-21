@@ -1106,6 +1106,7 @@ class BaseModel:
         dae_type="semi-explicit",
         generate_jacobian=False,
         cache_type="standard",
+        inline=True,
         **kwargs,
     ):
         """
@@ -1137,7 +1138,7 @@ class BaseModel:
 
         if self.algebraic == {}:
             # ODE model: form dy[] = ...
-            converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type)
+            converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type,inline=inline)
             converter.convert_tree_to_intermediate(self.concatenated_rhs)
             eqn_str = converter.build_julia_code(funcname=name)
         else:
@@ -1146,7 +1147,7 @@ class BaseModel:
             else:
                 len_rhs = self.concatenated_rhs.size
                 
-            converter = pybamm.JuliaConverter(dae_type=dae_type,input_parameter_order=input_parameter_order,cache_type=cache_type)
+            converter = pybamm.JuliaConverter(dae_type=dae_type,input_parameter_order=input_parameter_order,cache_type=cache_type,inline=inline)
             converter.convert_tree_to_intermediate(pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic),len_rhs=len_rhs)
             eqn_str = converter.build_julia_code(funcname=name)
 
@@ -1161,7 +1162,7 @@ class BaseModel:
             size_state = self.concatenated_initial_conditions.size
             state_vector = pybamm.StateVector(slice(0,size_state))
             expr = pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic).jac(state_vector)
-            jac_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type)
+            jac_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type,inline=inline)
             jac_converter.convert_tree_to_intermediate(expr)
             jac_str = jac_converter.build_julia_code(funcname="jac_"+name)
             return eqn_str,ics,jac_str
