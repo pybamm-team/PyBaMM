@@ -591,7 +591,7 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
             left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
             result_var_name = "({} {} {})".format(left_input_var_name,self.operator,right_input_var_name)
         return result_var_name
-
+#PREALLOCATING STOPPED HERE
 class JuliaAddition(JuliaBitwiseBinaryOperation):
     pass
 
