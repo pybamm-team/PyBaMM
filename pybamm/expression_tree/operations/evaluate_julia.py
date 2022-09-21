@@ -416,7 +416,6 @@ class JuliaConverter(object):
             else:
                 cache_shape_st = cache_shape
             self._cache_and_const_string+="{} = CUDA.zeros{}\n".format(cache_name, cache_shape_st,cache_shape[0])
-            self._cache_initialization_string+="   {} = PyBaMM.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
 
         else:
@@ -433,7 +432,10 @@ class JuliaConverter(object):
         self._const_dict[my_id] = const_name
         mat_value = symbol.value
         val_line = self.write_const(mat_value)
-        const_line = const_name+" = cu({})\n".format(val_line)
+        if self._cache_type=="gpu":
+            const_line = const_name+" = cu({})\n".format(val_line)
+        else:
+            const_line = const_name+" = {}\n".format(val_line)
         self._cache_and_const_string+=const_line
         return 0
     
@@ -532,7 +534,7 @@ class JuliaConverter(object):
 
 #BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
 class JuliaBinaryOperation(object):
-    def __init__(self,left_input,right_input,output,shape):
+    def __init__(self,left_input,right_input,output,shape,branch):
         self.left_input = left_input
         self.right_input = right_input
         self.output = output
@@ -544,7 +546,7 @@ class JuliaBinaryOperation(object):
 
 #MatMul and Inner Product are not really the same as the bitwisebinary operations.
 class JuliaMatrixMultiplication(JuliaBinaryOperation):
-    def __init__(self,left_input,right_input,output,shape):
+    def __init__(self,left_input,right_input,output,shape,branch):
         self.left_input = left_input
         self.right_input = right_input
         self.output = output
