@@ -399,16 +399,16 @@ class JuliaConverter(object):
                 cache_shape_st = "({})".format(cache_shape[0])
             else:
                 cache_shape_st = cache_shape
-            self._cache_and_const_string+="{} = dualcache(zeros{},12)\n".format(cache_name,cache_shape_st)
-            self._cache_initialization_string+="   {} = PreallocationTools.get_tmp({},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+            self._cache_and_const_string+="{}_init = dualcache(zeros{},12)\n".format(cache_name,cache_shape_st)
+            self._cache_initialization_string+="   {} = PreallocationTools.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
         elif self._cache_type=="symbolic":
             if cache_shape[1]==1:
                 cache_shape_st = "({})".format(cache_shape[0])
             else:
                 cache_shape_st = cache_shape
-            self._cache_and_const_string+="   {} = symcache(zeros{},Vector{{Num}}(undef,{}))\n".format(cache_name, cache_shape_st,cache_shape[0])
-            self._cache_initialization_string+="   {} = PyBaMM.get_tmp({},(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+            self._cache_and_const_string+="   {}_init = symcache(zeros{},Vector{{Num}}(undef,{}))\n".format(cache_name, cache_shape_st,cache_shape[0])
+            self._cache_initialization_string+="   {} = PyBaMM.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
         else:
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
