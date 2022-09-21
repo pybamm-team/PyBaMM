@@ -410,6 +410,15 @@ class JuliaConverter(object):
             self._cache_and_const_string+="   {}_init = symcache(zeros{},Vector{{Num}}(undef,{}))\n".format(cache_name, cache_shape_st,cache_shape[0])
             self._cache_initialization_string+="   {} = PyBaMM.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
             self._cache_dict[symbol.output] = cache_name
+        elif self._cache_type=="gpu":
+            if cache_shape[1]==1:
+                cache_shape_st = "({})".format(cache_shape[0])
+            else:
+                cache_shape_st = cache_shape
+            self._cache_and_const_string+="{} = CUDA.zeros{}\n".format(cache_name, cache_shape_st,cache_shape[0])
+            self._cache_initialization_string+="   {} = PyBaMM.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+            self._cache_dict[symbol.output] = cache_name
+
         else:
             raise NotImplementedError("The cache type you've specified has not yet been implemented")
         return self._cache_dict[my_id]
@@ -424,7 +433,7 @@ class JuliaConverter(object):
         self._const_dict[my_id] = const_name
         mat_value = symbol.value
         val_line = self.write_const(mat_value)
-        const_line = const_name+" = {}\n".format(val_line)
+        const_line = const_name+" = cu({})\n".format(val_line)
         self._cache_and_const_string+=const_line
         return 0
     
@@ -749,15 +758,7 @@ class JuliaConstant(JuliaValue):
         self.shape = value.shape
     def _convert_intermediate_to_code(self,converter,inline=True):
         converter.create_const(self)
-        my_name = converter._const_dict[self.output]
-        inline=True
-        if inline:
-            return converter._const_dict[self.output]
-        else:
-            result_var_name = converter.create_cache(self)
-            code = "{} .= {}\n".format(result_var_name,my_name)
-            converter._function_string+=code
-            return result_var_name
+        return converter._const_dict[self.output]
 
 class JuliaStateVector(JuliaValue):
     def __init__(self,id,loc,shape):
