@@ -546,7 +546,7 @@ class JuliaBinaryOperation(object):
 
 #MatMul and Inner Product are not really the same as the bitwisebinary operations.
 class JuliaMatrixMultiplication(JuliaBinaryOperation):
-    def __init__(self,left_input,right_input,output,shape,branch):
+    def __init__(self,left_input,right_input,output,shape):
         self.left_input = left_input
         self.right_input = right_input
         self.output = output
