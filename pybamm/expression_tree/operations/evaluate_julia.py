@@ -381,46 +381,48 @@ class JuliaConverter(object):
     #Cache and Const Creation
     def create_cache(self,symbol):
         my_id = symbol.output
+        if self._preallocate:
+            cache_shape = self._intermediate[my_id].shape
+            cache_id = self._cache_id
+            self._cache_id += 1
+            cache_name = "cache_{}".format(cache_id)
 
-        cache_shape = self._intermediate[my_id].shape
-        cache_id = self._cache_id
-        self._cache_id += 1
-        cache_name = "cache_{}".format(cache_id)
-        
-        if self._cache_type=="standard":
-            if cache_shape[1] == 1:
-                cache_shape_st = "({})".format(cache_shape[0])
+            if self._cache_type=="standard":
+                if cache_shape[1] == 1:
+                    cache_shape_st = "({})".format(cache_shape[0])
+                else:
+                    cache_shape_st = cache_shape
+                self._cache_and_const_string+="{} = zeros{}\n".format(cache_name,cache_shape_st)
+                self._cache_dict[symbol.output] = cache_name
+            elif self._cache_type=="dual":
+                if cache_shape[1] == 1:
+                    cache_shape_st = "({})".format(cache_shape[0])
+                else:
+                    cache_shape_st = cache_shape
+                self._cache_and_const_string+="{}_init = dualcache(zeros{},12)\n".format(cache_name,cache_shape_st)
+                self._cache_initialization_string+="   {} = PreallocationTools.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+                self._cache_dict[symbol.output] = cache_name
+            elif self._cache_type=="symbolic":
+                if cache_shape[1]==1:
+                    cache_shape_st = "({})".format(cache_shape[0])
+                else:
+                    cache_shape_st = cache_shape
+                self._cache_and_const_string+="   {}_init = symcache(zeros{},Vector{{Num}}(undef,{}))\n".format(cache_name, cache_shape_st,cache_shape[0])
+                self._cache_initialization_string+="   {} = PyBaMM.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
+                self._cache_dict[symbol.output] = cache_name
+            elif self._cache_type=="gpu":
+                if cache_shape[1]==1:
+                    cache_shape_st = "({})".format(cache_shape[0])
+                else:
+                    cache_shape_st = cache_shape
+                self._cache_and_const_string+="{} = CUDA.zeros{}\n".format(cache_name, cache_shape_st,cache_shape[0])
+                self._cache_dict[symbol.output] = cache_name
             else:
-                cache_shape_st = cache_shape
-            self._cache_and_const_string+="{} = zeros{}\n".format(cache_name,cache_shape_st)
-            self._cache_dict[symbol.output] = cache_name
-        elif self._cache_type=="dual":
-            if cache_shape[1] == 1:
-                cache_shape_st = "({})".format(cache_shape[0])
-            else:
-                cache_shape_st = cache_shape
-            self._cache_and_const_string+="{}_init = dualcache(zeros{},12)\n".format(cache_name,cache_shape_st)
-            self._cache_initialization_string+="   {} = PreallocationTools.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
-            self._cache_dict[symbol.output] = cache_name
-        elif self._cache_type=="symbolic":
-            if cache_shape[1]==1:
-                cache_shape_st = "({})".format(cache_shape[0])
-            else:
-                cache_shape_st = cache_shape
-            self._cache_and_const_string+="   {}_init = symcache(zeros{},Vector{{Num}}(undef,{}))\n".format(cache_name, cache_shape_st,cache_shape[0])
-            self._cache_initialization_string+="   {} = PyBaMM.get_tmp({}_init,(@view y[1:{}]))\n".format(cache_name,cache_name,cache_shape[0])
-            self._cache_dict[symbol.output] = cache_name
-        elif self._cache_type=="gpu":
-            if cache_shape[1]==1:
-                cache_shape_st = "({})".format(cache_shape[0])
-            else:
-                cache_shape_st = cache_shape
-            self._cache_and_const_string+="{} = CUDA.zeros{}\n".format(cache_name, cache_shape_st,cache_shape[0])
-            self._cache_dict[symbol.output] = cache_name
-
+                raise NotImplementedError("The cache type you've specified has not yet been implemented")
+            return self._cache_dict[my_id]
         else:
-            raise NotImplementedError("The cache type you've specified has not yet been implemented")
-        return self._cache_dict[my_id]
+            self._cache_dict[symbol.output] = cache_name
+            return self._cache_dict
 
     
 
@@ -534,7 +536,7 @@ class JuliaConverter(object):
 
 #BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
 class JuliaBinaryOperation(object):
-    def __init__(self,left_input,right_input,output,shape,branch):
+    def __init__(self,left_input,right_input,output,shape):
         self.left_input = left_input
         self.right_input = right_input
         self.output = output
@@ -583,7 +585,7 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
             if converter._preallocate:
                 code = "@. {} = {} {} {}\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
             else:
-                code = "{} = {} .{} {})\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
+                code = "{} = @. ( {} {} {})\n".format(result_var_name,left_input_var_name,self.operator,right_input_var_name)
             converter._function_string+=code
         elif inline:
             left_input_var_name,right_input_var_name = self.get_binary_inputs(converter,inline=True)
