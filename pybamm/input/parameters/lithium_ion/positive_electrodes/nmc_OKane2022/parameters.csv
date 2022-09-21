@@ -4,7 +4,7 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],0.18,Chen 2020,
 Maximum concentration in positive electrode [mol.m-3],63104,Chen 2020,tuned for 1C
-Positive electrode diffusivity [m2.s-1],4E-15,Chen 2020,tuned for 1C
+Positive electrode diffusivity [m2.s-1],[function]nmc_LGM50_diffusivity_Chen2020,Chen 2020,tuned for 1C
 Positive electrode OCP [V],[function]nmc_LGM50_ocp_Chen2020,Chen 2020,
 ,,,
 # Microstructure,,,
