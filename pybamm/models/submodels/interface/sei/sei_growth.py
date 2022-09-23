@@ -86,7 +86,7 @@ class SEIGrowth(BaseModel):
             j = variables["Lithium metal total interfacial current density"]
         else:
             j = variables[
-                f"X-averaged negative electrode total interfacial current density"
+                "X-averaged negative electrode total interfacial current density"
             ]
 
         L_sei_inner = variables[f"Inner {self.reaction_name}thickness"]
