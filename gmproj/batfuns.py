@@ -116,8 +116,8 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
     eps_p = parameter_values["Positive electrode active material volume fraction"]
     C_over_eps_n = Cn / eps_n
     C_over_eps_p = Cp / eps_p
-    c_n_max = parameter_values.evaluate(param.n.c_max)
-    c_p_max = parameter_values.evaluate(param.p.c_max)
+    c_n_max = parameter_values.evaluate(param.n.prim.c_max)
+    c_p_max = parameter_values.evaluate(param.p.prim.c_max)
     n_Li_init = parameter_values.evaluate(param.n_Li_particles_init)
     
     esoh_sol = esoh_sim.solve(
@@ -330,7 +330,7 @@ def plotc(all_sumvars_dict,esoh_data):
             ax.set_ylim([3,6.2])
         if k>3:
             ax.set_xlabel("Cycle number")
-    fig.legend(["Acc Sim"] + ["Reported"], 
+    fig.legend(["Sim"] + ["Data"], 
            loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
@@ -418,8 +418,8 @@ def init_exp_calendar(cell_no,dfe,param,parameter_values):
     C_n_init = dfe['C_n'][0]
     C_p_init = dfe['C_p'][0]
     y_0_init = dfe['y_0'][0] 
-    eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.c_max * param.F* param.A_cc))
-    eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.c_max * param.F* param.A_cc))
+    eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.prim.c_max * param.F* param.A_cc))
+    eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.prim.c_max * param.F* param.A_cc))
     # cs_p_init = parameter_values.evaluate(y_0_init* param.c_p_max)
     if cell_no=='22':
         SOC_0 = 1
@@ -502,38 +502,39 @@ def init_exp(cell_no,dfe,spm,parameter_values):
     C_n_init = dfe['C_n'][0]
     C_p_init = dfe['C_p'][0]
     y_0_init = dfe['y_0'][0] 
-    eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.c_max * param.F* param.A_cc))
-    eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.c_max * param.F* param.A_cc))
+    eps_n_data = parameter_values.evaluate(C_n_init*3600/(param.n.L * param.n.prim.c_max * param.F* param.A_cc))
+    eps_p_data = parameter_values.evaluate(C_p_init*3600/(param.p.L * param.p.prim.c_max * param.F* param.A_cc))
     # cs_p_init = parameter_values.evaluate(y_0_init* param.c_p_max) 
-    if cell_no=='01':
+    if (int(cell_no)-1)//3 ==0:
         c_rate_c = 'C/5'
         c_rate_d = 'C/5'
         dis_set = " until 3V"
-        Temp = 25
-    elif cell_no=='04':
+    elif (int(cell_no)-1)//3 ==1:
         c_rate_c = '1.5C'
         c_rate_d = '1.5C'
         dis_set = " until 3V"
-        Temp = 25
-    elif cell_no=='07':
+    elif (int(cell_no)-1)//3 ==2:
         c_rate_c = '2C'
         c_rate_d = '2C'
         dis_set = " until 3V"
-        Temp = 25
-    elif cell_no=='10':
+    elif (int(cell_no)-1)//3 ==3:
         c_rate_c = 'C/5'
         c_rate_d = '1.5C'
         dis_set = " until 3V"
-        Temp = 25
-    elif cell_no=='13':
+    elif (int(cell_no)-1)//3 ==4:
         c_rate_c = 'C/5'
         c_rate_d = 'C/5'
         dis_set = " for 150 min"
-        Temp = 25
-    elif cell_no=='16':
+    elif (int(cell_no)-1)//3 ==5:
         c_rate_c = 'C/5'
         c_rate_d = '1.5C'
         dis_set = " for 20 min"
+
+    if int(cell_no)%3 == 0:
+        Temp = 45
+    if int(cell_no)%3 == 1:
         Temp = 25
+    if int(cell_no)%3 == 2:
+        Temp = -5
     SOC_0 = 1
     return eps_n_data,eps_p_data,c_rate_c,c_rate_d,dis_set,Temp,SOC_0
