@@ -51,7 +51,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         extrap_tol=0,
         extra_options=None,
     ):
-        if scikits_odes_spec is None:
+        if scikits_odes_spec is None:  # pragma: no cover
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(method, rtol, atol, extrap_tol=extrap_tol)

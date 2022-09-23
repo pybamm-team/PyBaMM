@@ -299,17 +299,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for particle mechanics based on which SEI on cracks option
-        # is provided
-        # return "false" if option not given
+        # Change the default for particle mechanics based on which SEI on cracks and LAM
+        # options are provided
+        # return "false" and "none" respectively if options not given
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
+        LAM_opt = extra_options.get("loss of active material", "none")
         if SEI_cracks_option == "true":
-            default_options["particle mechanics"] = "swelling and cracking"
+            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+                default_options["particle mechanics"] = (
+                    "swelling and cracking", "swelling only"
+                )
+            else:
+                default_options["particle mechanics"] = (
+                    "swelling and cracking", "none"
+                )
         else:
-            # Change the default for particle mechanics based on which LAM option is
-            # provided
-            # return "none" if option not given
-            LAM_opt = extra_options.get("loss of active material", "none")
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = "swelling only"
             else:
@@ -506,7 +510,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                and options["SEI"] == "none"
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
                 and options["lithium plating"] == "none"
@@ -515,7 +518,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'false', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'SEI', 'particle mechanics', "
+                    "be 'none': 'particle mechanics', "
                     "'loss of active material', 'lithium plating'"
                 )
 
@@ -578,15 +581,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
-    def phase_number_to_names(self, number):
-        """
-        Converts number of phases to a list ["primary", "secondary", ...]
-        """
-        number = int(number)
-        phases = ["primary"]
-        if number >= 2:
-            phases.append("secondary")
-        return phases
+    @property
+    def phases(self):
+        try:
+            return self._phases
+        except AttributeError:
+            self._phases = {}
+            for domain in ["negative", "positive"]:
+                number = int(getattr(self, domain)["particle phases"])
+                phases = ["primary"]
+                if number >= 2:
+                    phases.append("secondary")
+                self._phases[domain] = phases
+            return self._phases
 
     def print_options(self):
         """
@@ -1248,8 +1255,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             eta_sei_av = self.variables["SEI film overpotential"]
             eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
         else:
-            eta_sei_av = self.variables["X-averaged SEI film overpotential"]
-            eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
+            eta_sei_av = self.variables[f"X-averaged {phase_n}SEI film overpotential"]
+            eta_sei_av_dim = self.variables[
+                f"X-averaged {phase_n}SEI film overpotential [V]"
+            ]
 
         # TODO: add current collector losses to the voltage in 3D
 

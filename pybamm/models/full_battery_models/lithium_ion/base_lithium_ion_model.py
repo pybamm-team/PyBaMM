@@ -46,11 +46,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
         # Add relevant secondary length scales
-        phases_p = int(getattr(self.options, "positive")["particle phases"])
-        if phases_p >= 2:
+        if len(self.options.phases["positive"]) >= 2:
             self._length_scales["positive secondary particle"] = self.param.p.sec.R_typ
-        phases_n = int(getattr(self.options, "negative")["particle phases"])
-        if not self.half_cell and phases_n >= 2:
+        if not self.half_cell and len(self.options.phases["negative"]) >= 2:
             self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
 
         self.set_standard_output_variables()
@@ -134,14 +132,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             domains = ["negative", "positive"]
         for domain in domains:
-            phases = self.options.phase_number_to_names(
-                getattr(self.options, domain)["particle phases"]
-            )
             self.variables[f"Total lithium in {domain} electrode [mol]"] = sum(
                 self.variables[
                     f"Total lithium in {phase} phase in {domain} electrode [mol]"
                 ]
-                for phase in phases
+                for phase in self.options.phases[domain]
             )
 
         # LAM
@@ -255,10 +250,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
             domain_options = getattr(self.options, domain)
-            phases = self.options.phase_number_to_names(
-                domain_options["particle phases"]
-            )
-            for phase in phases:
+            for phase in self.options.phases[domain]:
                 ocp_option = getattr(domain_options, phase)["open circuit potential"]
                 ocp_submodels = pybamm.open_circuit_potential
                 if ocp_option == "single":
@@ -277,28 +269,38 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             reaction_loc = "full electrode"
 
-        if self.options["SEI"] == "none":
-            self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
-        elif self.options["SEI"] == "constant":
-            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
-        else:
-            self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                self.param, reaction_loc, self.options, cracks=False
-            )
-        # Do not set "sei on cracks" submodel for half-cells
-        # For full cells, "sei on cracks" submodel must be set, even if it is zero
-        if reaction_loc != "interface":
-            if (
-                self.options["SEI"] in ["none", "constant"]
-                or self.options["SEI on cracks"] == "false"
-            ):
-                self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
-                    self.param, self.options, cracks=True
-                )
+        phases = self.options.phases["negative"]
+        for phase in phases:
+            if self.options["SEI"] == "none":
+                submodel = pybamm.sei.NoSEI(self.param, self.options, phase)
+            elif self.options["SEI"] == "constant":
+                submodel = pybamm.sei.ConstantSEI(self.param, self.options, phase)
             else:
-                self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
-                    self.param, reaction_loc, self.options, cracks=True
+                submodel = pybamm.sei.SEIGrowth(
+                    self.param, reaction_loc, self.options, phase, cracks=False
                 )
+            self.submodels[f"{phase} sei"] = submodel
+            # Do not set "sei on cracks" submodel for half-cells
+            # For full cells, "sei on cracks" submodel must be set, even if it is zero
+            if reaction_loc != "interface":
+                if (
+                    self.options["SEI"] in ["none", "constant"]
+                    or self.options["SEI on cracks"] == "false"
+                ):
+                    submodel = pybamm.sei.NoSEI(
+                        self.param, self.options, phase, cracks=True
+                    )
+                else:
+                    submodel = pybamm.sei.SEIGrowth(
+                        self.param, reaction_loc, self.options, phase, cracks=True
+                    )
+                self.submodels[f"{phase} sei on cracks"] = submodel
+
+        if len(phases) > 1:
+            self.submodels["total sei"] = pybamm.sei.TotalSEI(self.param, self.options)
+            self.submodels["total sei on cracks"] = pybamm.sei.TotalSEI(
+                self.param, self.options, cracks=True
+            )
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":
@@ -345,9 +347,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:
             lam = getattr(self.options, domain)["loss of active material"]
-            phases = self.options.phase_number_to_names(
-                getattr(self.options, domain)["particle phases"]
-            )
+            phases = self.options.phases[domain]
             for phase in phases:
                 if lam == "none":
                     submod = pybamm.active_material.Constant(

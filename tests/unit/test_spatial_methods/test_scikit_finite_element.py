@@ -420,6 +420,11 @@ class TestScikitFiniteElement(unittest.TestCase):
             extrap_pos_disc.evaluate(None, constant_y), 1
         )
 
+        # test BoundaryGradient not implemented
+        extrap_neg = pybamm.BoundaryGradient(var, "negative tab")
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(extrap_neg)
+
     def test_boundary_integral(self):
         mesh = get_2p1d_mesh_for_testing(include_particles=False)
         spatial_methods = {
