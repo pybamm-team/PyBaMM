@@ -71,8 +71,7 @@ class BaseThermal(pybamm.BaseSubModel):
         if self.options.electrode_types["negative"] == "planar":
             i_boundary_cc = variables["Current collector current density"]
             T_n = variables["Negative electrode temperature"]
-            Q_ohm_s_n_av = i_boundary_cc**2 / param.n.sigma(T_n)
-            Q_ohm_s_n = pybamm.PrimaryBroadcast(Q_ohm_s_n_av, "negative electrode")
+            Q_ohm_s_n = i_boundary_cc**2 / param.n.sigma(T_n)
         else:
             i_s_n = variables["Negative electrode current density"]
             phi_s_n = variables["Negative electrode potential"]

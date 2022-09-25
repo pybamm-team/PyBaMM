@@ -170,6 +170,8 @@ class SPM(BaseModel):
             surf_model = surf_form.LeadingOrderAlgebraic
 
         for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "planar":
+                continue
             self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, options=self.options
             )

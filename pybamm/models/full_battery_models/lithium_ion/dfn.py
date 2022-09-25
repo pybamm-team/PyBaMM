@@ -132,6 +132,8 @@ class DFN(BaseModel):
             surf_model = surf_form.FullAlgebraic
 
         for domain in ["negative", "separator", "positive"]:
+            if self.options.electrode_types.get(domain) == "planar":
+                continue
             self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, self.options
             )
