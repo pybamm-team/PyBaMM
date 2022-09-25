@@ -38,7 +38,7 @@ def remove_lines_with(input_string,pattern):
 
 
 class JuliaConverter(object):
-    def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit",input_parameter_order=[]): 
+    def __init__(self,ismtk=False,cache_type="standard",jacobian_type="analytical",preallocate=True,dae_type="semi-explicit",input_parameter_order=[],inline=True): 
         assert not ismtk
 
         #Characteristics
@@ -49,7 +49,7 @@ class JuliaConverter(object):
         self._dae_type = dae_type
 
         self._type = "Float64"
-        self._inline = True
+        self._inline = inline
         #"Caches"
         #Stores Constants to be Declared in the initial cache
         #insight: everything is just a line of code
