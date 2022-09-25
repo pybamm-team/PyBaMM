@@ -1107,7 +1107,7 @@ class BaseModel:
         generate_jacobian=False,
         cache_type="standard",
         inline=True,
-        preallocate=True
+        preallocate=True,
         **kwargs,
     ):
         """
