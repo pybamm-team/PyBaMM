@@ -32,6 +32,7 @@ class Full(BaseElectrolyteConductivity):
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
             )
+            phi_e_k.print_name = f"phi_e_{domain[0]}"
             phi_e_dict[domain] = phi_e_k
 
         variables = self._get_standard_potential_variables(phi_e_dict)

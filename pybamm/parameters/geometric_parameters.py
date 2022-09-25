@@ -189,9 +189,10 @@ class ParticleGeometricParameters(BaseParameters):
         """
         Dimensional electrode area-weighted particle-size distribution
         """
-        inputs = {f"{self.phase_prefactor}{self.domain} particle-size variable [m]": R}
+        Domain = self.domain.capitalize()
+        inputs = {f"{self.phase_prefactor}{Domain} particle-size variable [m]": R}
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{self.domain} "
+            f"{self.phase_prefactor}{Domain} "
             "area-weighted particle-size distribution [m-1]",
             inputs,
         )

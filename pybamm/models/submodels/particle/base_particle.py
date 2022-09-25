@@ -95,7 +95,7 @@ class BaseParticle(pybamm.BaseSubModel):
             f"Average {domain} {phase_name}particle concentration": c_s_av,
             f"Average {domain} {phase_name}particle concentration [mol.m-3]": c_s_av
             * c_scale,
-            f"{Domain} {phase_name}particle " "surface concentration": c_s_surf,
+            f"{Domain} {phase_name}particle surface concentration": c_s_surf,
             f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_scale
             * c_s_surf,
             f"X-averaged {domain} {phase_name}particle "
@@ -224,34 +224,33 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             f"{Domain} {phase_name}particle sizes": R,
             f"{Domain} {phase_name}particle sizes [m]": R * R_typ,
-            f"{Domain} area-weighted {phase_name}particle-size"
-            + " distribution": f_a_dist,
+            f"{Domain} area-weighted {phase_name}particle-size distribution": f_a_dist,
             f"{Domain} area-weighted {phase_name}particle-size"
             " distribution [m-1]": f_a_dist / R_typ,
             f"{Domain} volume-weighted {phase_name}particle-size"
-            + " distribution": f_v_dist,
+            " distribution": f_v_dist,
             f"{Domain} volume-weighted {phase_name}particle-size"
             " distribution [m-1]": f_v_dist / R_typ,
             f"{Domain} number-based {phase_name}particle-size"
-            + " distribution": f_num_dist,
+            " distribution": f_num_dist,
             f"{Domain} number-based {phase_name}particle-size"
             " distribution [m-1]": f_num_dist / R_typ,
-            f"{Domain} area-weighted" + " mean particle radius": R_a_mean,
-            f"{Domain} area-weighted" + " mean particle radius [m]": R_a_mean * R_typ,
-            f"{Domain} volume-weighted" + " mean particle radius": R_v_mean,
-            f"{Domain} volume-weighted" + " mean particle radius [m]": R_v_mean * R_typ,
-            f"{Domain} number-based" + " mean particle radius": R_num_mean,
-            f"{Domain} number-based" + " mean particle radius [m]": R_num_mean * R_typ,
+            f"{Domain} area-weighted mean particle radius": R_a_mean,
+            f"{Domain} area-weighted mean particle radius [m]": R_a_mean * R_typ,
+            f"{Domain} volume-weighted mean particle radius": R_v_mean,
+            f"{Domain} volume-weighted mean particle radius [m]": R_v_mean * R_typ,
+            f"{Domain} number-based mean particle radius": R_num_mean,
+            f"{Domain} number-based mean particle radius [m]": R_num_mean * R_typ,
             f"{Domain} area-weighted {phase_name}particle-size"
-            + " standard deviation": sd_a,
+            " standard deviation": sd_a,
             f"{Domain} area-weighted {phase_name}particle-size"
             " standard deviation [m]": sd_a * R_typ,
             f"{Domain} volume-weighted {phase_name}particle-size"
-            + " standard deviation": sd_v,
+            " standard deviation": sd_v,
             f"{Domain} volume-weighted {phase_name}particle-size"
             " standard deviation [m]": sd_v * R_typ,
             f"{Domain} number-based {phase_name}particle-size"
-            + " standard deviation": sd_num,
+            " standard deviation": sd_num,
             f"{Domain} number-based {phase_name}particle-size"
             " standard deviation [m]": sd_num * R_typ,
             # X-averaged distributions
