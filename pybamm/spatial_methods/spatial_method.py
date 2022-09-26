@@ -61,7 +61,7 @@ class SpatialMethod:
         edges).
 
         Parameters
-        -----------
+        ----------
         symbol : :class:`pybamm.SpatialVariable`
             The spatial variable to be discretised.
 
@@ -341,7 +341,7 @@ class SpatialMethod:
         'discretised_child'.
 
         Parameters
-        -----------
+        ----------
         symbol: :class:`pybamm.Symbol`
             The boundary value or flux symbol
         discretised_child : :class:`pybamm.StateVector`

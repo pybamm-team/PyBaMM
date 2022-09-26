@@ -107,18 +107,22 @@ class BasicFull(BaseModel):
         )
 
         # Interfacial reactions
-        j0_n = param.n.j0(c_e_n, T)
+        j0_n = param.n.prim.j0(c_e_n, T)
         j_n = (
             2
             * j0_n
-            * pybamm.sinh(param.n.ne / 2 * (phi_s_n - phi_e_n - param.n.U(c_e_n, T)))
+            * pybamm.sinh(
+                param.n.prim.ne / 2 * (phi_s_n - phi_e_n - param.n.prim.U(c_e_n, T))
+            )
         )
-        j0_p = param.p.j0(c_e_p, T)
+        j0_p = param.p.prim.j0(c_e_p, T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
             * j0_p
-            * pybamm.sinh(param.p.ne / 2 * (phi_s_p - phi_e_p - param.p.U(c_e_p, T)))
+            * pybamm.sinh(
+                param.p.prim.ne / 2 * (phi_s_p - phi_e_p - param.p.prim.U(c_e_p, T))
+            )
         )
         j = pybamm.concatenation(j_n, j_s, j_p)
 
@@ -184,7 +188,7 @@ class BasicFull(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.n.U_init
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # Current in the solid
@@ -227,13 +231,13 @@ class BasicFull(BaseModel):
                     "Zero negative electrode porosity cut-off", pybamm.min(eps_n)
                 ),
                 pybamm.Event(
-                    "Max negative electrode porosity cut-off", pybamm.max(eps_n) - 1
+                    "Max negative electrode porosity cut-off", 1 - pybamm.max(eps_n)
                 ),
                 pybamm.Event(
                     "Zero positive electrode porosity cut-off", pybamm.min(eps_p)
                 ),
                 pybamm.Event(
-                    "Max positive electrode porosity cut-off", pybamm.max(eps_p) - 1
+                    "Max positive electrode porosity cut-off", 1 - pybamm.max(eps_p)
                 ),
             ]
         )
@@ -247,9 +251,9 @@ class BasicFull(BaseModel):
             + param.C_e * c_e * v
         )
         s = pybamm.concatenation(
-            pybamm.PrimaryBroadcast(param.n.s_plus_S, "negative electrode"),
+            pybamm.PrimaryBroadcast(param.n.prim.s_plus_S, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
-            pybamm.PrimaryBroadcast(param.p.s_plus_S, "positive electrode"),
+            pybamm.PrimaryBroadcast(param.p.prim.s_plus_S, "positive electrode"),
         )
         self.rhs[c_e] = (1 / eps) * (
             -pybamm.div(N_e) / param.C_e
@@ -290,6 +294,6 @@ class BasicFull(BaseModel):
         self.events.extend(
             [
                 pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-                pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+                pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
             ]
         )

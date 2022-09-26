@@ -23,22 +23,24 @@ class ForwardTafel(BaseKinetics):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options)
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        alpha = self.domain_param.alpha_bv
+        alpha = self.phase_param.alpha_bv
         return (
             u * j0 * pybamm.exp((ne * alpha / (2 * (1 + self.param.Theta * T))) * eta_r)
         )
 
     def _get_dj_dc(self, variables):
         """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"""
-        alpha = self.domain_param.alpha_bv
+        alpha = self.phase_param.alpha_bv
         (
             c_e,
             delta_phi,
@@ -55,7 +57,7 @@ class ForwardTafel(BaseKinetics):
 
     def _get_dj_ddeltaphi(self, variables):
         """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"""
-        alpha = self.domain_param.alpha_bv
+        alpha = self.phase_param.alpha_bv
         _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
             variables
         )

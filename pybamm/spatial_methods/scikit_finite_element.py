@@ -43,7 +43,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         the FiniteElement method.
 
         Parameters
-        -----------
+        ----------
         symbol : :class:`pybamm.SpatialVariable`
             The spatial variable to be discretised.
 
@@ -128,7 +128,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         grad_y, grad_z = grad.orphans
-        return grad_y ** 2 + grad_z ** 2
+        return grad_y**2 + grad_z**2
 
     def gradient_matrix(self, symbol, boundary_conditions):
         """

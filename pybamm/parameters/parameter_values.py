@@ -179,12 +179,9 @@ class ParameterValues:
         ]
 
         # add SEI parameters if provided
-        if "sei" in chemistry:
-            component_groups += ["sei"]
-
-        # add lithium plating parameters if provided
-        if "lithium plating" in chemistry:
-            component_groups += ["lithium plating"]
+        for extra_group in ["sei", "lithium plating"]:
+            if extra_group in chemistry:
+                component_groups = [extra_group] + component_groups
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -203,7 +200,11 @@ class ParameterValues:
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
             )
-            component_params = self.read_parameters_csv(file_path)
+            component_params_tmp = self.read_parameters_csv(file_path)
+
+            component_params = {}
+            for k, v in component_params_tmp.items():
+                component_params[k] = v
 
             # Update parameters, making sure to check any conflicts
             self.update(
@@ -616,8 +617,14 @@ class ParameterValues:
                     else:
                         input_data = data
 
+                    # For parameters provided as data we use a cubic interpolant
+                    # Note: the cubic interpolant can be differentiated
                     function = pybamm.Interpolant(
-                        input_data[0], input_data[-1], new_children, name=name
+                        input_data[0],
+                        input_data[-1],
+                        new_children,
+                        interpolator="cubic",
+                        name=name,
                     )
                     # Define event to catch extrapolation. In these events the sign is
                     # important: it should be positive inside of the range and negative

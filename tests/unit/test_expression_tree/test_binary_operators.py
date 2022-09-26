@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 import sympy
-from scipy.sparse.coo import coo_matrix
+from scipy.sparse import coo_matrix
 
 import pybamm
 
@@ -22,6 +22,8 @@ class TestBinaryOperators(unittest.TestCase):
         bin2 = pybamm.BinaryOperator("binary test", c, d)
         with self.assertRaises(NotImplementedError):
             bin2.evaluate()
+        with self.assertRaises(NotImplementedError):
+            bin2._binary_jac(a, b)
 
     def test_binary_operator_domains(self):
         # same domain
@@ -303,6 +305,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(equal.evaluate(y=np.array([1])), 1)
         self.assertEqual(equal.evaluate(y=np.array([2])), 0)
         self.assertEqual(str(equal), "1.0 == y[0:1]")
+        self.assertEqual(equal.diff(b), 0)
 
     def test_sigmoid(self):
         a = pybamm.Scalar(1)
@@ -360,7 +363,12 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
         self.assertEqual(
-            str(maximum), "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"
+            str(maximum)[:15],
+            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"[:15],
+        )
+        self.assertEqual(
+            str(maximum)[-33:],
+            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"[-33:],
         )
 
         # Test that smooth min/max are used when the setting is changed
