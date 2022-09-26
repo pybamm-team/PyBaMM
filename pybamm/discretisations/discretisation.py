@@ -6,6 +6,9 @@ import numpy as np
 from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
+import copy
+
+from pybamm.util import is_constant_and_can_evaluate
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -149,6 +152,42 @@ class Discretisation(object):
         # Prepare discretisation
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        rhs_variables = list(model.rhs.keys())
+        algebraic_variables = list(model.algebraic.keys())
+        variables = rhs_variables+algebraic_variables
+
+
+        # Search Equations for Constants. Figure out what to do with them later.
+        for var in rhs_variables:
+            if is_constant_and_can_evaluate(model.rhs[var]):
+                print("WARNING: {} is constant".format(var))
+        for var in algebraic_variables:
+            if is_constant_and_can_evaluate(model.algebraic[var]):
+                print("WARNING: {} is constant".format(var))
+
+        
+        # Search Equations for Independence
+        variable_dependencies = []
+        for var in variables:
+            this_var_list = []
+            for child in var.children:
+                for tree in rhs_variables:
+                    pybamm.tree_search(model.rhs[tree],child,this_var_list)
+                for tree in algebraic_variables:
+                    pybamm.tree_search(model.algebraic[tree],child,this_var_list)
+            for tree in rhs_variables:
+                pybamm.tree_search(model.rhs[tree],var,this_var_list)
+            for tree in algebraic_variables:
+                pybamm.tree_search(model.algebraic[tree],var,this_var_list)
+            this_var_is_independent = not any(this_var_list)
+            if this_var_is_independent:
+                print("WARNING: {} is independent".format(var))
+            
+
+            
+
+
+        # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
             for var in variables:
                 if var.domain != []:
