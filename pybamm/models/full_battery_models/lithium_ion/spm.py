@@ -142,7 +142,12 @@ class SPM(BaseModel):
                 f"{domain} electrode potential"
             ] = pybamm.electrode.ohm.LeadingOrder(self.param, domain, self.options)
 
-    def set_electrolyte_submodel(self):
+    def set_electrolyte_concentration_submodel(self):
+        self.submodels[
+            "electrolyte diffusion"
+        ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)
+
+    def set_electrolyte_potential_submodel(self):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
@@ -175,7 +180,3 @@ class SPM(BaseModel):
             self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, options=self.options
             )
-
-        self.submodels[
-            "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)

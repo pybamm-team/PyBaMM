@@ -60,7 +60,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_intercalation_kinetics_submodel()
         self.set_particle_submodel()
         self.set_solid_submodel()
-        self.set_electrolyte_submodel()
+        self.set_electrolyte_concentration_submodel()
+        self.set_electrolyte_potential_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 

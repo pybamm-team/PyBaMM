@@ -82,8 +82,12 @@ class SPMe(SPM):
                 self.param, domain, self.options
             )
 
-    def set_electrolyte_submodel(self):
+    def set_electrolyte_concentration_submodel(self):
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
+            self.param, self.options
+        )
 
+    def set_electrolyte_potential_submodel(self):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if (
@@ -114,7 +118,3 @@ class SPMe(SPM):
                 self.submodels[f"{domain} surface potential difference"] = surf_model(
                     self.param, domain, self.options
                 )
-
-        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.options
-        )

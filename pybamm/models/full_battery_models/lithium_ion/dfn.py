@@ -77,41 +77,43 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "porous":
-                particle = getattr(self.options, domain)["particle"]
-                for phase in self.options.phases[domain]:
-                    if particle == "Fickian diffusion":
-                        submod = pybamm.particle.FickianDiffusion(
-                            self.param,
-                            domain,
-                            self.options,
-                            phase=phase,
-                            x_average=False,
-                        )
-                    elif particle in [
-                        "uniform profile",
-                        "quadratic profile",
-                        "quartic profile",
-                    ]:
-                        submod = pybamm.particle.PolynomialProfile(
-                            self.param, domain, self.options, phase=phase
-                        )
-                    self.submodels[f"{domain} {phase} particle"] = submod
+            if self.options.electrode_types[domain] == "planar":
+                continue
+            particle = getattr(self.options, domain)["particle"]
+            for phase in self.options.phases[domain]:
+                if particle == "Fickian diffusion":
+                    submod = pybamm.particle.FickianDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=False
+                    )
+                elif particle in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    submod = pybamm.particle.PolynomialProfile(
+                        self.param, domain, self.options, phase=phase
+                    )
+                self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "porous":
-                self.submodels[
-                    f"{domain} electrode potential"
-                ] = pybamm.electrode.ohm.Full(self.param, domain, self.options)
+            if self.options.electrode_types[domain] == "planar":
+                continue
+            if self.options["surface form"] == "false":
+                submodel = pybamm.electrode.ohm.Full
+            else:
+                submodel = pybamm.electrode.ohm.SurfaceForm
+            self.submodels[f"{domain} electrode potential"] = submodel(
+                self.param, domain, self.options
+            )
 
-    def set_electrolyte_submodel(self):
-
-        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
-
+    def set_electrolyte_concentration_submodel(self):
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.options
         )
+
+    def set_electrolyte_potential_submodel(self):
+        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if self.options["electrolyte conductivity"] not in ["default", "full"]:
             raise pybamm.OptionError(
@@ -124,6 +126,7 @@ class DFN(BaseModel):
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.Full(self.param, self.options)
+
         if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
