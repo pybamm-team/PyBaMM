@@ -67,6 +67,7 @@ class Discretisation(object):
         self.y_slices = {}
         self._discretised_symbols = {}
         self.external_variables = {}
+        self.rhs_explicit_integration = {}
 
     @property
     def mesh(self):
@@ -186,6 +187,7 @@ class Discretisation(object):
             if this_var_is_independent:
                 pybamm.logger.info("removing variable {} from rhs".format(var))
                 model.rhs_explicit_integration[var] = model.rhs[var]
+                self.rhs_explicit_integration[var] = model.rhs[var]
                 del model.rhs[var]
                 del model.initial_conditions[var]
         
@@ -1031,7 +1033,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
-            if any(symbol == var for var in self.external_variables.values()):
+            if (any(symbol == var for var in self.external_variables.values())):
                 # Look up dictionary key based on value
                 idx = list(self.external_variables.values()).index(symbol)
                 name, parent_and_slice = list(self.external_variables.keys())[idx]
@@ -1055,6 +1057,8 @@ class Discretisation(object):
                     out = pybamm.Index(ext, slice(start, end))
                     out.copy_domains(symbol)
                     return out
+            elif  any(symbol == var for var in self.rhs_explicit_integration.keys()):
+                raise NotImplementedError("Explicit integration not implemented")
 
             else:
                 # add a try except block for a more informative error if a variable

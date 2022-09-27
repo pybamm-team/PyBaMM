@@ -436,6 +436,7 @@ class BaseModel:
         new_model._events = self.events.copy()
         new_model.external_variables = self.external_variables.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
+        new_model._rhs_explicit_integration = self._rhs_explicit_integration.copy()
         return new_model
 
     def update(self, *submodels):
