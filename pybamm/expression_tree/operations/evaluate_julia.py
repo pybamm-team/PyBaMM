@@ -381,12 +381,11 @@ class JuliaConverter(object):
     #Cache and Const Creation
     def create_cache(self,symbol):
         my_id = symbol.output
+        cache_shape = self._intermediate[my_id].shape
+        cache_id = self._cache_id
+        self._cache_id += 1
+        cache_name = "cache_{}".format(cache_id)
         if self._preallocate:
-            cache_shape = self._intermediate[my_id].shape
-            cache_id = self._cache_id
-            self._cache_id += 1
-            cache_name = "cache_{}".format(cache_id)
-
             if self._cache_type=="standard":
                 if cache_shape[1] == 1:
                     cache_shape_st = "({})".format(cache_shape[0])
@@ -422,7 +421,7 @@ class JuliaConverter(object):
             return self._cache_dict[my_id]
         else:
             self._cache_dict[symbol.output] = cache_name
-            return self._cache_dict
+            return self._cache_dict[symbol.output]
 
     
 

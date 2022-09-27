@@ -11,14 +11,11 @@ from platform import system
 
 have_julia = pybamm.have_julia()
 if have_julia and system() != "Windows":
-    from julia.api import Julia
 
-    Julia(compiled_modules=False)
-    from julia import Main
-    from julia.core import JuliaError
+    from juliacall import Main
 
     # load julia libraries required for evaluating the strings
-    Main.eval("using SparseArrays, LinearAlgebra")
+    Main.seval("using SparseArrays, LinearAlgebra")
 
 
 @unittest.skipIf(not have_julia, "Julia not installed")
@@ -32,39 +29,29 @@ class TestEvaluate(unittest.TestCase):
         if not isinstance(t_tests, list):
             t_tests = [t_tests]
         if inputs is None:
-            input_parameter_order = None
+            input_parameter_order = []
             p = 0.0
         else:
             input_parameter_order = list(inputs.keys())
             p = list(inputs.values())
 
         pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs)
-        for preallocate in [True, False]:
-            kwargs["funcname"] = (
-                kwargs.get("funcname", "f") + "_" + str(int(preallocate))
-            )
-            funcname = kwargs["funcname"]
-            myconverter = pybamm.JuliaConverter()
+        for preallocate in [True,False]:
+            myconverter = pybamm.JuliaConverter(preallocate=preallocate,input_parameter_order=input_parameter_order)
             myconverter.convert_tree_to_intermediate(expr)
-            evaluator_str = myconverter.build_julia_code(funcname=funcname)
-            Main.eval(evaluator_str)
-            funcname = kwargs.get("funcname", "f")
-            Main.p = p
+            evaluator_str = myconverter.build_julia_code(funcname="f")
+            Main.seval(evaluator_str)
+            p = p
             for t_test, y_test in zip(t_tests, y_tests):
-                Main.dy = np.zeros_like(pybamm_eval)
-                Main.y = y_test
-                Main.t = t_test
-                try:
-                    Main.eval(f"{funcname}(dy,y,p,t)")
-                except JuliaError as e:
-                    # debugging
-                    #print(Main.dy, y_test, p, t_test)
-                    #print(evaluator_str)
-                    raise e
+                dy = np.zeros_like(pybamm_eval)
+                y = y_test
+                t = t_test
+                Main.f(dy, y, t, p)
+
                 pybamm_eval = expr.evaluate(t=t_test, y=y_test, inputs=inputs).flatten()
                 try:
                     np.testing.assert_array_almost_equal(
-                        Main.dy.flatten(),
+                        dy.flatten(),
                         pybamm_eval,
                         decimal=decimal,
                     )
