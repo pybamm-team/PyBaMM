@@ -1,6 +1,7 @@
 #
 # Class for reaction driven porosity changes as a multiple of SEI/plating thicknesses
 #
+import pybamm
 from .base_porosity import BaseModel
 
 
@@ -61,3 +62,21 @@ class ReactionDriven(BaseModel):
         variables = self._get_standard_porosity_variables(eps_dict)
 
         return variables
+
+    def set_events(self, variables):
+        if "negative electrode" in self.options.whole_cell_domains:
+            eps_n = variables["Negative electrode porosity"]
+            self.events.append(
+                pybamm.Event(
+                    "Zero negative electrode porosity cut-off",
+                    pybamm.min(eps_n),
+                    pybamm.EventType.TERMINATION,
+                )
+            )
+            self.events.append(
+                pybamm.Event(
+                    "Max negative electrode porosity cut-off",
+                    1 - pybamm.max(eps_n),
+                    pybamm.EventType.TERMINATION,
+                )
+            )

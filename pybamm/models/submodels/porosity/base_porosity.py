@@ -67,23 +67,3 @@ class BaseModel(pybamm.BaseSubModel):
                 )
 
         return variables
-
-    def set_events(self, variables):
-        for domain in self.options.whole_cell_domains:
-            Domain = domain.capitalize()
-            eps_k = variables[f"{Domain} porosity"]
-            if not eps_k.is_constant():
-                self.events.append(
-                    pybamm.Event(
-                        f"Zero {domain} porosity cut-off",
-                        pybamm.min(eps_k),
-                        pybamm.EventType.TERMINATION,
-                    )
-                )
-                self.events.append(
-                    pybamm.Event(
-                        f"Max {domain} porosity cut-off",
-                        1 - pybamm.max(eps_k),
-                        pybamm.EventType.TERMINATION,
-                    )
-                )

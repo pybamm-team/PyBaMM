@@ -91,3 +91,24 @@ class ReactionDrivenODE(BaseModel):
         else:
             eps = variables["Porosity"]
             self.initial_conditions = {eps: self.param.epsilon_init}
+
+    def set_events(self, variables):
+        for domain in self.options.whole_cell_domains:
+            if domain == "separator":
+                continue
+            Domain = domain.capitalize()
+            eps_k = variables[f"{Domain} porosity"]
+            self.events.append(
+                pybamm.Event(
+                    f"Zero {domain} porosity cut-off",
+                    pybamm.min(eps_k),
+                    pybamm.EventType.TERMINATION,
+                )
+            )
+            self.events.append(
+                pybamm.Event(
+                    f"Max {domain} porosity cut-off",
+                    1 - pybamm.max(eps_k),
+                    pybamm.EventType.TERMINATION,
+                )
+            )
