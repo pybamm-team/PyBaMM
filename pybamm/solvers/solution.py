@@ -9,6 +9,7 @@ import pickle
 import pybamm
 import pandas as pd
 from scipy.io import savemat
+import copy
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -482,6 +483,27 @@ class Solution(object):
             ):
                 if key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
+                elif isinstance(var_pybamm,pybamm.ExplicitTimeIntegral):
+                    t_MX = casadi.MX.sym("t")
+                    y_MX = casadi.MX.sym("y", ys.shape[0])
+                    inputs_MX_dict = {
+                        key: casadi.MX.sym(key, value.shape[0], value.shape[1])
+                        for key, value in inputs.items()
+                    }
+                    inputs_MX = casadi.vertcat(*inputs_MX_dict.values())
+                    
+                    pybamm_var = 0
+                    for i in range(len(self.all_ts)):
+                        if i != 0:
+                            pybamm_var += vars_pybamm[i].child*(pybamm.minimum(pybamm.t,self.all_ts[i][-1])-self.all_ts[i-1][-1])*self.all_models[i].timescale*(1-(pybamm.t<=self.all_ts[i-1][-1]))
+                        else:
+                            pybamm_var += vars_pybamm[i].child*(pybamm.minimum(pybamm.t,self.all_ts[i][-1]))*self.all_models[i].timescale
+                        
+                    var_sym = pybamm_var.to_casadi(t_MX, y_MX, inputs_MX_dict)
+                    var_casadi = casadi.Function(
+                        "variable", [t_MX, y_MX, inputs_MX], [var_sym]
+                    )
+                    model._variables_casadi[key] = var_casadi
                 else:
                     t_MX = casadi.MX.sym("t")
                     y_MX = casadi.MX.sym("y", ys.shape[0])
