@@ -6,9 +6,7 @@
     {
       "name": "sundials",
       "default-features": false,
-      "features": [
-        "klu"
-      ]
+      "features": ["klu"]
     }
   ]
 }

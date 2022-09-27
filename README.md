@@ -1,6 +1,7 @@
 ![PyBaMM_logo](https://user-images.githubusercontent.com/20817509/107091287-8ad46a80-67cf-11eb-86f5-7ebef7c72a1e.png)
 
 #
+
 <div align="center">
 
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
@@ -10,8 +11,11 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5334/jors.309.svg)](https://doi.org/10.5334/jors.309)
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+
 [![All Contributors](https://img.shields.io/badge/all_contributors-45-orange.svg)](#-contributors)
+
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -23,6 +27,7 @@ PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemi
 ## 💻 Using PyBaMM
 
 The easiest way to use PyBaMM is to run a 1C constant-current discharge with a model of your choice with all the default settings:
+
 ```python3
 import pybamm
 model = pybamm.lithium_ion.DFN()  # Doyle-Fuller-Newman model
@@ -30,7 +35,9 @@ sim = pybamm.Simulation(model)
 sim.solve([0, 3600])  # solve for 1 hour
 sim.plot()
 ```
+
 or simulate an experiment such as CCCV:
+
 ```python3
 import pybamm
 experiment = pybamm.Experiment(
@@ -48,7 +55,8 @@ sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver
 sim.solve()
 sim.plot()
 ```
-However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type,  number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/models/DFN.ipynb)).
+
+However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type, number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/models/DFN.ipynb)).
 
 For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Getting%20Started) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop).
 
@@ -69,6 +77,7 @@ We strongly recommend to install PyBaMM within a python virtual environment, in 
 For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#user-install).
 
 ### Using pip
+
 [![pypi](https://img.shields.io/pypi/v/pybamm?color=blue)](https://pypi.org/project/pybamm/)
 [![downloads](https://img.shields.io/pypi/dm/pybamm?color=blue)](https://pypi.org/project/pybamm/)
 
@@ -77,6 +86,7 @@ pip install pybamm
 ```
 
 ### Using conda
+
 PyBaMM is available as a conda package through the conda-forge channel.
 
 [![conda_forge](https://img.shields.io/conda/vn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
@@ -87,7 +97,9 @@ conda install -c conda-forge pybamm
 ```
 
 ### Optional solvers
+
 Following GNU/Linux and macOS solvers are optionally available:
+
 - [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-scikits-odes-solver).
 - [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver).
 

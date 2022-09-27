@@ -1,5 +1,5 @@
 name: Alert validation repository
-on: 
+on:
   release:
     types:
       - published
@@ -12,13 +12,13 @@ jobs:
     name: Dispatch to `pybamm-validation`
     runs-on: ubuntu-latest
     steps:
-        - uses: mvasigh/dispatch-action@main
-          with:
-            token: ${{ secrets.BENCHMARKS_ACCESS_TOKEN }}
-            repo: pybamm-validation
-            owner: pybamm-team
-            event_type: ${{ github.event_name }}
-            message: |
-              {
-                "commit_hash": "$GITHUB_SHA"
-              }
+      - uses: mvasigh/dispatch-action@main
+        with:
+          token: ${{ secrets.BENCHMARKS_ACCESS_TOKEN }}
+          repo: pybamm-validation
+          owner: pybamm-team
+          event_type: ${{ github.event_name }}
+          message: |
+            {
+              "commit_hash": "$GITHUB_SHA"
+            }

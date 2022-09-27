@@ -51,7 +51,7 @@ class TestSimulation(unittest.TestCase):
         for key in sim.spatial_methods.keys():
             self.assertEqual(
                 sim.spatial_methods[key].__class__,
-                model.default_spatial_methods[key].__class__
+                model.default_spatial_methods[key].__class__,
             )
 
         sim.build()

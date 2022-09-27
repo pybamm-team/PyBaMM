@@ -69,8 +69,7 @@ jobs:
           git commit -am "Add new results"
           git push
       - name: Publish results
-        run:
-          |
-            asv publish
-            git fetch origin gh-pages:gh-pages
-            asv gh-pages
+        run: |
+          asv publish
+          git fetch origin gh-pages:gh-pages
+          asv gh-pages

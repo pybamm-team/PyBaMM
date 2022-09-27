@@ -68,8 +68,8 @@ class GeometricParameters(BaseParameters):
         self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
         self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z
-        self.a_cooling = self.A_cooling / (self.L_z ** 2)
-        self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
+        self.a_cooling = self.A_cooling / (self.L_z**2)
+        self.v_cell = self.V_cell / (self.L_x * self.L_z**2)
 
         self.l = self.L / self.L_x
         self.delta = self.L_x / self.L_z  # Pouch cell aspect ratio

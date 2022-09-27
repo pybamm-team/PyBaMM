@@ -28,7 +28,7 @@ class TestCopy(unittest.TestCase):
             a - b,
             a * b,
             a / b,
-            a ** b,
+            a**b,
             -a,
             abs(a),
             pybamm.Function(np.sin, a),

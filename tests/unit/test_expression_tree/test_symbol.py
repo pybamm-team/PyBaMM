@@ -130,7 +130,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a * b, pybamm.Multiplication)
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
-        self.assertIsInstance(a ** b, pybamm.Power)
+        self.assertIsInstance(a**b, pybamm.Power)
         self.assertIsInstance(a < b, _Heaviside)
         self.assertIsInstance(a <= b, _Heaviside)
         self.assertIsInstance(a > b, _Heaviside)
@@ -143,7 +143,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a * 2, pybamm.Multiplication)
         self.assertIsInstance(a @ 2, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / 2, pybamm.Division)
-        self.assertIsInstance(a ** 2, pybamm.Power)
+        self.assertIsInstance(a**2, pybamm.Power)
 
         # binary - number and symbol
         self.assertIsInstance(3 + b, pybamm.Addition)
@@ -156,8 +156,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((3 @ b).children[1], b)
         self.assertIsInstance(3 / b, pybamm.Division)
         self.assertEqual((3 / b).children[1], b)
-        self.assertIsInstance(3 ** b, pybamm.Power)
-        self.assertEqual((3 ** b).children[1], b)
+        self.assertIsInstance(3**b, pybamm.Power)
+        self.assertEqual((3**b).children[1], b)
 
         # error raising
         with self.assertRaisesRegex(

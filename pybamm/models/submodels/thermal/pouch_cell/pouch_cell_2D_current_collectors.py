@@ -70,7 +70,7 @@ class CurrentCollector2D(BaseThermal):
             -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
-            / (self.param.delta ** 2)
+            / (self.param.delta**2)
         )
 
         edge_cooling_coefficient = self.param.h_edge / self.param.delta

@@ -715,8 +715,7 @@ class EvaluatorJaxSensitivities:
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
         result = {
-            key: value.reshape(value.shape[0], -1)
-            for key, value in result.items()
+            key: value.reshape(value.shape[0], -1) for key, value in result.items()
         }
 
         return result

@@ -71,7 +71,7 @@ class CurrentCollector1D(BaseThermal):
             -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
-            / (self.param.delta ** 2)
+            / (self.param.delta**2)
         )
 
         side_edge_area = 2 * self.param.l_z * self.param.l

@@ -33,14 +33,14 @@ def lico2_ocp_Ai2020_function(sto):
     p9 = -42146.98
     p10 = 3035.67
     u_eq = (
-        p1 * sto ** 9
-        + p2 * sto ** 8
-        + p3 * sto ** 7
-        + p4 * sto ** 6
-        + p5 * sto ** 5
-        + p6 * sto ** 4
-        + p7 * sto ** 3
-        + p8 * sto ** 2
+        p1 * sto**9
+        + p2 * sto**8
+        + p3 * sto**7
+        + p4 * sto**6
+        + p5 * sto**5
+        + p6 * sto**4
+        + p7 * sto**3
+        + p8 * sto**2
         + p9 * sto
         + p10
     )
