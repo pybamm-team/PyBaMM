@@ -101,6 +101,8 @@ class BaseModel:
         self._algebraic = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
+        self._rhs_explicit_integration = {}
+        self._explicit_algebraic = {}
         self._variables = pybamm.FuzzyDict({})
         self._events = []
         self._concatenated_rhs = None
@@ -135,6 +137,15 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
+    
+    @property
+    def rhs_explicit_integration(self):
+        return self._rhs_explicit_integration
+    
+    @rhs_explicit_integration.setter
+    def rhs_explicit_integration(self, rhs_explicit_integration):
+        self._rhs_explicit_integration = EquationDict("rhs_explicit", rhs_explicit_integration)
+
 
     @property
     def rhs(self):

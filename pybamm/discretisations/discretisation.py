@@ -151,24 +151,27 @@ class Discretisation(object):
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
-        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+
         rhs_variables = list(model.rhs.keys())
-        algebraic_variables = list(model.algebraic.keys())
-        variables = rhs_variables+algebraic_variables
-
-
-        # Search Equations for Constants. Figure out what to do with them later.
-        for var in rhs_variables:
-            if is_constant_and_can_evaluate(model.rhs[var]):
-                print("WARNING: {} is constant".format(var))
-        for var in algebraic_variables:
-            if is_constant_and_can_evaluate(model.algebraic[var]):
-                print("WARNING: {} is constant".format(var))
+        # Search Equations for Constants. Turn them into algebraic equations.
+        #do this later
+        #for var in rhs_variables:
+        #    if is_constant_and_can_evaluate(model.rhs[var]):
+        #        #model.algebraic[var] = model.initial_conditions[var] +  (model.rhs[var] * (pybamm.t))
+        #        del model._rhs[var] 
+        #        del model._initial_conditions[var]
+        #        print("WARNING: {} is constant and will be treated as an algebraic variable with the solution given by {}.".format(var,"fuck me"))
 
         
         # Search Equations for Independence
+        pybamm.logger.info("Removing independent blocks.")
+        rhs_variables = list(model.rhs.keys())
+        algebraic_variables = list(model.algebraic.keys())
+        variables = rhs_variables+algebraic_variables
         variable_dependencies = []
-        for var in variables:
+        for var in rhs_variables:
+            rhs_variables = list(model.rhs.keys())
+            algebraic_variables = list(model.algebraic.keys())
             this_var_list = []
             for child in var.children:
                 for tree in rhs_variables:
@@ -181,7 +184,14 @@ class Discretisation(object):
                 pybamm.tree_search(model.algebraic[tree],var,this_var_list)
             this_var_is_independent = not any(this_var_list)
             if this_var_is_independent:
-                print("WARNING: {} is independent".format(var))
+                pybamm.logger.info("removing variable {} from rhs".format(var))
+                model.rhs_explicit_integration[var] = model.rhs[var]
+                del model.rhs[var]
+                del model.initial_conditions[var]
+        
+        rhs_variables = list(model.rhs.keys())
+        algebraic_variables = list(model.algebraic.keys())
+        variables = rhs_variables+algebraic_variables
             
 
             
@@ -886,6 +896,7 @@ class Discretisation(object):
                     self.bcs[key_id] = self.check_tab_conditions(
                         symbol, self.bcs[key_id]
                     )
+        print(isinstance(symbol,pybamm.Variable))
 
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
