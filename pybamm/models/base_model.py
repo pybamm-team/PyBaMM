@@ -135,15 +135,6 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
-    
-    @property
-    def rhs_explicit_integration(self):
-        return self._rhs_explicit_integration
-    
-    @rhs_explicit_integration.setter
-    def rhs_explicit_integration(self, rhs_explicit_integration):
-        self._rhs_explicit_integration = EquationDict("rhs_explicit", rhs_explicit_integration)
-
 
     @property
     def rhs(self):
@@ -434,7 +425,6 @@ class BaseModel:
         new_model._events = self.events.copy()
         new_model.external_variables = self.external_variables.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
-        new_model._rhs_explicit_integration = self._rhs_explicit_integration.copy()
         return new_model
 
     def update(self, *submodels):

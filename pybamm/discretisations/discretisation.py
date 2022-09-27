@@ -6,7 +6,6 @@ import numpy as np
 from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
-import copy
 
 from pybamm.util import is_constant_and_can_evaluate
 
@@ -67,7 +66,6 @@ class Discretisation(object):
         self.y_slices = {}
         self._discretised_symbols = {}
         self.external_variables = {}
-        self.rhs_explicit_integration = {}
 
     @property
     def mesh(self):
@@ -153,20 +151,11 @@ class Discretisation(object):
         # Prepare discretisation
         # set variables (we require the full variable not just id)
 
-        rhs_variables = list(model.rhs.keys())
-        # Search Equations for Constants. Turn them into algebraic equations.
-        #for var in rhs_variables:
-        #    if is_constant_and_can_evaluate(model.rhs[var]):
-        #        model.algebraic[var] = model.initial_conditions[var] +  (model.rhs[var] * (pybamm.t-pybamm.InputParameter("t0")))
-        #        del model._rhs[var] 
-        #        del model._initial_conditions[var]
-        
         # Search Equations for Independence
         pybamm.logger.info("Removing independent blocks.")
         rhs_variables = list(model.rhs.keys())
         algebraic_variables = list(model.algebraic.keys())
         variables = rhs_variables+algebraic_variables
-        variable_dependencies = []
         for var in rhs_variables:
             rhs_variables = list(model.rhs.keys())
             algebraic_variables = list(model.algebraic.keys())
@@ -204,7 +193,7 @@ class Discretisation(object):
                 pybamm.tree_search(model.algebraic[tree],var,this_var_list)
             this_var_is_independent = not any(this_var_list)
             if this_var_is_independent:
-                pybamm.logger.info("removing variable {} from rhs".format(var))
+                pybamm.logger.info("removing variable {} from algebraic.".format(var))
                 #stick the old algebraic expression into the variables dict to replace the
                 model.variables[var.name] = model.algebraic[var]
                 del model.algebraic[var]
@@ -1051,7 +1040,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
-            if (any(symbol == var for var in self.external_variables.values())):
+            if any(symbol == var for var in self.external_variables.values()):
                 # Look up dictionary key based on value
                 idx = list(self.external_variables.values()).index(symbol)
                 name, parent_and_slice = list(self.external_variables.keys())[idx]
@@ -1075,9 +1064,6 @@ class Discretisation(object):
                     out = pybamm.Index(ext, slice(start, end))
                     out.copy_domains(symbol)
                     return out
-            elif  any(symbol == var for var in self.rhs_explicit_integration.keys()):
-                raise NotImplementedError("Explicit integration not implemented")
-
             else:
                 # add a try except block for a more informative error if a variable
                 # can't be found. This should usually be caught earlier by
