@@ -495,6 +495,8 @@ class Solution(object):
                     pybamm_var = 0
                     for i in range(len(self.all_ts)):
                         if i != 0:
+                            #this assumes that the child IS NOT a function of time.
+                            #to fix this, we could replace any instance of pybamm.t within child with an input parameter for t.
                             pybamm_var += vars_pybamm[i].child*(pybamm.minimum(pybamm.t,self.all_ts[i][-1])-self.all_ts[i-1][-1])*self.all_models[i].timescale*(1-(pybamm.t<=self.all_ts[i-1][-1]))
                         else:
                             pybamm_var += vars_pybamm[i].child*(pybamm.minimum(pybamm.t,self.all_ts[i][-1]))*self.all_models[i].timescale
