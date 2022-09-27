@@ -113,9 +113,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
                 "positive electrode",
             ]:
                 i_e_n, _, i_e_p = i_e.orphans
-            elif self.options.whole_cell_domains == ["negative electrode", "separator"]:
-                i_e_n, _ = i_e.orphans
-                i_e_p = None
             elif self.options.whole_cell_domains == ["separator", "positive electrode"]:
                 _, i_e_p = i_e.orphans
                 i_e_n = None
@@ -218,11 +215,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
-        if delta_phi.domain == []:
-            delta_phi = pybamm.FullBroadcast(
-                delta_phi, f"{domain} electrode", "current collector"
-            )
-        elif delta_phi.domain == ["current collector"]:
+        if delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, f"{domain} electrode")
 
         variables = {

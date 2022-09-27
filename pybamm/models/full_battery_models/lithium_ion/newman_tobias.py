@@ -58,8 +58,6 @@ class NewmanTobias(DFN):
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "planar":
-                continue
             particle = getattr(self.options, domain)["particle"]
             for phase in self.options.phases[domain]:
                 if particle == "Fickian diffusion":

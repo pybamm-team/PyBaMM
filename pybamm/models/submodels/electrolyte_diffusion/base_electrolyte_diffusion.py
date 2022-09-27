@@ -51,9 +51,6 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         if "negative electrode" not in self.options.whole_cell_domains:
             c_e_s = c_e_dict["separator"]
             c_e_dict["negative electrode"] = pybamm.boundary_value(c_e_s, "left")
-        if "positive electrode" not in self.options.whole_cell_domains:
-            c_e_s = c_e_dict["separator"]
-            c_e_dict["positive electrode"] = pybamm.boundary_value(c_e_s, "right")
 
         for domain, c_e_k in c_e_dict.items():
             domain = domain.split()[0]
