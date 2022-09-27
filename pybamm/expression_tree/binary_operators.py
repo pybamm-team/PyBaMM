@@ -169,7 +169,7 @@ class Power(BinaryOperator):
         # derivative if variable is in the exponent (rare, check separately to avoid
         # unecessarily big tree)
         if any(variable == x for x in exponent.pre_order()):
-            diff += (base ** exponent) * pybamm.log(base) * exponent.diff(variable)
+            diff += (base**exponent) * pybamm.log(base) * exponent.diff(variable)
         return diff
 
     def _binary_jac(self, left_jac, right_jac):
@@ -179,7 +179,7 @@ class Power(BinaryOperator):
         if right.evaluates_to_constant_number():
             return (right * left ** (right - 1)) * left_jac
         elif left.evaluates_to_constant_number():
-            return (left ** right * pybamm.log(left)) * right_jac
+            return (left**right * pybamm.log(left)) * right_jac
         else:
             return (left ** (right - 1)) * (
                 right * left_jac + left * pybamm.log(left) * right_jac
@@ -189,7 +189,7 @@ class Power(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
-            return left ** right
+            return left**right
 
 
 class Addition(BinaryOperator):
@@ -348,18 +348,18 @@ class Division(BinaryOperator):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply quotient rule
         top, bottom = self.orphans
-        return (top.diff(variable) * bottom - top * bottom.diff(variable)) / bottom ** 2
+        return (top.diff(variable) * bottom - top * bottom.diff(variable)) / bottom**2
 
     def _binary_jac(self, left_jac, right_jac):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # apply quotient rule
         left, right = self.orphans
         if left.evaluates_to_constant_number():
-            return -left / right ** 2 * right_jac
+            return -left / right**2 * right_jac
         elif right.evaluates_to_constant_number():
             return left_jac / right
         else:
-            return (right * left_jac - left * right_jac) / right ** 2
+            return (right * left_jac - left * right_jac) / right**2
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -765,8 +765,8 @@ def simplified_power(left, right):
         # if (a ** c) is constant or (b ** c) is constant
         if left.left.is_constant() or left.right.is_constant():
             l_left, l_right = left.orphans
-            new_left = l_left ** right
-            new_right = l_right ** right
+            new_left = l_left**right
+            new_right = l_right**right
             if new_left.is_constant() or new_right.is_constant():
                 return new_left * new_right
     elif isinstance(left, Division):
@@ -774,8 +774,8 @@ def simplified_power(left, right):
         # if (a ** c) is constant or (b ** c) is constant
         if left.left.is_constant() or left.right.is_constant():
             l_left, l_right = left.orphans
-            new_left = l_left ** right
-            new_right = l_right ** right
+            new_left = l_left**right
+            new_right = l_right**right
             if new_left.is_constant() or new_right.is_constant():
                 return new_left / new_right
 

@@ -12,7 +12,6 @@ Please add a line in the relevant section of [CHANGELOG.md](https://github.com/p
 - [ ] Optimization (back-end change that speeds up the code)
 - [ ] Bug fix (non-breaking change which fixes an issue)
 
-
 # Key checklist:
 
 - [ ] No style issues: `$ flake8`

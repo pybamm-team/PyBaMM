@@ -60,9 +60,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(
-            method, rtol, atol, root_method, root_tol, extrap_tol
-        )
+        super().__init__(method, rtol, atol, root_method, root_tol, extrap_tol)
         self.name = "Scikits DAE solver ({})".format(method)
 
         self.extra_options = extra_options or {}
@@ -105,16 +103,18 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             mass_matrix = model.mass_matrix.entries
 
         if model.convert_to_format == "casadi":
+
             def eqsres(t, y, ydot, return_residuals):
                 return_residuals[:] = (
                     rhs_algebraic_eval(t, y, inputs).full().flatten()
                     - mass_matrix @ ydot
                 )
+
         else:
+
             def eqsres(t, y, ydot, return_residuals):
                 return_residuals[:] = (
-                    rhs_algebraic_eval(t, y, inputs).flatten()
-                    - mass_matrix @ ydot
+                    rhs_algebraic_eval(t, y, inputs).flatten() - mass_matrix @ ydot
                 )
 
         def rootfn(t, y, ydot, return_root):
@@ -130,10 +130,13 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
+
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y, inputs) - cj * mass_matrix
                     J[:][:] = jac_eval.toarray()
+
             else:
+
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y, inputs) - cj * mass_matrix
                     J[:][:] = jac_eval
