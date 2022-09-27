@@ -141,7 +141,7 @@ class BaseModel(BaseElectrolyteConductivity):
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
     def set_boundary_conditions(self, variables):
-        domain, Domain = self.domain_Domain
+        Domain = self.domain.capitalize()
 
         if self.domain == "separator":
             return None

@@ -35,7 +35,7 @@ class PolynomialProfile(BaseParticle):
 
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
-        self.name = getattr(self.options, domain)["particle"]
+        self.name = getattr(self.options, self.domain)["particle"]
         if self.name == "Fickian diffusion":
             raise ValueError(
                 "Particle type must be 'uniform profile', "
