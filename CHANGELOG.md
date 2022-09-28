@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.9](https://github.com/pybamm-team/PyBaMM/tree/v22.9) - 2022-09-30
+
 ## Features
 
 - Added function `pybamm.get_git_commit_info()`, which returns information about the last git commit, useful for reproducibility ([#2293](https://github.com/pybamm-team/PyBaMM/pull/2293))
