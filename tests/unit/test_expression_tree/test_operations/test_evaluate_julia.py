@@ -37,16 +37,21 @@ class TestEvaluate(unittest.TestCase):
             p = np.array(list(inputs.values()))
 
         pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs)
-        for preallocate in [True,False]:
-            myconverter = pybamm.JuliaConverter(preallocate=preallocate,input_parameter_order=input_parameter_order)
+        for preallocate in [True, False]:
+            myconverter = pybamm.JuliaConverter(
+                preallocate=preallocate, input_parameter_order=input_parameter_order
+            )
             myconverter.convert_tree_to_intermediate(expr)
             evaluator_str = myconverter.build_julia_code(funcname="f")
             try:
                 Main.seval(evaluator_str)
             except JuliaError as e:
-                    text_file = open("julia_evaluator_{}.jl".format(kwargs["funcname"]), "w")
-                    text_file.write(evaluator_str)
-                    text_file.close()
+                #text_file = open(
+                #    "julia_evaluator_{}.jl".format(kwargs["funcname"]), "w"
+                #)
+                #text_file.write(evaluator_str)
+                #text_file.close()
+                raise e
 
             for t_test, y_test in zip(t_tests, y_tests):
                 dy = np.zeros_like(pybamm_eval)
@@ -67,9 +72,11 @@ class TestEvaluate(unittest.TestCase):
                     )
                 except AssertionError as e:
                     # debugging
-                    #print(Main.dy, y_test, p, t_test)
-                    #print(evaluator_str)
-                    text_file = open("julia_evaluator_{}.jl".format(kwargs["funcname"]), "w")
+                    # print(Main.dy, y_test, p, t_test)
+                    # print(evaluator_str)
+                    text_file = open(
+                        "julia_evaluator_{}.jl".format(kwargs["funcname"]), "w"
+                    )
                     text_file.write(evaluator_str)
                     text_file.close()
                     raise e
@@ -109,7 +116,7 @@ class TestEvaluate(unittest.TestCase):
         self.evaluate_and_test_equal(expr, None, funcname="g2")
 
         # test a larger expression
-        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         self.evaluate_and_test_equal(expr, y_tests)
 
         # test something with time
@@ -239,7 +246,7 @@ class TestEvaluate(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*c.domain)
         nodes = combined_submesh.nodes
-        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
         disc.set_variable_slices([c_n, c_s, c_p])
@@ -272,7 +279,7 @@ class TestEvaluate(unittest.TestCase):
         nodes = np.linspace(
             0, 1, combined_submesh.npts * mesh["current collector"].npts
         )
-        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
         disc.set_variable_slices([c_n, c_s, c_p])
@@ -309,7 +316,7 @@ class TestEvaluate(unittest.TestCase):
 
         # test
         nodes = combined_submesh.nodes
-        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
             self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=8)

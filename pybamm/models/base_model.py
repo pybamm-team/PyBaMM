@@ -1139,7 +1139,12 @@ class BaseModel:
 
         if self.algebraic == {}:
             # ODE model: form dy[] = ...
-            converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type,inline=inline,preallocate=preallocate)
+            converter = pybamm.JuliaConverter(
+                input_parameter_order=input_parameter_order,
+                cache_type=cache_type,
+                inline=inline,
+                preallocate=preallocate,
+            )
             converter.convert_tree_to_intermediate(self.concatenated_rhs)
             eqn_str = converter.build_julia_code(funcname=name)
         else:
@@ -1147,9 +1152,20 @@ class BaseModel:
                 len_rhs = None
             else:
                 len_rhs = self.concatenated_rhs.size
-                
-            converter = pybamm.JuliaConverter(dae_type=dae_type,input_parameter_order=input_parameter_order,cache_type=cache_type,inline=inline,preallocate=preallocate)
-            converter.convert_tree_to_intermediate(pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic),len_rhs=len_rhs)
+
+            converter = pybamm.JuliaConverter(
+                dae_type=dae_type,
+                input_parameter_order=input_parameter_order,
+                cache_type=cache_type,
+                inline=inline,
+                preallocate=preallocate,
+            )
+            converter.convert_tree_to_intermediate(
+                pybamm.numpy_concatenation(
+                    self.concatenated_rhs, self.concatenated_algebraic
+                ),
+                len_rhs=len_rhs,
+            )
             eqn_str = converter.build_julia_code(funcname=name)
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
@@ -1161,12 +1177,19 @@ class BaseModel:
 
         if generate_jacobian:
             size_state = self.concatenated_initial_conditions.size
-            state_vector = pybamm.StateVector(slice(0,size_state))
-            expr = pybamm.numpy_concatenation(self.concatenated_rhs,self.concatenated_algebraic).jac(state_vector)
-            jac_converter = pybamm.JuliaConverter(input_parameter_order=input_parameter_order,cache_type=cache_type,inline=inline,preallocate=preallocate)
+            state_vector = pybamm.StateVector(slice(0, size_state))
+            expr = pybamm.numpy_concatenation(
+                self.concatenated_rhs, self.concatenated_algebraic
+            ).jac(state_vector)
+            jac_converter = pybamm.JuliaConverter(
+                input_parameter_order=input_parameter_order,
+                cache_type=cache_type,
+                inline=inline,
+                preallocate=preallocate,
+            )
             jac_converter.convert_tree_to_intermediate(expr)
-            jac_str = jac_converter.build_julia_code(funcname="jac_"+name)
-            return eqn_str,ics,jac_str
+            jac_str = jac_converter.build_julia_code(funcname="jac_" + name)
+            return eqn_str, ics, jac_str
 
         return eqn_str, ics
 
