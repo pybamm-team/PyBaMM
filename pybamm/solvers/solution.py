@@ -486,10 +486,10 @@ class Solution(object):
                     t_MX = casadi.MX.sym("t")
                     y_MX = casadi.MX.sym("y", ys.shape[0])
                     inputs_MX_dict = {
-                        key: casadi.MX.sym(key, value.shape[0], value.shape[1])
+                        key: casadi.MX.sym("input", value.shape[0])
                         for key, value in inputs.items()
                     }
-                    inputs_MX = casadi.vertcat(*inputs_MX_dict.values())
+                    inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
                     pybamm_var = 0
                     for i in range(len(self.all_ts)):
                         if i != 0:
@@ -508,7 +508,7 @@ class Solution(object):
                             ts = self.all_models[i].timescale
                             integrand = vars_pybamm[i].child
                             pybamm_var += integrand * t * ts
-                    var_sym = pybamm_var.to_casadi(t_MX, y_MX, inputs_MX_dict)
+                    var_sym = pybamm_var.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
                     var_casadi = casadi.Function(
                         "variable", [t_MX, y_MX, inputs_MX], [var_sym]
                     )
