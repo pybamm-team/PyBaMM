@@ -957,8 +957,9 @@ class BoundaryValue(BoundaryOperator):
             latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
             return sympy.Symbol(latex_child)
 
+
 class ExplicitTimeIntegral(UnaryOperator):
-    def __init__(self,children):
+    def __init__(self, children):
         super().__init__("explicit time integral", children)
 
 

@@ -7,8 +7,6 @@ from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
 
-from pybamm.util import is_constant_and_can_evaluate
-
 
 def has_bc_of_form(symbol, side, bcs, form):
 
@@ -155,28 +153,30 @@ class Discretisation(object):
         pybamm.logger.info("Removing independent blocks.")
         rhs_variables = list(model.rhs.keys())
         algebraic_variables = list(model.algebraic.keys())
-        variables = rhs_variables+algebraic_variables
+        variables = rhs_variables + algebraic_variables
         for var in rhs_variables:
             rhs_variables = list(model.rhs.keys())
             algebraic_variables = list(model.algebraic.keys())
             this_var_list = []
             for child in var.children:
                 for tree in rhs_variables:
-                    pybamm.tree_search(model.rhs[tree],child,this_var_list)
+                    pybamm.tree_search(model.rhs[tree], child, this_var_list)
                 for tree in algebraic_variables:
-                    pybamm.tree_search(model.algebraic[tree],child,this_var_list)
+                    pybamm.tree_search(model.algebraic[tree], child, this_var_list)
             for tree in rhs_variables:
-                pybamm.tree_search(model.rhs[tree],var,this_var_list)
+                pybamm.tree_search(model.rhs[tree], var, this_var_list)
             for tree in algebraic_variables:
-                pybamm.tree_search(model.algebraic[tree],var,this_var_list)
+                pybamm.tree_search(model.algebraic[tree], var, this_var_list)
             this_var_is_independent = not any(this_var_list)
             if this_var_is_independent:
                 pybamm.logger.info("removing variable {} from rhs".format(var))
                 my_initial_condition = model.initial_conditions[var]
-                model.variables[var.name] = my_initial_condition+pybamm.ExplicitTimeIntegral(model.rhs[var])
+                model.variables[var.name] = (
+                    my_initial_condition +
+                    pybamm.ExplicitTimeIntegral(model.rhs[var])
+                )
                 del model.rhs[var]
                 del model.initial_conditions[var]
-                
 
         for var in algebraic_variables:
             rhs_variables = list(model.rhs.keys())
@@ -184,29 +184,22 @@ class Discretisation(object):
             this_var_list = []
             for child in var.children:
                 for tree in rhs_variables:
-                    pybamm.tree_search(model.rhs[tree],child,this_var_list)
+                    pybamm.tree_search(model.rhs[tree], child, this_var_list)
                 for tree in algebraic_variables:
-                    pybamm.tree_search(model.algebraic[tree],child,this_var_list)
+                    pybamm.tree_search(model.algebraic[tree], child, this_var_list)
             for tree in rhs_variables:
-                pybamm.tree_search(model.rhs[tree],var,this_var_list)
+                pybamm.tree_search(model.rhs[tree], var, this_var_list)
             for tree in algebraic_variables:
-                pybamm.tree_search(model.algebraic[tree],var,this_var_list)
+                pybamm.tree_search(model.algebraic[tree], var, this_var_list)
             this_var_is_independent = not any(this_var_list)
             if this_var_is_independent:
                 pybamm.logger.info("removing variable {} from algebraic.".format(var))
-                #stick the old algebraic expression into the variables dict to replace the
                 model.variables[var.name] = model.algebraic[var]
                 del model.algebraic[var]
                 del model.initial_conditions[var]
-        
         rhs_variables = list(model.rhs.keys())
         algebraic_variables = list(model.algebraic.keys())
-        variables = rhs_variables+algebraic_variables
-            
-
-            
-
-
+        variables = rhs_variables + algebraic_variables
         # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
             for var in variables:

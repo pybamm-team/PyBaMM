@@ -27,14 +27,14 @@ JAX_VERSION = "0.2.12"
 JAXLIB_VERSION = "0.1.70"
 
 
-def tree_search(tree,item,solutions):
+def tree_search(tree, item, solutions):
     for child in tree.children:
-        tree_search(child,item,solutions)
-        if child==item:
+        tree_search(child, item, solutions)
+        if child == item:
             solutions.append(True)
         else:
             solutions.append(False)
-    solutions.append(tree==item)
+    solutions.append(tree == item)
     return None
 
 
@@ -357,6 +357,7 @@ def is_jax_compatible():
         and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
     )
 
+
 def is_constant_and_can_evaluate(symbol):
     """
     Returns True if symbol is constant and evaluation does not raise any errors.
@@ -371,6 +372,7 @@ def is_constant_and_can_evaluate(symbol):
             return False
     else:
         return False
+
 
 def install_jax(arguments=None):  # pragma: no cover
     """
