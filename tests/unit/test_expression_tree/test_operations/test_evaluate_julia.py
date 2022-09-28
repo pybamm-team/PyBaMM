@@ -36,7 +36,7 @@ class TestEvaluate(unittest.TestCase):
             p = list(inputs.values())
 
         pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs)
-        for preallocate in [True,False]:
+        for preallocate in [True]:
             myconverter = pybamm.JuliaConverter(preallocate=preallocate,input_parameter_order=input_parameter_order)
             myconverter.convert_tree_to_intermediate(expr)
             evaluator_str = myconverter.build_julia_code(funcname="f")
@@ -46,7 +46,7 @@ class TestEvaluate(unittest.TestCase):
                 dy = np.zeros_like(pybamm_eval)
                 y = y_test
                 t = t_test
-                Main.f(dy, y, t, p)
+                Main.f(dy, y, p, t)
 
                 pybamm_eval = expr.evaluate(t=t_test, y=y_test, inputs=inputs).flatten()
                 try:
@@ -166,7 +166,7 @@ class TestEvaluate(unittest.TestCase):
 
         # test one input parameter
         expr = a * c
-        self.evaluate_and_test_equal(expr, np.array([2.0, 3.0]), inputs={"c": 5})
+        self.evaluate_and_test_equal(expr, np.array([2.0]), inputs={"c": 5})
 
         # test several input parameters
         expr = a * c + b * d
