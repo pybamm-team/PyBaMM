@@ -486,21 +486,24 @@ class JuliaConverter(object):
             parameter_string = ""
             for parameter in self.input_parameter_order:
                 parameter_string+="{},".format(parameter)
-            parameter_string = parameter_string[0:-1]
             parameter_string += "= p\n"
             self._function_string = parameter_string + self._function_string
         self._function_string = self._cache_initialization_string + self._function_string
+        if self._preallocate:
+            self._function_string += "\n   return nothing\n"
+        else:
+            self._function_string += "\n   return {}\n".format(top_var_name)
         if my_shape[1] != 1:
             self._function_string = self._function_string.replace(top_var_name,"J")
-            self._function_string += "\nreturn nothing\nend\nend\nend"
+            self._function_string += "end\nend\nend"
             self._function_string = "function {}(J, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
         elif self._dae_type=="semi-explicit":
             self._function_string = self._function_string.replace(top_var_name,"dy")
-            self._function_string += "\nreturn nothing\nend\nend\nend"
+            self._function_string += "end\nend\nend"
             self._function_string = "function {}(dy, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
         elif self._dae_type=="implicit":
             self._function_string = self._function_string.replace(top_var_name,"out")
-            self._function_string += "\nreturn nothing\nend\nend\nend"
+            self._function_string += "end\nend\nend"
             self._function_string = "function {}(out, dy, y, p, t)\n".format(funcname+"_with_consts") + self._function_string
         return 0
         
@@ -558,7 +561,7 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
         if converter._preallocate:
             code = "mul!({},{},{})\n".format(result_var_name,left_input_var_name,right_input_var_name)
         else:
-            code = "{} = {} * {}".format(result_var_name,left_input_var_name,right_input_var_name)
+            code = "{} = {} * {}\n".format(result_var_name,left_input_var_name,right_input_var_name)
         converter._function_string+=code
         return result_var_name
 
@@ -838,14 +841,20 @@ class JuliaConcatenation(object):
             code = ""
         elif child_var.shape[0] == 1:
             end_row = 1
-            if vec:
-                code = "@. {}[{}:{}{} =  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
+            if converter._preallocate:
+                if vec:
+                    code = "@. {}[{}:{}{} =  {}\n".format(my_name,start_row,start_row,right_parenthesis,child_var_name)
+                else:
+                    code = "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
             else:
-                code = "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                code = "{} = vcat({}".format(my_name,child_var_name)
         else:
             start_row = 1
             end_row = child_var.shape[0]
-            code = "@. {}[{}:{}{} = {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+            if converter._preallocate:
+                code = "@. {}[{}:{}{} = {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+            else:
+                code = "{} = vcat({}".format(my_name,child_var_name)
         
         for child in self.children[1:]:
             child_var = converter._intermediate[child]
@@ -855,14 +864,24 @@ class JuliaConcatenation(object):
             elif child_var.shape[0] == 1:
                 start_row = end_row+1
                 end_row = start_row+1
-                if vec:
-                    code += "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                if converter._preallocate:
+                    if vec:
+                        code += "{}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                    else:
+                        code += "@. {}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                elif child==self.children[-1]:
+                    code += ",{})\n".format(child_var_name)
                 else:
-                    code += "@. {}[{}{} = {}\n".format(my_name,start_row,right_parenthesis,child_var_name)
+                    code += ",{}".format(child_var_name)
             else:
                 start_row = end_row+1
-                end_row = start_row+child_var.shape[0]-1  
-                code += "@. {}[{}:{}{} = {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+                end_row = start_row+child_var.shape[0]-1
+                if converter._preallocate:  
+                    code += "@. {}[{}:{}{} = {}\n".format(my_name,start_row,end_row,right_parenthesis,child_var_name)
+                elif child==self.children[-1]:
+                    code += ",{})\n".format(child_var_name)
+                else:
+                    code += ",{}".format(child_var_name)
         
         converter._function_string+=code
         return my_name
@@ -907,7 +926,16 @@ class JuliaDomainConcatenation(JuliaConcatenation):
                 stop = this_slice.stop
                 start_row = end_row+1
                 end_row = start_row+(stop-start)-1
-                code += "@. {}[{}:{}{} = {}\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name)
+                if converter._preallocate:
+                    code += "@. {}[{}:{}{} = {}\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name)
+                else:
+                    if c==0:
+                        code+="{} = vcat({}".format(result_var_name,child_var_name)
+                    elif c==len(self.children)-1:
+                        code+=",{})\n".format(child_var_name)
+                    else:
+                        code +=",{}".format(child_var_name)
+                    
         else:
             for i in range(self.secondary_dimension_npts):
                 for c in range(len(self.children)):
@@ -918,7 +946,15 @@ class JuliaDomainConcatenation(JuliaConcatenation):
                     stop = this_slice.stop
                     start_row = end_row+1
                     end_row = start_row+(stop-start)-1
-                    code += "@. {}[{}:{}{} = (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+                    if converter._preallocate:
+                        code += "@. {}[{}:{}{} = (@view {}[{}:{}{})\n".format(result_var_name,start_row,end_row,right_parenthesis,child_var_name,start+1,stop,right_parenthesis)
+                    else:
+                        if (c==0) & (i==0):
+                            code+="{} = vcat((@view {}[{}:{}{})".format(result_var_name,child_var_name,start+1,stop,right_parenthesis)
+                        elif (c==len(self.children)-1) & (i==self.secondary_dimension_npts-1):
+                            code+=",(@view {}[{}:{}{}))\n".format(child_var_name,start+1,stop,right_parenthesis)
+                        else:
+                            code +=",(@view {}[{}:{}{})".format(child_var_name,start+1,stop,right_parenthesis)
         
         converter._function_string+=code
         return result_var_name

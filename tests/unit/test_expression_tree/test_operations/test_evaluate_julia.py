@@ -13,6 +13,7 @@ have_julia = pybamm.have_julia()
 if have_julia and system() != "Windows":
 
     from juliacall import Main
+    from juliacall import JuliaError
 
     # load julia libraries required for evaluating the strings
     Main.seval("using SparseArrays, LinearAlgebra")
@@ -33,20 +34,29 @@ class TestEvaluate(unittest.TestCase):
             p = 0.0
         else:
             input_parameter_order = list(inputs.keys())
-            p = list(inputs.values())
+            p = np.array(list(inputs.values()))
 
         pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs)
-        for preallocate in [True]:
+        for preallocate in [True,False]:
             myconverter = pybamm.JuliaConverter(preallocate=preallocate,input_parameter_order=input_parameter_order)
             myconverter.convert_tree_to_intermediate(expr)
             evaluator_str = myconverter.build_julia_code(funcname="f")
-            Main.seval(evaluator_str)
-            p = p
+            try:
+                Main.seval(evaluator_str)
+            except JuliaError as e:
+                    text_file = open("julia_evaluator_{}.jl".format(kwargs["funcname"]), "w")
+                    text_file.write(evaluator_str)
+                    text_file.close()
+
             for t_test, y_test in zip(t_tests, y_tests):
                 dy = np.zeros_like(pybamm_eval)
                 y = y_test
                 t = t_test
-                Main.f(dy, y, p, t)
+                if preallocate:
+                    Main.f(dy, y, p, t)
+                else:
+                    dy = Main.f(dy, y, p, t)
+                    dy = np.array(dy)
 
                 pybamm_eval = expr.evaluate(t=t_test, y=y_test, inputs=inputs).flatten()
                 try:
@@ -59,6 +69,9 @@ class TestEvaluate(unittest.TestCase):
                     # debugging
                     #print(Main.dy, y_test, p, t_test)
                     #print(evaluator_str)
+                    text_file = open("julia_evaluator_{}.jl".format(kwargs["funcname"]), "w")
+                    text_file.write(evaluator_str)
+                    text_file.close()
                     raise e
 
     def test_exceptions(self):
