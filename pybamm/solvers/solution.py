@@ -484,7 +484,9 @@ class Solution(object):
                 if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     if not pybamm.is_constant_and_can_evaluate(cumtrapz_ic):
-                        raise NotImplementedError("Non-constant initial conditions for explicit time integration has not been implemented.")
+                        raise NotImplementedError(
+                            "Non-constant initial conditions has not been implemented."
+                        )
                     else:
                         cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
