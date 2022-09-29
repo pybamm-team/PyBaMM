@@ -188,9 +188,9 @@ class Discretisation(object):
             if this_var_is_independent:
                 pybamm.logger.info("removing variable {} from rhs".format(var))
                 my_initial_condition = model.initial_conditions[var]
-                model.variables[
-                    var.name
-                ] = pybamm.ExplicitTimeIntegral(model.rhs[var],my_intitial_condition)
+                model.variables[var.name] = pybamm.ExplicitTimeIntegral(
+                    model.rhs[var], my_initial_condition
+                )
                 del model.rhs[var]
                 del model.initial_conditions[var]
 
@@ -222,7 +222,6 @@ class Discretisation(object):
             this_var_is_independent = not any(this_var_list)
             if this_var_is_independent:
                 pybamm.logger.info("removing variable {} from algebraic.".format(var))
-                print(var)
                 model.variables[var.name] = model.algebraic[var]
                 del model.algebraic[var]
                 del model.initial_conditions[var]

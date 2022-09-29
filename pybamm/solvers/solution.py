@@ -10,8 +10,6 @@ import pybamm
 import pandas as pd
 from scipy.io import savemat
 
-from pybamm.util import is_constant_and_can_evaluate
-
 
 class NumpyEncoder(json.JSONEncoder):
     """
@@ -480,15 +478,13 @@ class Solution(object):
             # Iterate through all models, some may be in the list several times and
             # therefore only get set up once
             vars_casadi = []
-            for (i,(model, ys, inputs, var_pybamm)) in enumerate(zip(
-                self.all_models, self.all_ys, self.all_inputs, vars_pybamm
-            )):
-                if key in model._variables_casadi:
-                    var_casadi = model._variables_casadi[key]
-                elif isinstance(var_pybamm,pybamm.ExplicitTimeIntegral):
+            for (i, (model, ys, inputs, var_pybamm)) in enumerate(
+                zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+            ):
+                if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     if not pybamm.is_constant_and_can_evaluate(cumtrapz_ic):
-                        raise NotImplementedError("wtf")
+                        raise NotImplementedError("Non-constant initial conditions for explicit time integration has not been implemented.")
                     else:
                         cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
@@ -509,6 +505,8 @@ class Solution(object):
                     )
                     model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
+                elif key in model._variables_casadi:
+                    var_casadi = model._variables_casadi[key]
                 else:
                     t_MX = casadi.MX.sym("t")
                     y_MX = casadi.MX.sym("y", ys.shape[0])
@@ -527,11 +525,11 @@ class Solution(object):
                     )
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
-            var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self,cumtrapz_ic=cumtrapz_ic)
+            var = pybamm.ProcessedVariable(
+                vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
+            )
 
             # Save variable and data
-            if cumtrapz_ic is not None:
-                print(key)
             self._variables[key] = var
             self.data[key] = var.data
 
@@ -553,11 +551,9 @@ class Solution(object):
 
         # return it if it exists
         if key in self._variables:
-            print("returning existing variable {}".format(key))
             return self._variables[key]
         else:
             # otherwise create it, save it and then return it
-            print("creating variable {}".format(key))
             self.update(key)
             return self._variables[key]
 
