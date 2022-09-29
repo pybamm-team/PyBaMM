@@ -10,6 +10,8 @@ import pybamm
 import pandas as pd
 from scipy.io import savemat
 
+from pybamm.util import is_constant_and_can_evaluate
+
 
 class NumpyEncoder(json.JSONEncoder):
     """
@@ -471,18 +473,25 @@ class Solution(object):
             variables = [variables]
         # Process
         for key in variables:
+            cumtrapz_ic = None
             pybamm.logger.debug("Post-processing {}".format(key))
             vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
             # Iterate through all models, some may be in the list several times and
             # therefore only get set up once
             vars_casadi = []
-            for model, ys, inputs, var_pybamm in zip(
+            for (i,(model, ys, inputs, var_pybamm)) in enumerate(zip(
                 self.all_models, self.all_ys, self.all_inputs, vars_pybamm
-            ):
+            )):
                 if key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
-                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                elif isinstance(var_pybamm,pybamm.ExplicitTimeIntegral):
+                    cumtrapz_ic = var_pybamm.initial_condition
+                    if not pybamm.is_constant_and_can_evaluate(cumtrapz_ic):
+                        raise NotImplementedError("wtf")
+                    else:
+                        cumtrapz_ic = cumtrapz_ic.evaluate()
+                    var_pybamm = var_pybamm.child
                     t_MX = casadi.MX.sym("t")
                     y_MX = casadi.MX.sym("y", ys.shape[0])
                     inputs_MX_dict = {
@@ -490,29 +499,16 @@ class Solution(object):
                         for key, value in inputs.items()
                     }
                     inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
-                    pybamm_var = 0
-                    for i in range(len(self.all_ts)):
-                        if i != 0:
-                            #this assumes that the child IS NOT a function of time.
-                            #to fix this, we could replace any instance of pybamm.t
-                            # within child with an input parameter for t.
-                            integrand = vars_pybamm[i].child
-                            t = pybamm.minimum(pybamm.t, self.all_ts[i][-1])
-                            original_t = self.all_ts[i - 1][-1]
-                            dt = t - original_t
-                            hh = (1 - (pybamm.t <= self.all_ts[i - 1][-1]))
-                            ts = self.all_models[i].timescale
-                            pybamm_var += integrand * dt * ts * hh
-                        else:
-                            t = pybamm.minimum(pybamm.t, self.all_ts[i][-1])
-                            ts = self.all_models[i].timescale
-                            integrand = vars_pybamm[i].child
-                            pybamm_var += integrand * t * ts
-                    var_sym = pybamm_var.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
+
+                    # Convert variable to casadi
+                    # Make all inputs symbolic first for converting to casadi
+                    var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
+
                     var_casadi = casadi.Function(
                         "variable", [t_MX, y_MX, inputs_MX], [var_sym]
                     )
                     model._variables_casadi[key] = var_casadi
+                    vars_pybamm[i] = var_pybamm
                 else:
                     t_MX = casadi.MX.sym("t")
                     y_MX = casadi.MX.sym("y", ys.shape[0])
@@ -531,10 +527,11 @@ class Solution(object):
                     )
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
-
-            var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self)
+            var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self,cumtrapz_ic=cumtrapz_ic)
 
             # Save variable and data
+            if cumtrapz_ic is not None:
+                print(key)
             self._variables[key] = var
             self.data[key] = var.data
 
@@ -556,9 +553,11 @@ class Solution(object):
 
         # return it if it exists
         if key in self._variables:
+            print("returning existing variable {}".format(key))
             return self._variables[key]
         else:
             # otherwise create it, save it and then return it
+            print("creating variable {}".format(key))
             self.update(key)
             return self._variables[key]
 

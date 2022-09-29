@@ -47,7 +47,8 @@ class UnaryOperator(pybamm.Symbol):
 
     def _unary_new_copy(self, child):
         """Make a new copy of the unary operator, with child `child`"""
-
+        if isinstance(self,pybamm.ExplicitTimeIntegral):
+            return self.__class__(child,self.initial_condition)
         return self.__class__(child)
 
     def _unary_jac(self, child_jac):
@@ -959,9 +960,9 @@ class BoundaryValue(BoundaryOperator):
 
 
 class ExplicitTimeIntegral(UnaryOperator):
-    def __init__(self, children):
+    def __init__(self, children,initial_condition):
         super().__init__("explicit time integral", children)
-
+        self.initial_condition = initial_condition
 
 class BoundaryGradient(BoundaryOperator):
     """
