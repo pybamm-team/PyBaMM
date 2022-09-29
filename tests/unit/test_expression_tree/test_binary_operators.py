@@ -22,6 +22,8 @@ class TestBinaryOperators(unittest.TestCase):
         bin2 = pybamm.BinaryOperator("binary test", c, d)
         with self.assertRaises(NotImplementedError):
             bin2.evaluate()
+        with self.assertRaises(NotImplementedError):
+            bin2._binary_jac(a, b)
 
     def test_binary_operator_domains(self):
         # same domain
@@ -70,13 +72,13 @@ class TestBinaryOperators(unittest.TestCase):
         y = np.array([5, 3])
 
         # power
-        self.assertEqual((a ** b).diff(b).evaluate(y=y), 5 ** 3 * np.log(5))
-        self.assertEqual((a ** b).diff(a).evaluate(y=y), 3 * 5 ** 2)
-        self.assertEqual((a ** b).diff(a ** b).evaluate(), 1)
+        self.assertEqual((a**b).diff(b).evaluate(y=y), 5**3 * np.log(5))
+        self.assertEqual((a**b).diff(a).evaluate(y=y), 3 * 5**2)
+        self.assertEqual((a**b).diff(a**b).evaluate(), 1)
         self.assertEqual(
-            (a ** a).diff(a).evaluate(y=y), 5 ** 5 * np.log(5) + 5 * 5 ** 4
+            (a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4
         )
-        self.assertEqual((a ** a).diff(b).evaluate(y=y), 0)
+        self.assertEqual((a**a).diff(b).evaluate(y=y), 0)
 
         # addition
         self.assertEqual((a + b).diff(a).evaluate(), 1)
@@ -303,6 +305,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(equal.evaluate(y=np.array([1])), 1)
         self.assertEqual(equal.evaluate(y=np.array([2])), 0)
         self.assertEqual(str(equal), "1.0 == y[0:1]")
+        self.assertEqual(equal.diff(b), 0)
 
     def test_sigmoid(self):
         a = pybamm.Scalar(1)
@@ -400,20 +403,20 @@ class TestBinaryOperators(unittest.TestCase):
         broad2_edge = pybamm.PrimaryBroadcastToEdges(2, "domain")
 
         # power
-        self.assertEqual((c ** 0), pybamm.Scalar(1))
-        self.assertEqual((0 ** c), pybamm.Scalar(0))
-        self.assertEqual((c ** 1), c)
+        self.assertEqual((c**0), pybamm.Scalar(1))
+        self.assertEqual((0**c), pybamm.Scalar(0))
+        self.assertEqual((c**1), c)
         # power with broadcasts
-        self.assertEqual((c ** broad2), pybamm.PrimaryBroadcast(c ** 2, "domain"))
-        self.assertEqual((broad2 ** c), pybamm.PrimaryBroadcast(2 ** c, "domain"))
+        self.assertEqual((c**broad2), pybamm.PrimaryBroadcast(c**2, "domain"))
+        self.assertEqual((broad2**c), pybamm.PrimaryBroadcast(2**c, "domain"))
         self.assertEqual(
             (broad2 ** pybamm.PrimaryBroadcast(c, "domain")),
-            pybamm.PrimaryBroadcast(2 ** c, "domain"),
+            pybamm.PrimaryBroadcast(2**c, "domain"),
         )
         # power with broadcasts to edge
-        self.assertIsInstance(var ** broad2_edge, pybamm.Power)
-        self.assertEqual((var ** broad2_edge).left, var)
-        self.assertEqual((var ** broad2_edge).right, broad2_edge)
+        self.assertIsInstance(var**broad2_edge, pybamm.Power)
+        self.assertEqual((var**broad2_edge).left, var)
+        self.assertEqual((var**broad2_edge).right, broad2_edge)
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)
@@ -663,13 +666,13 @@ class TestBinaryOperators(unittest.TestCase):
 
         # use power rules on multiplications and divisions
         expr = (var * 5) ** 2
-        self.assertEqual(expr, (var ** 2 * 25))
+        self.assertEqual(expr, (var**2 * 25))
         expr = (5 * var) ** 2
-        self.assertEqual(expr, (25 * var ** 2))
+        self.assertEqual(expr, (25 * var**2))
         expr = (var / 5) ** 2
-        self.assertEqual(expr, (var ** 2 / 25))
+        self.assertEqual(expr, (var**2 / 25))
         expr = (5 / var) ** 2
-        self.assertEqual(expr, (25 / var ** 2))
+        self.assertEqual(expr, (25 / var**2))
 
     def test_inner_simplifications(self):
         a1 = pybamm.Scalar(0)

@@ -130,7 +130,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a * b, pybamm.Multiplication)
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
-        self.assertIsInstance(a ** b, pybamm.Power)
+        self.assertIsInstance(a**b, pybamm.Power)
         self.assertIsInstance(a < b, _Heaviside)
         self.assertIsInstance(a <= b, _Heaviside)
         self.assertIsInstance(a > b, _Heaviside)
@@ -143,7 +143,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a * 2, pybamm.Multiplication)
         self.assertIsInstance(a @ 2, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / 2, pybamm.Division)
-        self.assertIsInstance(a ** 2, pybamm.Power)
+        self.assertIsInstance(a**2, pybamm.Power)
 
         # binary - number and symbol
         self.assertIsInstance(3 + b, pybamm.Addition)
@@ -156,14 +156,19 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((3 @ b).children[1], b)
         self.assertIsInstance(3 / b, pybamm.Division)
         self.assertEqual((3 / b).children[1], b)
-        self.assertIsInstance(3 ** b, pybamm.Power)
-        self.assertEqual((3 ** b).children[1], b)
+        self.assertIsInstance(3**b, pybamm.Power)
+        self.assertEqual((3**b).children[1], b)
 
         # error raising
         with self.assertRaisesRegex(
             NotImplementedError, "BinaryOperator not implemented for symbols of type"
         ):
             a + "two"
+
+    def test_symbol_create_copy(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
+            a.create_copy()
 
     def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed
@@ -244,6 +249,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
+        self.assertIsNone(pybamm.StateVectorDot(slice(0, 1)).evaluate_ignoring_errors())
+
         np.testing.assert_array_equal(
             pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
         )

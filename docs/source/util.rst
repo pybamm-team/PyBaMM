@@ -3,7 +3,7 @@ Utility functions
 
 .. autofunction:: pybamm.get_infinite_nested_dict
 
-.. autofunction:: pybamm.load_function
+.. autofunction:: pybamm.get_git_commit_info
 
 .. autofunction:: pybamm.rmse
 
@@ -11,3 +11,21 @@ Utility functions
 
 .. autoclass:: pybamm.Timer
   :members:
+
+.. autoclass:: pybamm.TimerTime
+  :members:
+
+.. autoclass:: pybamm.FuzzyDict
+  :members:
+
+.. autofunction:: pybamm.load_function
+
+.. autofunction:: pybamm.load
+
+.. autofunction:: pybamm.get_parameters_filepath
+
+.. autofunction:: pybamm.have_julia
+
+.. autofunction:: pybamm.have_jax
+
+.. autofunction:: pybamm.is_jax_compatible

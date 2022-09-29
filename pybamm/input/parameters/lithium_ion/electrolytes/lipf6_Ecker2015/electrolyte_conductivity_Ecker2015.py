@@ -34,7 +34,7 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
     cm = 1e-3 * c_e
 
     # value at T = 296K
-    sigma_e_296 = 0.2667 * cm ** 3 - 1.2983 * cm ** 2 + 1.7919 * cm + 0.1726
+    sigma_e_296 = 0.2667 * cm**3 - 1.2983 * cm**2 + 1.7919 * cm + 0.1726
 
     # add temperature dependence
     E_k_e = 1.71e4

@@ -131,7 +131,7 @@ class Composite(BaseElectrolyteConductivity):
                     * self._higher_order_macinnes_function(c_e_n / c_e_av)
                 )
                 - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av)
-                * (x_n ** 2 - l_n ** 2)
+                * (x_n**2 - l_n**2)
                 / (2 * l_n)
                 - i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av
             )
@@ -154,7 +154,7 @@ class Composite(BaseElectrolyteConductivity):
                 * self._higher_order_macinnes_function(c_e_p / c_e_av)
             )
             - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av)
-            * (x_p * (2 - x_p) + l_p ** 2 - 1)
+            * (x_p * (2 - x_p) + l_p**2 - 1)
             / (2 * l_p)
             - i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av
         )

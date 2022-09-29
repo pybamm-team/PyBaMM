@@ -105,7 +105,7 @@ class TestEvaluate(unittest.TestCase):
         self.evaluate_and_test_equal(expr, None, funcname="g2")
 
         # test a larger expression
-        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         self.evaluate_and_test_equal(expr, y_tests)
 
         # test something with time
@@ -235,7 +235,7 @@ class TestEvaluate(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*c.domain)
         nodes = combined_submesh.nodes
-        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
         disc.set_variable_slices([c_n, c_s, c_p])
@@ -268,7 +268,7 @@ class TestEvaluate(unittest.TestCase):
         nodes = np.linspace(
             0, 1, combined_submesh.npts * mesh["current collector"].npts
         )
-        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
         disc.set_variable_slices([c_n, c_s, c_p])
@@ -305,7 +305,7 @@ class TestEvaluate(unittest.TestCase):
 
         # test
         nodes = combined_submesh.nodes
-        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
             self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=10)

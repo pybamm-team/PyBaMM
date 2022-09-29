@@ -12,8 +12,6 @@ class TotalMainKinetics(pybamm.BaseSubModel):
 
     Parameters
     ----------
-    Parameters
-    ----------
     param :
         model parameters
     domain : str
@@ -34,79 +32,18 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
 
-        if Domain == "Negative" and self.half_cell is True:
-            return variables
-        elif getattr(self.options, domain)["particle phases"] == "1":
-            j = variables[f"{Domain} electrode interfacial current density"]
-            j_dim = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
-            j0 = variables[f"{Domain} electrode exchange current density"]
-            j0_dim = variables[f"{Domain} electrode exchange current density [A.m-2]"]
-            a_j = variables[
-                f"{Domain} electrode volumetric interfacial current density"
-            ]
-            variables.update(
-                {
-                    f"{Domain} electrode primary interfacial current density": j,
-                    f"{Domain} electrode primary "
-                    "interfacial current density [A.m-2]": j_dim,
-                    f"{Domain} electrode primary exchange current density": j0,
-                    f"{Domain} electrode primary "
-                    "exchange current density [A.m-2]": j0_dim,
-                    f"{Domain} electrode primary volumetric "
-                    "interfacial current density": a_j,
-                }
+        phases = self.options.phases[domain]
+        # For each of the variables, the variable name without the phase name
+        # is constructed by summing all of the variable names with the phases
+        for variable_template in [
+            f"{Domain} electrode {{}}volumetric interfacial current density",
+            f"{Domain} electrode {{}}volumetric interfacial current density [A.m-3]",
+            f"X-averaged {domain} electrode {{}}volumetric "
+            "interfacial current density",
+        ]:
+            sumvar = sum(
+                variables[variable_template.format(phase + " ")] for phase in phases
             )
-            return variables
-
-        j = variables[f"{Domain} electrode primary interfacial current density"]
-        j_dim = variables[
-            f"{Domain} electrode primary interfacial current density [A.m-2]"
-        ]
-        j0 = variables[f"{Domain} electrode primary exchange current density"]
-        j0_dim = variables[
-            f"{Domain} electrode primary exchange current density [A.m-2]"
-        ]
-        variables.update(
-            {
-                f"{Domain} electrode interfacial current density": j,
-                f"{Domain} electrode interfacial current density [A.m-2]": j_dim,
-                f"{Domain} electrode exchange current density": j0,
-                f"{Domain} electrode exchange current density [A.m-2]": j0_dim,
-            }
-        )
-
-        phases = self.options.phase_number_to_names(
-            getattr(self.options, domain)["particle phases"]
-        )
-
-        a_j = sum(
-            variables[
-                f"{Domain} electrode {phase} volumetric interfacial current density"
-            ]
-            for phase in phases
-        )
-        a_j_dim = sum(
-            variables[
-                f"{Domain} electrode {phase} volumetric "
-                "interfacial current density [A.m-3]"
-            ]
-            for phase in phases
-        )
-        a_j_av = sum(
-            variables[
-                f"X-averaged {domain} electrode {phase} volumetric "
-                "interfacial current density"
-            ]
-            for phase in phases
-        )
-        variables.update(
-            {
-                f"{Domain} electrode volumetric interfacial current density": a_j,
-                f"{Domain} electrode volumetric "
-                "interfacial current density [A.m-2]": a_j_dim,
-                f"X-averaged {domain} electrode volumetric "
-                "interfacial current density": a_j_av,
-            }
-        )
+            variables[variable_template.format("")] = sumvar
 
         return variables

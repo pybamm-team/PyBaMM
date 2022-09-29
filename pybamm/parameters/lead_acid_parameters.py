@@ -233,7 +233,7 @@ class LeadAcidParameters(BaseParameters):
 
         # Electrolyte diffusion timescale
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
-        self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
+        self.tau_diffusion_e = self.L_x**2 / self.D_e_typ
 
         # Thermal diffusion timescale
         self.tau_th_yz = self.therm.tau_th_yz
@@ -283,7 +283,7 @@ class LeadAcidParameters(BaseParameters):
             self.mu_typ
             * self.velocity_scale
             * self.L_x
-            / (self.n.d ** 2 * self.R * self.T_ref * self.c_e_typ)
+            / (self.n.d**2 * self.R * self.T_ref * self.c_e_typ)
         )
         # ratio of electrolyte concentration to electrode concentration, undefined
         self.gamma_e = pybamm.Scalar(1)
@@ -415,7 +415,7 @@ class LeadAcidParameters(BaseParameters):
     def kappa_e(self, c_e, T):
         """Dimensionless electrolyte conductivity"""
         c_e_dimensional = c_e * self.c_e_typ
-        kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
+        kappa_scale = self.F**2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         return self.kappa_e_dimensional(c_e_dimensional, self.T_ref) / kappa_scale
 
     def chiT_over_c(self, c_e, T):
@@ -576,7 +576,7 @@ class DomainLeadAcidParameters(BaseParameters):
         self.sigma_cc = (
             self.sigma_cc_dimensional * main.potential_scale / main.i_typ / main.L_x
         )
-        self.sigma_cc_prime = self.sigma_cc * main.delta ** 2
+        self.sigma_cc_prime = self.sigma_cc * main.delta**2
         self.Q_max = self.Q_max_dimensional / (main.c_e_typ * main.F)
         self.beta_U = 1 / self.Q_max
 
@@ -629,7 +629,7 @@ class DomainLeadAcidParameters(BaseParameters):
 
     def sigma_prime(self, T):
         """Rescaled dimensionless negative electrode electrical conductivity"""
-        return self.sigma(T) * self.main_param.delta ** 2
+        return self.sigma(T) * self.main_param.delta**2
 
 
 class PhaseLeadAcidParameters(BaseParameters):

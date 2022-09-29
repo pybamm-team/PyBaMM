@@ -56,7 +56,7 @@ class ThermalParameters(BaseParameters):
 
         # Planar (y,z) thermal diffusion timescale
         self.tau_th_yz = (
-            self.rho_eff_dim_ref * (self.geo.L_z ** 2) / self.lambda_eff_dim_ref
+            self.rho_eff_dim_ref * (self.geo.L_z**2) / self.lambda_eff_dim_ref
         )
 
     def T_amb_dim(self, t):

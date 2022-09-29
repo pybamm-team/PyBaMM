@@ -70,19 +70,19 @@ class TestJacobian(unittest.TestCase):
 
         y0 = np.array([1, 2, 3, 4])
 
-        func = v ** 2
+        func = v**2
         jacobian = np.array([[0, 0, 6, 0], [0, 0, 0, 8]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = 2 ** v
+        func = 2**v
         jacobian = np.array(
-            [[0, 0, 2 ** 3 * np.log(2), 0], [0, 0, 0, 2 ** 4 * np.log(2)]]
+            [[0, 0, 2**3 * np.log(2), 0], [0, 0, 0, 2**4 * np.log(2)]]
         )
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = v ** v
+        func = v**v
         jacobian = [[0, 0, 27 * (1 + np.log(3)), 0], [0, 0, 0, 256 * (1 + np.log(4))]]
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_almost_equal(jacobian, dfunc_dy.toarray())
@@ -256,7 +256,7 @@ class TestJacobian(unittest.TestCase):
         divide = a / b
         self.assertEqual(divide.jac(y).evaluate(), 0)
 
-        power = a ** b
+        power = a**b
         self.assertEqual(power.jac(y).evaluate(), 0)
 
     def test_jac_of_symbol(self):
@@ -279,6 +279,22 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             b.jac(y)
 
+    def test_jac_of_binary_operator(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+
+        phi_s = pybamm.standard_variables.phi_s_n
+        i = pybamm.grad(phi_s)
+
+        inner = pybamm.inner(2, i)
+        self.assertEqual(inner._binary_jac(a, b), 2 * b)
+
+        inner = pybamm.inner(i, 2)
+        self.assertEqual(inner._binary_jac(a, b), 2 * a)
+
+        inner = pybamm.inner(i, i)
+        self.assertEqual(inner._binary_jac(a, b), i * a + i * b)
+
     def test_jac_of_independent_variable(self):
         a = pybamm.IndependentVariable("Variable")
         y = pybamm.StateVector(slice(0, 1))
@@ -299,11 +315,11 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Scalar(1)
         y = pybamm.StateVector(slice(0, 5))
         np.testing.assert_array_equal(
-            ((a < y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            ((a < y) * y**2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
             10 * np.eye(5),
         )
         np.testing.assert_array_equal(
-            ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)).toarray(), 0
+            ((a < y) * y**2).jac(y).evaluate(y=-5 * np.ones(5)).toarray(), 0
         )
 
     def test_jac_of_equality(self):
@@ -321,15 +337,15 @@ class TestJacobian(unittest.TestCase):
             (a % (3 * a)).jac(y).evaluate(y=5 * np.ones(5)), 0
         )
         np.testing.assert_array_equal(
-            ((y % a) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            ((y % a) * y**2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
             45 * np.eye(5),
         )
         np.testing.assert_array_equal(
-            ((a % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            ((a % y) * y**2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
             30 * np.eye(5),
         )
         np.testing.assert_array_equal(
-            (((y + 1) ** 2 % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            (((y + 1) ** 2 % y) * y**2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
             135 * np.eye(5),
         )
 
@@ -337,11 +353,11 @@ class TestJacobian(unittest.TestCase):
         y = pybamm.StateVector(slice(0, 10))
         y_test = np.linspace(0, 2, 10)
         np.testing.assert_array_equal(
-            np.diag(pybamm.minimum(1, y ** 2).jac(y).evaluate(y=y_test).toarray()),
+            np.diag(pybamm.minimum(1, y**2).jac(y).evaluate(y=y_test).toarray()),
             2 * y_test * (y_test < 1),
         )
         np.testing.assert_array_equal(
-            np.diag(pybamm.maximum(1, y ** 2).jac(y).evaluate(y=y_test).toarray()),
+            np.diag(pybamm.maximum(1, y**2).jac(y).evaluate(y=y_test).toarray()),
             2 * y_test * (y_test > 1),
         )
 

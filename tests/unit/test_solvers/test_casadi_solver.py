@@ -119,8 +119,8 @@ class TestCasadiSolver(unittest.TestCase):
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+            pybamm.Event("var1 = 1.5", pybamm.min(1.5 - var1)),
+            pybamm.Event("var2 = 2.5", pybamm.min(2.5 - var2)),
         ]
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -178,8 +178,8 @@ class TestCasadiSolver(unittest.TestCase):
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
-            pybamm.Event("var1 = 1.5", var1 - 1.5),
-            pybamm.Event("var2 = 2.5", var2 - 2.5),
+            pybamm.Event("var1 = 1.5", 1.5 - var1),
+            pybamm.Event("var2 = 2.5", 2.5 - var2),
             pybamm.Event("var1 = 1.5 switch", var1 - 2, pybamm.EventType.SWITCH),
             pybamm.Event("var2 = 2.5 switch", var2 - 3, pybamm.EventType.SWITCH),
         ]
@@ -206,7 +206,7 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
         model.events = [
-            pybamm.Event("event", var - 1.02),
+            pybamm.Event("event", 1.02 - var),
             pybamm.Event("sqrt event", pybamm.sqrt(1.0199 - var)),
         ]
         disc = pybamm.Discretisation()
@@ -302,8 +302,8 @@ class TestCasadiSolver(unittest.TestCase):
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+            pybamm.Event("var1 = 1.5", pybamm.min(1.5 - var1)),
+            pybamm.Event("var2 = 2.5", pybamm.min(2.5 - var2)),
         ]
         disc = pybamm.Discretisation()
         disc.process_model(model)
@@ -545,7 +545,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {var: p * var}
         model.initial_conditions = {var: 1}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -841,7 +841,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {var: p * var}
         model.initial_conditions = {var: 1}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -935,7 +935,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         model.rhs = {var1: p * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.variables = {"var2 squared": var2 ** 2}
+        model.variables = {"var2 squared": var2**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -974,7 +974,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.algebraic = {var: var - p * pybamm.t}
         model.initial_conditions = {var: 0}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -993,7 +993,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         )
         np.testing.assert_allclose(
             solution["var squared"].sensitivities["p"],
-            (2 * 0.1 * solution.t ** 2).reshape(-1, 1),
+            (2 * 0.1 * solution.t**2).reshape(-1, 1),
             atol=1e-7,
         )
 

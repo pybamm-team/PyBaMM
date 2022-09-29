@@ -19,7 +19,7 @@ def test_multi_var_function(arg1, arg2):
 
 
 def test_multi_var_function_cube(arg1, arg2):
-    return arg1 + arg2 ** 3
+    return arg1 + arg2**3
 
 
 class TestFunction(unittest.TestCase):

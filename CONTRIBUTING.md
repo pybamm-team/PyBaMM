@@ -8,9 +8,25 @@ If you're already familiar with our workflow, maybe have a quick look at the [pr
 
 Before you commit any code, please perform the following checks:
 
-- [No style issues](#coding-style-guidelines): `$ flake8`
 - [All tests pass](#testing): `$ tox -e unit` (GNU/Linux and MacOS), `$ python -m tox -e windows-unit` (Windows)
 - [The documentation builds](#building-the-documentation): `$ python -m tox -e docs`
+
+### Installing and using pre-commit
+
+`PyBaMM` uses a set of `pre-commit` hooks and the `pre-commit` bot to format and prettify the codebase. The hooks can be installed locally using -
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+This would run the checks every time a commit is created locally. The checks will only run on the files modified by that commit, but the checks can be triggered for all the files using -
+
+```bash
+pre-commit run --all-files
+```
+
+If you would like to skip the failing checks and push the code for further discussion, use the `--no-verify` option with `git commit`.
 
 ## Workflow
 
@@ -28,7 +44,7 @@ You now have everything you need to start making changes!
 
 ### B. Writing your code
 
-6. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
+6. PyBaMM is developed in [Python](<https://en.wikipedia.org/wiki/Python_(programming_language)>), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
 7. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
 8. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
 9. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
@@ -43,10 +59,9 @@ You now have everything you need to start making changes!
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
-
 ## Coding style guidelines
 
-PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them.
+PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and using-pre-commit) section for more details.
 
 ### Flake8
 
@@ -55,10 +70,10 @@ We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence.
 ```bash
 flake8
 ```
+
 Flake8 is configured inside the file `tox.ini`, under the section `[flake8]`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
 When you commit your changes they will be checked against flake8 automatically (see [infrastructure](#infrastructure)).
-
 
 ### Black
 
@@ -81,7 +96,6 @@ Even when code has been formatted by black, you should still make sure that it a
 Naming is hard. In general, we aim for descriptive class, method, and argument names. Avoid abbreviations when possible without making names overly long, so `mean` is better than `mu`, but a class name like `MyClass` is fine.
 
 Class names are CamelCase, and start with an upper case letter, for example `MyOtherClass`. Method and variable names are lower case, and use underscores for word separation, for example `x` or `iteration_count`.
-
 
 ## Dependencies and reusing code
 
@@ -117,7 +131,6 @@ def plot_great_things(self, x, y, z):
 
 This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) configure Matplotlib's back-end in their scripts, which _must_ be done before e.g. `pyplot` is first imported.
 
-
 ## Testing
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
@@ -129,7 +142,9 @@ tox -e unit # (GNU/Linux and MacOS)
 #
 python -m tox -e windows-unit # (Windows)
 ```
+
 else, type
+
 ```bash
 python run-tests.py --unit
 ```
@@ -178,79 +193,100 @@ Once you've isolated the issue, it's a good idea to add a unit test that replica
 This also means that, if you can't fix the bug yourself, it will be much easier to ask for help (by opening a [bug-report issue](https://github.com/pybamm-team/PyBaMM/issues/new?template=bug_report.md)).
 
 1. Run individual test scripts instead of the whole test suite:
+
 ```bash
 python tests/unit/path/to/test
 ```
+
 You can also run an individual test from a particular script, e.g.
+
 ```bash
 python tests/unit/test_quick_plot.py TestQuickPlot.test_failure
 ```
+
 If you want to run several, but not all, the tests from a script, you can restrict which tests are run from a particular script by using the skipping decorator:
+
 ```python
 @unittest.skip("")
 def test_bit_of_code(self):
     ...
 ```
-or by just commenting out all the tests you don't want to run
-2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
+
+or by just commenting out all the tests you don't want to run 2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
+
 ```python
 import ipdb; ipdb.set_trace()
 ```
+
 This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
+
 ```python
 from IPython import embed; embed(); import ipdb; ipdb.set_trace()
 ```
+
 at the break point instead.
 Figuring out where to start the debugger is the real challenge. Some good ways to set debugging break points are:
-  a. Try-except blocks. Suppose the line `do_something_complicated()` is raising a `ValueError`. Then you can put a try-except block around that line as:
-  ```python
-  try:
-      do_something_complicated()
-  except ValueError:
-      import ipdb; ipdb.set_trace()
-  ```
-  This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
-  b. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
-  ```python
-  import warnings
-  warnings.simplefilter("error")
-  ```
-  Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
-  ```python
-  expression_tree.render()
-  ```
-  You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc.
-3. To isolate whether a bug is in a model, its jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
-4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
-5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
+a. Try-except blocks. Suppose the line `do_something_complicated()` is raising a `ValueError`. Then you can put a try-except block around that line as:
+
+```python
+try:
+    do_something_complicated()
+except ValueError:
+    import ipdb; ipdb.set_trace()
+```
+
+This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
+b. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
+
+```python
+import warnings
+warnings.simplefilter("error")
+```
+
+Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
+c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+
+```python
+expression_tree.render()
+```
+
+You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc. 3. To isolate whether a bug is in a model, its jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models). 4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models. 5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
+
 ```python3
 pybamm.set_logging_level("DEBUG")
 ```
+
 6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_parameters_and_discretise` to process a symbol and see what it will look like.
 
 ### Profiling
 
 Sometimes, a bit of code will take much longer than you expect to run. In this case, you can set
+
 ```python
 from IPython import embed; embed(); import ipdb; ipdb.set_trace()
 ```
+
 as above, and then use some of the profiling tools. In order of increasing detail:
+
 1. Simple timer. In ipython, the command
+
 ```
 %time command_to_time()
 ```
-tells you how long the line `command_to_time()` takes. You can use `%timeit` instead to run the command several times and obtain more accurate timings.
-2. Simple profiler. Using `%prun` instead of `%time` will give a brief profiling report
-3. Detailed profiler. You can install the detailed profiler `snakeviz` through pip:
+
+tells you how long the line `command_to_time()` takes. You can use `%timeit` instead to run the command several times and obtain more accurate timings. 2. Simple profiler. Using `%prun` instead of `%time` will give a brief profiling report 3. Detailed profiler. You can install the detailed profiler `snakeviz` through pip:
+
 ```bash
 pip install snakeviz
 ```
+
 and then, in ipython, run
+
 ```
 %load_ext snakeviz
 %snakeviz command_to_time()
 ```
+
 This will open a window in your browser with detailed profiling information.
 
 ## Documentation
@@ -259,7 +295,7 @@ PyBaMM is documented in several ways.
 
 First and foremost, every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
 
-These docstrings can be fairly simple, but can also make use of [reStructuredText](http://docutils.sourceforge.net/docs/user/rst/quickref.html), a markup language designed specifically for writing [technical documentation](https://en.wikipedia.org/wiki/ReStructuredText). For example, you can link to other classes and methods by writing ```:class:`pybamm.Model` ``` and  ```:meth:`run()` ```.
+These docstrings can be fairly simple, but can also make use of [reStructuredText](http://docutils.sourceforge.net/docs/user/rst/quickref.html), a markup language designed specifically for writing [technical documentation](https://en.wikipedia.org/wiki/ReStructuredText). For example, you can link to other classes and methods by writing `` :class:`pybamm.Model`  `` and `` :meth:`run()`  ``.
 
 In addition, we write a (very) small bit of documentation in separate reStructuredText files in the `docs` directory. Most of what these files do is simply import docstrings from the source code. But they also do things like add tables and indexes. If you've added a new class to a module, search the `docs` directory for that module's `.rst` file and add your class (in alphabetical order) to its index. If you've added a whole new module, copy-paste another module's file and add a link to your new file in the appropriate `index.rst` file.
 
@@ -272,6 +308,7 @@ To test and debug the documentation, it's best to build it locally. To do this, 
 ```
 python -m tox -e docs (GNU/Linux, MacOS and Windows)
 ```
+
 And then visit the webpage served at http://127.0.0.1:8000. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded.
 
 ### Example notebooks
@@ -314,7 +351,7 @@ Configuration files:
 setup.py
 ```
 
-Note that this file must be kept in sync with the version number in [pybamm/__init__.py](pybamm/__init__.py).
+Note that this file must be kept in sync with the version number in [pybamm/**init**.py](pybamm/__init__.py).
 
 ### Continuous Integration using GitHub actions
 
