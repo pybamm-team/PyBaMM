@@ -144,7 +144,7 @@ class BaseModel(BaseElectrolyteConductivity):
         Domain = self.domain.capitalize()
 
         if self.domain == "separator":
-            return None
+            return
 
         param = self.param
 

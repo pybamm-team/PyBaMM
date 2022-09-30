@@ -117,17 +117,7 @@ class BaseSubModel(pybamm.BaseModel):
     def domain(self, domain):
         if domain is not None:
             domain = domain.lower()
-        ok_domain_list = [
-            "negative",
-            "separator",
-            "positive",
-            "negative electrode",
-            "Negative electrolyte",
-            "Separator electrolyte",
-            "positive electrode",
-            "Positive electrolyte",
-            None,
-        ]
+        ok_domain_list = ["negative", "separator", "positive", None]
         if domain in ok_domain_list:
             self._domain = domain
             if domain is not None:
