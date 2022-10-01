@@ -83,16 +83,31 @@ class ParameterValues:
             self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
-            if (isinstance(values, str) and hasattr(pybamm.parameter_sets, values)) or (
-                isinstance(values, dict) and "chemistry" in values
-            ):
+            if isinstance(values, dict) and "chemistry" in values:
                 self.update_from_chemistry(values)
             else:
-                # If base_parameters is a filename, load from that filename
                 if isinstance(values, str):
-                    file_path = self.find_parameter(values)
-                    path = os.path.split(file_path)[0]
-                    values = self.read_parameters_csv(file_path)
+                    # Look for the values name in the standard pybamm parameter sets
+                    found_parameter_set = False
+                    parameter_sets_path = os.path.join(
+                        pybamm.ABSOLUTE_PATH, "pybamm", "input", "parameters"
+                    )
+                    for chemistry in ["lead_acid", "lithium_ion"]:
+                        path = os.path.join(parameter_sets_path, chemistry)
+                        filename = os.path.join(path, f"{values}.py")
+                        if os.path.exists(filename):
+                            # Use a function call to avoid issues with updating the
+                            # dictionary in place later
+                            func = pybamm.load_function(
+                                filename, "get_parameter_values"
+                            )
+                            values = func()
+                            found_parameter_set = True
+                    if not found_parameter_set:
+                        # In this case it might be a filename, load from that filename
+                        file_path = self.find_parameter(values)
+                        path = os.path.split(file_path)[0]
+                        values = self.read_parameters_csv(file_path)
                 else:
                     path = ""
                 # Don't check parameter already exists when first creating it

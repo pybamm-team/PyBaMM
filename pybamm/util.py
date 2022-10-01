@@ -212,7 +212,7 @@ class TimerTime:
         return self.value == other.value
 
 
-def load_function(filename):
+def load_function(filename, funcname=None):
     """
     Load a python function from an absolute or relative path using `importlib`.
     Example - pybamm.load_function("pybamm/input/example.py")
@@ -221,18 +221,22 @@ def load_function(filename):
     ---------
     filename : str
         The path of the file containing the function.
+    funcname : str, optional
+        The name of the function in the file. If None, assumed to be the same as the
+        filename (ignoring the path)
 
     Returns
     -------
     function
         The python function loaded from the file.
     """
+    if funcname is None:
+        # Read funcname by splitting the file (assumes funcname is the same as filename)
+        _, funcname = os.path.split(filename)
+
     # Remove `.py` from the file name
     if filename.endswith(".py"):
         filename = filename.replace(".py", "")
-
-    # Assign path to _ and filename to tail
-    _, tail = os.path.split(filename)
 
     # Store the current working directory
     orig_dir = os.getcwd()
@@ -260,13 +264,13 @@ def load_function(filename):
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
     pybamm.logger.debug(
-        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+        f"Importing function '{funcname}' from file '{filename}' via path '{path}'"
     )
     module_object = importlib.import_module(path)
 
     # Revert back current working directory if it was changed
     os.chdir(orig_dir)
-    return getattr(module_object, tail)
+    return getattr(module_object, funcname)
 
 
 def rmse(x, y):
