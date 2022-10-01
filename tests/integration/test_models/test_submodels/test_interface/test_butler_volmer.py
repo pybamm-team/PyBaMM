@@ -81,7 +81,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Negative",
+            "negative",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
@@ -95,7 +95,7 @@ class TestButlerVolmer(unittest.TestCase):
         ]
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Positive",
+            "positive",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
@@ -120,7 +120,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Negative",
+            "negative",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
@@ -134,7 +134,7 @@ class TestButlerVolmer(unittest.TestCase):
         ]
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Positive",
+            "positive",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
@@ -162,7 +162,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Negative",
+            "negative",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
@@ -176,7 +176,7 @@ class TestButlerVolmer(unittest.TestCase):
         ]
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Positive",
+            "positive",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
@@ -232,7 +232,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.LeadAcidParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Negative",
+            "negative",
             "lead-acid main",
             {
                 "SEI film resistance": "none",
@@ -242,7 +242,7 @@ class TestButlerVolmer(unittest.TestCase):
         )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Positive",
+            "positive",
             "lead-acid main",
             {
                 "SEI film resistance": "none",
@@ -303,7 +303,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.LeadAcidParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Negative",
+            "negative",
             "lead-acid main",
             {
                 "SEI film resistance": "none",
@@ -313,7 +313,7 @@ class TestButlerVolmer(unittest.TestCase):
         )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
-            "Positive",
+            "positive",
             "lead-acid main",
             {
                 "SEI film resistance": "none",

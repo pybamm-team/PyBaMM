@@ -66,11 +66,13 @@ class SEIGrowth(BaseModel):
     def get_coupled_variables(self, variables):
         phase_param = self.phase_param
         # delta_phi = phi_s - phi_e
+        T = variables["Negative electrode temperature"]
         if self.reaction_loc == "interface":
             delta_phi = variables[
                 "Lithium metal interface surface potential difference"
             ]
             phi_s_n = variables["Lithium metal interface electrode potential"]
+            T = pybamm.boundary_value(T, "right")
         else:
             delta_phi = variables["Negative electrode surface potential difference"]
             phi_s_n = variables["Negative electrode potential"]
@@ -86,16 +88,13 @@ class SEIGrowth(BaseModel):
             j = variables["Lithium metal total interfacial current density"]
         else:
             j = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode total interfacial current density"
+                "X-averaged negative electrode total interfacial current density"
             ]
 
         L_sei_inner = variables[f"Inner {self.reaction_name}thickness"]
         L_sei_outer = variables[f"Outer {self.reaction_name}thickness"]
         L_sei = variables[f"Total {self.reaction_name}thickness"]
 
-        T = variables["Negative electrode temperature"]
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - j * L_sei * R_sei
         # Thermal prefactor for reaction, interstitial and EC models

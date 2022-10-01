@@ -22,26 +22,18 @@ class NoConvection(BaseThroughCellModel):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
+        variables = {}
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
+                div_v_box_k = pybamm.FullBroadcast(0, domain, "current collector")
+                p_k = pybamm.FullBroadcast(0, domain, "current collector")
 
-        if self.half_cell:
-            v_box_n = None
-            div_v_box_n = None
-            p_n = None
-        else:
-            v_box_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-            div_v_box_n = pybamm.FullBroadcast(
-                0, "negative electrode", "current collector"
-            )
-            p_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        div_v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        p_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-
-        variables = self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
-        variables.update(
-            self._get_standard_neg_pos_acceleration_variables(div_v_box_n, div_v_box_p)
-        )
-        variables.update(self._get_standard_neg_pos_pressure_variables(p_n, p_p))
+                variables.update(
+                    self._get_standard_convection_variables(
+                        domain, v_box_k, div_v_box_k, p_k
+                    )
+                )
 
         return variables
 

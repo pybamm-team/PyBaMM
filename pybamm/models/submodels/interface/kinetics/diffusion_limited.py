@@ -32,10 +32,10 @@ class DiffusionLimited(BaseInterface):
         self.order = order
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
-        delta_phi_s = variables[self.domain + " electrode surface potential difference"]
+        delta_phi_s = variables[f"{Domain} electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
             delta_phi_s = delta_phi_s.orphans[0]
@@ -71,14 +71,14 @@ class DiffusionLimited(BaseInterface):
             # For the composite model, adds the first-order x-averaged interfacial
             # current density to the dictionary of variables.
             j_0 = variables[
-                f"Leading-order {self.domain.lower()} electrode {self.reaction_name}"
+                f"Leading-order {domain} electrode {self.reaction_name}"
                 "interfacial current density"
             ]
             j_1_bar = (pybamm.x_average(j) - pybamm.x_average(j_0)) / self.param.C_e
 
             variables.update(
                 {
-                    f"First-order x-averaged {self.domain.lower()} electrode"
+                    f"First-order x-averaged {domain} electrode"
                     f" {self.reaction_name}interfacial current density": j_1_bar
                 }
             )
@@ -87,7 +87,7 @@ class DiffusionLimited(BaseInterface):
 
     def _get_diffusion_limited_current_density(self, variables):
         param = self.param
-        if self.domain == "Negative":
+        if self.domain == "negative":
             if self.order == "leading":
                 j_p = variables[
                     f"X-averaged positive electrode {self.reaction_name}"
@@ -95,7 +95,7 @@ class DiffusionLimited(BaseInterface):
                 ]
                 j = -self.param.p.l * j_p / self.param.n.l
             elif self.order in ["composite", "full"]:
-                tor_s = variables["Separator transport efficiency"]
+                tor_s = variables["Separator electrolyte transport efficiency"]
                 c_ox_s = variables["Separator oxygen concentration"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
@@ -120,13 +120,14 @@ class DiffusionLimited(BaseInterface):
         diffusion-limited effects. For a general model the correction term is zero,
         since the reaction is not diffusion-limited
         """
+        domain = self.domain
         if self.order == "leading":
             j_leading_order = variables[
-                f"Leading-order x-averaged {self.domain.lower()} electrode "
+                f"Leading-order x-averaged {domain} electrode "
                 f"{self.reaction_name}interfacial current density"
             ]
             param = self.param
-            if self.domain == "Negative":
+            if self.domain == "negative":
                 N_ox_s_p = variables["Oxygen flux"].orphans[1]
                 N_ox_neg_sep_interface = pybamm.Index(N_ox_s_p, slice(0, 1))
 

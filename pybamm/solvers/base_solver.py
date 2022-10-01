@@ -583,14 +583,14 @@ class BaseSolver(object):
 
         if self.algebraic_solver is True:
             # Don't update model.y0
-            return None
+            return
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
                 y0 = model.initial_conditions_eval(0, y_zero, inputs)
             else:
                 # Don't update model.y0
-                return None
+                return
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations

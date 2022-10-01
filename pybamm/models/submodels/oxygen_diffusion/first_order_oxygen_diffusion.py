@@ -37,7 +37,7 @@ class FirstOrder(BaseModel):
 
         # Unpack
         tor_s_0_av = variables[
-            "Leading-order x-averaged separator transport efficiency"
+            "Leading-order x-averaged separator electrolyte transport efficiency"
         ]
         tor_p_0_av = variables[
             "Leading-order x-averaged positive electrolyte transport efficiency"
