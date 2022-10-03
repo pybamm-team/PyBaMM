@@ -11,6 +11,8 @@ from pprint import pformat
 from collections import defaultdict
 import inspect
 import json
+from textwrap import fill
+import shutil
 
 
 class ParameterValues:
@@ -84,6 +86,12 @@ class ParameterValues:
         # Then update with values dictionary or file
         if values is not None:
             if isinstance(values, dict) and "chemistry" in values:
+                warnings.warn(
+                    "Creating a parameter set from a dictionary of components has "
+                    "been deprecated and will be removed in a future release. "
+                    "Define the parameter set in a python script instead.",
+                    DeprecationWarning,
+                )
                 self.update_from_chemistry(values)
             else:
                 if isinstance(values, str):
@@ -120,6 +128,11 @@ class ParameterValues:
         # Don't touch this parameter unless you know what you are doing
         # This is for the conversion to Julia (ModelingToolkit)
         self._replace_callable_function_parameters = True
+
+        # save citations
+        if hasattr(self, "citations"):
+            for citation in self.citations:
+                pybamm.citations.register(citation)
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -180,6 +193,8 @@ class ParameterValues:
         if isinstance(chemistry, str):
             chemistry = getattr(pybamm.parameter_sets, chemistry)
 
+        self.chemistry = chemistry
+
         base_chemistry = chemistry["chemistry"]
 
         # Load each component name
@@ -234,8 +249,8 @@ class ParameterValues:
             self.citations = chemistry["citation"]
             if not isinstance(self.citations, list):
                 self.citations = [self.citations]
-            for citation in self.citations:
-                pybamm.citations.register(citation)
+        else:
+            self.citations = []
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -970,7 +985,7 @@ class ParameterValues:
                 return trial_path
         raise FileNotFoundError("Could not find parameter {}".format(path))
 
-    def print_as_python_script(self, name, path=None):
+    def export_python_script(self, name, path=None):
         """
         Print a python script that can be used to reproduce the parameter set
 
@@ -981,6 +996,7 @@ class ParameterValues:
         path : string, optional
             Optional path for the location where the parameter set should be saved
         """
+        # Process file name
         filename = name
         if not filename.endswith(".py"):
             filename = filename + ".py"
@@ -988,63 +1004,78 @@ class ParameterValues:
             filename = path + filename
         filename = pybamm.get_parameters_filepath(filename)
 
+        # Initialize
         preamble = "import pybamm\n"
         function_output = ""
         data_output = ""
-        negative_dict_output = "\n        # Negative electrode"
-        separator_dict_output = "\n        # Separator"
-        positive_dict_output = "\n        # Positive electrode"
-        other_dict_output = "\n        # Other"
+        dict_output = ""
 
-        use_np = False
-        for k, v in self.items():
-            if callable(v):
-                # write the function body to the file
-                function_output += inspect.getsource(v) + "\n"
-                v = v.__name__
-            elif isinstance(v, tuple):
-                # save the data to a separate csv file and load it in the parameter set
-                data_name, data = v
-                data_file = path + f"{data_name}.csv"
-                # save data to a file
-                data_2D = np.hstack([data[0][0][:, np.newaxis], data[1][:, np.newaxis]])
-                np.savetxt(data_file, data_2D, delimiter=",")
-                # add code to load data
-                data_output += (
-                    f"{data_name}_filename = pybamm.get_parameters_filepath"
-                    f"('{path}{data_name}.csv')\n"
-                    f"{data_name} = np.loadtxt({data_name}_filename, delimiter=',')\n"
-                )
-                # replace data with data_name
-                v = f"('{data_name}', {data_name})"
-                use_np = True
-            elif np.isnan(v):
-                continue  # skip this value
+        component_params_by_group = getattr(
+            self, "component_params_by_group", {"": self}
+        )
 
-            # add line to the parameter output in the appropriate section
-            param_output = f"""\n        "{k}": {v},"""
-            if "negative electrode" in k.lower():
-                negative_dict_output += param_output
-            elif "separator" in k.lower():
-                separator_dict_output += param_output
-            elif "positive electrode" in k.lower():
-                positive_dict_output += param_output
-            else:
-                other_dict_output += param_output
+        # Loop through each component group and add appropriate functions, data, and
+        # parameters to the relevant strings
+        for component_group, items in component_params_by_group.items():
+            if component_group != "":
+                dict_output += f"\n        # {component_group}"
+            for k in items.keys():
+                v = self[k]
+                if callable(v):
+                    # write the function body to the file
+                    function_output += inspect.getsource(v) + "\n"
+                    v = v.__name__
+                elif isinstance(v, tuple):
+                    # save the data to a separate csv file
+                    # and load it in the parameter set
+                    data_name = v[0]
+                    data_file_old = os.path.join(
+                        path,
+                        component_group.replace(" ", "_") + "s",
+                        self.chemistry[component_group],
+                        f"{data_name}.csv",
+                    )
+                    data_file_new = path + f"{data_name}.csv"
+                    shutil.copyfile(data_file_old, data_file_new)
 
-        if use_np:
-            preamble += "import numpy as np\n"
+                    # add code to load data
+                    data_output += (
+                        f"{data_name}_filename = pybamm.get_parameters_filepath"
+                        f"('{path}{data_name}.csv')\n"
+                        f"{data_name} = pd.read_csv"
+                        f"({data_name}_filename, comment='#')\n"
+                    )
+                    # replace data with data_name
+                    v = f"('{data_name}', {data_name})"
+                    if "import pandas as pd" not in preamble:
+                        preamble += "import pandas as pd\n"
 
+                elif np.isnan(v):
+                    continue  # skip this value
+
+                # add line to the parameter output in the appropriate section
+                dict_output += f'\n        "{k}": {v},'
+
+        # save citation info
+        if hasattr(self, "citations"):
+            dict_output += (
+                "\n        # citations" + f"\n        'citations': {self.citations},"
+            )
+
+        # read README.md if they exist and save info
+        docstring = self._create_docstring_from_readmes(name)
+
+        # construct the output string
         output = (
             preamble
             + "\n\n"
             + function_output
             + data_output
-            + "\ndef get_parameter_values():\n    return {"
-            + negative_dict_output
-            + separator_dict_output
-            + positive_dict_output
-            + other_dict_output
+            + "\n# Call dict via a function to avoid errors when editing in place"
+            + "\ndef get_parameter_values():"
+            + docstring
+            + "\n    return {"
+            + dict_output
             + "\n    }"
         )
 
@@ -1053,5 +1084,48 @@ class ParameterValues:
             output = output.replace(f"{funcname}(", f"pybamm.{funcname}(")
         output = output.replace("constants", "pybamm.constants")
 
+        # save to file
         with open(filename, "w") as f:
             f.write(output)
+
+    def _create_docstring_from_readmes(self, name):
+        if hasattr(self, "chemistry"):
+            chemistry = self.chemistry
+            lines = []
+            for component_group, component in chemistry.items():
+                if component_group in self.component_params_by_group:
+                    readme = os.path.join(
+                        "input",
+                        "parameters",
+                        self.chemistry["chemistry"],
+                        component_group.replace(" ", "_") + "s",
+                        component,
+                        "README.md",
+                    )
+                    readme = pybamm.get_parameters_filepath(readme)
+                    if os.path.isfile(readme):
+                        with open(readme, "r") as f:
+                            lines += f.readlines()
+
+            # lines, ind = np.unique(lines, return_index=True)
+            # lines = lines[np.argsort(ind)]
+            lines = [
+                fill(
+                    line,
+                    88,
+                    drop_whitespace=False,
+                    initial_indent="    ",
+                    subsequent_indent="    ",
+                )
+                + "\n"
+                for line in lines
+            ]
+            docstring = (
+                f'\n    """\n    # {name} parameter set\n'
+                + "".join(lines)
+                + '    """\n'
+            )
+        else:
+            docstring = ""
+
+        return docstring

@@ -1,5 +1,5 @@
 import pybamm
-import numpy as np
+import pandas as pd
 
 
 def graphite_diffusivity_Dualfoil1998(sto, T):
@@ -33,6 +33,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     T_ref = pybamm.Parameter("Reference temperature [K]")
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius
+
 
 def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     c_e, c_s_surf, c_s_max, T
@@ -70,6 +71,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
@@ -123,6 +125,7 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
 
     return du_dT
 
+
 def graphite_volume_change_Ai2020(sto, c_s_max):
     """
     Graphite particle volume change as a function of stochiometry [1, 2].
@@ -174,6 +177,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     )
     return t_change
 
+
 def graphite_cracking_rate_Ai2020(T_dim):
     """
     graphite particle cracking rate as a function of temperature [1, 2].
@@ -207,6 +211,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / T_ref))
     return k_cr * arrhenius
 
+
 def lico2_diffusivity_Dualfoil1998(sto, T):
     """
     LiCo2 diffusivity as a function of stochiometry, in this case the
@@ -233,6 +238,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     T_ref = pybamm.Parameter("Reference temperature [K]")
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius
+
 
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_max, T):
     """
@@ -267,6 +273,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     """
@@ -317,6 +324,7 @@ def lico2_entropic_change_Ai2020_function(sto, c_s_max):
 
     return du_dT
 
+
 def lico2_volume_change_Ai2020(sto, c_s_max):
     """
     lico2 particle volume change as a function of stochiometry [1, 2].
@@ -347,6 +355,7 @@ def lico2_volume_change_Ai2020(sto, c_s_max):
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
     t_change = omega * c_s_max * sto
     return t_change
+
 
 def lico2_cracking_rate_Ai2020(T_dim):
     """
@@ -381,6 +390,7 @@ def lico2_cracking_rate_Ai2020(T_dim):
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / T_ref))
     return k_cr * arrhenius
 
+
 def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     """
     Activity dependence of LiPF6 in EC:DMC as a function of ion concentration.
@@ -413,6 +423,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     ) / (1 - t_plus)
     return dlnf_dlnc
 
+
 def electrolyte_diffusivity_Ai2020(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration.
@@ -441,6 +452,7 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
     D_c_e = 10 ** (-8.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
 
     return D_c_e
+
 
 def electrolyte_conductivity_Ai2020(c_e, T):
     """
@@ -483,22 +495,183 @@ def electrolyte_conductivity_Ai2020(c_e, T):
 
     return sigma_e
 
-graphite_ocp_Enertech_Ai2020_filename = pybamm.get_parameters_filepath('pybamm/input/parameters/lithium_ion/graphite_ocp_Enertech_Ai2020.csv')
-graphite_ocp_Enertech_Ai2020 = np.loadtxt(graphite_ocp_Enertech_Ai2020_filename, delimiter=',')
-lico2_ocp_Ai2020_filename = pybamm.get_parameters_filepath('pybamm/input/parameters/lithium_ion/lico2_ocp_Ai2020.csv')
-lico2_ocp_Ai2020 = np.loadtxt(lico2_ocp_Ai2020_filename, delimiter=',')
 
+graphite_ocp_Enertech_Ai2020_filename = pybamm.get_parameters_filepath(
+    "pybamm/input/parameters/lithium_ion/graphite_ocp_Enertech_Ai2020.csv"
+)
+graphite_ocp_Enertech_Ai2020 = pd.read_csv(
+    graphite_ocp_Enertech_Ai2020_filename, comment="#"
+)
+lico2_ocp_Ai2020_filename = pybamm.get_parameters_filepath(
+    "pybamm/input/parameters/lithium_ion/lico2_ocp_Ai2020.csv"
+)
+lico2_ocp_Ai2020 = pd.read_csv(lico2_ocp_Ai2020_filename, comment="#")
+
+# Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    # Ai2020 parameter set
+    # Enertech cell parameters
+
+    Parameters for the Enertech cell, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Enertech Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Enertech Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Lithium Cobalt Oxide positive electrode parameters
+
+    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Enertech Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # SEI parameters
+
+    Some example parameters for SEI growth from the papers:
+
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
+    Development of first principles capacity fade model for Li-ion cells. Journal of the
+     Electrochemical Society, 151(2), A196-A203.
+    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
+    A456-A462.
+    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
+    1950-1955.
+    > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
+    Electrochemical Society, 156(3),
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. Instead these are parameter values that were used to fit SEI models to
+    observed experimental data in the referenced papers.
+    """
+
     return {
-        # Negative electrode
+        # sei
+        "Ratio of lithium moles to SEI moles": 2.0,
+        "Inner SEI reaction proportion": 0.5,
+        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI reaction exchange current density [A.m-2]": 1.5e-07,
+        "SEI resistivity [Ohm.m]": 200000.0,
+        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Bulk solvent concentration [mol.m-3]": 2636.0,
+        "Inner SEI open-circuit potential [V]": 0.1,
+        "Outer SEI open-circuit potential [V]": 0.8,
+        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Lithium interstitial reference concentration [mol.m-3]": 15.0,
+        "Initial inner SEI thickness [m]": 2.5e-09,
+        "Initial outer SEI thickness [m]": 2.5e-09,
+        "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
+        "EC diffusivity [m2.s-1]": 2e-18,
+        "SEI kinetic rate constant [m.s-1]": 1e-12,
+        "SEI open-circuit potential [V]": 0.4,
+        "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        # cell
+        "Negative current collector thickness [m]": 1e-05,
         "Negative electrode thickness [m]": 7.65e-05,
+        "Separator thickness [m]": 2.5e-05,
+        "Positive electrode thickness [m]": 6.8e-05,
+        "Positive current collector thickness [m]": 1.5e-05,
+        "Electrode height [m]": 0.051,
+        "Electrode width [m]": 0.047,
+        "Cell cooling surface area [m2]": 0.0060484,
+        "Cell volume [m3]": 1.5341e-05,
+        "Cell emissivity": 0.95,
+        "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
+        "Negative current collector conductivity [S.m-1]": 58411000.0,
+        "Positive current collector conductivity [S.m-1]": 36914000.0,
+        "Negative current collector density [kg.m-3]": 8960.0,
+        "Positive current collector density [kg.m-3]": 2700.0,
+        "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
+        "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
+        "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
+        "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
+        "Nominal cell capacity [A.h]": 2.28,
+        "Typical current [A]": 2.28,
+        "Current function [A]": 2.28,
+        # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
-        "Negative electrode OCP [V]": ('graphite_ocp_Enertech_Ai2020', graphite_ocp_Enertech_Ai2020),
+        "Negative electrode OCP [V]": (
+            "graphite_ocp_Enertech_Ai2020",
+            graphite_ocp_Enertech_Ai2020,
+        ),
         "Negative electrode porosity": 0.33,
         "Negative electrode active material volume fraction": 0.61,
+        "Negative particle radius [m]": 5e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 2.914,
         "Negative electrode Bruggeman coefficient (electrode)": 0.0,
         "Negative electrode cation signed stoichiometry": -1.0,
@@ -525,23 +698,14 @@ def get_parameter_values():
         "Negative electrode LAM constant proportional term [s-1]": 0.0,
         "Negative electrode LAM constant exponential term": 2.0,
         "Negative electrode critical stress [Pa]": 60000000.0,
-        "Initial concentration in negative electrode [mol.m-3]": 24108.0,
-        # Separator
-        "Separator thickness [m]": 2.5e-05,
-        "Separator porosity": 0.5,
-        "Separator Bruggeman coefficient (electrolyte)": 1.5,
-        "Separator density [kg.m-3]": 2470.0,
-        "Separator specific heat capacity [J.kg-1.K-1]": 1080.2,
-        "Separator thermal conductivity [W.m-1.K-1]": 0.334,
-        # Positive electrode
-        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        "Positive electrode thickness [m]": 6.8e-05,
+        # positive electrode
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49943.0,
         "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
-        "Positive electrode OCP [V]": ('lico2_ocp_Ai2020', lico2_ocp_Ai2020),
+        "Positive electrode OCP [V]": ("lico2_ocp_Ai2020", lico2_ocp_Ai2020),
         "Positive electrode porosity": 0.32,
         "Positive electrode active material volume fraction": 0.62,
+        "Positive particle radius [m]": 3e-06,
         "Positive electrode surface area to volume ratio [m-1]": 620000.0,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.83,
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
@@ -569,55 +733,20 @@ def get_parameter_values():
         "Positive electrode LAM constant proportional term [s-1]": 2.78e-13,
         "Positive electrode LAM constant exponential term": 2.0,
         "Positive electrode critical stress [Pa]": 375000000.0,
-        "Initial concentration in positive electrode [mol.m-3]": 21725.0,
-        # Other
-        "Ratio of lithium moles to SEI moles": 2.0,
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "SEI reaction exchange current density [A.m-2]": 1.5e-07,
-        "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
-        "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
-        "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 2.5e-09,
-        "Initial outer SEI thickness [m]": 2.5e-09,
-        "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
-        "EC diffusivity [m2.s-1]": 2e-18,
-        "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.4,
-        "SEI growth activation energy [J.mol-1]": 0.0,
-        "Negative current collector thickness [m]": 1e-05,
-        "Positive current collector thickness [m]": 1.5e-05,
-        "Electrode height [m]": 0.051,
-        "Electrode width [m]": 0.047,
-        "Cell cooling surface area [m2]": 0.0060484,
-        "Cell volume [m3]": 1.5341e-05,
-        "Cell emissivity": 0.95,
-        "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
-        "Negative current collector conductivity [S.m-1]": 58411000.0,
-        "Positive current collector conductivity [S.m-1]": 36914000.0,
-        "Negative current collector density [kg.m-3]": 8960.0,
-        "Positive current collector density [kg.m-3]": 2700.0,
-        "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
-        "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
-        "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
-        "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
-        "Nominal cell capacity [A.h]": 2.28,
-        "Typical current [A]": 2.28,
-        "Current function [A]": 2.28,
-        "Negative particle radius [m]": 5e-06,
-        "Positive particle radius [m]": 3e-06,
+        # separator
+        "Separator porosity": 0.5,
+        "Separator Bruggeman coefficient (electrolyte)": 1.5,
+        "Separator density [kg.m-3]": 2470.0,
+        "Separator specific heat capacity [J.kg-1.K-1]": 1080.2,
+        "Separator thermal conductivity [W.m-1.K-1]": 0.334,
+        # electrolyte
         "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
         "1 + dlnf/dlnc": dlnf_dlnc_Ai2020,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ai2020,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ai2020,
+        # experiment
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 35.0,
         "Ambient temperature [K]": 298.15,
@@ -625,5 +754,9 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 3.0,
         "Upper voltage cut-off [V]": 4.2,
+        "Initial concentration in negative electrode [mol.m-3]": 24108.0,
+        "Initial concentration in positive electrode [mol.m-3]": 21725.0,
         "Initial temperature [K]": 298.15,
+        # citations
+        "citations": ["Ai2019"],
     }

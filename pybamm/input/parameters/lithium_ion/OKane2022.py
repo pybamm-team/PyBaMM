@@ -1,5 +1,5 @@
 import pybamm
-import numpy as np
+import pandas as pd
 
 
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
@@ -28,6 +28,7 @@ def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
     k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
 
     return pybamm.constants.F * k_plating * c_e
+
 
 def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
     """
@@ -62,6 +63,7 @@ def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
 
     return pybamm.constants.F * k_plating * c_Li
 
+
 def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
     Decay rate for dead lithium formation [s-1].
@@ -89,6 +91,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     gamma = gamma_0 * L_sei_0 / L_sei
 
     return gamma
+
 
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
@@ -121,6 +124,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
+
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
@@ -160,6 +164,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def graphite_volume_change_Ai2020(sto, c_s_max):
     """
@@ -209,6 +214,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     )
     return t_change
 
+
 def graphite_cracking_rate_Ai2020(T_dim):
     """
     Graphite particle cracking rate as a function of temperature [1, 2].
@@ -238,6 +244,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     Eac_cr = 0  # to be implemented
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
 
 def nmc_LGM50_diffusivity_Chen2020(sto, T):
     """
@@ -269,6 +276,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
+
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
@@ -302,6 +310,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     )
 
     return u_eq
+
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
     """
@@ -337,6 +346,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def volume_change_Ai2020(sto, c_s_max):
     """
     Particle volume change as a function of stochiometry [1, 2].
@@ -364,6 +374,7 @@ def volume_change_Ai2020(sto, c_s_max):
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
     t_change = omega * c_s_max * sto
     return t_change
+
 
 def cracking_rate_Ai2020(T_dim):
     """
@@ -394,6 +405,7 @@ def cracking_rate_Ai2020(T_dim):
     Eac_cr = 0  # to be implemented
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
 
 def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     """
@@ -431,6 +443,7 @@ def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     arrhenius = pybamm.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
+
 
 def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
     """
@@ -471,20 +484,184 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
 
     return sigma_e * arrhenius
 
-graphite_LGM50_ocp_Chen2020_filename = pybamm.get_parameters_filepath('pybamm/input/parameters/lithium_ion/graphite_LGM50_ocp_Chen2020.csv')
-graphite_LGM50_ocp_Chen2020 = np.loadtxt(graphite_LGM50_ocp_Chen2020_filename, delimiter=',')
 
+graphite_LGM50_ocp_Chen2020_filename = pybamm.get_parameters_filepath(
+    "pybamm/input/parameters/lithium_ion/graphite_LGM50_ocp_Chen2020.csv"
+)
+graphite_LGM50_ocp_Chen2020 = pd.read_csv(
+    graphite_LGM50_ocp_Chen2020_filename, comment="#"
+)
+
+# Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    # OKane2022 parameter set
+    # LG M50 cell parameters
+
+    Parameters for an LG M50 cell, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # LG M50 Graphite anode parameters
+
+    Parameters for an LG M50 graphite negative electrode, from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for an LG M50 separator, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # NMC 811 positive electrode parameters
+
+    Parameters for an LG M50 NMC 811 positive electrode, from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # SEI parameters
+
+    Parameters for SEI growth from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. These are merely the parameter values that were used in the referenced
+    papers.
+    # Lithium plating parameters
+
+    Some example parameters for lithium plating from the paper:
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. These are merely the parameter values that were used in the referenced
+    papers.
+    """
+
     return {
-        # Negative electrode
+        # lithium plating
+        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
+        "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
+        "Exchange-current density for plating [A.m-2]": plating_exchange_current_density_OKane2020,
+        "Exchange-current density for stripping [A.m-2]": stripping_exchange_current_density_OKane2020,
+        "Initial plated lithium concentration [mol.m-3]": 0.0,
+        "Typical plated lithium concentration [mol.m-3]": 1000.0,
+        "Lithium plating transfer coefficient": 0.65,
+        "Dead lithium decay constant [s-1]": 1e-06,
+        "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
+        # sei
+        "Ratio of lithium moles to SEI moles": 1.0,
+        "Inner SEI reaction proportion": 0.0,
+        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI reaction exchange current density [A.m-2]": 1.5e-07,
+        "SEI resistivity [Ohm.m]": 200000.0,
+        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Bulk solvent concentration [mol.m-3]": 2636.0,
+        "Inner SEI open-circuit potential [V]": 0.1,
+        "Outer SEI open-circuit potential [V]": 0.8,
+        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Lithium interstitial reference concentration [mol.m-3]": 15.0,
+        "Initial inner SEI thickness [m]": 0.0,
+        "Initial outer SEI thickness [m]": 5e-09,
+        "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
+        "EC diffusivity [m2.s-1]": 2e-18,
+        "SEI kinetic rate constant [m.s-1]": 1e-12,
+        "SEI open-circuit potential [V]": 0.4,
+        "SEI growth activation energy [J.mol-1]": 38000.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        # cell
+        "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,
+        "Separator thickness [m]": 1.2e-05,
+        "Positive electrode thickness [m]": 7.56e-05,
+        "Positive current collector thickness [m]": 1.6e-05,
+        "Electrode height [m]": 0.065,
+        "Electrode width [m]": 1.58,
+        "Cell cooling surface area [m2]": 0.00531,
+        "Cell volume [m3]": 2.42e-05,
+        "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
+        "Negative current collector conductivity [S.m-1]": 58411000.0,
+        "Positive current collector conductivity [S.m-1]": 36914000.0,
+        "Negative current collector density [kg.m-3]": 8960.0,
+        "Positive current collector density [kg.m-3]": 2700.0,
+        "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
+        "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
+        "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
+        "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
+        "Nominal cell capacity [A.h]": 5.0,
+        "Typical current [A]": 5.0,
+        "Current function [A]": 5.0,
+        # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
         "Negative electrode diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
-        "Negative electrode OCP [V]": ('graphite_LGM50_ocp_Chen2020', graphite_LGM50_ocp_Chen2020),
+        "Negative electrode OCP [V]": (
+            "graphite_LGM50_ocp_Chen2020",
+            graphite_LGM50_ocp_Chen2020,
+        ),
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,
+        "Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 1.5,
         "Negative electrode cation signed stoichiometry": -1.0,
@@ -510,23 +687,14 @@ def get_parameter_values():
         "Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Negative electrode LAM constant exponential term": 2.0,
         "Negative electrode critical stress [Pa]": 60000000.0,
-        "Initial concentration in negative electrode [mol.m-3]": 29866.0,
-        # Separator
-        "Separator thickness [m]": 1.2e-05,
-        "Separator porosity": 0.47,
-        "Separator Bruggeman coefficient (electrolyte)": 1.5,
-        "Separator density [kg.m-3]": 397.0,
-        "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
-        "Separator thermal conductivity [W.m-1.K-1]": 0.16,
-        # Positive electrode
-        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        "Positive electrode thickness [m]": 7.56e-05,
+        # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
         "Positive electrode diffusivity [m2.s-1]": nmc_LGM50_diffusivity_Chen2020,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,
+        "Positive particle radius [m]": 5.22e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
         "Positive electrode cation signed stoichiometry": -1.0,
@@ -552,63 +720,20 @@ def get_parameter_values():
         "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Positive electrode LAM constant exponential term": 2.0,
         "Positive electrode critical stress [Pa]": 375000000.0,
-        "Initial concentration in positive electrode [mol.m-3]": 17038.0,
-        # Other
-        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
-        "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
-        "Exchange-current density for plating [A.m-2]": plating_exchange_current_density_OKane2020,
-        "Exchange-current density for stripping [A.m-2]": stripping_exchange_current_density_OKane2020,
-        "Initial plated lithium concentration [mol.m-3]": 0.0,
-        "Typical plated lithium concentration [mol.m-3]": 1000.0,
-        "Lithium plating transfer coefficient": 0.65,
-        "Dead lithium decay constant [s-1]": 1e-06,
-        "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
-        "Ratio of lithium moles to SEI moles": 1.0,
-        "Inner SEI reaction proportion": 0.0,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "SEI reaction exchange current density [A.m-2]": 1.5e-07,
-        "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
-        "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
-        "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 0.0,
-        "Initial outer SEI thickness [m]": 5e-09,
-        "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
-        "EC diffusivity [m2.s-1]": 2e-18,
-        "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.4,
-        "SEI growth activation energy [J.mol-1]": 38000.0,
-        "Negative current collector thickness [m]": 1.2e-05,
-        "Positive current collector thickness [m]": 1.6e-05,
-        "Electrode height [m]": 0.065,
-        "Electrode width [m]": 1.58,
-        "Cell cooling surface area [m2]": 0.00531,
-        "Cell volume [m3]": 2.42e-05,
-        "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
-        "Negative current collector conductivity [S.m-1]": 58411000.0,
-        "Positive current collector conductivity [S.m-1]": 36914000.0,
-        "Negative current collector density [kg.m-3]": 8960.0,
-        "Positive current collector density [kg.m-3]": 2700.0,
-        "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
-        "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
-        "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
-        "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
-        "Nominal cell capacity [A.h]": 5.0,
-        "Typical current [A]": 5.0,
-        "Current function [A]": 5.0,
-        "Negative particle radius [m]": 5.86e-06,
-        "Positive particle radius [m]": 5.22e-06,
+        # separator
+        "Separator porosity": 0.47,
+        "Separator Bruggeman coefficient (electrolyte)": 1.5,
+        "Separator density [kg.m-3]": 397.0,
+        "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
+        "Separator thermal conductivity [W.m-1.K-1]": 0.16,
+        # electrolyte
         "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
         "1 + dlnf/dlnc": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008_arrhenius,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008_arrhenius,
+        # experiment
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Ambient temperature [K]": 298.15,
@@ -616,5 +741,9 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.5,
         "Upper voltage cut-off [V]": 4.2,
+        "Initial concentration in negative electrode [mol.m-3]": 29866.0,
+        "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
+        # citations
+        "citations": ["OKane2022", "Chen2020"],
     }

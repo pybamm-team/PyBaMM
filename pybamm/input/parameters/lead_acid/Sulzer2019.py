@@ -20,6 +20,7 @@ def lead_ocp_Bode1977(m):
     )
     return U
 
+
 def lead_exchange_current_density_Sulzer2019(c_e, T):
     """
     Dimensional exchange-current density in the negative (lead) electrode, from [1]_
@@ -51,6 +52,7 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def lead_dioxide_ocp_Bode1977(m):
     """
     Dimensional open-circuit voltage in the positive (lead-dioxide) electrode [V],
@@ -69,6 +71,7 @@ def lead_dioxide_ocp_Bode1977(m):
         + 0.022 * log10(m) ** 4
     )
     return U
+
 
 def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     """
@@ -107,6 +110,7 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def oxygen_exchange_current_density_Sulzer2019(c_e, T):
     """
     Dimensional oxygen exchange-current density in the positive electrode, from [1]_
@@ -138,6 +142,7 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def conductivity_Gu1997(c_e):
     """
     Dimensional conductivity of sulfuric acid [S.m-1], from [1]_ citing [2]_ and
@@ -159,6 +164,7 @@ def conductivity_Gu1997(c_e):
     """
     return c_e * pybamm.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
 
+
 def darken_thermodynamic_factor_Chapman1968(c_e):
     """
     Dimensional Darken thermodynamic factor of sulfuric acid, from data in
@@ -175,6 +181,7 @@ def darken_thermodynamic_factor_Chapman1968(c_e):
 
     """
     return 0.49 + 4.1e-4 * c_e
+
 
 def diffusivity_Gu1997(c_e):
     """
@@ -197,6 +204,7 @@ def diffusivity_Gu1997(c_e):
     """
     return (1.75 + 260e-6 * c_e) * 1e-9
 
+
 def viscosity_Chapman1968(c_e):
     """
     Dimensional viscosity of sulfuric acid [kg.m-1.s-1], from data in [1]_, as a
@@ -212,59 +220,69 @@ def viscosity_Chapman1968(c_e):
     return 0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e**2
 
 
+# Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    # Sulzer2019 parameter set
+    # BBOXX cell parameters
+
+    Cell-specific parameters for BBOXX lead-acid cells, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
+    lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+    # Lead negative electrode parameters
+
+    Parameters for a lead negative electrode, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
+    lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # AGM separator parameters
+
+    Parameters for an Absorbent Glass Mat (AGM) separator, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
+    lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # Lead-dioxide positive electrode parameters
+
+    Parameters for a lead-dioxide positive electrode, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
+    lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # Sulfuric acid electrolyte parameters
+
+    Parameters for a sulfuric acid electrolyte, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
+    lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lead-acid battery from full charge at 1C.
+    """
+
     return {
-        # Negative electrode
-        "Negative electrode thickness [m]": 0.0009,
-        "Negative electrode conductivity [S.m-1]": 4800000.0,
-        "Negative electrode pore size [m]": 1e-07,
-        "Maximum porosity of negative electrode": 0.53,
-        "Negative electrode volumetric capacity [C.m-3]": 3473000000.0,
-        "Negative electrode open-circuit potential [V]": lead_ocp_Bode1977,
-        "Negative electrode surface area to volume ratio [m-1]": 2300000.0,
-        "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Negative electrode Bruggeman coefficient (electrode)": 1.5,
-        "Negative electrode morphological parameter": 0.6,
-        "Negative electrode capacity [C.m-3]": 3473000000.0,
-        "Negative electrode cation signed stoichiometry": 1.0,
-        "Negative electrode electrons in reaction": 2.0,
-        "Negative electrode exchange-current density [A.m-2]": lead_exchange_current_density_Sulzer2019,
-        "Negative electrode reference exchange-current density (oxygen) [A.m-2]": 2.5e-32,
-        "Negative electrode reference exchange-current density (hydrogen) [A.m-2]": 1.56e-11,
-        "Negative electrode double-layer capacity [F.m-2]": 0.2,
-        "Negative electrode density [kg.m-3]": 11300.0,
-        "Negative electrode specific heat capacity [J.kg-1.K-1]": 130.0,
-        "Negative electrode thermal conductivity [W.m-1.K-1]": 35.0,
-        # Separator
-        "Separator thickness [m]": 0.0015,
-        "Maximum porosity of separator": 0.92,
-        "Separator Bruggeman coefficient (electrolyte)": 1.5,
-        "Separator density [kg.m-3]": 1680.0,
-        "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
-        "Separator thermal conductivity [W.m-1.K-1]": 0.04,
-        # Positive electrode
-        "Positive electrode thickness [m]": 0.00125,
-        "Positive electrode conductivity [S.m-1]": 80000.0,
-        "Positive electrode pore size [m]": 1e-07,
-        "Maximum porosity of positive electrode": 0.57,
-        "Positive electrode volumetric capacity [C.m-3]": 2745000000.0,
-        "Positive electrode open-circuit potential [V]": lead_dioxide_ocp_Bode1977,
-        "Positive electrode surface area to volume ratio [m-1]": 23000000.0,
-        "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Positive electrode Bruggeman coefficient (electrode)": 1.5,
-        "Positive electrode morphological parameter": 0.6,
-        "Positive electrode capacity [C.m-3]": 2745000000.0,
-        "Positive electrode cation signed stoichiometry": 3.0,
-        "Positive electrode electrons in reaction": 2.0,
-        "Positive electrode exchange-current density [A.m-2]": lead_dioxide_exchange_current_density_Sulzer2019,
-        "Positive electrode oxygen exchange-current density [A.m-2]": oxygen_exchange_current_density_Sulzer2019,
-        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]": 0.0,
-        "Positive electrode double-layer capacity [F.m-2]": 0.2,
-        "Positive electrode density [kg.m-3]": 9375.0,
-        "Positive electrode specific heat capacity [J.kg-1.K-1]": 256.0,
-        "Positive electrode thermal conductivity [W.m-1.K-1]": 35.0,
-        # Other
+        # cell
         "Negative current collector thickness [m]": 0.0,
+        "Negative electrode thickness [m]": 0.0009,
+        "Separator thickness [m]": 0.0015,
+        "Positive electrode thickness [m]": 0.00125,
         "Positive current collector thickness [m]": 0.0,
         "Electrode height [m]": 0.114,
         "Electrode width [m]": 0.065,
@@ -285,19 +303,77 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 256.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 35.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 35.0,
+        # negative electrode
+        "Negative electrode conductivity [S.m-1]": 4800000.0,
+        "Negative electrode pore size [m]": 1e-07,
+        "Maximum porosity of negative electrode": 0.53,
         "Molar volume of lead [m3.mol-1]": 1.82539682539683e-05,
         "Molar volume of lead sulfate [m3.mol-1]": 4.81717011128776e-05,
+        "Negative electrode volumetric capacity [C.m-3]": 3473000000.0,
+        "Negative electrode open-circuit potential [V]": lead_ocp_Bode1977,
+        "Negative electrode surface area to volume ratio [m-1]": 2300000.0,
+        "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
+        "Negative electrode Bruggeman coefficient (electrode)": 1.5,
+        "Negative electrode morphological parameter": 0.6,
+        "Negative electrode capacity [C.m-3]": 3473000000.0,
+        "Negative electrode cation signed stoichiometry": 1.0,
+        "Negative electrode electrons in reaction": 2.0,
+        "Negative electrode exchange-current density [A.m-2]": lead_exchange_current_density_Sulzer2019,
         "Signed stoichiometry of cations (oxygen reaction)": 4.0,
         "Signed stoichiometry of water (oxygen reaction)": -1.0,
         "Signed stoichiometry of oxygen (oxygen reaction)": 1.0,
         "Electrons in oxygen reaction": 4.0,
+        "Negative electrode reference exchange-current density (oxygen) [A.m-2]": 2.5e-32,
         "Reference oxygen molecule concentration [mol.m-3]": 1000.0,
         "Oxygen reference OCP vs SHE [V]": 1.229,
         "Signed stoichiometry of cations (hydrogen reaction)": 2.0,
         "Signed stoichiometry of hydrogen (hydrogen reaction)": -1.0,
         "Electrons in hydrogen reaction": 2.0,
+        "Negative electrode reference exchange-current density (hydrogen) [A.m-2]": 1.56e-11,
         "Hydrogen reference OCP vs SHE [V]": 0.0,
+        "Negative electrode double-layer capacity [F.m-2]": 0.2,
+        "Negative electrode density [kg.m-3]": 11300.0,
+        "Negative electrode specific heat capacity [J.kg-1.K-1]": 130.0,
+        "Negative electrode thermal conductivity [W.m-1.K-1]": 35.0,
+        # positive electrode
+        "Positive electrode conductivity [S.m-1]": 80000.0,
+        "Positive electrode pore size [m]": 1e-07,
+        "Maximum porosity of positive electrode": 0.57,
         "Molar volume of lead-dioxide [m3.mol-1]": 2.54797441364606e-05,
+        "Molar volume of lead sulfate [m3.mol-1]": 4.81717011128776e-05,
+        "Positive electrode volumetric capacity [C.m-3]": 2745000000.0,
+        "Positive electrode open-circuit potential [V]": lead_dioxide_ocp_Bode1977,
+        "Positive electrode surface area to volume ratio [m-1]": 23000000.0,
+        "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
+        "Positive electrode Bruggeman coefficient (electrode)": 1.5,
+        "Positive electrode morphological parameter": 0.6,
+        "Positive electrode capacity [C.m-3]": 2745000000.0,
+        "Positive electrode cation signed stoichiometry": 3.0,
+        "Positive electrode electrons in reaction": 2.0,
+        "Positive electrode exchange-current density [A.m-2]": lead_dioxide_exchange_current_density_Sulzer2019,
+        "Signed stoichiometry of cations (oxygen reaction)": 4.0,
+        "Signed stoichiometry of water (oxygen reaction)": -1.0,
+        "Signed stoichiometry of oxygen (oxygen reaction)": 1.0,
+        "Electrons in oxygen reaction": 4.0,
+        "Positive electrode oxygen exchange-current density [A.m-2]": oxygen_exchange_current_density_Sulzer2019,
+        "Reference oxygen molecule concentration [mol.m-3]": 1000.0,
+        "Oxygen reference OCP vs SHE [V]": 1.229,
+        "Signed stoichiometry of cations (hydrogen reaction)": 2.0,
+        "Signed stoichiometry of hydrogen (hydrogen reaction)": -1.0,
+        "Electrons in hydrogen reaction": 2.0,
+        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]": 0.0,
+        "Hydrogen reference OCP vs SHE [V]": 0.0,
+        "Positive electrode double-layer capacity [F.m-2]": 0.2,
+        "Positive electrode density [kg.m-3]": 9375.0,
+        "Positive electrode specific heat capacity [J.kg-1.K-1]": 256.0,
+        "Positive electrode thermal conductivity [W.m-1.K-1]": 35.0,
+        # separator
+        "Maximum porosity of separator": 0.92,
+        "Separator Bruggeman coefficient (electrolyte)": 1.5,
+        "Separator density [kg.m-3]": 1680.0,
+        "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
+        "Separator thermal conductivity [W.m-1.K-1]": 0.04,
+        # electrolyte
         "Typical electrolyte concentration [mol.m-3]": 5650.0,
         "Cation transference number": 0.7,
         "1 + dlnf/dlnc": 1.0,
@@ -321,6 +397,7 @@ def get_parameter_values():
         "Partial molar volume of hydrogen molecules [m3.mol-1]": 2.31e-05,
         "Molar mass of oxygen molecules [kg.mol-1]": 0.032,
         "Molar mass of hydrogen molecules [kg.mol-1]": 0.002,
+        # experiment
         "Reference temperature [K]": 294.85,
         "Maximum temperature [K]": 333.15,
         "Ambient temperature [K]": 294.85,
@@ -337,4 +414,6 @@ def get_parameter_values():
         "Initial State of Charge": 1.0,
         "Initial oxygen concentration [mol.m-3]": 0.0,
         "Initial temperature [K]": 294.85,
+        # citations
+        "citations": ["Sulzer2019physical"],
     }

@@ -29,6 +29,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
     return D_ref * arrhenius
 
+
 def graphite_ocp_PeymanMPM(sto):
     """
     Graphite Open Circuit Potential (OCP) as a function of the
@@ -51,6 +52,7 @@ def graphite_ocp_PeymanMPM(sto):
     )
 
     return u_eq
+
 
 def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T):
     """
@@ -87,6 +89,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def graphite_entropic_change_PeymanMPM(sto, c_s_max):
     """
     Graphite entropic change in open circuit potential (OCP) at a temperature of
@@ -116,6 +119,7 @@ def graphite_entropic_change_PeymanMPM(sto, c_s_max):
 
     return du_dT
 
+
 def NMC_diffusivity_PeymanMPM(sto, T):
     """
     NMC diffusivity as a function of stochiometry, in this case the
@@ -144,6 +148,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 
     return D_ref * arrhenius
 
+
 def NMC_ocp_PeymanMPM(sto):
     """
     Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
@@ -171,6 +176,7 @@ def NMC_ocp_PeymanMPM(sto):
     )
 
     return u_eq
+
 
 def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T):
     """
@@ -204,6 +210,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def NMC_entropic_change_PeymanMPM(sto, c_s_max):
     """
@@ -242,6 +249,7 @@ def NMC_entropic_change_PeymanMPM(sto, c_s_max):
 
     return du_dT
 
+
 def electrolyte_diffusivity_PeymanMPM(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration. The original data
@@ -273,6 +281,7 @@ def electrolyte_diffusivity_PeymanMPM(c_e, T):
     arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
+
 
 def electrolyte_conductivity_PeymanMPM(c_e, T):
     """
@@ -306,69 +315,50 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
     return sigma_e * arrhenius
 
 
+# Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    # Mohtat2020 parameter set
+    # SEI parameters
+
+    Some example parameters for SEI growth from the papers:
+
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
+    Development of first principles capacity fade model for Li-ion cells. Journal of the
+     Electrochemical Society, 151(2), A196-A203.
+    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
+    A456-A462.
+    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
+    1950-1955.
+    > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
+    Electrochemical Society, 156(3),
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. Instead these are parameter values that were used to fit SEI models to
+    observed experimental data in the referenced papers.
+    # SEI parameters
+
+    Parameters for lithium plating from the paper:
+
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
+    """
+
     return {
-        # Negative electrode
-        "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        "Negative electrode thickness [m]": 6.2e-05,
-        "Negative electrode conductivity [S.m-1]": 100.0,
-        "Maximum concentration in negative electrode [mol.m-3]": 28746.0,
-        "Negative electrode diffusion coefficient [m2.s-1]": 5e-15,
-        "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_PeymanMPM,
-        "Negative electrode OCP [V]": graphite_ocp_PeymanMPM,
-        "Negative electrode porosity": 0.3,
-        "Negative electrode active material volume fraction": 0.61,
-        "Negative electrode Bruggeman coefficient (electrode)": 1.5,
-        "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Negative electrode transport efficiency": 0.16,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
-        "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]": 1.061e-06,
-        "Negative electrode charge transfer coefficient": 0.5,
-        "Negative electrode double-layer capacity [F.m-2]": 0.2,
-        "Negative electrode exchange-current density [A.m-2]": graphite_electrolyte_exchange_current_density_PeymanMPM,
-        "Negative electrode density [kg.m-3]": 3100.0,
-        "Negative electrode specific heat capacity [J.kg-1.K-1]": 1100.0,
-        "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
-        "Negative electrode OCP entropic change [V.K-1]": graphite_entropic_change_PeymanMPM,
-        "Initial concentration in negative electrode [mol.m-3]": 48.8682,
-        # Separator
-        "Separator thickness [m]": 1.2e-05,
-        "Separator porosity": 0.4,
-        "Separator Bruggeman coefficient (electrolyte)": 1.5,
-        "Separator density [kg.m-3]": 397.0,
-        "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
-        "Separator thermal conductivity [W.m-1.K-1]": 0.16,
-        "Separator transport efficiency ": 0.25,
-        # Positive electrode
-        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        "Positive electrode thickness [m]": 6.7e-05,
-        "Positive electrode conductivity [S.m-1]": 100.0,
-        "Maximum concentration in positive electrode [mol.m-3]": 35380.0,
-        "Positive electrode diffusivity [m2.s-1]": NMC_diffusivity_PeymanMPM,
-        "Positive electrode OCP [V]": NMC_ocp_PeymanMPM,
-        "Positive electrode porosity": 0.3,
-        "Positive electrode active material volume fraction": 0.445,
-        "Positive electrode Bruggeman coefficient (electrode)": 1.5,
-        "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Positive electrode transport efficiency": 0.16,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
-        "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]": 4.824e-06,
-        "Positive electrode charge transfer coefficient": 0.5,
-        "Positive electrode double-layer capacity [F.m-2]": 0.2,
-        "Positive electrode exchange-current density [A.m-2]": NMC_electrolyte_exchange_current_density_PeymanMPM,
-        "Positive electrode density [kg.m-3]": 3100.0,
-        "Positive electrode specific heat capacity [J.kg-1.K-1]": 1100.0,
-        "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
-        "Positive electrode OCP entropic change [V.K-1]": NMC_entropic_change_PeymanMPM,
-        "Initial concentration in positive electrode [mol.m-3]": 31513.0,
-        # Other
+        # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Exchange-current density for plating [A.m-2]": 0.001,
         "Initial plated lithium concentration [mol.m-3]": 0.0,
         "Typical plated lithium concentration [mol.m-3]": 1000.0,
         "Lithium plating transfer coefficient": 0.7,
+        # sei
         "Ratio of lithium moles to SEI moles": 2.0,
         "Inner SEI reaction proportion": 0.5,
         "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
@@ -389,7 +379,13 @@ def get_parameter_values():
         "SEI kinetic rate constant [m.s-1]": 1e-12,
         "SEI open-circuit potential [V]": 0.4,
         "SEI growth activation energy [J.mol-1]": 0.0,
+        "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        # cell
         "Negative current collector thickness [m]": 2.5e-05,
+        "Negative electrode thickness [m]": 6.2e-05,
+        "Separator thickness [m]": 1.2e-05,
+        "Positive electrode thickness [m]": 6.7e-05,
         "Positive current collector thickness [m]": 2.5e-05,
         "Electrode height [m]": 1.0,
         "Electrode width [m]": 0.205,
@@ -406,8 +402,57 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 5.0,
         "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
+        # negative electrode
+        "Negative electrode conductivity [S.m-1]": 100.0,
+        "Maximum concentration in negative electrode [mol.m-3]": 28746.0,
+        "Negative electrode diffusion coefficient [m2.s-1]": 5e-15,
+        "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_PeymanMPM,
+        "Negative electrode OCP [V]": graphite_ocp_PeymanMPM,
+        "Negative electrode porosity": 0.3,
+        "Negative electrode active material volume fraction": 0.61,
         "Negative particle radius [m]": 2.5e-06,
+        "Negative electrode Bruggeman coefficient (electrode)": 1.5,
+        "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
+        "Negative electrode transport efficiency": 0.16,
+        "Negative electrode cation signed stoichiometry": -1.0,
+        "Negative electrode electrons in reaction": 1.0,
+        "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]": 1.061e-06,
+        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode double-layer capacity [F.m-2]": 0.2,
+        "Negative electrode exchange-current density [A.m-2]": graphite_electrolyte_exchange_current_density_PeymanMPM,
+        "Negative electrode density [kg.m-3]": 3100.0,
+        "Negative electrode specific heat capacity [J.kg-1.K-1]": 1100.0,
+        "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
+        "Negative electrode OCP entropic change [V.K-1]": graphite_entropic_change_PeymanMPM,
+        # positive electrode
+        "Positive electrode conductivity [S.m-1]": 100.0,
+        "Maximum concentration in positive electrode [mol.m-3]": 35380.0,
+        "Positive electrode diffusivity [m2.s-1]": NMC_diffusivity_PeymanMPM,
+        "Positive electrode OCP [V]": NMC_ocp_PeymanMPM,
+        "Positive electrode porosity": 0.3,
+        "Positive electrode active material volume fraction": 0.445,
         "Positive particle radius [m]": 3.5e-06,
+        "Positive electrode Bruggeman coefficient (electrode)": 1.5,
+        "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
+        "Positive electrode transport efficiency": 0.16,
+        "Positive electrode cation signed stoichiometry": -1.0,
+        "Positive electrode electrons in reaction": 1.0,
+        "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]": 4.824e-06,
+        "Positive electrode charge transfer coefficient": 0.5,
+        "Positive electrode double-layer capacity [F.m-2]": 0.2,
+        "Positive electrode exchange-current density [A.m-2]": NMC_electrolyte_exchange_current_density_PeymanMPM,
+        "Positive electrode density [kg.m-3]": 3100.0,
+        "Positive electrode specific heat capacity [J.kg-1.K-1]": 1100.0,
+        "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
+        "Positive electrode OCP entropic change [V.K-1]": NMC_entropic_change_PeymanMPM,
+        # separator
+        "Separator porosity": 0.4,
+        "Separator Bruggeman coefficient (electrolyte)": 1.5,
+        "Separator density [kg.m-3]": 397.0,
+        "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
+        "Separator thermal conductivity [W.m-1.K-1]": 0.16,
+        "Separator transport efficiency ": 0.25,
+        # electrolyte
         "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
@@ -415,6 +460,7 @@ def get_parameter_values():
         "Typical lithium ion diffusivity [m2.s-1]": 5.34e-10,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_PeymanMPM,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_PeymanMPM,
+        # experiment
         "Reference temperature [K]": 298.15,
         "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
         "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
@@ -427,5 +473,9 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.8,
         "Upper voltage cut-off [V]": 4.2,
+        "Initial concentration in negative electrode [mol.m-3]": 48.8682,
+        "Initial concentration in positive electrode [mol.m-3]": 31513.0,
         "Initial temperature [K]": 298.15,
+        # citations
+        "citations": ["Mohtat2020"],
     }
