@@ -1,3 +1,6 @@
+import pybamm
+
+
 def copper_heat_capacity_CRC(T):
     """
     Copper specific heat capacity as a function of the temperature from [1].
@@ -115,16 +118,16 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
         ** (
             a0 * sto
             + c0
-            + a1 * exp(-((sto - b1) ** 2) / c1)
-            + a2 * exp(-((sto - b2) ** 2) / c2)
-            + a3 * exp(-((sto - b3) ** 2) / c3)
-            + a4 * exp(-((sto - b4) ** 2) / c4)
+            + a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
+            + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
+            + a3 * pybamm.exp(-((sto - b3) ** 2) / c3)
+            + a4 * pybamm.exp(-((sto - b4) ** 2) / c4)
         )
         * 3.0321  # correcting factor (see O'Regan et al 2021)
     )
 
-    E_D_s = d * constants.R
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    E_D_s = d * pybamm.constants.R
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -152,11 +155,11 @@ def graphite_LGM50_ocp_Chen2020(sto):
     """
 
     U = (
-        1.9793 * exp(-39.3631 * sto)
+        1.9793 * pybamm.exp(-39.3631 * sto)
         + 0.2482
-        - 0.0909 * tanh(29.8538 * (sto - 0.1234))
-        - 0.04478 * tanh(14.9159 * (sto - 0.2769))
-        - 0.0205 * tanh(30.4444 * (sto - 0.6103))
+        - 0.0909 * pybamm.tanh(29.8538 * (sto - 0.1234))
+        - 0.04478 * pybamm.tanh(14.9159 * (sto - 0.2769))
+        - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
     )
 
     return U
@@ -194,9 +197,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
     i_ref = 2.668  # (A/m2)
     alpha = 0.792
     E_r = 4e4
-    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    c_e_ref = Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 
     return (
         i_ref
@@ -237,7 +240,7 @@ def graphite_LGM50_heat_capacity_ORegan2022(T):
     # value for the bulk electrolyte
     rho_e = 1280
     cp_e = 229
-    eps_e = Parameter("Negative electrode porosity")
+    eps_e = pybamm.Parameter("Negative electrode porosity")
     theta_e = rho_e * cp_e
 
     # value for the wet separator
@@ -308,8 +311,8 @@ def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     dUdT = (
         a0 * sto
         + c0
-        + a2 * exp(-((sto - b2) ** 2) / c2)
-        + a1 * (tanh(d1 * (sto - (b1 - c1))) - tanh(d1 * (sto - (b1 + c1))))
+        + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
+        + a1 * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
     ) / 1000  # fit in mV / K
 
     return dUdT
@@ -337,7 +340,7 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     """
 
     E_r = 3.5e3
-    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     sigma = 0.8473 * arrhenius
 
@@ -383,15 +386,15 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
         10
         ** (
             c0
-            + a1 * exp(-((sto - b1) ** 2) / c1)
-            + a2 * exp(-((sto - b2) ** 2) / c2)
-            + a3 * exp(-((sto - b3) ** 2) / c3)
+            + a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
+            + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
+            + a3 * pybamm.exp(-((sto - b3) ** 2) / c3)
         )
         * 2.7  # correcting factor (see O'Regan et al 2021)
     )
 
-    E_D_s = d * constants.R
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    E_D_s = d * pybamm.constants.R
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -421,9 +424,9 @@ def nmc_LGM50_ocp_Chen2020(sto):
     U = (
         -0.809 * sto
         + 4.4875
-        - 0.0428 * tanh(18.5138 * (sto - 0.5542))
-        - 17.7326 * tanh(15.789 * (sto - 0.3117))
-        + 17.5842 * tanh(15.9308 * (sto - 0.312))
+        - 0.0428 * pybamm.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * pybamm.tanh(15.789 * (sto - 0.3117))
+        + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.312))
     )
 
     return U
@@ -460,9 +463,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     i_ref = 5.028  # (A/m2)
     alpha = 0.43
     E_r = 2.401e4
-    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    c_e_ref = Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 
     return (
         i_ref
@@ -503,7 +506,7 @@ def nmc_LGM50_heat_capacity_ORegan2022(T):
     # value for the bulk electrolyte
     rho_e = 1280
     cp_e = 229
-    eps_e = Parameter("Positive electrode porosity")
+    eps_e = pybamm.Parameter("Positive electrode porosity")
     theta_e = rho_e * cp_e
 
     # value for the wet separator
@@ -568,7 +571,7 @@ def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     c2 = 0.02179
 
     dUdT = (
-        a1 * exp(-((sto - b1) ** 2) / c1) + a2 * exp(-((sto - b2) ** 2) / c2)
+        a1 * pybamm.exp(-((sto - b1) ** 2) / c1) + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
     ) / 1000
     # fit in mV / K
 
@@ -604,7 +607,7 @@ def separator_LGM50_heat_capacity_ORegan2022(T):
     # value for the bulk electrolyte
     rho_e = 1280
     cp_e = 229
-    eps_e = Parameter("Separator porosity")
+    eps_e = pybamm.Parameter("Separator porosity")
     theta_e = rho_e * cp_e
 
     # value for the wet separator
@@ -736,84 +739,89 @@ def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
 
     return electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs)
 
+
 def get_parameter_values():
-    return {'1 + dlnf/dlnc': electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
- 'Ambient temperature [K]': 298.15,
- 'Cation transference number': electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019,
- 'Cell cooling surface area [m2]': 0.00531,
- 'Cell volume [m3]': 2.42e-05,
- 'Current function [A]': 5.0,
- 'Electrode height [m]': 0.065,
- 'Electrode width [m]': 1.58,
- 'Electrolyte conductivity [S.m-1]': electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019,
- 'Electrolyte diffusivity [m2.s-1]': electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019,
- 'Initial concentration in electrolyte [mol.m-3]': 1000.0,
- 'Initial concentration in negative electrode [mol.m-3]': 28866.0,
- 'Initial concentration in positive electrode [mol.m-3]': 13975.0,
- 'Initial temperature [K]': 298.15,
- 'Lower voltage cut-off [V]': 2.5,
- 'Maximum concentration in negative electrode [mol.m-3]': 29583.0,
- 'Maximum concentration in positive electrode [mol.m-3]': 51765.0,
- 'Negative current collector conductivity [S.m-1]': 58411000.0,
- 'Negative current collector density [kg.m-3]': 8933.0,
- 'Negative current collector specific heat capacity [J.kg-1.K-1]': copper_heat_capacity_CRC,
- 'Negative current collector thermal conductivity [W.m-1.K-1]': copper_thermal_conductivity_CRC,
- 'Negative current collector thickness [m]': 1.2e-05,
- 'Negative electrode Bruggeman coefficient (electrode)': 0.0,
- 'Negative electrode Bruggeman coefficient (electrolyte)': 1.5,
- 'Negative electrode OCP [V]': graphite_LGM50_ocp_Chen2020,
- 'Negative electrode OCP entropic change [V.K-1]': graphite_LGM50_entropic_change_ORegan2022,
- 'Negative electrode active material volume fraction': 0.75,
- 'Negative electrode cation signed stoichiometry': -1.0,
- 'Negative electrode charge transfer coefficient': 0.5,
- 'Negative electrode conductivity [S.m-1]': 215.0,
- 'Negative electrode density [kg.m-3]': 2060.0,
- 'Negative electrode diffusivity [m2.s-1]': graphite_LGM50_diffusivity_ORegan2022,
- 'Negative electrode double-layer capacity [F.m-2]': 0.2,
- 'Negative electrode electrons in reaction': 1.0,
- 'Negative electrode exchange-current density [A.m-2]': graphite_LGM50_electrolyte_exchange_current_density_ORegan2022,
- 'Negative electrode porosity': 0.25,
- 'Negative electrode specific heat capacity [J.kg-1.K-1]': graphite_LGM50_heat_capacity_ORegan2022,
- 'Negative electrode thermal conductivity [W.m-1.K-1]': graphite_LGM50_thermal_conductivity_ORegan2022,
- 'Negative electrode thickness [m]': 8.52e-05,
- 'Negative particle radius [m]': 5.86e-06,
- 'Nominal cell capacity [A.h]': 5.0,
- 'Number of cells connected in series to make a battery': 1.0,
- 'Number of electrodes connected in parallel to make a cell': 1.0,
- 'Positive current collector conductivity [S.m-1]': 36914000.0,
- 'Positive current collector density [kg.m-3]': 2702.0,
- 'Positive current collector specific heat capacity [J.kg-1.K-1]': aluminium_heat_capacity_CRC,
- 'Positive current collector thermal conductivity [W.m-1.K-1]': 237.0,
- 'Positive current collector thickness [m]': 1.6e-05,
- 'Positive electrode Bruggeman coefficient (electrode)': 0.0,
- 'Positive electrode Bruggeman coefficient (electrolyte)': 1.5,
- 'Positive electrode OCP [V]': nmc_LGM50_ocp_Chen2020,
- 'Positive electrode OCP entropic change [V.K-1]': nmc_LGM50_entropic_change_ORegan2022,
- 'Positive electrode active material volume fraction': 0.665,
- 'Positive electrode cation signed stoichiometry': -1.0,
- 'Positive electrode charge transfer coefficient': 0.5,
- 'Positive electrode conductivity [S.m-1]': nmc_LGM50_electronic_conductivity_ORegan2022,
- 'Positive electrode density [kg.m-3]': 3699.0,
- 'Positive electrode diffusivity [m2.s-1]': nmc_LGM50_diffusivity_ORegan2022,
- 'Positive electrode double-layer capacity [F.m-2]': 0.2,
- 'Positive electrode electrons in reaction': 1.0,
- 'Positive electrode exchange-current density [A.m-2]': nmc_LGM50_electrolyte_exchange_current_density_ORegan2022,
- 'Positive electrode porosity': 0.335,
- 'Positive electrode specific heat capacity [J.kg-1.K-1]': nmc_LGM50_heat_capacity_ORegan2022,
- 'Positive electrode thermal conductivity [W.m-1.K-1]': nmc_LGM50_thermal_conductivity_ORegan2022,
- 'Positive electrode thickness [m]': 7.56e-05,
- 'Positive particle radius [m]': 5.22e-06,
- 'Reference OCP vs SHE in the negative electrode [V]': nan,
- 'Reference OCP vs SHE in the positive electrode [V]': nan,
- 'Reference temperature [K]': 298.15,
- 'Separator Bruggeman coefficient (electrode)': 1.5,
- 'Separator Bruggeman coefficient (electrolyte)': 1.5,
- 'Separator density [kg.m-3]': 1548.0,
- 'Separator porosity': 0.47,
- 'Separator specific heat capacity [J.kg-1.K-1]': separator_LGM50_heat_capacity_ORegan2022,
- 'Separator thermal conductivity [W.m-1.K-1]': 0.3344,
- 'Separator thickness [m]': 1.2e-05,
- 'Total heat transfer coefficient [W.m-2.K-1]': 10.0,
- 'Typical current [A]': 5.0,
- 'Typical electrolyte concentration [mol.m-3]': 1000.0,
- 'Upper voltage cut-off [V]': 4.4}
+    return {
+        # Negative electrode
+        "Negative electrode thickness [m]": 8.52e-05,
+        "Negative electrode conductivity [S.m-1]": 215.0,
+        "Maximum concentration in negative electrode [mol.m-3]": 29583.0,
+        "Negative electrode diffusivity [m2.s-1]": graphite_LGM50_diffusivity_ORegan2022,
+        "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
+        "Negative electrode porosity": 0.25,
+        "Negative electrode active material volume fraction": 0.75,
+        "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
+        "Negative electrode Bruggeman coefficient (electrode)": 0.0,
+        "Negative electrode cation signed stoichiometry": -1.0,
+        "Negative electrode electrons in reaction": 1.0,
+        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode double-layer capacity [F.m-2]": 0.2,
+        "Negative electrode exchange-current density [A.m-2]": graphite_LGM50_electrolyte_exchange_current_density_ORegan2022,
+        "Negative electrode density [kg.m-3]": 2060.0,
+        "Negative electrode specific heat capacity [J.kg-1.K-1]": graphite_LGM50_heat_capacity_ORegan2022,
+        "Negative electrode thermal conductivity [W.m-1.K-1]": graphite_LGM50_thermal_conductivity_ORegan2022,
+        "Negative electrode OCP entropic change [V.K-1]": graphite_LGM50_entropic_change_ORegan2022,
+        "Initial concentration in negative electrode [mol.m-3]": 28866.0,
+        # Separator
+        "Separator thickness [m]": 1.2e-05,
+        "Separator porosity": 0.47,
+        "Separator Bruggeman coefficient (electrolyte)": 1.5,
+        "Separator Bruggeman coefficient (electrode)": 1.5,
+        "Separator density [kg.m-3]": 1548.0,
+        "Separator specific heat capacity [J.kg-1.K-1]": separator_LGM50_heat_capacity_ORegan2022,
+        "Separator thermal conductivity [W.m-1.K-1]": 0.3344,
+        # Positive electrode
+        "Positive electrode thickness [m]": 7.56e-05,
+        "Positive electrode conductivity [S.m-1]": nmc_LGM50_electronic_conductivity_ORegan2022,
+        "Maximum concentration in positive electrode [mol.m-3]": 51765.0,
+        "Positive electrode diffusivity [m2.s-1]": nmc_LGM50_diffusivity_ORegan2022,
+        "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
+        "Positive electrode porosity": 0.335,
+        "Positive electrode active material volume fraction": 0.665,
+        "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
+        "Positive electrode Bruggeman coefficient (electrode)": 0.0,
+        "Positive electrode cation signed stoichiometry": -1.0,
+        "Positive electrode electrons in reaction": 1.0,
+        "Positive electrode charge transfer coefficient": 0.5,
+        "Positive electrode double-layer capacity [F.m-2]": 0.2,
+        "Positive electrode exchange-current density [A.m-2]": nmc_LGM50_electrolyte_exchange_current_density_ORegan2022,
+        "Positive electrode density [kg.m-3]": 3699.0,
+        "Positive electrode specific heat capacity [J.kg-1.K-1]": nmc_LGM50_heat_capacity_ORegan2022,
+        "Positive electrode thermal conductivity [W.m-1.K-1]": nmc_LGM50_thermal_conductivity_ORegan2022,
+        "Positive electrode OCP entropic change [V.K-1]": nmc_LGM50_entropic_change_ORegan2022,
+        "Initial concentration in positive electrode [mol.m-3]": 13975.0,
+        # Other
+        "Negative current collector thickness [m]": 1.2e-05,
+        "Positive current collector thickness [m]": 1.6e-05,
+        "Electrode height [m]": 0.065,
+        "Electrode width [m]": 1.58,
+        "Cell cooling surface area [m2]": 0.00531,
+        "Cell volume [m3]": 2.42e-05,
+        "Negative current collector conductivity [S.m-1]": 58411000.0,
+        "Positive current collector conductivity [S.m-1]": 36914000.0,
+        "Negative current collector density [kg.m-3]": 8933.0,
+        "Positive current collector density [kg.m-3]": 2702.0,
+        "Negative current collector specific heat capacity [J.kg-1.K-1]": copper_heat_capacity_CRC,
+        "Positive current collector specific heat capacity [J.kg-1.K-1]": aluminium_heat_capacity_CRC,
+        "Negative current collector thermal conductivity [W.m-1.K-1]": copper_thermal_conductivity_CRC,
+        "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
+        "Nominal cell capacity [A.h]": 5.0,
+        "Typical current [A]": 5.0,
+        "Current function [A]": 5.0,
+        "Negative particle radius [m]": 5.86e-06,
+        "Positive particle radius [m]": 5.22e-06,
+        "Typical electrolyte concentration [mol.m-3]": 1000.0,
+        "Initial concentration in electrolyte [mol.m-3]": 1000.0,
+        "Cation transference number": electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019,
+        "1 + dlnf/dlnc": electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
+        "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019,
+        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019,
+        "Reference temperature [K]": 298.15,
+        "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
+        "Ambient temperature [K]": 298.15,
+        "Number of electrodes connected in parallel to make a cell": 1.0,
+        "Number of cells connected in series to make a battery": 1.0,
+        "Lower voltage cut-off [V]": 2.5,
+        "Upper voltage cut-off [V]": 4.4,
+        "Initial temperature [K]": 298.15,
+    }

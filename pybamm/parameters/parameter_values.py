@@ -193,6 +193,8 @@ class ParameterValues:
             "experiment",
         ]
 
+        self.component_params_by_group = {}
+
         # add SEI parameters if provided
         for extra_group in ["sei", "lithium plating"]:
             if extra_group in chemistry:
@@ -215,11 +217,9 @@ class ParameterValues:
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
             )
-            component_params_tmp = self.read_parameters_csv(file_path)
+            component_params = self.read_parameters_csv(file_path)
 
-            component_params = {}
-            for k, v in component_params_tmp.items():
-                component_params[k] = v
+            self.component_params_by_group[component_group] = component_params
 
             # Update parameters, making sure to check any conflicts
             self.update(
@@ -231,10 +231,10 @@ class ParameterValues:
 
         # register (list of) citations
         if "citation" in chemistry:
-            citations = chemistry["citation"]
-            if not isinstance(citations, list):
-                citations = [citations]
-            for citation in citations:
+            self.citations = chemistry["citation"]
+            if not isinstance(self.citations, list):
+                self.citations = [self.citations]
+            for citation in self.citations:
                 pybamm.citations.register(citation)
 
     def read_parameters_csv(self, filename):
@@ -969,3 +969,89 @@ class ParameterValues:
                 pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
                 return trial_path
         raise FileNotFoundError("Could not find parameter {}".format(path))
+
+    def print_as_python_script(self, name, path=None):
+        """
+        Print a python script that can be used to reproduce the parameter set
+
+        Parameters
+        ----------
+        name : string
+            The name to save the parameter set under
+        path : string, optional
+            Optional path for the location where the parameter set should be saved
+        """
+        filename = name
+        if not filename.endswith(".py"):
+            filename = filename + ".py"
+        if path is not None:
+            filename = path + filename
+        filename = pybamm.get_parameters_filepath(filename)
+
+        preamble = "import pybamm\n"
+        function_output = ""
+        data_output = ""
+        negative_dict_output = "\n        # Negative electrode"
+        separator_dict_output = "\n        # Separator"
+        positive_dict_output = "\n        # Positive electrode"
+        other_dict_output = "\n        # Other"
+
+        use_np = False
+        for k, v in self.items():
+            if callable(v):
+                # write the function body to the file
+                function_output += inspect.getsource(v) + "\n"
+                v = v.__name__
+            elif isinstance(v, tuple):
+                # save the data to a separate csv file and load it in the parameter set
+                data_name, data = v
+                data_file = path + f"{data_name}.csv"
+                # save data to a file
+                data_2D = np.hstack([data[0][0][:, np.newaxis], data[1][:, np.newaxis]])
+                np.savetxt(data_file, data_2D, delimiter=",")
+                # add code to load data
+                data_output += (
+                    f"{data_name}_filename = pybamm.get_parameters_filepath"
+                    f"('{path}{data_name}.csv')\n"
+                    f"{data_name} = np.loadtxt({data_name}_filename, delimiter=',')\n"
+                )
+                # replace data with data_name
+                v = f"('{data_name}', {data_name})"
+                use_np = True
+            elif np.isnan(v):
+                continue  # skip this value
+
+            # add line to the parameter output in the appropriate section
+            param_output = f"""\n        "{k}": {v},"""
+            if "negative electrode" in k.lower():
+                negative_dict_output += param_output
+            elif "separator" in k.lower():
+                separator_dict_output += param_output
+            elif "positive electrode" in k.lower():
+                positive_dict_output += param_output
+            else:
+                other_dict_output += param_output
+
+        if use_np:
+            preamble += "import numpy as np\n"
+
+        output = (
+            preamble
+            + "\n\n"
+            + function_output
+            + data_output
+            + "\ndef get_parameter_values():\n    return {"
+            + negative_dict_output
+            + separator_dict_output
+            + positive_dict_output
+            + other_dict_output
+            + "\n    }"
+        )
+
+        # Add pybamm. to functions that didn't have it in function body before
+        for funcname in ["Parameter", "exp", "tanh", "cosh"]:
+            output = output.replace(f"{funcname}(", f"pybamm.{funcname}(")
+        output = output.replace("constants", "pybamm.constants")
+
+        with open(filename, "w") as f:
+            f.write(output)
