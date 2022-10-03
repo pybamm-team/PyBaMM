@@ -260,9 +260,25 @@ class JuliaConverter(object):
     def _convert_tree_to_intermediate(self, symbol: pybamm.Index):
         assert len(symbol.children) == 1
         id_lower = self._convert_tree_to_intermediate(symbol.children[0])
+        child_shape = self._intermediate[id_lower].shape
+        child_ncols = child_shape[1]
+
+
         my_id = symbol.id
         index = symbol.index
-        self._intermediate[my_id] = JuliaIndex(id_lower, my_id, index)
+        if type(index) is slice:
+            if index.step is None:
+                shape = ((index.stop) - (index.start), child_ncols)
+            elif type(index.step) == int:
+                shape = (floor((index.stop - index.start) / index.step), child_ncols)
+            else:
+                raise NotImplementedError("index must be slice or int")
+        elif type(index) is int:
+            shape = (1, child_ncols)
+        else:
+            raise NotImplementedError("index must be slice or int")
+        
+        self._intermediate[my_id] = JuliaIndex(id_lower, my_id, index, shape)
         return my_id
 
     def find_broadcastable_shape(self, id_left, id_right):
@@ -857,28 +873,22 @@ class JuliaMinimumMaximum(JuliaBroadcastableFunction):
 
 # Index is a little weird, so it just sits on its own.
 class JuliaIndex(object):
-    def __init__(self, input, output, index):
+    def __init__(self, input, output, index, shape):
         self.input = input
         self.output = output
         self.index = index
-        if type(index) is slice:
-            if index.step is None:
-                self.shape = ((index.stop) - (index.start), 1)
-            elif type(index.step) == int:
-                self.shape = (floor((index.stop - index.start) / index.step), 1)
-            else:
-                print(index.step)
-                raise NotImplementedError("asldhfjwaes")
-        elif type(index) is int:
-            self.shape = (1, 1)
-        else:
-            raise NotImplementedError("index must be slice or int")
+        self.shape = shape
+
 
     def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
         if converter.cache_exists(self.output):
             return converter._cache_dict[self.output]
         index = self.index
         inline = inline & converter._inline
+        if self.shape[1] == 1:
+            right_parenthesis = "]"
+        else:
+            right_parenthesis = ",:]"
         if inline:
             input_var_name = converter._intermediate[
                 self.input
@@ -887,12 +897,12 @@ class JuliaIndex(object):
                 return "{}[{}]".format(input_var_name, index + 1)
             elif type(index) is slice:
                 if index.step is None:
-                    return "(@view {}[{}:{}])".format(
-                        input_var_name, index.start + 1, index.stop
+                    return "(@view {}[{}:{}{})".format(
+                        input_var_name, index.start + 1, index.stop, right_parenthesis
                     )
                 elif type(index.step) is int:
-                    return "(@view {}[{}:{}:{}])".format(
-                        input_var_name, index.start + 1, index.step, index.stop
+                    return "(@view {}[{}:{}:{}{})".format(
+                        input_var_name, index.start + 1, index.step, index.stop, right_parenthesis
                     )
                 else:
                     raise NotImplementedError("Step has to be an integer.")
@@ -904,21 +914,23 @@ class JuliaIndex(object):
                 self.input
             ]._convert_intermediate_to_code(converter, inline=False)
             if type(index) is int:
-                code = "@. {} = {}[{}]".format(
-                    result_var_name, input_var_name, index + 1
+                code = "@. {} = {}[{}{}".format(
+                    result_var_name, input_var_name, index + 1, right_parenthesis
                 )
             elif type(index) is slice:
                 if index.step is None:
-                    code = "@. {} = (@view {}[{}:{}])".format(
-                        result_var_name, input_var_name, index.start + 1, index.stop
+                    code = "@. {} = (@view {}[{}:{}{})".format(
+                        result_var_name, input_var_name, index.start + 1, index.stop, right_parenthesis
                     )
                 elif type(index.step) is int:
-                    code = "@. {} = (@view {}[{}:{}:{}])".format(
+                    code = "@. {} = (@view {}[{}:{}:{}{})".format(
                         result_var_name,
                         input_var_name,
                         index.start + 1,
                         index.step,
                         index.stop,
+                        right_parenthesis,
+
                     )
                 else:
                     raise NotImplementedError("Step has to be an integer.")
