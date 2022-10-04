@@ -589,7 +589,7 @@ class JuliaConverter(object):
         # this line actually writes the code
         top_var_name = top._convert_intermediate_to_code(self, inline=False)
         #if parallel is true, we haven't actually written the function yet
-        alg = "top_cut"
+        alg = "level_sync"
         if self.parallel:
             if alg == "top_cut":
                 self.top_cut(topcut_options)
