@@ -26,6 +26,7 @@ def copper_heat_capacity_CRC(T):
 
     return cp
 
+
 def aluminium_heat_capacity_CRC(T):
     """
     Aluminium specific heat capacity as a function of the temperature from [1].
@@ -50,6 +51,7 @@ def aluminium_heat_capacity_CRC(T):
 
     return cp
 
+
 def copper_thermal_conductivity_CRC(T):
     """
     Copper thermal conductivity as a function of the temperature from [1].
@@ -73,6 +75,7 @@ def copper_thermal_conductivity_CRC(T):
     lambda_th = -5.409e-7 * T**3 + 7.054e-4 * T**2 - 0.3727 * T + 463.6
 
     return lambda_th
+
 
 def graphite_LGM50_diffusivity_ORegan2022(sto, T):
     """
@@ -132,6 +135,7 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
 
     return D_ref * arrhenius
 
+
 def graphite_LGM50_ocp_Chen2020(sto):
     """
     LG M50 Graphite open-circuit potential as a function of stochiometry, fit taken
@@ -164,6 +168,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     )
 
     return U
+
 
 def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
     c_e, c_s_surf, c_s_max, T
@@ -210,6 +215,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
         * (1 - c_s_surf / c_s_max) ** (1 - alpha)
     )
 
+
 def graphite_LGM50_heat_capacity_ORegan2022(T):
     """
     Wet negative electrode specific heat capacity as a function of the temperature from
@@ -251,6 +257,7 @@ def graphite_LGM50_heat_capacity_ORegan2022(T):
 
     return cp_wet
 
+
 def graphite_LGM50_thermal_conductivity_ORegan2022(T):
     """
     Wet negative electrode thermal conductivity as a function of the temperature from
@@ -276,6 +283,7 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
     lambda_wet = -2.61e-4 * T**2 + 0.1726 * T - 24.49
 
     return lambda_wet
+
 
 def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
@@ -313,10 +321,12 @@ def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
         a0 * sto
         + c0
         + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
-        + a1 * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
+        + a1
+        * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
     ) / 1000  # fit in mV / K
 
     return dUdT
+
 
 def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     """
@@ -346,6 +356,7 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     sigma = 0.8473 * arrhenius
 
     return sigma
+
 
 def nmc_LGM50_diffusivity_ORegan2022(sto, T):
     """
@@ -399,6 +410,7 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
 
     return D_ref * arrhenius
 
+
 def nmc_LGM50_ocp_Chen2020(sto):
     """
      LG M50 NMC open-circuit potential as a function of stoichiometry.  The fit is
@@ -431,6 +443,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     )
 
     return U
+
 
 def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     c_e, c_s_surf, c_s_max, T
@@ -476,6 +489,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
         * (1 - c_s_surf / c_s_max) ** (1 - alpha)
     )
 
+
 def nmc_LGM50_heat_capacity_ORegan2022(T):
     """
     Wet positive electrode specific heat capacity as a function of the temperature from
@@ -517,6 +531,7 @@ def nmc_LGM50_heat_capacity_ORegan2022(T):
 
     return cp_wet
 
+
 def nmc_LGM50_thermal_conductivity_ORegan2022(T):
     """
     Wet positive electrode thermal conductivity as a function of the temperature from
@@ -542,6 +557,7 @@ def nmc_LGM50_thermal_conductivity_ORegan2022(T):
     lambda_wet = 2.063e-5 * T**2 - 0.01127 * T + 2.331
 
     return lambda_wet
+
 
 def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
@@ -572,11 +588,13 @@ def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     c2 = 0.02179
 
     dUdT = (
-        a1 * pybamm.exp(-((sto - b1) ** 2) / c1) + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
+        a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
+        + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
     ) / 1000
     # fit in mV / K
 
     return dUdT
+
 
 def separator_LGM50_heat_capacity_ORegan2022(T):
     """
@@ -618,6 +636,7 @@ def separator_LGM50_heat_capacity_ORegan2022(T):
 
     return cp_wet
 
+
 def electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Transference number of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
@@ -657,6 +676,7 @@ def electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019(c_e, T):
 
     return electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs)
 
+
 def electrolyte_TDF_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Thermodynamic factor (TDF) of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
@@ -686,6 +706,7 @@ def electrolyte_TDF_EC_EMC_3_7_Landesfeind2019(c_e, T):
 
     return electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs)
 
+
 def electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7 w:w) as a function of ion concentration and
@@ -712,6 +733,7 @@ def electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     coeffs = np.array([1.01e3, 1.01, -1.56e3, -4.87e2])
 
     return electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs)
+
 
 def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
@@ -745,65 +767,65 @@ def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
 def get_parameter_values():
     """
     # ORegan2022 parameter set
-    # LG M50 cell parameters 
-     
-    Parameters for an LG M50 cell, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # LG M50 Graphite negative electrode parameters 
-     
-    Parameters for a LG M50 graphite negative electrode, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for an LG M50 separator, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # NMC 811 positive electrode parameters 
-     
-    Parameters for an LG M50 NMC positive electrode, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # LiPF6 in EC:EMC (3:7 w:w) electrolyte parameters 
-     
-    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte, from the paper 
-     
-    > Johannes Landesfeind and Hubert A. Gasteiger, ["Temperature and Concentration 
-    Dependence of the Ionic Transport Properties of Lithium-Ion Battery 
-    Electrolytes."](https://iopscience.iop.org/article/10.1149/2.0571912jes) Journal of 
-    the Electrochemical Society 166 (2019): A3079. 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
+    # LG M50 cell parameters
+
+    Parameters for an LG M50 cell, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # LG M50 Graphite negative electrode parameters
+
+    Parameters for a LG M50 graphite negative electrode, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for an LG M50 separator, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # NMC 811 positive electrode parameters
+
+    Parameters for an LG M50 NMC positive electrode, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # LiPF6 in EC:EMC (3:7 w:w) electrolyte parameters
+
+    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte, from the paper
+
+    > Johannes Landesfeind and Hubert A. Gasteiger, ["Temperature and Concentration
+    Dependence of the Ionic Transport Properties of Lithium-Ion Battery
+    Electrolytes."](https://iopscience.iop.org/article/10.1149/2.0571912jes) Journal of
+    the Electrochemical Society 166 (2019): A3079.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
     """
 
     return {
@@ -892,5 +914,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 13975.0,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['ORegan2022', 'Chen2020'],
+        "citations": ["ORegan2022", "Chen2020"],
     }

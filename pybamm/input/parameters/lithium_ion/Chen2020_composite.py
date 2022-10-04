@@ -39,6 +39,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def silicon_ocp_lithiation_Mark2016(sto):
     """
     silicon Open Circuit Potential (OCP) as a a function of the
@@ -81,6 +82,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
         + p8
     )
     return U_lithiation
+
 
 def silicon_ocp_delithiation_Mark2016(sto):
     """
@@ -125,6 +127,7 @@ def silicon_ocp_delithiation_Mark2016(sto):
     )
     return U_delithiation
 
+
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -166,6 +169,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def nmc_LGM50_ocp_Chen2020(sto):
     """
     LG M50 NMC open circuit potential as a function of stochiometry, fit taken
@@ -198,6 +202,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     )
 
     return u_eq
+
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
     """
@@ -235,6 +240,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
@@ -264,6 +270,7 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
     # Nyman et al. (2008) does not provide temperature dependence
 
     return D_c_e
+
 
 def electrolyte_conductivity_Nyman2008(c_e, T):
     """
@@ -302,86 +309,86 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 def get_parameter_values():
     """
     # Chen2020_composite parameter set
-    # LG M50 cell parameters 
-     
-    Parameters for an LG M50 cell, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # Graphite/silicon negative electrode parameters 
-     
-    Parameters for a composite graphite/silicon negative electrode, from the paper 
-     
+    # LG M50 cell parameters
+
+    Parameters for an LG M50 cell, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # Graphite/silicon negative electrode parameters
+
+    Parameters for a composite graphite/silicon negative electrode, from the paper
+
     > Ai, W., Kirkaldy, N., Jiang, Y., Offer, G., Wang, H., & Wu, B. (2022). A composite
-     electrode model for lithium-ion batteries with silicon/graphite negative 
-    electrodes. Journal of Power Sources, 527, 231142. 
-     
-    based on the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for an LG M50 separator, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # NMC 811 positive electrode parameters 
-     
-    Parameters for an LG M50 NMC 811 positive electrode, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the paper 
-     
-    > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and 
-    modelling of the mass transport phenomena in LiPF6-EC-EMC 
-    electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045) 
-    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008. 
-     
-    and references therein. 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # SEI parameters 
-     
-    Example parameters for composite SEI on silicon/graphite. Both phases use the same 
-    values, from the paper 
-     
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium 
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear 
-    aging. Journal of Power Sources, 360, 28-40. 
+     electrode model for lithium-ion batteries with silicon/graphite negative
+    electrodes. Journal of Power Sources, 527, 231142.
+
+    based on the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for an LG M50 separator, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # NMC 811 positive electrode parameters
+
+    Parameters for an LG M50 NMC 811 positive electrode, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC
+    electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045)
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # SEI parameters
+
+    Example parameters for composite SEI on silicon/graphite. Both phases use the same
+    values, from the paper
+
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
     """
 
     return {
@@ -435,7 +442,7 @@ def get_parameter_values():
         "Primary: Maximum concentration in negative electrode [mol.m-3]": 28700.0,
         "Primary: Initial concentration in negative electrode [mol.m-3]": 27700.0,
         "Primary: Negative electrode diffusivity [m2.s-1]": 5.5e-14,
-        "Primary: Negative electrode OCP [V]": '[data]graphite_ocp_Enertech_Ai2020',
+        "Primary: Negative electrode OCP [V]": "[data]graphite_ocp_Enertech_Ai2020",
         "Negative electrode porosity": 0.25,
         "Primary: Negative electrode active material volume fraction": 0.735,
         "Primary: Negative particle radius [m]": 5.86e-06,
@@ -505,5 +512,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['Chen2020', 'Ai2022'],
+        "citations": ["Chen2020", "Ai2022"],
     }

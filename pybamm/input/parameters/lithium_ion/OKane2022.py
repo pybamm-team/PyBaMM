@@ -28,6 +28,7 @@ def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
 
     return pybamm.constants.F * k_plating * c_e
 
+
 def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
     """
     Exchange-current density for Li stripping reaction [A.m-2].
@@ -61,6 +62,7 @@ def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
 
     return pybamm.constants.F * k_plating * c_Li
 
+
 def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
     Decay rate for dead lithium formation [s-1].
@@ -88,6 +90,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     gamma = gamma_0 * L_sei_0 / L_sei
 
     return gamma
+
 
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
@@ -120,6 +123,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
+
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
@@ -159,6 +163,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def graphite_volume_change_Ai2020(sto, c_s_max):
     """
@@ -208,6 +213,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     )
     return t_change
 
+
 def graphite_cracking_rate_Ai2020(T_dim):
     """
     Graphite particle cracking rate as a function of temperature [1, 2].
@@ -237,6 +243,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     Eac_cr = 0  # to be implemented
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
 
 def nmc_LGM50_diffusivity_Chen2020(sto, T):
     """
@@ -268,6 +275,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
+
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
@@ -301,6 +309,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     )
 
     return u_eq
+
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
     """
@@ -336,6 +345,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def volume_change_Ai2020(sto, c_s_max):
     """
     Particle volume change as a function of stochiometry [1, 2].
@@ -363,6 +373,7 @@ def volume_change_Ai2020(sto, c_s_max):
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
     t_change = omega * c_s_max * sto
     return t_change
+
 
 def cracking_rate_Ai2020(T_dim):
     """
@@ -393,6 +404,7 @@ def cracking_rate_Ai2020(T_dim):
     Eac_cr = 0  # to be implemented
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
 
 def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     """
@@ -430,6 +442,7 @@ def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     arrhenius = pybamm.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
+
 
 def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
     """
@@ -475,103 +488,103 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
 def get_parameter_values():
     """
     # OKane2022 parameter set
-    # LG M50 cell parameters 
-     
-    Parameters for an LG M50 cell, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # LG M50 Graphite anode parameters 
-     
-    Parameters for an LG M50 graphite negative electrode, from the paper 
-     
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms, 
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu. 
-    ["Lithium-ion battery degradation: how to model 
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical 
-    Chemistry: Chemical Physics 24 (2022): 7909-7922 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for an LG M50 separator, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # NMC 811 positive electrode parameters 
-     
-    Parameters for an LG M50 NMC 811 positive electrode, from the paper 
-     
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms, 
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu. 
-    ["Lithium-ion battery degradation: how to model 
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical 
-    Chemistry: Chemical Physics 24 (2022): 7909-7922 
-     
-    and references therein. 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the paper 
-     
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms, 
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu. 
-    ["Lithium-ion battery degradation: how to model 
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical 
-    Chemistry: Chemical Physics 24 (2022): 7909-7922 
-     
-    and references therein. 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # SEI parameters 
-     
-    Parameters for SEI growth from the paper 
-     
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms, 
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu. 
-    ["Lithium-ion battery degradation: how to model 
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical 
-    Chemistry: Chemical Physics 24 (2022): 7909-7922 
-     
-    and references therein. 
-     
-    Note: this parameter set does not claim to be representative of the true parameter 
-    values. These are merely the parameter values that were used in the referenced 
-    papers. 
-    # Lithium plating parameters 
-     
-    Some example parameters for lithium plating from the paper: 
-     
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms, 
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu. 
-    ["Lithium-ion battery degradation: how to model 
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical 
-    Chemistry: Chemical Physics 24 (2022): 7909-7922 
-     
-    and references therein. 
-     
-    Note: this parameter set does not claim to be representative of the true parameter 
-    values. These are merely the parameter values that were used in the referenced 
-    papers. 
+    # LG M50 cell parameters
+
+    Parameters for an LG M50 cell, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # LG M50 Graphite anode parameters
+
+    Parameters for an LG M50 graphite negative electrode, from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for an LG M50 separator, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # NMC 811 positive electrode parameters
+
+    Parameters for an LG M50 NMC 811 positive electrode, from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # SEI parameters
+
+    Parameters for SEI growth from the paper
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. These are merely the parameter values that were used in the referenced
+    papers.
+    # Lithium plating parameters
+
+    Some example parameters for lithium plating from the paper:
+
+    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
+    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
+    ["Lithium-ion battery degradation: how to model
+    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
+    Chemistry: Chemical Physics 24 (2022): 7909-7922
+
+    and references therein.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. These are merely the parameter values that were used in the referenced
+    papers.
     """
 
     return {
@@ -634,7 +647,7 @@ def get_parameter_values():
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
         "Negative electrode diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
-        "Negative electrode OCP [V]": '[data]graphite_LGM50_ocp_Chen2020',
+        "Negative electrode OCP [V]": "[data]graphite_LGM50_ocp_Chen2020",
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,
         "Negative particle radius [m]": 5.86e-06,
@@ -721,5 +734,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['OKane2022', 'Chen2020'],
+        "citations": ["OKane2022", "Chen2020"],
     }

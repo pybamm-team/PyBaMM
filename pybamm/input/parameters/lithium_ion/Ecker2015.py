@@ -32,9 +32,12 @@ def graphite_diffusivity_Ecker2015(sto, T):
 
     D_ref = 8.4e-13 * pybamm.exp(-11.3 * sto) + 8.2e-15
     E_D_s = 3.03e4
-    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R * T)) * pybamm.exp(E_D_s / (pybamm.constants.R * 296))
+    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R * T)) * pybamm.exp(
+        E_D_s / (pybamm.constants.R * 296)
+    )
 
     return D_ref * arrhenius
+
 
 def graphite_ocp_Ecker2015_function(sto):
     """
@@ -96,6 +99,7 @@ def graphite_ocp_Ecker2015_function(sto):
 
     return u_eq
 
+
 def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between graphite and LiPF6 in
@@ -133,14 +137,19 @@ def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_m
     k_ref = 1.11 * 1e-10
 
     # multiply by Faraday's constant to get correct units
-    m_ref = pybamm.constants.F * k_ref  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = (
+        pybamm.constants.F * k_ref
+    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 53400
 
-    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(E_r / (pybamm.constants.R * 296.15))
+    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(
+        E_r / (pybamm.constants.R * 296.15)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def nco_diffusivity_Ecker2015(sto, T):
     """
@@ -173,9 +182,12 @@ def nco_diffusivity_Ecker2015(sto, T):
 
     D_ref = 3.7e-13 - 3.4e-13 * pybamm.exp(-12 * (sto - 0.62) * (sto - 0.62))
     E_D_s = 8.06e4
-    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R * T)) * pybamm.exp(E_D_s / (pybamm.constants.R * 296.15))
+    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R * T)) * pybamm.exp(
+        E_D_s / (pybamm.constants.R * 296.15)
+    )
 
     return D_ref * arrhenius
+
 
 def nco_ocp_Ecker2015_function(sto):
     """
@@ -232,6 +244,7 @@ def nco_ocp_Ecker2015_function(sto):
     )
     return u_eq
 
+
 def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between NCO and LiPF6 in
@@ -269,14 +282,19 @@ def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T
     k_ref = 3.01e-11
 
     # multiply by Faraday's constant to get correct units
-    m_ref = pybamm.constants.F * k_ref  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = (
+        pybamm.constants.F * k_ref
+    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
 
     E_r = 4.36e4
-    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(E_r / (pybamm.constants.R * 296.15))
+    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(
+        E_r / (pybamm.constants.R * 296.15)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def electrolyte_diffusivity_Ecker2015(c_e, T):
     """
@@ -311,9 +329,15 @@ def electrolyte_diffusivity_Ecker2015(c_e, T):
     inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
     sigma_e = pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
-    D_c_e = (pybamm.constants.k_b / (pybamm.constants.F * pybamm.constants.q_e)) * sigma_e * T / c_e
+    D_c_e = (
+        (pybamm.constants.k_b / (pybamm.constants.F * pybamm.constants.q_e))
+        * sigma_e
+        * T
+        / c_e
+    )
 
     return D_c_e
+
 
 def electrolyte_conductivity_Ecker2015(c_e, T):
     """
@@ -362,147 +386,147 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
 def get_parameter_values():
     """
     # Ecker2015 parameter set
-    # Kokam SLPB 75106100 cell parameters 
-     
-    Parameters for a Kokam SLPB 75106100 cell, from the papers 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery I. determination of parameters." Journal of the Electrochemical 
-    Society 162.9 (2015): A1836-A1848. 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857. 
-     
-    The tab placement parameters are taken from measurements in 
-     
-    > Hales, Alastair, et al. "The cell cooling coefficient: a standard to define heat 
+    # Kokam SLPB 75106100 cell parameters
+
+    Parameters for a Kokam SLPB 75106100 cell, from the papers
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery I. determination of parameters." Journal of the Electrochemical
+    Society 162.9 (2015): A1836-A1848.
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857.
+
+    The tab placement parameters are taken from measurements in
+
+    > Hales, Alastair, et al. "The cell cooling coefficient: a standard to define heat
     rejection from lithium-ion batteries." Journal of The Electrochemical Society 166.12
-     (2019): A2383. 
-     
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data 
-    are extracted from 
-     
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and 
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical 
-    Society, 165.13 (2018): A3169-A3178. 
-    # Graphite negative electrode parameters 
-     
-    Parameters for a graphite negative electrode, from the papers: 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery I. determination of parameters." Journal of the Electrochemical 
-    Society 162.9 (2015): A1836-A1848. 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857. 
-     
-    The fits to data for the electrode and electrolyte properties are those provided 
-    by Dr. Simon O’Kane in the paper: 
-     
-    > Richardson, Giles, et. al. "Generalised single particle models for high-rate 
-    operation of graded lithium-ion electrodes: Systematic derivation and validation." 
-    Electrochemica Acta 339 (2020): 135862 
-     
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data 
-    are extracted from 
-     
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and 
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical 
-    Society, 165.13 (2018): A3169-A3178. 
-    # Separator parameters 
-     
-    Parameters for the separator from the papers 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical 
-    Society 162.9 (2015): A1836-A1848. 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857. 
-     
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data 
-    are extracted from 
-     
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and 
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical 
-    Society, 165.13 (2018): A3169-A3178. 
-    # Lithium Nickel Cobalt Oxide positive electrode parameters 
-     
-    Parameters for a Lithium Nickel Cobalt Oxide positive electrode, from the papers 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical 
-    Society 162.9 (2015): A1836-A1848. 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857. 
-     
-    The fits to data for the electrode and electrolyte properties are those provided 
-    by Dr. Simon O’Kane in the paper: 
-     
-    > Richardson, Giles, et. al. "Generalised single particle models for high-rate 
-    operation of graded lithium-ion electrodes: Systematic derivation and validation." 
-    Electrochemica Acta 339 (2020): 135862 
-     
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data 
-    are extracted from 
-     
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and 
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical 
-    Society, 165.13 (2018): A3169-A3178. 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the papers 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical 
-    Society 162.9 (2015): A1836-A1848. 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857. 
-     
-    The fits to data for the electrode and electrolyte properties are those provided 
-    by Dr. Simon O’Kane in the paper: 
-     
-    > Richardson, Giles, et. al. "Generalised single particle models for high-rate 
-    operation of graded lithium-ion electrodes: Systematic derivation and validation." 
-    Electrochemica Acta 339 (2020): 135862 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857.. 
-    # SEI parameters 
-     
-    Some example parameters for SEI growth from the papers: 
-     
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004). 
+     (2019): A2383.
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from
+
+    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
+    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
+    Society, 165.13 (2018): A3169-A3178.
+    # Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the papers:
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery I. determination of parameters." Journal of the Electrochemical
+    Society 162.9 (2015): A1836-A1848.
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857.
+
+    The fits to data for the electrode and electrolyte properties are those provided
+    by Dr. Simon O’Kane in the paper:
+
+    > Richardson, Giles, et. al. "Generalised single particle models for high-rate
+    operation of graded lithium-ion electrodes: Systematic derivation and validation."
+    Electrochemica Acta 339 (2020): 135862
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from
+
+    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
+    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
+    Society, 165.13 (2018): A3169-A3178.
+    # Separator parameters
+
+    Parameters for the separator from the papers
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
+    Society 162.9 (2015): A1836-A1848.
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857.
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from
+
+    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
+    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
+    Society, 165.13 (2018): A3169-A3178.
+    # Lithium Nickel Cobalt Oxide positive electrode parameters
+
+    Parameters for a Lithium Nickel Cobalt Oxide positive electrode, from the papers
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
+    Society 162.9 (2015): A1836-A1848.
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857.
+
+    The fits to data for the electrode and electrolyte properties are those provided
+    by Dr. Simon O’Kane in the paper:
+
+    > Richardson, Giles, et. al. "Generalised single particle models for high-rate
+    operation of graded lithium-ion electrodes: Systematic derivation and validation."
+    Electrochemica Acta 339 (2020): 135862
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from
+
+    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
+    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
+    Society, 165.13 (2018): A3169-A3178.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the papers
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
+    Society 162.9 (2015): A1836-A1848.
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857.
+
+    The fits to data for the electrode and electrolyte properties are those provided
+    by Dr. Simon O’Kane in the paper:
+
+    > Richardson, Giles, et. al. "Generalised single particle models for high-rate
+    operation of graded lithium-ion electrodes: Systematic derivation and validation."
+    Electrochemica Acta 339 (2020): 135862
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857..
+    # SEI parameters
+
+    Some example parameters for SEI growth from the papers:
+
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203. 
-    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for 
-    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3), 
-    A456-A462. 
-    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of 
-    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12), 
-    1950-1955. 
+     Electrochemical Society, 151(2), A196-A203.
+    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
+    A456-A462.
+    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
+    1950-1955.
     > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The 
-    Electrochemical Society, 156(3), 
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium 
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear 
-    aging. Journal of Power Sources, 360, 28-40. 
-     
-    Note: this parameter set does not claim to be representative of the true parameter 
-    values. Instead these are parameter values that were used to fit SEI models to 
-    observed experimental data in the referenced papers. 
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
+    Electrochemical Society, 156(3),
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. Instead these are parameter values that were used to fit SEI models to
+    observed experimental data in the referenced papers.
     """
 
     return {
@@ -559,9 +583,9 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 14.0,
         "Maximum concentration in negative electrode [mol.m-3]": 31920.0,
-        "Measured negative electrode diffusivity [m2.s-1]": '[data]measured_graphite_diffusivity_Ecker2015',
+        "Measured negative electrode diffusivity [m2.s-1]": "[data]measured_graphite_diffusivity_Ecker2015",
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Ecker2015,
-        "Measured negative electrode OCP [V]": '[data]graphite_ocp_Ecker2015',
+        "Measured negative electrode OCP [V]": "[data]graphite_ocp_Ecker2015",
         "Negative electrode OCP [V]": graphite_ocp_Ecker2015_function,
         "Negative electrode porosity": 0.329,
         "Negative electrode active material volume fraction": 0.372403,
@@ -578,9 +602,9 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 68.1,
         "Maximum concentration in positive electrode [mol.m-3]": 48580.0,
-        "Measured positive electrode diffusivity [m2.s-1]": '[data]measured_nco_diffusivity_Ecker2015',
+        "Measured positive electrode diffusivity [m2.s-1]": "[data]measured_nco_diffusivity_Ecker2015",
         "Positive electrode diffusivity [m2.s-1]": nco_diffusivity_Ecker2015,
-        "Measured positive electrode OCP [V]": '[data]nco_ocp_Ecker2015',
+        "Measured positive electrode OCP [V]": "[data]nco_ocp_Ecker2015",
         "Positive electrode OCP [V]": nco_ocp_Ecker2015_function,
         "Positive electrode porosity": 0.296,
         "Positive electrode active material volume fraction": 0.40832,
@@ -624,5 +648,11 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 12630.8,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['Ecker2015i', 'Ecker2015ii', 'Zhao2018', 'Hales2019', 'Richardson2020'],
+        "citations": [
+            "Ecker2015i",
+            "Ecker2015ii",
+            "Zhao2018",
+            "Hales2019",
+            "Richardson2020",
+        ],
     }

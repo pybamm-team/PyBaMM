@@ -31,6 +31,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
 
     return m_ref * c_Li**0.7 * c_e**0.3
 
+
 def nmc_ocp_Xu2019(sto):
     """
     Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
@@ -78,6 +79,7 @@ def nmc_ocp_Xu2019(sto):
 
     return u_eq
 
+
 def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between NMC and LiPF6 in
@@ -107,9 +109,12 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
         Exchange-current density [A.m-2]
     """
     # assuming implicit correction of incorrect units from the paper
-    m_ref = 5.76e-11 * pybamm.constants.F  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = (
+        5.76e-11 * pybamm.constants.F
+    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
 
     return m_ref * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
+
 
 def electrolyte_diffusivity_Valoen2005(c_e, T):
     """
@@ -143,6 +148,7 @@ def electrolyte_diffusivity_Valoen2005(c_e, T):
     # cm2/s to m2/s
     # note, in the Valoen paper, ln means log10, so its inverse is 10^x
     return (10 ** (D_0 + D_1 * c_e)) * 1e-4
+
 
 def electrolyte_conductivity_Valoen2005(c_e, T):
     """
@@ -185,87 +191,87 @@ def electrolyte_conductivity_Valoen2005(c_e, T):
 def get_parameter_values():
     """
     # Xu2019 parameter set
-    # Kokam SLPB78205130H cell parameters 
-     
-    Parameters for a Kokam SLPB78205130H cell, from the paper 
-     
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and 
+    # Kokam SLPB78205130H cell parameters
+
+    Parameters for a Kokam SLPB78205130H cell, from the paper
+
+    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
     Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The 
-    Electrochemical Society 166.14 (2019): A3456-A3463. 
-     
-    and references therein. 
-    # Graphite MCMB 2528 anode parameters 
-     
-    Parameters for a graphite MCMB 2528 anode, from the paper 
-     
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and 
+     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    and references therein.
+    # Graphite MCMB 2528 anode parameters
+
+    Parameters for a graphite MCMB 2528 anode, from the paper
+
+    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
     Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The 
-    Electrochemical Society 166.14 (2019): A3456-A3463. 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for a Celgard 2325 separator, from the paper 
-     
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and 
+     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for a Celgard 2325 separator, from the paper
+
+    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
     Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The 
-    Electrochemical Society 166.14 (2019): A3456-A3463. 
-     
-    and references therein. 
-    # Lithium Cobalt Oxide cathode parameters 
-     
-    Parameters for a lithium Cobalt Oxide cathode, from the paper 
-     
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and 
+     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    and references therein.
+    # Lithium Cobalt Oxide cathode parameters
+
+    Parameters for a lithium Cobalt Oxide cathode, from the paper
+
+    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
     Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The 
-    Electrochemical Society 166.14 (2019): A3456-A3463. 
-     
-    and references therein. 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the paper 
-     
-    > Valøen, Lars Ole, and Jan N. Reimers. "Transport properties of LiPF6-based Li-ion 
-    battery electrolytes." Journal of The Electrochemical Society 152.5 (2005): 
-    A882-A891. [doi: 10.1149/1.1872737](http://dx.doi.org/10.1149/1.1872737) 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and 
+     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > Valøen, Lars Ole, and Jan N. Reimers. "Transport properties of LiPF6-based Li-ion
+    battery electrolytes." Journal of The Electrochemical Society 152.5 (2005):
+    A882-A891. [doi: 10.1149/1.1872737](http://dx.doi.org/10.1149/1.1872737)
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
     Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The 
-    Electrochemical Society 166.14 (2019): A3456-A3463. 
-     
-    and references therein. 
-    # SEI parameters 
-     
-    Some example parameters for SEI growth from the papers: 
-     
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004). 
+     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    and references therein.
+    # SEI parameters
+
+    Some example parameters for SEI growth from the papers:
+
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203. 
-    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for 
-    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3), 
-    A456-A462. 
-    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of 
-    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12), 
-    1950-1955. 
+     Electrochemical Society, 151(2), A196-A203.
+    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
+    A456-A462.
+    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
+    1950-1955.
     > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The 
-    Electrochemical Society, 156(3), 
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium 
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear 
-    aging. Journal of Power Sources, 360, 28-40. 
-     
-    Note: this parameter set does not claim to be representative of the true parameter 
-    values. Instead these are parameter values that were used to fit SEI models to 
-    observed experimental data in the referenced papers. 
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
+    Electrochemical Society, 156(3),
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. Instead these are parameter values that were used to fit SEI models to
+    observed experimental data in the referenced papers.
     """
 
     return {
@@ -349,5 +355,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 4631.0,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['Xu2019'],
+        "citations": ["Xu2019"],
     }

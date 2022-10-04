@@ -20,6 +20,7 @@ def lead_ocp_Bode1977(m):
     )
     return U
 
+
 def lead_exchange_current_density_Sulzer2019(c_e, T):
     """
     Dimensional exchange-current density in the negative (lead) electrode, from [1]_
@@ -51,6 +52,7 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def lead_dioxide_ocp_Bode1977(m):
     """
     Dimensional open-circuit voltage in the positive (lead-dioxide) electrode [V],
@@ -69,6 +71,7 @@ def lead_dioxide_ocp_Bode1977(m):
         + 0.022 * pybamm.log10(m) ** 4
     )
     return U
+
 
 def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     """
@@ -107,6 +110,7 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def oxygen_exchange_current_density_Sulzer2019(c_e, T):
     """
     Dimensional oxygen exchange-current density in the positive electrode, from [1]_
@@ -138,6 +142,7 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def conductivity_Gu1997(c_e):
     """
     Dimensional conductivity of sulfuric acid [S.m-1], from [1]_ citing [2]_ and
@@ -159,6 +164,7 @@ def conductivity_Gu1997(c_e):
     """
     return c_e * pybamm.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
 
+
 def darken_thermodynamic_factor_Chapman1968(c_e):
     """
     Dimensional Darken thermodynamic factor of sulfuric acid, from data in
@@ -175,6 +181,7 @@ def darken_thermodynamic_factor_Chapman1968(c_e):
 
     """
     return 0.49 + 4.1e-4 * c_e
+
 
 def diffusivity_Gu1997(c_e):
     """
@@ -197,6 +204,7 @@ def diffusivity_Gu1997(c_e):
     """
     return (1.75 + 260e-6 * c_e) * 1e-9
 
+
 def viscosity_Chapman1968(c_e):
     """
     Dimensional viscosity of sulfuric acid [kg.m-1.s-1], from data in [1]_, as a
@@ -216,57 +224,57 @@ def viscosity_Chapman1968(c_e):
 def get_parameter_values():
     """
     # Sulzer2019 parameter set
-    # BBOXX cell parameters 
-     
-    Cell-specific parameters for BBOXX lead-acid cells, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+    # BBOXX cell parameters
+
+    Cell-specific parameters for BBOXX lead-acid cells, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-    # Lead negative electrode parameters 
-     
-    Parameters for a lead negative electrode, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+    # Lead negative electrode parameters
+
+    Parameters for a lead negative electrode, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # AGM separator parameters 
-     
-    Parameters for an Absorbent Glass Mat (AGM) separator, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # AGM separator parameters
+
+    Parameters for an Absorbent Glass Mat (AGM) separator, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # Lead-dioxide positive electrode parameters 
-     
-    Parameters for a lead-dioxide positive electrode, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # Lead-dioxide positive electrode parameters
+
+    Parameters for a lead-dioxide positive electrode, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # Sulfuric acid electrolyte parameters 
-     
-    Parameters for a sulfuric acid electrolyte, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # Sulfuric acid electrolyte parameters
+
+    Parameters for a sulfuric acid electrolyte, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # 1C discharge from full 
-     
-    Discharge lead-acid battery from full charge at 1C. 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lead-acid battery from full charge at 1C.
     """
 
     return {
@@ -406,5 +414,5 @@ def get_parameter_values():
         "Initial oxygen concentration [mol.m-3]": 0.0,
         "Initial temperature [K]": 294.85,
         # citations
-        'citations': ['Sulzer2019physical'],
+        "citations": ["Sulzer2019physical"],
     }
