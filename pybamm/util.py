@@ -230,13 +230,13 @@ def load_function(filename, funcname=None):
     function
         The python function loaded from the file.
     """
-    if funcname is None:
-        # Read funcname by splitting the file (assumes funcname is the same as filename)
-        _, funcname = os.path.split(filename)
-
     # Remove `.py` from the file name
     if filename.endswith(".py"):
         filename = filename.replace(".py", "")
+
+    if funcname is None:
+        # Read funcname by splitting the file (assumes funcname is the same as filename)
+        _, funcname = os.path.split(filename)
 
     # Store the current working directory
     orig_dir = os.getcwd()
