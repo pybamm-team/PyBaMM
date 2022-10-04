@@ -99,15 +99,22 @@ class JuliaConverter(object):
         self._cache_initialization_string = ""
 
     def cache_exists(self, id, loc=""):
+        if self._cache_dict.get(id)=="cache_28":
+            print("cache 28 is {}".format(self._intermediate[id]))
+        elif self._cache_dict.get(id) =="cache_24":
+            print("cache 24 is {}".format(self._intermediate[id]))
         if self._cache_dict.get(id) is not None:
-            print("warning, cache duplicated for {}".format(self._cache_dict[id]))
-        if self.parallel:
-            old_loc = self.inverse_parallel_dict.get(id)
-            if old_loc is not None:
-                if len(old_loc)<len(loc):
-                    self.inverse_parallel_dict[id] = loc
-                    self.parallel_dict[loc] = self.parallel_dict[old_loc]
-                    del self.parallel_dict[old_loc]
+            if self.parallel:
+                old_loc = self.inverse_parallel_dict.get(id)
+                if old_loc is not None:
+                    if len(old_loc)<len(loc):
+                        #print("code for {} being replaced".format(self._cache_dict[id]))
+                        #print("{} was at level {} and is now at level {}".format(self._cache_dict[id],len(old_loc),len(loc)))
+                        self.inverse_parallel_dict[id] = loc
+                        self.parallel_dict[loc] = self.parallel_dict[old_loc]
+                        del self.parallel_dict[old_loc]
+                    else:
+                        print("hi")
         return self._cache_dict.get(id) is not None
 
     # know where to go to find a variable.
