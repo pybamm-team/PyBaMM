@@ -609,17 +609,7 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_2d_from_json(self):
-
-        # pv = pybamm.ParameterValues({'interpolation': 0.0, 'function': 0.0})
-        #
-        # pv['interpolation'] = \
-        #     '[2D data]../tests/unit/test_parameters/lico2_diffusivity_Dualfoil1998_2D'
-        #
-        # pv['function'] = '[function]'
-
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Ai2020
-        )
+        parameter_values = pybamm.ParameterValues("Ai2020")
         parameter_values.update(
             {
                 "function": "[function]lico2_diffusivity_Dualfoil1998",
@@ -1000,7 +990,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_export_python_script(self):
         parameter_values = pybamm.ParameterValues(pybamm.parameter_sets.Ai2020)
-        path = "input/parameters/lithium_ion/"
+        path = os.path.join("input", "parameters", "lithium_ion")
         parameter_values.export_python_script("Ai2020_test", path=path)
 
         # test that loading the parameter set works

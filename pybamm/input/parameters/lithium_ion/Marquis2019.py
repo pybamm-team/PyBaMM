@@ -29,7 +29,6 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     return D_ref * arrhenius
 
-
 def graphite_mcmb2528_ocp_Dualfoil1998(sto):
     """
     Graphite MCMB 2528 Open Circuit Potential (OCP) as a function of the
@@ -56,7 +55,6 @@ def graphite_mcmb2528_ocp_Dualfoil1998(sto):
     )
 
     return u_eq
-
 
 def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     c_e, c_s_surf, c_s_max, T
@@ -93,7 +91,6 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
-
 def graphite_entropic_change_Moura2016(sto, c_s_max):
     """
     Graphite entropic change in open circuit potential (OCP) at a temperature of
@@ -124,7 +121,6 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
 
     return du_dT
 
-
 def lico2_diffusivity_Dualfoil1998(sto, T):
     """
     LiCo2 diffusivity as a function of stochiometry, in this case the
@@ -151,7 +147,6 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
-
 
 def lico2_ocp_Dualfoil1998(sto):
     """
@@ -190,7 +185,6 @@ def lico2_ocp_Dualfoil1998(sto):
 
     return u_eq
 
-
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between lico2 and LiPF6 in
@@ -224,7 +218,6 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
-
 def lico2_entropic_change_Moura2016(sto, c_s_max):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
@@ -246,21 +239,15 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     sto = stretch * sto
 
     du_dT = (
-        0.07645
-        * (-54.4806 / c_s_max)
-        * ((1.0 / pybamm.cosh(30.834 - 54.4806 * sto)) ** 2)
+        0.07645 * (-54.4806 / c_s_max) * ((1.0 / pybamm.cosh(30.834 - 54.4806 * sto)) ** 2)
         + 2.1581 * (-50.294 / c_s_max) * ((pybamm.cosh(52.294 - 50.294 * sto)) ** (-2))
-        + 0.14169
-        * (19.854 / c_s_max)
-        * ((pybamm.cosh(11.0923 - 19.8543 * sto)) ** (-2))
+        + 0.14169 * (19.854 / c_s_max) * ((pybamm.cosh(11.0923 - 19.8543 * sto)) ** (-2))
         - 0.2051 * (5.4888 / c_s_max) * ((pybamm.cosh(1.4684 - 5.4888 * sto)) ** (-2))
-        - (0.2531 / 0.1316 / c_s_max)
-        * ((pybamm.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
+        - (0.2531 / 0.1316 / c_s_max) * ((pybamm.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
         - (0.02167 / 0.006 / c_s_max) * ((pybamm.cosh((sto - 0.525) / 0.006)) ** (-2))
     )
 
     return du_dT
-
 
 def electrolyte_diffusivity_Capiglia1999(c_e, T):
     """
@@ -293,7 +280,6 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
     arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
-
 
 def electrolyte_conductivity_Capiglia1999(c_e, T):
     """
@@ -338,90 +324,90 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
 def get_parameter_values():
     """
     # Marquis2019 parameter set
-    # Kokam SLPB78205130H cell parameters
-
-    Parameters for a Kokam SLPB78205130H cell, from the paper
-
+    # Kokam SLPB78205130H cell parameters 
+     
+    Parameters for a Kokam SLPB78205130H cell, from the paper 
+     
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # Graphite MCMB 2528 negative electrode parameters
-
-    Parameters for a graphite MCMB 2528 negative electrode, from the paper
-
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
+    A3693-A3706. 
+     
+    and references therein. 
+    # Graphite MCMB 2528 negative electrode parameters 
+     
+    Parameters for a graphite MCMB 2528 negative electrode, from the paper 
+     
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # Separator parameters
-
-    Parameters for the separator in the paper
-
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
+    A3693-A3706. 
+     
+    and references therein. 
+    # Separator parameters 
+     
+    Parameters for the separator in the paper 
+     
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # Lithium Cobalt Oxide positive electrode parameters
-
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
-
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
+    A3693-A3706. 
+     
+    and references therein. 
+    # Lithium Cobalt Oxide positive electrode parameters 
+     
+    Parameters for a lithium Cobalt Oxide positive electrode, from the paper 
+     
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
-
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
+    A3693-A3706. 
+     
+    and references therein. 
+    # LiPF6 electrolyte parameters 
+     
+    Parameters for a LiPF6 electrolyte, from the paper 
+     
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
+    A3693-A3706. 
+     
+    and references therein. 
+    # 1C discharge from full 
+     
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
+    from the paper 
+     
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
-
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
+    A3693-A3706. 
+     
+    and references therein. 
+    # SEI parameters 
+     
+    Some example parameters for SEI growth from the papers: 
+     
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004). 
     Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203.
-    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
-    A456-A462.
-    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
-    1950-1955.
+     Electrochemical Society, 151(2), A196-A203. 
+    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for 
+    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3), 
+    A456-A462. 
+    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of 
+    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12), 
+    1950-1955. 
     > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
-    Electrochemical Society, 156(3),
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
-    aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The 
+    Electrochemical Society, 156(3), 
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium 
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear 
+    aging. Journal of Power Sources, 360, 28-40. 
+     
+    Note: this parameter set does not claim to be representative of the true parameter 
+    values. Instead these are parameter values that were used to fit SEI models to 
+    observed experimental data in the referenced papers. 
     """
 
     return {
@@ -543,5 +529,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 30730.7554385565,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Marquis2019"],
+        'citations': ['Marquis2019'],
     }

@@ -1001,13 +1001,13 @@ class ParameterValues:
         if not filename.endswith(".py"):
             filename = filename + ".py"
         if path is not None:
-            filename = path + filename
+            filename = os.path.join(path, filename)
+        path = pybamm.get_parameters_filepath(path)
         filename = pybamm.get_parameters_filepath(filename)
 
         # Initialize
         preamble = "import pybamm\n"
         function_output = ""
-        data_output = ""
         dict_output = ""
 
         component_params_by_group = getattr(
@@ -1038,18 +1038,8 @@ class ParameterValues:
                     data_file_new = path + f"{data_name}.csv"
                     shutil.copyfile(data_file_old, data_file_new)
 
-                    # add code to load data
-                    data_output += (
-                        f"{data_name}_filename = pybamm.get_parameters_filepath"
-                        f"('{path}{data_name}.csv')\n"
-                        f"{data_name} = pd.read_csv"
-                        f"({data_name}_filename, comment='#')\n"
-                    )
-                    # replace data with data_name
-                    v = f"('{data_name}', {data_name})"
-                    if "import pandas as pd" not in preamble:
-                        preamble += "import pandas as pd\n"
-
+                    # save data with data tag
+                    v = f"'[data]{data_name}'"
                 elif np.isnan(v):
                     continue  # skip this value
 
@@ -1067,10 +1057,7 @@ class ParameterValues:
 
         # construct the output string
         output = (
-            preamble
-            + "\n\n"
-            + function_output
-            + data_output
+            function_output
             + "\n# Call dict via a function to avoid errors when editing in place"
             + "\ndef get_parameter_values():"
             + docstring
@@ -1079,9 +1066,18 @@ class ParameterValues:
             + "\n    }"
         )
 
+        # Add more packages to preamble if needed
+        if "pd." in output:
+            preamble += "import pandas as pd\n"
+        if "np." in output:
+            preamble += "import numpy as np\n"
+        output = preamble + "\n\n" + output
+
         # Add pybamm. to functions that didn't have it in function body before
-        for funcname in ["Parameter", "exp", "tanh", "cosh"]:
-            output = output.replace(f"{funcname}(", f"pybamm.{funcname}(")
+        for funcname in ["Parameter", "exp", "tanh", "cosh", "log10"]:
+            # add space or ( before so it doesn't do this for middle-of-word matches
+            output = output.replace(f" {funcname}(", f" pybamm.{funcname}(")
+            output = output.replace(f"({funcname}(", f"(pybamm.{funcname}(")
         output = output.replace("constants", "pybamm.constants")
 
         # save to file
