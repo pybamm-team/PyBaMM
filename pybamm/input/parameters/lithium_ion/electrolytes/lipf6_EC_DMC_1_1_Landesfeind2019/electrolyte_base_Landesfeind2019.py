@@ -29,8 +29,8 @@ def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4, p5, p6 = coeffs
     A = p1 * (1 + (T - p2))
-    B = 1 + p3 * pybamm.sqrt(c) + p4 * (1 + p5 * pybamm.exp(1000 / T)) * c
-    C = 1 + c**4 * (p6 * pybamm.exp(1000 / T))
+    B = 1 + p3 * sqrt(c) + p4 * (1 + p5 * exp(1000 / T)) * c
+    C = 1 + c**4 * (p6 * exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
 
     return sigma_e / 10
@@ -63,9 +63,9 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
     """
     c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4 = coeffs
-    A = p1 * pybamm.exp(p2 * c)
-    B = pybamm.exp(p3 / T)
-    C = pybamm.exp(p4 * c / T)
+    A = p1 * exp(p2 * c)
+    B = exp(p3 / T)
+    C = exp(p4 * c / T)
     D_e = A * B * C * 1e-10  # m2/s
 
     return D_e

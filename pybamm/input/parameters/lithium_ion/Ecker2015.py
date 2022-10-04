@@ -583,12 +583,8 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 14.0,
         "Maximum concentration in negative electrode [mol.m-3]": 31920.0,
-<<<<<<< HEAD
         "Measured negative electrode diffusivity [m2.s-1]"
         "": "[data]measured_graphite_diffusivity_Ecker2015",
-=======
-        "Measured negative electrode diffusivity [m2.s-1]": "[data]measured_graphite_diffusivity_Ecker2015",
->>>>>>> 2a75a8dc349b5e193ae476a9370c172f9bed0d76
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Ecker2015,
         "Measured negative electrode OCP [V]": "[data]graphite_ocp_Ecker2015",
         "Negative electrode OCP [V]": graphite_ocp_Ecker2015_function,
@@ -608,12 +604,8 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 68.1,
         "Maximum concentration in positive electrode [mol.m-3]": 48580.0,
-<<<<<<< HEAD
         "Measured positive electrode diffusivity [m2.s-1]"
         "": "[data]measured_nco_diffusivity_Ecker2015",
-=======
-        "Measured positive electrode diffusivity [m2.s-1]": "[data]measured_nco_diffusivity_Ecker2015",
->>>>>>> 2a75a8dc349b5e193ae476a9370c172f9bed0d76
         "Positive electrode diffusivity [m2.s-1]": nco_diffusivity_Ecker2015,
         "Measured positive electrode OCP [V]": "[data]nco_ocp_Ecker2015",
         "Positive electrode OCP [V]": nco_ocp_Ecker2015_function,

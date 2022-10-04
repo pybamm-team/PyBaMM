@@ -1,8 +1,4 @@
 import pybamm
-import numpy as np
-import os
-import inspect
-from pprint import pformat
 import subprocess
 
 all_parameter_sets = [x for x in dir(pybamm.parameter_sets) if not x.startswith("__")]
