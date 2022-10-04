@@ -20,6 +20,7 @@ def lead_ocp_Bode1977(m):
     )
     return U
 
+
 def lead_exchange_current_density_Sulzer2019(c_e, T):
     """
     Dimensional exchange-current density in the negative (lead) electrode, from [1]_
@@ -51,6 +52,7 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def lead_dioxide_ocp_Bode1977(m):
     """
     Dimensional open-circuit voltage in the positive (lead-dioxide) electrode [V],
@@ -69,6 +71,7 @@ def lead_dioxide_ocp_Bode1977(m):
         + 0.022 * pybamm.log10(m) ** 4
     )
     return U
+
 
 def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     """
@@ -97,7 +100,7 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     """
     c_ox = 0
     c_hy = 0
-    param = LeadAcidParameters()
+    param = pybamm.LeadAcidParameters()
     c_w_dim = (1 - c_e * param.V_e - c_ox * param.V_ox - c_hy * param.V_hy) / param.V_w
     c_w_ref = (1 - param.c_e_typ * param.V_e) / param.V_w
     c_w = c_w_dim / c_w_ref
@@ -106,6 +109,7 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     j0 = j0_ref * (c_e / param.c_e_typ) ** 2 * c_w
 
     return j0
+
 
 def oxygen_exchange_current_density_Sulzer2019(c_e, T):
     """
@@ -138,6 +142,7 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
 
     return j0
 
+
 def conductivity_Gu1997(c_e):
     """
     Dimensional conductivity of sulfuric acid [S.m-1], from [1]_ citing [2]_ and
@@ -159,6 +164,7 @@ def conductivity_Gu1997(c_e):
     """
     return c_e * pybamm.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
 
+
 def darken_thermodynamic_factor_Chapman1968(c_e):
     """
     Dimensional Darken thermodynamic factor of sulfuric acid, from data in
@@ -175,6 +181,7 @@ def darken_thermodynamic_factor_Chapman1968(c_e):
 
     """
     return 0.49 + 4.1e-4 * c_e
+
 
 def diffusivity_Gu1997(c_e):
     """
@@ -197,6 +204,7 @@ def diffusivity_Gu1997(c_e):
     """
     return (1.75 + 260e-6 * c_e) * 1e-9
 
+
 def viscosity_Chapman1968(c_e):
     """
     Dimensional viscosity of sulfuric acid [kg.m-1.s-1], from data in [1]_, as a
@@ -216,57 +224,57 @@ def viscosity_Chapman1968(c_e):
 def get_parameter_values():
     """
     # Sulzer2019 parameter set
-    # BBOXX cell parameters 
-     
-    Cell-specific parameters for BBOXX lead-acid cells, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+    # BBOXX cell parameters
+
+    Cell-specific parameters for BBOXX lead-acid cells, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-    # Lead negative electrode parameters 
-     
-    Parameters for a lead negative electrode, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+    # Lead negative electrode parameters
+
+    Parameters for a lead negative electrode, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # AGM separator parameters 
-     
-    Parameters for an Absorbent Glass Mat (AGM) separator, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # AGM separator parameters
+
+    Parameters for an Absorbent Glass Mat (AGM) separator, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # Lead-dioxide positive electrode parameters 
-     
-    Parameters for a lead-dioxide positive electrode, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # Lead-dioxide positive electrode parameters
+
+    Parameters for a lead-dioxide positive electrode, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # Sulfuric acid electrolyte parameters 
-     
-    Parameters for a sulfuric acid electrolyte, from the paper 
-     
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # Sulfuric acid electrolyte parameters
+
+    Parameters for a sulfuric acid electrolyte, from the paper
+
+    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
     lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes), 
-    166(12), 2363 (2019). 
-     
-    and references therein. 
-    # 1C discharge from full 
-     
-    Discharge lead-acid battery from full charge at 1C. 
+     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
+    166(12), 2363 (2019).
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lead-acid battery from full charge at 1C.
     """
 
     return {
@@ -309,18 +317,21 @@ def get_parameter_values():
         "Negative electrode capacity [C.m-3]": 3473000000.0,
         "Negative electrode cation signed stoichiometry": 1.0,
         "Negative electrode electrons in reaction": 2.0,
-        "Negative electrode exchange-current density [A.m-2]": lead_exchange_current_density_Sulzer2019,
+        "Negative electrode exchange-current density [A.m-2]"
+        "": lead_exchange_current_density_Sulzer2019,
         "Signed stoichiometry of cations (oxygen reaction)": 4.0,
         "Signed stoichiometry of water (oxygen reaction)": -1.0,
         "Signed stoichiometry of oxygen (oxygen reaction)": 1.0,
         "Electrons in oxygen reaction": 4.0,
-        "Negative electrode reference exchange-current density (oxygen) [A.m-2]": 2.5e-32,
+        "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
+        "": 2.5e-32,
         "Reference oxygen molecule concentration [mol.m-3]": 1000.0,
         "Oxygen reference OCP vs SHE [V]": 1.229,
         "Signed stoichiometry of cations (hydrogen reaction)": 2.0,
         "Signed stoichiometry of hydrogen (hydrogen reaction)": -1.0,
         "Electrons in hydrogen reaction": 2.0,
-        "Negative electrode reference exchange-current density (hydrogen) [A.m-2]": 1.56e-11,
+        "Negative electrode reference exchange-current density (hydrogen) [A.m-2]"
+        "": 1.56e-11,
         "Hydrogen reference OCP vs SHE [V]": 0.0,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode density [kg.m-3]": 11300.0,
@@ -341,18 +352,19 @@ def get_parameter_values():
         "Positive electrode capacity [C.m-3]": 2745000000.0,
         "Positive electrode cation signed stoichiometry": 3.0,
         "Positive electrode electrons in reaction": 2.0,
-        "Positive electrode exchange-current density [A.m-2]": lead_dioxide_exchange_current_density_Sulzer2019,
+        "Positive electrode exchange-current density [A.m-2]"
+        "": lead_dioxide_exchange_current_density_Sulzer2019,
         "Signed stoichiometry of cations (oxygen reaction)": 4.0,
-        "Signed stoichiometry of water (oxygen reaction)": -1.0,
         "Signed stoichiometry of oxygen (oxygen reaction)": 1.0,
         "Electrons in oxygen reaction": 4.0,
-        "Positive electrode oxygen exchange-current density [A.m-2]": oxygen_exchange_current_density_Sulzer2019,
+        "Positive electrode oxygen exchange-current density [A.m-2]"
+        "": oxygen_exchange_current_density_Sulzer2019,
         "Reference oxygen molecule concentration [mol.m-3]": 1000.0,
         "Oxygen reference OCP vs SHE [V]": 1.229,
         "Signed stoichiometry of cations (hydrogen reaction)": 2.0,
-        "Signed stoichiometry of hydrogen (hydrogen reaction)": -1.0,
         "Electrons in hydrogen reaction": 2.0,
-        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]": 0.0,
+        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
+        "": 0.0,
         "Hydrogen reference OCP vs SHE [V]": 0.0,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode density [kg.m-3]": 9375.0,
@@ -392,8 +404,10 @@ def get_parameter_values():
         "Reference temperature [K]": 294.85,
         "Maximum temperature [K]": 333.15,
         "Ambient temperature [K]": 294.85,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
+        "": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
+        "": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
@@ -406,5 +420,5 @@ def get_parameter_values():
         "Initial oxygen concentration [mol.m-3]": 0.0,
         "Initial temperature [K]": 294.85,
         # citations
-        'citations': ['Sulzer2019physical'],
+        "citations": ["Sulzer2019physical"],
     }

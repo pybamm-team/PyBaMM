@@ -130,9 +130,13 @@ class ParameterValues:
         self._replace_callable_function_parameters = True
 
         # save citations
+        citations = []
         if hasattr(self, "citations"):
-            for citation in self.citations:
-                pybamm.citations.register(citation)
+            citations = self.citations
+        elif "citations" in self._dict_items:
+            citations = self._dict_items["citations"]
+        for citation in citations:
+            pybamm.citations.register(citation)
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -1044,7 +1048,12 @@ class ParameterValues:
                     continue  # skip this value
 
                 # add line to the parameter output in the appropriate section
-                dict_output += f'\n        "{k}": {v},'
+                line_output = f'\n        "{k}": {v},'
+                if len(line_output) > 88:
+                    # this will be split into multiple lines by black
+                    line_output = f'\n        "{k}""": {v},'
+
+                dict_output += line_output
 
         # save citation info
         if hasattr(self, "citations"):
@@ -1074,7 +1083,14 @@ class ParameterValues:
         output = preamble + "\n\n" + output
 
         # Add pybamm. to functions that didn't have it in function body before
-        for funcname in ["Parameter", "exp", "tanh", "cosh", "log10"]:
+        for funcname in [
+            "Parameter",
+            "exp",
+            "tanh",
+            "cosh",
+            "log10",
+            "LeadAcidParameters",
+        ]:
             # add space or ( before so it doesn't do this for middle-of-word matches
             output = output.replace(f" {funcname}(", f" pybamm.{funcname}(")
             output = output.replace(f"({funcname}(", f"(pybamm.{funcname}(")

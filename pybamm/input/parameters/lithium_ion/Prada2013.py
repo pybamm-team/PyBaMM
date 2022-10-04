@@ -34,6 +34,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
 
     return u_eq
 
+
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -72,6 +73,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def LFP_ocp_ashfar2017(sto):
     """
     Open-circuit potential for LFP
@@ -93,6 +95,7 @@ def LFP_ocp_ashfar2017(sto):
     k = 3.4077 - 0.020269 * sto + 0.5 * pybamm.exp(c1) - 0.9 * pybamm.exp(c2)
 
     return k
+
 
 def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_max, T):
     """
@@ -130,6 +133,7 @@ def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_ma
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
@@ -159,6 +163,7 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
     # Nyman et al. (2008) does not provide temperature dependence
 
     return D_c_e
+
 
 def electrolyte_conductivity_Nyman2008(c_e, T):
     """
@@ -197,68 +202,68 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 def get_parameter_values():
     """
     # Prada2013 parameter set
-    # Pouch cell parameters 
-     
-    Parameters for an A123 LFP cell, from the paper 
-     
-    > Lain, M. J., Brandon, J., & Kendrick, E. (2019). Design Strategies for High Power 
-    vs. High Energy Lithium Ion Cells. 
-    [Batteries](https://doi.org/10.3390/batteries5040064), 5(4), 64. 
-    # LG M50 Graphite negative electrode parameters 
-     
-    Parameters for a LG M50 graphite negative electrode, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for an LG M50 separator, from the paper 
-     
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. 
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for 
-    Parameterization of Multi-scale Lithium-ion Battery 
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of 
-    the Electrochemical Society 167 (2020): 080534 
-     
-    and references therein. 
-    # Lithium Iron Phosphate positive electrode parameters 
-     
-    Parameters for an LFP positive electrode, from the paper 
-     
+    # Pouch cell parameters
+
+    Parameters for an A123 LFP cell, from the paper
+
+    > Lain, M. J., Brandon, J., & Kendrick, E. (2019). Design Strategies for High Power
+    vs. High Energy Lithium Ion Cells.
+    [Batteries](https://doi.org/10.3390/batteries5040064), 5(4), 64.
+    # LG M50 Graphite negative electrode parameters
+
+    Parameters for a LG M50 graphite negative electrode, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for an LG M50 separator, from the paper
+
+    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery
+    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
+    the Electrochemical Society 167 (2020): 080534
+
+    and references therein.
+    # Lithium Iron Phosphate positive electrode parameters
+
+    Parameters for an LFP positive electrode, from the paper
+
     > Prada, E., Di Domenico, D., Creff, Y., Bernard, J., Sauvant-Moynot, V., & Huet, F.
-     (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite 
-    Li-ion batteries: power and capacity fade simulations. [Journal of The 
-    Electrochemical Society](https://doi.org/10.1149/2.053304jes), 160(4), A616. 
-     
-    and references therein. The functions used for OCP and exchange-current density are 
+     (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite
+    Li-ion batteries: power and capacity fade simulations. [Journal of The
+    Electrochemical Society](https://doi.org/10.1149/2.053304jes), 160(4), A616.
+
+    and references therein. The functions used for OCP and exchange-current density are
     from separate references (documented within the functions), to provide better fit to
-     data 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the paper 
-     
-    > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and 
-    modelling of the mass transport phenomena in LiPF6-EC-EMC 
-    electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045) 
-    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008. 
-     
-    and references therein. 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 4C, using the initial conditions 
-    from the paper 
-     
+     data
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC
+    electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045)
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 4C, using the initial conditions
+    from the paper
+
     > Prada, E., Di Domenico, D., Creff, Y., Bernard, J., Sauvant-Moynot, V., & Huet, F.
-     (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite 
-    Li-ion batteries: power and capacity fade simulations. [Journal of The 
-    Electrochemical Society](https://doi.org/10.1149/2.053304jes), 160(4), A616. 
-     
-    and references therein. 
+     (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite
+    Li-ion batteries: power and capacity fade simulations. [Journal of The
+    Electrochemical Society](https://doi.org/10.1149/2.053304jes), 160(4), A616.
+
+    and references therein.
     """
 
     return {
@@ -301,7 +306,8 @@ def get_parameter_values():
         "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
-        "Negative electrode exchange-current density [A.m-2]": graphite_LGM50_electrolyte_exchange_current_density_Chen2020,
+        "Negative electrode exchange-current density [A.m-2]"
+        "": graphite_LGM50_electrolyte_exchange_current_density_Chen2020,
         "Negative electrode density [kg.m-3]": 1657.0,
         "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
@@ -324,7 +330,8 @@ def get_parameter_values():
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 1100.0,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
         "Positive electrode OCP entropic change [V.K-1]": 0.0,
-        "Positive electrode exchange-current density [A.m-2]": LFP_electrolyte_exchange_current_density_kashkooli2017,
+        "Positive electrode exchange-current density [A.m-2]"
+        "": LFP_electrolyte_exchange_current_density_kashkooli2017,
         # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
@@ -350,5 +357,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 35.3766672,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['Chen2020', 'Lain2019', 'Prada2013'],
+        "citations": ["Chen2020", "Lain2019", "Prada2013"],
     }

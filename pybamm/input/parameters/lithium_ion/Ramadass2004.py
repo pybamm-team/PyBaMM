@@ -29,6 +29,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     return D_ref * arrhenius
 
+
 def graphite_ocp_Ramadass2004(sto):
     """
     Graphite Open Circuit Potential (OCP) as a function of the
@@ -52,6 +53,7 @@ def graphite_ocp_Ramadass2004(sto):
     )
 
     return u_eq
+
 
 def graphite_electrolyte_exchange_current_density_Ramadass2004(
     c_e, c_s_surf, c_s_max, T
@@ -90,6 +92,7 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def graphite_entropic_change_Moura2016(sto, c_s_max):
     """
     Graphite entropic change in open circuit potential (OCP) at a temperature of
@@ -120,6 +123,7 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
 
     return du_dT
 
+
 def lico2_diffusivity_Ramadass2004(sto, T):
     """
     LiCo2 diffusivity as a function of stochiometry, in this case the
@@ -148,6 +152,7 @@ def lico2_diffusivity_Ramadass2004(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
+
 
 def lico2_ocp_Ramadass2004(sto):
     """
@@ -189,6 +194,7 @@ def lico2_ocp_Ramadass2004(sto):
 
     return u_eq
 
+
 def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between lico2 and LiPF6 in
@@ -224,6 +230,7 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
 
+
 def lico2_entropic_change_Moura2016(sto, c_s_max):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
@@ -245,15 +252,21 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     sto = stretch * sto
 
     du_dT = (
-        0.07645 * (-54.4806 / c_s_max) * ((1.0 / pybamm.cosh(30.834 - 54.4806 * sto)) ** 2)
+        0.07645
+        * (-54.4806 / c_s_max)
+        * ((1.0 / pybamm.cosh(30.834 - 54.4806 * sto)) ** 2)
         + 2.1581 * (-50.294 / c_s_max) * ((pybamm.cosh(52.294 - 50.294 * sto)) ** (-2))
-        + 0.14169 * (19.854 / c_s_max) * ((pybamm.cosh(11.0923 - 19.8543 * sto)) ** (-2))
+        + 0.14169
+        * (19.854 / c_s_max)
+        * ((pybamm.cosh(11.0923 - 19.8543 * sto)) ** (-2))
         - 0.2051 * (5.4888 / c_s_max) * ((pybamm.cosh(1.4684 - 5.4888 * sto)) ** (-2))
-        - (0.2531 / 0.1316 / c_s_max) * ((pybamm.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
+        - (0.2531 / 0.1316 / c_s_max)
+        * ((pybamm.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
         - (0.02167 / 0.006 / c_s_max) * ((pybamm.cosh((sto - 0.525) / 0.006)) ** (-2))
     )
 
     return du_dT
+
 
 def electrolyte_diffusivity_Ramadass2004(c_e, T):
     """
@@ -284,6 +297,7 @@ def electrolyte_diffusivity_Ramadass2004(c_e, T):
     arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
+
 
 def electrolyte_conductivity_Ramadass2004(c_e, T):
     """
@@ -331,103 +345,103 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
 def get_parameter_values():
     """
     # Ramadass2004 parameter set
-    # Cell geometry parameters 
-     
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper 
-     
+    # Cell geometry parameters
+
+    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
+
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
-    A3693-A3706. 
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N. 
-    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells." 
-    (2004) 
-    > P. Ramadass, Bala Haran, Ralph White, and Branko N. Popov. "Capacity fade of Sony 
-    18650 cells cycled at elevated temperatures part I." (2002) 
-     
-    and references therein. 
-    # Graphite negative electrode parameters 
-     
-    Parameters for a graphite negative electrode, from the paper 
-     
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
+    A3693-A3706.
+    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
+    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
+    (2004)
+    > P. Ramadass, Bala Haran, Ralph White, and Branko N. Popov. "Capacity fade of Sony
+    18650 cells cycled at elevated temperatures part I." (2002)
+
+    and references therein.
+    # Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
-    A3693-A3706. 
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N. 
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
+    A3693-A3706.
+    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
     Popov.["Development of First Principles Capacity Fade Model for Li-Ion Cells."](http
-    s://scholarcommons.sc.edu/cgi/viewcontent.cgi?article=1161&context=eche_facpub) 
-    (2004) 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for the separator from the papers 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical 
-    Society 162.9 (2015): A1836-A1848. 
-     
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a 
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society 
-    162.9 (2015): A1849-A1857. 
-     
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data 
-    are extracted from 
-     
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and 
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical 
-    Society, 165.13 (2018): A3169-A3178. 
-    # Lithium Cobalt Oxide positive electrode parameters 
-     
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper 
-     
+    s://scholarcommons.sc.edu/cgi/viewcontent.cgi?article=1161&context=eche_facpub)
+    (2004)
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for the separator from the papers
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
+    Society 162.9 (2015): A1836-A1848.
+
+    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
+    162.9 (2015): A1849-A1857.
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from
+
+    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
+    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
+    Society, 165.13 (2018): A3169-A3178.
+    # Lithium Cobalt Oxide positive electrode parameters
+
+    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
+
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
-    A3693-A3706. 
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N. 
-    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells." 
-    (2004) 
-     
-    and references therein. 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the paper 
-     
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
+    A3693-A3706.
+    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
+    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
+    (2004)
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
-    A3693-A3706. 
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N. 
-    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells." 
-    (2004) 
-     
-    and references therein. 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
+    A3693-A3706.
+    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
+    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
+    (2004)
+
+    and references therein.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), 
-    A3693-A3706. 
-     
-    and references therein. 
-    # SEI parameters 
-     
-    Some example parameters for SEI growth from the papers: 
-     
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004). 
+     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
+    A3693-A3706.
+
+    and references therein.
+    # SEI parameters
+
+    Some example parameters for SEI growth from the papers:
+
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203. 
+     Electrochemical Society, 151(2), A196-A203.
     > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The 
-    Electrochemical Society, 156(3), 
-     
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
+    Electrochemical Society, 156(3),
+
     Note: Ramadass 2004 has mistakes in units and values of SEI parameters, corrected by
-     Safari 2009. 
+     Safari 2009.
     """
 
     return {
@@ -480,7 +494,8 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 30555.0,
-        "Negative electrode diffusivity [m2.s-1]": graphite_mcmb2528_diffusivity_Dualfoil1998,
+        "Negative electrode diffusivity [m2.s-1]"
+        "": graphite_mcmb2528_diffusivity_Dualfoil1998,
         "Negative electrode OCP [V]": graphite_ocp_Ramadass2004,
         "Negative electrode porosity": 0.485,
         "Negative electrode active material volume fraction": 0.49,
@@ -491,11 +506,13 @@ def get_parameter_values():
         "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
-        "Negative electrode exchange-current density [A.m-2]": graphite_electrolyte_exchange_current_density_Ramadass2004,
+        "Negative electrode exchange-current density [A.m-2]"
+        "": graphite_electrolyte_exchange_current_density_Ramadass2004,
         "Negative electrode density [kg.m-3]": 1657.0,
         "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
-        "Negative electrode OCP entropic change [V.K-1]": graphite_entropic_change_Moura2016,
+        "Negative electrode OCP entropic change [V.K-1]"
+        "": graphite_entropic_change_Moura2016,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in positive electrode [mol.m-3]": 51555.0,
@@ -510,11 +527,13 @@ def get_parameter_values():
         "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
-        "Positive electrode exchange-current density [A.m-2]": lico2_electrolyte_exchange_current_density_Ramadass2004,
+        "Positive electrode exchange-current density [A.m-2]"
+        "": lico2_electrolyte_exchange_current_density_Ramadass2004,
         "Positive electrode density [kg.m-3]": 3262.0,
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
-        "Positive electrode OCP entropic change [V.K-1]": lico2_entropic_change_Moura2016,
+        "Positive electrode OCP entropic change [V.K-1]"
+        "": lico2_entropic_change_Moura2016,
         # separator
         "Separator porosity": 0.508,
         "Separator Bruggeman coefficient (electrolyte)": 1.9804586773134945,
@@ -531,8 +550,10 @@ def get_parameter_values():
         # experiment
         "Reference temperature [K]": 298.15,
         "Ambient temperature [K]": 298.15,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
+        "": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
+        "": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Edge heat transfer coefficient [W.m-2.K-1]": 0.3,
@@ -544,5 +565,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 25777.5,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['Ramadass2004'],
+        "citations": ["Ramadass2004"],
     }

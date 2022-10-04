@@ -33,6 +33,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius
 
+
 def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -69,6 +70,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
@@ -122,6 +124,7 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
 
     return du_dT
 
+
 def graphite_volume_change_Ai2020(sto, c_s_max):
     """
     Graphite particle volume change as a function of stochiometry [1, 2].
@@ -173,6 +176,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     )
     return t_change
 
+
 def graphite_cracking_rate_Ai2020(T_dim):
     """
     graphite particle cracking rate as a function of temperature [1, 2].
@@ -206,6 +210,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / T_ref))
     return k_cr * arrhenius
 
+
 def lico2_diffusivity_Dualfoil1998(sto, T):
     """
     LiCo2 diffusivity as a function of stochiometry, in this case the
@@ -232,6 +237,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     T_ref = pybamm.Parameter("Reference temperature [K]")
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius
+
 
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_max, T):
     """
@@ -266,6 +272,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
     )
+
 
 def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     """
@@ -316,6 +323,7 @@ def lico2_entropic_change_Ai2020_function(sto, c_s_max):
 
     return du_dT
 
+
 def lico2_volume_change_Ai2020(sto, c_s_max):
     """
     lico2 particle volume change as a function of stochiometry [1, 2].
@@ -346,6 +354,7 @@ def lico2_volume_change_Ai2020(sto, c_s_max):
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
     t_change = omega * c_s_max * sto
     return t_change
+
 
 def lico2_cracking_rate_Ai2020(T_dim):
     """
@@ -380,6 +389,7 @@ def lico2_cracking_rate_Ai2020(T_dim):
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / T_ref))
     return k_cr * arrhenius
 
+
 def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     """
     Activity dependence of LiPF6 in EC:DMC as a function of ion concentration.
@@ -412,6 +422,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     ) / (1 - t_plus)
     return dlnf_dlnc
 
+
 def electrolyte_diffusivity_Ai2020(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration.
@@ -440,6 +451,7 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
     D_c_e = 10 ** (-8.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
 
     return D_c_e
+
 
 def electrolyte_conductivity_Ai2020(c_e, T):
     """
@@ -487,107 +499,107 @@ def electrolyte_conductivity_Ai2020(c_e, T):
 def get_parameter_values():
     """
     # Ai2020 parameter set
-    # Enertech cell parameters 
-     
-    Parameters for the Enertech cell, from the paper 
-     
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. 
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES. 
-     
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model 
-    the thickness change of a commercial pouch cell during discharge. Journal of The 
-    Electrochemical Society, 163(8), A1566-A1575. 
-     
-    and references therein. 
-    # Enertech Graphite negative electrode parameters 
-     
-    Parameters for a graphite negative electrode, from the paper 
-     
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. 
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES. 
-     
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model 
-    the thickness change of a commercial pouch cell during discharge. Journal of The 
-    Electrochemical Society, 163(8), A1566-A1575. 
-     
-    and references therein. 
-    # Enertech Graphite negative electrode parameters 
-     
-    Parameters for a graphite negative electrode, from the paper 
-     
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. 
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES. 
-     
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model 
-    the thickness change of a commercial pouch cell during discharge. Journal of The 
-    Electrochemical Society, 163(8), A1566-A1575. 
-     
-    and references therein. 
-    # Lithium Cobalt Oxide positive electrode parameters 
-     
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper 
-     
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. 
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES. 
-     
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model 
-    the thickness change of a commercial pouch cell during discharge. Journal of The 
-    Electrochemical Society, 163(8), A1566-A1575. 
-     
-    and references therein. 
-    # LiPF6 electrolyte parameters 
-     
-    Parameters for a LiPF6 electrolyte, from the paper 
-     
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. 
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES. 
-     
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model 
-    the thickness change of a commercial pouch cell during discharge. Journal of The 
-    Electrochemical Society, 163(8), A1566-A1575. 
-     
-    and references therein. 
-    # Enertech Graphite negative electrode parameters 
-     
-    Parameters for a graphite negative electrode, from the paper 
-     
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. 
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES. 
-     
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model 
-    the thickness change of a commercial pouch cell during discharge. Journal of The 
-    Electrochemical Society, 163(8), A1566-A1575. 
-     
-    and references therein. 
-    # SEI parameters 
-     
-    Some example parameters for SEI growth from the papers: 
-     
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004). 
+    # Enertech cell parameters
+
+    Parameters for the Enertech cell, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Enertech Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Enertech Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Lithium Cobalt Oxide positive electrode parameters
+
+    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # LiPF6 electrolyte parameters
+
+    Parameters for a LiPF6 electrolyte, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # Enertech Graphite negative electrode parameters
+
+    Parameters for a graphite negative electrode, from the paper
+
+    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
+    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
+
+    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
+    the thickness change of a commercial pouch cell during discharge. Journal of The
+    Electrochemical Society, 163(8), A1566-A1575.
+
+    and references therein.
+    # SEI parameters
+
+    Some example parameters for SEI growth from the papers:
+
+    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203. 
-    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for 
-    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3), 
-    A456-A462. 
-    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of 
-    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12), 
-    1950-1955. 
+     Electrochemical Society, 151(2), A196-A203.
+    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
+    A456-A462.
+    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
+    1950-1955.
     > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The 
-    Electrochemical Society, 156(3), 
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium 
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear 
-    aging. Journal of Power Sources, 360, 28-40. 
-     
-    Note: this parameter set does not claim to be representative of the true parameter 
-    values. Instead these are parameter values that were used to fit SEI models to 
-    observed experimental data in the referenced papers. 
+    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
+    Electrochemical Society, 156(3),
+    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging. Journal of Power Sources, 360, 28-40.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. Instead these are parameter values that were used to fit SEI models to
+    observed experimental data in the referenced papers.
     """
 
     return {
@@ -641,7 +653,7 @@ def get_parameter_values():
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
-        "Negative electrode OCP [V]": '[data]graphite_ocp_Enertech_Ai2020',
+        "Negative electrode OCP [V]": "[data]graphite_ocp_Enertech_Ai2020",
         "Negative electrode porosity": 0.33,
         "Negative electrode active material volume fraction": 0.61,
         "Negative particle radius [m]": 5e-06,
@@ -651,14 +663,17 @@ def get_parameter_values():
         "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
-        "Negative electrode exchange-current density [A.m-2]": graphite_electrolyte_exchange_current_density_Dualfoil1998,
+        "Negative electrode exchange-current density [A.m-2]"
+        "": graphite_electrolyte_exchange_current_density_Dualfoil1998,
         "Negative electrode density [kg.m-3]": 2470.0,
         "Negative electrode specific heat capacity [J.kg-1.K-1]": 1080.2,
         "Negative electrode thermal conductivity [W.m-1.K-1]": 1.04,
-        "Negative electrode OCP entropic change [V.K-1]": graphite_entropy_Enertech_Ai2020_function,
+        "Negative electrode OCP entropic change [V.K-1]"
+        "": graphite_entropy_Enertech_Ai2020_function,
         "Negative electrode Poisson's ratio": 0.3,
         "Negative electrode Young's modulus [Pa]": 15000000000.0,
-        "Negative electrode reference concentration for free of deformation [mol.m-3]": 0.0,
+        "Negative electrode reference concentration for free of deformation [mol.m-3]"
+        "": 0.0,
         "Negative electrode partial molar volume [m3.mol-1]": 3.1e-06,
         "Negative electrode volume change": graphite_volume_change_Ai2020,
         "Negative electrode initial crack length [m]": 2e-08,
@@ -675,7 +690,7 @@ def get_parameter_values():
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49943.0,
         "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
-        "Positive electrode OCP [V]": '[data]lico2_ocp_Ai2020',
+        "Positive electrode OCP [V]": "[data]lico2_ocp_Ai2020",
         "Positive electrode porosity": 0.32,
         "Positive electrode active material volume fraction": 0.62,
         "Positive particle radius [m]": 3e-06,
@@ -686,14 +701,17 @@ def get_parameter_values():
         "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
-        "Positive electrode exchange-current density [A.m-2]": lico2_electrolyte_exchange_current_density_Dualfoil1998,
+        "Positive electrode exchange-current density [A.m-2]"
+        "": lico2_electrolyte_exchange_current_density_Dualfoil1998,
         "Positive electrode density [kg.m-3]": 2470.0,
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 1080.2,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 1.58,
-        "Positive electrode OCP entropic change [V.K-1]": lico2_entropic_change_Ai2020_function,
+        "Positive electrode OCP entropic change [V.K-1]"
+        "": lico2_entropic_change_Ai2020_function,
         "Positive electrode Poisson's ratio": 0.2,
         "Positive electrode Young's modulus [Pa]": 375000000000.0,
-        "Positive electrode reference concentration for free of deformation [mol.m-3]": 0.0,
+        "Positive electrode reference concentration for free of deformation [mol.m-3]"
+        "": 0.0,
         "Positive electrode partial molar volume [m3.mol-1]": -7.28e-07,
         "Positive electrode volume change": lico2_volume_change_Ai2020,
         "Positive electrode initial crack length [m]": 2e-08,
@@ -731,5 +749,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 21725.0,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['Ai2019'],
+        "citations": ["Ai2019"],
     }

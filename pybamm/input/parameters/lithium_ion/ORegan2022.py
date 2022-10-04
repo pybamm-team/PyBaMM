@@ -2,6 +2,160 @@ import pybamm
 import numpy as np
 
 
+def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
+    """
+    Conductivity of LiPF6 in solvent_X as a function of ion concentration and
+    temperature. The data comes from [1].
+
+    References
+    ----------
+    .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
+    Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
+    Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+    coeffs: :class:`pybamm.Symbol`
+        Fitting parameter coefficients
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Electrolyte conductivity
+    """
+    c = c_e / 1000  # mol.m-3 -> mol.l
+    p1, p2, p3, p4, p5, p6 = coeffs
+    A = p1 * (1 + (T - p2))
+    B = 1 + p3 * pybamm.sqrt(c) + p4 * (1 + p5 * pybamm.exp(1000 / T)) * c
+    C = 1 + c**4 * (p6 * pybamm.exp(1000 / T))
+    sigma_e = A * c * B / C  # mS.cm-1
+
+    return sigma_e / 10
+
+
+def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
+    """
+    Diffusivity of LiPF6 in solvent_X as a function of ion concentration and
+    temperature. The data comes from [1].
+
+    References
+    ----------
+    .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
+    Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
+    Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+    coeffs: :class:`pybamm.Symbol`
+        Fitting parameter coefficients
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Electrolyte diffusivity
+    """
+    c = c_e / 1000  # mol.m-3 -> mol.l
+    p1, p2, p3, p4 = coeffs
+    A = p1 * pybamm.exp(p2 * c)
+    B = pybamm.exp(p3 / T)
+    C = pybamm.exp(p4 * c / T)
+    D_e = A * B * C * 1e-10  # m2/s
+
+    return D_e
+
+
+def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
+    """
+    Thermodynamic factor (TDF) of LiPF6 in solvent_X as a function of ion concentration
+    and temperature. The data comes from [1].
+
+    References
+    ----------
+    .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
+    Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
+    Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+    coeffs: :class:`pybamm.Symbol`
+        Fitting parameter coefficients
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Electrolyte thermodynamic factor
+    """
+    c = c_e / 1000  # mol.m-3 -> mol.l
+    p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
+    tdf = (
+        p1
+        + p2 * c
+        + p3 * T
+        + p4 * c**2
+        + p5 * c * T
+        + p6 * T**2
+        + p7 * c**3
+        + p8 * c**2 * T
+        + p9 * c * T**2
+    )
+
+    return tdf
+
+
+def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
+    """
+    Transference number of LiPF6 in solvent_X as a function of ion concentration and
+    temperature. The data comes from [1].
+
+    References
+    ----------
+    .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
+    Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
+    Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+    coeffs: :class:`pybamm.Symbol`
+        Fitting parameter coefficients
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Electrolyte transference number
+    """
+    c = c_e / 1000  # mol.m-3 -> mol.l
+    p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
+    tplus = (
+        p1
+        + p2 * c
+        + p3 * T
+        + p4 * c**2
+        + p5 * c * T
+        + p6 * T**2
+        + p7 * c**3
+        + p8 * c**2 * T
+        + p9 * c * T**2
+    )
+
+    return tplus
+
+
 def copper_heat_capacity_CRC(T):
     """
     Copper specific heat capacity as a function of the temperature from [1].
@@ -25,6 +179,7 @@ def copper_heat_capacity_CRC(T):
     cp = 1.445e-6 * T**3 - 1.946e-3 * T**2 + 0.9633 * T + 236
 
     return cp
+
 
 def aluminium_heat_capacity_CRC(T):
     """
@@ -50,6 +205,7 @@ def aluminium_heat_capacity_CRC(T):
 
     return cp
 
+
 def copper_thermal_conductivity_CRC(T):
     """
     Copper thermal conductivity as a function of the temperature from [1].
@@ -73,6 +229,7 @@ def copper_thermal_conductivity_CRC(T):
     lambda_th = -5.409e-7 * T**3 + 7.054e-4 * T**2 - 0.3727 * T + 463.6
 
     return lambda_th
+
 
 def graphite_LGM50_diffusivity_ORegan2022(sto, T):
     """
@@ -132,6 +289,7 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
 
     return D_ref * arrhenius
 
+
 def graphite_LGM50_ocp_Chen2020(sto):
     """
     LG M50 Graphite open-circuit potential as a function of stochiometry, fit taken
@@ -164,6 +322,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     )
 
     return U
+
 
 def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
     c_e, c_s_surf, c_s_max, T
@@ -210,6 +369,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
         * (1 - c_s_surf / c_s_max) ** (1 - alpha)
     )
 
+
 def graphite_LGM50_heat_capacity_ORegan2022(T):
     """
     Wet negative electrode specific heat capacity as a function of the temperature from
@@ -251,6 +411,7 @@ def graphite_LGM50_heat_capacity_ORegan2022(T):
 
     return cp_wet
 
+
 def graphite_LGM50_thermal_conductivity_ORegan2022(T):
     """
     Wet negative electrode thermal conductivity as a function of the temperature from
@@ -276,6 +437,7 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
     lambda_wet = -2.61e-4 * T**2 + 0.1726 * T - 24.49
 
     return lambda_wet
+
 
 def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
@@ -313,10 +475,12 @@ def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
         a0 * sto
         + c0
         + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
-        + a1 * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
+        + a1
+        * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
     ) / 1000  # fit in mV / K
 
     return dUdT
+
 
 def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     """
@@ -346,6 +510,7 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     sigma = 0.8473 * arrhenius
 
     return sigma
+
 
 def nmc_LGM50_diffusivity_ORegan2022(sto, T):
     """
@@ -399,6 +564,7 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
 
     return D_ref * arrhenius
 
+
 def nmc_LGM50_ocp_Chen2020(sto):
     """
      LG M50 NMC open-circuit potential as a function of stoichiometry.  The fit is
@@ -431,6 +597,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     )
 
     return U
+
 
 def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     c_e, c_s_surf, c_s_max, T
@@ -476,6 +643,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
         * (1 - c_s_surf / c_s_max) ** (1 - alpha)
     )
 
+
 def nmc_LGM50_heat_capacity_ORegan2022(T):
     """
     Wet positive electrode specific heat capacity as a function of the temperature from
@@ -517,6 +685,7 @@ def nmc_LGM50_heat_capacity_ORegan2022(T):
 
     return cp_wet
 
+
 def nmc_LGM50_thermal_conductivity_ORegan2022(T):
     """
     Wet positive electrode thermal conductivity as a function of the temperature from
@@ -542,6 +711,7 @@ def nmc_LGM50_thermal_conductivity_ORegan2022(T):
     lambda_wet = 2.063e-5 * T**2 - 0.01127 * T + 2.331
 
     return lambda_wet
+
 
 def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
@@ -572,11 +742,13 @@ def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     c2 = 0.02179
 
     dUdT = (
-        a1 * pybamm.exp(-((sto - b1) ** 2) / c1) + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
+        a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
+        + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
     ) / 1000
     # fit in mV / K
 
     return dUdT
+
 
 def separator_LGM50_heat_capacity_ORegan2022(T):
     """
@@ -618,6 +790,7 @@ def separator_LGM50_heat_capacity_ORegan2022(T):
 
     return cp_wet
 
+
 def electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Transference number of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
@@ -657,6 +830,7 @@ def electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019(c_e, T):
 
     return electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs)
 
+
 def electrolyte_TDF_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Thermodynamic factor (TDF) of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
@@ -686,6 +860,7 @@ def electrolyte_TDF_EC_EMC_3_7_Landesfeind2019(c_e, T):
 
     return electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs)
 
+
 def electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7 w:w) as a function of ion concentration and
@@ -712,6 +887,7 @@ def electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     coeffs = np.array([1.01e3, 1.01, -1.56e3, -4.87e2])
 
     return electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs)
+
 
 def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
@@ -745,65 +921,65 @@ def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
 def get_parameter_values():
     """
     # ORegan2022 parameter set
-    # LG M50 cell parameters 
-     
-    Parameters for an LG M50 cell, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # LG M50 Graphite negative electrode parameters 
-     
-    Parameters for a LG M50 graphite negative electrode, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # Separator parameters 
-     
-    Parameters for an LG M50 separator, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # NMC 811 positive electrode parameters 
-     
-    Parameters for an LG M50 NMC positive electrode, from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
-    # LiPF6 in EC:EMC (3:7 w:w) electrolyte parameters 
-     
-    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte, from the paper 
-     
-    > Johannes Landesfeind and Hubert A. Gasteiger, ["Temperature and Concentration 
-    Dependence of the Ionic Transport Properties of Lithium-Ion Battery 
-    Electrolytes."](https://iopscience.iop.org/article/10.1149/2.0571912jes) Journal of 
-    the Electrochemical Society 166 (2019): A3079. 
-    # 1C discharge from full 
-     
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions 
-    from the paper 
-     
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. 
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical 
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593) 
-    Electrochimica Acta 425 (2022): 140700 
-     
-    and references therein. 
+    # LG M50 cell parameters
+
+    Parameters for an LG M50 cell, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # LG M50 Graphite negative electrode parameters
+
+    Parameters for a LG M50 graphite negative electrode, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # Separator parameters
+
+    Parameters for an LG M50 separator, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # NMC 811 positive electrode parameters
+
+    Parameters for an LG M50 NMC positive electrode, from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
+    # LiPF6 in EC:EMC (3:7 w:w) electrolyte parameters
+
+    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte, from the paper
+
+    > Johannes Landesfeind and Hubert A. Gasteiger, ["Temperature and Concentration
+    Dependence of the Ionic Transport Properties of Lithium-Ion Battery
+    Electrolytes."](https://iopscience.iop.org/article/10.1149/2.0571912jes) Journal of
+    the Electrochemical Society 166 (2019): A3079.
+    # 1C discharge from full
+
+    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
+    from the paper
+
+    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
+    Electrochimica Acta 425 (2022): 140700
+
+    and references therein.
     """
 
     return {
@@ -821,9 +997,12 @@ def get_parameter_values():
         "Positive current collector conductivity [S.m-1]": 36914000.0,
         "Negative current collector density [kg.m-3]": 8933.0,
         "Positive current collector density [kg.m-3]": 2702.0,
-        "Negative current collector specific heat capacity [J.kg-1.K-1]": copper_heat_capacity_CRC,
-        "Positive current collector specific heat capacity [J.kg-1.K-1]": aluminium_heat_capacity_CRC,
-        "Negative current collector thermal conductivity [W.m-1.K-1]": copper_thermal_conductivity_CRC,
+        "Negative current collector specific heat capacity [J.kg-1.K-1]"
+        "": copper_heat_capacity_CRC,
+        "Positive current collector specific heat capacity [J.kg-1.K-1]"
+        "": aluminium_heat_capacity_CRC,
+        "Negative current collector thermal conductivity [W.m-1.K-1]"
+        "": copper_thermal_conductivity_CRC,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 5.0,
         "Typical current [A]": 5.0,
@@ -831,7 +1010,8 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 29583.0,
-        "Negative electrode diffusivity [m2.s-1]": graphite_LGM50_diffusivity_ORegan2022,
+        "Negative electrode diffusivity [m2.s-1]"
+        "": graphite_LGM50_diffusivity_ORegan2022,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,
@@ -842,13 +1022,18 @@ def get_parameter_values():
         "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
-        "Negative electrode exchange-current density [A.m-2]": graphite_LGM50_electrolyte_exchange_current_density_ORegan2022,
+        "Negative electrode exchange-current density [A.m-2]"
+        "": graphite_LGM50_electrolyte_exchange_current_density_ORegan2022,
         "Negative electrode density [kg.m-3]": 2060.0,
-        "Negative electrode specific heat capacity [J.kg-1.K-1]": graphite_LGM50_heat_capacity_ORegan2022,
-        "Negative electrode thermal conductivity [W.m-1.K-1]": graphite_LGM50_thermal_conductivity_ORegan2022,
-        "Negative electrode OCP entropic change [V.K-1]": graphite_LGM50_entropic_change_ORegan2022,
+        "Negative electrode specific heat capacity [J.kg-1.K-1]"
+        "": graphite_LGM50_heat_capacity_ORegan2022,
+        "Negative electrode thermal conductivity [W.m-1.K-1]"
+        "": graphite_LGM50_thermal_conductivity_ORegan2022,
+        "Negative electrode OCP entropic change [V.K-1]"
+        "": graphite_LGM50_entropic_change_ORegan2022,
         # positive electrode
-        "Positive electrode conductivity [S.m-1]": nmc_LGM50_electronic_conductivity_ORegan2022,
+        "Positive electrode conductivity [S.m-1]"
+        "": nmc_LGM50_electronic_conductivity_ORegan2022,
         "Maximum concentration in positive electrode [mol.m-3]": 51765.0,
         "Positive electrode diffusivity [m2.s-1]": nmc_LGM50_diffusivity_ORegan2022,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
@@ -861,25 +1046,33 @@ def get_parameter_values():
         "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
-        "Positive electrode exchange-current density [A.m-2]": nmc_LGM50_electrolyte_exchange_current_density_ORegan2022,
+        "Positive electrode exchange-current density [A.m-2]"
+        "": nmc_LGM50_electrolyte_exchange_current_density_ORegan2022,
         "Positive electrode density [kg.m-3]": 3699.0,
-        "Positive electrode specific heat capacity [J.kg-1.K-1]": nmc_LGM50_heat_capacity_ORegan2022,
-        "Positive electrode thermal conductivity [W.m-1.K-1]": nmc_LGM50_thermal_conductivity_ORegan2022,
-        "Positive electrode OCP entropic change [V.K-1]": nmc_LGM50_entropic_change_ORegan2022,
+        "Positive electrode specific heat capacity [J.kg-1.K-1]"
+        "": nmc_LGM50_heat_capacity_ORegan2022,
+        "Positive electrode thermal conductivity [W.m-1.K-1]"
+        "": nmc_LGM50_thermal_conductivity_ORegan2022,
+        "Positive electrode OCP entropic change [V.K-1]"
+        "": nmc_LGM50_entropic_change_ORegan2022,
         # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
         "Separator Bruggeman coefficient (electrode)": 1.5,
         "Separator density [kg.m-3]": 1548.0,
-        "Separator specific heat capacity [J.kg-1.K-1]": separator_LGM50_heat_capacity_ORegan2022,
+        "Separator specific heat capacity [J.kg-1.K-1]"
+        "": separator_LGM50_heat_capacity_ORegan2022,
         "Separator thermal conductivity [W.m-1.K-1]": 0.3344,
         # electrolyte
         "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
-        "Cation transference number": electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019,
+        "Cation transference number"
+        "": electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019,
         "1 + dlnf/dlnc": electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
-        "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019,
-        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019,
+        "Electrolyte diffusivity [m2.s-1]"
+        "": electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019,
+        "Electrolyte conductivity [S.m-1]"
+        "": electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019,
         # experiment
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
@@ -892,5 +1085,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 13975.0,
         "Initial temperature [K]": 298.15,
         # citations
-        'citations': ['ORegan2022', 'Chen2020'],
+        "citations": ["ORegan2022", "Chen2020"],
     }
