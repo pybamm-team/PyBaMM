@@ -1006,8 +1006,8 @@ class TestBaseModel(unittest.TestCase):
 
         model = pybamm.BaseModel()
         model.submodels = {
-            "submodel 1": Submodel1(None, "Negative"),
-            "submodel 2": Submodel2(None, "Negative"),
+            "submodel 1": Submodel1(None, "negative"),
+            "submodel 2": Submodel2(None, "negative"),
         }
         self.assertFalse(model._built)
         model.build_model()

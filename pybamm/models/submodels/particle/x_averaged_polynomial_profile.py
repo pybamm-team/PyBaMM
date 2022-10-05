@@ -36,8 +36,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain = self.domain
 
         variables = {}
         # For all orders we solve an equation for the average concentration
@@ -100,7 +99,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         return variables
 
     def get_coupled_variables(self, variables):
-        domain = self.domain.lower()
+        domain = self.domain
         phase_param = self.phase_param
         phase_param = self.phase_param
 
@@ -113,7 +112,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             a_av = variables[
                 f"X-averaged {domain} electrode surface area to volume ratio"
             ]
-            sgn = 1 if self.domain == "Negative" else -1
+            sgn = 1 if self.domain == "negative" else -1
 
             j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
 
@@ -225,7 +224,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # the scalar source term gets multplied by the correct mass matrix when
         # using this model with 2D current collectors with the finite element
         # method (see #1399)
-        domain = self.domain.lower()
+        domain = self.domain
         phase_param = self.phase_param
         phase_param = self.phase_param
 
@@ -271,7 +270,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         For single or x-averaged particle models, initial conditions can't depend on x
         or r so we take the r- and x-average of the initial conditions.
         """
-        domain = self.domain.lower()
+        domain = self.domain
         c_init = pybamm.x_average(pybamm.r_average(self.phase_param.c_init))
 
         if self.size_distribution is False:

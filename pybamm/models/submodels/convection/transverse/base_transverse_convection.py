@@ -35,53 +35,39 @@ class BaseTransverseModel(BaseModel):
         """Vertical acceleration in the separator"""
         if typ == "velocity":
             scale = self.param.velocity_scale
+            typ_dim = "velocity [m.s-1]"
         elif typ == "acceleration":
             scale = self.param.velocity_scale / self.param.L_z
+            typ_dim = "acceleration [m.s-2]"
 
-        if self.half_cell:
-            var_n_av = None
-            var_n = None
-        else:
-            var_n_av = pybamm.PrimaryBroadcast(0, "current collector")
-            var_n = pybamm.PrimaryBroadcast(var_n_av, "negative electrode")
+        var_dict = {}
+        variables = {}
+        for domain in self.options.whole_cell_domains:
+            if domain == "separator":
+                var_k_av = var_s_av
+            else:
+                var_k_av = pybamm.PrimaryBroadcast(0, "current collector")
+            var_k = pybamm.PrimaryBroadcast(var_k_av, domain)
+            var_dict[domain] = var_k
 
-        var_p_av = pybamm.PrimaryBroadcast(0, "current collector")
-        var_s = pybamm.PrimaryBroadcast(var_s_av, "separator")
-        var_p = pybamm.PrimaryBroadcast(var_p_av, "positive electrode")
-        var = pybamm.concatenation(var_n, var_s, var_p)
-
-        variables = {
-            "Separator transverse volume-averaged " + typ: var_s,
-            "Positive electrode transverse volume-averaged " + typ: var_p,
-            "Separator transverse volume-averaged " + typ + " [m.s-2]": scale * var_s,
-            "Positive electrode transverse volume-averaged "
-            + typ
-            + " [m.s-2]": scale * var_p,
-            "X-averaged separator transverse volume-averaged " + typ: var_s_av,
-            "X-averaged positive electrode transverse volume-averaged " + typ: var_p_av,
-            "X-averaged separator transverse volume-averaged "
-            + typ
-            + " [m.s-2]": scale * var_s_av,
-            "X-averaged positive electrode transverse volume-averaged "
-            + typ
-            + " [m.s-2]": scale * var_p_av,
-            "Transverse volume-averaged " + typ: var,
-            "Transverse volume-averaged " + typ + " [m.s-2]": scale * var,
-        }
-
-        if not self.half_cell:
             variables.update(
                 {
-                    "Negative electrode transverse volume-averaged " + typ: var_n,
-                    "Negative electrode transverse volume-averaged "
-                    + typ
-                    + " [m.s-2]": scale * var_n,
-                    "X-averaged negative electrode transverse volume-averaged "
-                    + typ: var_n_av,
-                    "X-averaged negative electrode transverse volume-averaged "
-                    + typ
-                    + " [m.s-2]": scale * var_n_av,
+                    f"{domain} transverse volume-averaged {typ}": var_k,
+                    f"{domain} transverse volume-averaged {typ_dim}": scale * var_k,
+                    f"X-averaged {domain} transverse volume-averaged "
+                    f"{typ}": var_k_av,
+                    f"X-averaged {domain} transverse volume-averaged "
+                    f"{typ_dim}": scale * var_k_av,
                 }
             )
+
+        var = pybamm.concatenation(*var_dict.values())
+
+        variables.update(
+            {
+                f"Transverse volume-averaged {typ}": var,
+                f"Transverse volume-averaged {typ_dim}": scale * var,
+            }
+        )
 
         return variables

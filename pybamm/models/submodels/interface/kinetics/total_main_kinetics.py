@@ -29,8 +29,7 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
 
         phases = self.options.phases[domain]
         # For each of the variables, the variable name without the phase name

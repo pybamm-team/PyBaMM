@@ -9,8 +9,8 @@ import unittest
 class TestBaseSubModel(unittest.TestCase):
     def test_domain(self):
         # Accepted string
-        submodel = pybamm.BaseSubModel(None, "Negative", phase="primary")
-        self.assertEqual(submodel.domain, "Negative")
+        submodel = pybamm.BaseSubModel(None, "negative", phase="primary")
+        self.assertEqual(submodel.domain, "negative")
 
         # None
         submodel = pybamm.BaseSubModel(None, None)
@@ -29,27 +29,27 @@ class TestBaseSubModel(unittest.TestCase):
             pybamm.BaseSubModel(None, None, phase="primary")
 
         # With domain
-        submodel = pybamm.BaseSubModel(None, "Negative", phase="primary")
+        submodel = pybamm.BaseSubModel(None, "negative", phase="primary")
         self.assertEqual(submodel.phase, "primary")
         self.assertEqual(submodel.phase_name, "")
 
         submodel = pybamm.BaseSubModel(
-            None, "Negative", options={"particle phases": "2"}, phase="secondary"
+            None, "negative", options={"particle phases": "2"}, phase="secondary"
         )
         self.assertEqual(submodel.phase, "secondary")
         self.assertEqual(submodel.phase_name, "secondary ")
 
         with self.assertRaisesRegex(ValueError, "Phase must be 'primary'"):
-            pybamm.BaseSubModel(None, "Negative", phase="secondary")
+            pybamm.BaseSubModel(None, "negative", phase="secondary")
         with self.assertRaisesRegex(ValueError, "Phase must be either 'primary'"):
             pybamm.BaseSubModel(
-                None, "Negative", options={"particle phases": "2"}, phase="tertiary"
+                None, "negative", options={"particle phases": "2"}, phase="tertiary"
             )
         with self.assertRaisesRegex(ValueError, "Phase must be 'primary'"):
             # 2 phases in the negative but only 1 in the positive
             pybamm.BaseSubModel(
                 None,
-                "Positive",
+                "positive",
                 options={"particle phases": ("2", "1")},
                 phase="secondary",
             )

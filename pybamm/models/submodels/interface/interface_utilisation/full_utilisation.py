@@ -14,7 +14,7 @@ class Full(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
 
@@ -22,9 +22,8 @@ class Full(BaseModel):
     """
 
     def get_fundamental_variables(self):
-        u = pybamm.FullBroadcast(
-            1, self.domain.lower() + " electrode", "current collector"
-        )
+        domain = self.domain
+        u = pybamm.FullBroadcast(1, f"{domain} electrode", "current collector")
 
         variables = self._get_standard_interface_utilisation_variables(u)
         return variables

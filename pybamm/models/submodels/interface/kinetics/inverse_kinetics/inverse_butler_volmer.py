@@ -30,7 +30,7 @@ class InverseButlerVolmer(BaseInterface):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
@@ -44,26 +44,22 @@ class InverseButlerVolmer(BaseInterface):
         if j0.domain in [[], ["current collector"]]:
             j_tot = j_tot_av
         else:
-            j_tot = pybamm.PrimaryBroadcast(
-                j_tot_av, [self.domain.lower() + " electrode"]
-            )
+            j_tot = pybamm.PrimaryBroadcast(j_tot_av, [f"{domain} electrode"])
         variables.update(
             self._get_standard_total_interfacial_current_variables(j_tot, a_j_tot_av)
         )
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             T = variables["X-averaged cell temperature"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:
             T = variables["X-averaged cell temperature"]
-            u = variables[
-                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
-            ]
+            u = variables[f"X-averaged {domain} electrode interface utilisation"]
         else:
-            T = variables[self.domain + " electrode temperature"]
-            u = variables[self.domain + " electrode interface utilisation"]
+            T = variables[f"{Domain} electrode temperature"]
+            u = variables[f"{Domain} electrode interface utilisation"]
 
         # eta_r is the overpotential from inverting Butler-Volmer, regardless of any
         # additional SEI resistance. What changes is how delta_phi is defined in terms
@@ -74,10 +70,10 @@ class InverseButlerVolmer(BaseInterface):
         eta_r = self._get_overpotential(j_tot, j0, ne, T, u)
 
         # With SEI resistance (distributed and averaged have the same effect here)
-        if self.domain == "Negative":
+        if self.domain == "negative":
             if self.options["SEI film resistance"] != "none":
                 R_sei = self.phase_param.R_sei
-                if self.half_cell:
+                if self.options.electrode_types["negative"] == "planar":
                     L_sei = variables["Total SEI thickness"]
                 else:
                     L_sei = variables["X-averaged total SEI thickness"]
@@ -144,11 +140,12 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
+        domain = self.domain
+
         j_tot = variables[
-            f"X-averaged {self.domain.lower()} electrode "
-            "total interfacial current density"
+            f"X-averaged {domain} electrode " "total interfacial current density"
         ]
-        if self.domain == "Negative":
+        if self.domain == "negative":
             j_sei = variables["SEI interfacial current density"]
             j_stripping = variables["Lithium plating interfacial current density"]
             j = j_tot - j_sei - j_stripping
