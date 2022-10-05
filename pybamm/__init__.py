@@ -163,6 +163,7 @@ from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.size_distribution_parameters import *
 from .parameters.parameter_sets import parameter_sets
+from .parameters_cli import add_parameter, remove_parameter, edit_parameter
 
 #
 # Mesh and Discretisation classes

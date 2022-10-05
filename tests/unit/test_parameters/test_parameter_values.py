@@ -105,17 +105,6 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
             pybamm.ParameterValues({"chemistry": "lithium_ion"})
 
-    def test_update_from_chemistry_local(self):
-        # Copy parameters
-        cmd = ["pybamm_edit_parameter", "-f", "lithium_ion"]
-        subprocess.run(cmd)
-
-        # Import parameters from chemistry
-        pybamm.ParameterValues("Ai2020")
-
-        # Clean up parameter files
-        shutil.rmtree("lithium_ion")
-
     def test_update(self):
         # converts to dict if not
         param = pybamm.ParameterValues("Ai2020")
