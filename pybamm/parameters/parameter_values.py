@@ -1039,7 +1039,7 @@ class ParameterValues:
                         self.chemistry[component_group],
                         f"{data_name}.csv",
                     )
-                    data_file_new = path + f"{data_name}.csv"
+                    data_file_new = os.path.join(path, f"{data_name}.csv")
                     shutil.copyfile(data_file_old, data_file_new)
 
                     # save data with data tag

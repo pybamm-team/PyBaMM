@@ -1024,7 +1024,12 @@ class TestParameterValues(unittest.TestCase):
         )
 
         # remove the file
-        os.remove(os.path.join(pybamm.ABSOLUTE_PATH, "pybamm", path, "Ai2020_test.py"))
+        for ext in [".py", ".pyc"]:
+            filename = os.path.join(
+                pybamm.ABSOLUTE_PATH, "pybamm", path, "Ai2020_test" + ext
+            )
+            if os.path.exists(filename):
+                os.remove(filename)
 
 
 if __name__ == "__main__":
