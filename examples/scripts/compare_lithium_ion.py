@@ -16,7 +16,7 @@ models = [
 # create and run simulations
 sims = []
 for model in models:
-    sim = pybamm.Simulation(model, parameter_values=pybamm.ParameterValues("Ai2020"))
+    sim = pybamm.Simulation(model)
     sim.solve([0, 3600])
     sims.append(sim)
 

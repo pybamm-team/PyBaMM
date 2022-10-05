@@ -21,6 +21,12 @@ class TestParameterValuesWithModel(unittest.TestCase):
             "Ecker2015": pybamm.lithium_ion.DFN(),
             "Mohtat2020": pybamm.lithium_ion.DFN(),
             "NCA_Kim2011": pybamm.lithium_ion.DFN(),
+            "OKane2022": pybamm.lithium_ion.DFN(
+                {
+                    "SEI": "solvent-diffusion limited",
+                    "lithium plating": "partially reversible",
+                }
+            ),
             "ORegan2022": pybamm.lithium_ion.DFN(),
             "Prada2013": pybamm.lithium_ion.DFN(),
             "Ramadass2004": pybamm.lithium_ion.DFN(),

@@ -14,6 +14,10 @@ import pandas as pd
 
 import pybamm
 import tests.shared as shared
+from pybamm.input.parameters.lithium_ion.Marquis2019 import (
+    lico2_ocp_Dualfoil1998,
+    lico2_diffusivity_Dualfoil1998,
+)
 
 
 class TestParameterValues(unittest.TestCase):
@@ -41,11 +45,11 @@ class TestParameterValues(unittest.TestCase):
                 "parameters",
                 "lithium_ion",
                 "positive_electrodes",
-                "lico2_Marquis2019",
+                "lico2_Ai2020",
                 "parameters.csv",
             )
         )
-        self.assertEqual(data["Positive electrode porosity"], "0.3")
+        self.assertEqual(data["Positive electrode porosity"], "0.32")
 
     def test_init(self):
         # from dict
@@ -57,9 +61,9 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium_ion/positive_electrodes/lico2_Marquis2019/parameters.csv"
+            "lithium_ion/positive_electrodes/lico2_Ai2020/parameters.csv"
         )
-        self.assertEqual(param["Positive electrode porosity"], 0.3)
+        self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # from file, absolute path
         param = pybamm.ParameterValues(
@@ -68,10 +72,13 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium_ion/positive_electrodes/lico2_Marquis2019/parameters.csv",
+                "lithium_ion",
+                "positive_electrodes",
+                "lico2_Ai2020",
+                "parameters.csv",
             )
         )
-        self.assertEqual(param["Positive electrode porosity"], 0.3)
+        self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # values vs chemistry
         with self.assertRaisesRegex(
@@ -104,16 +111,16 @@ class TestParameterValues(unittest.TestCase):
         subprocess.run(cmd)
 
         # Import parameters from chemistry
-        pybamm.ParameterValues("Chen2020")
+        pybamm.ParameterValues("Ai2020")
 
         # Clean up parameter files
         shutil.rmtree("lithium_ion")
 
     def test_update(self):
         # converts to dict if not
-        param = pybamm.ParameterValues("Chen2020")
+        param = pybamm.ParameterValues("Ai2020")
         param_from_csv = pybamm.ParameterValues(
-            "lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv"
+            "lithium_ion/negative_electrodes/graphite_Ai2020/parameters.csv"
         )
         param.update(param_from_csv)
         # equate values
@@ -571,20 +578,16 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_against_function(self):
-        parameter_values = pybamm.ParameterValues({})
+        parameter_values = pybamm.ParameterValues({"function": lico2_ocp_Dualfoil1998})
         parameter_values.update(
-            {
-                "function": "[function]lico2_ocp_Dualfoil1998",
-                "interpolation": "[data]lico2_data_example",
-            },
+            {"interpolation": "[data]lico2_data_example"},
             path=os.path.join(
                 pybamm.root_dir(),
                 "pybamm",
                 "input",
                 "parameters",
                 "lithium_ion",
-                "positive_electrodes",
-                "lico2_Marquis2019",
+                "data",
             ),
             check_already_exists=False,
         )
@@ -609,32 +612,14 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_2d_from_json(self):
-        parameter_values = pybamm.ParameterValues("Ai2020")
-        parameter_values.update(
-            {
-                "function": "[function]lico2_diffusivity_Dualfoil1998",
-            },
-            path=os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "positive_electrodes",
-                "lico2_Ai2020",
-            ),
-            check_already_exists=False,
+        parameter_values = pybamm.ParameterValues(
+            {"function": lico2_diffusivity_Dualfoil1998}
         )
         parameter_values.update(
             {
                 "interpolation": "[2D data]lico2_diffusivity_Dualfoil1998_2D",
             },
-            path=os.path.join(
-                pybamm.root_dir(),
-                "tests",
-                "unit",
-                "test_parameters",
-            ),
+            path=os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters"),
             check_already_exists=False,
         )
 

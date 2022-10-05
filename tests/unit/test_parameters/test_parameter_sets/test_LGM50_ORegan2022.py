@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-import os
 
 
 class TestORegan2022(unittest.TestCase):

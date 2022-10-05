@@ -1,4 +1,5 @@
 import pybamm
+import os
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -305,6 +306,13 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     return sigma_e
 
 
+# Load data in the appropriate format
+path, _ = os.path.split(os.path.abspath(__file__))
+graphite_ocp_Enertech_Ai2020 = pybamm.parameters.process_1D_data(
+    "graphite_ocp_Enertech_Ai2020.csv", path=path
+)
+
+
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -383,7 +391,7 @@ def get_parameter_values():
         "Primary: Maximum concentration in negative electrode [mol.m-3]": 28700.0,
         "Primary: Initial concentration in negative electrode [mol.m-3]": 27700.0,
         "Primary: Negative electrode diffusivity [m2.s-1]": 5.5e-14,
-        "Primary: Negative electrode OCP [V]": "[data]graphite_ocp_Enertech_Ai2020",
+        "Primary: Negative electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
         "Negative electrode porosity": 0.25,
         "Primary: Negative electrode active material volume fraction": 0.735,
         "Primary: Negative particle radius [m]": 5.86e-06,

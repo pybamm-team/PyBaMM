@@ -1,4 +1,5 @@
 import pybamm
+import os
 
 
 def graphite_diffusivity_Dualfoil1998(sto, T):
@@ -495,6 +496,14 @@ def electrolyte_conductivity_Ai2020(c_e, T):
     return sigma_e
 
 
+# Load data in the appropriate format
+path, _ = os.path.split(os.path.abspath(__file__))
+graphite_ocp_Enertech_Ai2020 = pybamm.parameters.process_1D_data(
+    "graphite_ocp_Enertech_Ai2020.csv", path=path
+)
+lico2_ocp_Ai2020 = pybamm.parameters.process_1D_data("lico2_ocp_Ai2020.csv", path=path)
+
+
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -503,7 +512,6 @@ def get_parameter_values():
     > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
     Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
     Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
-
     > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
     the thickness change of a commercial pouch cell during discharge. Journal of The
     Electrochemical Society, 163(8), A1566-A1575.
@@ -584,7 +592,7 @@ def get_parameter_values():
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
-        "Negative electrode OCP [V]": "[data]graphite_ocp_Enertech_Ai2020",
+        "Negative electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
         "Negative electrode porosity": 0.33,
         "Negative electrode active material volume fraction": 0.61,
         "Negative particle radius [m]": 5e-06,
@@ -621,7 +629,7 @@ def get_parameter_values():
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49943.0,
         "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
-        "Positive electrode OCP [V]": "[data]lico2_ocp_Ai2020",
+        "Positive electrode OCP [V]": lico2_ocp_Ai2020,
         "Positive electrode porosity": 0.32,
         "Positive electrode active material volume fraction": 0.62,
         "Positive particle radius [m]": 3e-06,

@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-import os
 
 
 class TestRamadass2004(unittest.TestCase):

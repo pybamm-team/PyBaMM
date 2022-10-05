@@ -1,4 +1,5 @@
 import pybamm
+import os
 
 
 def graphite_diffusivity_Kim2011(sto, T):
@@ -259,6 +260,13 @@ def electrolyte_conductivity_Kim2011(c_e, T):
     return sigma_e
 
 
+# Load data in the appropriate format
+path, _ = os.path.split(os.path.abspath(__file__))
+nca_ocp_Kim2011_data = pybamm.parameters.process_1D_data(
+    "nca_ocp_Kim2011_data.csv", path=path
+)
+
+
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -375,7 +383,7 @@ def get_parameter_values():
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49000.0,
         "Positive electrode diffusivity [m2.s-1]": nca_diffusivity_Kim2011,
-        "Positive electrode OCP [V]": "[data]nca_ocp_Kim2011_data",
+        "Positive electrode OCP [V]": nca_ocp_Kim2011_data,
         "Positive electrode porosity": 0.4,
         "Positive electrode active material volume fraction": 0.41,
         "Positive particle radius [m]": 1.633e-06,

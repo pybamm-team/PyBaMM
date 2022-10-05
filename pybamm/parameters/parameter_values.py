@@ -10,7 +10,6 @@ import warnings
 from pprint import pformat
 from collections import defaultdict
 import inspect
-import json
 from textwrap import fill
 import shutil
 
@@ -26,22 +25,8 @@ class ParameterValues:
     ----------
     values : dict or string
         Explicit set of parameters, or reference to a file of parameters
-        If string, gets passed to read_parameters_csv to read a file.
-    chemistry : dict
-        Dict of strings for default chemistries. Must be of the form:
-        {"base chemistry": base_chemistry,
-        "cell": cell_properties_authorYear,
-        "negative electrode": negative_electrode_chemistry_authorYear,
-        "separator": separator_chemistry_authorYear,
-        "positive electrode": positive_electrode_chemistry_authorYear,
-        "electrolyte": electrolyte_chemistry_authorYear,
-        "experiment": experimental_conditions_authorYear}.
-        Then the negative electrode chemistry is loaded from the file
-        inputs/parameters/base_chemistry/negative electrodes/
-        negative_electrode_chemistry_authorYear, etc.
-        Parameters in "cell" should include geometry and current collector properties.
-        Parameters in "experiment" should include parameters relating to experimental
-        conditions, such as initial conditions and currents.
+        If string and matches one of the inbuilt parameter sets, returns that parameter
+        set. If non-matching string, gets passed to read_parameters_csv to read a file.
 
     Examples
     --------
@@ -333,27 +318,16 @@ class ParameterValues:
                             pybamm.root_dir(), "pybamm", "input", "drive_cycles"
                         )
                         filename = os.path.join(data_path, value[14:] + ".csv")
-                        function_name = value[14:]
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
-                        function_name = value[6:]
                     filename = pybamm.get_parameters_filepath(filename)
-                    data = pd.read_csv(
-                        filename, comment="#", skip_blank_lines=True, header=None
-                    ).to_numpy()
                     # Save name and data
-                    self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
+                    self._dict_items[name] = pybamm.parameters.process_1D_data(filename)
                 # parse 2D parameter data
                 elif value.startswith("[2D data]"):
                     filename = os.path.join(path, value[9:] + ".json")
-                    function_name = value[9:]
                     filename = pybamm.get_parameters_filepath(filename)
-                    with open(filename, "r") as jsonfile:
-                        json_data = json.load(jsonfile)
-                    data = json_data["data"]
-                    data[0] = [np.array(el) for el in data[0]]
-                    data[1] = np.array(data[1])
-                    self._dict_items[name] = (function_name, data)
+                    self._dict_items[name] = pybamm.parameters.process_2D_data(filename)
 
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
@@ -1007,6 +981,7 @@ class ParameterValues:
         # Initialize
         preamble = "import pybamm\n"
         function_output = ""
+        data_output = ""
         dict_output = ""
 
         component_params_by_group = getattr(
@@ -1037,8 +1012,19 @@ class ParameterValues:
                     data_file_new = os.path.join(path, f"{data_name}.csv")
                     shutil.copyfile(data_file_old, data_file_new)
 
-                    # save data with data tag
-                    v = f"'[data]{data_name}'"
+                    # add data output
+                    if data_output == "":
+                        data_output = (
+                            "# Load data in the appropriate format\n"
+                            "path, _ = os.path.split(os.path.abspath(__file__))\n"
+                        )
+                    data_output += (
+                        f"{data_name} = pybamm.parameters.process_1D_data"
+                        f"('{data_name}.csv', path)\n"
+                    )
+                    v = f"pybamm.{data_name}"
+
+                    v = f"{data_name}"
                 elif np.isnan(v):
                     continue  # skip this value
 
@@ -1062,6 +1048,7 @@ class ParameterValues:
         # construct the output string
         output = (
             function_output
+            + data_output
             + "\n# Call dict via a function to avoid errors when editing in place"
             + "\ndef get_parameter_values():"
             + docstring
@@ -1075,6 +1062,8 @@ class ParameterValues:
             preamble += "import pandas as pd\n"
         if "np." in output:
             preamble += "import numpy as np\n"
+        if "os." in output:
+            preamble += "import os\n"
         output = preamble + "\n\n" + output
 
         # Add pybamm. to functions that didn't have it in function body before

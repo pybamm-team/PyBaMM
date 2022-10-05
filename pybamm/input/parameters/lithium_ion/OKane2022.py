@@ -1,4 +1,5 @@
 import pybamm
+import os
 
 
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
@@ -484,6 +485,13 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
     return sigma_e * arrhenius
 
 
+# Load data in the appropriate format
+path, _ = os.path.split(os.path.abspath(__file__))
+graphite_LGM50_ocp_Chen2020 = pybamm.parameters.process_1D_data(
+    "graphite_LGM50_ocp_Chen2020.csv", path=path
+)
+
+
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -572,7 +580,7 @@ def get_parameter_values():
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
         "Negative electrode diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
-        "Negative electrode OCP [V]": "[data]graphite_LGM50_ocp_Chen2020",
+        "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,
         "Negative particle radius [m]": 5.86e-06,
