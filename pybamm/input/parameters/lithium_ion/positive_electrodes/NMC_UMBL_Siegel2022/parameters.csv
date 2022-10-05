@@ -5,7 +5,8 @@ Name [units],Value,Reference,Notes
 Positive electrode conductivity [S.m-1],100,Scott Moura FastDFN,no info from Peyman MPM
 Maximum concentration in positive electrode [mol.m-3],35380,Peyman MPM, nickel manganese cobalt oxide
 Positive electrode diffusivity [m2.s-1],[function]NMC_diffusivity_Siegel,Peyman MPM,
-Positive electrode OCP [V],[data]NMC_ocp_Siegel,Siegel 2022, Measured
+#Positive electrode OCP [V],[data]NMC_ocp_Siegel,Siegel 2022, Measured
+Positive electrode OCP [V],[function]NMC_ocp_Siegel,Siegel 2022, Measured
 ,,,
 # Microstructure,,,
 Positive electrode porosity,0.3,Siegel2022,
