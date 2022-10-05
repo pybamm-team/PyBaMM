@@ -44,6 +44,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium_ion",
+                "testing_only",
                 "positive_electrodes",
                 "lico2_Ai2020",
                 "parameters.csv",
@@ -61,7 +62,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium_ion/positive_electrodes/lico2_Ai2020/parameters.csv"
+            "lithium_ion/testing_only/positive_electrodes/lico2_Ai2020/parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.32)
 
@@ -73,6 +74,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium_ion",
+                "testing_only",
                 "positive_electrodes",
                 "lico2_Ai2020",
                 "parameters.csv",
@@ -109,7 +111,7 @@ class TestParameterValues(unittest.TestCase):
         # converts to dict if not
         param = pybamm.ParameterValues("Ai2020")
         param_from_csv = pybamm.ParameterValues(
-            "lithium_ion/negative_electrodes/graphite_Ai2020/parameters.csv"
+            "lithium_ion/testing_only/negative_electrodes/graphite_Ai2020/parameters.csv"
         )
         param.update(param_from_csv)
         # equate values

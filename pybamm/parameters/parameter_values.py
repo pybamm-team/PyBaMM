@@ -211,7 +211,10 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group.replace(" ", "_") + "s", component
+                base_chemistry,
+                "testing_only",
+                component_group.replace(" ", "_") + "s",
+                component,
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
@@ -1005,6 +1008,7 @@ class ParameterValues:
                     data_name = v[0]
                     data_file_old = os.path.join(
                         path,
+                        "testing_only",
                         component_group.replace(" ", "_") + "s",
                         self.chemistry[component_group],
                         f"{data_name}.csv",
