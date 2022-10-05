@@ -30,11 +30,11 @@ JAXLIB_VERSION = "0.1.70"
 def tree_search(tree, item, solutions):
     for child in tree.children:
         tree_search(child, item, solutions)
-        if child == item:
+        if (child == item) or (child.name == item.name):
             solutions.append(True)
         else:
             solutions.append(False)
-    solutions.append(tree == item)
+    solutions.append((tree == item) or (tree.name == item.name))
     return None
 
 

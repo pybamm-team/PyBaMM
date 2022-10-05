@@ -175,6 +175,9 @@ class Discretisation(object):
                             child,
                             this_var_list,
                         )
+                for tree in model.variables.keys():
+                    for rhs_child in model.variables[tree].children:
+                        pybamm.tree_search(rhs_child, var, this_var_list)
             for tree in rhs_variables:
                 pybamm.tree_search(model.rhs[tree], var, this_var_list)
             for tree in algebraic_variables:
@@ -184,7 +187,19 @@ class Discretisation(object):
                     pybamm.tree_search(
                         model.boundary_conditions[tree][key][0], var, this_var_list
                     )
+            for tree in model.variables.keys():
+                for rhs_child in model.variables[tree].children:
+                    pybamm.tree_search(rhs_child, var, this_var_list)
             this_var_is_independent = not any(this_var_list)
+            not_in_y_slices = not (var in list(self.y_slices.keys()))
+            not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+            is_0D = len(var.domain) == 0
+            this_var_is_independent = (
+                this_var_is_independent and
+                not_in_y_slices and
+                not_in_discretised and
+                is_0D
+            )
             if this_var_is_independent:
                 if len(model.rhs) != 1:
                     pybamm.logger.info("removing variable {} from rhs".format(var))
@@ -192,6 +207,11 @@ class Discretisation(object):
                     model.variables[var.name] = pybamm.ExplicitTimeIntegral(
                         model.rhs[var], my_initial_condition
                     )
+                    #edge case where a variable appears
+                    # in the rhs twice under different names
+                    for key in model.variables:
+                        if model.variables[key] == var:
+                            model.variables[key] = model.variables[var.name]
                     del model.rhs[var]
                     del model.initial_conditions[var]
                 else:
@@ -223,6 +243,15 @@ class Discretisation(object):
                         model.boundary_conditions[tree][key][0], var, this_var_list
                     )
             this_var_is_independent = not any(this_var_list)
+            not_in_y_slices = not (var in list(self.y_slices.keys()))
+            not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+            is_0D = len(var.domain) == 0
+            this_var_is_independent = (
+                this_var_is_independent and
+                not_in_y_slices and
+                not_in_discretised and
+                is_0D
+            )
             if this_var_is_independent:
                 if len(model.algebraic) != 1:
                     pybamm.logger.info(
