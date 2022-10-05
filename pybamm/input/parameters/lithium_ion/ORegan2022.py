@@ -920,9 +920,6 @@ def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # ORegan2022 parameter set
-    # LG M50 cell parameters
-
     Parameters for an LG M50 cell, from the paper
 
     > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
@@ -930,54 +927,12 @@ def get_parameter_values():
     battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
     Electrochimica Acta 425 (2022): 140700
 
-    and references therein.
-    # LG M50 Graphite negative electrode parameters
-
-    Parameters for a LG M50 graphite negative electrode, from the paper
-
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
-    Electrochimica Acta 425 (2022): 140700
-
-    and references therein.
-    # Separator parameters
-
-    Parameters for an LG M50 separator, from the paper
-
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
-    Electrochimica Acta 425 (2022): 140700
-
-    and references therein.
-    # NMC 811 positive electrode parameters
-
-    Parameters for an LG M50 NMC positive electrode, from the paper
-
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
-    Electrochimica Acta 425 (2022): 140700
-
-    and references therein.
-    # LiPF6 in EC:EMC (3:7 w:w) electrolyte parameters
-
-    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte, from the paper
+    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte are from the paper
 
     > Johannes Landesfeind and Hubert A. Gasteiger, ["Temperature and Concentration
     Dependence of the Ionic Transport Properties of Lithium-Ion Battery
     Electrolytes."](https://iopscience.iop.org/article/10.1149/2.0571912jes) Journal of
     the Electrochemical Society 166 (2019): A3079.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
-    Electrochimica Acta 425 (2022): 140700
 
     and references therein.
     """

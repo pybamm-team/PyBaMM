@@ -487,32 +487,15 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # OKane2022 parameter set
-    # LG M50 cell parameters
-
     Parameters for an LG M50 cell, from the paper
 
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # LG M50 Graphite anode parameters
-
-    Parameters for an LG M50 graphite negative electrode, from the paper
-
     > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
     Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
     ["Lithium-ion battery degradation: how to model
     it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
     Chemistry: Chemical Physics 24 (2022): 7909-7922
 
-    and references therein.
-    # Separator parameters
-
-    Parameters for an LG M50 separator, from the paper
+    based on the paper
 
     > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
@@ -521,70 +504,10 @@ def get_parameter_values():
     the Electrochemical Society 167 (2020): 080534
 
     and references therein.
-    # NMC 811 positive electrode parameters
 
-    Parameters for an LG M50 NMC 811 positive electrode, from the paper
-
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
-    ["Lithium-ion battery degradation: how to model
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
-    Chemistry: Chemical Physics 24 (2022): 7909-7922
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
-
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
-    ["Lithium-ion battery degradation: how to model
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
-    Chemistry: Chemical Physics 24 (2022): 7909-7922
-
-    and references therein.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # SEI parameters
-
-    Parameters for SEI growth from the paper
-
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
-    ["Lithium-ion battery degradation: how to model
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
-    Chemistry: Chemical Physics 24 (2022): 7909-7922
-
-    and references therein.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. These are merely the parameter values that were used in the referenced
-    papers.
-    # Lithium plating parameters
-
-    Some example parameters for lithium plating from the paper:
-
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
-    ["Lithium-ion battery degradation: how to model
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
-    Chemistry: Chemical Physics 24 (2022): 7909-7922
-
-    and references therein.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. These are merely the parameter values that were used in the referenced
-    papers.
+    Note: the SEI and plating parameters do not claim to be representative of the true
+    parameter values. These are merely the parameter values that were used in the
+    referenced papers.
     """
 
     return {
@@ -742,5 +665,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["OKane2022", "Chen2020"],
+        "citations": ["OKane2022", "OKane2020", "Chen2020"],
     }

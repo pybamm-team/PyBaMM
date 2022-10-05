@@ -337,9 +337,6 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Marquis2019 parameter set
-    # Kokam SLPB78205130H cell parameters
-
     Parameters for a Kokam SLPB78205130H cell, from the paper
 
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
@@ -348,60 +345,8 @@ def get_parameter_values():
     A3693-A3706.
 
     and references therein.
-    # Graphite MCMB 2528 negative electrode parameters
 
-    Parameters for a graphite MCMB 2528 negative electrode, from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # Separator parameters
-
-    Parameters for the separator in the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # Lithium Cobalt Oxide positive electrode parameters
-
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
+    SEI parameters are example parameters for SEI growth from the papers:
 
     > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the

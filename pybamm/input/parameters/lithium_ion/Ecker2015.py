@@ -385,9 +385,6 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Ecker2015 parameter set
-    # Kokam SLPB 75106100 cell parameters
-
     Parameters for a Kokam SLPB 75106100 cell, from the papers
 
     > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
@@ -412,16 +409,6 @@ def get_parameter_values():
     Society, 165.13 (2018): A3169-A3178.
     # Graphite negative electrode parameters
 
-    Parameters for a graphite negative electrode, from the papers:
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery I. determination of parameters." Journal of the Electrochemical
-    Society 162.9 (2015): A1836-A1848.
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
-    162.9 (2015): A1849-A1857.
-
     The fits to data for the electrode and electrolyte properties are those provided
     by Dr. Simon O’Kane in the paper:
 
@@ -429,84 +416,7 @@ def get_parameter_values():
     operation of graded lithium-ion electrodes: Systematic derivation and validation."
     Electrochemica Acta 339 (2020): 135862
 
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
-    are extracted from
-
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
-    Society, 165.13 (2018): A3169-A3178.
-    # Separator parameters
-
-    Parameters for the separator from the papers
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
-    Society 162.9 (2015): A1836-A1848.
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
-    162.9 (2015): A1849-A1857.
-
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
-    are extracted from
-
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
-    Society, 165.13 (2018): A3169-A3178.
-    # Lithium Nickel Cobalt Oxide positive electrode parameters
-
-    Parameters for a Lithium Nickel Cobalt Oxide positive electrode, from the papers
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
-    Society 162.9 (2015): A1836-A1848.
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
-    162.9 (2015): A1849-A1857.
-
-    The fits to data for the electrode and electrolyte properties are those provided
-    by Dr. Simon O’Kane in the paper:
-
-    > Richardson, Giles, et. al. "Generalised single particle models for high-rate
-    operation of graded lithium-ion electrodes: Systematic derivation and validation."
-    Electrochemica Acta 339 (2020): 135862
-
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
-    are extracted from
-
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
-    Society, 165.13 (2018): A3169-A3178.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the papers
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
-    Society 162.9 (2015): A1836-A1848.
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
-    162.9 (2015): A1849-A1857.
-
-    The fits to data for the electrode and electrolyte properties are those provided
-    by Dr. Simon O’Kane in the paper:
-
-    > Richardson, Giles, et. al. "Generalised single particle models for high-rate
-    operation of graded lithium-ion electrodes: Systematic derivation and validation."
-    Electrochemica Acta 339 (2020): 135862
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
-    162.9 (2015): A1849-A1857..
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
+    SEI parameters are example parameters for SEI growth from the papers:
 
     > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the

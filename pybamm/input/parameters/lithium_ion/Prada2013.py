@@ -201,9 +201,6 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Prada2013 parameter set
-    # Pouch cell parameters
-
     Parameters for an A123 LFP cell, from the paper
 
     > Lain, M. J., Brandon, J., & Kendrick, E. (2019). Design Strategies for High Power
@@ -211,7 +208,7 @@ def get_parameter_values():
     [Batteries](https://doi.org/10.3390/batteries5040064), 5(4), 64.
     # LG M50 Graphite negative electrode parameters
 
-    Parameters for a LG M50 graphite negative electrode, from the paper
+    Parameters for negative electrode (graphite) and separator are from the paper
 
     > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
@@ -220,20 +217,8 @@ def get_parameter_values():
     the Electrochemical Society 167 (2020): 080534
 
     and references therein.
-    # Separator parameters
 
-    Parameters for an LG M50 separator, from the paper
-
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # Lithium Iron Phosphate positive electrode parameters
-
-    Parameters for an LFP positive electrode, from the paper
+    Parameters for positive electrode (LFP) are from the paper
 
     > Prada, E., Di Domenico, D., Creff, Y., Bernard, J., Sauvant-Moynot, V., & Huet, F.
      (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite
@@ -242,26 +227,14 @@ def get_parameter_values():
 
     and references therein. The functions used for OCP and exchange-current density are
     from separate references (documented within the functions), to provide better fit to
-     data
-    # LiPF6 electrolyte parameters
+    data
 
-    Parameters for a LiPF6 electrolyte, from the paper
+    Parameters for a LiPF6 electrolyte are from the paper
 
     > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and
     modelling of the mass transport phenomena in LiPF6-EC-EMC
     electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045)
     Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
-
-    and references therein.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 4C, using the initial conditions
-    from the paper
-
-    > Prada, E., Di Domenico, D., Creff, Y., Bernard, J., Sauvant-Moynot, V., & Huet, F.
-     (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite
-    Li-ion batteries: power and capacity fade simulations. [Journal of The
-    Electrochemical Society](https://doi.org/10.1149/2.053304jes), 160(4), A616.
 
     and references therein.
     """
@@ -357,5 +330,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 35.3766672,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Chen2020", "Lain2019", "Prada2013"],
+        "citations": ["Chen2020", "Lain2019", "Prada2013", "Nyman2008"],
     }

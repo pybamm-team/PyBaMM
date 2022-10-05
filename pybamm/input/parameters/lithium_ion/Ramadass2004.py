@@ -344,10 +344,11 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Ramadass2004 parameter set
-    # Cell geometry parameters
+    Ramadass2004 parameter set. This is a bit of a Frankenstein parameter set and
+    should be used with caution.
 
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
+    Parameters for a graphite negative electrode, Lithium Cobalt Oxide positive
+    electrode, and LiPF6 electrolyte are from the papers
 
     > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
      asymptotic derivation of a single particle model with electrolyte”. [Journal of The
@@ -360,28 +361,12 @@ def get_parameter_values():
     18650 cells cycled at elevated temperatures part I." (2002)
 
     and references therein.
-    # Graphite negative electrode parameters
 
-    Parameters for a graphite negative electrode, from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
-    Popov.["Development of First Principles Capacity Fade Model for Li-Ion Cells."](http
-    s://scholarcommons.sc.edu/cgi/viewcontent.cgi?article=1161&context=eche_facpub)
-    (2004)
-
-    and references therein.
-    # Separator parameters
-
-    Parameters for the separator from the papers
+    Parameters for the separator are from the papers
 
     > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
     lithium-ion battery i. determination of parameters." Journal of the Electrochemical
     Society 162.9 (2015): A1836-A1848.
-
     > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
     lithium-ion battery II. Model validation." Journal of The Electrochemical Society
     162.9 (2015): A1849-A1857.
@@ -394,44 +379,7 @@ def get_parameter_values():
     Society, 165.13 (2018): A3169-A3178.
     # Lithium Cobalt Oxide positive electrode parameters
 
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
-    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
-    (2004)
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
-    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
-    (2004)
-
-    and references therein.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-
-    and references therein.
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
+    Parameters for SEI growth are from the papers
 
     > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the
@@ -440,8 +388,8 @@ def get_parameter_values():
     Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
     Electrochemical Society, 156(3),
 
-    Note: Ramadass 2004 has mistakes in units and values of SEI parameters, corrected by
-     Safari 2009.
+    Note: Ramadass 2004 has mistakes in units and values of SEI parameters, corrected
+    by Safari 2009.
     """
 
     return {

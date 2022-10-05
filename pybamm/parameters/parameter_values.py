@@ -50,11 +50,6 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "input/parameters/lithium_ion/cells/kokam_Marquis2019/parameters.csv"
-    >>> values_path = pybamm.get_parameters_filepath(file)
-    >>> param = pybamm.ParameterValues(values_path)
-    >>> param["Negative current collector thickness [m]"]
-    2.5e-05
     >>> param = pybamm.ParameterValues("Marquis2019")
     >>> param["Reference temperature [K]"]
     298.15

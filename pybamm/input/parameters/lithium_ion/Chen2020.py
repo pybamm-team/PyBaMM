@@ -212,9 +212,6 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Chen2020 parameter set
-    # LG M50 cell parameters
-
     Parameters for an LG M50 cell, from the paper
 
     > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
@@ -224,64 +221,8 @@ def get_parameter_values():
     the Electrochemical Society 167 (2020): 080534
 
     and references therein.
-    # LG M50 Graphite negative electrode parameters
 
-    Parameters for a LG M50 graphite negative electrode, from the paper
-
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # Separator parameters
-
-    Parameters for an LG M50 separator, from the paper
-
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # NMC 811 positive electrode parameters
-
-    Parameters for an LG M50 NMC 811 positive electrode, from the paper
-
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
-
-    > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and
-    modelling of the mass transport phenomena in LiPF6-EC-EMC
-    electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045)
-    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
-
-    and references therein.
-    # 1C discharge from full
-
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
-
-    and references therein.
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
+    SEI parameters are example parameters for SEI growth from the papers:
 
     > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the

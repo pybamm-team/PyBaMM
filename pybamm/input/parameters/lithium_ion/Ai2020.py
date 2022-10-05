@@ -498,10 +498,7 @@ def electrolyte_conductivity_Ai2020(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Ai2020 parameter set
-    # Enertech cell parameters
-
-    Parameters for the Enertech cell, from the paper
+    Parameters for the Enertech cell (Ai2020), from the papers
 
     > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
     Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
@@ -512,74 +509,8 @@ def get_parameter_values():
     Electrochemical Society, 163(8), A1566-A1575.
 
     and references therein.
-    # Enertech Graphite negative electrode parameters
 
-    Parameters for a graphite negative electrode, from the paper
-
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
-
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
-    the thickness change of a commercial pouch cell during discharge. Journal of The
-    Electrochemical Society, 163(8), A1566-A1575.
-
-    and references therein.
-    # Enertech Graphite negative electrode parameters
-
-    Parameters for a graphite negative electrode, from the paper
-
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
-
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
-    the thickness change of a commercial pouch cell during discharge. Journal of The
-    Electrochemical Society, 163(8), A1566-A1575.
-
-    and references therein.
-    # Lithium Cobalt Oxide positive electrode parameters
-
-    Parameters for a lithium Cobalt Oxide positive electrode, from the paper
-
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
-
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
-    the thickness change of a commercial pouch cell during discharge. Journal of The
-    Electrochemical Society, 163(8), A1566-A1575.
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
-
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
-
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
-    the thickness change of a commercial pouch cell during discharge. Journal of The
-    Electrochemical Society, 163(8), A1566-A1575.
-
-    and references therein.
-    # Enertech Graphite negative electrode parameters
-
-    Parameters for a graphite negative electrode, from the paper
-
-    > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
-
-    > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016). A new method to model
-    the thickness change of a commercial pouch cell during discharge. Journal of The
-    Electrochemical Society, 163(8), A1566-A1575.
-
-    and references therein.
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
+    SEI parameters are example parameters for SEI growth from the papers:
 
     > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the

@@ -318,8 +318,15 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Mohtat2020 parameter set
-    # SEI parameters
+    Parameters for a graphite/NMC532 pouch cell from the paper
+
+    > Mohtat, P., Lee, S., Sulzer, V., Siegel, J. B., & Stefanopoulou, A. G. (2020).
+    Differential expansion and voltage model for li-ion batteries at practical charging
+    rates.
+    [Journal of The Electrochemical Society](https://doi.org/10.1149/1945-7111/aba5d1),
+    167(11), 110561.
+
+    and references therein.
 
     Some example parameters for SEI growth from the papers:
 
@@ -344,11 +351,15 @@ def get_parameter_values():
     observed experimental data in the referenced papers.
     # SEI parameters
 
-    Parameters for lithium plating from the paper:
+    Parameters for lithium plating are from the paper:
 
     > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
     plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
     aging. Journal of Power Sources, 360, 28-40.
+
+    Note: this parameter set does not claim to be representative of the true parameter
+    values. Instead these are parameter values that were used to fit SEI models to
+    observed experimental data in the referenced papers.
     """
 
     return {

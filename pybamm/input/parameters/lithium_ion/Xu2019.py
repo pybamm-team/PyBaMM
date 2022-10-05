@@ -190,20 +190,11 @@ def electrolyte_conductivity_Valoen2005(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    # Xu2019 parameter set
-    # Kokam SLPB78205130H cell parameters
-
-    Parameters for a Kokam SLPB78205130H cell, from the paper
-
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
-    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
-    Electrochemical Society 166.14 (2019): A3456-A3463.
-
-    and references therein.
-    # Graphite MCMB 2528 anode parameters
-
-    Parameters for a graphite MCMB 2528 anode, from the paper
+    Parameters for a Kokam SLPB78205130H half-cell, from the paper.
+    Anode is graphite MCMB 2528.
+    Separator is Celgard 2325.
+    Cathode is lithium Cobalt Oxide.
+    Electrolyte is LiPF6.
 
     > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
     Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
@@ -211,47 +202,15 @@ def get_parameter_values():
     Electrochemical Society 166.14 (2019): A3456-A3463.
 
     and references therein.
-    # Separator parameters
 
-    Parameters for a Celgard 2325 separator, from the paper
-
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
-    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
-    Electrochemical Society 166.14 (2019): A3456-A3463.
-
-    and references therein.
-    # Lithium Cobalt Oxide cathode parameters
-
-    Parameters for a lithium Cobalt Oxide cathode, from the paper
-
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
-    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
-    Electrochemical Society 166.14 (2019): A3456-A3463.
-
-    and references therein.
-    # LiPF6 electrolyte parameters
-
-    Parameters for a LiPF6 electrolyte, from the paper
+    Parameters for a LiPF6 electrolyte are from the paper
 
     > Valøen, Lars Ole, and Jan N. Reimers. "Transport properties of LiPF6-based Li-ion
     battery electrolytes." Journal of The Electrochemical Society 152.5 (2005):
     A882-A891. [doi: 10.1149/1.1872737](http://dx.doi.org/10.1149/1.1872737)
     # 1C discharge from full
 
-    Discharge lithium-ion battery from full charge at 1C, using the initial conditions
-    from the paper
-
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
-    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
-    Electrochemical Society 166.14 (2019): A3456-A3463.
-
-    and references therein.
-    # SEI parameters
-
-    Some example parameters for SEI growth from the papers:
+    SEI parameters are example parameters for SEI growth from the papers:
 
     > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
     Development of first principles capacity fade model for Li-ion cells. Journal of the
@@ -357,5 +316,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 4631.0,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Xu2019"],
+        "citations": ["Xu2019", "Valoen2005"],
     }
