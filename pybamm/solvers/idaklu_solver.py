@@ -23,7 +23,8 @@ def have_idaklu():
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
-    """Solve a discretised model, using sundials with the KLU sparse linear solver.
+    """
+    Solve a discretised model, using sundials with the KLU sparse linear solver.
 
      Parameters
     ----------
