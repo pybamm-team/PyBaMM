@@ -282,7 +282,7 @@ class TestIDAKLUSolver(unittest.TestCase):
                 model,
                 t_eval,
                 inputs={"a": a_value, "b": b_value},
-                calculate_sensitivities=True
+                calculate_sensitivities=True,
             )
 
             # test that y[1] remains constant
@@ -298,29 +298,33 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             # evaluate the sensitivities using finite difference
             h = 1e-6
-            sol_plus = solver.solve(model, t_eval, inputs={
-                "a": a_value + 0.5 * h, "b": b_value
-            })
-            sol_neg = solver.solve(model, t_eval, inputs={
-                "a": a_value - 0.5 * h, "b": b_value
-            })
+            sol_plus = solver.solve(
+                model, t_eval, inputs={"a": a_value + 0.5 * h, "b": b_value}
+            )
+            sol_neg = solver.solve(
+                model, t_eval, inputs={"a": a_value - 0.5 * h, "b": b_value}
+            )
             max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
             dyda_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(dyda_ida[:(2 * max_index), :], dyda_fd)
+            np.testing.assert_array_almost_equal(
+                dyda_ida[: (2 * max_index), :], dyda_fd
+            )
 
-            sol_plus = solver.solve(model, t_eval, inputs={
-                "a": a_value , "b": b_value + 0.5 * h
-            })
-            sol_neg = solver.solve(model, t_eval, inputs={
-                "a": a_value , "b": b_value - 0.5 * h
-            })
+            sol_plus = solver.solve(
+                model, t_eval, inputs={"a": a_value, "b": b_value + 0.5 * h}
+            )
+            sol_neg = solver.solve(
+                model, t_eval, inputs={"a": a_value, "b": b_value - 0.5 * h}
+            )
             max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
             dydb_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
             dydb_fd = dydb_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(dydb_ida[:(2 * max_index), :], dydb_fd)
+            np.testing.assert_array_almost_equal(
+                dydb_ida[: (2 * max_index), :], dydb_fd
+            )
 
     def test_set_atol(self):
         model = pybamm.lithium_ion.DFN()
