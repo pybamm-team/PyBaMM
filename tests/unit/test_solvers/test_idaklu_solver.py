@@ -166,15 +166,17 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # test that y[3] remains constant
-            np.testing.assert_array_almost_equal(sol.y[3, :], np.ones(sol.t.shape))
+            np.testing.assert_array_almost_equal(sol["v"], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+            np.testing.assert_array_almost_equal(sol["u1"], true_solution)
 
             # test that y[1:3] = to true solution
-            true_solution = b_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[1:3, :], true_solution)
+            true_solution = b_value[0] * sol.t
+            np.testing.assert_array_almost_equal(sol["u2"], true_solution)
+            true_solution = b_value[0] * sol.t
+            np.testing.assert_array_almost_equal(sol["u3"], true_solution)
 
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
