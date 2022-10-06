@@ -24,7 +24,7 @@ def separator_LGM50_heat_capacity_ORegan2022(T):
 
     # value for the dry porous separator (i.e. separator + air, and we neglect the air
     # contribution to density)
-    cp_dry = 1.494e-3 * T ** 3 - 1.444 * T ** 2 + 475.5 * T - 5.13e4
+    cp_dry = 1.494e-3 * T**3 - 1.444 * T**2 + 475.5 * T - 5.13e4
     rho_dry = 946
     theta_dry = rho_dry * cp_dry
 

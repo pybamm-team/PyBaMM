@@ -24,35 +24,28 @@ class Explicit(BaseThroughCellModel):
 
         # Set up
         param = self.param
-        l_n = param.n.l
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_s = pybamm.standard_spatial_vars.x_s
-        x_p = pybamm.standard_spatial_vars.x_p
-
         p_s = variables["X-averaged separator pressure"]
-        j_n_av = variables["X-averaged negative electrode interfacial current density"]
-        j_p_av = variables["X-averaged positive electrode interfacial current density"]
+        for domain in self.options.whole_cell_domains:
+            if domain == "separator":
+                continue
+            j_k_av = variables[f"X-averaged {domain} interfacial current density"]
+            if domain == "negative electrode":
+                x_n = pybamm.standard_spatial_vars.x_n
+                beta_k = param.n.beta
+                p_k = beta_k * j_k_av * (-(x_n**2) + param.n.l**2) / 2 + p_s
+                v_box_k = beta_k * j_k_av * x_n
+            elif domain == "positive electrode":
+                x_p = pybamm.standard_spatial_vars.x_p
+                beta_k = param.p.beta
+                p_k = beta_k * j_k_av * ((x_p - 1) ** 2 - param.p.l**2) / 2 + p_s
+                v_box_k = beta_k * j_k_av * (x_p - 1)
+            div_v_box_k = pybamm.PrimaryBroadcast(beta_k * j_k_av, domain)
 
-        p_n = param.n.beta * j_n_av * (-(x_n ** 2) + param.n.l ** 2) / 2 + p_s
-        p_p = param.n.beta * j_n_av * ((x_p - 1) ** 2 - param.p.l ** 2) / 2 + p_s
-        variables.update(self._get_standard_neg_pos_pressure_variables(p_n, p_p))
-
-        # Volume-averaged velocity
-        v_box_n = param.n.beta * j_n_av * x_n
-        v_box_p = param.p.beta * j_p_av * (x_p - 1)
-        variables.update(
-            self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
-        )
-
-        div_v_box_n = pybamm.PrimaryBroadcast(
-            param.n.beta * j_n_av, "negative electrode"
-        )
-        div_v_box_p = pybamm.PrimaryBroadcast(
-            param.p.beta * j_p_av, "positive electrode"
-        )
-        variables.update(
-            self._get_standard_neg_pos_acceleration_variables(div_v_box_n, div_v_box_p)
-        )
+            variables.update(
+                self._get_standard_convection_variables(
+                    domain, v_box_k, div_v_box_k, p_k
+                )
+            )
 
         # Transverse velocity in the separator determines through-cell velocity
         div_Vbox_s = variables[
@@ -64,7 +57,8 @@ class Explicit(BaseThroughCellModel):
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
         # Simple formula for velocity in the separator
-        v_box_s = div_v_box_s_av * (x_s - l_n) + v_box_n_right
+        x_s = pybamm.standard_spatial_vars.x_s
+        v_box_s = div_v_box_s_av * (x_s - param.n.l) + v_box_n_right
 
         variables.update(
             self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)

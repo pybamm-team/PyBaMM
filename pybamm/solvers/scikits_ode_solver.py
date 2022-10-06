@@ -93,9 +93,12 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         jacobian = model.jac_rhs_eval
 
         if model.convert_to_format == "casadi":
+
             def eqsydot(t, y, return_ydot):
                 return_ydot[:] = derivs(t, y, inputs).full().flatten()
+
         else:
+
             def eqsydot(t, y, return_ydot):
                 return_ydot[:] = derivs(t, y, inputs).flatten()
 

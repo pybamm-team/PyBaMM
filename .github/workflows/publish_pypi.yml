@@ -7,7 +7,7 @@ on:
     inputs:
       target:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
-        default: 'pypi'
+        default: "pypi"
 
 jobs:
   build_windows_wheels:
@@ -46,7 +46,7 @@ jobs:
         run: |
           python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 17 2022\" CMAKE_GENERATOR_PLATFORM=x64"
+          CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
           CIBW_ARCHS: "AMD64"
 
       - name: Upload windows wheels
@@ -55,7 +55,6 @@ jobs:
           name: windows_wheels
           path: ./wheelhouse/*.whl
           if-no-files-found: error
-
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -103,7 +102,6 @@ jobs:
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-
   build_sdist:
     name: Build sdist
     runs-on: ubuntu-latest
@@ -130,7 +128,6 @@ jobs:
           path: ./dist/*.tar.gz
           if-no-files-found: error
 
-
   publish_pypi:
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
@@ -148,7 +145,7 @@ jobs:
         if: |
           github.event.inputs.target == 'pypi' ||
           (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
@@ -156,7 +153,7 @@ jobs:
 
       - name: Publish on TestPyPI
         if: github.event.inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.TESTPYPI_TOKEN }}

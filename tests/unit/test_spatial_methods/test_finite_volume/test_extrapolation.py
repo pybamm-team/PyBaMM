@@ -65,7 +65,7 @@ class TestExtrapolation(unittest.TestCase):
         quad = {"extrapolation": {"order": "quadratic"}}
 
         def x_squared(x):
-            y = x ** 2
+            y = x**2
             l_true = 0
             r_true = 1
             return y, l_true, r_true
@@ -92,7 +92,7 @@ class TestExtrapolation(unittest.TestCase):
         np.testing.assert_array_almost_equal(r_errors_quad, 0, decimal=14)
 
         def x_cubed(x):
-            y = x ** 3
+            y = x**3
             l_true = 0
             r_true = 1
             return y, l_true, r_true
@@ -137,7 +137,7 @@ class TestExtrapolation(unittest.TestCase):
 
         def x_cubed(x):
             n = 3
-            f_x = x ** n
+            f_x = x**n
             f_l = 0
             fp_r = n
             y = f_x + (right_flux - fp_r) * x + (left_val - f_l)
@@ -192,7 +192,7 @@ class TestExtrapolation(unittest.TestCase):
 
         def x_cubed(x):
             n = 3
-            f_x = x ** n
+            f_x = x**n
             fp_l = 0
             f_r = 1
             y = f_x + (left_flux - fp_l) * x + (right_val - f_r - left_flux + fp_l)

@@ -95,7 +95,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             x_edge = pybamm.standard_spatial_vars.x_edge
 
             # Define flux and eqn
-            N = x_edge ** 2 * pybamm.cos(x_edge)
+            N = x_edge**2 * pybamm.cos(x_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = x**2 * cos(x) --> dNdx = x*(2cos(x) - xsin(x))

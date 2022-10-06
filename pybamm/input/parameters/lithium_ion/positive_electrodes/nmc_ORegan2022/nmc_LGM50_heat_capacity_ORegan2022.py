@@ -25,7 +25,7 @@ def nmc_LGM50_heat_capacity_ORegan2022(T):
 
     # value for the dry porous electrode (i.e. electrode + air, and we neglect the air
     # contribution to density)
-    cp_dry = -8.414e-4 * T ** 3 + 0.7892 * T ** 2 - 241.3 * T + 2.508e4
+    cp_dry = -8.414e-4 * T**3 + 0.7892 * T**2 - 241.3 * T + 2.508e4
     rho_dry = 3270
     theta_dry = rho_dry * cp_dry
 

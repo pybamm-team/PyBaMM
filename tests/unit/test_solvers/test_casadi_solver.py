@@ -545,7 +545,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {var: p * var}
         model.initial_conditions = {var: 1}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -841,7 +841,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {var: p * var}
         model.initial_conditions = {var: 1}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -935,7 +935,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         model.rhs = {var1: p * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.variables = {"var2 squared": var2 ** 2}
+        model.variables = {"var2 squared": var2**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -974,7 +974,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.algebraic = {var: var - p * pybamm.t}
         model.initial_conditions = {var: 0}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -993,7 +993,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         )
         np.testing.assert_allclose(
             solution["var squared"].sensitivities["p"],
-            (2 * 0.1 * solution.t ** 2).reshape(-1, 1),
+            (2 * 0.1 * solution.t**2).reshape(-1, 1),
             atol=1e-7,
         )
 

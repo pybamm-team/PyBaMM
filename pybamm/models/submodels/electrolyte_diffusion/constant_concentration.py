@@ -23,53 +23,32 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         super().__init__(param, options)
 
     def get_fundamental_variables(self):
-        if self.half_cell:
-            c_e_n = None
-        else:
-            c_e_n = pybamm.FullBroadcast(1, "negative electrode", "current collector")
-        c_e_s = pybamm.FullBroadcast(1, "separator", "current collector")
-        c_e_p = pybamm.FullBroadcast(1, "positive electrode", "current collector")
+        c_e_dict = {
+            domain: pybamm.FullBroadcast(1, domain, "current collector")
+            for domain in self.options.whole_cell_domains
+        }
+        variables = self._get_standard_concentration_variables(c_e_dict)
 
-        variables = self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
-
-        if self.half_cell:
-            N_e = pybamm.FullBroadcastToEdges(
-                0, ["separator", "positive electrode"], "current collector"
-            )
-        else:
-            N_e = pybamm.FullBroadcastToEdges(
-                0,
-                ["negative electrode", "separator", "positive electrode"],
-                "current collector",
-            )
+        N_e = pybamm.FullBroadcastToEdges(
+            0,
+            [domain for domain in self.options.whole_cell_domains],
+            "current collector",
+        )
 
         variables.update(self._get_standard_flux_variables(N_e))
 
         return variables
 
     def get_coupled_variables(self, variables):
-        if self.half_cell:
-            eps_c_e_n = None
-        else:
-            eps_n = variables["Negative electrode porosity"]
-            c_e_n = variables["Negative electrolyte concentration"]
-            eps_c_e_n = eps_n * c_e_n
-
-        eps_s = variables["Separator porosity"]
-        eps_p = variables["Positive electrode porosity"]
-        c_e_s = variables["Separator electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
-
+        eps_c_e_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            eps_k = variables[f"{Domain} porosity"]
+            c_e_k = variables[f"{Domain.split()[0]} electrolyte concentration"]
+            eps_c_e_dict[domain] = eps_k * c_e_k
         variables.update(
-            self._get_standard_porosity_times_concentration_variables(
-                eps_c_e_n, eps_s * c_e_s, eps_p * c_e_p
-            )
+            self._get_standard_porosity_times_concentration_variables(eps_c_e_dict)
         )
-
-        c_e = variables["Electrolyte concentration"]
-        eps = variables["Porosity"]
-
-        variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
         return variables
 

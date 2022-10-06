@@ -284,7 +284,7 @@ class Symbol:
                 # accounting for empty domains
                 or {k: v for k, v in self._domains.items() if v != []} == domains
             ):
-                return None  # no change
+                return  # no change
         except AttributeError:
             # self._domains has not been set yet
             pass
@@ -293,7 +293,7 @@ class Symbol:
         if domains == {"primary": []}:
             self._domains = EMPTY_DOMAINS
             self.set_id()
-            return None
+            return
 
         # Set default domains
         domains = {**EMPTY_DOMAINS, **domains}

@@ -10,19 +10,23 @@ This page contains a number of examples showing how to use PyBaMM.
 
 Each example was created as a _Jupyter notebook_ (http://jupyter.org/).
 These notebooks can be downloaded and used locally by running
+
 ```
 $ jupyter notebook
 ```
+
 from your local PyBaMM repository or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/). Alternatively, you can simply copy/paste the relevant code.
 
 ## Using PyBaMM
 
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
+
 - [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
 - [Compare models](./models/lead-acid.ipynb)
 - [Comparison with COMSOL](./models/compare-comsol-discharge-curve.ipynb)
 
 It is also easy to add new models or change the setting that are used:
+
 - [Add a model (documentation)](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
 - [Add a model (example)](./create-model.ipynb)
 - [Change model options](./models/using-model-options_thermal-example.ipynb)
@@ -31,11 +35,10 @@ It is also easy to add new models or change the setting that are used:
 - [Change the applied current](./parameterization/change-input-current.ipynb)
 
 For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
+
 - [Add parameters](https://pybamm.readthedocs.io/en/latest/tutorials/add-parameter-values.html)
 - [Add a spatial method](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html)
 - [Add a solver](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html)
-
-
 
 ## Expression tree structure
 
@@ -67,6 +70,7 @@ Once you are comfortable with the expression tree structure, a good starting poi
 ### Spatial Methods
 
 The following spatial methods are implemented
+
 - [Finite Volumes](./spatial_methods/finite-volumes.ipynb) (1D only)
 - Spectral Volumes (1D only)
 - Finite Elements (only for 2D current collector domains)

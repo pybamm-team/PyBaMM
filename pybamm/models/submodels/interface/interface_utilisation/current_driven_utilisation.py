@@ -14,7 +14,7 @@ class CurrentDriven(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
     reaction_loc : str
@@ -29,31 +29,20 @@ class CurrentDriven(BaseModel):
         self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
+        domain, Domain = self.domain_Domain
+
         if self.reaction_loc == "full electrode":
-            if self.domain == "Negative":
-                u = pybamm.Variable(
-                    "Negative electrode interface utilisation variable",
-                    domain="negative electrode",
-                    auxiliary_domains={"secondary": "current collector"},
-                )
-            else:
-                u = pybamm.Variable(
-                    "Positive electrode interface utilisation variable",
-                    domain="positive electrode",
-                    auxiliary_domains={"secondary": "current collector"},
-                )
+            u = pybamm.Variable(
+                f"{Domain} electrode interface utilisation variable",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
         elif self.reaction_loc == "x-average":
-            if self.domain == "Negative":
-                u_xav = pybamm.Variable(
-                    "X-averaged negative electrode interface utilisation variable",
-                    domain="current collector",
-                )
-            else:
-                u_xav = pybamm.Variable(
-                    "X-averaged positive electrode interface utilisation variable",
-                    domain="current collector",
-                )
-            u = pybamm.PrimaryBroadcast(u_xav, self.domain.lower() + " electrode")
+            u_xav = pybamm.Variable(
+                f"X-averaged {domain} electrode interface utilisation variable",
+                domain="current collector",
+            )
+            u = pybamm.PrimaryBroadcast(u_xav, f"{domain} electrode")
         else:
             u = pybamm.Variable(
                 "Lithium metal interface utilisation variable",
@@ -64,26 +53,18 @@ class CurrentDriven(BaseModel):
         return variables
 
     def set_rhs(self, variables):
+        domain, Domain = self.domain_Domain
+
         if self.reaction_loc == "full electrode":
-            u = variables[self.domain + " electrode interface utilisation variable"]
-            a = variables[self.domain + " electrode surface area to volume ratio"]
-            j = variables[self.domain + " electrode interfacial current density"]
+            u = variables[f"{Domain} electrode interface utilisation variable"]
+            a = variables[f"{Domain} electrode surface area to volume ratio"]
+            j = variables[f"{Domain} electrode interfacial current density"]
         elif self.reaction_loc == "x-average":
             u = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode interface utilisation variable"
+                f"X-averaged {domain} electrode interface utilisation variable"
             ]
-            a = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode surface area to volume ratio"
-            ]
-            j = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode interfacial current density"
-            ]
+            a = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
+            j = variables[f"X-averaged {domain} electrode interfacial current density"]
         else:
             u = variables["Lithium metal interface utilisation variable"]
             a = 1
@@ -94,13 +75,13 @@ class CurrentDriven(BaseModel):
         self.rhs = {u: beta * a * u * j}
 
     def set_initial_conditions(self, variables):
+        domain, Domain = self.domain_Domain
+
         if self.reaction_loc == "full electrode":
-            u = variables[self.domain + " electrode interface utilisation variable"]
+            u = variables[f"{Domain} electrode interface utilisation variable"]
         elif self.reaction_loc == "x-average":
             u = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode interface utilisation variable"
+                f"X-averaged {domain} electrode interface utilisation variable"
             ]
         else:
             u = variables["Lithium metal interface utilisation variable"]
@@ -110,17 +91,17 @@ class CurrentDriven(BaseModel):
         self.initial_conditions = {u: u_init}
 
     def set_events(self, variables):
+        domain, Domain = self.domain_Domain
+
         if self.reaction_loc == "full electrode":
-            u = variables[self.domain + " electrode interface utilisation"]
+            u = variables[f"{Domain} electrode interface utilisation"]
         elif self.reaction_loc == "x-average":
-            u = variables[
-                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
-            ]
+            u = variables[f"X-averaged {domain} electrode interface utilisation"]
         else:
             u = variables["Lithium metal interface utilisation"]
         self.events.append(
             pybamm.Event(
-                "Zero " + self.domain.lower() + " electrode utilisation cut-off",
+                f"Zero {domain} electrode utilisation cut-off",
                 pybamm.min(u),
                 pybamm.EventType.TERMINATION,
             )

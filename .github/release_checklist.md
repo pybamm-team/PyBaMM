@@ -1,4 +1,5 @@
 - Run `scripts/update_version.py` to
+
   - Increment version number in
     - `pybamm/version.py`
     - `docs/conf.py`
@@ -8,4 +9,4 @@
   - Update `CHANGELOG.md` with a summary of the release
 
 - Update jax and jaxlib to latest version in `pybamm.util` and fix any bugs that arise
-- If building wheels on Windows gives a `vcpkg` related error - revert the baseline of default-registry to a stable commit in `vcpkg-configuration.json` 
+- If building wheels on Windows gives a `vcpkg` related error - revert the baseline of default-registry to a stable commit in `vcpkg-configuration.json`
