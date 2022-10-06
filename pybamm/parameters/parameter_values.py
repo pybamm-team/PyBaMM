@@ -233,8 +233,6 @@ class ParameterValues:
             self.citations = chemistry["citation"]
             if not isinstance(self.citations, list):
                 self.citations = [self.citations]
-        else:
-            self.citations = []
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -866,48 +864,29 @@ class ParameterValues:
             parameters = parameters_dict
 
         evaluated_parameters = defaultdict(list)
-        # Calculate parameters for each C-rate
-        for Crate in [1, 10]:
-            # Update Crate
-            capacity = self.get("Nominal cell capacity [A.h]")
-            if capacity is not None:
-                self.update(
-                    {"Current function [A]": Crate * capacity},
-                    check_already_exists=False,
-                )
 
-            # Turn to regular dictionary for faster KeyErrors
-            self._dict_items = dict(self._dict_items)
+        # Turn to regular dictionary for faster KeyErrors
+        self._dict_items = dict(self._dict_items)
 
-            for name, symbol in parameters.items():
-                if isinstance(symbol, pybamm.Symbol):
-                    try:
-                        proc_symbol = self.process_symbol(symbol)
-                    except KeyError:
-                        # skip parameters that don't have a value in that parameter set
-                        proc_symbol = None
-                    if not (
-                        callable(proc_symbol)
-                        or proc_symbol is None
-                        or proc_symbol.has_symbol_of_classes(
-                            (pybamm.Concatenation, pybamm.Broadcast)
-                        )
-                    ):
-                        evaluated_parameters[name].append(proc_symbol.evaluate(t=0))
+        for name, symbol in parameters.items():
+            if isinstance(symbol, pybamm.Symbol):
+                try:
+                    proc_symbol = self.process_symbol(symbol)
+                except KeyError:
+                    # skip parameters that don't have a value in that parameter set
+                    proc_symbol = None
+                if not (
+                    callable(proc_symbol)
+                    or proc_symbol is None
+                    or proc_symbol.has_symbol_of_classes(
+                        (pybamm.Concatenation, pybamm.Broadcast)
+                    )
+                ):
+                    evaluated_parameters[name] = proc_symbol.evaluate(t=0)
 
             # Turn back to FuzzyDict
             self._dict_items = pybamm.FuzzyDict(self._dict_items)
 
-        # Calculate C-dependence of the parameters based on the difference between the
-        # value at 1C and the value at C / 10
-        for name, values in evaluated_parameters.items():
-            if values[1] == 0 or abs(values[0] / values[1] - 1) < 1e-10:
-                C_dependence = ""
-            elif abs(values[0] / values[1] - 10) < 1e-10:
-                C_dependence = " * Crate"
-            elif abs(values[0] / values[1] - 0.1) < 1e-10:
-                C_dependence = " / Crate"
-            evaluated_parameters[name] = (values[0], C_dependence)
         # Print the evaluated_parameters dict to output_file
         if output_file:
             self.print_evaluated_parameters(evaluated_parameters, output_file)
@@ -932,15 +911,11 @@ class ParameterValues:
         column_width = max(len(name) for name in evaluated_parameters.keys())
         s = "{{:>{}}}".format(column_width)
         with open(output_file, "w") as file:
-            for name, (value, C_dependence) in sorted(evaluated_parameters.items()):
+            for name, value in sorted(evaluated_parameters.items()):
                 if 0.001 < abs(value) < 1000:
-                    file.write(
-                        (s + " : {:10.4g}{!s}\n").format(name, value, C_dependence)
-                    )
+                    file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
-                    file.write(
-                        (s + " : {:10.3E}{!s}\n").format(name, value, C_dependence)
-                    )
+                    file.write((s + " : {:10.3E}\n").format(name, value))
 
     @staticmethod
     def find_parameter(path):
@@ -1023,8 +998,6 @@ class ParameterValues:
                     v = f"pybamm.{data_name}"
 
                     v = f"{data_name}"
-                elif np.isnan(v):
-                    continue  # skip this value
 
                 # add line to the parameter output in the appropriate section
                 line_output = f'\n        "{k}": {v},'
@@ -1056,10 +1029,6 @@ class ParameterValues:
         )
 
         # Add more packages to preamble if needed
-        if "pd." in output:
-            preamble += "import pandas as pd\n"
-        if "np." in output:
-            preamble += "import numpy as np\n"
         if "os." in output:
             preamble += "import os\n"
         output = preamble + "\n\n" + output
@@ -1089,6 +1058,8 @@ class ParameterValues:
             f.write(output)
 
     def _create_docstring_from_readmes(self, name):
+        docstring = ""
+
         if hasattr(self, "chemistry"):
             chemistry = self.chemistry
             lines = []
@@ -1098,6 +1069,7 @@ class ParameterValues:
                         "input",
                         "parameters",
                         self.chemistry["chemistry"],
+                        "testing_only",
                         component_group.replace(" ", "_") + "s",
                         component,
                         "README.md",
@@ -1125,7 +1097,5 @@ class ParameterValues:
                 + "".join(lines)
                 + '    """\n'
             )
-        else:
-            docstring = ""
 
         return docstring

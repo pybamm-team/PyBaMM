@@ -28,6 +28,9 @@ class TestParameterValues(unittest.TestCase):
         tempfile_name = os.path.basename(f.name)
         self.assertEqual(pybamm.ParameterValues.find_parameter(tempfile_name), f.name)
 
+        with self.assertRaisesRegex(FileNotFoundError, "Could not find parameter"):
+            pybamm.ParameterValues.find_parameter("not_a_file")
+
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
             os.path.join(
@@ -97,7 +100,7 @@ class TestParameterValues(unittest.TestCase):
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues({"chemistry": "lithium_ion"})
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
         # converts to dict if not

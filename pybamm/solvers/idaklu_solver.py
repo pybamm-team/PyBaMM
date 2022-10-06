@@ -23,9 +23,10 @@ def have_idaklu():
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
-    """Solve a discretised model, using sundials with the KLU sparse linear solver.
+    """
+    Solve a discretised model, using sundials with the KLU sparse linear solver.
 
-     Parameters
+    Parameters
     ----------
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
@@ -79,7 +80,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         variables_with_tols : dict
             A dictionary with keys that are strings indicating the variable you
             wish to set the tolerance of and values that are the tolerances.
-
         model : :class:`pybamm.BaseModel`
             The model that is going to be solved.
         """
