@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import unittest
 import inspect
+import importlib
 
 import numpy as np
 import pandas as pd
@@ -20,14 +21,6 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
 
 
 class TestParameterValues(unittest.TestCase):
-    def tearDown(self):
-        # Make sure the local lithium_ion directory is removed
-        try:
-            shutil.rmtree("lithium_ion")
-        except FileNotFoundError:
-            pass
-        return super().tearDown()
-
     def test_find_parameter(self):
         f = tempfile.NamedTemporaryFile()
         pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
@@ -979,10 +972,22 @@ class TestParameterValues(unittest.TestCase):
             }
         )
         path = os.path.join("input", "parameters", "lithium_ion")
-        parameter_values.export_python_script("Ai2020_test", path=path)
+        parameter_values.export_python_script(
+            "Ai2020_test",
+            old_parameters_path=os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium_ion",
+                "testing_only",
+            ),
+        )
 
         # test that loading the parameter set works
-        new_parameter_values = pybamm.ParameterValues("Ai2020_test")
+        module = importlib.import_module("Ai2020_test")
+        function = getattr(module, "get_parameter_values")
+        new_parameter_values = pybamm.ParameterValues(function())
 
         # Parameters should be the same
         self.assertEqual(
@@ -1012,12 +1017,10 @@ class TestParameterValues(unittest.TestCase):
         )
 
         # remove the file
-        for ext in [".py", ".pyc"]:
-            filename = os.path.join(
-                pybamm.ABSOLUTE_PATH, "pybamm", path, "Ai2020_test" + ext
-            )
-            if os.path.exists(filename):
-                os.remove(filename)
+        filename = os.path.join("Ai2020_test.py")
+        if os.path.exists(filename):
+            os.remove(filename)
+        shutil.rmtree("data")
 
 
 if __name__ == "__main__":

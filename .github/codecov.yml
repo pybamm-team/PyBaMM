@@ -1,3 +1,2 @@
 ignore:
-  - pybamm/input/parameters/lithium_ion/Ai2020_test.py
   - pybamm/install_odes.py

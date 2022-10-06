@@ -961,7 +961,9 @@ class ParameterValues:
                 return trial_path
         raise FileNotFoundError("Could not find parameter {}".format(path))
 
-    def export_python_script(self, name, path=None):
+    def export_python_script(
+        self, name, old_parameters_path="", new_parameters_path=""
+    ):
         """
         Print a python script that can be used to reproduce the parameter set
 
@@ -969,18 +971,11 @@ class ParameterValues:
         ----------
         name : string
             The name to save the parameter set under
-        path : string, optional
-            Optional path for the location where the parameter set should be saved
+        old_parameters_path : string, optional
+            Optional path for the location where to find the old parameters.
+        new_parameters_path : string, optional
+            Optional path for the location where to save the new parameters.
         """
-        # Process file name
-        filename = name
-        if not filename.endswith(".py"):
-            filename = filename + ".py"
-        if path is not None:
-            filename = os.path.join(path, filename)
-        path = pybamm.get_parameters_filepath(path)
-        filename = pybamm.get_parameters_filepath(filename)
-
         # Initialize
         preamble = "import pybamm\n"
         function_output = ""
@@ -1007,13 +1002,15 @@ class ParameterValues:
                     # and load it in the parameter set
                     data_name = v[0]
                     data_file_old = os.path.join(
-                        path,
-                        "testing_only",
+                        old_parameters_path,
                         component_group.replace(" ", "_") + "s",
                         self.chemistry[component_group],
                         f"{data_name}.csv",
                     )
-                    data_file_new = os.path.join(path, "data", f"{data_name}.csv")
+                    data_path = os.path.join(new_parameters_path, "data")
+                    if not os.path.exists(data_path):
+                        os.makedirs(data_path)
+                    data_file_new = os.path.join(data_path, f"{data_name}.csv")
                     shutil.copyfile(data_file_old, data_file_new)
 
                     # add data output
@@ -1083,6 +1080,12 @@ class ParameterValues:
             output = output.replace(f" {funcname}(", f" pybamm.{funcname}(")
             output = output.replace(f"({funcname}(", f"(pybamm.{funcname}(")
         output = output.replace("constants", "pybamm.constants")
+
+        # Process file name
+        filename = name
+        if not filename.endswith(".py"):
+            filename = filename + ".py"
+        filename = os.path.join(new_parameters_path, filename)
 
         # save to file
         with open(filename, "w") as f:

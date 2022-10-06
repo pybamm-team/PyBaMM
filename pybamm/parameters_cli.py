@@ -1,7 +1,9 @@
 def raise_error():
     raise NotImplementedError(
         "parameters cli has been deprecated. "
-        "Parameters should now be defined via python files."
+        "Parameters should now be defined via python files (see "
+        "https://github.com/pybamm-team/PyBaMM/tree/develop/pybamm/input/parameters/lithium_ion/Ai2020.py"  # noqa: E501
+        " for example)"
     )
 
 
