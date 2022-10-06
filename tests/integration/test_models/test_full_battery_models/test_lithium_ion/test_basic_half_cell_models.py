@@ -37,7 +37,7 @@ class TestBasicHalfCellModels(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
         solver.solve(model, t_eval)
 
-    def test_runs_Chen2020(self):
+    def test_runs_OKane2022(self):
         # load model
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
@@ -46,19 +46,7 @@ class TestBasicHalfCellModels(unittest.TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        param = pybamm.ParameterValues(
-            {
-                "chemistry": "lithium_ion",
-                "cell": "LGM50_Chen2020",
-                "negative electrode": "graphite_Chen2020",
-                "separator": "separator_Chen2020",
-                "positive electrode": "nmc_Chen2020",
-                "electrolyte": "lipf6_Nyman2008",
-                "experiment": "1C_discharge_from_full_Chen2020",
-                "sei": "example",
-                "lithium plating": "okane2020_Li_plating",
-            }
-        )
+        param = pybamm.ParameterValues("OKane2022")
 
         param["Current function [A]"] = 2.5
 

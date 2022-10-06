@@ -674,6 +674,13 @@ class CurrentTests(BaseOutputTest):
         self.a_j_n_sei_av = solution[
             "X-averaged negative electrode SEI volumetric interfacial current density"
         ]
+        self.a_j_n_pl = solution[
+            "Negative electrode lithium plating volumetric interfacial current density"
+        ]
+        self.a_j_n_pl_av = solution[
+            "X-averaged negative electrode lithium plating "
+            "volumetric interfacial current density"
+        ]
 
         self.i_s_n = solution["Negative electrode current density"]
         self.i_s_p = solution["Positive electrode current density"]
@@ -687,7 +694,9 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_j_n(self.t, self.x_n) + self.a_j_n_sei(self.t, self.x_n),
+                self.a_j_n(self.t, self.x_n)
+                + self.a_j_n_sei(self.t, self.x_n)
+                + self.a_j_n_pl(self.t, self.x_n),
                 axis=0,
             ),
             self.i_cell / self.l_n,
