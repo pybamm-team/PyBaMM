@@ -971,7 +971,6 @@ class TestParameterValues(unittest.TestCase):
                 "citation": "Ai2019",
             }
         )
-        path = os.path.join("input", "parameters", "lithium_ion")
         parameter_values.export_python_script(
             "Ai2020_test",
             old_parameters_path=os.path.join(
