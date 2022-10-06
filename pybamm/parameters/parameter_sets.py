@@ -151,26 +151,12 @@ class ParameterSets:
         try:
             return super().__getattribute__(name)
         except AttributeError as error:
-            if name == "Ai2020":
-                # kept for testing for now
-                out = {
-                    "chemistry": "lithium_ion",
-                    "cell": "Enertech_Ai2020",
-                    "negative electrode": "graphite_Ai2020",
-                    "separator": "separator_Ai2020",
-                    "positive electrode": "lico2_Ai2020",
-                    "electrolyte": "lipf6_Enertech_Ai2020",
-                    "experiment": "1C_discharge_from_full_Ai2020",
-                    "sei": "example",
-                    "citation": "Ai2019",
-                }
             # For backwards compatibility, parameter sets that used to be defined in
             # this file now return the name as a string, which will load the same
             # parameter set as before when passed to `ParameterValues`
-            elif name in self.all_parameter_sets_list:
+            if name in self.all_parameter_sets_list:
                 out = name
             else:
-                print("here")
                 raise error
             warnings.warn(
                 f"Parameter sets should be called directly by their name ({name}),"

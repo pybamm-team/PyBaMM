@@ -965,7 +965,19 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["c"], "[data]some_data")
 
     def test_export_python_script(self):
-        parameter_values = pybamm.ParameterValues(pybamm.parameter_sets.Ai2020)
+        parameter_values = pybamm.ParameterValues(
+            {
+                "chemistry": "lithium_ion",
+                "cell": "Enertech_Ai2020",
+                "negative electrode": "graphite_Ai2020",
+                "separator": "separator_Ai2020",
+                "positive electrode": "lico2_Ai2020",
+                "electrolyte": "lipf6_Enertech_Ai2020",
+                "experiment": "1C_discharge_from_full_Ai2020",
+                "sei": "example",
+                "citation": "Ai2019",
+            }
+        )
         path = os.path.join("input", "parameters", "lithium_ion")
         parameter_values.export_python_script("Ai2020_test", path=path)
 
