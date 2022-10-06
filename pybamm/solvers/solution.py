@@ -511,14 +511,11 @@ class Solution(object):
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", ys.shape[0])
         inputs_MX_dict = {
-            key: casadi.MX.sym("input", value.shape[0])
-            for key, value in inputs.items()
+            key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
         }
         inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
-        var_casadi = casadi.Function(
-            "variable", [t_MX, y_MX, inputs_MX], [var_sym]
-        )
+        var_casadi = casadi.Function("variable", [t_MX, y_MX, inputs_MX], [var_sym])
         return var_casadi
 
     def __getitem__(self, key):
