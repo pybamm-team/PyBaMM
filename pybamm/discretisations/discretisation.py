@@ -195,10 +195,10 @@ class Discretisation(object):
             not_in_discretised = not (var in list(self._discretised_symbols.keys()))
             is_0D = len(var.domain) == 0
             this_var_is_independent = (
-                this_var_is_independent and
-                not_in_y_slices and
-                not_in_discretised and
-                is_0D
+                this_var_is_independent
+                and not_in_y_slices
+                and not_in_discretised
+                and is_0D
             )
             if this_var_is_independent:
                 if len(model.rhs) != 1:
@@ -207,7 +207,7 @@ class Discretisation(object):
                     model.variables[var.name] = pybamm.ExplicitTimeIntegral(
                         model.rhs[var], my_initial_condition
                     )
-                    #edge case where a variable appears
+                    # edge case where a variable appears
                     # in the rhs twice under different names
                     for key in model.variables:
                         if model.variables[key] == var:
@@ -247,10 +247,10 @@ class Discretisation(object):
             not_in_discretised = not (var in list(self._discretised_symbols.keys()))
             is_0D = len(var.domain) == 0
             this_var_is_independent = (
-                this_var_is_independent and
-                not_in_y_slices and
-                not_in_discretised and
-                is_0D
+                this_var_is_independent
+                and not_in_y_slices
+                and not_in_discretised
+                and is_0D
             )
             if this_var_is_independent:
                 if len(model.algebraic) != 1:
