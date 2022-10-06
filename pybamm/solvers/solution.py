@@ -490,41 +490,13 @@ class Solution(object):
                     else:
                         cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
-                    t_MX = casadi.MX.sym("t")
-                    y_MX = casadi.MX.sym("y", ys.shape[0])
-                    inputs_MX_dict = {
-                        key: casadi.MX.sym("input", value.shape[0])
-                        for key, value in inputs.items()
-                    }
-                    inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
-
-                    # Convert variable to casadi
-                    # Make all inputs symbolic first for converting to casadi
-                    var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
-
-                    var_casadi = casadi.Function(
-                        "variable", [t_MX, y_MX, inputs_MX], [var_sym]
-                    )
+                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
                     model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
                 elif key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
                 else:
-                    t_MX = casadi.MX.sym("t")
-                    y_MX = casadi.MX.sym("y", ys.shape[0])
-                    inputs_MX_dict = {
-                        key: casadi.MX.sym("input", value.shape[0])
-                        for key, value in inputs.items()
-                    }
-                    inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
-
-                    # Convert variable to casadi
-                    # Make all inputs symbolic first for converting to casadi
-                    var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
-
-                    var_casadi = casadi.Function(
-                        "variable", [t_MX, y_MX, inputs_MX], [var_sym]
-                    )
+                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
             var = pybamm.ProcessedVariable(
@@ -534,6 +506,20 @@ class Solution(object):
             # Save variable and data
             self._variables[key] = var
             self.data[key] = var.data
+
+    def process_casadi_var(self, var_pybamm, inputs, ys):
+        t_MX = casadi.MX.sym("t")
+        y_MX = casadi.MX.sym("y", ys.shape[0])
+        inputs_MX_dict = {
+            key: casadi.MX.sym("input", value.shape[0])
+            for key, value in inputs.items()
+        }
+        inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
+        var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
+        var_casadi = casadi.Function(
+            "variable", [t_MX, y_MX, inputs_MX], [var_sym]
+        )
+        return var_casadi
 
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.

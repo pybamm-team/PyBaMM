@@ -150,123 +150,8 @@ class Discretisation(object):
         # set variables (we require the full variable not just id)
 
         # Search Equations for Independence
-        pybamm.logger.info("Removing independent blocks.")
-        rhs_variables = list(model.rhs.keys())
-        algebraic_variables = list(model.algebraic.keys())
-        boundary_variables = list(model.boundary_conditions.keys())
-        boundary_variable_keys = []
-        for condition in boundary_variables:
-            keys_for_condition = list(model.boundary_conditions[condition].keys())
-            boundary_variable_keys.append(keys_for_condition)
-        variables = rhs_variables + algebraic_variables
-        for var in rhs_variables:
-            rhs_variables = list(model.rhs.keys())
-            algebraic_variables = list(model.algebraic.keys())
-            this_var_list = []
-            for child in var.children:
-                for tree in rhs_variables:
-                    pybamm.tree_search(model.rhs[tree], child, this_var_list)
-                for tree in algebraic_variables:
-                    pybamm.tree_search(model.algebraic[tree], child, this_var_list)
-                for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-                    for key in keys:
-                        pybamm.tree_search(
-                            model.boundary_conditions[tree][key][0],
-                            child,
-                            this_var_list,
-                        )
-                for tree in model.variables.keys():
-                    for rhs_child in model.variables[tree].children:
-                        pybamm.tree_search(rhs_child, var, this_var_list)
-            for tree in rhs_variables:
-                pybamm.tree_search(model.rhs[tree], var, this_var_list)
-            for tree in algebraic_variables:
-                pybamm.tree_search(model.algebraic[tree], var, this_var_list)
-            for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-                for key in keys:
-                    pybamm.tree_search(
-                        model.boundary_conditions[tree][key][0], var, this_var_list
-                    )
-            for tree in model.variables.keys():
-                for rhs_child in model.variables[tree].children:
-                    pybamm.tree_search(rhs_child, var, this_var_list)
-            this_var_is_independent = not any(this_var_list)
-            not_in_y_slices = not (var in list(self.y_slices.keys()))
-            not_in_discretised = not (var in list(self._discretised_symbols.keys()))
-            is_0D = len(var.domain) == 0
-            this_var_is_independent = (
-                this_var_is_independent and
-                not_in_y_slices and
-                not_in_discretised and
-                is_0D
-            )
-            if this_var_is_independent:
-                if len(model.rhs) != 1:
-                    pybamm.logger.info("removing variable {} from rhs".format(var))
-                    my_initial_condition = model.initial_conditions[var]
-                    model.variables[var.name] = pybamm.ExplicitTimeIntegral(
-                        model.rhs[var], my_initial_condition
-                    )
-                    #edge case where a variable appears
-                    # in the rhs twice under different names
-                    for key in model.variables:
-                        if model.variables[key] == var:
-                            model.variables[key] = model.variables[var.name]
-                    del model.rhs[var]
-                    del model.initial_conditions[var]
-                else:
-                    break
-
-        for var in algebraic_variables:
-            rhs_variables = list(model.rhs.keys())
-            algebraic_variables = list(model.algebraic.keys())
-            this_var_list = []
-            for child in var.children:
-                for tree in rhs_variables:
-                    pybamm.tree_search(model.rhs[tree], child, this_var_list)
-                for tree in algebraic_variables:
-                    pybamm.tree_search(model.algebraic[tree], child, this_var_list)
-                for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-                    for key in keys:
-                        pybamm.tree_search(
-                            model.boundary_conditions[tree][key][0],
-                            child,
-                            this_var_list,
-                        )
-            for tree in rhs_variables:
-                pybamm.tree_search(model.rhs[tree], var, this_var_list)
-            for tree in algebraic_variables:
-                pybamm.tree_search(model.algebraic[tree], var, this_var_list)
-            for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-                for key in keys:
-                    pybamm.tree_search(
-                        model.boundary_conditions[tree][key][0], var, this_var_list
-                    )
-            this_var_is_independent = not any(this_var_list)
-            not_in_y_slices = not (var in list(self.y_slices.keys()))
-            not_in_discretised = not (var in list(self._discretised_symbols.keys()))
-            is_0D = len(var.domain) == 0
-            this_var_is_independent = (
-                this_var_is_independent and
-                not_in_y_slices and
-                not_in_discretised and
-                is_0D
-            )
-            if this_var_is_independent:
-                if len(model.algebraic) != 1:
-                    pybamm.logger.info(
-                        "removing variable {} from algebraic".format(var)
-                    )
-                    my_initial_condition = model.initial_conditions[var]
-                    model.variables[var.name] = model.algebraic[var]
-                    del model.algebraic[var]
-                    del model.initial_conditions[var]
-                else:
-                    break
-        rhs_variables = list(model.rhs.keys())
-        algebraic_variables = list(model.algebraic.keys())
-        variables = rhs_variables + algebraic_variables
-
+        model = self.check_for_independent_variables(model)
+        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
             for var in variables:
@@ -1315,3 +1200,88 @@ class Discretisation(object):
                             var.shape, model.rhs[rhs_var].shape, var
                         )
                     )
+
+    def search_for_independent_var(self, model, var):
+        pybamm.logger.info("Removing independent blocks.")
+        boundary_variables = list(model.boundary_conditions.keys())
+        boundary_variable_keys = []
+        for condition in boundary_variables:
+            keys_for_condition = list(model.boundary_conditions[condition].keys())
+            boundary_variable_keys.append(keys_for_condition)
+        rhs_variables = list(model.rhs.keys())
+        algebraic_variables = list(model.algebraic.keys())
+        this_var_list = []
+        for child in var.children:
+            for tree in rhs_variables:
+                pybamm.tree_search(model.rhs[tree], child, this_var_list)
+            for tree in algebraic_variables:
+                pybamm.tree_search(model.algebraic[tree], child, this_var_list)
+            for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
+                for key in keys:
+                    pybamm.tree_search(
+                        model.boundary_conditions[tree][key][0],
+                        child,
+                        this_var_list,
+                    )
+            for tree in model.variables.keys():
+                for rhs_child in model.variables[tree].children:
+                    pybamm.tree_search(rhs_child, var, this_var_list)
+        for tree in rhs_variables:
+            pybamm.tree_search(model.rhs[tree], var, this_var_list)
+        for tree in algebraic_variables:
+            pybamm.tree_search(model.algebraic[tree], var, this_var_list)
+        for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
+            for key in keys:
+                pybamm.tree_search(
+                    model.boundary_conditions[tree][key][0], var, this_var_list
+                )
+        for tree in model.variables.keys():
+            for rhs_child in model.variables[tree].children:
+                pybamm.tree_search(rhs_child, var, this_var_list)
+        this_var_is_independent = not any(this_var_list)
+        not_in_y_slices = not (var in list(self.y_slices.keys()))
+        not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+        is_0D = len(var.domain) == 0
+        this_var_is_independent = (
+            this_var_is_independent and
+            not_in_y_slices and
+            not_in_discretised and
+            is_0D
+        )
+        return model, this_var_is_independent
+
+    def check_for_independent_variables(self, model):
+        rhs_vars_to_search_over = list(model.rhs.keys())
+        for var in rhs_vars_to_search_over:
+            model, this_var_is_independent = self.search_for_independent_var(model, var)
+            if this_var_is_independent:
+                if len(model.rhs) != 1:
+                    pybamm.logger.info("removing variable {} from rhs".format(var))
+                    my_initial_condition = model.initial_conditions[var]
+                    model.variables[var.name] = pybamm.ExplicitTimeIntegral(
+                        model.rhs[var], my_initial_condition
+                    )
+                    #edge case where a variable appears
+                    # in the rhs twice under different names
+                    for key in model.variables:
+                        if model.variables[key] == var:
+                            model.variables[key] = model.variables[var.name]
+                    del model.rhs[var]
+                    del model.initial_conditions[var]
+                else:
+                    break
+        algebraic_vars_to_search_over = list(model.algebraic.keys())
+        for var in algebraic_vars_to_search_over:
+            model, this_var_is_independent = self.search_for_independent_var(model, var)
+            if this_var_is_independent:
+                if len(model.algebraic) != 1:
+                    pybamm.logger.info(
+                        "removing variable {} from algebraic".format(var)
+                    )
+                    my_initial_condition = model.initial_conditions[var]
+                    model.variables[var.name] = model.algebraic[var]
+                    del model.algebraic[var]
+                    del model.initial_conditions[var]
+                else:
+                    break
+        return model
