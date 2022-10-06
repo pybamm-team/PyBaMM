@@ -5,7 +5,6 @@
 import os
 import tempfile
 import shutil
-import subprocess
 import unittest
 import inspect
 
@@ -111,7 +110,8 @@ class TestParameterValues(unittest.TestCase):
         # converts to dict if not
         param = pybamm.ParameterValues("Ai2020")
         param_from_csv = pybamm.ParameterValues(
-            "lithium_ion/testing_only/negative_electrodes/graphite_Ai2020/parameters.csv"
+            "lithium_ion/testing_only/"
+            "negative_electrodes/graphite_Ai2020/parameters.csv"
         )
         param.update(param_from_csv)
         # equate values

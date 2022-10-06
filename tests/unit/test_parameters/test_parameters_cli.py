@@ -3,16 +3,10 @@
 # command line interface
 #
 
-import os
-import subprocess
 import pybamm
-import csv
-import tempfile
 import unittest
-import platform
 
 
-@unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
 class TestParametersCLI(unittest.TestCase):
     def test_error(self):
         with self.assertRaisesRegex(NotImplementedError, "deprecated"):

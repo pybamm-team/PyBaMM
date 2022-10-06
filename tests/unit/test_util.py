@@ -4,11 +4,8 @@
 import numpy as np
 import os
 import pybamm
-import shutil
 import tempfile
 import unittest
-import importlib
-import subprocess
 from unittest.mock import patch
 from io import StringIO
 
