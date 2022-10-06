@@ -46,12 +46,23 @@ class TestAi2020(unittest.TestCase):
             )
 
     def test_standard_lithium_parameters(self):
-        parameter_values = pybamm.ParameterValues("Ai2020")
+        # test with chemistry dictionary format, for coverage
+        parameter_values = pybamm.ParameterValues(
+            {
+                "chemistry": "lithium_ion",
+                "cell": "Enertech_Ai2020",
+                "negative electrode": "graphite_Ai2020",
+                "separator": "separator_Ai2020",
+                "positive electrode": "lico2_Ai2020",
+                "electrolyte": "lipf6_Enertech_Ai2020",
+                "experiment": "1C_discharge_from_full_Ai2020",
+                "sei": "example",
+                "citation": "Ai2019",
+            }
+        )
         options = {"particle mechanics": "swelling and cracking"}
         model = pybamm.lithium_ion.DFN(options)
-        sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sim.set_parameters()
-        sim.build()
+        parameter_values.process_model(model)
 
 
 if __name__ == "__main__":

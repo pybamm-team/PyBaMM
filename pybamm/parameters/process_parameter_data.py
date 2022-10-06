@@ -30,7 +30,7 @@ def _process_name(name, path, ext):
         _, name = os.path.split(filename)
 
     # Remove the extension from the name
-    return (filename, name[:-4])
+    return (filename, name.split(".")[0])
 
 
 def process_1D_data(name, path=None):
@@ -57,4 +57,4 @@ def process_2D_data(name, path=None):
     data = json_data["data"]
     data[0] = [np.array(el) for el in data[0]]
     data[1] = np.array(data[1])
-    return (name, data)
+    return (name, tuple(data))

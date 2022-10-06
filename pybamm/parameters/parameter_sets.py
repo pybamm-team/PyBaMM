@@ -159,7 +159,7 @@ class ParameterSets:
             else:
                 raise error
             warnings.warn(
-                f"Parameter sets should be called directly by their name ({name}),"
+                f"Parameter sets should be called directly by their name ({name}), "
                 f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name}).",
                 DeprecationWarning,
             )

@@ -174,9 +174,6 @@ class ParameterValues:
         """
         Load standard set of components from a 'chemistry' dictionary
         """
-        if isinstance(chemistry, str):
-            chemistry = getattr(pybamm.parameter_sets, chemistry)
-
         self.chemistry = chemistry
 
         base_chemistry = chemistry["chemistry"]

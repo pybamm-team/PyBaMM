@@ -9,12 +9,6 @@ import unittest
 from unittest.mock import patch
 from io import StringIO
 
-# Insert .../x/y/z/PyBaMM in sys.path when running this file individually
-import sys
-
-if os.getcwd() not in sys.path:
-    sys.path.insert(0, os.getcwd())
-
 
 class TestUtil(unittest.TestCase):
     """

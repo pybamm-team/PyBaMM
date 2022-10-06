@@ -13,7 +13,3 @@ class Yang2017(DFN):
         }
         super().__init__(options=options, name=name)
         pybamm.citations.register("Yang2017")
-
-    @property
-    def default_parameter_values(self):
-        return pybamm.ParameterValues("Yang2017")
