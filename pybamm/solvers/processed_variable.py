@@ -47,8 +47,6 @@ class ProcessedVariable(object):
         self.domains = base_variables[0].domains
         self.warn = warn
 
-        self.symbolic_inputs = solution.has_symbolic_inputs
-
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -171,7 +169,7 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0] in ["negative particle", "positive particle"]:
+        if self.domain[0].endswith("particle"):
             self.first_dimension = "r"
             self.r_sol = space
         elif self.domain[0] in [
@@ -184,10 +182,7 @@ class ProcessedVariable(object):
         elif self.domain == ["current collector"]:
             self.first_dimension = "z"
             self.z_sol = space
-        elif self.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ]:
+        elif self.domain[0].endswith("particle size"):
             self.first_dimension = "R"
             self.R_sol = space
         else:
@@ -303,67 +298,46 @@ class ProcessedVariable(object):
         )
 
         # Process r-x, x-z, r-R, R-x, or R-z
-        if self.domain[0] in [
-            "negative particle",
-            "positive particle",
-        ] and self.domains["secondary"][0] in [
-            "negative electrode",
-            "positive electrode",
-        ]:
+        if self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
             self.first_dimension = "r"
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif (
-            self.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and self.domains["secondary"] == ["current collector"]
-        ):
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and self.domains["secondary"] == ["current collector"]:
             self.first_dimension = "x"
             self.second_dimension = "z"
             self.x_sol = first_dim_pts
             self.z_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative particle",
-            "positive particle",
-        ] and self.domains["secondary"][0] in [
-            "negative particle size",
-            "positive particle size",
-        ]:
+        elif self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("particle size"):
             self.first_dimension = "r"
             self.second_dimension = "R"
             self.r_sol = first_dim_pts
             self.R_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ] and self.domains["secondary"][0] in [
-            "negative electrode",
-            "positive electrode",
-        ]:
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
             self.first_dimension = "R"
             self.second_dimension = "x"
             self.R_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif (
-            self.domain[0]
-            in [
-                "negative particle size",
-                "positive particle size",
-            ]
-            and self.domains["secondary"] == ["current collector"]
-        ):
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
+            "current collector"
+        ]:
             self.first_dimension = "R"
             self.second_dimension = "z"
             self.R_sol = first_dim_pts
             self.z_sol = second_dim_pts
-        else:
+        else:  # pragma: no cover
             raise pybamm.DomainError(
-                f"Cannot process 3D object with domains '{self.domains}'."
+                f"Cannot process 2D object with domains '{self.domains}'."
             )
 
         # assign attributes for reference

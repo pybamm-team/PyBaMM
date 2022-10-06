@@ -18,11 +18,11 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         self.assertEqual(func.diff(a).evaluate(y=y), 1 / 5)
         self.assertEqual(func.diff(b).evaluate(y=y), -2 / 9)
         #
-        func = a * b ** a
+        func = a * b**a
         testing.assert_array_almost_equal(
-            func.diff(a).evaluate(y=y)[0], 3 ** 5 * (5 * np.log(3) + 1)
+            func.diff(a).evaluate(y=y)[0], 3**5 * (5 * np.log(3) + 1)
         )
-        self.assertEqual(func.diff(b).evaluate(y=y), 5 ** 2 * 3 ** 4)
+        self.assertEqual(func.diff(b).evaluate(y=y), 5**2 * 3**4)
 
     def test_advanced_functions(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -57,14 +57,14 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
         func = (a * 2 + 5 * (-a)) / (a * a)
-        self.assertEqual(func.diff(b).id, pybamm.Scalar(0).id)
-        self.assertNotEqual(func.diff(a).id, pybamm.Scalar(0).id)
+        self.assertEqual(func.diff(b), pybamm.Scalar(0))
+        self.assertNotEqual(func.diff(a), pybamm.Scalar(0))
 
     def test_diff_state_vector_dot(self):
         a = pybamm.StateVectorDot(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
-        self.assertEqual(a.diff(a).id, pybamm.Scalar(1).id)
-        self.assertEqual(a.diff(b).id, pybamm.Scalar(0).id)
+        self.assertEqual(a.diff(a), pybamm.Scalar(1))
+        self.assertEqual(a.diff(b), pybamm.Scalar(0))
 
     def test_diff_heaviside(self):
         a = pybamm.Scalar(1)
@@ -78,7 +78,7 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         a = pybamm.Scalar(3)
         b = pybamm.StateVector(slice(0, 1))
 
-        func = (a % b) * (b ** 2)
+        func = (a % b) * (b**2)
         self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 0)
         self.assertEqual(func.diff(b).evaluate(y=np.array([5])), 30)
         self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 12)
@@ -87,14 +87,14 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
 
-        func = pybamm.minimum(a, b ** 3)
+        func = pybamm.minimum(a, b**3)
         self.assertEqual(func.diff(b).evaluate(y=np.array([10])), 0)
         self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 0)
         self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 3 * (-2) ** 2)
 
-        func = pybamm.maximum(a, b ** 3)
-        self.assertEqual(func.diff(b).evaluate(y=np.array([10])), 3 * 10 ** 2)
-        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 3 * 2 ** 2)
+        func = pybamm.maximum(a, b**3)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([10])), 3 * 10**2)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 3 * 2**2)
         self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 0)
 
     def test_exceptions(self):

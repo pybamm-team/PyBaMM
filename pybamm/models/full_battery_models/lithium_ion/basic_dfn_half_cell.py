@@ -51,7 +51,7 @@ class BasicDFNHalfCell(BaseModel):
         # `ParameterValues` class when the model is processed.
         param = self.param
 
-        R_w_typ = param.R_p_typ
+        R_w_typ = param.p.prim.R_typ
 
         # Set default length scales
         self._length_scales = {
@@ -120,38 +120,38 @@ class BasicDFNHalfCell(BaseModel):
         eps_w = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
-        b_e_s = param.b_e_s
-        b_e_w = param.b_e_p
+        b_e_s = param.s.b_e
+        b_e_w = param.p.b_e
 
         # Interfacial reactions
-        j0_w = param.j0_p(c_e_w, c_s_surf_w, T) / param.C_r_p
-        U_w = param.U_p
-        ne_w = param.ne_p
+        j0_w = param.p.prim.j0(c_e_w, c_s_surf_w, T)
+        U_w = param.p.prim.U
+        ne_w = param.p.prim.ne
 
         # Particle diffusion parameters
-        D_w = param.D_p
-        C_w = param.C_p
-        a_R_w = param.a_R_p
-        gamma_e = param.c_e_typ / param.c_p_max
-        c_w_init = param.c_p_init
+        D_w = param.p.prim.D
+        C_w = param.p.prim.cap_init
+        a_R_w = param.p.prim.a_R
+        gamma_e = param.c_e_typ / param.p.prim.c_max
+        c_w_init = param.p.prim.c_init
 
         # Electrode equation parameters
         eps_s_w = pybamm.Parameter("Positive electrode active material volume fraction")
-        b_s_w = param.b_s_p
-        sigma_w = param.sigma_p
+        b_s_w = param.p.b_s
+        sigma_w = param.p.sigma
 
         # Other parameters (for outputs)
-        c_w_max = param.c_p_max
-        U_w_ref = param.U_p_ref
-        U_Li_ref = param.U_n_ref
-        L_w = param.L_p
+        c_w_max = param.p.prim.c_max
+        U_w_ref = param.p.U_ref
+        U_Li_ref = param.n.U_ref
+        L_w = param.p.L
 
         # gamma_w is always 1 because we choose the timescale based on the working
         # electrode
         gamma_w = pybamm.Scalar(1)
 
         eps = pybamm.concatenation(eps_s, eps_w)
-        tor = pybamm.concatenation(eps_s ** b_e_s, eps_w ** b_e_w)
+        tor = pybamm.concatenation(eps_s**b_e_s, eps_w**b_e_w)
 
         j_w = (
             2 * j0_w * pybamm.sinh(ne_w / 2 * (phi_s_w - phi_e_w - U_w(c_s_surf_w, T)))
@@ -203,7 +203,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_w = sigma_w(T) * eps_s_w ** b_s_w
+        sigma_eff_w = sigma_w(T) * eps_s_w**b_s_w
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -216,7 +216,7 @@ class BasicDFNHalfCell(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
         # initial conditions
-        self.initial_conditions[phi_s_w] = param.U_p_init
+        self.initial_conditions[phi_s_w] = param.p.prim.U_init
 
         ######################
         # Electrolyte concentration
@@ -248,14 +248,14 @@ class BasicDFNHalfCell(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * gamma_e / param.C_e) * (
-            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chiT_over_c(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
         # dimensionless reference potential so that dimensional reference potential
         # is zero (phi_dim = U_n_ref + pot_scale * phi)
-        l_Li = param.l_p
-        sigma_Li = param.sigma_p
+        l_Li = param.p.l
+        sigma_Li = param.p.sigma
         j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
         eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
 
@@ -269,7 +269,7 @@ class BasicDFNHalfCell(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[phi_e] = param.U_n_ref / pot_scale
+        self.initial_conditions[phi_e] = param.n.U_ref / pot_scale
 
         ######################
         # (Some) variables
@@ -295,7 +295,7 @@ class BasicDFNHalfCell(BaseModel):
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                voltage_dim - self.param.voltage_high_cut_dimensional,
+                self.param.voltage_high_cut_dimensional - voltage_dim,
                 pybamm.EventType.TERMINATION,
             )
         )

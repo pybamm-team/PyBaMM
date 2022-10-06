@@ -102,6 +102,9 @@ called (must be in the same folder), with the tag ``[data]``, for example:
 | Example [m2.s-1]    | [data]diffusivity_AuthorYear     | AuthorYear   | some data   |
 +---------------------+----------------------------------+--------------+-------------+
 
+Data passed using the ``[data]`` tag will be used to create a cubic spline interpolant. For more control over the interpolation you can create your own :class:`Interpolant` from the data and pass that to the :class:`ParameterValues` class instead. 
+
+
 Using new parameters
 --------------------
 

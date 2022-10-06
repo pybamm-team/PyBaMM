@@ -149,6 +149,11 @@ class TestUtil(unittest.TestCase):
             compatible = pybamm.is_jax_compatible()
             self.assertTrue(compatible)
 
+    def test_git_commit_info(self):
+        git_commit_info = pybamm.get_git_commit_info()
+        self.assertIsInstance(git_commit_info, str)
+        self.assertEqual(git_commit_info[:2], "v2")
+
 
 class TestSearch(unittest.TestCase):
     def test_url_gets_to_stdout(self):
@@ -164,9 +169,9 @@ class TestSearch(unittest.TestCase):
 
         # Test bad var search (returns best matches)
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            model.variables.search("bad var")
+            model.variables.search("Electrolyte cot")
             out = (
-                "No results for search using 'bad var'. "
+                "No results for search using 'Electrolyte cot'. "
                 "Best matches are ['Electrolyte concentration', "
                 "'Electrode potential']\n"
             )

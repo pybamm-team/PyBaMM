@@ -17,21 +17,18 @@ class Constant(BaseModel):
         The domain of the model either 'Negative' or 'Positive'
     options : dict
         Additional options to pass to the model
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.active_material.BaseModel`
     """
 
     def get_fundamental_variables(self):
-        if self.domain == "Negative":
-            eps_solid = self.param.epsilon_s_n
-            deps_solid_dt = pybamm.FullBroadcast(
-                0, "negative electrode", "current collector"
-            )
-        elif self.domain == "Positive":
-            eps_solid = self.param.epsilon_s_p
-            deps_solid_dt = pybamm.FullBroadcast(
-                0, "positive electrode", "current collector"
-            )
+        domain = self.domain
+        eps_solid = self.phase_param.epsilon_s
+        deps_solid_dt = pybamm.FullBroadcast(
+            0, f"{domain} electrode", "current collector"
+        )
 
         variables = self._get_standard_active_material_variables(eps_solid)
         variables.update(

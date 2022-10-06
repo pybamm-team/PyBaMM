@@ -11,7 +11,7 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    phase : str
+    component : str
         The material for the model ('electrolyte' or 'electrode').
     options : dict, optional
         A dictionary of options to be passed to the model.
@@ -19,44 +19,30 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, phase, options=None):
+    def __init__(self, param, component, options=None):
         super().__init__(param, options=options)
-        self.phase = phase
+        self.component = component
 
-    def _get_standard_transport_efficiency_variables(
-        self, tor_n, tor_s, tor_p, set_leading_order=False
-    ):
-        tor = pybamm.concatenation(tor_n, tor_s, tor_p)
+    def _get_standard_transport_efficiency_variables(self, tor_dict):
+        component = self.component.lower()
 
-        variables = {
-            self.phase + " transport efficiency": tor,
-            "Positive " + self.phase.lower() + " transport efficiency": tor_p,
-            "X-averaged positive "
-            + self.phase.lower()
-            + " transport efficiency": pybamm.x_average(tor_p),
-        }
+        tor = pybamm.concatenation(*tor_dict.values())
 
-        if not self.half_cell:
+        variables = {f"{self.component} transport efficiency": tor}
+
+        for domain, tor_k in tor_dict.items():
+            domain = domain.split()[0]
+            Domain = domain.capitalize()
+            tor_k_av = pybamm.x_average(tor_k)
+
             variables.update(
                 {
-                    "Negative " + self.phase.lower() + " transport efficiency": tor_n,
-                    "X-averaged negative "
-                    + self.phase.lower()
-                    + " transport efficiency": pybamm.x_average(tor_n),
+                    f"{Domain} {component} transport efficiency": tor_k,
+                    f"X-averaged {domain} {component} transport efficiency": tor_k_av,
                 }
             )
 
-        if self.phase == "Electrolyte":
-            variables.update(
-                {
-                    "Separator transport efficiency": tor_s,
-                    "X-averaged separator transport efficiency": pybamm.x_average(
-                        tor_s
-                    ),
-                }
-            )
-
-        if set_leading_order is True:
+        if self.set_leading_order is True:
             leading_order_variables = {
                 "Leading-order " + name.lower(): var for name, var in variables.items()
             }

@@ -93,7 +93,7 @@ class TestJacobian(unittest.TestCase):
 
         y0 = np.arange(1, 9)
 
-        func = v ** 2
+        func = v**2
         jacobian = np.array(
             [
                 [0, 0, 6, 0, 0, 0, 0, 0],
@@ -105,19 +105,19 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = 2 ** v
+        func = 2**v
         jacobian = np.array(
             [
-                [0, 0, 2 ** 3 * np.log(2), 0, 0, 0, 0, 0],
-                [0, 0, 0, 2 ** 4 * np.log(2), 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 2 ** 7 * np.log(2), 0],
-                [0, 0, 0, 0, 0, 0, 0, 2 ** 8 * np.log(2)],
+                [0, 0, 2**3 * np.log(2), 0, 0, 0, 0, 0],
+                [0, 0, 0, 2**4 * np.log(2), 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 2**7 * np.log(2), 0],
+                [0, 0, 0, 0, 0, 0, 0, 2**8 * np.log(2)],
             ]
         )
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = v ** v
+        func = v**v
         jacobian = [
             [0, 0, 27 * (1 + np.log(3)), 0, 0, 0, 0, 0],
             [0, 0, 0, 256 * (1 + np.log(4)), 0, 0, 0, 0],

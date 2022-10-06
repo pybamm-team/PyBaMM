@@ -34,6 +34,8 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain="test")
         self.assertEqual(a.domain, ["test"])
+        # test for updating domain with same as existing domain
+        a.domains = {"primary": ["test"]}
         self.assertEqual(a.domains["primary"], ["test"])
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])
@@ -128,7 +130,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a * b, pybamm.Multiplication)
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
-        self.assertIsInstance(a ** b, pybamm.Power)
+        self.assertIsInstance(a**b, pybamm.Power)
         self.assertIsInstance(a < b, _Heaviside)
         self.assertIsInstance(a <= b, _Heaviside)
         self.assertIsInstance(a > b, _Heaviside)
@@ -141,27 +143,32 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a * 2, pybamm.Multiplication)
         self.assertIsInstance(a @ 2, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / 2, pybamm.Division)
-        self.assertIsInstance(a ** 2, pybamm.Power)
+        self.assertIsInstance(a**2, pybamm.Power)
 
         # binary - number and symbol
         self.assertIsInstance(3 + b, pybamm.Addition)
-        self.assertEqual((3 + b).children[1].id, b.id)
+        self.assertEqual((3 + b).children[1], b)
         self.assertIsInstance(3 - b, pybamm.Subtraction)
-        self.assertEqual((3 - b).children[1].id, b.id)
+        self.assertEqual((3 - b).children[1], b)
         self.assertIsInstance(3 * b, pybamm.Multiplication)
-        self.assertEqual((3 * b).children[1].id, b.id)
+        self.assertEqual((3 * b).children[1], b)
         self.assertIsInstance(3 @ b, pybamm.MatrixMultiplication)
-        self.assertEqual((3 @ b).children[1].id, b.id)
+        self.assertEqual((3 @ b).children[1], b)
         self.assertIsInstance(3 / b, pybamm.Division)
-        self.assertEqual((3 / b).children[1].id, b.id)
-        self.assertIsInstance(3 ** b, pybamm.Power)
-        self.assertEqual((3 ** b).children[1].id, b.id)
+        self.assertEqual((3 / b).children[1], b)
+        self.assertIsInstance(3**b, pybamm.Power)
+        self.assertEqual((3**b).children[1], b)
 
         # error raising
         with self.assertRaisesRegex(
             NotImplementedError, "BinaryOperator not implemented for symbols of type"
         ):
             a + "two"
+
+    def test_symbol_create_copy(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
+            a.create_copy()
 
     def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed
@@ -242,6 +249,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
+        self.assertIsNone(pybamm.StateVectorDot(slice(0, 1)).evaluate_ignoring_errors())
+
         np.testing.assert_array_equal(
             pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
         )
@@ -405,8 +414,8 @@ class TestSymbol(unittest.TestCase):
         summ = a + b
 
         a_orp, b_orp = summ.orphans
-        self.assertEqual(a.id, a_orp.id)
-        self.assertEqual(b.id, b_orp.id)
+        self.assertEqual(a, a_orp)
+        self.assertEqual(b, b_orp)
 
     def test_shape(self):
         scal = pybamm.Scalar(1)
@@ -494,6 +503,15 @@ class TestIsZero(unittest.TestCase):
         self.assertTrue(pybamm.is_matrix_zero(a))
         self.assertFalse(pybamm.is_matrix_zero(b))
         self.assertFalse(pybamm.is_matrix_zero(c))
+
+    def test_bool(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(NotImplementedError, "Boolean"):
+            bool(a)
+        # if statement calls Boolean
+        with self.assertRaisesRegex(NotImplementedError, "Boolean"):
+            if a > 1:
+                print("a is greater than 1")
 
 
 if __name__ == "__main__":

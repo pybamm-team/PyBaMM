@@ -3,7 +3,7 @@ from pybamm import exp, tanh
 
 def graphite_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 graphite open circuit potential as a function of stochiometry, fit taken
+    LG M50 Graphite open-circuit potential as a function of stochiometry, fit taken
     from [1].
 
     References

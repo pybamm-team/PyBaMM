@@ -37,18 +37,21 @@ class CurrentCollector1D(BaseThermal):
 
     def get_fundamental_variables(self):
 
-        T_x_av = pybamm.standard_variables.T_av
+        T_x_av = pybamm.Variable(
+            "X-averaged cell temperature", domain="current collector"
+        )
         T_vol_av = self._yz_average(T_x_av)
 
-        T_cn = T_x_av
-        T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
-        T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
-        T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T_cp = T_x_av
+        T_dict = {
+            "negative current collector": T_x_av,
+            "positive current collector": T_x_av,
+            "x-averaged cell": T_x_av,
+            "volume-averaged cell": T_vol_av,
+        }
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
-        variables = self._get_standard_fundamental_variables(
-            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
-        )
+        variables = self._get_standard_fundamental_variables(T_dict)
 
         return variables
 
@@ -68,10 +71,10 @@ class CurrentCollector1D(BaseThermal):
 
         yz_surface_area = self.param.l_y * self.param.l_z
         yz_surface_cooling_coefficient = (
-            -(self.param.h_cn + self.param.h_cp)
+            -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
-            / (self.param.delta ** 2)
+            / (self.param.delta**2)
         )
 
         side_edge_area = 2 * self.param.l_z * self.param.l
@@ -101,16 +104,16 @@ class CurrentCollector1D(BaseThermal):
 
         # find tab locations (top vs bottom)
         l_z = param.l_z
-        neg_tab_z = param.centre_z_tab_n
-        pos_tab_z = param.centre_z_tab_p
+        neg_tab_z = param.n.centre_z_tab
+        pos_tab_z = param.p.centre_z_tab
         neg_tab_top_bool = pybamm.Equality(neg_tab_z, l_z)
         neg_tab_bottom_bool = pybamm.Equality(neg_tab_z, 0)
         pos_tab_top_bool = pybamm.Equality(pos_tab_z, l_z)
         pos_tab_bottom_bool = pybamm.Equality(pos_tab_z, 0)
 
         # calculate tab vs non-tab area on top and bottom
-        neg_tab_area = param.l_tab_n * param.l_cn
-        pos_tab_area = param.l_tab_p * param.l_cp
+        neg_tab_area = param.n.l_tab * param.n.l_cc
+        pos_tab_area = param.p.l_tab * param.p.l_cc
         total_area = param.l * param.l_y
 
         non_tab_top_area = (
@@ -127,8 +130,8 @@ class CurrentCollector1D(BaseThermal):
         # calculate effective cooling coefficients
         top_cooling_coefficient = (
             (
-                param.h_tab_n * neg_tab_area * neg_tab_top_bool
-                + param.h_tab_p * pos_tab_area * pos_tab_top_bool
+                param.n.h_tab * neg_tab_area * neg_tab_top_bool
+                + param.p.h_tab * pos_tab_area * pos_tab_top_bool
                 + param.h_edge * non_tab_top_area
             )
             / param.delta
@@ -136,8 +139,8 @@ class CurrentCollector1D(BaseThermal):
         )
         bottom_cooling_coefficient = (
             (
-                param.h_tab_n * neg_tab_area * neg_tab_bottom_bool
-                + param.h_tab_p * pos_tab_area * pos_tab_bottom_bool
+                param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
+                + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
                 + param.h_edge * non_tab_bottom_area
             )
             / param.delta

@@ -81,6 +81,7 @@ API documentation
    source/simulation
    source/plotting/index
    source/util
+   source/callbacks
    source/citations
    source/parameters_cli
    source/batch_study

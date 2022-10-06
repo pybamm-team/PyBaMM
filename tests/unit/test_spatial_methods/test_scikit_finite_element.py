@@ -34,7 +34,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         y_test = np.ones(mesh["current collector"].npts)
         unit_source = pybamm.PrimaryBroadcast(1, "current collector")
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Neumann"),
                 "positive tab": (pybamm.Scalar(0), "Neumann"),
             }
@@ -46,17 +46,17 @@ class TestScikitFiniteElement(unittest.TestCase):
             pybamm.laplacian(var) - pybamm.source(unit_source, var),
             pybamm.source(var, var),
             pybamm.laplacian(var) - pybamm.source(2 * var, var),
-            pybamm.laplacian(var) - pybamm.source(unit_source ** 2 + 1 / var, var),
+            pybamm.laplacian(var) - pybamm.source(unit_source**2 + 1 / var, var),
             pybamm.Integral(var, [y, z]) - 1,
             pybamm.source(var, var, boundary=True),
             pybamm.laplacian(var) - pybamm.source(unit_source, var, boundary=True),
             pybamm.laplacian(var)
-            - pybamm.source(unit_source ** 2 + 1 / var, var, boundary=True),
+            - pybamm.source(unit_source**2 + 1 / var, var, boundary=True),
         ]:
             # Check that equation can be evaluated in each case
             # Dirichlet
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                     "positive tab": (pybamm.Scalar(1), "Dirichlet"),
                 }
@@ -65,7 +65,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # Neumann
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Neumann"),
                     "positive tab": (pybamm.Scalar(1), "Neumann"),
                 }
@@ -74,7 +74,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # One of each
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Neumann"),
                     "positive tab": (pybamm.Scalar(1), "Dirichlet"),
                 }
@@ -83,7 +83,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # One of each
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                     "positive tab": (pybamm.Scalar(1), "Neumann"),
                 }
@@ -94,7 +94,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # check  ValueError raised for non Dirichlet or Neumann BCs
         eqn = pybamm.laplacian(var) - pybamm.source(unit_source, var)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(1), "Other BC"),
             }
@@ -102,7 +102,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         with self.assertRaises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Other BC"),
                 "positive tab": (pybamm.Scalar(1), "Neumann"),
             }
@@ -153,7 +153,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # check grad_squared positive
         eqn = pybamm.grad_squared(var)
         eqn_disc = disc.process_symbol(eqn)
-        ans = eqn_disc.evaluate(None, 3 * y ** 2)
+        ans = eqn_disc.evaluate(None, 3 * y**2)
         np.testing.assert_array_less(0, ans)
 
     def test_manufactured_solution(self):
@@ -191,7 +191,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -202,7 +202,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         u = np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi ** 2 * u
+        soln = -np.pi**2 * u
         np.testing.assert_array_almost_equal(
             eqn_zz_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=3
         )
@@ -213,7 +213,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -225,7 +225,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi ** 2 * u
+        soln = -np.pi**2 * u
         np.testing.assert_array_almost_equal(
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=2
         )
@@ -274,7 +274,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -286,7 +286,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi ** 2 * u
+        soln = -np.pi**2 * u
         np.testing.assert_array_almost_equal(
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
         )
@@ -337,7 +337,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -349,7 +349,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi ** 2 * u
+        soln = -np.pi**2 * u
         np.testing.assert_array_almost_equal(
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
         )
@@ -419,6 +419,11 @@ class TestScikitFiniteElement(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             extrap_pos_disc.evaluate(None, constant_y), 1
         )
+
+        # test BoundaryGradient not implemented
+        extrap_neg = pybamm.BoundaryGradient(var, "negative tab")
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(extrap_neg)
 
     def test_boundary_integral(self):
         mesh = get_2p1d_mesh_for_testing(include_particles=False)
@@ -492,7 +497,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         solution = solver.solve(model)
 
         z = mesh["current collector"].coordinates[1, :][:, np.newaxis]
-        u_exact = z ** 2 / 2 - 1 / 6
+        u_exact = z**2 / 2 - 1 / 6
         np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
 
     def test_dirichlet_bcs(self):
@@ -529,7 +534,7 @@ class TestScikitFiniteElement(unittest.TestCase):
 
         # indepedent of y, so just check values for one y
         z = mesh["current collector"].edges["z"][:, np.newaxis]
-        u_exact = a * z ** 2 + b * z + c
+        u_exact = a * z**2 + b * z + c
         np.testing.assert_array_almost_equal(solution.y[0 : len(z)], u_exact)
 
     def test_disc_spatial_var(self):

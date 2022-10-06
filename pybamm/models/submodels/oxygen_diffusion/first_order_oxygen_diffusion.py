@@ -29,15 +29,15 @@ class FirstOrder(BaseModel):
     def get_coupled_variables(self, variables):
 
         param = self.param
-        l_n = param.l_n
-        l_s = param.l_s
-        l_p = param.l_p
+        l_n = param.n.l
+        l_s = param.s.l
+        l_p = param.p.l
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
         tor_s_0_av = variables[
-            "Leading-order x-averaged separator transport efficiency"
+            "Leading-order x-averaged separator electrolyte transport efficiency"
         ]
         tor_p_0_av = variables[
             "Leading-order x-averaged positive electrolyte transport efficiency"
@@ -63,7 +63,7 @@ class FirstOrder(BaseModel):
         c_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         c_ox_s_1 = sj_ox_p * l_p / D_ox_s * (x_s - l_n)
         c_ox_p_1 = (
-            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - l_p ** 2)
+            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - l_p**2)
             + sj_ox_p * l_p * l_s / D_ox_s
         )
 

@@ -10,6 +10,18 @@
   doi = {10.1149/2.0122001JES},
 }
 
+@article{Ai2022,
+  title = {A composite electrode model for lithium-ion batteries with silicon/graphite negative electrodes},
+  journal = {Journal of Power Sources},
+  volume = {527},
+  pages = {231142},
+  year = {2022},
+  issn = {0378-7753},
+  doi = {https://doi.org/10.1016/j.jpowsour.2022.231142},
+  url = {https://www.sciencedirect.com/science/article/pii/S0378775322001604},
+  author = {Weilong Ai and Niall Kirkaldy and Yang Jiang and Gregory Offer and Huizhi Wang and Billy Wu},
+}
+
 @article{Andersson2019,
   author = {Andersson, Joel A. E. and Gillis, Joris and Horn, Greg
             and Rawlings, James B. and Diehl, Moritz},
@@ -33,6 +45,18 @@
   pages = {138524},
   volume = {388},
   doi = {10.1016/j.electacta.2021.138524},
+}
+
+@article{BrosaPlanella2022,
+  author = {Brosa Planella, Ferran and Widanage, W. Dhammika},
+  title = {{Systematic derivation of a Single Particle Model with Electrolyte and Side Reactions (SPMe+SR) for degradation of lithium-ion batteries}},
+  journal = {Submitted for publication},
+  volume = {},
+  number = {},
+  pages = {},
+  year = {2022},
+  publisher = {},
+  doi = {},
 }
 
 @article{Chen2020,
@@ -296,16 +320,28 @@
   journal = {Journal of The Electrochemical Society}
 }
 
-@article{ORegan2021,
+@article{OKane2022,
+  author ="O{'}Kane, Simon E. J. and Ai, Weilong and Madabattula, Ganesh and Alonso-Alvarez, Diego and Timms, Robert and Sulzer, Valentin and Edge, Jacqueline Sophie and Wu, Billy and Offer, Gregory J. and Marinescu, Monica",
+  title  ="Lithium-ion battery degradation: how to model it",
+  journal  ="Phys. Chem. Chem. Phys.",
+  year  ="2022",
+  volume  ="24",
+  issue  ="13",
+  pages  ="7909-7922",
+  publisher  ="The Royal Society of Chemistry",
+  doi  ="10.1039/D2CP00417H",
+  url  ="http://dx.doi.org/10.1039/D2CP00417H",
+}
+
+@article{ORegan2022,
   author = {O'Regan, Kieran and Brosa Planella, Ferran and Widanage, W. Dhammika and Kendrick, Emma},
-  title = {{Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li concentration and temperature dependencies}},
-  journal = {Journal of The Electrochemical Society},
-  volume = {},
-  number = {},
-  pages = {},
-  year = {2021},
-  publisher = {The Electrochemical Society},
-  doi = {},
+  title = {{Thermal-electrochemical parameters of a high energy lithium-ion cylindrical battery}},
+  journal = {{Electrochimica Acta}},
+  volume = {425},
+  pages = {140700},
+  year = {2022},
+  publisher = {Elsevier},
+  doi = {10.1016/j.electacta.2022.140700},
 }
 
 @article{Prada2013,

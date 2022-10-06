@@ -15,6 +15,7 @@ import sys
 import timeit
 from collections import defaultdict
 from platform import system
+import difflib
 
 import numpy as np
 import pkg_resources
@@ -31,69 +32,27 @@ def root_dir():
     return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 
+def get_git_commit_info():
+    """
+    Get the git commit info for the current PyBaMM version, e.g. v22.8-39-gb25ce8c41
+    (version 22.8, commit b25ce8c41)
+    """
+    try:
+        # Get the latest git commit hash
+        return str(
+            subprocess.check_output(["git", "describe", "--tags"], cwd=root_dir())
+            .strip()
+            .decode()
+        )
+    except subprocess.CalledProcessError:  # pragma: no cover
+        # Not a git repository so just return the version number
+        return f"v{pybamm.__version__}"
+
+
 class FuzzyDict(dict):
-    def levenshtein_ratio(self, s, t):
-        """
-        Calculates levenshtein distance between two strings s and t.
-        Uses the formula from
-        https://www.datacamp.com/community/tutorials/fuzzy-string-python
-        """
-        # Initialize matrix of zeros
-        rows = len(s) + 1
-        cols = len(t) + 1
-        distance = np.zeros((rows, cols), dtype=int)
-
-        # Populate matrix of zeros with the indices of each character of both strings
-        for i in range(1, rows):
-            for k in range(1, cols):
-                distance[i][0] = i
-                distance[0][k] = k
-
-        # Iterate over the matrix to compute the cost of deletions, insertions and/or
-        # substitutions
-        for col in range(1, cols):
-            for row in range(1, rows):
-                if s[row - 1] == t[col - 1]:
-                    # If the characters are the same in the two strings in a given
-                    # position [i,j] then the cost is 0
-                    cost = 0
-                else:
-                    # In order to align the results with those of the Python Levenshtein
-                    # package, the cost of a substitution is 2.
-                    cost = 2
-                distance[row][col] = min(
-                    distance[row - 1][col] + 1,  # Cost of deletions
-                    distance[row][col - 1] + 1,  # Cost of insertions
-                    distance[row - 1][col - 1] + cost,  # Cost of substitutions
-                )
-        # Computation of the Levenshtein Distance Ratio
-        ratio = ((len(s) + len(t)) - distance[row][col]) / (len(s) + len(t))
-        return ratio
-
     def get_best_matches(self, key):
         """Get best matches from keys"""
-        key = key.lower()
-        best_three = []
-        lowest_score = 0
-        for k in self.keys():
-            score = self.levenshtein_ratio(k.lower(), key)
-            # Start filling out the list
-            if len(best_three) < 3:
-                best_three.append((k, score))
-                # Sort once the list has three elements, using scores
-                if len(best_three) == 3:
-                    best_three.sort(key=lambda x: x[1], reverse=True)
-                    lowest_score = best_three[-1][1]
-            # Once list is full, start checking new entries
-            else:
-                if score > lowest_score:
-                    # Replace last element with new entry
-                    best_three[-1] = (k, score)
-                    # Sort and update lowest score
-                    best_three.sort(key=lambda x: x[1], reverse=True)
-                    lowest_score = best_three[-1][1]
-
-        return [x[0] for x in best_three]
+        return difflib.get_close_matches(key, list(self.keys()), n=3, cutoff=0.5)
 
     def __getitem__(self, key):
         try:
@@ -119,7 +78,8 @@ class FuzzyDict(dict):
         both the keys and values will be printed. Otherwise just the values will
         be printed. If no results are found, the best matches are printed.
         """
-        key = key.lower()
+        key_in = key
+        key = key_in.lower()
 
         # Sort the keys so results are stored in alphabetical order
         keys = list(self.keys())
@@ -135,7 +95,8 @@ class FuzzyDict(dict):
             # If no results, return best matches
             best_matches = self.get_best_matches(key)
             print(
-                f"No results for search using '{key}'. Best matches are {best_matches}"
+                f"No results for search using '{key_in}'. "
+                f"Best matches are {best_matches}"
             )
         elif print_values:
             # Else print results, including dict items
@@ -143,6 +104,9 @@ class FuzzyDict(dict):
         else:
             # Just print keys
             print("\n".join("{}".format(k) for k in results.keys()))
+
+    def copy(self):
+        return FuzzyDict(super().copy())
 
 
 class Timer(object):
@@ -202,6 +166,9 @@ class TimerTime:
             time -= f * k
         output.append("1 second" if time == 1 else str(time) + " seconds")
         return ", ".join(output)
+
+    def __repr__(self):
+        return f"pybamm.TimerTime({self.value})"
 
     def __add__(self, other):
         if isinstance(other, numbers.Number):
@@ -348,6 +315,19 @@ def get_parameters_filepath(path):
         return path
     else:
         return os.path.join(pybamm.__path__[0], path)
+
+
+def have_julia():
+    """
+    Checks whether the Julia programming language has been installed
+    """
+    # Try reading the julia version quietly to see whether julia is installed
+    FNULL = open(os.devnull, "w")
+    try:
+        subprocess.call(["julia", "--version"], stdout=FNULL, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError:  # pragma: no cover
+        return False
 
 
 def have_jax():

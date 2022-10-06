@@ -1,7 +1,7 @@
 import pybamm
 
 
-def NMC_entropic_change_PeymanMPM(sto):
+def NMC_entropic_change_PeymanMPM(sto, c_s_max):
     """
     Nickel Manganese Cobalt (NMC) entropic change in open circuit potential (OCP) at
     a temperature of 298.15K as a function of the OCP. The fit is taken from [1].
@@ -26,14 +26,14 @@ def NMC_entropic_change_PeymanMPM(sto):
     u_eq = (
         4.3452
         - 1.6518 * sto
-        + 1.6225 * sto ** 2
-        - 2.0843 * sto ** 3
-        + 3.5146 * sto ** 4
+        + 1.6225 * sto**2
+        - 2.0843 * sto**3
+        + 3.5146 * sto**4
         - 0.5623 * 10 ** (-4) * pybamm.exp(109.451 * sto - 100.006)
     )
 
     du_dT = (
-        -800 + 779 * u_eq - 284 * u_eq ** 2 + 46 * u_eq ** 3 - 2.8 * u_eq ** 4
+        -800 + 779 * u_eq - 284 * u_eq**2 + 46 * u_eq**3 - 2.8 * u_eq**4
     ) * 10 ** (-3)
 
     return du_dT

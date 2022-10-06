@@ -34,22 +34,18 @@ class Lumped(BaseThermal):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-
-        T_vol_av = pybamm.standard_variables.T_vol_av
+        T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
         T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
+        T_dict = {
+            "negative current collector": T_x_av,
+            "positive current collector": T_x_av,
+            "x-averaged cell": T_x_av,
+            "volume-averaged cell": T_vol_av,
+        }
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
-        T_cn = T_x_av
-        if self.half_cell:
-            T_n = None
-        else:
-            T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
-        T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
-        T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T_cp = T_x_av
-
-        variables = self._get_standard_fundamental_variables(
-            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
-        )
+        variables = self._get_standard_fundamental_variables(T_dict)
 
         return variables
 
@@ -69,20 +65,20 @@ class Lumped(BaseThermal):
 
             yz_cell_surface_area = self.param.l_y * self.param.l_z
             yz_surface_cooling_coefficient = (
-                -(self.param.h_cn + self.param.h_cp)
+                -(self.param.n.h_cc + self.param.p.h_cc)
                 * yz_cell_surface_area
                 / cell_volume
-                / (self.param.delta ** 2)
+                / (self.param.delta**2)
             )
 
-            negative_tab_area = self.param.l_tab_n * self.param.l_cn
+            negative_tab_area = self.param.n.l_tab * self.param.n.l_cc
             negative_tab_cooling_coefficient = (
-                -self.param.h_tab_n * negative_tab_area / cell_volume / self.param.delta
+                -self.param.n.h_tab * negative_tab_area / cell_volume / self.param.delta
             )
 
-            positive_tab_area = self.param.l_tab_p * self.param.l_cp
+            positive_tab_area = self.param.p.l_tab * self.param.p.l_cc
             positive_tab_cooling_coefficient = (
-                -self.param.h_tab_p * positive_tab_area / cell_volume / self.param.delta
+                -self.param.p.h_tab * positive_tab_area / cell_volume / self.param.delta
             )
 
             edge_area = (
@@ -108,7 +104,7 @@ class Lumped(BaseThermal):
                 -self.param.h_total
                 * cell_surface_area
                 / cell_volume
-                / (self.param.delta ** 2)
+                / (self.param.delta**2)
             )
 
         self.rhs = {

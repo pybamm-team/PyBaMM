@@ -37,12 +37,12 @@ class CasadiConverter(object):
             The converted symbol
         """
         try:
-            return self._casadi_symbols[symbol.id]
+            return self._casadi_symbols[symbol]
         except KeyError:
             # Change inputs to empty dictionary if it's None
             inputs = inputs or {}
             casadi_symbol = self._convert(symbol, t, y, y_dot, inputs)
-            self._casadi_symbols[symbol.id] = casadi_symbol
+            self._casadi_symbols[symbol] = casadi_symbol
 
             return casadi_symbol
 
@@ -134,12 +134,12 @@ class CasadiConverter(object):
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"
-                elif symbol.interpolator == "cubic spline":
+                elif symbol.interpolator == "cubic":
                     solver = "bspline"
                 elif symbol.interpolator == "pchip":
                     raise NotImplementedError(
                         "The interpolator 'pchip' is not supported by CasAdi. "
-                        "Use 'linear' or 'cubic spline' instead. "
+                        "Use 'linear' or 'cubic' instead. "
                         "Alternatively, set 'model.convert_to_format = 'python'' "
                         "and use a non-CasADi solver. "
                     )

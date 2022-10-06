@@ -17,23 +17,25 @@ class ConstantSEI(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    options : dict, optional
+    options : dict
         A dictionary of options to be passed to the model.
+    phase : str, optional
+        Phase of the particle (default is "primary")
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
-        if self.half_cell:
+    def __init__(self, param, options, phase="primary"):
+        super().__init__(param, options=options, phase=phase)
+        if self.options.electrode_types["negative"] == "planar":
             self.reaction_loc = "interface"
         else:
             self.reaction_loc = "full electrode"
 
     def get_fundamental_variables(self):
         # Constant thicknesses
-        L_inner = self.param.L_inner_0
-        L_outer = self.param.L_outer_0
+        L_inner = self.phase_param.L_inner_0
+        L_outer = self.phase_param.L_outer_0
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
 
         # Concentrations (derived from thicknesses)

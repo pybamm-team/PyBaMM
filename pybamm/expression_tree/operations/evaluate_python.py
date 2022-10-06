@@ -38,7 +38,7 @@ class JaxCooMatrix:
     """
 
     def __init__(self, row, col, data, shape):
-        if not pybamm.have_jax():
+        if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
@@ -413,7 +413,7 @@ def to_python(symbol, debug=False, output_jax=False):
 
     line_format = "{} = {}"
 
-    if debug:
+    if debug:  # pragma: no cover
         variable_lines = [
             "print('{}'); ".format(
                 line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
@@ -464,8 +464,7 @@ class EvaluatorPython:
 
         # add function def to first line
         python_str = (
-            "def evaluate(constants, t=None, y=None, "
-            "inputs=None):\n" + python_str
+            "def evaluate(constants, t=None, y=None, " "inputs=None):\n" + python_str
         )
 
         # calculate the final variable that will output the result of calling `evaluate`
@@ -541,7 +540,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-        if not pybamm.have_jax():
+        if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
@@ -642,9 +641,7 @@ class EvaluatorJax:
             y = y.reshape(-1, 1)
 
         # execute code
-        jaxpr = jax.make_jaxpr(self._evaluate_jax)(
-            *self._constants, t, y, inputs
-        ).jaxpr
+        jaxpr = jax.make_jaxpr(self._evaluate_jax)(*self._constants, t, y, inputs).jaxpr
         print("invars:", jaxpr.invars)
         print("outvars:", jaxpr.outvars)
         print("constvars:", jaxpr.constvars)
@@ -718,8 +715,7 @@ class EvaluatorJaxSensitivities:
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
         result = {
-            key: value.reshape(value.shape[0], -1)
-            for key, value in result.items()
+            key: value.reshape(value.shape[0], -1) for key, value in result.items()
         }
 
         return result
