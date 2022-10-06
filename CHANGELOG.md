@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2331](https://github.com/pybamm-team/PyBaMM/pull/2337))
+
 # [v22.9](https://github.com/pybamm-team/PyBaMM/tree/v22.9) - 2022-09-30
 
 ## Features
