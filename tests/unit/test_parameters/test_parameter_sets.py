@@ -2,8 +2,6 @@
 # Tests for the ParameterSets class
 #
 
-import os
-import numpy as np
 import pybamm
 
 import unittest
