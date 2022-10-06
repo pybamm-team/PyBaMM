@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2331](https://github.com/pybamm-team/PyBaMM/pull/2337))
+
 # [v22.9](https://github.com/pybamm-team/PyBaMM/tree/v22.9) - 2022-09-30
 
 ## Features
@@ -10,7 +14,6 @@
 
 ## Bug fixes
 
-- For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2331](https://github.com/pybamm-team/PyBaMM/pull/2337))
 - Arrhenius function for `nmc_OKane2022` positive electrode actually gets used now ([#2309](https://github.com/pybamm-team/PyBaMM/pull/2309))
 - Added `SEI on cracks` to loop over all interfacial reactions ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
 - Fixed `X-averaged SEI on cracks concentration` so it's an average over x only, not y and z ([#2262](https://github.com/pybamm-team/PyBaMM/pull/2262))
