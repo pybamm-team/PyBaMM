@@ -33,8 +33,8 @@ class TestExternalCC(unittest.TestCase):
             dt = t_eval[i + 1] - t_eval[i]
 
             # provide phi_s_n and i_cc
-            phi_s_n = np.zeros((yz_pts ** 2, 1))
-            i_boundary_cc = np.ones((yz_pts ** 2, 1))
+            phi_s_n = np.zeros((yz_pts**2, 1))
+            i_boundary_cc = np.ones((yz_pts**2, 1))
             external_variables = {
                 "Negative current collector potential": phi_s_n,
                 "Current collector current density": i_boundary_cc,
@@ -45,7 +45,7 @@ class TestExternalCC(unittest.TestCase):
             # obtain phi_s_n from the pybamm solution at the current time
             phi_s_p = sim.solution["Positive current collector potential"].data[:, -1]
 
-        self.assertTrue(phi_s_p.shape, (yz_pts ** 2, 1))
+        self.assertTrue(phi_s_p.shape, (yz_pts**2, 1))
 
 
 if __name__ == "__main__":

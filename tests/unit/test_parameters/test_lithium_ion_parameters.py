@@ -65,7 +65,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
                 )
             ),
             values.evaluate(
-                2 * 10 ** (-5) * param.c_e_typ ** 0.5 * param.n.prim.c_max / 2
+                2 * 10 ** (-5) * param.c_e_typ**0.5 * param.n.prim.c_max / 2
             ),
             8,
         )
@@ -78,7 +78,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
                 )
             ),
             values.evaluate(
-                6 * 10 ** (-7) * param.c_e_typ ** 0.5 * param.p.prim.c_max / 2
+                6 * 10 ** (-7) * param.c_e_typ**0.5 * param.p.prim.c_max / 2
             ),
             8,
         )

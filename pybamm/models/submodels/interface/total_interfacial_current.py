@@ -31,12 +31,11 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         This function also creates the "total source term" variables by summing all
         the reactions.
         """
-        if self.half_cell:
-            domains = ["positive"]
-        else:
-            domains = ["negative", "positive"]
-        for domain in domains:
-            variables.update(self._get_coupled_variables_by_domain(variables, domain))
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                variables.update(
+                    self._get_coupled_variables_by_domain(variables, domain.split()[0])
+                )
 
         variables.update(self._get_whole_cell_coupled_variables(variables))
 
@@ -45,7 +44,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
     def _get_coupled_variables_by_domain(self, variables, domain):
         phase_names = [""]
 
-        num_phases = int(getattr(self.options, domain.lower())["particle phases"])
+        num_phases = int(getattr(self.options, domain)["particle phases"])
         if num_phases > 1:
             phase_names += ["primary ", "secondary "]
 
@@ -65,10 +64,10 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             reaction_names = [""]
             if phase_name == "":
                 reaction_names += ["SEI "]
-                if not self.half_cell:
-                    # no separate plating reaction in a half-cell,
-                    # since plating is the main reaction
-                    # no SEI on cracks with half-cell model
+                if self.options.electrode_types["negative"] == "porous":
+                    # separate plating reaction only if the negative electrode is
+                    # porous, since plating is the main reaction
+                    # SEI on cracks only in a porous negative electrode
                     reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
@@ -106,10 +105,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 s_k = 1
             elif self.chemistry == "lead-acid":
                 if reaction_name == "":  # main reaction
-                    if domain == "negative":
-                        s_k = self.param.n.prim.s_plus_S
-                    elif domain == "positive":
-                        s_k = self.param.p.prim.s_plus_S
+                    s_k = self.param.domain_params[domain].prim.s_plus_S
                 elif reaction_name == "oxygen ":
                     s_k = self.param.s_plus_Ox
 
@@ -143,70 +139,38 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             self.options.negative["particle phases"] == "1"
             and self.options.positive["particle phases"] == "1"
         ):
-            j_p = variables["Positive electrode interfacial current density"]
-            j_p_dim = variables[
-                "Positive electrode interfacial current density [A.m-2]"
-            ]
-            j_p.print_name = "j_p"
-            if self.half_cell:
-                j = pybamm.concatenation(zero_s, j_p)
-                j_dim = pybamm.concatenation(zero_s, j_p_dim)
-            else:
-                j_n = variables["Negative electrode interfacial current density"]
-                j_n.print_name = "j_n"
-                j_n_dim = variables[
-                    "Negative electrode interfacial current density [A.m-2]"
-                ]
-                j = pybamm.concatenation(j_n, zero_s, j_p)
-                j_dim = pybamm.concatenation(j_n_dim, zero_s, j_p_dim)
-
-            j0_p = variables["Positive electrode exchange current density"]
-            j0_p_dim = variables["Positive electrode exchange current density [A.m-2]"]
-
-            if self.half_cell:
-                j0 = pybamm.concatenation(zero_s, j0_p)
-                j0_dim = pybamm.concatenation(zero_s, j0_p_dim)
-            else:
-                j0_n = variables["Negative electrode exchange current density"]
-                j0_n_dim = variables[
-                    "Negative electrode exchange current density [A.m-2]"
-                ]
-                j0 = pybamm.concatenation(j0_n, zero_s, j0_p)
-                j0_dim = pybamm.concatenation(j0_n_dim, zero_s, j0_p_dim)
-            variables.update(
-                {
-                    "Interfacial current density": j,
-                    "Interfacial current density [A.m-2]": j_dim,
-                    "Exchange current density": j0,
-                    "Exchange current density [A.m-2]": j0_dim,
-                }
-            )
+            for variable_template in [
+                "{}interfacial current density",
+                "{}interfacial current density [A.m-2]",
+                "{}exchange current density",
+                "{}exchange current density [A.m-2]",
+            ]:
+                var_dict = {}
+                for domain in self.options.whole_cell_domains:
+                    if domain == "separator":
+                        var_dict[domain] = zero_s
+                    else:
+                        Domain = domain.capitalize()
+                        var_dict[domain] = variables[
+                            variable_template.format(Domain + " ")
+                        ]
+                var = pybamm.concatenation(*var_dict.values())
+                var_name = variable_template.format("")
+                var_name = var_name[0].upper() + var_name[1:]  # capitalise first letter
+                variables.update({var_name: var})
 
         # Sum variables
-        a_j_p = variables[
-            "Sum of positive electrode volumetric interfacial current densities"
-        ]
-        s_a_j_p = variables[
-            "Sum of positive electrode electrolyte reaction source terms"
-        ]
-
-        if self.half_cell:
-            a_j = pybamm.concatenation(zero_s, a_j_p)
-            s_a_j = pybamm.concatenation(zero_s, s_a_j_p)
-        else:
-            a_j_n = variables[
-                "Sum of negative electrode volumetric interfacial current densities"
-            ]
-            s_a_j_n = variables[
-                "Sum of negative electrode electrolyte reaction source terms"
-            ]
-            a_j = pybamm.concatenation(a_j_n, zero_s, a_j_p)
-            s_a_j = pybamm.concatenation(s_a_j_n, zero_s, s_a_j_p)
-
-        # Override print_name
-        a_j.print_name = "aj"
-
-        variables["Sum of electrolyte reaction source terms"] = s_a_j
-        variables["Sum of volumetric interfacial current densities"] = a_j
+        for variable_template in [
+            "Sum of {}volumetric interfacial current densities",
+            "Sum of {}electrolyte reaction source terms",
+        ]:
+            var_dict = {}
+            for domain in self.options.whole_cell_domains:
+                if domain == "separator":
+                    var_dict[domain] = zero_s
+                else:
+                    var_dict[domain] = variables[variable_template.format(domain + " ")]
+            var = pybamm.concatenation(*var_dict.values())
+            variables.update({variable_template.format("").capitalize(): var})
 
         return variables

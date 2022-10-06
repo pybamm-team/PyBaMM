@@ -19,7 +19,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         options = options or {}
         # Specify that there are no particles in lead-acid, and no half-cell models
         options["particle shape"] = "no particles"
-        self.half_cell = False
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
 
@@ -82,14 +81,14 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.initial_conditions[fci] = self.param.q_init * 100
 
     def set_open_circuit_potential_submodel(self):
-        for domain in ["Negative", "Positive"]:
+        for domain in ["negative", "positive"]:
             self.submodels[
-                f"{domain.lower()} open circuit potential"
+                f"{domain} open circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
                 self.param, domain, "lead-acid main", self.options, "primary"
             )
             self.submodels[
-                f"{domain.lower()} oxygen open circuit potential"
+                f"{domain} oxygen open circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
                 self.param, domain, "lead-acid oxygen", self.options, "primary"
             )

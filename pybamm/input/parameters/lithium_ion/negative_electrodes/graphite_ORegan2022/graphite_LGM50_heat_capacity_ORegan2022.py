@@ -25,7 +25,7 @@ def graphite_LGM50_heat_capacity_ORegan2022(T):
 
     # value for the dry porous electrode (i.e. electrode + air, and we neglect the air
     # contribution to density)
-    cp_dry = 4.932e-4 * T ** 3 - 0.491 * T ** 2 + 169.4 * T - 1.897e4
+    cp_dry = 4.932e-4 * T**3 - 0.491 * T**2 + 169.4 * T - 1.897e4
     rho_dry = 1740
     theta_dry = rho_dry * cp_dry
 

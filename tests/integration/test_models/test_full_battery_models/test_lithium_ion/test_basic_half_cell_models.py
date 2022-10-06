@@ -46,17 +46,19 @@ class TestBasicHalfCellModels(unittest.TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        param = pybamm.ParameterValues({
-            "chemistry": "lithium_ion",
-            "cell": "LGM50_Chen2020",
-            "negative electrode": "graphite_Chen2020",
-            "separator": "separator_Chen2020",
-            "positive electrode": "nmc_Chen2020",
-            "electrolyte": "lipf6_Nyman2008",
-            "experiment": "1C_discharge_from_full_Chen2020",
-            "sei": "example",
-            "lithium plating": "okane2020_Li_plating",
-        })
+        param = pybamm.ParameterValues(
+            {
+                "chemistry": "lithium_ion",
+                "cell": "LGM50_Chen2020",
+                "negative electrode": "graphite_Chen2020",
+                "separator": "separator_Chen2020",
+                "positive electrode": "nmc_Chen2020",
+                "electrolyte": "lipf6_Nyman2008",
+                "experiment": "1C_discharge_from_full_Chen2020",
+                "sei": "example",
+                "lithium plating": "okane2020_Li_plating",
+            }
+        )
 
         param["Current function [A]"] = 2.5
 

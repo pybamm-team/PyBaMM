@@ -35,12 +35,12 @@ def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     p8 = 0.109667298
 
     du_dT = (
-        p1 * sto ** 7
-        + p2 * sto ** 6
-        + p3 * sto ** 5
-        + p4 * sto ** 4
-        + p5 * sto ** 3
-        + p6 * sto ** 2
+        p1 * sto**7
+        + p2 * sto**6
+        + p3 * sto**5
+        + p4 * sto**4
+        + p5 * sto**3
+        + p6 * sto**2
         + p7 * sto
         + p8
     )

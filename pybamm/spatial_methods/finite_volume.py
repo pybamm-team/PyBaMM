@@ -171,7 +171,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_numpy = np.kron(np.ones(second_dim_repeats), submesh.edges)
             r_edges = pybamm.Vector(r_edges_numpy)
             if submesh.coord_sys == "spherical polar":
-                out = divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
+                out = divergence_matrix @ ((r_edges**2) * discretised_symbol)
             elif submesh.coord_sys == "cylindrical polar":
                 out = divergence_matrix @ (r_edges * discretised_symbol)
         else:
@@ -202,9 +202,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             if submesh.coord_sys == "spherical polar":
-                d_edges = (r_edges_right ** 3 - r_edges_left ** 3) / 3
+                d_edges = (r_edges_right**3 - r_edges_left**3) / 3
             elif submesh.coord_sys == "cylindrical polar":
-                d_edges = (r_edges_right ** 2 - r_edges_left ** 2) / 2
+                d_edges = (r_edges_right**2 - r_edges_left**2) / 2
         else:
             d_edges = submesh.d_edges
 
@@ -283,9 +283,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             if submesh.coord_sys == "spherical polar":
-                d_edges = 4 * np.pi * (r_edges_right ** 3 - r_edges_left ** 3) / 3
+                d_edges = 4 * np.pi * (r_edges_right**3 - r_edges_left**3) / 3
             elif submesh.coord_sys == "cylindrical polar":
-                d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 2
+                d_edges = 2 * np.pi * (r_edges_right**2 - r_edges_left**2) / 2
         else:
             d_edges = submesh.d_edges
 
@@ -909,7 +909,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         child, symbol.side, bcs, "Neumann"
                     ):
                         a = (dx0 + dx1) ** 2 / (dx1 * (2 * dx0 + dx1))
-                        b = -(dx0 ** 2) / (2 * dx0 * dx1 + dx1 ** 2)
+                        b = -(dx0**2) / (2 * dx0 * dx1 + dx1**2)
                         alpha = -(dx0 * (dx0 + dx1)) / (2 * dx0 + dx1)
 
                         sub_matrix = csr_matrix(
@@ -961,7 +961,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         child, symbol.side, bcs, "Neumann"
                     ):
                         a = (dxN + dxNm1) ** 2 / (dxNm1 * (2 * dxN + dxNm1))
-                        b = -(dxN ** 2) / (2 * dxN * dxNm1 + dxNm1 ** 2)
+                        b = -(dxN**2) / (2 * dxN * dxNm1 + dxNm1**2)
                         alpha = dxN * (dxN + dxNm1) / (2 * dxN + dxNm1)
                         sub_matrix = csr_matrix(
                             ([b, a], ([0, 0], [prim_pts - 2, prim_pts - 1])),
@@ -1008,9 +1008,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                 elif extrap_order == "quadratic":
 
-                    a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1 ** 2 + dx1 * dx2)
+                    a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
                     b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
-                    c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2 ** 2)
+                    c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
 
                     sub_matrix = csr_matrix(
                         ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts)
@@ -1031,9 +1031,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
 
                 elif extrap_order == "quadratic":
-                    a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1 ** 2 + dxNm1 * dxNm2)
+                    a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
                     b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
-                    c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2 ** 2)
+                    c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2**2)
 
                     sub_matrix = csr_matrix(
                         (

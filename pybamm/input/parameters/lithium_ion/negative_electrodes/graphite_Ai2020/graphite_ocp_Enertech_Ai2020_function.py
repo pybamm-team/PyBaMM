@@ -34,14 +34,14 @@ def graphite_ocp_Enertech_Ai2020_function(sto):
     p9 = -21.20097
     p10 = 0.84498
     u_eq = (
-        p1 * sto ** 9
-        + p2 * sto ** 8
-        + p3 * sto ** 7
-        + p4 * sto ** 6
-        + p5 * sto ** 5
-        + p6 * sto ** 4
-        + p7 * sto ** 3
-        + p8 * sto ** 2
+        p1 * sto**9
+        + p2 * sto**8
+        + p3 * sto**7
+        + p4 * sto**6
+        + p5 * sto**5
+        + p6 * sto**4
+        + p7 * sto**3
+        + p8 * sto**2
         + p9 * sto
         + p10
     )

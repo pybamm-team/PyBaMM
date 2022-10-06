@@ -25,7 +25,7 @@ class NoSEI(BaseModel):
 
     def __init__(self, param, options, phase="primary", cracks=False):
         super().__init__(param, options=options, phase=phase, cracks=cracks)
-        if self.half_cell:
+        if self.options.electrode_types[self.domain] == "planar":
             self.reaction_loc = "interface"
         else:
             self.reaction_loc = "full electrode"

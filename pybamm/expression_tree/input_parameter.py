@@ -62,9 +62,7 @@ class InputParameter(pybamm.Symbol):
             n_self = 1
         else:
             n_self = nan_vector.shape[0]
-        zero_matrix = scipy.sparse.csr_matrix(
-            (n_self, n_variable)
-        )
+        zero_matrix = scipy.sparse.csr_matrix((n_self, n_variable))
         return pybamm.Matrix(zero_matrix)
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):

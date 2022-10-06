@@ -15,4 +15,4 @@ def viscosity_Chapman1968(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return 0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e ** 2
+    return 0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e**2

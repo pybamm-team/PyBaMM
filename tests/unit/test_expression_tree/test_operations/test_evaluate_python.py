@@ -330,7 +330,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(result, 6)
 
         # test a larger expression
-        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorPython(expr)
         for y in y_tests:
             result = evaluator(t=None, y=y)
@@ -511,7 +511,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(result, 6)
 
         # test a larger expression
-        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorJax(expr)
         for y in y_tests:
             result = evaluator(t=None, y=y)
@@ -639,7 +639,7 @@ class TestEvaluate(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
 
-        expr = a ** 2
+        expr = a**2
         expr_jac = 2 * a
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator_jac_test = evaluator.get_jacobian()
@@ -655,7 +655,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
         v_tests = [np.array([[2.9]]), np.array([[0.9]]), np.array([1.3])]
 
-        expr = a ** 2
+        expr = a**2
         expr_jac = 2 * a
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator_jac_test = evaluator.get_jacobian()
@@ -672,7 +672,7 @@ class TestEvaluate(unittest.TestCase):
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
-        expr = a ** 2
+        expr = a**2
         y_test = np.array([2.0, 3.0])
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
@@ -680,7 +680,7 @@ class TestEvaluate(unittest.TestCase):
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_inputs(self):
         a = pybamm.InputParameter("a")
-        expr = a ** 2
+        expr = a**2
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(inputs={"a": 2})
         self.assertEqual(result, 4)

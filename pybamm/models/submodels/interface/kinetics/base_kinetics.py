@@ -30,7 +30,7 @@ class BaseKinetics(BaseInterface):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):
-        domain = self.domain.lower()
+        domain = self.domain
         phase_name = self.phase_name
 
         if (
@@ -57,8 +57,7 @@ class BaseKinetics(BaseInterface):
             return {}
 
     def get_coupled_variables(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         phase_name = self.phase_name
 
@@ -98,8 +97,8 @@ class BaseKinetics(BaseInterface):
             variables
         )
         # Add SEI resistance in the negative electrode
-        if self.domain == "Negative":
-            if self.half_cell:
+        if self.domain == "negative":
+            if self.options.electrode_types["negative"] == "planar":
                 R_sei = self.phase_param.R_sei
                 L_sei = variables[f"Total {phase_name}SEI thickness"]  # on interface
                 eta_sei = -j_tot_av * L_sei * R_sei
@@ -126,7 +125,7 @@ class BaseKinetics(BaseInterface):
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             T = variables["X-averaged cell temperature"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:
@@ -176,7 +175,7 @@ class BaseKinetics(BaseInterface):
             self._get_standard_volumetric_current_density_variables(variables)
         )
 
-        if self.domain == "Negative" and self.reaction in [
+        if self.domain == "negative" and self.reaction in [
             "lithium-ion main",
             "lithium metal plating",
             "lead-acid main",
@@ -188,8 +187,7 @@ class BaseKinetics(BaseInterface):
         return variables
 
     def set_algebraic(self, variables):
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         if (
@@ -217,7 +215,7 @@ class BaseKinetics(BaseInterface):
             self.algebraic[j_tot_var] = j_tot_var - a_j_tot / a
 
     def set_initial_conditions(self, variables):
-        domain = self.domain.lower()
+        domain = self.domain
         phase_name = self.phase_name
 
         if (
@@ -234,7 +232,7 @@ class BaseKinetics(BaseInterface):
                 / param.I_typ
                 * pybamm.sign(param.I_typ)
             )
-            sgn = 1 if self.domain == "Negative" else -1
+            sgn = 1 if self.domain == "negative" else -1
             # i / (a*l), assuming a=1 initially
             j_tot_av_init = sgn * current_at_0 / self.domain_param.l
 
@@ -245,13 +243,12 @@ class BaseKinetics(BaseInterface):
         # the NotConstant class
         # to differentiate it from the electrolyte concentration inside the
         # surface potential difference when taking j.diff(c_e) later on
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
 
         c_e_0 = pybamm.NotConstant(
             variables["Leading-order x-averaged electrolyte concentration"]
         )
-        c_e = pybamm.PrimaryBroadcast(c_e_0, self.domain_for_broadcast)
+        c_e = pybamm.PrimaryBroadcast(c_e_0, f"{domain} electrode")
         hacked_variables = {**variables, f"{Domain} electrolyte concentration": c_e}
         delta_phi = variables[
             f"Leading-order x-averaged {domain} electrode surface potential difference"

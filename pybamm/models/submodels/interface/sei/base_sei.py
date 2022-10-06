@@ -27,7 +27,7 @@ class BaseModel(BaseInterface):
             reaction = "SEI on cracks"
         else:
             reaction = "SEI"
-        domain = "Negative"
+        domain = "negative"
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_coupled_variables(self, variables):
@@ -125,6 +125,8 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_thickness_variables(self, L_sei):
         """Update variables related to total SEI thickness."""
+        domain = self.domain
+
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
             R_sei_dim = 1
@@ -152,7 +154,7 @@ class BaseModel(BaseInterface):
             if self.reaction == "SEI":
                 variables.update(
                     {
-                        f"X-averaged {self.domain.lower()} electrode resistance "
+                        f"X-averaged {domain} electrode resistance "
                         "[Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
                     }
                 )
@@ -160,6 +162,7 @@ class BaseModel(BaseInterface):
 
     def _get_standard_concentration_variables(self, variables):
         """Update variables related to the SEI concentration."""
+        Domain = self.domain.capitalize()
         phase_param = self.phase_param
         reaction_name = self.reaction_name
 
@@ -258,7 +261,7 @@ class BaseModel(BaseInterface):
         elif self.reaction == "SEI on cracks":
             L_inner_cr = variables[f"Inner {reaction_name}thickness"]
             L_outer_cr = variables[f"Outer {reaction_name}thickness"]
-            roughness = variables[self.domain + " electrode roughness ratio"]
+            roughness = variables[f"{Domain} electrode roughness ratio"]
 
             n_inner_cr = L_inner_cr * (roughness - 1)  # inner SEI cracks concentration
             n_outer_cr = L_outer_cr * (roughness - 1)  # outer SEI cracks concentration

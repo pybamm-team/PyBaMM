@@ -119,7 +119,7 @@ class FunctionParameter(pybamm.Symbol):
                 if hasattr(parent_param, "domain") and parent_param.domain is not None:
                     # add "_n" or "_s" or "_p" if this comes from a Parameter class with
                     # a domain
-                    d = parent_param.domain.lower()[0]
+                    d = parent_param.domain[0]
                     print_name += f"_{d}"
                 self.print_name = print_name
 
