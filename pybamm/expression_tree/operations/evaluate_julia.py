@@ -9,11 +9,7 @@ from collections import OrderedDict
 from multimethod import multimethod
 from math import floor
 import re
-
-#Option 1:
-#When save cache dict, do something
-#Option 2:
-#Find out a better way to store the data
+import graphlib
 
 
 def get_lower_keys(key,all_keys):
@@ -29,13 +25,16 @@ def is_constant_and_can_evaluate(symbol):
     Returns False otherwise.
     An example of a constant symbol that cannot be "evaluated" is PrimaryBroadcast(0).
     """
-    if symbol.is_constant():
-        try:
-            symbol.evaluate()
-            return True
-        except NotImplementedError:
+    try:
+        if symbol.is_constant():
+            try:
+                symbol.evaluate()
+                return True
+            except NotImplementedError:
+                return False
+        else:
             return False
-    else:
+    except:
         return False
 
 
@@ -58,9 +57,12 @@ class JuliaConverter(object):
         dae_type="semi-explicit",
         input_parameter_order=[],
         inline=True,
-        parallel=False,
+        parallel="legacy-serial"
     ):
         assert not ismtk
+
+        if parallel != "legacy-serial" and inline:
+            raise NotImplementedError("Inline not supported with anything other than legacy-serial")
 
         # Characteristics
         self._cache_type = cache_type
@@ -71,7 +73,7 @@ class JuliaConverter(object):
 
         self._type = "Float64"
         self._inline = inline
-        self.parallel = parallel
+        self._parallel = parallel
         # "Caches"
         # Stores Constants to be Declared in the initial cache
         # insight: everything is just a line of code
@@ -84,8 +86,10 @@ class JuliaConverter(object):
         # Variable Names to be used to generate the code.
         self._cache_dict = OrderedDict()
         self._const_dict = OrderedDict()
-        self.parallel_dict = {}
-        self.inverse_parallel_dict = {}
+
+        #the real hero
+        self._dag = {}
+        self._code = {}
 
         self.input_parameter_order = input_parameter_order
 
@@ -98,24 +102,12 @@ class JuliaConverter(object):
         self._return_string = ""
         self._cache_initialization_string = ""
 
-    def cache_exists(self, id, loc=""):
-        if self._cache_dict.get(id)=="cache_28":
-            print("cache 28 is {}".format(self._intermediate[id]))
-        elif self._cache_dict.get(id) =="cache_24":
-            print("cache 24 is {}".format(self._intermediate[id]))
-        if self._cache_dict.get(id) is not None:
-            if self.parallel:
-                old_loc = self.inverse_parallel_dict.get(id)
-                if old_loc is not None:
-                    if len(old_loc)<len(loc):
-                        #print("code for {} being replaced".format(self._cache_dict[id]))
-                        #print("{} was at level {} and is now at level {}".format(self._cache_dict[id],len(old_loc),len(loc)))
-                        self.inverse_parallel_dict[id] = loc
-                        self.parallel_dict[loc] = self.parallel_dict[old_loc]
-                        del self.parallel_dict[old_loc]
-                    else:
-                        print("hi")
-        return self._cache_dict.get(id) is not None
+    def cache_exists(self, my_id, inputs):
+        existance = self._cache_dict.get(my_id) is not None
+        if existance:
+            for input in inputs:
+                self._dag[my_id].add(input)
+        return self._cache_dict.get(my_id) is not None
 
     # know where to go to find a variable.
     # this could be smoother, there will
@@ -463,7 +455,7 @@ class JuliaConverter(object):
         last_point = symbol.last_point
         points = (first_point, last_point)
         shape = symbol.shape
-        self._intermediate[my_id] = JuliaStateVector(id, points, shape)
+        self._intermediate[my_id] = JuliaStateVector(my_id, points, shape)
         return my_id
 
     @multimethod
@@ -473,7 +465,7 @@ class JuliaConverter(object):
         last_point = symbol.last_point
         points = (first_point, last_point)
         shape = symbol.shape
-        self._intermediate[my_id] = JuliaStateVectorDot(id, points, shape)
+        self._intermediate[my_id] = JuliaStateVectorDot(my_id, points, shape)
         return my_id
 
     # Cache and Const Creation
@@ -585,31 +577,43 @@ class JuliaConverter(object):
         self._cache_dict = OrderedDict()
         self._cache_and_const_string = ""
         self._const_dict = OrderedDict()
-        self.parallel_dict = {}
+        self._dag = {}
+        self._code = {}
         self._cache_id = 0
         self._const_id = 0
+    
+    def write_function(self):
+        ts = graphlib.TopologicalSorter(self._dag)
+        if self._parallel is None:
+            for node in ts.static_order():
+                code = self._code.get(node)
+                if code is not None:
+                    self._function_string += self._code[node]
+        elif self._parallel == "Threads":
+            ts.prepare()
+            while ts.is_active():
+                self._function_string += "@sync begin\n"
+                for node in ts.get_ready():
+                    code = self._code.get(node)
+                    if code is not None:
+                        code = code[0:-1]
+                        code = "Threads.@spawn begin " + code + " end\n"
+                        self._function_string += code
+                    ts.done(node)
+                self._function_string += "end\n"
+        elif self._parallel == "legacy-serial":
+            pass
+        else:
+            raise NotImplementedError()
 
     # Just get something working here, so can start actual testing
-    def write_function_easy(self, funcname, inline=True, topcut_options={"race heuristic": "search_and_sync"}):
+    def write_function_easy(self, funcname, inline=True):
         # start with the closure
         top = self._intermediate[next(reversed(self._intermediate))]
         # this line actually writes the code
         top_var_name = top._convert_intermediate_to_code(self, inline=False)
         #if parallel is true, we haven't actually written the function yet
-        alg = "level_sync"
-        if self.parallel:
-            if alg == "top_cut":
-                self.top_cut(topcut_options)
-            elif alg =="serial":
-                keys = list(self.parallel_dict.keys())
-                keys.sort(reverse=True)
-                for key in keys:
-                    self._function_string += self.parallel_dict[key][0:-1]+"#{}\n".format(key)
-            elif alg == "level_sync":
-                self.level_sync()
-
-            else:
-                raise NotImplementedError("only top cut has been implemented so far...")
+        self.write_function()
         # write the cache initialization
         self._cache_and_const_string = (
             "begin\n{} = let \n".format(funcname) + self._cache_and_const_string
@@ -676,115 +680,13 @@ class JuliaConverter(object):
         self._convert_tree_to_intermediate(symbol)
         return 0
 
-    def level_sync(self):
-        all_keys = list(self.parallel_dict.keys())
-        max_key_length = max([len(key) for key in all_keys])
-        for this_level in range(max_key_length,-1,-1):
-            keys_at_this_level = [key for key in all_keys if len(key) == this_level]
-            if len(keys_at_this_level)==0:
-                continue
-            self._function_string+="@sync begin # LEVEL {}\n".format(this_level)
-            for key in keys_at_this_level:
-                #self._function_string+=self.parallel_dict[key]
-                self._function_string += "Threads.@spawn begin "+self.parallel_dict[key][0:-1]+"  end #{}\n".format(key)
-            self._function_string+="end\n"
-
 
     # rework this at some point
-    def build_julia_code(self, funcname="f", inline=True, topcut_options={"race heuristic": "search_and_sync"}):
+    def build_julia_code(self, funcname="f", inline=True):
         # get top node of tree
-        self.write_function_easy(funcname, inline=inline, topcut_options=topcut_options)
+        self.write_function_easy(funcname, inline=inline)
         string = self._cache_and_const_string + self._function_string
         return string
-
-    def write_lower_key(self, key):
-        self._function_string+=self.parallel_dict[key][0:-1]+"#{}\n".format(key)
-        return 0
-    
-    def top_cut(self, options):
-        #start by making a list of the keys
-        race_heuristic = options["race heuristic"]
-        self.search_for_topcut_race(race_heuristic)
-        all_keys = list(self.parallel_dict.keys())
-        all_keys.sort()
-        all_keys.remove("")
-        top_level_keys = list(set([key[0] for key in all_keys]))
-        top_level_keys.sort()
-        if " " in top_level_keys:
-            key = " "
-            self._function_string+="@sync begin\n"
-            lower_keys = get_lower_keys(key, all_keys)
-            lower_keys.sort(reverse=True)
-            for lower_key in lower_keys:
-                self.write_lower_key(lower_key)
-            if key in all_keys:
-                self._function_string+=self.parallel_dict[key]
-            top_level_keys.remove(" ")
-            self._function_string+="end\n\n"
-        
-        self._function_string+="@sync begin\n"
-        for key in top_level_keys:
-            self._function_string+="@async begin\n"
-            lower_keys = get_lower_keys(key, all_keys)
-            lower_keys.sort(reverse=True)
-            for lower_key in lower_keys:
-                self.write_lower_key(lower_key)
-            if key in all_keys:
-                self._function_string+=self.parallel_dict[key]
-            self._function_string+="end\n\n"
-        self._function_string+="end\n\n"
-        self._function_string+=self.parallel_dict[""]
-
-
-             
-
-    def search_for_topcut_race(self, race_heuristic):
-        #figure out what the top level really is
-        all_keys = list(self.parallel_dict.keys())
-        all_keys.remove("")
-        all_keys.sort(reverse=True)
-        race_found = False
-        for key in all_keys:
-            this_key_top_level = key[0]
-            keys_from_other_top_levels = list(filter(lambda this_key : this_key[0]!=this_key_top_level, all_keys))
-            this_line = self.parallel_dict[key]
-            res_to_look_for = r"\[|\]|\*|\/|\-|\<|\>|\=|\)|\(|\,|\+|\@|\.|\ |\n"
-            if ("mul!" in this_line):
-                # var is the first thing after the
-                var_names = re.split(res_to_look_for, this_line)
-                var_names = list(filter(("").__ne__, var_names))
-                this_var_name = var_names[1]
-            else:
-                var_names = re.split(res_to_look_for, this_line)
-                var_names = list(filter(("").__ne__, var_names))
-                this_var_name = var_names[0]
-            for other_key in keys_from_other_top_levels:
-                other_line = self.parallel_dict[other_key]
-                other_line_var_names = re.split(res_to_look_for,other_line)
-                other_line_var_names = list(filter(("").__ne__, other_line_var_names))
-                if this_var_name in other_line_var_names:
-                    print("WARNING race condition found where {} is needed by {}".format(key, other_key))
-                    my_lower_keys = get_lower_keys(key,all_keys)
-                    for lower_key in my_lower_keys:
-                        if race_heuristic == "search_and_sync":
-                            new_lower_key = " " + lower_key
-                            self.parallel_dict[new_lower_key] = self.parallel_dict[lower_key]
-                            if lower_key in all_keys:
-                                all_keys.remove(lower_key)
-                            self.parallel_dict[lower_key] = "#test\n"
-                        elif race_heuristic == "recompute":
-                            new_lower_key = other_key + lower_key
-                            self.parallel_dict[new_lower_key] = self.parallel_dict[lower_key]
-                    if race_heuristic == "search_and_sync":
-                        new_key = " " + key
-                        self.parallel_dict[new_key] = self.parallel_dict[key]
-                        if key in all_keys:
-                            all_keys.remove(key)
-                        self.parallel_dict[key] = "#test\n"
-                    elif race_heuristic == "recompute":
-                        new_key = other_key + key
-                        self.parallel_dict[new_key] = self.parallel_dict[key]
-                        
 
 
 # BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
@@ -795,14 +697,22 @@ class JuliaBinaryOperation(object):
         self.output = output
         self.shape = shape
 
-    def get_binary_inputs(self, converter: JuliaConverter, inline=True, loc=""):
+    def get_binary_inputs(self, converter: JuliaConverter, inline=True):
         left_input_var_name = converter._intermediate[
             self.left_input
-        ]._convert_intermediate_to_code(converter, inline=inline, loc = loc + "a")
+        ]._convert_intermediate_to_code(converter, inline=inline)
         right_input_var_name = converter._intermediate[
             self.right_input
-        ]._convert_intermediate_to_code(converter, inline=inline, loc = loc + "b")
+        ]._convert_intermediate_to_code(converter, inline=inline)
         return left_input_var_name, right_input_var_name
+    
+    def generate_code_and_dag(self, converter, code):
+        converter._code[self.output] = code
+        l_id = converter._intermediate[self.left_input].output
+        r_id = converter._intermediate[self.right_input].output
+        converter._dag[self.output] = {l_id, r_id}
+        if converter._parallel == "legacy-serial":
+            converter._function_string += code
 
 
 # MatMul and Inner Product are not really the same as the bitwisebinary operations.
@@ -813,12 +723,12 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
         self.output = output
         self.shape = shape
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False,loc=""):
-        if converter.cache_exists(self.output, loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False):
+        if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         result_var_name = converter.create_cache(self)
         left_input_var_name, right_input_var_name = self.get_binary_inputs(
-            converter, inline=False, loc=loc
+            converter, inline=False
         )
         result_var_name = converter._cache_dict[self.output]
         if converter._preallocate:
@@ -830,11 +740,7 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
                 result_var_name, left_input_var_name, right_input_var_name
             )
         #mat-mul is always creating a cache
-        if converter.parallel:
-            converter.parallel_dict[loc] = code
-            converter.inverse_parallel_dict[self.output] = loc
-        else:
-            converter._function_string += code
+        self.generate_code_and_dag(converter, code)
         return result_var_name
 
 
@@ -847,14 +753,14 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         self.shape = shape
         self.operator = operator
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
         if not inline:
             result_var_name = converter.create_cache(self)
             left_input_var_name, right_input_var_name = self.get_binary_inputs(
-                converter, inline=True, loc=loc
+                converter, inline=True
             )
             if converter._preallocate:
                 code = "@. {} = {} {} {}\n".format(
@@ -870,14 +776,10 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
                     self.operator,
                     right_input_var_name,
                 )
-            if converter.parallel:
-                converter.parallel_dict[loc] = code
-                converter.inverse_parallel_dict[self.output] = loc
-            else:
-                converter._function_string += code
+            self.generate_code_and_dag(converter, code)
         elif inline:
             left_input_var_name, right_input_var_name = self.get_binary_inputs(
-                converter, inline=True, loc=loc
+                converter, inline=True
             )
             result_var_name = "({} {} {})".format(
                 left_input_var_name, self.operator, right_input_var_name
@@ -916,15 +818,15 @@ class JuliaMinMax(JuliaBinaryOperation):
         self.shape = shape
         self.name = name
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
 
         if not inline:
             result_var_name = converter.create_cache(self)
             left_input_var_name, right_input_var_name = self.get_binary_inputs(
-                converter, inline=True, loc=loc
+                converter, inline=True
             )
             if converter._preallocate:
                 code = "@. {} = {}({},{})\n".format(
@@ -940,14 +842,10 @@ class JuliaMinMax(JuliaBinaryOperation):
                     left_input_var_name,
                     right_input_var_name,
                 )
-            if converter.parallel:
-                converter.parallel_dict[loc] = code
-                converter.inverse_parallel_dict[self.output] = loc
-            else:
-                converter._function_string += code
+            self.generate_code_and_dag(converter, code)
         elif inline:
             left_input_var_name, right_input_var_name = self.get_binary_inputs(
-                converter, inline=True, loc=loc
+                converter, inline=True
             )
             result_var_name = "{}({},{})".format(
                 self.name, left_input_var_name, right_input_var_name
@@ -968,16 +866,22 @@ class JuliaBroadcastableFunction(JuliaFunction):
         self.input = input
         self.output = output
         self.shape = shape
+    
+    def generate_code_and_dag(self, converter: JuliaConverter, code):
+        converter._code[self.output] = code
+        converter._dag[self.output] = {converter._intermediate[self.input].output}
+        if converter._parallel == "legacy-serial":
+            converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
         if not inline:
             result_var_name = converter.create_cache(self)
             input_var_name = converter._intermediate[
                 self.input
-            ]._convert_intermediate_to_code(converter, inline=True, loc=loc+"a")
+            ]._convert_intermediate_to_code(converter, inline=True)
             if converter._preallocate:
                 code = "@. {} = {}({})\n".format(
                     result_var_name, self.name, input_var_name
@@ -986,23 +890,19 @@ class JuliaBroadcastableFunction(JuliaFunction):
                 code = "{} = {}.({})\n".format(
                     result_var_name, self.name, input_var_name
                 )
-            if converter.parallel:
-                converter.parallel_dict[loc] = code
-                converter.inverse_parallel_dict[self.output] = loc
-            else:
-                converter._function_string += code
+            self.generate_code_and_dag(converter, code)
         else:
             # assume an @. has already been issued
             input_var_name = converter._intermediate[
                 self.input
-            ]._convert_intermediate_to_code(converter, inline=True, loc=loc+"a")
+            ]._convert_intermediate_to_code(converter, inline=True)
             result_var_name = "({}({}))".format(self.name, input_var_name)
         return result_var_name
 
 
 class JuliaNegation(JuliaBroadcastableFunction):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
 
@@ -1010,41 +910,33 @@ class JuliaNegation(JuliaBroadcastableFunction):
             result_var_name = converter.create_cache(self)
             input_var_name = converter._intermediate[
                 self.input
-            ]._convert_intermediate_to_code(converter, inline=True, loc=loc+"a")
+            ]._convert_intermediate_to_code(converter, inline=True)
             if converter._preallocate:
                 code = "@. {} = - {}\n".format(result_var_name, input_var_name)
             else:
                 code = "{} = -{}\n".format(result_var_name, input_var_name)
-            if converter.parallel:
-                converter.parallel_dict[loc] = code
-                converter.inverse_parallel_dict[self.output] = loc
-            else:
-                converter._function_string += code
+            self.generate_code_and_dag(converter, code)
         else:
             input_var_name = converter._intermediate[
                 self.input
-            ]._convert_intermediate_to_code(converter, inline=True, loc=loc+"a")
+            ]._convert_intermediate_to_code(converter, inline=True)
             result_var_name = "(- {})".format(input_var_name)
         return result_var_name
 
 
 class JuliaMinimumMaximum(JuliaBroadcastableFunction):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         result_var_name = converter.create_cache(self)
         input_var_name = converter._intermediate[
             self.input
-        ]._convert_intermediate_to_code(converter, inline=False, loc=loc+"a")
+        ]._convert_intermediate_to_code(converter, inline=False)
         if converter._preallocate:
             code = "{} .= {}({})\n".format(result_var_name, self.name, input_var_name)
         else:
             code = "{} = {}({})\n".format(result_var_name, self.name, input_var_name)
-        if converter.parallel:
-            converter.parallel_dict[loc] = code
-            converter.inverse_parallel_dict[self.output] = loc
-        else:
-            converter._function_string += code
+        self.generate_code_and_dag(converter, code)
         return result_var_name
 
 
@@ -1055,10 +947,17 @@ class JuliaIndex(object):
         self.output = output
         self.index = index
         self.shape = shape
+    
+    def generate_code_and_dag(self, converter: JuliaConverter, code):
+        input_id = converter._intermediate[self.input].output
+        converter._code[self.output] = code
+        converter._dag[self.output] = {input_id}
+        if converter._parallel == "legacy-serial":
+            converter._function_string += code
 
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         index = self.index
         inline = inline & converter._inline
@@ -1069,7 +968,7 @@ class JuliaIndex(object):
         if inline:
             input_var_name = converter._intermediate[
                 self.input
-            ]._convert_intermediate_to_code(converter, inline=False, loc=loc+"a")
+            ]._convert_intermediate_to_code(converter, inline=False)
             if type(index) is int:
                 return "{}[{}]".format(input_var_name, index + 1)
             elif type(index) is slice:
@@ -1089,7 +988,7 @@ class JuliaIndex(object):
             result_var_name = converter.create_cache(self)
             input_var_name = converter._intermediate[
                 self.input
-            ]._convert_intermediate_to_code(converter, inline=False, loc=loc+"a")
+            ]._convert_intermediate_to_code(converter, inline=False)
             if type(index) is int:
                 code = "@. {} = {}[{}{}".format(
                     result_var_name, input_var_name, index + 1, right_parenthesis
@@ -1113,39 +1012,39 @@ class JuliaIndex(object):
                     raise NotImplementedError("Step has to be an integer.")
             else:
                 raise NotImplementedError("Step must be a slice or an int")
-            if converter.parallel:
-                converter.parallel_dict[loc] = code
-                converter.inverse_parallel_dict[self.output] = loc
-            else:
-                converter._function_string += code
+            self.generate_code_and_dag(converter, code)
             return result_var_name
 
 
 # Values and Constants -- I will need to change this to inputs, due to t, y, and p.
 class JuliaValue(object):
-    pass
+    def generate_code_and_dag(self, converter: JuliaConverter):
+        pass
 
 
 class JuliaConstant(JuliaValue):
-    def __init__(self, id, value):
-        self.output = id
+    def __init__(self, my_id, value):
+        self.output = my_id
         self.value = value
         self.shape = value.shape
 
-    def _convert_intermediate_to_code(self, converter, inline=True, loc=""):
+    def _convert_intermediate_to_code(self, converter, inline=True):
         converter.create_const(self)
+        self.generate_code_and_dag(converter)
         return converter._const_dict[self.output]
 
 
+
 class JuliaStateVector(JuliaValue):
-    def __init__(self, id, loc, shape):
-        self.output = id
+    def __init__(self, my_id, loc, shape):
+        self.output = my_id
         self.loc = loc
         self.shape = shape
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
         start = self.loc[0] + 1
         end = self.loc[1]
+        self.generate_code_and_dag(converter)
         if start == end:
             return "(y[{}])".format(start)
         else:
@@ -1153,9 +1052,10 @@ class JuliaStateVector(JuliaValue):
 
 
 class JuliaStateVectorDot(JuliaStateVector):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
         start = self.loc[0] + 1
         end = self.loc[1]
+        self.generate_code_and_dag(converter)
         if start == end:
             return "(dy[{}])".format(start)
         else:
@@ -1163,31 +1063,34 @@ class JuliaStateVectorDot(JuliaStateVector):
 
 
 class JuliaScalar(JuliaConstant):
-    def __init__(self, id, value):
-        self.output = id
+    def __init__(self, my_id, value):
+        self.output = my_id
         self.value = float(value)
         self.shape = (1, 1)
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        self.generate_code_and_dag(converter)
         return self.value
 
 
 class JuliaTime(JuliaScalar):
-    def __init__(self, id):
-        self.output = id
+    def __init__(self, my_id):
+        self.output = my_id
         self.shape = (1, 1)
 
-    def _convert_intermediate_to_code(self, converter, inline=True, loc=""):
+    def _convert_intermediate_to_code(self, converter, inline=True):
+        self.generate_code_and_dag(converter)
         return "t"
 
 
 class JuliaInput(JuliaScalar):
-    def __init__(self, id, name):
-        self.output = id
+    def __init__(self, my_id, name):
+        self.output = my_id
         self.shape = (1, 1)
         self.name = name
 
-    def _convert_intermediate_to_code(self, converter, inline=True, loc=""):
+    def _convert_intermediate_to_code(self, converter, inline=True):
+        self.generate_code_and_dag(converter)
         return self.name
 
 
@@ -1197,9 +1100,17 @@ class JuliaConcatenation(object):
         self.output = output
         self.shape = shape
         self.children = children
+    
+    def generate_code_and_dag(self, converter: JuliaConverter,code):
+        ids = set(converter._intermediate[child].output for child in self.children)
+        converter._dag[self.output] = ids
+        converter._code[self.output] = code
+        if converter._parallel == "legacy-serial":
+            converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, self.children):
             return converter._cache_dict[self.output]
         num_cols = self.shape[1]
         my_name = converter.create_cache(self)
@@ -1216,7 +1127,7 @@ class JuliaConcatenation(object):
         # do the 0th one outside of the loop to initialize
         child = self.children[0]
         child_var = converter._intermediate[child]
-        child_var_name = child_var._convert_intermediate_to_code(converter, inline=True, loc=loc+"a")
+        child_var_name = child_var._convert_intermediate_to_code(converter, inline=True)
         start_row = 1
         if child_var.shape[0] == 0:
             end_row = 1
@@ -1247,7 +1158,7 @@ class JuliaConcatenation(object):
         for child in self.children[1:]:
             child_var = converter._intermediate[child]
             child_var_name = child_var._convert_intermediate_to_code(
-                converter, inline=True, loc=loc+counter
+                converter, inline=True
             )
             counter = chr(ord(counter) + 1)
             if child_var.shape[0] == 0:
@@ -1279,11 +1190,7 @@ class JuliaConcatenation(object):
                     code += ",{} )\n".format(child_var_name)
                 else:
                     code += ", {} ".format(child_var_name)
-        if converter.parallel:
-            converter.parallel_dict[loc] = code
-            converter.inverse_parallel_dict[self.output] = loc
-        else:
-            converter._function_string += code
+        self.generate_code_and_dag(converter,code)
         return my_name
 
 
@@ -1306,8 +1213,8 @@ class JuliaDomainConcatenation(JuliaConcatenation):
         self.secondary_dimension_npts = secondary_dimension_npts
         self.children_slices = children_slices
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, loc=""):
-        if converter.cache_exists(self.output,loc):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+        if converter.cache_exists(self.output, self.children):
             return converter._cache_dict[self.output]
         num_cols = self.shape[1]
         result_var_name = converter.create_cache(self)
@@ -1325,7 +1232,7 @@ class JuliaDomainConcatenation(JuliaConcatenation):
             for c in range(len(self.children)):
                 child = converter._intermediate[self.children[c]]
                 child_var_name = child._convert_intermediate_to_code(
-                    converter, inline=True, loc = loc+chr(ord("a")+c)
+                    converter, inline=True
                 )
                 this_slice = list(self.children_slices[c].values())[0][0]
                 start = this_slice.start
@@ -1354,7 +1261,7 @@ class JuliaDomainConcatenation(JuliaConcatenation):
                 for c in range(num_chil):
                     child = converter._intermediate[self.children[c]]
                     child_var_name = child._convert_intermediate_to_code(
-                        converter, inline=True, loc = loc+chr(ord("a")+(i*num_chil+c))
+                        converter, inline=True
                     )
                     this_slice = list(self.children_slices[c].values())[0][i]
                     start = this_slice.start
@@ -1391,9 +1298,5 @@ class JuliaDomainConcatenation(JuliaConcatenation):
                             code += ",(@view {}[{}:{}{})".format(
                                 child_var_name, start + 1, stop, right_parenthesis
                             )
-        if converter.parallel:
-            converter.parallel_dict[loc] = code
-            converter.inverse_parallel_dict[self.output] = loc
-        else:
-            converter._function_string += code
+        self.generate_code_and_dag(converter, code)
         return result_var_name
