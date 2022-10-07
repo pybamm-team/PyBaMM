@@ -42,14 +42,6 @@ class TestCasadiSolver(unittest.TestCase):
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
 
-        # Safe mode, without grid (enforce events that won't be triggered)
-        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
-        )
-
         # Fast with events
         # with an ODE model this behaves exactly the same as "fast"
         solver = pybamm.CasadiSolver(mode="fast with events", rtol=1e-8, atol=1e-8)
@@ -58,6 +50,58 @@ class TestCasadiSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
+
+    def test_without_grid(self):
+        t_eval = np.linspace(0, 1, 100)
+
+        # ODE model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.events = [pybamm.Event("an event", var + 1)]
+
+        # Safe mode, without grid (enforce events that won't be triggered)
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # DAE model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var: 0.1 * var}
+        model.algebraic = {var2: 1 - var2}
+        model.initial_conditions = {var: 1, var2: 1}
+        model.events = [pybamm.Event("an event", var + 1)]
+
+        # Safe mode, without grid (enforce events that won't be triggered)
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[0], np.exp(0.1 * t_eval), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[1], np.ones_like(t_eval), decimal=5
+        )
+
+        # DAE model, errors
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var: -pybamm.sqrt(var)}
+        model.algebraic = {var2: 1 - var2}
+        model.initial_conditions = {var: 1, var2: 1}
+        model.events = [pybamm.Event("an event", var + 1)]
+
+        # Safe mode, without grid (enforce events that won't be triggered)
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
+        with self.assertRaisesRegex(pybamm.SolverError, "Maximum number of decreased"):
+            solver.solve(model, [0, 10])
 
     def test_model_solver_python(self):
         # Create model

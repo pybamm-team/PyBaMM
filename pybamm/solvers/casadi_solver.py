@@ -203,8 +203,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 solved = False
                 count = 0
                 dt = dt_max
-                if termination_due_to_small_dt:
-                    solved = True
                 while not solved:
                     # Get window of time to integrate over (so that we return
                     # all the points in t_eval, not just t and t+dt)
