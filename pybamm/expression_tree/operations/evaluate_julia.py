@@ -12,10 +12,12 @@ import re
 import graphlib
 
 
-def get_lower_keys(key,all_keys):
+def get_lower_keys(key, all_keys):
     key_length = len(key)
-    all_lower_keys = list(filter(lambda this_key : len(this_key)>key_length, all_keys))
-    my_lower_keys = list(filter(lambda this_key : this_key[0:key_length]==key, all_lower_keys))
+    all_lower_keys = list(filter(lambda this_key: len(this_key) > key_length, all_keys))
+    my_lower_keys = list(
+        filter(lambda this_key: this_key[0:key_length] == key, all_lower_keys)
+    )
     return my_lower_keys
 
 
@@ -57,12 +59,14 @@ class JuliaConverter(object):
         dae_type="semi-explicit",
         input_parameter_order=[],
         inline=True,
-        parallel="legacy-serial"
+        parallel="legacy-serial",
     ):
         assert not ismtk
 
         if parallel != "legacy-serial" and inline:
-            raise NotImplementedError("Inline not supported with anything other than legacy-serial")
+            raise NotImplementedError(
+                "Inline not supported with anything other than legacy-serial"
+            )
 
         # Characteristics
         self._cache_type = cache_type
@@ -87,7 +91,7 @@ class JuliaConverter(object):
         self._cache_dict = OrderedDict()
         self._const_dict = OrderedDict()
 
-        #the real hero
+        # the real hero
         self._dag = {}
         self._code = {}
 
@@ -288,7 +292,6 @@ class JuliaConverter(object):
         child_shape = self._intermediate[id_lower].shape
         child_ncols = child_shape[1]
 
-
         my_id = symbol.id
         index = symbol.index
         if type(index) is slice:
@@ -302,7 +305,7 @@ class JuliaConverter(object):
             shape = (1, child_ncols)
         else:
             raise NotImplementedError("index must be slice or int")
-        
+
         self._intermediate[my_id] = JuliaIndex(id_lower, my_id, index, shape)
         return my_id
 
@@ -495,10 +498,11 @@ class JuliaConverter(object):
                         cache_name, cache_shape_st
                     )
                 )
-                self._cache_initialization_string +=\
+                self._cache_initialization_string += (
                     "{} = PreallocationTools.get_tmp({}_init,(@view y[1:{}]))\n".format(
                         cache_name, cache_name, cache_shape[0]
                     )
+                )
                 self._cache_dict[symbol.output] = cache_name
             elif self._cache_type == "symbolic":
                 if cache_shape[1] == 1:
@@ -581,7 +585,7 @@ class JuliaConverter(object):
         self._code = {}
         self._cache_id = 0
         self._const_id = 0
-    
+
     def write_function(self):
         ts = graphlib.TopologicalSorter(self._dag)
         if self._parallel is None:
@@ -612,7 +616,7 @@ class JuliaConverter(object):
         top = self._intermediate[next(reversed(self._intermediate))]
         # this line actually writes the code
         top_var_name = top._convert_intermediate_to_code(self, inline=False)
-        #if parallel is true, we haven't actually written the function yet
+        # if parallel is true, we haven't actually written the function yet
         self.write_function()
         # write the cache initialization
         self._cache_and_const_string = (
@@ -680,7 +684,6 @@ class JuliaConverter(object):
         self._convert_tree_to_intermediate(symbol)
         return 0
 
-
     # rework this at some point
     def build_julia_code(self, funcname="f", inline=True):
         # get top node of tree
@@ -705,7 +708,7 @@ class JuliaBinaryOperation(object):
             self.right_input
         ]._convert_intermediate_to_code(converter, inline=inline)
         return left_input_var_name, right_input_var_name
-    
+
     def generate_code_and_dag(self, converter, code):
         converter._code[self.output] = code
         l_id = converter._intermediate[self.left_input].output
@@ -739,7 +742,7 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
             code = "{} = {} * {}\n".format(
                 result_var_name, left_input_var_name, right_input_var_name
             )
-        #mat-mul is always creating a cache
+        # mat-mul is always creating a cache
         self.generate_code_and_dag(converter, code)
         return result_var_name
 
@@ -866,7 +869,7 @@ class JuliaBroadcastableFunction(JuliaFunction):
         self.input = input
         self.output = output
         self.shape = shape
-    
+
     def generate_code_and_dag(self, converter: JuliaConverter, code):
         converter._code[self.output] = code
         converter._dag[self.output] = {converter._intermediate[self.input].output}
@@ -947,14 +950,13 @@ class JuliaIndex(object):
         self.output = output
         self.index = index
         self.shape = shape
-    
+
     def generate_code_and_dag(self, converter: JuliaConverter, code):
         input_id = converter._intermediate[self.input].output
         converter._code[self.output] = code
         converter._dag[self.output] = {input_id}
         if converter._parallel == "legacy-serial":
             converter._function_string += code
-
 
     def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
         if converter.cache_exists(self.output, [self.input]):
@@ -978,7 +980,11 @@ class JuliaIndex(object):
                     )
                 elif type(index.step) is int:
                     return "(@view {}[{}:{}:{}{})".format(
-                        input_var_name, index.start + 1, index.step, index.stop, right_parenthesis
+                        input_var_name,
+                        index.start + 1,
+                        index.step,
+                        index.stop,
+                        right_parenthesis,
                     )
                 else:
                     raise NotImplementedError("Step has to be an integer.")
@@ -996,7 +1002,11 @@ class JuliaIndex(object):
             elif type(index) is slice:
                 if index.step is None:
                     code = "@. {} = (@view {}[{}:{}{})\n".format(
-                        result_var_name, input_var_name, index.start + 1, index.stop, right_parenthesis
+                        result_var_name,
+                        input_var_name,
+                        index.start + 1,
+                        index.stop,
+                        right_parenthesis,
                     )
                 elif type(index.step) is int:
                     code = "@. {} = (@view {}[{}:{}:{}{})\n".format(
@@ -1006,7 +1016,6 @@ class JuliaIndex(object):
                         index.step,
                         index.stop,
                         right_parenthesis,
-
                     )
                 else:
                     raise NotImplementedError("Step has to be an integer.")
@@ -1032,7 +1041,6 @@ class JuliaConstant(JuliaValue):
         converter.create_const(self)
         self.generate_code_and_dag(converter)
         return converter._const_dict[self.output]
-
 
 
 class JuliaStateVector(JuliaValue):
@@ -1100,14 +1108,13 @@ class JuliaConcatenation(object):
         self.output = output
         self.shape = shape
         self.children = children
-    
-    def generate_code_and_dag(self, converter: JuliaConverter,code):
+
+    def generate_code_and_dag(self, converter: JuliaConverter, code):
         ids = set(converter._intermediate[child].output for child in self.children)
         converter._dag[self.output] = ids
         converter._code[self.output] = code
         if converter._parallel == "legacy-serial":
             converter._function_string += code
-
 
     def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
         if converter.cache_exists(self.output, self.children):
@@ -1190,7 +1197,7 @@ class JuliaConcatenation(object):
                     code += ",{} )\n".format(child_var_name)
                 else:
                     code += ", {} ".format(child_var_name)
-        self.generate_code_and_dag(converter,code)
+        self.generate_code_and_dag(converter, code)
         return my_name
 
 
