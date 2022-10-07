@@ -28,15 +28,17 @@ class NoMechanics(BaseMechanics):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
+        domain, Domain = self.domain_Domain
+
         zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
+            pybamm.Scalar(0), f"{domain} electrode", "current collector"
         )
         zero_av = pybamm.x_average(zero)
         variables = self._get_standard_variables(zero)
         variables.update(
             {
-                self.domain + " particle cracking rate": zero,
-                "X-averaged " + self.domain + " particle cracking rate": zero_av,
+                f"{Domain} particle cracking rate": zero,
+                f"X-averaged {domain} particle cracking rate": zero_av,
             }
         )
         return variables

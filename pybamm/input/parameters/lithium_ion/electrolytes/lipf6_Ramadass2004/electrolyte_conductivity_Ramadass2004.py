@@ -32,9 +32,9 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
     sigma_e = (
         4.1253 * (10 ** (-4))
         + 5.007 * cm
-        - 4.7212 * (10 ** 3) * (cm ** 2)
-        + 1.5094 * (10 ** 6) * (cm ** 3)
-        - 1.6018 * (10 ** 8) * (cm ** 4)
+        - 4.7212 * (10**3) * (cm**2)
+        + 1.5094 * (10**6) * (cm**3)
+        - 1.6018 * (10**8) * (cm**4)
     ) * 1e3  # and here there should not be an exponent
 
     E_k_e = 34700

@@ -47,8 +47,7 @@ class BaseOpenCircuitPotential(BaseInterface):
             The variables dictionary including the open circuit potentials
             and related standard variables.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         # Update size variables then size average.
@@ -62,15 +61,13 @@ class BaseOpenCircuitPotential(BaseInterface):
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)
         ocp_av = pybamm.x_average(ocp)
-        if self.half_cell and self.domain == "Negative":
+        if self.options.electrode_types[domain] == "planar":
             # Half-cell domain, ocp should not be broadcast
             pass
         elif ocp.domain == []:
-            ocp = pybamm.FullBroadcast(
-                ocp, self.domain_for_broadcast, "current collector"
-            )
+            ocp = pybamm.FullBroadcast(ocp, f"{domain} electrode", "current collector")
         elif ocp.domain == ["current collector"]:
-            ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
+            ocp = pybamm.PrimaryBroadcast(ocp, f"{domain} electrode")
 
         pot_scale = self.param.potential_scale
         ocp_dim = self.domain_param.U_ref + pot_scale * ocp
@@ -106,20 +103,19 @@ class BaseOpenCircuitPotential(BaseInterface):
         A private function to obtain the open circuit potential and
         related standard variables when there is a distribution of particle sizes.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
         # X-average or broadcast to electrode if necessary
         if ocp.domains["secondary"] != [f"{domain} electrode"]:
             ocp_av = ocp
-            ocp = pybamm.SecondaryBroadcast(ocp, self.domain_for_broadcast)
+            ocp = pybamm.SecondaryBroadcast(ocp, f"{domain} electrode")
         else:
             ocp_av = pybamm.x_average(ocp)
 
         if dUdT.domains["secondary"] != [f"{domain} electrode"]:
             dUdT_av = dUdT
-            dUdT = pybamm.SecondaryBroadcast(dUdT, self.domain_for_broadcast)
+            dUdT = pybamm.SecondaryBroadcast(dUdT, f"{domain} electrode")
         else:
             dUdT_av = pybamm.x_average(dUdT)
 

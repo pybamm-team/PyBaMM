@@ -18,17 +18,21 @@ class BaseModel(pybamm.BaseSubModel):
             Q_Wh = pybamm.standard_variables.Q_Wh
             Qt_Wh = pybamm.standard_variables.Qt_Wh
             Qt_Ah = pybamm.standard_variables.Qt_Ah
-            variables.update({
-                "Discharge energy [W.h]": Q_Wh,
-                "Throughput energy [W.h]": Qt_Wh,
-                "Throughput capacity [A.h]": Qt_Ah,
-            })
+            variables.update(
+                {
+                    "Discharge energy [W.h]": Q_Wh,
+                    "Throughput energy [W.h]": Qt_Wh,
+                    "Throughput capacity [A.h]": Qt_Ah,
+                }
+            )
         else:
-            variables.update({
-                "Discharge energy [W.h]": pybamm.Scalar(0),
-                "Throughput energy [W.h]": pybamm.Scalar(0),
-                "Throughput capacity [A.h]": pybamm.Scalar(0),
-            })
+            variables.update(
+                {
+                    "Discharge energy [W.h]": pybamm.Scalar(0),
+                    "Throughput energy [W.h]": pybamm.Scalar(0),
+                    "Throughput capacity [A.h]": pybamm.Scalar(0),
+                }
+            )
         return variables
 
     def set_initial_conditions(self, variables):
@@ -71,9 +75,11 @@ class LeadingOrderBaseModel(BaseModel):
             Q_Wh = pybamm.Variable("Leading-order discharge energy [W.h]")
             Qt_Wh = pybamm.Variable("Leading-order throughput energy [W.h]")
             Qt_Ah = pybamm.Variable("Leading-order throughput capacity [A.h]")
-            variables.update({
-                "Discharge energy [W.h]": Q_Wh,
-                "Throughput energy [W.h]": Qt_Wh,
-                "Throughput capacity [A.h]": Qt_Ah,
-            })
+            variables.update(
+                {
+                    "Discharge energy [W.h]": Q_Wh,
+                    "Throughput energy [W.h]": Qt_Wh,
+                    "Throughput capacity [A.h]": Qt_Ah,
+                }
+            )
         return variables

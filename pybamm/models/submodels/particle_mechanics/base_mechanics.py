@@ -14,7 +14,7 @@ class BaseMechanics(pybamm.BaseSubModel):
     param : parameter class
         The parameters to use for this submodel
     domain : dict, optional
-        Dictionary of either the electrode for "Positive" or "Nagative"
+        Dictionary of either the electrode for "positive" or "Nagative"
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
@@ -40,26 +40,25 @@ class BaseMechanics(pybamm.BaseSubModel):
         pybamm.citations.register("Deshpande2012")
 
     def _get_standard_variables(self, l_cr):
-        domain = self.domain.lower() + " particle"
+        domain, Domain = self.domain_Domain
         l_cr0 = self.domain_param.l_cr_0
         l_cr_av = pybamm.x_average(l_cr)
         variables = {
-            self.domain + " particle crack length [m]": l_cr * l_cr0,
-            self.domain + " particle crack length": l_cr,
-            f"X-averaged {domain} crack length": l_cr_av,
-            f"X-averaged {domain} crack length [m]": l_cr_av * l_cr0,
+            f"{Domain} particle crack length [m]": l_cr * l_cr0,
+            f"{Domain} particle crack length": l_cr,
+            f"X-averaged {domain} particle crack length": l_cr_av,
+            f"X-averaged {domain} particle crack length [m]": l_cr_av * l_cr0,
         }
         return variables
 
     def _get_mechanical_results(self, variables):
         domain_param = self.domain_param
+        domain, Domain = self.domain_Domain
 
-        c_s_rav = variables[
-            "R-averaged " + self.domain.lower() + " particle concentration"
-        ]
-        c_s_surf = variables[self.domain + " particle surface concentration"]
+        c_s_rav = variables[f"R-averaged {domain} particle concentration"]
+        c_s_surf = variables[f"{Domain} particle surface concentration"]
         T_xav = variables["X-averaged cell temperature"]
-        eps_s = variables[self.domain + " electrode active material volume fraction"]
+        eps_s = variables[f"{Domain} electrode active material volume fraction"]
 
         if "Cell thickness change [m]" not in variables:
             cell_thickness_change = (
@@ -96,24 +95,18 @@ class BaseMechanics(pybamm.BaseSubModel):
         stress_t_surf_av = pybamm.x_average(stress_t_surf)
 
         return {
-            self.domain + " particle surface tangential stress": stress_t_surf,
-            self.domain + " particle surface radial stress": stress_r_surf,
-            self.domain + " particle surface displacement": disp_surf,
-            self.domain + " particle surface tangential stress [Pa]": stress_t_surf_dim,
-            self.domain + " particle surface radial stress [Pa]": stress_r_surf_dim,
-            self.domain + " particle surface displacement [m]": disp_surf_dim,
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface radial stress": stress_r_surf_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface radial stress [Pa]": stress_r_surf_av * E0,
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface tangential stress": stress_t_surf_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface tangential stress [Pa]": stress_t_surf_av * E0,
+            f"{Domain} particle surface tangential stress": stress_t_surf,
+            f"{Domain} particle surface radial stress": stress_r_surf,
+            f"{Domain} particle surface displacement": disp_surf,
+            f"{Domain} particle surface tangential stress [Pa]": stress_t_surf_dim,
+            f"{Domain} particle surface radial stress [Pa]": stress_r_surf_dim,
+            f"{Domain} particle surface displacement [m]": disp_surf_dim,
+            f"X-averaged {domain} particle surface radial stress": stress_r_surf_av,
+            f"X-averaged {domain} particle surface "
+            "radial stress [Pa]": stress_r_surf_av * E0,
+            f"X-averaged {domain} particle surface tangential stress": stress_t_surf_av,
+            f"X-averaged {domain} particle surface "
+            "tangential stress [Pa]": stress_t_surf_av * E0,
             "Cell thickness change [m]": cell_thickness_change,
         }
 
@@ -134,8 +127,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the crack length.
         """
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         l_cr = variables[f"{Domain} particle crack length"]

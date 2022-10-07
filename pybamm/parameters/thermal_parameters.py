@@ -21,10 +21,14 @@ class ThermalParameters(BaseParameters):
         # Get geometric parameters
         self.geo = pybamm.geometric_parameters
 
-        self.n = DomainThermalParameters("Negative", self)
-        self.s = DomainThermalParameters("Separator", self)
-        self.p = DomainThermalParameters("Positive", self)
-        self.domain_params = [self.n, self.s, self.p]
+        self.n = DomainThermalParameters("negative", self)
+        self.s = DomainThermalParameters("separator", self)
+        self.p = DomainThermalParameters("positive", self)
+        self.domain_params = {
+            "negative": self.n,
+            "separator": self.s,
+            "positive": self.p,
+        }
 
         # Set parameters
         self._set_dimensional_parameters()
@@ -32,7 +36,7 @@ class ThermalParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensional_parameters()
 
         # Reference temperature
@@ -56,7 +60,7 @@ class ThermalParameters(BaseParameters):
 
         # Planar (y,z) thermal diffusion timescale
         self.tau_th_yz = (
-            self.rho_eff_dim_ref * (self.geo.L_z ** 2) / self.lambda_eff_dim_ref
+            self.rho_eff_dim_ref * (self.geo.L_z**2) / self.lambda_eff_dim_ref
         )
 
     def T_amb_dim(self, t):
@@ -85,7 +89,7 @@ class ThermalParameters(BaseParameters):
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensionless_parameters()
 
         # Relative temperature rise
@@ -122,61 +126,68 @@ class DomainThermalParameters(BaseParameters):
         self.main_param = main_param
 
     def _set_dimensional_parameters(self):
+        Domain = self.domain.capitalize()
         self.h_cc_dim = pybamm.Parameter(
-            f"{self.domain} current collector surface heat transfer coefficient "
+            f"{Domain} current collector surface heat transfer coefficient "
             "[W.m-2.K-1]"
         )
         self.h_tab_dim = pybamm.Parameter(
-            f"{self.domain} tab heat transfer coefficient [W.m-2.K-1]"
+            f"{Domain} tab heat transfer coefficient [W.m-2.K-1]"
         )
 
     def c_p_dim(self, T):
         """Electrode specific heat capacity [J.kg-1.K-1]"""
         inputs = {"Temperature [K]": T}
-        if self.domain == "Separator":
+        if self.domain == "separator":
             name = "Separator specific heat capacity [J.kg-1.K-1]"
         else:
-            name = f"{self.domain} electrode specific heat capacity [J.kg-1.K-1]"
+            Domain = self.domain.capitalize()
+            name = f"{Domain} electrode specific heat capacity [J.kg-1.K-1]"
         return pybamm.FunctionParameter(name, inputs)
 
     def c_p_cc_dim(self, T):
         """Current collector specific heat capacity [J.kg-1.K-1]"""
         inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{self.domain} current collector specific heat capacity [J.kg-1.K-1]",
+            f"{Domain} current collector specific heat capacity [J.kg-1.K-1]",
             inputs,
         )
 
     def lambda_dim(self, T):
         """Electrode thermal conductivity [W.m-1.K-1]"""
         inputs = {"Temperature [K]": T}
-        if self.domain == "Separator":
+        if self.domain == "separator":
             name = "Separator thermal conductivity [W.m-1.K-1]"
         else:
-            name = f"{self.domain} electrode thermal conductivity [W.m-1.K-1]"
+            Domain = self.domain.capitalize()
+            name = f"{Domain} electrode thermal conductivity [W.m-1.K-1]"
         return pybamm.FunctionParameter(name, inputs)
 
     def lambda_cc_dim(self, T):
         """Current collector thermal conductivity [W.m-1.K-1]"""
         inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{self.domain} current collector thermal conductivity [W.m-1.K-1]", inputs
+            f"{Domain} current collector thermal conductivity [W.m-1.K-1]", inputs
         )
 
     def rho_dim(self, T):
         """Electrode density [kg.m-3]"""
         inputs = {"Temperature [K]": T}
-        if self.domain == "Separator":
+        if self.domain == "separator":
             name = "Separator density [kg.m-3]"
         else:
-            name = f"{self.domain} electrode density [kg.m-3]"
+            Domain = self.domain.capitalize()
+            name = f"{Domain} electrode density [kg.m-3]"
         return pybamm.FunctionParameter(name, inputs)
 
     def rho_cc_dim(self, T):
         """Current collector density [kg.m-3]"""
         inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{self.domain} current collector density [kg.m-3]", inputs
+            f"{Domain} current collector density [kg.m-3]", inputs
         )
 
     def _set_dimensionless_parameters(self):

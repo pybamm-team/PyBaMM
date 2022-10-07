@@ -31,8 +31,8 @@ class Composite(Full):
 
     def get_coupled_variables(self, variables):
 
-        tor_0_s = variables["Leading-order separator transport efficiency"]
-        tor_0_p = variables["Leading-order positive electrode transport efficiency"]
+        tor_0_s = variables["Leading-order separator electrolyte transport efficiency"]
+        tor_0_p = variables["Leading-order positive electrolyte transport efficiency"]
         tor_0 = pybamm.concatenation(tor_0_s, tor_0_p)
 
         c_ox = variables["Separator and positive electrode oxygen concentration"]

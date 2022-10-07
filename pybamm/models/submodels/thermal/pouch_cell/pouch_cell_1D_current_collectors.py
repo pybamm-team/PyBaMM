@@ -37,18 +37,21 @@ class CurrentCollector1D(BaseThermal):
 
     def get_fundamental_variables(self):
 
-        T_x_av = pybamm.standard_variables.T_av
+        T_x_av = pybamm.Variable(
+            "X-averaged cell temperature", domain="current collector"
+        )
         T_vol_av = self._yz_average(T_x_av)
 
-        T_cn = T_x_av
-        T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
-        T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
-        T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T_cp = T_x_av
+        T_dict = {
+            "negative current collector": T_x_av,
+            "positive current collector": T_x_av,
+            "x-averaged cell": T_x_av,
+            "volume-averaged cell": T_vol_av,
+        }
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
-        variables = self._get_standard_fundamental_variables(
-            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
-        )
+        variables = self._get_standard_fundamental_variables(T_dict)
 
         return variables
 
@@ -71,7 +74,7 @@ class CurrentCollector1D(BaseThermal):
             -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
-            / (self.param.delta ** 2)
+            / (self.param.delta**2)
         )
 
         side_edge_area = 2 * self.param.l_z * self.param.l

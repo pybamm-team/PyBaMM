@@ -61,10 +61,10 @@ class BasePotentialPair(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
 
         self.algebraic = {
-            phi_s_cn: (param.n.sigma_cc * param.delta ** 2 * param.n.l_cc)
+            phi_s_cn: (param.n.sigma_cc * param.delta**2 * param.n.l_cc)
             * pybamm.laplacian(phi_s_cn)
             - pybamm.source(i_boundary_cc, phi_s_cn),
-            i_boundary_cc: (param.p.sigma_cc * param.delta ** 2 * param.p.l_cc)
+            i_boundary_cc: (param.p.sigma_cc * param.delta**2 * param.p.l_cc)
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc, phi_s_cp),
         }
@@ -100,7 +100,7 @@ class PotentialPair1plus1D(BasePotentialPair):
         pos_tab_bc = (
             -applied_current
             * cc_area
-            / (param.p.sigma_cc * param.delta ** 2 * param.p.l_cc)
+            / (param.p.sigma_cc * param.delta**2 * param.p.l_cc)
         )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
@@ -149,7 +149,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         pos_tab_bc = (
             -applied_current
             * cc_area
-            / (param.p.sigma_cc * param.delta ** 2 * positive_tab_area)
+            / (param.p.sigma_cc * param.delta**2 * positive_tab_area)
         )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,

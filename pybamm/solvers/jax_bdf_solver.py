@@ -227,7 +227,7 @@ if pybamm.have_jax():
         state["M"] = mass
         EPS = jnp.finfo(y0.dtype).eps
         state["newton_tol"] = jnp.maximum(
-            10 * EPS / rtol, jnp.minimum(0.03, rtol ** 0.5)
+            10 * EPS / rtol, jnp.minimum(0.03, rtol**0.5)
         )
 
         scale_y0 = atol + rtol * jnp.abs(y0)
@@ -569,7 +569,7 @@ if pybamm.have_jax():
         return converged, k, y, d, state._replace(n_function_evals=n_function_evals)
 
     def rms_norm(arg):
-        return jnp.sqrt(jnp.mean(arg ** 2))
+        return jnp.sqrt(jnp.mean(arg**2))
 
     def _prepare_next_step(state, d):
         D = _update_difference_for_next_step(state, d)

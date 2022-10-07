@@ -882,7 +882,7 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
     if (
         esoh_solver is not None
         and isinstance(model, pybamm.lithium_ion.BaseModel)
-        and model.half_cell is False
+        and model.options.electrode_types["negative"] == "porous"
     ):
         V_min = esoh_solver.parameter_values["Lower voltage cut-off [V]"]
         V_max = esoh_solver.parameter_values["Upper voltage cut-off [V]"]

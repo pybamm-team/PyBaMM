@@ -24,9 +24,10 @@ class Constant(BaseModel):
     """
 
     def get_fundamental_variables(self):
+        domain = self.domain
         eps_solid = self.phase_param.epsilon_s
         deps_solid_dt = pybamm.FullBroadcast(
-            0, f"{self.domain.lower()} electrode", "current collector"
+            0, f"{domain} electrode", "current collector"
         )
 
         variables = self._get_standard_active_material_variables(eps_solid)

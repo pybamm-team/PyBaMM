@@ -39,19 +39,31 @@ class OneDimensionalX(BaseThermal):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-        T_n = pybamm.standard_variables.T_n
-        T_s = pybamm.standard_variables.T_s
-        T_p = pybamm.standard_variables.T_p
-        T_cn = pybamm.BoundaryValue(T_n, "left")
-        T_cp = pybamm.BoundaryValue(T_p, "right")
+        T_dict = {}
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            Domain = domain.capitalize()
+            T_k = pybamm.Variable(
+                f"{Domain} temperature",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            T_dict[domain] = T_k
 
-        T = pybamm.concatenation(T_n, T_s, T_p)
+        T = pybamm.concatenation(*T_dict.values())
+        T_cn = pybamm.boundary_value(T_dict["negative electrode"], "left")
+        T_cp = pybamm.boundary_value(T_dict["positive electrode"], "right")
         T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
-
-        variables = self._get_standard_fundamental_variables(
-            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
+        T_dict.update(
+            {
+                "negative current collector": T_cn,
+                "positive current collector": T_cp,
+                "x-averaged cell": T_x_av,
+                "volume-averaged cell": T_vol_av,
+            }
         )
+
+        variables = self._get_standard_fundamental_variables(T_dict)
         return variables
 
     def get_coupled_variables(self, variables):
@@ -85,7 +97,7 @@ class OneDimensionalX(BaseThermal):
 
         # N.B only y-z surface cooling is implemented for this model
         self.rhs = {
-            T: (-pybamm.div(q) / self.param.delta ** 2 + self.param.B * Q)
+            T: (-pybamm.div(q) / self.param.delta**2 + self.param.B * Q)
             / (self.param.C_th * rho_k)
         }
 

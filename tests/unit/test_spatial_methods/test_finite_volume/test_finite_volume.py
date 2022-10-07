@@ -89,7 +89,7 @@ class TestFiniteVolume(unittest.TestCase):
         y_test = np.ones_like(combined_submesh.nodes[:, np.newaxis])
         for eqn in [
             var * pybamm.grad(var),
-            var ** 2 * pybamm.grad(var),
+            var**2 * pybamm.grad(var),
             var * pybamm.grad(var) ** 2,
             var * (pybamm.grad(var) + 2),
             (pybamm.grad(var) + 2) * (-var),

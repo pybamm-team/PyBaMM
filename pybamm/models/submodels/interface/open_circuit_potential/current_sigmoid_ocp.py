@@ -12,7 +12,7 @@ class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
         m_lith = pybamm.sigmoid(current, 0, k)  # for lithation (current < 0)
         m_delith = 1 - m_lith  # for delithiation (current > 0)
 
-        Domain = self.domain
+        Domain = self.domain.capitalize()
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
