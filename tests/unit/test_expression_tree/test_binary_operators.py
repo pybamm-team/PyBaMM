@@ -532,7 +532,7 @@ class TestBinaryOperators(unittest.TestCase):
 
         # division with a common term
         self.assertEqual((2 * c) / (2 * var), (c / var))
-        self.assertEqual((c * 2) / (var*2), (c / var))
+        self.assertEqual((c * 2) / (var * 2), (c / var))
 
     def test_binary_simplifications_concatenations(self):
         def conc_broad(x, y, z):
