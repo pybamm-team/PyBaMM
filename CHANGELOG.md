@@ -4,6 +4,10 @@
 
 - For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2331](https://github.com/pybamm-team/PyBaMM/pull/2337))
 
+## Optimizations
+
+- Added more rules for simplifying expressions ([#2211](https://github.com/pybamm-team/PyBaMM/pull/2211))
+
 ## Breaking change
 
 - Removed parameter cli tools (add/edit/remove parameters). Parameter sets can now more easily be added via python scripts. ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))

@@ -530,6 +530,10 @@ class TestBinaryOperators(unittest.TestCase):
         with self.assertRaises(ZeroDivisionError):
             b / a
 
+        # division with a common term
+        self.assertEqual((2 * c) / (2 * var), (c / var))
+        self.assertEqual((c * 2) / (var * 2), (c / var))
+
     def test_binary_simplifications_concatenations(self):
         def conc_broad(x, y, z):
             return pybamm.concatenation(
@@ -564,7 +568,9 @@ class TestBinaryOperators(unittest.TestCase):
         # MatMul simplifications that often appear when discretising spatial operators
         A = pybamm.Matrix(np.random.rand(10, 10))
         B = pybamm.Matrix(np.random.rand(10, 10))
+        # C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
+        # var2 = pybamm.StateVector(slice(10, 20))
         vec = pybamm.Vector(np.random.rand(10))
 
         # Do A@B first if it is constant
@@ -575,9 +581,19 @@ class TestBinaryOperators(unittest.TestCase):
         # constant
         expr = A @ (var + vec)
         self.assertEqual(expr, ((A @ var) + (A @ vec)))
+        expr = A @ (var - vec)
+        self.assertEqual(expr, ((A @ var) - (A @ vec)))
 
         expr = A @ ((B @ var) + vec)
         self.assertEqual(expr, (((A @ B) @ var) + (A @ vec)))
+        expr = A @ ((B @ var) - vec)
+        self.assertEqual(expr, (((A @ B) @ var) - (A @ vec)))
+
+        # Distribute the @ operator to a sum if both symbols being summed are matmuls
+        # expr = A @ (B @ var + C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
+        # expr = A @ (B @ var - C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
 
         # Reduce (A@var + B@var) to ((A+B)@var)
         expr = A @ var + B @ var
