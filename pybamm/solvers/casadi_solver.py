@@ -237,7 +237,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         # also reduce maximum step size for future global steps,
                         # but skip them in the beginning
                         # sometimes, for the first integrator smaller timesteps are
-                        # neeeded, but this won't affect the global timesteps. The
+                        # needed, but this won't affect the global timesteps. The
                         # global timestep will only be reduced after the first timestep.
                         if first_ts_solved:
                             dt_max = dt
