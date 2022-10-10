@@ -1259,7 +1259,7 @@ class Discretisation(object):
                         model.rhs[var], my_initial_condition
                     )
                     # edge case where a variable appears
-                    # in the rhs twice under different names
+                    # in variables twice under different names
                     for key in model.variables:
                         if model.variables[key] == var:
                             model.variables[key] = model.variables[var.name]
