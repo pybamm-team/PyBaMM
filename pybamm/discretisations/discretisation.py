@@ -94,7 +94,13 @@ class Discretisation(object):
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True, check_model=True):
+    def process_model(
+        self,
+        model,
+        inplace=True,
+        check_model=True,
+        check_for_independent_variables=True
+    ):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -109,8 +115,14 @@ class Discretisation(object):
         check_model : bool, optional
             If True, model checks are performed after discretisation. For large
             systems these checks can be slow, so can be skipped by setting this
-            option to False. When developing, testing or debugging it is recommened
+            option to False. When developing, testing or debugging it is recommended
             to leave this option as True as it may help to identify any errors.
+            Default is True.
+        check_for_independent_variables : bool, optional
+            If True, model checks to see whether any variables from the RHS are used
+            in any other equation. If a variable meets all of the following criteria
+            (not used anywhere in the model, len(rhs)>1), then the variable
+            is moved to be explicitly integrated when called by the solution object.
             Default is True.
 
         Returns
@@ -150,7 +162,8 @@ class Discretisation(object):
         # set variables (we require the full variable not just id)
 
         # Search Equations for Independence
-        model = self.check_for_independent_variables(model)
+        if check_for_independent_variables:
+            model = self.check_for_independent_variables(model)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
@@ -1264,20 +1277,6 @@ class Discretisation(object):
                         if model.variables[key] == var:
                             model.variables[key] = model.variables[var.name]
                     del model.rhs[var]
-                    del model.initial_conditions[var]
-                else:
-                    break
-        algebraic_vars_to_search_over = list(model.algebraic.keys())
-        for var in algebraic_vars_to_search_over:
-            model, this_var_is_independent = self.search_for_independent_var(model, var)
-            if this_var_is_independent:
-                if len(model.algebraic) != 1:
-                    pybamm.logger.info(
-                        "removing variable {} from algebraic".format(var)
-                    )
-                    my_initial_condition = model.initial_conditions[var]
-                    model.variables[var.name] = model.algebraic[var]
-                    del model.algebraic[var]
                     del model.initial_conditions[var]
                 else:
                     break
