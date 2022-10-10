@@ -529,7 +529,10 @@ def init_exp(cell_no,dfe,spm,parameter_values):
         c_rate_c = 'C/5'
         c_rate_d = '1.5C'
         dis_set = " for 20 min"
-
+    elif (int(cell_no)-1)//3 ==6:
+        c_rate_c = '1.5C'
+        c_rate_d = '1.5C'
+        dis_set = " for 20 min"
     if int(cell_no)%3 == 0:
         Temp = 45
     if int(cell_no)%3 == 1:
