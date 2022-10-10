@@ -1215,7 +1215,7 @@ class Discretisation(object):
                     )
 
     def search_for_independent_var(self, model, var):
-        pybamm.logger.info("Removing independent blocks.")
+        pybamm.logger.verbose("Removing independent blocks.")
         boundary_variables = list(model.boundary_conditions.keys())
         boundary_variable_keys = []
         for condition in boundary_variables:
@@ -1235,8 +1235,8 @@ class Discretisation(object):
                 pybamm.tree_search(
                     model.boundary_conditions[tree][key][0], var, this_var_list
                 )
-        for tree in model.variables.keys():
-            for rhs_child in model.variables[tree].children:
+        for name in model.variables.keys():
+            for rhs_child in model.variables[name].children:
                 pybamm.tree_search(rhs_child, var, this_var_list)
         this_var_is_independent = not any(this_var_list)
         not_in_y_slices = not (var in list(self.y_slices.keys()))
