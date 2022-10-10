@@ -1224,21 +1224,8 @@ class Discretisation(object):
         rhs_variables = list(model.rhs.keys())
         algebraic_variables = list(model.algebraic.keys())
         this_var_list = []
-        for child in var.children:
-            for tree in rhs_variables:
-                pybamm.tree_search(model.rhs[tree], child, this_var_list)
-            for tree in algebraic_variables:
-                pybamm.tree_search(model.algebraic[tree], child, this_var_list)
-            for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-                for key in keys:
-                    pybamm.tree_search(
-                        model.boundary_conditions[tree][key][0],
-                        child,
-                        this_var_list,
-                    )
-            for tree in model.variables.keys():
-                for rhs_child in model.variables[tree].children:
-                    pybamm.tree_search(rhs_child, var, this_var_list)
+        if not isinstance(var, pybamm.Variable):
+            return model, False
         for tree in rhs_variables:
             pybamm.tree_search(model.rhs[tree], var, this_var_list)
         for tree in algebraic_variables:
