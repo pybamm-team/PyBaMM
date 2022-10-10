@@ -99,7 +99,7 @@ class Discretisation(object):
         model,
         inplace=True,
         check_model=True,
-        check_for_independent_variables=True
+        check_for_independent_variables=True,
     ):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
