@@ -248,6 +248,86 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
 
+    def test_sensitivities_with_events(self):
+        # this test implements a python version of the ida Roberts
+        # example provided in sundials
+        # see sundials ida examples pdf
+        for form in ["python", "casadi", "jax"]:
+            if form == "jax" and not pybamm.have_jax():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            u = pybamm.Variable("u")
+            v = pybamm.Variable("v")
+            a = pybamm.InputParameter("a")
+            b = pybamm.InputParameter("b")
+            model.rhs = {u: a * v + b}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u: 0, v: 1}
+            model.events = [pybamm.Event("1", 0.2 - u)]
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            solver = pybamm.IDAKLUSolver(root_method=root_method)
+
+            t_eval = np.linspace(0, 3, 100)
+            a_value = 0.1
+            b_value = 0.0
+
+            # solve first without sensitivities
+            sol = solver.solve(
+                model,
+                t_eval,
+                inputs={"a": a_value, "b": b_value},
+                calculate_sensitivities=True,
+            )
+
+            # test that y[1] remains constant
+            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
+
+            # test that y[0] = to true solution
+            true_solution = a_value * sol.t
+            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+
+            # evaluate the sensitivities using idas
+            dyda_ida = sol.sensitivities["a"]
+            dydb_ida = sol.sensitivities["b"]
+
+            # evaluate the sensitivities using finite difference
+            h = 1e-6
+            sol_plus = solver.solve(
+                model, t_eval, inputs={"a": a_value + 0.5 * h, "b": b_value}
+            )
+            sol_neg = solver.solve(
+                model, t_eval, inputs={"a": a_value - 0.5 * h, "b": b_value}
+            )
+            max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
+            dyda_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
+            dyda_fd = dyda_fd.transpose().reshape(-1, 1)
+
+            np.testing.assert_array_almost_equal(
+                dyda_ida[: (2 * max_index), :], dyda_fd
+            )
+
+            sol_plus = solver.solve(
+                model, t_eval, inputs={"a": a_value, "b": b_value + 0.5 * h}
+            )
+            sol_neg = solver.solve(
+                model, t_eval, inputs={"a": a_value, "b": b_value - 0.5 * h}
+            )
+            max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
+            dydb_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
+            dydb_fd = dydb_fd.transpose().reshape(-1, 1)
+
+            np.testing.assert_array_almost_equal(
+                dydb_ida[: (2 * max_index), :], dydb_fd
+            )
+
     def test_set_atol(self):
         model = pybamm.lithium_ion.DFN()
         geometry = model.default_geometry
