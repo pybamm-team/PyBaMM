@@ -81,7 +81,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
         Exchange-current density [A.m-2]
     """
     m_ref = 1.061 * 10 ** (-6)  # unit has been converted
-    # units are (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    # units are (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 37480
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
@@ -203,7 +203,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 4.824 * 10 ** (-6)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = 4.824 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 39570
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
@@ -416,7 +416,6 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28746.0,
-        "Negative electrode diffusion coefficient [m2.s-1]": 5e-15,
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_PeymanMPM,
         "Negative electrode OCP [V]": graphite_ocp_PeymanMPM,
         "Negative electrode porosity": 0.3,

@@ -84,7 +84,7 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 4.854 * 10 ** (-6)  # (A/m2)(mol/m3)**1.5
+    m_ref = 4.854 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
     E_r = 37480
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
@@ -222,7 +222,7 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 2.252 * 10 ** (-6)  # (A/m2)(mol/m3)**1.5
+    m_ref = 2.252 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
     E_r = 39570
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 

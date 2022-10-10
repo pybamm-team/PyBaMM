@@ -140,7 +140,7 @@ def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_m
     # multiply by Faraday's constant to get correct units
     m_ref = (
         pybamm.constants.F * k_ref
-    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 53400
 
     arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(
@@ -285,7 +285,7 @@ def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T
     # multiply by Faraday's constant to get correct units
     m_ref = (
         pybamm.constants.F * k_ref
-    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
     E_r = 4.36e4
     arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(

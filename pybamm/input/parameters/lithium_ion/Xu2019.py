@@ -111,7 +111,7 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
     # assuming implicit correction of incorrect units from the paper
     m_ref = (
         5.76e-11 * pybamm.constants.F
-    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
     return m_ref * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 

@@ -30,7 +30,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     """
     D_ref = 3.9 * 10 ** (-14)
     E_D_s = 5000
-    T_ref = pybamm.Parameter("Reference temperature [K]")
+    T_ref = 298.15
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius
 
@@ -64,7 +64,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     """
     m_ref = (
         1 * 10 ** (-11) * pybamm.constants.F
-    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 5000  # activation energy for Temperature Dependent Reaction Constant [J/mol]
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
@@ -204,7 +204,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = pybamm.Parameter("Reference temperature [K]")
+    T_ref = 298.15
     Eac_cr = pybamm.Parameter(
         "Negative electrode activation energy for cracking rate [J.mol-1]"
     )
@@ -235,7 +235,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     """
     D_ref = 5.387 * 10 ** (-15)
     E_D_s = 5000
-    T_ref = pybamm.Parameter("Reference temperature [K]")
+    T_ref = 298.15
     arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius
 
@@ -266,7 +266,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
         Exchange-current density [A.m-2]
     """
     m_ref = 1 * 10 ** (-11) * pybamm.constants.F  # need to match the unit from m/s
-    # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 5000
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
@@ -383,7 +383,7 @@ def lico2_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = pybamm.Parameter("Reference temperature [K]")
+    T_ref = 298.15
     Eac_cr = pybamm.Parameter(
         "Positive electrode activation energy for cracking rate [J.mol-1]"
     )
@@ -414,7 +414,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     :class:`pybamm.Symbol`
         1 + dlnf/dlnc
     """
-    T_ref = pybamm.Parameter("Reference temperature [K]")
+    T_ref = 298.15
     t_plus = pybamm.Parameter("Cation transference number")
     dlnf_dlnc = (
         0.601

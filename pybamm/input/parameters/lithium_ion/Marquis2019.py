@@ -85,7 +85,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 2 * 10 ** (-5)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = 2 * 10 ** (-5)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 37480
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
@@ -216,7 +216,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 6 * 10 ** (-7)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = 6 * 10 ** (-7)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 39570
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
