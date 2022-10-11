@@ -13,8 +13,7 @@ from pybamm.parameters import parameter_sets
 
 
 DOC_INTRO = """
-Parameter sets from papers. The 'citation' entry provides a reference to the appropriate
-paper in the file "pybamm/CITATIONS.txt". To see which parameter sets have been used in
+Parameter sets from papers. To see which parameter sets have been used in
 your simulation, add the line "pybamm.print_citations()" to your script."""
 
 
@@ -24,20 +23,16 @@ def get_ps_dict():
     parameter_sets.py
     """
     parameter_set_dict = defaultdict(list)
-    for ps_name, ps_dict in parameter_sets.__dict__.items():
-        if not isinstance(ps_dict, dict):
-            continue
-        elif "citation" not in ps_dict or "chemistry" not in ps_dict:
-            continue
+    for chemistry, ps_names in pybamm.parameter_sets.all_parameter_sets.items():
+        for ps_name in ps_names:
+            ps = pybamm.ParameterValues(ps_name)
+            citation = ps["citations"]
 
-        chemistry = ps_dict["chemistry"]
-        citation = ps_dict["citation"]
+            # Enclose citation in a list if not already enclosed
+            if not isinstance(citation, list):
+                citation = [citation]
 
-        # Enclose citation in a list if not already enclosed
-        if not isinstance(citation, list):
-            citation = [citation]
-
-        parameter_set_dict[chemistry].append((ps_name, citation))
+            parameter_set_dict[chemistry].append((ps_name, citation))
     return parameter_set_dict
 
 

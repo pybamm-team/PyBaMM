@@ -1,9 +1,5 @@
-#
-# Parameter sets from papers
-#
 """
-Parameter sets from papers. The 'citation' entry provides a reference to the appropriate
-paper in the file "pybamm/CITATIONS.txt". To see which parameter sets have been used in
+Parameter sets from papers. To see which parameter sets have been used in
 your simulation, add the line "pybamm.print_citations()" to your script.
 
 Lead-acid parameter sets
@@ -76,6 +72,11 @@ Lithium-ion parameter sets
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+       - Simon E. J. O'Kane, Ian D. Campbell, Mohamed W. J. Marzook, Gregory J. Offer,
+         and Monica Marinescu. Physical origin of the differential voltage minimum
+         associated with lithium plating in li-ion batteries. Journal of The
+         Electrochemical Society, 167(9):090540, may 2020. URL:
+         https://doi.org/10.1149/1945-7111/ab90ac, doi:10.1149/1945-7111/ab90ac.
        - Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez,
          Robert Timms, Valentin Sulzer, Jacqueline Sophie Edge, Billy Wu, Gregory J.
          Offer, and Monica Marinescu. Lithium-ion battery degradation: how to model it.
@@ -98,6 +99,9 @@ Lithium-ion parameter sets
        - Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
          power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.
          doi:10.3390/batteries5040064.
+       - Andreas Nyman, Mårten Behm, and Göran Lindbergh. Electrochemical
+         characterisation and modelling of the mass transport phenomena in lipf6–ec–emc
+         electrolyte. Electrochimica Acta, 53(22):6356–6365, 2008.
        - Eric Prada, D. Di Domenico, Y. Creff, J. Bernard, Valérie Sauvant-Moynot, and
          François Huet. A simplified electrochemical and thermal aging model of
          LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
@@ -108,177 +112,58 @@ Lithium-ion parameter sets
          Journal of the Electrochemical Society, 151(2):A196, 2004.
          doi:10.1149/1.1634273.
     * Xu2019 :
+       - Lars Ole Valøen and Jan N Reimers. Transport properties of lipf6-based li-ion
+         battery electrolytes. Journal of The Electrochemical Society, 152(5):A882,
+         2005.
        - Shanshan Xu, Kuan-Hung Chen, Neil P Dasgupta, Jason B Siegel, and Anna G
          Stefanopoulou. Evolution of dead lithium growth in lithium metal batteries:
          experimentally validated model of the apparent capacity loss. Journal of The
          Electrochemical Society, 166(14):A3456, 2019.
 """
+import warnings
 
-#
-# Lithium-ion
-#
 
-NCA_Kim2011 = {
-    "chemistry": "lithium_ion",
-    "cell": "Kim2011",
-    "negative electrode": "graphite_Kim2011",
-    "separator": "separator_Kim2011",
-    "positive electrode": "nca_Kim2011",
-    "electrolyte": "lipf6_Kim2011",
-    "experiment": "1C_discharge_from_full_Kim2011",
-    "sei": "example",
-    "citation": "Kim2011",
-}
+class ParameterSets:
+    def __init__(self):
+        self.all_parameter_sets = {
+            "lead_acid": ["Sulzer2019"],
+            "lithium_ion": [
+                "Ai2020",
+                "Chen2020",
+                "Chen2020_composite",
+                "Ecker2015",
+                "Marquis2019",
+                "Mohtat2020",
+                "NCA_Kim2011",
+                "OKane2022",
+                "ORegan2022",
+                "Prada2013",
+                "Ramadass2004",
+                "Xu2019",
+            ],
+        }
+        self.all_parameter_sets_list = [
+            *self.all_parameter_sets["lead_acid"],
+            *self.all_parameter_sets["lithium_ion"],
+        ]
 
-Ecker2015 = {
-    "chemistry": "lithium_ion",
-    "cell": "kokam_Ecker2015",
-    "negative electrode": "graphite_Ecker2015",
-    "separator": "separator_Ecker2015",
-    "positive electrode": "LiNiCoO2_Ecker2015",
-    "electrolyte": "lipf6_Ecker2015",
-    "experiment": "1C_discharge_from_full_Ecker2015",
-    "sei": "example",
-    "citation": [
-        "Ecker2015i",
-        "Ecker2015ii",
-        "Zhao2018",
-        "Hales2019",
-        "Richardson2020",
-    ],
-}
+    def __getattribute__(self, name):
+        try:
+            return super().__getattribute__(name)
+        except AttributeError as error:
+            # For backwards compatibility, parameter sets that used to be defined in
+            # this file now return the name as a string, which will load the same
+            # parameter set as before when passed to `ParameterValues`
+            if name in self.all_parameter_sets_list:
+                out = name
+            else:
+                raise error
+            warnings.warn(
+                f"Parameter sets should be called directly by their name ({name}), "
+                f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name}).",
+                DeprecationWarning,
+            )
+            return out
 
-Marquis2019 = {
-    "chemistry": "lithium_ion",
-    "cell": "kokam_Marquis2019",
-    "negative electrode": "graphite_mcmb2528_Marquis2019",
-    "separator": "separator_Marquis2019",
-    "positive electrode": "lico2_Marquis2019",
-    "electrolyte": "lipf6_Marquis2019",
-    "experiment": "1C_discharge_from_full_Marquis2019",
-    "sei": "example",
-    "citation": "Marquis2019",
-}
 
-Chen2020 = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020",
-    "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
-    "electrolyte": "lipf6_Nyman2008",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
-    "citation": "Chen2020",
-}
-
-Chen2020_composite = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020_composite",
-    "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
-    "electrolyte": "lipf6_Nyman2008",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example_composite",
-    "citation": ["Chen2020", "Ai2022"],
-}
-
-Mohtat2020 = {
-    "chemistry": "lithium_ion",
-    "cell": "UMBL_Mohtat2020",
-    "negative electrode": "graphite_UMBL_Mohtat2020",
-    "separator": "separator_Mohtat2020",
-    "positive electrode": "NMC_UMBL_Mohtat2020",
-    "electrolyte": "LiPF6_Mohtat2020",
-    "experiment": "1C_charge_from_empty_Mohtat2020",
-    "sei": "example",
-    "lithium plating": "yang2017_Li_plating",
-    "citation": "Mohtat2020",
-}
-
-Ramadass2004 = {
-    "chemistry": "lithium_ion",
-    "cell": "sony_Ramadass2004",
-    "negative electrode": "graphite_Ramadass2004",
-    "separator": "separator_Ecker2015",  # no values found, relevance?
-    "positive electrode": "lico2_Ramadass2004",
-    "electrolyte": "lipf6_Ramadass2004",
-    "experiment": "1C_discharge_from_full_Ramadass2004",
-    "sei": "ramadass2004",
-    "citation": "Ramadass2004",
-}
-
-Prada2013 = {
-    "chemistry": "lithium_ion",
-    "cell": "A123_Lain2019",
-    "negative electrode": "graphite_Chen2020",
-    "separator": "separator_Chen2020",
-    "positive electrode": "LFP_Prada2013",
-    "electrolyte": "lipf6_Nyman2008",
-    "experiment": "4C_discharge_from_full_Prada2013",
-    "citation": ["Chen2020", "Lain2019", "Prada2013"],
-}
-
-Ai2020 = {
-    "chemistry": "lithium_ion",
-    "cell": "Enertech_Ai2020",
-    "negative electrode": "graphite_Ai2020",
-    "separator": "separator_Ai2020",
-    "positive electrode": "lico2_Ai2020",
-    "electrolyte": "lipf6_Enertech_Ai2020",
-    "experiment": "1C_discharge_from_full_Ai2020",
-    "sei": "example",
-    "citation": "Ai2019",
-}
-
-Xu2019 = {
-    "chemistry": "lithium_ion",
-    "cell": "li_metal_Xu2019",
-    "negative electrode": "li_metal_Xu2019",
-    "separator": "separator_Xu2019",
-    "positive electrode": "NMC532_Xu2019",
-    "electrolyte": "lipf6_Valoen2005",
-    "experiment": "1C_discharge_from_full_Xu2019",
-    "sei": "example",
-    "citation": "Xu2019",
-}
-
-ORegan2022 = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_ORegan2022",
-    "negative electrode": "graphite_ORegan2022",
-    "separator": "separator_ORegan2022",
-    "positive electrode": "nmc_ORegan2022",
-    "electrolyte": "lipf6_EC_EMC_3_7_Landesfeind2019",
-    "experiment": "1C_discharge_from_full_ORegan2022",
-    "citation": ["ORegan2022", "Chen2020"],
-}
-
-OKane2022 = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_OKane2022",
-    "separator": "separator_Chen2020",
-    "positive electrode": "nmc_OKane2022",
-    "electrolyte": "lipf6_OKane2022",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "OKane2022",
-    "lithium plating": "okane2022_Li_plating",
-    "citation": ["OKane2022", "Chen2020"],
-}
-
-#
-# Lead-acid
-#
-
-Sulzer2019 = {
-    "chemistry": "lead_acid",
-    "cell": "BBOXX_Sulzer2019",
-    "negative electrode": "lead_Sulzer2019",
-    "separator": "agm_Sulzer2019",
-    "positive electrode": "lead_dioxide_Sulzer2019",
-    "electrolyte": "sulfuric_acid_Sulzer2019",
-    "experiment": "1C_discharge_from_full",
-    "citation": "Sulzer2019physical",
-}
+parameter_sets = ParameterSets()

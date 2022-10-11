@@ -83,7 +83,6 @@ API documentation
    source/util
    source/callbacks
    source/citations
-   source/parameters_cli
    source/batch_study
 
 Examples
