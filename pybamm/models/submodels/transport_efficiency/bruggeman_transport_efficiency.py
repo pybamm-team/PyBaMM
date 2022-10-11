@@ -2,7 +2,6 @@
 # Class for Bruggemantransport_efficiency
 #
 import pybamm
-
 from .base_transport_efficiency import BaseModel
 
 
@@ -26,34 +25,25 @@ class Bruggeman(BaseModel):
         self.set_leading_order = set_leading_order
 
     def get_coupled_variables(self, variables):
-        param = self.param
-
         if self.component == "Electrolyte":
-            if self.half_cell:
-                tor_n = None
-            else:
-                eps_n = variables["Negative electrode porosity"]
-                tor_n = eps_n ** param.n.b_e
-
-            eps_s = variables["Separator porosity"]
-            tor_s = eps_s ** param.s.b_e
-            eps_p = variables["Positive electrode porosity"]
-            tor_p = eps_p ** param.p.b_e
+            tor_dict = {}
+            for domain in self.options.whole_cell_domains:
+                Domain = domain.capitalize()
+                eps_k = variables[f"{Domain} porosity"]
+                b_k = self.param.domain_params[domain.split()[0]].b_e
+                tor_dict[domain] = eps_k**b_k
         elif self.component == "Electrode":
-            if self.half_cell:
-                tor_n = None
-            else:
-                eps_n = variables["Negative electrode active material volume fraction"]
-                tor_n = eps_n ** param.n.b_s
+            tor_dict = {}
+            for domain in self.options.whole_cell_domains:
+                if domain == "separator":
+                    tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
+                else:
+                    Domain = domain.capitalize()
+                    eps_k = variables[f"{Domain} active material volume fraction"]
+                    b_k = self.param.domain_params[domain.split()[0]].b_s
+                    tor_k = eps_k**b_k
+                tor_dict[domain] = tor_k
 
-            eps_p = variables["Positive electrode active material volume fraction"]
-            tor_s = pybamm.FullBroadcast(0, "separator", "current collector")
-            tor_p = eps_p ** param.p.b_s
-
-        variables.update(
-            self._get_standard_transport_efficiency_variables(
-                tor_n, tor_s, tor_p, self.set_leading_order
-            )
-        )
+        variables.update(self._get_standard_transport_efficiency_variables(tor_dict))
 
         return variables

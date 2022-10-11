@@ -181,9 +181,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         for linsolver in linsolvers:
             solver = pybamm.ScikitsOdeSolver(
-                rtol=1e-9,
-                atol=1e-9,
-                extra_options={"linsolver": linsolver}
+                rtol=1e-9, atol=1e-9, extra_options={"linsolver": linsolver}
             )
             t_eval = np.linspace(0, 1, 100)
             solution = solver.solve(model, t_eval)

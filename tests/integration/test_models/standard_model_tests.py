@@ -207,4 +207,3 @@ class OptimisationsTest(object):
         if to_python is True:
             self.model.convert_to_format = "python"
         self.model.default_solver.set_up(self.model)
-        return None

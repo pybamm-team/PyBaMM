@@ -454,7 +454,7 @@ class Simulation:
         """
 
         if self.model_with_set_params:
-            return None
+            return
 
         if self._parameter_values._dict_items == {}:
             # Don't process if parameter values is empty
@@ -482,7 +482,7 @@ class Simulation:
         """
 
         if self.built_model:
-            return None
+            return
         elif self.model.is_discretised:
             self._model_with_set_params = self.model
             self._built_model = self.model
@@ -500,7 +500,7 @@ class Simulation:
         experiment, where there may be several models to build
         """
         if self.op_conds_to_built_models:
-            return None
+            return
         else:
             # Can process geometry with default parameter values (only electrical
             # parameters change between parameter values)
@@ -743,7 +743,7 @@ class Simulation:
                 ) = pybamm.make_cycle_solution(
                     starting_solution.steps,
                     esoh_solver=esoh_solver,
-                    save_this_cycle=True
+                    save_this_cycle=True,
                 )
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]

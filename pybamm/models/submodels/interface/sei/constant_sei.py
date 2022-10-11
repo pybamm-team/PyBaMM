@@ -27,7 +27,7 @@ class ConstantSEI(BaseModel):
 
     def __init__(self, param, options, phase="primary"):
         super().__init__(param, options=options, phase=phase)
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             self.reaction_loc = "interface"
         else:
             self.reaction_loc = "full electrode"

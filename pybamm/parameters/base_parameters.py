@@ -44,7 +44,7 @@ class BaseParameters:
 
     def __setattr__(self, name, value):
         if hasattr(self, "domain"):
-            d = self.domain.lower()[0]
+            d = self.domain[0]
             print_name = f"{name}_{d}"
         else:
             print_name = name
@@ -60,11 +60,24 @@ class BaseParameters:
     def options(self, extra_options):
         self._options = pybamm.BatteryModelOptions(extra_options)
 
+    @property
+    def domain(self):
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        self._domain = domain
+        if domain is not None:
+            self._Domain = domain.capitalize()
+
+    @property
+    def domain_Domain(self):
+        return self.domain, self._Domain
+
     def set_phase_name(self):
         if (
             self.phase == "primary"
-            and getattr(self.main_param.options, self.domain.lower())["particle phases"]
-            == "1"
+            and getattr(self.main_param.options, self.domain)["particle phases"] == "1"
         ):
             # Only one phase, no need to distinguish between
             # "primary" and "secondary"

@@ -74,32 +74,7 @@ class NewmanTobias(DFN):
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
 
-    def set_electrolyte_submodel(self):
-
-        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
-
+    def set_electrolyte_concentration_submodel(self):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
-
-        if self.options["electrolyte conductivity"] not in ["default", "full"]:
-            raise pybamm.OptionError(
-                "electrolyte conductivity '{}' not suitable for Newman-Tobias".format(
-                    self.options["electrolyte conductivity"]
-                )
-            )
-
-        if self.options["surface form"] == "false":
-            self.submodels[
-                "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Full(self.param)
-            surf_model = surf_form.Explicit
-        elif self.options["surface form"] == "differential":
-            surf_model = surf_form.FullDifferential
-        elif self.options["surface form"] == "algebraic":
-            surf_model = surf_form.FullAlgebraic
-
-        for domain in ["Negative", "Separator", "Positive"]:
-            self.submodels[
-                domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain)

@@ -37,7 +37,7 @@ class FirstOrder(BaseModel):
 
         # Unpack
         tor_s_0_av = variables[
-            "Leading-order x-averaged separator transport efficiency"
+            "Leading-order x-averaged separator electrolyte transport efficiency"
         ]
         tor_p_0_av = variables[
             "Leading-order x-averaged positive electrolyte transport efficiency"
@@ -63,7 +63,7 @@ class FirstOrder(BaseModel):
         c_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         c_ox_s_1 = sj_ox_p * l_p / D_ox_s * (x_s - l_n)
         c_ox_p_1 = (
-            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - l_p ** 2)
+            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - l_p**2)
             + sj_ox_p * l_p * l_s / D_ox_s
         )
 

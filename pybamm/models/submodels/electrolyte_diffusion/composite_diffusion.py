@@ -2,6 +2,7 @@
 # Class for composite electrolyte diffusion employing stefan-maxwell
 #
 import pybamm
+import numpy as np
 from .base_electrolyte_diffusion import BaseElectrolyteDiffusion
 
 
@@ -26,11 +27,21 @@ class Composite(BaseElectrolyteDiffusion):
         self.extended = extended
 
     def get_fundamental_variables(self):
-        c_e_n = pybamm.standard_variables.c_e_n
-        c_e_s = pybamm.standard_variables.c_e_s
-        c_e_p = pybamm.standard_variables.c_e_p
+        c_e_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize().split()[0]
+            c_e_k = pybamm.Variable(
+                f"{Domain} electrolyte concentration",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+                bounds=(0, np.inf),
+            )
+            c_e_k.print_name = f"c_e_{domain[0]}"
+            c_e_dict[domain] = c_e_k
 
-        return self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
+        variables = self._get_standard_concentration_variables(c_e_dict)
+
+        return variables
 
     def get_coupled_variables(self, variables):
 

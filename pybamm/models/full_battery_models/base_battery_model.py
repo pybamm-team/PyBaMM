@@ -307,11 +307,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if SEI_cracks_option == "true":
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = (
-                    "swelling and cracking", "swelling only"
+                    "swelling and cracking",
+                    "swelling only",
                 )
             else:
                 default_options["particle mechanics"] = (
-                    "swelling and cracking", "none"
+                    "swelling and cracking",
+                    "none",
                 )
         else:
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
@@ -594,6 +596,33 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     phases.append("secondary")
                 self._phases[domain] = phases
             return self._phases
+
+    @property
+    def whole_cell_domains(self):
+        try:
+            return self._whole_cell_domains
+        except AttributeError:
+            if self["working electrode"] == "positive":
+                wcd = ["separator", "positive electrode"]
+            elif self["working electrode"] == "negative":
+                wcd = ["negative electrode", "separator"]
+            elif self["working electrode"] == "both":
+                wcd = ["negative electrode", "separator", "positive electrode"]
+            self._whole_cell_domains = wcd
+            return wcd
+
+    @property
+    def electrode_types(self):
+        try:
+            return self._electrode_types
+        except AttributeError:
+            self._electrode_types = {}
+            for domain in ["negative", "positive"]:
+                if f"{domain} electrode" in self.whole_cell_domains:
+                    self._electrode_types[domain] = "porous"
+                else:
+                    self._electrode_types[domain] = "planar"
+            return self._electrode_types
 
     def print_options(self):
         """
@@ -1014,7 +1043,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._summary_variables = []
 
     def get_intercalation_kinetics(self, domain):
-        options = getattr(self.options, domain.lower())
+        options = getattr(self.options, domain)
         if options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.SymmetricButlerVolmer
         elif options["intercalation kinetics"] == "asymmetric Butler-Volmer":
@@ -1026,8 +1055,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
 
-    @property
-    def inverse_intercalation_kinetics(self):
+    def get_inverse_intercalation_kinetics(self):
         if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.InverseButlerVolmer
         else:
@@ -1097,36 +1125,21 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_thermal_submodel(self):
 
         if self.options["thermal"] == "isothermal":
-            thermal_submodel = pybamm.thermal.isothermal.Isothermal(
-                self.param, self.options
-            )
-
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal
         elif self.options["thermal"] == "lumped":
-            thermal_submodel = pybamm.thermal.Lumped(
-                self.param,
-                self.options,
-            )
-
+            thermal_submodel = pybamm.thermal.Lumped
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.Lumped(self.param, self.options)
+                thermal_submodel = pybamm.thermal.Lumped
             elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
-                    self.param,
-                    self.options,
-                )
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D
             elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
-                    self.param,
-                    self.options,
-                )
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.OneDimensionalX(
-                    self.param, self.options
-                )
+                thermal_submodel = pybamm.thermal.OneDimensionalX
 
-        self.submodels["thermal"] = thermal_submodel
+        self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
     def set_current_collector_submodel(self):
 
@@ -1140,33 +1153,28 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["current collector"] = submodel
 
     def set_interface_utilisation_submodel(self):
-        if self.half_cell:
-            domains = ["Counter", "Positive"]
-        else:
-            domains = ["Negative", "Positive"]
-        for domain in domains:
-            name = domain.lower() + " interface utilisation"
-            if domain == "Counter":
-                domain = "Negative"
-            util = getattr(self.options, domain.lower())["interface utilisation"]
+        for domain in ["negative", "positive"]:
+            Domain = domain.capitalize()
+            util = getattr(self.options, domain)["interface utilisation"]
             if util == "full":
-                self.submodels[name] = pybamm.interface_utilisation.Full(
+                submodel = pybamm.interface_utilisation.Full(
                     self.param, domain, self.options
                 )
             elif util == "constant":
-                self.submodels[name] = pybamm.interface_utilisation.Constant(
+                submodel = pybamm.interface_utilisation.Constant(
                     self.param, domain, self.options
                 )
             elif util == "current-driven":
-                if self.half_cell and domain == "Negative":
+                if self.options.electrode_types[domain] == "planar":
                     reaction_loc = "interface"
                 elif self.x_average:
                     reaction_loc = "x-average"
                 else:
                     reaction_loc = "full electrode"
-                self.submodels[name] = pybamm.interface_utilisation.CurrentDriven(
+                submodel = pybamm.interface_utilisation.CurrentDriven(
                     self.param, domain, self.options, reaction_loc
                 )
+            self.submodels[f"{Domain} interface utilisation"] = submodel
 
     def set_voltage_variables(self):
         if self.options.negative["particle phases"] == "1":
@@ -1214,7 +1222,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # overpotentials
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             eta_r_n_av = self.variables[
                 "Lithium metal interface reaction overpotential"
             ]
@@ -1251,7 +1259,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
-        if self.half_cell:
+        if self.options.electrode_types["negative"] == "planar":
             eta_sei_av = self.variables["SEI film overpotential"]
             eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
         else:

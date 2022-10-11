@@ -59,7 +59,7 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options, build=False)
         particle_n = pybamm.particle.XAveragedPolynomialProfile(
             model.param,
-            "Negative",
+            "negative",
             {**options, "particle": "quadratic profile"},
             "primary",
         )

@@ -70,19 +70,30 @@ class SPMe(SPM):
         )
 
     def set_solid_submodel(self):
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                solid_submodel = pybamm.electrode.ohm.Composite
+            elif self.options.electrode_types[domain] == "planar":
+                if self.options["surface form"] == "false":
+                    solid_submodel = pybamm.electrode.ohm.LithiumMetalExplicit
+                else:
+                    solid_submodel = pybamm.electrode.ohm.LithiumMetalSurfaceForm
+            self.submodels[f"{domain} electrode potential"] = solid_submodel(
+                self.param, domain, self.options
+            )
 
-        self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Negative", options=self.options
+    def set_electrolyte_concentration_submodel(self):
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
+            self.param, self.options
         )
-        self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Positive", options=self.options
-        )
 
-    def set_electrolyte_submodel(self):
-
+    def set_electrolyte_potential_submodel(self):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        if self.options["surface form"] == "false" or self.half_cell:
+        if (
+            self.options["surface form"] == "false"
+            or self.options.electrode_types["negative"] == "planar"
+        ):
             if self.options["electrolyte conductivity"] in ["default", "composite"]:
                 self.submodels[
                     "electrolyte conductivity"
@@ -102,11 +113,8 @@ class SPMe(SPM):
         elif self.options["surface form"] == "algebraic":
             surf_model = surf_form.CompositeAlgebraic
 
-        for domain in ["Negative", "Positive"]:
-            self.submodels[
-                domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain)
-
-        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.options
-        )
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                self.submodels[f"{domain} surface potential difference"] = surf_model(
+                    self.param, domain, self.options
+                )

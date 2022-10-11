@@ -512,7 +512,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {var: p * var}
         model.initial_conditions = {var: 1}
-        model.variables = {"var squared": var ** 2}
+        model.variables = {"var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works

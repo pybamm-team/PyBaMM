@@ -19,10 +19,14 @@ class GeometricParameters(BaseParameters):
 
     def __init__(self, options=None):
         self.options = options
-        self.n = DomainGeometricParameters("Negative", self)
-        self.s = DomainGeometricParameters("Separator", self)
-        self.p = DomainGeometricParameters("Positive", self)
-        self.domain_params = [self.n, self.s, self.p]
+        self.n = DomainGeometricParameters("negative", self)
+        self.s = DomainGeometricParameters("separator", self)
+        self.p = DomainGeometricParameters("positive", self)
+        self.domain_params = {
+            "negative": self.n,
+            "separator": self.s,
+            "positive": self.p,
+        }
 
         # Set parameters and scales
         self._set_dimensional_parameters()
@@ -31,7 +35,7 @@ class GeometricParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensional_parameters()
 
         # Macroscale geometry
@@ -52,12 +56,12 @@ class GeometricParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_scales()
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
-        for domain in self.domain_params:
+        for domain in self.domain_params.values():
             domain._set_dimensionless_parameters()
 
         # Macroscale Geometry
@@ -68,8 +72,8 @@ class GeometricParameters(BaseParameters):
         self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
         self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z
-        self.a_cooling = self.A_cooling / (self.L_z ** 2)
-        self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
+        self.a_cooling = self.A_cooling / (self.L_z**2)
+        self.v_cell = self.V_cell / (self.L_x * self.L_z**2)
 
         self.l = self.L / self.L_x
         self.delta = self.L_x / self.L_z  # Pouch cell aspect ratio
@@ -80,24 +84,24 @@ class DomainGeometricParameters(BaseParameters):
         self.domain = domain
         self.main_param = main_param
 
-        if self.domain != "Separator":
+        if self.domain != "separator":
             self.prim = ParticleGeometricParameters(domain, "primary", main_param)
             self.sec = ParticleGeometricParameters(domain, "secondary", main_param)
-            self.phases = [self.prim, self.sec]
+            self.phase_params = {"primary": self.prim, "secondary": self.sec}
         else:
-            self.phases = []
+            self.phase_params = {}
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_dimensional_parameters()
 
-        if self.domain == "Separator":
+        if self.domain == "separator":
             self.L = pybamm.Parameter("Separator thickness [m]")
             self.b_e = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
             return
 
-        Domain = self.domain
+        Domain = self.domain.capitalize()
 
         # Macroscale geometry
         self.L_cc = pybamm.Parameter(f"{Domain} current collector thickness [m]")
@@ -119,18 +123,18 @@ class DomainGeometricParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_scales()
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
-        for phase in self.phases:
+        for phase in self.phase_params.values():
             phase._set_dimensionless_parameters()
         main = self.main_param
 
         # Macroscale Geometry
         self.l = self.L / main.L_x
-        if self.domain == "Separator":
+        if self.domain == "separator":
             return
 
         self.l_cc = self.L_cc / main.L_x
@@ -150,7 +154,7 @@ class ParticleGeometricParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        Domain = self.domain
+        Domain = self.domain.capitalize()
         pref = self.phase_prefactor
 
         # Microscale geometry
@@ -170,23 +174,25 @@ class ParticleGeometricParameters(BaseParameters):
 
     @property
     def R_dimensional(self):
-        if self.domain == "Negative":
+        if self.domain == "negative":
             x = pybamm.standard_spatial_vars.x_n
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             x = pybamm.standard_spatial_vars.x_p
 
         inputs = {"Through-cell distance (x) [m]": x * self.main_param.L_x}
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{self.domain} particle radius [m]", inputs
+            f"{self.phase_prefactor}{Domain} particle radius [m]", inputs
         )
 
     def f_a_dist_dimensional(self, R):
         """
         Dimensional electrode area-weighted particle-size distribution
         """
-        inputs = {f"{self.phase_prefactor}{self.domain} particle-size variable [m]": R}
+        Domain = self.domain.capitalize()
+        inputs = {f"{self.phase_prefactor}{Domain} particle-size variable [m]": R}
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{self.domain} "
+            f"{self.phase_prefactor}{Domain} "
             "area-weighted particle-size distribution [m-1]",
             inputs,
         )

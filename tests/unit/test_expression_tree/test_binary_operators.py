@@ -72,13 +72,13 @@ class TestBinaryOperators(unittest.TestCase):
         y = np.array([5, 3])
 
         # power
-        self.assertEqual((a ** b).diff(b).evaluate(y=y), 5 ** 3 * np.log(5))
-        self.assertEqual((a ** b).diff(a).evaluate(y=y), 3 * 5 ** 2)
-        self.assertEqual((a ** b).diff(a ** b).evaluate(), 1)
+        self.assertEqual((a**b).diff(b).evaluate(y=y), 5**3 * np.log(5))
+        self.assertEqual((a**b).diff(a).evaluate(y=y), 3 * 5**2)
+        self.assertEqual((a**b).diff(a**b).evaluate(), 1)
         self.assertEqual(
-            (a ** a).diff(a).evaluate(y=y), 5 ** 5 * np.log(5) + 5 * 5 ** 4
+            (a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4
         )
-        self.assertEqual((a ** a).diff(b).evaluate(y=y), 0)
+        self.assertEqual((a**a).diff(b).evaluate(y=y), 0)
 
         # addition
         self.assertEqual((a + b).diff(a).evaluate(), 1)
@@ -403,20 +403,20 @@ class TestBinaryOperators(unittest.TestCase):
         broad2_edge = pybamm.PrimaryBroadcastToEdges(2, "domain")
 
         # power
-        self.assertEqual((c ** 0), pybamm.Scalar(1))
-        self.assertEqual((0 ** c), pybamm.Scalar(0))
-        self.assertEqual((c ** 1), c)
+        self.assertEqual((c**0), pybamm.Scalar(1))
+        self.assertEqual((0**c), pybamm.Scalar(0))
+        self.assertEqual((c**1), c)
         # power with broadcasts
-        self.assertEqual((c ** broad2), pybamm.PrimaryBroadcast(c ** 2, "domain"))
-        self.assertEqual((broad2 ** c), pybamm.PrimaryBroadcast(2 ** c, "domain"))
+        self.assertEqual((c**broad2), pybamm.PrimaryBroadcast(c**2, "domain"))
+        self.assertEqual((broad2**c), pybamm.PrimaryBroadcast(2**c, "domain"))
         self.assertEqual(
             (broad2 ** pybamm.PrimaryBroadcast(c, "domain")),
-            pybamm.PrimaryBroadcast(2 ** c, "domain"),
+            pybamm.PrimaryBroadcast(2**c, "domain"),
         )
         # power with broadcasts to edge
-        self.assertIsInstance(var ** broad2_edge, pybamm.Power)
-        self.assertEqual((var ** broad2_edge).left, var)
-        self.assertEqual((var ** broad2_edge).right, broad2_edge)
+        self.assertIsInstance(var**broad2_edge, pybamm.Power)
+        self.assertEqual((var**broad2_edge).left, var)
+        self.assertEqual((var**broad2_edge).right, broad2_edge)
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)
@@ -530,6 +530,10 @@ class TestBinaryOperators(unittest.TestCase):
         with self.assertRaises(ZeroDivisionError):
             b / a
 
+        # division with a common term
+        self.assertEqual((2 * c) / (2 * var), (c / var))
+        self.assertEqual((c * 2) / (var * 2), (c / var))
+
     def test_binary_simplifications_concatenations(self):
         def conc_broad(x, y, z):
             return pybamm.concatenation(
@@ -564,7 +568,9 @@ class TestBinaryOperators(unittest.TestCase):
         # MatMul simplifications that often appear when discretising spatial operators
         A = pybamm.Matrix(np.random.rand(10, 10))
         B = pybamm.Matrix(np.random.rand(10, 10))
+        # C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
+        # var2 = pybamm.StateVector(slice(10, 20))
         vec = pybamm.Vector(np.random.rand(10))
 
         # Do A@B first if it is constant
@@ -575,9 +581,19 @@ class TestBinaryOperators(unittest.TestCase):
         # constant
         expr = A @ (var + vec)
         self.assertEqual(expr, ((A @ var) + (A @ vec)))
+        expr = A @ (var - vec)
+        self.assertEqual(expr, ((A @ var) - (A @ vec)))
 
         expr = A @ ((B @ var) + vec)
         self.assertEqual(expr, (((A @ B) @ var) + (A @ vec)))
+        expr = A @ ((B @ var) - vec)
+        self.assertEqual(expr, (((A @ B) @ var) - (A @ vec)))
+
+        # Distribute the @ operator to a sum if both symbols being summed are matmuls
+        # expr = A @ (B @ var + C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
+        # expr = A @ (B @ var - C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
 
         # Reduce (A@var + B@var) to ((A+B)@var)
         expr = A @ var + B @ var
@@ -666,13 +682,13 @@ class TestBinaryOperators(unittest.TestCase):
 
         # use power rules on multiplications and divisions
         expr = (var * 5) ** 2
-        self.assertEqual(expr, (var ** 2 * 25))
+        self.assertEqual(expr, (var**2 * 25))
         expr = (5 * var) ** 2
-        self.assertEqual(expr, (25 * var ** 2))
+        self.assertEqual(expr, (25 * var**2))
         expr = (var / 5) ** 2
-        self.assertEqual(expr, (var ** 2 / 25))
+        self.assertEqual(expr, (var**2 / 25))
         expr = (5 / var) ** 2
-        self.assertEqual(expr, (25 / var ** 2))
+        self.assertEqual(expr, (25 / var**2))
 
     def test_inner_simplifications(self):
         a1 = pybamm.Scalar(0)

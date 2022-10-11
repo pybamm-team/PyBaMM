@@ -20,16 +20,18 @@ class TestOKane2020(unittest.TestCase):
 
     def test_functions(self):
         root = pybamm.root_dir()
-        param = pybamm.ParameterValues({
-            "chemistry": "lithium_ion",
-            "cell": "LGM50_Chen2020",
-            "negative electrode": "graphite_Chen2020",
-            "separator": "separator_Chen2020",
-            "positive electrode": "nmc_Chen2020",
-            "electrolyte": "lipf6_Nyman2008",
-            "experiment": "1C_discharge_from_full_Chen2020",
-            "lithium plating": "okane2020_Li_plating",
-        })
+        param = pybamm.ParameterValues(
+            {
+                "chemistry": "lithium_ion",
+                "cell": "LGM50_Chen2020",
+                "negative electrode": "graphite_Chen2020",
+                "separator": "separator_Chen2020",
+                "positive electrode": "nmc_Chen2020",
+                "electrolyte": "lipf6_Nyman2008",
+                "experiment": "1C_discharge_from_full_Chen2020",
+                "lithium plating": "okane2020_Li_plating",
+            }
+        )
         T = pybamm.Scalar(298.15)
 
         p = "pybamm/input/parameters/lithium_ion/lithium_platings/okane2020_Li_plating/"
