@@ -674,6 +674,8 @@ class CasadiSolver(pybamm.BaseSolver):
         if self.perturb_algebraic_initial_conditions:
             # Add a tiny perturbation to the algebraic initial conditions
             # For some reason this helps with convergence
+            # The actual value of the initial conditions for the algebraic variables
+            # doesn't matter
             y0_alg = y0_alg * (1 + 1e-6 * np.random.rand(model.len_alg))
         pybamm.logger.spam("Finished preliminary setup for integrator run")
 
