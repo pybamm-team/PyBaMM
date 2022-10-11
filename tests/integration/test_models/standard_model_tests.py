@@ -72,7 +72,7 @@ class StandardModelTest(object):
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
 
-        #Somehow removing an equation makes the solver fail at
+        # Somehow removing an equation makes the solver fail at
         # the low tolerances
         if isinstance(self.model, pybamm.lithium_ion.NewmanTobias):
             self.solver.rtol = 1e-7
