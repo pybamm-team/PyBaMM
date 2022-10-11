@@ -694,7 +694,7 @@ class CasadiSolver(pybamm.BaseSolver):
             except RuntimeError as error:
                 # If it doesn't work raise error
                 pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                raise pybamm.SolverError(e.args[0])
+                raise pybamm.SolverError(error.args[0])
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
             y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
@@ -726,7 +726,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 except RuntimeError as error:
                     # If it doesn't work raise error
                     pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                    raise pybamm.SolverError(e.args[0])
+                    raise pybamm.SolverError(error.args[0])
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
                 z = casadi_sol["zf"]
