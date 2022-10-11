@@ -73,7 +73,7 @@ class StandardModelTest(object):
         self.solver.atol = 1e-8
 
         if isinstance(self.model, pybamm.lithium_ion.NewmanTobias):
-            self.solver.rtol=1e-7
+            self.solver.rtol = 1e-7
 
         Crate = abs(
             self.parameter_values["Current function [A]"]
