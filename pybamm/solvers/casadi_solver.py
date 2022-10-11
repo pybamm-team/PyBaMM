@@ -66,6 +66,10 @@ class CasadiSolver(pybamm.BaseSolver):
     return_solution_if_failed_early : bool, optional
         Whether to return a Solution object if the solver fails to reach the end of
         the simulation, but managed to take some successful steps. Default is False.
+    perturb_algebraic_initial_conditions : bool, optional
+        Whether to perturb algebraic initial conditions to avoid a singularity. This
+        can sometimes slow down the solver, but is kept True as default as it seems
+        to be more robust.
     """
 
     def __init__(
@@ -81,6 +85,7 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_setup=None,
         extra_options_call=None,
         return_solution_if_failed_early=False,
+        perturb_algebraic_initial_conditions=True,
     ):
         super().__init__(
             "problem dependent",
@@ -105,7 +110,7 @@ class CasadiSolver(pybamm.BaseSolver):
         self.extra_options_call = extra_options_call or {}
         self.extrap_tol = extrap_tol
         self.return_solution_if_failed_early = return_solution_if_failed_early
-
+        self.perturb_algebraic_initial_conditions = perturb_algebraic_initial_conditions
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
@@ -666,6 +671,10 @@ class CasadiSolver(pybamm.BaseSolver):
 
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
+        if self.perturb_algebraic_initial_conditions:
+            # Add a tiny perturbation to the algebraic initial conditions
+            # For some reason this helps with convergence
+            y0_alg = y0_alg * (1 + 1e-6 * np.random.rand(model.len_alg))
         pybamm.logger.spam("Finished preliminary setup for integrator run")
 
         # Solve
@@ -680,8 +689,9 @@ class CasadiSolver(pybamm.BaseSolver):
                 casadi_sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
-            except RuntimeError as e:
+            except RuntimeError as error:
                 # If it doesn't work raise error
+                pybamm.logger.debug(f"Casadi integrator failed with error {error}")
                 raise pybamm.SolverError(e.args[0])
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
@@ -711,8 +721,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     casadi_sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
                     )
-                except RuntimeError as e:
+                except RuntimeError as error:
                     # If it doesn't work raise error
+                    pybamm.logger.debug(f"Casadi integrator failed with error {error}")
                     raise pybamm.SolverError(e.args[0])
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
