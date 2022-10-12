@@ -663,20 +663,22 @@ class CasadiSolver(pybamm.BaseSolver):
             integrator = self.integrators[model]["no grid"]
 
         len_rhs = model.concatenated_rhs.size
+        len_alg = model.concatenated_algebraic.size
 
         # Check y0 to see if it includes sensitivities
         if explicit_sensitivities:
             num_parameters = model.len_rhs_sens // model.len_rhs
             len_rhs = len_rhs * (num_parameters + 1)
+            len_alg = len_alg * (num_parameters + 1)
 
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
-        if self.perturb_algebraic_initial_conditions:
+        if self.perturb_algebraic_initial_conditions and len_alg > 0:
             # Add a tiny perturbation to the algebraic initial conditions
             # For some reason this helps with convergence
             # The actual value of the initial conditions for the algebraic variables
             # doesn't matter
-            y0_alg = y0_alg * (1 + 1e-6 * np.random.rand(model.len_alg))
+            y0_alg = y0_alg * (1 + 1e-6 * casadi.DM(np.random.rand(len_alg)))
         pybamm.logger.spam("Finished preliminary setup for integrator run")
 
         # Solve
