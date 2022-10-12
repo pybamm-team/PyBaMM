@@ -299,10 +299,7 @@ class JuliaConverter(object):
             assert is_constant_and_can_evaluate(symbol)
             my_id = symbol.id
             value = symbol.evaluate()
-            if value.shape == (1, 1):
-                self._intermediate[my_id] = JuliaScalar(my_id, value)
-            else:
-                self._intermediate[my_id] = JuliaConstant(my_id, value)
+            self._intermediate[my_id] = JuliaConstant(my_id, value)
         elif isinstance(symbol, pybamm.Scalar):
             assert is_constant_and_can_evaluate(symbol)
             my_id = symbol.id
