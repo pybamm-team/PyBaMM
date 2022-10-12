@@ -7,8 +7,7 @@ import unittest
 
 
 DOC = """
-Parameter sets from papers. The 'citation' entry provides a reference to the appropriate
-paper in the file "pybamm/CITATIONS.txt". To see which parameter sets have been used in
+Parameter sets from papers. To see which parameter sets have been used in
 your simulation, add the line "pybamm.print_citations()" to your script.
 
 Lead-acid parameter sets
@@ -29,6 +28,9 @@ Lithium-ion parameter sets
        - Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
          power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.
          doi:10.3390/batteries5040064.
+       - Andreas Nyman, Mårten Behm, and Göran Lindbergh. Electrochemical
+         characterisation and modelling of the mass transport phenomena in lipf6–ec–emc
+         electrolyte. Electrochimica Acta, 53(22):6356–6365, 2008.
        - Eric Prada, D. Di Domenico, Y. Creff, J. Bernard, Valérie Sauvant-Moynot, and
          François Huet. A simplified electrochemical and thermal aging model of
          LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
@@ -37,7 +39,7 @@ Lithium-ion parameter sets
 
 AUTHOR_YEAR_DICT = {
     "lithium_ion": [
-        ("Prada2013", ["Chen2020", "Lain2019", "Prada2013"]),
+        ("Prada2013", ["Chen2020", "Lain2019", "Prada2013", "Nyman2008"]),
     ],
     "lead_acid": [("Sulzer2019", ["Sulzer2019physical"])],
 }

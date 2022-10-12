@@ -3,100 +3,45 @@
 #
 import pybamm
 import unittest
-import os
 
 
 class TestRamadass2004(unittest.TestCase):
-    def test_load_params(self):
-        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
-            pybamm.get_parameters_filepath(
-                "input/parameters/lithium_ion/negative_electrodes/"
-                "graphite_Ramadass2004/parameters.csv"
-            )
-        )
-        self.assertEqual(negative_electrode["Negative electrode porosity"], "0.485")
-
-        positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
-            pybamm.get_parameters_filepath(
-                "input/parameters/lithium_ion/positive_electrodes/lico2_Ramadass2004/"
-                "parameters.csv"
-            )
-        )
-        self.assertEqual(positive_electrode["Positive electrode porosity"], "0.385")
-
-        electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
-            pybamm.get_parameters_filepath(
-                "input/parameters/lithium_ion/electrolytes/lipf6_Ramadass2004/"
-                + "parameters.csv"
-            )
-        )
-        self.assertEqual(electrolyte["Cation transference number"], "0.363")
-
-        cell = pybamm.ParameterValues({}).read_parameters_csv(
-            pybamm.get_parameters_filepath(
-                "input/parameters/lithium_ion/cells/sony_Ramadass2004/parameters.csv"
-            )
-        )
-        self.assertAlmostEqual(
-            cell["Negative current collector thickness [m]"], 1.7e-05
-        )
-
     def test_functions(self):
-        root = pybamm.root_dir()
         param = pybamm.ParameterValues("Ramadass2004")
         sto = pybamm.Scalar(0.5)
         T = pybamm.Scalar(298.15)
 
-        # Positive electrode
-        p = (
-            "pybamm/input/parameters/lithium_ion/positive_electrodes/"
-            "lico2_Ramadass2004/"
-        )
-        k_path = os.path.join(root, p)
-
         c_p_max = param["Maximum concentration in positive electrode [mol.m-3]"]
+        c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
         fun_test = {
-            "lico2_diffusivity_Ramadass2004.py": ([sto, T], 1e-14),
-            "lico2_electrolyte_exchange_current_density_Ramadass2004.py": (
+            # Positive electrode
+            "Positive electrode diffusivity [m2.s-1]": ([sto, T], 1e-14),
+            "Positive electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_p_max, T],
                 1.4517,
             ),
-            "lico2_entropic_change_Moura2016.py": ([sto, c_p_max], -3.4664e-5),
-            "lico2_ocp_Ramadass2004.py": ([sto], 4.1249),
-        }
-
-        for name, value in fun_test.items():
-            fun = pybamm.load_function(os.path.join(k_path, name))
-            self.assertAlmostEqual(param.evaluate(fun(*value[0])), value[1], places=4)
-
-        # Negative electrode
-        p = (
-            "pybamm/input/parameters/lithium_ion/negative_electrodes/"
-            "graphite_Ramadass2004/"
-        )
-        k_path = os.path.join(root, p)
-
-        c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
-        fun_test = {
-            "graphite_mcmb2528_diffusivity_Dualfoil1998.py": ([sto, T], 3.9e-14),
-            "graphite_electrolyte_exchange_current_density_Ramadass2004.py": (
+            "Positive electrode OCP entropic change [V.K-1]": (
+                [sto, c_p_max],
+                -3.4664e-5,
+            ),
+            "Positive electrode OCP [V]": ([sto], 4.1249),
+            # Negative electrode
+            "Negative electrode diffusivity [m2.s-1]": ([sto, T], 3.9e-14),
+            "Negative electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_n_max, T],
                 2.2007,
             ),
-            "graphite_entropic_change_Moura2016.py": ([sto, c_n_max], -1.5079e-5),
-            "graphite_ocp_Ramadass2004.py": ([sto], 0.1215),
+            "Negative electrode OCP entropic change [V.K-1]": (
+                [sto, c_n_max],
+                -1.5079e-5,
+            ),
+            "Negative electrode OCP [V]": ([sto], 0.1215),
         }
 
         for name, value in fun_test.items():
-            fun = pybamm.load_function(os.path.join(k_path, name))
-            self.assertAlmostEqual(param.evaluate(fun(*value[0])), value[1], places=4)
-
-    def test_standard_lithium_parameters(self):
-        parameter_values = pybamm.ParameterValues("Ramadass2004")
-        model = pybamm.lithium_ion.DFN()
-        sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sim.set_parameters()
-        sim.build()
+            self.assertAlmostEqual(
+                param.evaluate(param[name](*value[0])), value[1], places=4
+            )
 
 
 if __name__ == "__main__":
