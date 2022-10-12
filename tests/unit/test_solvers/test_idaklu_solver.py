@@ -151,7 +151,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.initial_conditions = {u1: 0, u2: 0, u3: 0, v: 1}
 
             disc = pybamm.Discretisation()
-            disc.process_model(model)
+            disc.process_model(model, check_for_independent_variables=False)
 
             solver = pybamm.IDAKLUSolver(root_method=root_method)
 
@@ -166,15 +166,15 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # test that y[3] remains constant
-            np.testing.assert_array_almost_equal(sol.y[3, :], np.ones(sol.t.shape))
+            np.testing.assert_array_almost_equal(sol.y[3], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+            np.testing.assert_array_almost_equal(sol.y[0], true_solution)
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[1:3, :], true_solution)
+            np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts

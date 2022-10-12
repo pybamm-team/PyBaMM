@@ -1436,6 +1436,21 @@ class TestDiscretise(unittest.TestCase):
         disc.process_model(model)
         self.assertEqual(model.length_scales["negative electrode"], pybamm.Scalar(1))
 
+    def test_independent_rhs(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        model = pybamm.BaseModel()
+        model.rhs = {a: b, b: c, c: -c}
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(1),
+            c: pybamm.Scalar(1),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        self.assertEqual(len(model.rhs), 2)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
