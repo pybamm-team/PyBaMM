@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
+from pybamm.util import is_constant_and_can_evaluate
 
 import numbers
 
@@ -18,22 +19,6 @@ def id_to_julia_variable(symbol_id, prefix):
     var_format = prefix + "_{:05d}"
     # Need to replace "-" character to make them valid julia variable names
     return var_format.format(symbol_id).replace("-", "m")
-
-
-def is_constant_and_can_evaluate(symbol):
-    """
-    Returns True if symbol is constant and evaluation does not raise any errors.
-    Returns False otherwise.
-    An example of a constant symbol that cannot be "evaluated" is PrimaryBroadcast(0).
-    """
-    if symbol.is_constant():
-        try:
-            symbol.evaluate()
-            return True
-        except NotImplementedError:
-            return False
-    else:
-        return False
 
 
 def find_symbols(
