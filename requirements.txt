@@ -7,6 +7,7 @@ scikit-fem >= 0.2.0
 casadi >= 3.5.0
 imageio>=2.9.0
 juliacall >= 0.1.0
+juliapkg >= 0.1.9
 jupyter  # For example notebooks
 pybtex>=0.24.0
 sympy >= 1.8

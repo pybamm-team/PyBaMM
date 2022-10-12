@@ -1174,6 +1174,15 @@ class BaseModel:
             get_consistent_ics_solver.set_up(self)
             get_consistent_ics_solver._set_initial_conditions(self, {}, False)
             ics = pybamm.Vector(self.y0.full())
+        ics_converter = pybamm.JuliaConverter(
+            input_parameter_order=input_parameter_order,
+            cache_type=cache_type,
+            inline=inline,
+            preallocate=preallocate,
+        )
+        ics_converter.convert_tree_to_intermediate(self.concatenated_initial_conditions)
+        ics_str = ics_converter.build_julia_code(funcname=name + "_ics")
+        ics_str.replace("(du, u, p, t)", "(u, p)")
 
         if generate_jacobian:
             size_state = self.concatenated_initial_conditions.size
@@ -1189,9 +1198,9 @@ class BaseModel:
             )
             jac_converter.convert_tree_to_intermediate(expr)
             jac_str = jac_converter.build_julia_code(funcname="jac_" + name)
-            return eqn_str, ics, jac_str
+            return eqn_str, ics_str, jac_str
 
-        return eqn_str, ics
+        return eqn_str, ics_str
 
     def latexify(self, filename=None, newline=True):
         # For docstring, see pybamm.expression_tree.operations.latexify.Latexify

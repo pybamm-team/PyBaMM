@@ -4,6 +4,7 @@
 import platform
 import unittest
 import pybamm
+import numpy as np
 
 have_julia = True  # pybamm.have_julia()
 if have_julia and platform.system() != "Windows":
@@ -29,8 +30,6 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIn("ode_test_model", rhs_str)
         self.assertIn("(dy, y, p, t)", rhs_str)
         self.assertIsInstance(ics_str, pybamm.Vector)
-        self.assertIn("ode_test_model_u0", ics_str)
-        self.assertIn("(u0, p)", ics_str)
 
         # ODE model with input parameters
         model = pybamm.BaseModel(name="ode test model 2")
@@ -45,11 +44,9 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         rhs_str, ics_str = model.generate_julia_diffeq(input_parameter_order=["p", "q"])
         self.assertIsInstance(rhs_str, str)
         self.assertIn("ode_test_model_2", rhs_str)
-        self.assertIn("p, q = p", rhs_str)
+        self.assertIn("p,q,= p", rhs_str)
 
-        self.assertIsInstance(ics_str, str)
-        self.assertIn("ode_test_model_2_u0", ics_str)
-        self.assertIn("p, q = p", ics_str)
+        self.assertIsInstance(ics_str, pybamm.Vector)
 
     def test_generate_dae(self):
         # ODE model with no input parameters
@@ -65,26 +62,21 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIsInstance(eqn_str, str)
         self.assertIn("dae_test_model", eqn_str)
         self.assertIn("(dy, y, p, t)", eqn_str)
-        self.assertIsInstance(ics_str, str)
-        self.assertIn("dae_test_model_u0", ics_str)
-        self.assertIn("(u0, p)", ics_str)
-        self.assertIn("[1.,2.]", ics_str)
+        self.assertIsInstance(ics_str, pybamm.Vector)
 
         # Generate eqn and ics for the Julia model (implicit)
         eqn_str, ics_str = model.generate_julia_diffeq(dae_type="implicit")
         self.assertIsInstance(eqn_str, str)
         self.assertIn("dae_test_model", eqn_str)
         self.assertIn("(out, dy, y, p, t)", eqn_str)
-        self.assertIsInstance(ics_str, str)
-        self.assertIn("dae_test_model_u0", ics_str)
-        self.assertIn("(u0, p)", ics_str)
+        self.assertIsInstance(ics_str, pybamm.Vector)
 
         # Calculate initial conditions in python
         eqn_str, ics_str = model.generate_julia_diffeq(
             get_consistent_ics_solver=pybamm.CasadiSolver()
         )
         # Check that the initial conditions are consistent
-        self.assertIn("[1.,1.]", ics_str)
+        self.assertEqual(pybamm.Vector(np.array([1., 1.])), ics_str)
 
     def test_generate_pde(self):
         # ODE model with no input parameters
@@ -113,9 +105,7 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIsInstance(rhs_str, str)
         self.assertIn("pde_test_model", rhs_str)
         self.assertIn("(dy, y, p, t)", rhs_str)
-        self.assertIsInstance(ics_str, str)
-        self.assertIn("pde_test_model_u0", ics_str)
-        self.assertIn("(u0, p)", ics_str)
+        self.assertIsInstance(ics_str, pybamm.Vector)
 
 
 if __name__ == "__main__":
