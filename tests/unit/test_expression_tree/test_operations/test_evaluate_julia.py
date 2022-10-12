@@ -319,7 +319,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}_asf", decimal=8)
+            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=8)
 
     def test_evaluator_julia_discretised_microscale(self):
         # create discretisation
@@ -364,7 +364,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [np.linspace(0, 1, total_npts) ** 2]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}_asdf", decimal=8)
+            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=8)
 
 
 if __name__ == "__main__":

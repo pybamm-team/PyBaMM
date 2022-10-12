@@ -7,13 +7,10 @@ import pybamm
 
 have_julia = True  # pybamm.have_julia()
 if have_julia and platform.system() != "Windows":
-    from julia.api import Julia
-
-    Julia(compiled_modules=False)
-    from julia import Main
+    from juliacall import Main
 
     # load julia libraries required for evaluating the strings
-    Main.eval("using SparseArrays, LinearAlgebra")
+    Main.seval("using SparseArrays, LinearAlgebra")
 
 
 @unittest.skipIf(not have_julia, "Julia not installed")
@@ -31,7 +28,7 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIsInstance(rhs_str, str)
         self.assertIn("ode_test_model", rhs_str)
         self.assertIn("(dy, y, p, t)", rhs_str)
-        self.assertIsInstance(ics_str, str)
+        self.assertIsInstance(ics_str, pybamm.Vector)
         self.assertIn("ode_test_model_u0", ics_str)
         self.assertIn("(u0, p)", ics_str)
 

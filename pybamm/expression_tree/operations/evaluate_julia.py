@@ -8,7 +8,6 @@ import scipy
 from collections import OrderedDict
 from multimethod import multimethod
 from math import floor
-import re
 import graphlib
 
 
@@ -27,16 +26,13 @@ def is_constant_and_can_evaluate(symbol):
     Returns False otherwise.
     An example of a constant symbol that cannot be "evaluated" is PrimaryBroadcast(0).
     """
-    try:
-        if symbol.is_constant():
-            try:
-                symbol.evaluate()
-                return True
-            except NotImplementedError:
-                return False
-        else:
+    if symbol.is_constant():
+        try:
+            symbol.evaluate()
+            return True
+        except NotImplementedError:
             return False
-    except:
+    else:
         return False
 
 

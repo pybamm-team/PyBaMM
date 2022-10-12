@@ -15,4 +15,6 @@ sympy >= 1.8
 # outside of plot() methods.
 # Should not be imported
 matplotlib >= 2.0
+# graphlib is a native part of python 3.9 and above
+graphlib-backport; python_version < "3.9"
 #
