@@ -300,7 +300,8 @@ class JuliaConverter(object):
             my_id = symbol.id
             value = symbol.evaluate()
             if value.shape == (1, 1):
-                value = value.toarray()
+                if isinstance(value, scipy.sparse._csr.csr_matrix):
+                    value = value.toarray()
                 self._intermediate[my_id] = JuliaScalar(my_id, value)
             else:
                 self._intermediate[my_id] = JuliaConstant(my_id, value)
