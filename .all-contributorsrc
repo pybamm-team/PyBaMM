@@ -512,6 +512,15 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "abillscmu",
+      "name": "Alec Bills",
+      "avatar_url": "https://avatars.githubusercontent.com/u/48105066?v=4",
+      "profile": "https://github.com/abillscmu",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -519,5 +528,6 @@
   "projectOwner": "pybamm-team",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true
+  "skipCi": true,
+  "commitConvention": "angular"
 }
