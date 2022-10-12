@@ -56,9 +56,11 @@ class TestUtil(unittest.TestCase):
 
     def test_is_constant_and_can_evaluate(self):
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
-        self.asssertRaisesRegex(NotImplementedError, "does not implement")
+        self.assertEqual(False,pybamm.is_constant_and_can_evaluate(symbol))
         symbol = pybamm.StateVector(slice(0, 1))
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
+        symbol = pybamm.Scalar(0)
+        self.assertEqual(True, pybamm.is_constant_and_can_evaluate(symbol))
 
     def test_fuzzy_dict(self):
         d = pybamm.FuzzyDict(
