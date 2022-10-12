@@ -68,8 +68,8 @@ class CasadiSolver(pybamm.BaseSolver):
         the simulation, but managed to take some successful steps. Default is False.
     perturb_algebraic_initial_conditions : bool, optional
         Whether to perturb algebraic initial conditions to avoid a singularity. This
-        can sometimes slow down the solver, but is kept True as default as it seems
-        to be more robust.
+        can sometimes slow down the solver, but is kept True as default for "safe" mode
+        as it seems to be more robust (False by default for other modes).
     """
 
     def __init__(
@@ -85,7 +85,7 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_setup=None,
         extra_options_call=None,
         return_solution_if_failed_early=False,
-        perturb_algebraic_initial_conditions=True,
+        perturb_algebraic_initial_conditions=None,
     ):
         super().__init__(
             "problem dependent",
@@ -110,7 +110,18 @@ class CasadiSolver(pybamm.BaseSolver):
         self.extra_options_call = extra_options_call or {}
         self.extrap_tol = extrap_tol
         self.return_solution_if_failed_early = return_solution_if_failed_early
-        self.perturb_algebraic_initial_conditions = perturb_algebraic_initial_conditions
+
+        # Decide whether to perturb algebraic initial conditions, True by default for
+        # "safe" mode, False by default for other modes
+        if perturb_algebraic_initial_conditions is None:
+            if mode == "safe":
+                self.perturb_algebraic_initial_conditions = True
+            else:
+                self.perturb_algebraic_initial_conditions = False
+        else:
+            self.perturb_algebraic_initial_conditions = (
+                perturb_algebraic_initial_conditions
+            )
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
