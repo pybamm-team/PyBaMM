@@ -476,11 +476,11 @@ class TestSimulationExperiment(unittest.TestCase):
             model, parameter_values=parameter_values, experiment=experiment2
         )
         sol2 = sim2.solve()
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             sol["Terminal voltage [V]"].data, sol2["Terminal voltage [V]"].data
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
-            np.testing.assert_array_equal(
+            np.testing.assert_array_almost_equal(
                 sol.cycles[0].steps[idx1]["Terminal voltage [V]"].data,
                 sol2.cycles[0].steps[idx2]["Terminal voltage [V]"].data,
             )
