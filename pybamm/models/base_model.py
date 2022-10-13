@@ -1180,7 +1180,7 @@ class BaseModel:
             input_parameter_order=input_parameter_order,
             cache_type=cache_type,
             inline=inline,
-            preallocate=False,
+            preallocate=True,
         )
         ics_converter.convert_tree_to_intermediate(ics)
         ics_str = ics_converter.build_julia_code(funcname=name + "_ics")
