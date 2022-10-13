@@ -535,7 +535,7 @@ class JuliaConverter(object):
         self._cache_and_const_string = (
             "begin\n{} = let \n".format(funcname) + self._cache_and_const_string
         )
-        if len(self._intermediate)>1:
+        if len(self._intermediate) > 1:
             self._cache_and_const_string = remove_lines_with(
                 self._cache_and_const_string, top_var_name
             )

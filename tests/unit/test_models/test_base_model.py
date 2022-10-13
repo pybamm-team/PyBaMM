@@ -611,7 +611,9 @@ class TestBaseModel(unittest.TestCase):
         rhs_str, ics_str = model.generate_julia_diffeq()
         self.assertIsInstance(rhs_str, str)
         self.assertIn("ode_test_model", rhs_str)
-        self.assertIsInstance(ics_str, pybamm.Vector)
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_ics", ics_str)
+        self.assertIn("(dy, p)", ics_str)
 
         # ODE model with input parameters
         model = pybamm.BaseModel(name="ode test model 2")
@@ -628,7 +630,9 @@ class TestBaseModel(unittest.TestCase):
         self.assertIn("ode_test_model_2", rhs_str)
         self.assertIn("p,q,= p", rhs_str)
 
-        self.assertIsInstance(ics_str, pybamm.Vector)
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_2_ics", ics_str)
+        self.assertIn("p,q,= p", ics_str)
 
     def test_set_initial_conditions(self):
         # Set up model

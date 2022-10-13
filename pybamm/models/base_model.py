@@ -1175,7 +1175,7 @@ class BaseModel:
             get_consistent_ics_solver._set_initial_conditions(self, {}, False)
             ics = pybamm.Vector(self.y0.full())
         ics = pybamm.Addition(ics, pybamm.Scalar(0))
-        
+
         ics_converter = pybamm.JuliaConverter(
             input_parameter_order=input_parameter_order,
             cache_type=cache_type,
@@ -1184,7 +1184,7 @@ class BaseModel:
         )
         ics_converter.convert_tree_to_intermediate(ics)
         ics_str = ics_converter.build_julia_code(funcname=name + "_ics")
-        ics_str = ics_str.replace("(dy, y, p, t)","(dy, p)")
+        ics_str = ics_str.replace("(dy, y, p, t)", "(dy, p)")
 
         if generate_jacobian:
             size_state = self.concatenated_initial_conditions.size
