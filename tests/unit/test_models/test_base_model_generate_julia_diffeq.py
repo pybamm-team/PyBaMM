@@ -76,7 +76,7 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
             generate_jacobian = True
         )
         # Check the jacobian
-        self.assertIn("dae_test_model_jac", jac_str)
+        self.assertIn("jac_dae_test_model", jac_str)
         self.assertIn("(J, y, p, t)", jac_str)
 
         # Generate eqn and ics for the Julia model (implicit)

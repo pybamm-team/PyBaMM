@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 import scipy.sparse
 from platform import system
+from collections import OrderedDict
 
 have_julia = pybamm.have_julia()
 if have_julia and system() != "Windows":
@@ -87,6 +88,18 @@ class TestEvaluate(unittest.TestCase):
             myconverter = pybamm.JuliaConverter()
             myconverter.convert_tree_to_intermediate(a)
             myconverter.build_julia_code()
+        with self.assertRaisesRegex(NotImplementedError, "Inline not supported"):
+            myconverter = pybamm.JuliaConverter(parallel=None, inline=True)
+    
+    def test_converter_julia(self):
+        A = pybamm.Matrix(np.random.rand(2,2))
+        b = pybamm.StateVector(slice(0,2))
+        expr = A @ b
+
+        converter = pybamm.JuliaConverter()
+        converter.convert_tree_to_intermediate(expr)
+        converter.clear()
+        self.assertEqual(converter._intermediate, OrderedDict())
 
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -128,10 +141,20 @@ class TestEvaluate(unittest.TestCase):
         expr = A @ pybamm.StateVector(slice(0, 2))
         self.evaluate_and_test_equal(expr, y_tests, funcname="g3")
 
+        # test something with a 1x1 matrix multiplication
+        Q = pybamm.Matrix(np.random.rand(1,1))
+        expr = Q * pybamm.StateVector(slice(0, 1))
+        self.evaluate_and_test_equal(expr, y_tests, funcname="a1")
+
         # test something with a heaviside
         a = pybamm.Vector([1, 2])
         expr = a <= pybamm.StateVector(slice(0, 2))
         self.evaluate_and_test_equal(expr, y_tests, funcname="g4")
+        
+        #test something with a notequalheaviside
+        a = pybamm.Vector([1, 2])
+        expr = a < pybamm.StateVector(slice(0, 2))
+        self.evaluate_and_test_equal(expr, y_tests, funcname="a4")
 
         # test something with a minimum or maximum
         a = pybamm.Vector([1, 2])
@@ -144,6 +167,16 @@ class TestEvaluate(unittest.TestCase):
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         self.evaluate_and_test_equal(expr, y_tests, funcname="g6")
+
+        # test something with a slice index
+        expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), slice(0,1))
+        self.evaluate_and_test_equal(expr, y_tests, funcname="a2")
+
+        q_test = np.array([1,2,3,4,5,6])
+        Q = pybamm.Matrix(np.random.rand(6,6))
+        q = pybamm.StateVector(slice(0, 6))
+        expr = pybamm.Index(Q @ q, slice(0,5,2))
+        self.evaluate_and_test_equal(expr, q_test, funcname="a6", decimal=7)
 
         # test something with a sparse matrix multiplication
         A = pybamm.Matrix([[1, 2], [3, 4]])

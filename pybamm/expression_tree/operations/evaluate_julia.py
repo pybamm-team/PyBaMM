@@ -224,12 +224,8 @@ class JuliaConverter(object):
                         floor((index.stop - index.start) / index.step),
                         child_ncols,
                     )
-                else:
-                    raise NotImplementedError("index must be slice or int")
             elif isinstance(index, int):
                 shape = (1, child_ncols)
-            else:
-                raise NotImplementedError("index must be slice or int")
 
             self._intermediate[my_id] = JuliaIndex(id_lower, my_id, index, shape)
         elif isinstance(symbol, pybamm.Min) or isinstance(symbol, pybamm.Max):
