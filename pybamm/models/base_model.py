@@ -1180,7 +1180,7 @@ class BaseModel:
             inline=inline,
             preallocate=preallocate,
         )
-        ics_converter.convert_tree_to_intermediate(self.concatenated_initial_conditions)
+        ics_converter.convert_tree_to_intermediate(ics)
         ics_str = ics_converter.build_julia_code(funcname=name + "_ics")
         ics_str.replace("(du, u, p, t)", "(u, p)")
 
