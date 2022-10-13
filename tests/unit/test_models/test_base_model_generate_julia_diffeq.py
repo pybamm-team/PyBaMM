@@ -70,10 +70,9 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIn("(dy, p)", ics_str)
         self.assertIn("[[1.]\n [2.]]", ics_str)
 
-                # Calculate initial conditions in python
+        # Calculate initial conditions in python
         eqn_str, ics_str, jac_str = model.generate_julia_diffeq(
-            get_consistent_ics_solver=pybamm.CasadiSolver(),
-            generate_jacobian = True
+            get_consistent_ics_solver=pybamm.CasadiSolver(), generate_jacobian=True
         )
         # Check the jacobian
         self.assertIn("jac_dae_test_model", jac_str)
@@ -86,7 +85,6 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIn("(out, dy, y, p, t)", eqn_str)
         self.assertIsInstance(ics_str, str)
         self.assertIn("dae_test_model_ics", ics_str)
-
 
     def test_generate_pde(self):
         # ODE model with no input parameters
