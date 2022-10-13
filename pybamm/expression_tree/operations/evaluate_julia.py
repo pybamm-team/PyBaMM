@@ -20,23 +20,6 @@ def get_lower_keys(key, all_keys):
     return my_lower_keys
 
 
-
-def is_constant_and_can_evaluate(symbol):
-    """
-    Returns True if symbol is constant and evaluation does not raise any errors.
-    Returns False otherwise.
-    An example of a constant symbol that cannot be "evaluated" is PrimaryBroadcast(0).
-    """
-    if symbol.is_constant():
-        try:
-            symbol.evaluate()
-            return True
-        except NotImplementedError:
-            return False
-    else:
-        return False
-
-
 def remove_lines_with(input_string, pattern):
     string_list = input_string.split("\n")
     my_string = ""
