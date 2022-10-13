@@ -8,6 +8,7 @@ import scipy
 from collections import OrderedDict
 from math import floor
 import graphlib
+from pybamm.util import is_constant_and_can_evaluate
 
 
 def get_lower_keys(key, all_keys):
@@ -17,6 +18,7 @@ def get_lower_keys(key, all_keys):
         filter(lambda this_key: this_key[0:key_length] == key, all_lower_keys)
     )
     return my_lower_keys
+
 
 
 def is_constant_and_can_evaluate(symbol):

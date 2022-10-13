@@ -5,31 +5,31 @@
 import os
 import tempfile
 import shutil
-import subprocess
 import unittest
+import inspect
+import importlib
 
 import numpy as np
 import pandas as pd
 
 import pybamm
 import tests.shared as shared
+from pybamm.input.parameters.lithium_ion.Marquis2019 import (
+    lico2_ocp_Dualfoil1998,
+    lico2_diffusivity_Dualfoil1998,
+)
 
 
 class TestParameterValues(unittest.TestCase):
-    def tearDown(self):
-        # Make sure the local lithium_ion directory is removed
-        try:
-            shutil.rmtree("lithium_ion")
-        except FileNotFoundError:
-            pass
-        return super().tearDown()
-
     def test_find_parameter(self):
         f = tempfile.NamedTemporaryFile()
         pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
 
         tempfile_name = os.path.basename(f.name)
         self.assertEqual(pybamm.ParameterValues.find_parameter(tempfile_name), f.name)
+
+        with self.assertRaisesRegex(FileNotFoundError, "Could not find parameter"):
+            pybamm.ParameterValues.find_parameter("not_a_file")
 
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
@@ -39,12 +39,13 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium_ion",
+                "testing_only",
                 "positive_electrodes",
-                "lico2_Marquis2019",
+                "lico2_Ai2020",
                 "parameters.csv",
             )
         )
-        self.assertEqual(data["Positive electrode porosity"], "0.3")
+        self.assertEqual(data["Positive electrode porosity"], "0.32")
 
     def test_init(self):
         # from dict
@@ -56,9 +57,9 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium_ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium_ion/testing_only/positive_electrodes/lico2_Ai2020/parameters.csv"
         )
-        self.assertEqual(param["Positive electrode porosity"], 0.3)
+        self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # from file, absolute path
         param = pybamm.ParameterValues(
@@ -67,10 +68,14 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium_ion/positive_electrodes/lico2_Marquis2019/parameters.csv",
+                "lithium_ion",
+                "testing_only",
+                "positive_electrodes",
+                "lico2_Ai2020",
+                "parameters.csv",
             )
         )
-        self.assertEqual(param["Positive electrode porosity"], 0.3)
+        self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # values vs chemistry
         with self.assertRaisesRegex(
@@ -95,24 +100,14 @@ class TestParameterValues(unittest.TestCase):
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues({"chemistry": "lithium_ion"})
-
-    def test_update_from_chemistry_local(self):
-        # Copy parameters
-        cmd = ["pybamm_edit_parameter", "-f", "lithium_ion"]
-        subprocess.run(cmd)
-
-        # Import parameters from chemistry
-        pybamm.ParameterValues("Chen2020")
-
-        # Clean up parameter files
-        shutil.rmtree("lithium_ion")
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
         # converts to dict if not
-        param = pybamm.ParameterValues("Chen2020")
+        param = pybamm.ParameterValues("Ai2020")
         param_from_csv = pybamm.ParameterValues(
-            "lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv"
+            "lithium_ion/testing_only/"
+            "negative_electrodes/graphite_Ai2020/parameters.csv"
         )
         param.update(param_from_csv)
         # equate values
@@ -330,18 +325,13 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_c.evaluate(inputs={"c": 5}), 10)
 
     def test_process_function_parameter(self):
+        def test_function(var):
+            return 123 * var
+
         parameter_values = pybamm.ParameterValues(
             {
                 "a": 3,
-                "func": pybamm.load_function(
-                    os.path.join(
-                        "tests",
-                        "unit",
-                        "test_parameters",
-                        "data",
-                        "process_symbol_test_function.py",
-                    )
-                ),
+                "func": test_function,
                 "const": 254,
                 "float_func": lambda x: 42,
                 "mult": pybamm.InputParameter("b") * 5,
@@ -575,20 +565,16 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_against_function(self):
-        parameter_values = pybamm.ParameterValues({})
+        parameter_values = pybamm.ParameterValues({"function": lico2_ocp_Dualfoil1998})
         parameter_values.update(
-            {
-                "function": "[function]lico2_ocp_Dualfoil1998",
-                "interpolation": "[data]lico2_data_example",
-            },
+            {"interpolation": "[data]lico2_data_example"},
             path=os.path.join(
                 pybamm.root_dir(),
                 "pybamm",
                 "input",
                 "parameters",
                 "lithium_ion",
-                "positive_electrodes",
-                "lico2_Marquis2019",
+                "data",
             ),
             check_already_exists=False,
         )
@@ -613,42 +599,14 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_2d_from_json(self):
-
-        # pv = pybamm.ParameterValues({'interpolation': 0.0, 'function': 0.0})
-        #
-        # pv['interpolation'] = \
-        #     '[2D data]../tests/unit/test_parameters/lico2_diffusivity_Dualfoil1998_2D'
-        #
-        # pv['function'] = '[function]'
-
         parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Ai2020
-        )
-        parameter_values.update(
-            {
-                "function": "[function]lico2_diffusivity_Dualfoil1998",
-            },
-            path=os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "positive_electrodes",
-                "lico2_Ai2020",
-            ),
-            check_already_exists=False,
+            {"function": lico2_diffusivity_Dualfoil1998}
         )
         parameter_values.update(
             {
                 "interpolation": "[2D data]lico2_diffusivity_Dualfoil1998_2D",
             },
-            path=os.path.join(
-                pybamm.root_dir(),
-                "tests",
-                "unit",
-                "test_parameters",
-            ),
+            path=os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters"),
             check_already_exists=False,
         )
 
@@ -1001,6 +959,70 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["a"], "0.1")
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
+
+    def test_export_python_script(self):
+        parameter_values = pybamm.ParameterValues(
+            {
+                "chemistry": "lithium_ion",
+                "cell": "Enertech_Ai2020",
+                "negative electrode": "graphite_Ai2020",
+                "separator": "separator_Ai2020",
+                "positive electrode": "lico2_Ai2020",
+                "electrolyte": "lipf6_Enertech_Ai2020",
+                "experiment": "1C_discharge_from_full_Ai2020",
+                "sei": "example",
+                "citation": "Ai2019",
+            }
+        )
+        parameter_values.export_python_script(
+            "Ai2020_test",
+            old_parameters_path=os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium_ion",
+                "testing_only",
+            ),
+        )
+
+        # test that loading the parameter set works
+        module = importlib.import_module("Ai2020_test")
+        function = getattr(module, "get_parameter_values")
+        new_parameter_values = pybamm.ParameterValues(function())
+
+        # Parameters should be the same
+        self.assertEqual(
+            new_parameter_values["Negative particle radius [m]"],
+            parameter_values["Negative particle radius [m]"],
+        )
+
+        # Functions should be the same, except without 'pybamm.'
+        self.assertEqual(
+            inspect.getsource(
+                new_parameter_values[
+                    "Negative electrode exchange-current density [A.m-2]"
+                ]
+            ).replace(" pybamm.", " "),
+            inspect.getsource(
+                parameter_values["Negative electrode exchange-current density [A.m-2]"]
+            ),
+        )
+        # Data should be the same
+        np.testing.assert_array_equal(
+            new_parameter_values["Negative electrode OCP [V]"][1][0],
+            parameter_values["Negative electrode OCP [V]"][1][0],
+        )
+        np.testing.assert_array_equal(
+            new_parameter_values["Negative electrode OCP [V]"][1][1],
+            parameter_values["Negative electrode OCP [V]"][1][1],
+        )
+
+        # remove the file
+        filename = os.path.join("Ai2020_test.py")
+        if os.path.exists(filename):
+            os.remove(filename)
+        shutil.rmtree("data")
 
 
 if __name__ == "__main__":
