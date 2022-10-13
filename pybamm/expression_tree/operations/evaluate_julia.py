@@ -3,21 +3,10 @@
 #
 import pybamm
 import numpy as np
-import numpy
 import scipy
 from collections import OrderedDict
 from math import floor
 import graphlib
-from pybamm.util import is_constant_and_can_evaluate
-
-
-def get_lower_keys(key, all_keys):
-    key_length = len(key)
-    all_lower_keys = list(filter(lambda this_key: len(this_key) > key_length, all_keys))
-    my_lower_keys = list(
-        filter(lambda this_key: this_key[0:key_length] == key, all_lower_keys)
-    )
-    return my_lower_keys
 
 
 def remove_lines_with(input_string, pattern):
@@ -37,11 +26,15 @@ class JuliaConverter(object):
         jacobian_type="analytical",
         preallocate=True,
         dae_type="semi-explicit",
-        input_parameter_order=[],
+        input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
     ):
-        assert not ismtk
+        if ismtk:
+            raise NotImplementedError("mtk is not supported")
+
+        if input_parameter_order is None:
+            input_parameter_order = []
 
         if parallel != "legacy-serial" and inline:
             raise NotImplementedError(
@@ -89,8 +82,8 @@ class JuliaConverter(object):
     def cache_exists(self, my_id, inputs):
         existance = self._cache_dict.get(my_id) is not None
         if existance:
-            for input in inputs:
-                self._dag[my_id].add(input)
+            for this_input in inputs:
+                self._dag[my_id].add(this_input)
         return self._cache_dict.get(my_id) is not None
 
     # know where to go to find a variable.
@@ -102,10 +95,6 @@ class JuliaConverter(object):
     def break_down_binary(self, symbol):
         # Check for constant
         # assert not is_constant_and_can_evaluate(symbol)
-
-        # We know that this should only have 2 children
-        assert len(symbol.children) == 2
-
         # take care of the kids first (this is recursive
         # but multiple-dispatch recursive which is cool)
         id_left = self._convert_tree_to_intermediate(symbol.children[0])
@@ -123,7 +112,6 @@ class JuliaConverter(object):
         num_rows = 0
         for child_id in child_ids:
             child_shape = self._intermediate[child_id].shape
-            assert num_cols == child_shape[1]
             num_rows += child_shape[0]
         shape = (num_rows, num_cols)
         return child_ids, shape
@@ -222,24 +210,23 @@ class JuliaConverter(object):
                 id_left, id_right, my_id, my_shape, "<"
             )
         elif isinstance(symbol, pybamm.Index):
-            assert len(symbol.children) == 1
             id_lower = self._convert_tree_to_intermediate(symbol.children[0])
             child_shape = self._intermediate[id_lower].shape
             child_ncols = child_shape[1]
 
             my_id = symbol.id
             index = symbol.index
-            if type(index) is slice:
+            if isinstance(index, slice):
                 if index.step is None:
                     shape = ((index.stop) - (index.start), child_ncols)
-                elif type(index.step) == int:
+                elif isinstance(index.step, int):
                     shape = (
                         floor((index.stop - index.start) / index.step),
                         child_ncols,
                     )
                 else:
                     raise NotImplementedError("index must be slice or int")
-            elif type(index) is int:
+            elif isinstance(index, int):
                 shape = (1, child_ncols)
             else:
                 raise NotImplementedError("index must be slice or int")
@@ -247,33 +234,29 @@ class JuliaConverter(object):
             self._intermediate[my_id] = JuliaIndex(id_lower, my_id, index, shape)
         elif isinstance(symbol, pybamm.Min) or isinstance(symbol, pybamm.Max):
             my_jl_name = symbol.julia_name
-            assert len(symbol.children) == 1
             my_shape = (1, 1)
-            input = self._convert_tree_to_intermediate(symbol.children[0])
+            this_input = self._convert_tree_to_intermediate(symbol.children[0])
             my_id = symbol.id
             self._intermediate[my_id] = JuliaMinimumMaximum(
-                my_jl_name, input, my_id, my_shape
+                my_jl_name, this_input, my_id, my_shape
             )
         elif isinstance(symbol, pybamm.Function):
             my_jl_name = symbol.julia_name
-            assert len(symbol.children) == 1
             my_shape = symbol.children[0].shape
-            input = self._convert_tree_to_intermediate(symbol.children[0])
+            this_input = self._convert_tree_to_intermediate(symbol.children[0])
             my_id = symbol.id
             self._intermediate[my_id] = JuliaBroadcastableFunction(
-                my_jl_name, input, my_id, my_shape
+                my_jl_name, this_input, my_id, my_shape
             )
         elif isinstance(symbol, pybamm.Negate):
             my_jl_name = "-"
-            assert len(symbol.children) == 1
             my_shape = symbol.children[0].shape
-            input = self._convert_tree_to_intermediate(symbol.children[0])
+            this_input = self._convert_tree_to_intermediate(symbol.children[0])
             my_id = symbol.id
             self._intermediate[my_id] = JuliaNegation(
-                my_jl_name, input, my_id, my_shape
+                my_jl_name, this_input, my_id, my_shape
             )
         elif isinstance(symbol, pybamm.Matrix):
-            assert is_constant_and_can_evaluate(symbol)
             my_id = symbol.id
             value = symbol.evaluate()
             if value.shape == (1, 1):
@@ -281,7 +264,6 @@ class JuliaConverter(object):
             else:
                 self._intermediate[my_id] = JuliaConstant(my_id, value)
         elif isinstance(symbol, pybamm.Vector):
-            assert is_constant_and_can_evaluate(symbol)
             my_id = symbol.id
             value = symbol.evaluate()
             if value.shape == (1, 1):
@@ -291,7 +273,6 @@ class JuliaConverter(object):
             else:
                 self._intermediate[my_id] = JuliaConstant(my_id, value)
         elif isinstance(symbol, pybamm.Scalar):
-            assert is_constant_and_can_evaluate(symbol)
             my_id = symbol.id
             value = symbol.evaluate()
             self._intermediate[my_id] = JuliaScalar(my_id, value)
@@ -347,9 +328,6 @@ class JuliaConverter(object):
         elif (left_shape[1] == 1) & (right_shape[0] == left_shape[0]):
             return right_shape
         else:
-            print("Right type is {}".format(type(self._intermediate[id_right])))
-            print("Right Shape is {}".format(right_shape))
-            print("Left Shape is {}".format(left_shape))
             raise NotImplementedError(
                 "multiplication for the shapes youve requested doesnt work."
             )
@@ -360,7 +338,8 @@ class JuliaConverter(object):
     def same_shape(self, id_left, id_right):
         left_shape = self._intermediate[id_left].shape
         right_shape = self._intermediate[id_right].shape
-        assert left_shape == right_shape
+        if left_shape != right_shape:
+            raise AssertionError("the shapes are not the same")
         return left_shape
 
     # Functions
@@ -452,7 +431,7 @@ class JuliaConverter(object):
         return 0
 
     def write_const(self, value):
-        if isinstance(value, numpy.ndarray):
+        if isinstance(value, np.ndarray):
             val_string = value
         elif isinstance(value, scipy.sparse._csr.csr_matrix):
             row, col, data = scipy.sparse.find(value)
@@ -567,7 +546,6 @@ class JuliaConverter(object):
     # this function will be the top level.
     def convert_tree_to_intermediate(self, symbol, len_rhs=None):
         if self._dae_type == "implicit":
-            assert len_rhs is not None
             symbol_minus_dy = []
             end = 0
             for child in symbol.orphans:
@@ -763,9 +741,9 @@ class JuliaFunction(object):
 
 
 class JuliaBroadcastableFunction(JuliaFunction):
-    def __init__(self, name, input, output, shape):
+    def __init__(self, name, this_input, output, shape):
         self.name = name
-        self.input = input
+        self.input = this_input
         self.output = output
         self.shape = shape
 
@@ -844,8 +822,8 @@ class JuliaMinimumMaximum(JuliaBroadcastableFunction):
 
 # Index is a little weird, so it just sits on its own.
 class JuliaIndex(object):
-    def __init__(self, input, output, index, shape):
-        self.input = input
+    def __init__(self, this_input, output, index, shape):
+        self.input = this_input
         self.output = output
         self.index = index
         self.shape = shape
@@ -870,14 +848,14 @@ class JuliaIndex(object):
             input_var_name = converter._intermediate[
                 self.input
             ]._convert_intermediate_to_code(converter, inline=False)
-            if type(index) is int:
+            if isinstance(index, int):
                 return "{}[{}]".format(input_var_name, index + 1)
-            elif type(index) is slice:
+            elif isinstance(index, slice):
                 if index.step is None:
                     return "(@view {}[{}:{}{})".format(
                         input_var_name, index.start + 1, index.stop, right_parenthesis
                     )
-                elif type(index.step) is int:
+                elif isinstance(index.step, int):
                     return "(@view {}[{}:{}:{}{})".format(
                         input_var_name,
                         index.start + 1,
@@ -894,11 +872,11 @@ class JuliaIndex(object):
             input_var_name = converter._intermediate[
                 self.input
             ]._convert_intermediate_to_code(converter, inline=False)
-            if type(index) is int:
+            if isinstance(index, int):
                 code = "@. {} = {}[{}{}".format(
                     result_var_name, input_var_name, index + 1, right_parenthesis
                 )
-            elif type(index) is slice:
+            elif isinstance(index, slice):
                 if index.step is None:
                     code = "@. {} = (@view {}[{}:{}{})\n".format(
                         result_var_name,
@@ -907,7 +885,7 @@ class JuliaIndex(object):
                         index.stop,
                         right_parenthesis,
                     )
-                elif type(index.step) is int:
+                elif isinstance(index.step, int):
                     code = "@. {} = (@view {}[{}:{}:{}{})\n".format(
                         result_var_name,
                         input_var_name,
