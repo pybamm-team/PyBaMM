@@ -535,12 +535,13 @@ class JuliaConverter(object):
         self._cache_and_const_string = (
             "begin\n{} = let \n".format(funcname) + self._cache_and_const_string
         )
-        self._cache_and_const_string = remove_lines_with(
-            self._cache_and_const_string, top_var_name
-        )
-        self._cache_initialization_string = remove_lines_with(
-            self._cache_initialization_string, top_var_name
-        )
+        if len(self._intermediate)>1:
+            self._cache_and_const_string = remove_lines_with(
+                self._cache_and_const_string, top_var_name
+            )
+            self._cache_initialization_string = remove_lines_with(
+                self._cache_initialization_string, top_var_name
+            )
         my_shape = top.shape
         if len(self.input_parameter_order) != 0:
             parameter_string = ""
