@@ -46,11 +46,11 @@ class TestEvaluate(unittest.TestCase):
             try:
                 Main.seval(evaluator_str)
             except JuliaError as e:
-                #text_file = open(
+                # text_file = open(
                 #    "julia_evaluator_{}.jl".format(kwargs["funcname"]), "w"
-                #)
-                #text_file.write(evaluator_str)
-                #text_file.close()
+                # )
+                # text_file.write(evaluator_str)
+                # text_file.close()
                 raise e
 
             for t_test, y_test in zip(t_tests, y_tests):
