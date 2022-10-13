@@ -199,7 +199,6 @@ setup(
         "imageio>=2.9.0",
         # Julia pip packaged can be installed even if
         # julia programming language is not installed
-        "julia>=0.5.6",
         "jupyter",  # For example notebooks
         "pybtex>=0.24.0",
         "sympy>=1.8",
@@ -208,6 +207,9 @@ setup(
         # outside of plot() methods.
         # Should not be imported
         "matplotlib>=2.0",
+        "juliacall>=0.1.0",
+        "juliapkg>=0.1.9",
+        "graphlib-backport; python_version<'3.9'",
     ],
     extras_require={
         "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation
