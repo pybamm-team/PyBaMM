@@ -1184,6 +1184,7 @@ class BaseModel:
         )
         ics_converter.convert_tree_to_intermediate(ics)
         ics_str = ics_converter.build_julia_code(funcname=name + "_ics")
+        ics_str = ics_str.replace("(dy, y, p, t)","(u0, p)")
 
         if generate_jacobian:
             size_state = self.concatenated_initial_conditions.size
