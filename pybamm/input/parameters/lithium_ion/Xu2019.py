@@ -234,6 +234,7 @@ def get_parameter_values():
     """
 
     return {
+        "chemistry": "lithium_ion",
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
         "Inner SEI reaction proportion": 0.5,

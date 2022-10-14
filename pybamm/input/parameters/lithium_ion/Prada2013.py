@@ -240,6 +240,7 @@ def get_parameter_values():
     """
 
     return {
+        "chemistry": "lithium_ion",
         # cell
         "Negative current collector thickness [m]": 1e-05,
         "Negative electrode thickness [m]": 3.6e-05,
