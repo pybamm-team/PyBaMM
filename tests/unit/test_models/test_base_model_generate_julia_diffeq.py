@@ -117,6 +117,46 @@ class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
         self.assertIn("pde_test_model_ics", ics_str)
         self.assertIn("(dy, p)", ics_str)
 
+    def test_generate_model(self):
+        model = pybamm.lithium_ion.DFN(name="DFN")
+        sim = pybamm.Simulation(model)
+        sim.build()
+        model_str, ics_str, jac_str = sim.built_model.generate_julia_diffeq(
+            generate_jacobian=True
+        )
+        self.assertIsInstance(model_str, str)
+        self.assertIn("DFN", model_str)
+        self.assertIn("(dy, y, p, t)", model_str)
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("DFN_ics", ics_str)
+        self.assertIn("(dy, p)", ics_str)
+        self.assertIn("jac_DFN", jac_str)
+        self.assertIn("(J, y, p, t)", jac_str)
+
+        model = pybamm.lithium_ion.DFN(name="DFN")
+        sim = pybamm.Simulation(model)
+        sim.build()
+        model_str, ics_str = sim.built_model.generate_julia_diffeq(
+            cache_type="dual", dae_type="implicit"
+        )
+        self.assertIn("PreallocationTools", model_str)
+
+        model = pybamm.lithium_ion.DFN(name="DFN")
+        sim = pybamm.Simulation(model)
+        sim.build()
+        model_str, ics_str, jac_str = sim.built_model.generate_julia_diffeq(
+            cache_type="gpu", generate_jacobian=True
+        )
+        self.assertIn("cu", model_str)
+
+        model = pybamm.lithium_ion.DFN(name="DFN")
+        sim = pybamm.Simulation(model)
+        sim.build()
+        model_str, ics_str, jac_str = sim.built_model.generate_julia_diffeq(
+            cache_type="symbolic", generate_jacobian=True
+        )
+        self.assertIn("symcache", model_str)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

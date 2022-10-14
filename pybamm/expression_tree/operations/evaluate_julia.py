@@ -328,16 +328,6 @@ class JuliaConverter(object):
                 "multiplication for the shapes youve requested doesnt work."
             )
 
-    # to find the shape, there are a number of elements that should just
-    # have the shame shape as their children. This function removes
-    # boilerplate by implementing those cases
-    def same_shape(self, id_left, id_right):
-        left_shape = self._intermediate[id_left].shape
-        right_shape = self._intermediate[id_right].shape
-        if left_shape != right_shape:
-            raise AssertionError("the shapes are not the same")
-        return left_shape
-
     # Functions
     # Broadcastable functions have 1 input and 1 output, and the
     #  input and output have the same shape. The hard part is that
