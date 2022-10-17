@@ -525,7 +525,7 @@ class Simulation:
             set.
         """
         if initial_soc is not None:
-            c_n_init, c_p_init = self.set_initial_soc(initial_soc)
+            self.set_initial_soc(initial_soc)
 
         if self.built_model:
             return
