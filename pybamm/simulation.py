@@ -1,7 +1,6 @@
 #
 # Simulation class
 #
-from calendar import c
 import pickle
 import pybamm
 import numpy as np
