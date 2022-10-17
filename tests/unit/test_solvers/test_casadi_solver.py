@@ -24,7 +24,12 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         model_disc = disc.process_model(model, inplace=False)
         # Solve
-        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8)
+        solver = pybamm.CasadiSolver(
+            mode="fast",
+            rtol=1e-8,
+            atol=1e-8,
+            perturb_algebraic_initial_conditions=False,  # added for coverage
+        )
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model_disc, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
