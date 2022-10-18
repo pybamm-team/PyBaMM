@@ -466,7 +466,47 @@ class Simulation:
             self._parameter_values.process_geometry(self._geometry)
         self.model = self._model_with_set_params
 
-    def build(self, check_model=True):
+    def set_initial_soc(self, initial_soc):
+        if self._built_initial_soc != initial_soc:
+            # reset
+            self._model_with_set_params = None
+            self._built_model = None
+            self.op_conds_to_built_models = None
+
+        c_n_init = self.parameter_values[
+            "Initial concentration in negative electrode [mol.m-3]"
+        ]
+        c_p_init = self.parameter_values[
+            "Initial concentration in positive electrode [mol.m-3]"
+        ]
+        param = pybamm.LithiumIonParameters()
+        c_n_max = self.parameter_values.evaluate(param.n.prim.c_max)
+        c_p_max = self.parameter_values.evaluate(param.p.prim.c_max)
+        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+            initial_soc, self.parameter_values
+        )
+        self.parameter_values.update(
+            {
+                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
+                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        # For experiments also update the following
+        if hasattr(self, "op_conds_to_model_and_param"):
+            for key, (model, param) in self.op_conds_to_model_and_param.items():
+                param.update(
+                    {
+                        "Initial concentration in negative electrode [mol.m-3]": x
+                        * c_n_max,
+                        "Initial concentration in positive electrode [mol.m-3]": y
+                        * c_p_max,
+                    }
+                )
+        # Save solved initial SOC in case we need to re-build the model
+        self._built_initial_soc = initial_soc
+        return c_n_init, c_p_init
+
+    def build(self, check_model=True, initial_soc=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
@@ -479,7 +519,13 @@ class Simulation:
         check_model : bool, optional
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
+        initial_soc : float, optional
+            Initial State of Charge (SOC) for the simulation. Must be between 0 and 1.
+            If given, overwrites the initial concentrations provided in the parameter
+            set.
         """
+        if initial_soc is not None:
+            self.set_initial_soc(initial_soc)
 
         if self.built_model:
             return
@@ -596,45 +642,7 @@ class Simulation:
         logs = {}
 
         if initial_soc is not None:
-            if self._built_initial_soc != initial_soc:
-                # reset
-                self._model_with_set_params = None
-                self._built_model = None
-                self.op_conds_to_built_models = None
-
-            c_n_init = self.parameter_values[
-                "Initial concentration in negative electrode [mol.m-3]"
-            ]
-            c_p_init = self.parameter_values[
-                "Initial concentration in positive electrode [mol.m-3]"
-            ]
-            param = pybamm.LithiumIonParameters()
-            c_n_max = self.parameter_values.evaluate(param.n.prim.c_max)
-            c_p_max = self.parameter_values.evaluate(param.p.prim.c_max)
-            x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-                initial_soc, self.parameter_values
-            )
-            self.parameter_values.update(
-                {
-                    "Initial concentration in negative electrode [mol.m-3]": x
-                    * c_n_max,
-                    "Initial concentration in positive electrode [mol.m-3]": y
-                    * c_p_max,
-                }
-            )
-            # For experiments also update the following
-            if hasattr(self, "op_conds_to_model_and_param"):
-                for key, (model, param) in self.op_conds_to_model_and_param.items():
-                    param.update(
-                        {
-                            "Initial concentration in negative electrode [mol.m-3]": x
-                            * c_n_max,
-                            "Initial concentration in positive electrode [mol.m-3]": y
-                            * c_p_max,
-                        }
-                    )
-            # Save solved initial SOC in case we need to re-build the model
-            self._built_initial_soc = initial_soc
+            c_n_init, c_p_init = self.set_initial_soc(initial_soc)
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
             self.build(check_model=check_model)

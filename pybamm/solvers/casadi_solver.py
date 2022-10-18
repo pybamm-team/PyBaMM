@@ -66,6 +66,10 @@ class CasadiSolver(pybamm.BaseSolver):
     return_solution_if_failed_early : bool, optional
         Whether to return a Solution object if the solver fails to reach the end of
         the simulation, but managed to take some successful steps. Default is False.
+    perturb_algebraic_initial_conditions : bool, optional
+        Whether to perturb algebraic initial conditions to avoid a singularity. This
+        can sometimes slow down the solver, but is kept True as default for "safe" mode
+        as it seems to be more robust (False by default for other modes).
     """
 
     def __init__(
@@ -81,6 +85,7 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_setup=None,
         extra_options_call=None,
         return_solution_if_failed_early=False,
+        perturb_algebraic_initial_conditions=None,
     ):
         super().__init__(
             "problem dependent",
@@ -106,6 +111,17 @@ class CasadiSolver(pybamm.BaseSolver):
         self.extrap_tol = extrap_tol
         self.return_solution_if_failed_early = return_solution_if_failed_early
 
+        # Decide whether to perturb algebraic initial conditions, True by default for
+        # "safe" mode, False by default for other modes
+        if perturb_algebraic_initial_conditions is None:
+            if mode == "safe":
+                self.perturb_algebraic_initial_conditions = True
+            else:
+                self.perturb_algebraic_initial_conditions = False
+        else:
+            self.perturb_algebraic_initial_conditions = (
+                perturb_algebraic_initial_conditions
+            )
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
@@ -658,14 +674,22 @@ class CasadiSolver(pybamm.BaseSolver):
             integrator = self.integrators[model]["no grid"]
 
         len_rhs = model.concatenated_rhs.size
+        len_alg = model.concatenated_algebraic.size
 
         # Check y0 to see if it includes sensitivities
         if explicit_sensitivities:
             num_parameters = model.len_rhs_sens // model.len_rhs
             len_rhs = len_rhs * (num_parameters + 1)
+            len_alg = len_alg * (num_parameters + 1)
 
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
+        if self.perturb_algebraic_initial_conditions and len_alg > 0:
+            # Add a tiny perturbation to the algebraic initial conditions
+            # For some reason this helps with convergence
+            # The actual value of the initial conditions for the algebraic variables
+            # doesn't matter
+            y0_alg = y0_alg * (1 + 1e-6 * casadi.DM(np.random.rand(len_alg)))
         pybamm.logger.spam("Finished preliminary setup for integrator run")
 
         # Solve
@@ -680,9 +704,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 casadi_sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
-            except RuntimeError as e:
+            except RuntimeError as error:
                 # If it doesn't work raise error
-                raise pybamm.SolverError(e.args[0])
+                pybamm.logger.debug(f"Casadi integrator failed with error {error}")
+                raise pybamm.SolverError(error.args[0])
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
             y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
@@ -711,9 +736,10 @@ class CasadiSolver(pybamm.BaseSolver):
                     casadi_sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
                     )
-                except RuntimeError as e:
+                except RuntimeError as error:
                     # If it doesn't work raise error
-                    raise pybamm.SolverError(e.args[0])
+                    pybamm.logger.debug(f"Casadi integrator failed with error {error}")
+                    raise pybamm.SolverError(error.args[0])
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
                 z = casadi_sol["zf"]
