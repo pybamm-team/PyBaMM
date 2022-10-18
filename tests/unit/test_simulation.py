@@ -244,6 +244,10 @@ class TestSimulation(unittest.TestCase):
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.build(initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
