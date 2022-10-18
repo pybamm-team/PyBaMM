@@ -1,4 +1,3 @@
-from scipy.interpolate import RegularGridInterpolator
 import numpy as np
 
 import pybamm
@@ -14,24 +13,35 @@ z = np.linspace(7, 9, 33)
 xg, yg, zg = np.meshgrid(x, y, z, indexing="ij", sparse=True)
 data = f(xg, yg, zg)
 
-interp = RegularGridInterpolator((x, y, z), data)
-
-pts = np.array([[2.1, 6.2, 8.3], [3.3, 5.2, 7.1]])
-
-interp(pts)
-
-
-var1 = pybamm.StateVector(slice(0, 1))
-var2 = pybamm.StateVector(slice(1, 2))
-var3 = pybamm.StateVector(slice(2, 3))
-
 x_in = (x, y, z)
-interp = pybamm.Interpolant(x_in, data, (var1, var2, var3), interpolator="linear")
-
-eval = interp.evaluate(y=np.array([1, 4, 7]))
-
-print(eval)
-
-
 
 model = pybamm.BaseModel()
+
+a = pybamm.Variable("a")
+b = pybamm.Variable("b")
+c = pybamm.Variable("c")
+d = pybamm.Variable("d")
+
+interp = pybamm.Interpolant(x_in, data, (a, b, c), interpolator="linear")
+
+model.rhs = {a: 0, b: 0, c: 0, d: interp}  # add to model
+model.initial_conditions = {
+    a: pybamm.Scalar(1),
+    b: pybamm.Scalar(4),
+    c: pybamm.Scalar(7),
+    d: pybamm.Scalar(0),
+}
+
+model.variables = {
+    "Something": interp,
+}
+
+sim = pybamm.Simulation(model)
+
+t_eval = np.linspace(0, 1, 100)
+sim.solve(t_eval)
+
+something = sim.solution["Something"]
+
+
+print("hi")

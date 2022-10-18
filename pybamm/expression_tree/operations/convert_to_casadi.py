@@ -158,6 +158,10 @@ class CasadiConverter(object):
                     )
                     res = LUT(casadi.hcat(converted_children).T).T
                     return res
+                elif len(converted_children) == 3:
+                    LUT = casadi.interpolant("LUT", solver, symbol.x, symbol.y.ravel())
+                    res = LUT(casadi.hcat(converted_children).T).T
+                    return res
                 else:  # pragma: no cover
                     raise ValueError(
                         "Invalid converted_children count: {0}".format(
