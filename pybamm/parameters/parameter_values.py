@@ -118,6 +118,26 @@ class ParameterValues:
         for citation in citations:
             pybamm.citations.register(citation)
 
+    @staticmethod
+    def create_from_bpx(filename):
+        """
+        Parameters
+        ----------
+        filename: str
+            The filename of the bpx file
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        from bpx import parse_bpx_file
+        from .bpx import bpx_to_param_dict
+        bpx = parse_bpx_file(filename)
+        pybamm_dict = bpx_to_param_dict(bpx)
+        return pybamm.ParameterValues(pybamm_dict)
+
     def __getitem__(self, key):
         return self._dict_items[key]
 
