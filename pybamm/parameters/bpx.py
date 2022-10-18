@@ -84,7 +84,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             domain.pre_name + 'reaction rate [mol.m-2.s-1]'
         ]
         k = k_norm * F / (c_n_max * c_e ** 0.5)
-
         def exchange_current_density(c_e, c_s_surf, c_s_max, T):
             k_ref = k  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
             E_r = 53400
