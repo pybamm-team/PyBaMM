@@ -99,9 +99,8 @@ from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.replace_symbols import SymbolReplacer
-from .expression_tree.operations.evaluate_julia import (
-    JuliaConverter,
-)
+from .expression_tree.operations.evaluate_julia import JuliaConverter
+from .expression_tree.operations.build_pack import Pack
 
 #
 # Model classes
