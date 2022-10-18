@@ -71,6 +71,26 @@ class Interpolant(pybamm.Function):
                     "len(x2) should equal y=shape[0], "
                     f"but x2.shape={x2.shape} and y.shape={y.shape}"
                 )
+        elif isinstance(x, (tuple, list)) and len(x) == 3:
+            x1, x2, x3 = x
+            if y.ndim != 3:
+                raise ValueError("y should be three-dimensional if len(x)=3")
+
+            if x1.shape[0] != y.shape[0]:
+                raise ValueError(
+                    "len(x1) should equal y=shape[0], "
+                    f"but x1.shape={x1.shape} and y.shape={y.shape}"
+                )
+            if x2 is not None and x2.shape[0] != y.shape[1]:
+                raise ValueError(
+                    "len(x2) should equal y=shape[1], "
+                    f"but x2.shape={x2.shape} and y.shape={y.shape}"
+                )
+            if x3 is not None and x3.shape[0] != y.shape[2]:
+                raise ValueError(
+                    "len(x3) should equal y=shape[2], "
+                    f"but x3.shape={x3.shape} and y.shape={y.shape}"
+                )
         else:
             if isinstance(x, (tuple, list)):
                 x1 = x[0]
@@ -128,6 +148,16 @@ class Interpolant(pybamm.Function):
             else:
                 interpolating_function = interpolate.interp2d(
                     x1, x2, y, kind=interpolator
+                )
+        elif len(x) == 3:
+            self.dimension = 3
+            if interpolator != "linear":
+                raise ValueError(
+                    "interpolator should be 'linear' if x is three-dimensional"
+                )
+            else:
+                interpolating_function = interpolate.RegularGridInterpolator(
+                    (x1, x2, x3), y, method="linear"
                 )
         else:
             raise ValueError("Invalid dimension of x: {0}".format(len(x)))
@@ -198,6 +228,12 @@ class Interpolant(pybamm.Function):
                 return np.diagonal(res)[:, np.newaxis]
             else:
                 # raise ValueError("Invalid children dimension: {0}".format(res.ndim))
+                return res[:, np.newaxis]
+        elif self.dimension == 3:
+            res = self.function(np.transpose(children_eval_flat))
+            if res.ndim > 1:
+                return np.diagonal(res)[:, np.newaxis]
+            else:
                 return res[:, np.newaxis]
         else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
