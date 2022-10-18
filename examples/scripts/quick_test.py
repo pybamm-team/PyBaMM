@@ -30,5 +30,8 @@ interp = pybamm.Interpolant(x_in, data, (var1, var2, var3), interpolator="linear
 
 eval = interp.evaluate(y=np.array([1, 4, 7]))
 
-
 print(eval)
+
+
+
+model = pybamm.BaseModel()

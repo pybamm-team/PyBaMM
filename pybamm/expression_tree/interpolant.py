@@ -157,7 +157,7 @@ class Interpolant(pybamm.Function):
                 )
             else:
                 interpolating_function = interpolate.RegularGridInterpolator(
-                    (x1, x2, x3), y, method="linear"
+                    (x1, x2, x3), y, method="linear", bounds_error=False
                 )
         else:
             raise ValueError("Invalid dimension of x: {0}".format(len(x)))
