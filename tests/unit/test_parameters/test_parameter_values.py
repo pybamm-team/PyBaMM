@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 
 import pybamm
+import tests
+print(tests.__file__)
 import tests.shared as shared
 from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
@@ -1034,6 +1036,7 @@ class TestParameterValues(unittest.TestCase):
                 "Cell": {
                     "Initial temperature [K]": 299.0,
                     "Reference temperature [K]": 299.0,
+                    "Nominal cell capacity [A.h]": 5.0,
                     "Electrode area [m2]": 2.0,
                     "Number of electrodes connected in parallel to make a cell": 1,
                 },
@@ -1083,7 +1086,7 @@ class TestParameterValues(unittest.TestCase):
         import tempfile
         filename = 'tmp.json'
         with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False
+            suffix=filename, delete=False, mode='w'
         ) as tmp:
             # write to a tempory file so we can
             # get the source later on using inspect.getsource
@@ -1092,7 +1095,14 @@ class TestParameterValues(unittest.TestCase):
             tmp.flush()
 
             pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
-            print('got pv', pv)
+
+            model = pybamm.lithium_ion.DFN()
+            model.events = []
+            experiment = pybamm.Experiment([
+                "Discharge at C/5 for 1 hour",
+            ])
+            sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
+            sim.solve(calc_esoh=False)
 
 
 if __name__ == "__main__":
