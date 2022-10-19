@@ -521,6 +521,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "agriyakhetarpal",
+      "name": "Agriya Khetarpal",
+      "avatar_url": "https://avatars.githubusercontent.com/u/74401230?v=4",
+      "profile": "https://github.com/agriyakhetarpal",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
