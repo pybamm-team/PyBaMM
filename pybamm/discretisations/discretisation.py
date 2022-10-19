@@ -652,62 +652,6 @@ class Discretisation(object):
 
         return mass_matrix, mass_matrix_inv
 
-    def create_jacobian(self, model):
-        """Creates Jacobian of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
-
-        Note: At present, calculation of the Jacobian is deferred until after
-        simplification, since it is much faster to compute the Jacobian of the
-        simplified model. However, in some use cases (e.g. running the same
-        model multiple times but with different parameters) it may be more
-        efficient to compute the Jacobian once, before simplification, so that
-        parameters in the Jacobian can be updated (see PR #670).
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Discretised model. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-
-        Returns
-        -------
-        :class:`pybamm.Concatenation`
-            The expression trees corresponding to the Jacobian of the model
-        """
-        # create state vector to differentiate with respect to
-        y = pybamm.StateVector(slice(0, np.size(model.concatenated_initial_conditions)))
-        # set up Jacobian object, for re-use of dict
-        jacobian = pybamm.Jacobian()
-
-        # calculate Jacobian of rhs by equation
-        jac_rhs_eqn_dict = {}
-        for eqn_key, eqn in model.rhs.items():
-            pybamm.logger.debug(
-                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
-            )
-            jac_rhs_eqn_dict[eqn_key] = jacobian.jac(eqn, y)
-        jac_rhs = self._concatenate_in_order(jac_rhs_eqn_dict, sparse=True)
-
-        # calculate Jacobian of algebraic by equation
-        jac_algebraic_eqn_dict = {}
-        for eqn_key, eqn in model.algebraic.items():
-            pybamm.logger.debug(
-                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
-            )
-            jac_algebraic_eqn_dict[eqn_key] = jacobian.jac(eqn, y)
-        jac_algebraic = self._concatenate_in_order(jac_algebraic_eqn_dict, sparse=True)
-
-        # full Jacobian
-        if model.rhs.keys() and model.algebraic.keys():
-            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
-        elif not model.algebraic.keys():
-            jac = jac_rhs
-        else:
-            jac = jac_algebraic
-
-        return jac, jac_rhs, jac_algebraic
-
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.algebraic, model.initial_conditions or
