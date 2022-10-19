@@ -1214,43 +1214,42 @@ class Discretisation(object):
                         )
                     )
 
-    def search_for_independent_var(self, model, var):
+    def search_for_independent_var(self, var, all_vars_in_eqns):
         pybamm.logger.verbose("Removing independent blocks.")
-        boundary_variables = list(model.boundary_conditions.keys())
-        boundary_variable_keys = []
-        for condition in boundary_variables:
-            keys_for_condition = list(model.boundary_conditions[condition].keys())
-            boundary_variable_keys.append(keys_for_condition)
-        rhs_variables = list(model.rhs.keys())
-        algebraic_variables = list(model.algebraic.keys())
-        this_var_list = []
         if not isinstance(var, pybamm.Variable):
-            return model, False
-        for tree in rhs_variables:
-            pybamm.tree_search(model.rhs[tree], var, this_var_list)
-        for tree in algebraic_variables:
-            pybamm.tree_search(model.algebraic[tree], var, this_var_list)
-        for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-            for key in keys:
-                pybamm.tree_search(
-                    model.boundary_conditions[tree][key][0], var, this_var_list
-                )
-        for name in model.variables.keys():
-            for rhs_child in model.variables[name].children:
-                pybamm.tree_search(rhs_child, var, this_var_list)
-        this_var_is_independent = not any(this_var_list)
+            return False
+
+        this_var_is_independent = not (var.name in all_vars_in_eqns)
         not_in_y_slices = not (var in list(self.y_slices.keys()))
         not_in_discretised = not (var in list(self._discretised_symbols.keys()))
         is_0D = len(var.domain) == 0
         this_var_is_independent = (
             this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D
         )
-        return model, this_var_is_independent
+        return this_var_is_independent
 
     def check_for_independent_variables(self, model):
         rhs_vars_to_search_over = list(model.rhs.keys())
+        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
+        eqns_to_check = (
+            list(model.rhs.values())
+            + list(model.algebraic.values())
+            + [
+                x[side][0]
+                for x in model.boundary_conditions.values()
+                for side in x.keys()
+            ]
+            # only check children of variables, this will skip the variable itself
+            # and catch any other cases
+            + [child for var in model.variables.values() for child in var.children]
+        )
+        all_vars_in_eqns = unpacker.unpack_list_of_symbols(eqns_to_check)
+        all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
+
         for var in rhs_vars_to_search_over:
-            model, this_var_is_independent = self.search_for_independent_var(model, var)
+            this_var_is_independent = self.search_for_independent_var(
+                var, all_vars_in_eqns
+            )
             if this_var_is_independent:
                 if len(model.rhs) != 1:
                     pybamm.logger.info("removing variable {} from rhs".format(var))
