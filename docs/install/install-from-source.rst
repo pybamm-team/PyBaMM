@@ -177,7 +177,7 @@ The default command
 will run the full test suite (integration and unit tests).
 This can take several minutes.
 
-Is is often sufficient to run the unit tests only. To do so, use
+It is often sufficient to run the unit tests only. To do so, use
 
    .. code:: bash
 
