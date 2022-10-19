@@ -10,14 +10,18 @@ import pybamm
 
 class Interpolant(pybamm.Function):
     """
-    Interpolate data in 1D.
+    Interpolate data in 1D, 2D, or 3D. Interpolation in 3D required the input data to be
+    on a regular grid.
 
     Parameters
     ----------
     x : iterable of :class:`numpy.ndarray`
-        1-D array(s) of real values defining the data point coordinates.
+        The data point coordinates. If 1-D, then this is an array(s) of real values. If,
+        2D or 3D interpolation, then this is to ba a tuple of 1D arrays (one for each
+        dimension) which together define the coordinates of the points.
     y : :class:`numpy.ndarray`
-        The values of the function to interpolate at the data points.
+        The values of the function to interpolate at the data points. In 2D and 3D, this
+        should be a matrix of two and three dimensions respectively.
     children : iterable of :class:`pybamm.Symbol`
         Node(s) to use when evaluating the interpolant. Each child corresponds to an
         entry of x
@@ -26,7 +30,7 @@ class Interpolant(pybamm.Function):
         function" is given.
     interpolator : str, optional
         Which interpolator to use. Can be "linear", "cubic", or "pchip". Default is
-        "linear".
+        "linear". For 3D interpolation, only "linear" is currently supported.
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -151,13 +155,23 @@ class Interpolant(pybamm.Function):
                 )
         elif len(x) == 3:
             self.dimension = 3
+
+            if extrapolate:
+                fill_value = None
+            else:
+                fill_value = np.nan
+
             if interpolator != "linear":
                 raise ValueError(
                     "interpolator should be 'linear' if x is three-dimensional"
                 )
             else:
                 interpolating_function = interpolate.RegularGridInterpolator(
-                    (x1, x2, x3), y, method="linear", bounds_error=False
+                    (x1, x2, x3),
+                    y,
+                    method="linear",
+                    bounds_error=False,
+                    fill_value=fill_value,
                 )
         else:
             raise ValueError("Invalid dimension of x: {0}".format(len(x)))
