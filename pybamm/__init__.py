@@ -73,7 +73,7 @@ from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
-from .expression_tree.input_parameter import InputParameter
+from .expression_tree.input_parameter import InputParameter, PsuedoInputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import *
