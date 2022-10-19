@@ -116,9 +116,8 @@ class TestInterpolant(unittest.TestCase):
             x_in, data, (var1, var2, var3), interpolator="linear"
         )
 
-        value = interp.evaluate(y=np.array([1, 4, 7]))
-        np.testing.assert_equal(value, f(1, 4, 7))
-
+        value = interp.evaluate(y=np.array([1, 5, 8]))
+        np.testing.assert_equal(value, f(1, 5, 8))
 
     def test_name(self):
         a = pybamm.Symbol("a")

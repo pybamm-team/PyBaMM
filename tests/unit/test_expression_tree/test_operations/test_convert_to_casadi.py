@@ -268,11 +268,16 @@ class TestCasadiConverter(unittest.TestCase):
 
         casadi_y = casadi.MX.sym("y", 3)
         interp_casadi = interp.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
 
-        y_test = np.array([1, 4, 7])
-        # casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
+        y_test = np.array([1, 5, 8])
 
-        np.testing.assert_array_equal(f(*y_test), interp_casadi(y=y_test))
+        casadi_sol = casadi_f(y_test)
+        true_value = f(1, 5, 8)
+
+        self.assertIsInstance(casadi_sol, casadi.DM)
+
+        np.testing.assert_equal(true_value, casadi_sol.__float__())
 
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
