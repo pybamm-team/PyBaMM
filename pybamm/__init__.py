@@ -36,7 +36,7 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, TimerTime, FuzzyDict
+from .util import Timer, TimerTime, FuzzyDict, ReadOnlyDict
 from .util import (
     root_dir,
     load_function,
@@ -104,9 +104,13 @@ from .expression_tree.operations.evaluate_julia import (
 )
 
 #
-# Model classes
+# Model and equation classes
 #
 from .models.base_model import BaseModel
+from .models.base_equations import _BaseEquations, _BaseProcessedEquations
+from .models.symbolic_equations import _SymbolicEquations
+from .models.parameterised_equations import _ParameterisedEquations
+from .models.discretised_equations import _DiscretisedEquations
 from .models.standard_variables import standard_variables
 from .models.event import Event
 from .models.event import EventType

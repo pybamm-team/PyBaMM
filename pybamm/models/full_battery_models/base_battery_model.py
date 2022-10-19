@@ -891,115 +891,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
             )
 
-    def build_fundamental_and_external(self):
-        # Get the fundamental variables
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting fundamental variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            self.variables.update(submodel.get_fundamental_variables())
-
-        # Set the submodels that are external
-        for sub in self.options["external submodels"]:
-            self.submodels[sub].external = True
-
-        # Set any external variables
-        self.external_variables = []
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting external variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            external_variables = submodel.get_external_variables()
-
-            self.external_variables += external_variables
-
-        self._built_fundamental_and_external = True
-
-    def build_coupled_variables(self):
-        # Note: pybamm will try to get the coupled variables for the submodels in the
-        # order they are set by the user. If this fails for a particular submodel,
-        # return to it later and try again. If setting coupled variables fails and
-        # there are no more submodels to try, raise an error.
-        submodels = list(self.submodels.keys())
-        count = 0
-        # For this part the FuzzyDict of variables is briefly converted back into a
-        # normal dictionary for speed with KeyErrors
-        self._variables = dict(self._variables)
-        while len(submodels) > 0:
-            count += 1
-            for submodel_name, submodel in self.submodels.items():
-                if submodel_name in submodels:
-                    pybamm.logger.debug(
-                        "Getting coupled variables for {} submodel ({})".format(
-                            submodel_name, self.name
-                        )
-                    )
-                    try:
-                        self.variables.update(
-                            submodel.get_coupled_variables(self.variables)
-                        )
-                        submodels.remove(submodel_name)
-                    except KeyError as key:
-                        if len(submodels) == 1 or count == 100:
-                            # no more submodels to try
-                            raise pybamm.ModelError(
-                                "Missing variable for submodel '{}': {}.\n".format(
-                                    submodel_name, key
-                                )
-                                + "Check the selected "
-                                "submodels provide all of the required variables."
-                            )
-                        else:
-                            # try setting coupled variables on next loop through
-                            pybamm.logger.debug(
-                                "Can't find {}, trying other submodels first".format(
-                                    key
-                                )
-                            )
-        # Convert variables back into FuzzyDict
-        self.variables = pybamm.FuzzyDict(self._variables)
-
-    def build_model_equations(self):
-        # Set model equations
-        for submodel_name, submodel in self.submodels.items():
-            if submodel.external is False:
-                pybamm.logger.verbose(
-                    "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
-                )
-
-                submodel.set_rhs(self.variables)
-                pybamm.logger.verbose(
-                    "Setting algebraic for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
-                )
-
-                submodel.set_algebraic(self.variables)
-                pybamm.logger.verbose(
-                    "Setting boundary conditions for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
-                )
-
-                submodel.set_boundary_conditions(self.variables)
-                pybamm.logger.verbose(
-                    "Setting initial conditions for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
-                )
-                submodel.set_initial_conditions(self.variables)
-                submodel.set_events(self.variables)
-                pybamm.logger.verbose(
-                    "Updating {} submodel ({})".format(submodel_name, self.name)
-                )
-                self.update(submodel)
-                self.check_no_repeated_keys()
-
     def build_model(self):
+        """
+        Override BaseModel.build_model() to add extra variables specific to
+        battery models.
+        """
 
         # Build model variables and equations
         self._build_model()

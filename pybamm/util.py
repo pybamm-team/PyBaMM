@@ -16,6 +16,7 @@ import timeit
 from collections import defaultdict
 from platform import system
 import difflib
+import collections
 
 import numpy as np
 import pkg_resources
@@ -107,6 +108,24 @@ class FuzzyDict(dict):
 
     def copy(self):
         return FuzzyDict(super().copy())
+
+
+class ReadOnlyDict(collections.abc.Mapping):
+    """
+    A dictionary that is read-only, i.e. cannot be modified after creation.
+    """
+
+    def __init__(self, items):
+        self._items = items
+
+    def __getitem__(self, key):
+        return self._items[key]
+
+    def __len__(self):
+        return len(self._items)
+
+    def __iter__(self):
+        return iter(self._items)
 
 
 class Timer(object):

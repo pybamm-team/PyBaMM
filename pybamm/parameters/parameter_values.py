@@ -360,7 +360,7 @@ class ParameterValues:
                     "by 3600 to get the same results as before."
                 )
 
-    def process_model(self, unprocessed_model, inplace=True):
+    def process_model(self, unprocessed_model, inplace=None):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
@@ -383,15 +383,6 @@ class ParameterValues:
             "Start setting parameters for {}".format(unprocessed_model.name)
         )
 
-        # set up inplace vs not inplace
-        if inplace:
-            # any changes to unprocessed_model attributes will change model attributes
-            # since they point to the same object
-            model = unprocessed_model
-        else:
-            # create a copy of the model
-            model = unprocessed_model.new_copy()
-
         if (
             len(unprocessed_model.rhs) == 0
             and len(unprocessed_model.algebraic) == 0
@@ -405,7 +396,6 @@ class ParameterValues:
                 "Processing parameters for {!r} (rhs)".format(variable)
             )
             new_rhs[variable] = self.process_symbol(equation)
-        model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
@@ -413,7 +403,6 @@ class ParameterValues:
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
             new_algebraic[variable] = self.process_symbol(equation)
-        model.algebraic = new_algebraic
 
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
@@ -421,20 +410,11 @@ class ParameterValues:
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
             new_initial_conditions[variable] = self.process_symbol(equation)
-        model.initial_conditions = new_initial_conditions
 
-        model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
-
-        new_variables = {}
-        for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.verbose(
-                "Processing parameters for {!r} (variables)".format(variable)
-            )
-            new_variables[variable] = self.process_symbol(equation)
-        model.variables = new_variables
+        new_boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
         new_events = []
-        for event in unprocessed_model.events:
+        for event in unprocessed_model.events + self.parameter_events:
             pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
             )
@@ -443,29 +423,15 @@ class ParameterValues:
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
-
-        for event in self.parameter_events:
-            pybamm.logger.verbose(
-                "Processing parameters for event '{}''".format(event.name)
-            )
-            new_events.append(
-                pybamm.Event(
-                    event.name, self.process_symbol(event.expression), event.event_type
-                )
-            )
-
-        model.events = new_events
 
         # Set external variables
-        model.external_variables = [
+        new_external_variables = [
             self.process_symbol(var) for var in unprocessed_model.external_variables
         ]
 
         # Process timescale
         new_timescale = self.process_symbol(unprocessed_model.timescale)
-        if isinstance(new_timescale, pybamm.Scalar):
-            model._timescale = new_timescale
-        else:
+        if not isinstance(new_timescale, pybamm.Scalar):
             raise ValueError(
                 "model.timescale must be a Scalar after parameter processing "
                 "(cannot contain 'InputParameter's). "
@@ -480,7 +446,27 @@ class ParameterValues:
         for domain, scale in unprocessed_model.length_scales.items():
             new_scale = self.process_symbol(scale)
             new_length_scales[domain] = new_scale
-        model._length_scales = new_length_scales
+
+        parameterized_equations = pybamm._ParameterisedEquations(
+            self,
+            new_rhs,
+            new_algebraic,
+            new_initial_conditions,
+            new_boundary_conditions,
+            unprocessed_model.variables,
+            new_events,
+            new_external_variables,
+            new_timescale,
+            new_length_scales,
+        )
+
+        # inplace vs not inplace
+        if inplace:
+            model = unprocessed_model
+            model._equations = parameterized_equations
+        else:
+            # create a copy of the model
+            model = unprocessed_model.new_copy(equations=parameterized_equations)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 

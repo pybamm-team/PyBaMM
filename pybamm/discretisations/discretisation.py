@@ -162,8 +162,8 @@ class Discretisation(object):
         # set variables (we require the full variable not just id)
 
         # Search Equations for Independence
-        if check_for_independent_variables:
-            model = self.check_for_independent_variables(model)
+        # if check_for_independent_variables:
+        #     model = self.check_for_independent_variables(model)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
@@ -193,75 +193,73 @@ class Discretisation(object):
         )
         self.set_internal_boundary_conditions(model)
 
-        # set up inplace vs not inplace
-        if inplace:
-            # any changes to model_disc attributes will change model attributes
-            # since they point to the same object
-            model_disc = model
-        else:
-            # create a copy of the original model
-            model_disc = model.new_copy()
+        kwargs = {}
 
         # Keep a record of y_slices in the model
-        model_disc.y_slices = self.y_slices_explicit
+        y_slices = self.y_slices_explicit
         # Keep a record of the bounds in the model
-        model_disc.bounds = self.bounds
+        bounds = self.bounds
 
-        model_disc.bcs = self.bcs
+        bcs = self.bcs
 
         pybamm.logger.verbose("Discretise initial conditions for {}".format(model.name))
-        ics, concat_ics = self.process_initial_conditions(model)
-        model_disc.initial_conditions = ics
-        model_disc.concatenated_initial_conditions = concat_ics
-
-        # Discretise variables (applying boundary conditions)
-        # Note that we **do not** discretise the keys of model.rhs,
-        # model.initial_conditions and model.boundary_conditions
-        pybamm.logger.verbose("Discretise variables for {}".format(model.name))
-        model_disc.variables = self.process_dict(model.variables)
+        initial_conditions = self.process_dict(model.initial_conditions)
 
         # Process parabolic and elliptic equations
         pybamm.logger.verbose("Discretise model equations for {}".format(model.name))
-        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
-        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
-        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
-
-        # Save length of rhs and algebraic
-        model_disc.len_rhs = model_disc.concatenated_rhs.size
-        model_disc.len_alg = model_disc.concatenated_algebraic.size
-        model_disc.len_rhs_and_alg = model_disc.len_rhs + model_disc.len_alg
+        rhs = self.process_dict(model.rhs)
+        algebraic = self.process_dict(model.algebraic)
 
         # Process events
-        processed_events = []
+        events = []
         pybamm.logger.verbose("Discretise events for {}".format(model.name))
         for event in model.events:
             pybamm.logger.debug("Discretise event '{}'".format(event.name))
-            processed_event = pybamm.Event(
+            event = pybamm.Event(
                 event.name, self.process_symbol(event.expression), event.event_type
             )
-            processed_events.append(processed_event)
-        model_disc.events = processed_events
+            events.append(event)
 
         # Set external variables
-        model_disc.external_variables = [
+        external_variables = [
             self.process_symbol(var) for var in model.external_variables
         ]
 
-        # Create mass matrix
-        pybamm.logger.verbose("Create mass matrix for {}".format(model.name))
-        model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
-            model_disc
+        # Process length scales
+        length_scales = {}
+        for domain, scale in model.length_scales.items():
+            scale = self.process_symbol(scale)
+            if isinstance(scale, pybamm.Array):
+                # Convert possible arrays of length 1 to scalars
+                scale = pybamm.Scalar(float(scale.evaluate()))
+            length_scales[domain] = scale
+
+        discretised_equations = pybamm._DiscretisedEquations(
+            self,
+            rhs,
+            algebraic,
+            initial_conditions,
+            bcs,
+            model.variables,
+            events,
+            external_variables,
+            model.timescale,
+            length_scales,
+            y_slices=y_slices,
+            bounds=bounds,
         )
 
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            if isinstance(new_scale, pybamm.Array):
-                # Convert possible arrays of length 1 to scalars
-                new_scale = pybamm.Scalar(float(new_scale.evaluate()))
-            new_length_scales[domain] = new_scale
-        model_disc._length_scales = new_length_scales
+        # inplace vs not inplace
+        if inplace:
+            model_disc = model
+            model_disc._equations = discretised_equations
+        else:
+            # create a copy of the original model
+            model_disc = model.new_copy(equations=discretised_equations)
+
+        # Create mass matrix
+        pybamm.logger.verbose("Create mass matrix for {}".format(model.name))
+        mass_matrix, mass_matrix_inv = self.create_mass_matrix(model_disc)
 
         # Check that resulting model makes sense
         if check_model:
@@ -269,9 +267,6 @@ class Discretisation(object):
             self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
-
-        # Record that the model has been discretised
-        model_disc.is_discretised = True
 
         return model_disc
 
@@ -471,34 +466,6 @@ class Discretisation(object):
 
         self.bcs.update(internal_bcs)
 
-    def process_initial_conditions(self, model):
-        """Discretise model initial_conditions.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-
-        Returns
-        -------
-        tuple
-            Tuple of processed_initial_conditions (dict of initial conditions) and
-            concatenated_initial_conditions (numpy array of concatenated initial
-            conditions)
-
-        """
-        # Discretise initial conditions
-        processed_initial_conditions = self.process_dict(model.initial_conditions)
-
-        # Concatenate initial conditions into a single vector
-        # check that all initial conditions are set
-        processed_concatenated_initial_conditions = self._concatenate_in_order(
-            processed_initial_conditions, check_complete=True
-        )
-
-        return processed_initial_conditions, processed_concatenated_initial_conditions
-
     def process_boundary_conditions(self, model):
         """Discretise model boundary_conditions, also converting keys to ids
 
@@ -604,49 +571,6 @@ class Discretisation(object):
                 bcs["left"] = bcs.pop("no tab")
 
         return bcs
-
-    def process_rhs_and_algebraic(self, model):
-        """Discretise model equations - differential ('rhs') and algebraic.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-
-        Returns
-        -------
-        tuple
-            Tuple of processed_rhs (dict of processed differential equations),
-            processed_concatenated_rhs, processed_algebraic (dict of processed algebraic
-            equations) and processed_concatenated_algebraic
-
-        """
-
-        # Discretise right-hand sides, passing domain from variable
-        processed_rhs = self.process_dict(model.rhs)
-
-        # Concatenate rhs into a single state vector
-        # Need to concatenate in order as the ordering of equations could be different
-        # in processed_rhs and model.rhs
-        processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
-
-        # Discretise and concatenate algebraic equations
-        processed_algebraic = self.process_dict(model.algebraic)
-
-        # Concatenate algebraic into a single state vector
-        # Need to concatenate in order as the ordering of equations could be different
-        # in processed_algebraic and model.algebraic
-        processed_concatenated_algebraic = self._concatenate_in_order(
-            processed_algebraic
-        )
-
-        return (
-            processed_rhs,
-            processed_concatenated_rhs,
-            processed_algebraic,
-            processed_concatenated_algebraic,
-        )
 
     def create_mass_matrix(self, model):
         """Creates mass matrix of the discretised model.
