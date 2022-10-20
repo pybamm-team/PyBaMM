@@ -269,16 +269,14 @@ class _EquationDict(dict):
                 equations[var] = eqn
             if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
                 raise pybamm.DomainError(
-                    "variable and equation in '{}' must have the same domain".format(
-                        name
-                    )
+                    f"variable and equation in '{self.name}' must have the same domain"
                 )
 
         # For initial conditions, check that the equation doesn't contain any
         # Variable objects
         # skip this if the dictionary has no "name" attribute (which will be the case
         # after pickling)
-        if hasattr(self, "name") and name == "initial_conditions":
+        if hasattr(self, "name") and self.name == "initial_conditions":
             for var, eqn in equations.items():
                 if eqn.has_symbol_of_classes(pybamm.Variable):
                     unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
