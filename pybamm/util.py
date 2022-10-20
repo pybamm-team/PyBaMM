@@ -13,7 +13,6 @@ import pickle
 import subprocess
 import sys
 import timeit
-from collections import defaultdict
 from platform import system
 import difflib
 
@@ -292,28 +291,6 @@ def rmse(x, y):
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")
     return np.sqrt(np.nanmean((x - y) ** 2))
-
-
-def get_infinite_nested_dict():
-    """
-    Return a dictionary that allows infinite nesting without having to define level by
-    level.
-
-    See:
-    https://stackoverflow.com/questions/651794/whats-the-best-way-to-initialize-a-dict-of-dicts-in-python/652226#652226
-
-    Example
-    -------
-    >>> import pybamm
-    >>> d = pybamm.get_infinite_nested_dict()
-    >>> d["a"] = 1
-    >>> d["a"]
-    1
-    >>> d["b"]["c"]["d"] = 2
-    >>> d["b"]["c"] == {"d": 2}
-    True
-    """
-    return defaultdict(get_infinite_nested_dict)
 
 
 def load(filename):

@@ -47,13 +47,6 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "same length"):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
-    def test_infinite_nested_dict(self):
-        d = pybamm.get_infinite_nested_dict()
-        d[1][2][3] = "x"
-        self.assertEqual(d[1][2][3], "x")
-        d[4][5] = "y"
-        self.assertEqual(d[4][5], "y")
-
     def test_is_constant_and_can_evaluate(self):
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
