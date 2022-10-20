@@ -10,10 +10,26 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param, options):
         super().__init__(param, options=options)
 
-    def get_fundamental_variables(self):
+    def get_external_circuit_fundamental_variables(self, i_var):
+        if self.control in ["algebraic", "differential without max", "explicit"]:
+            i_cell = i_var
+        elif self.control == "differential with max":
+            i_cell = pybamm.maximum(i_var, param.current_with_time)
+
+        # Update derived variables
+        I = i_cell * abs(param.I_typ)
+        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
+
+        variables = {
+            "Current density variable": i_var,
+            "Total current density": i_cell,
+            "Total current density [A.m-2]": i_cell_dim,
+            "Current [A]": I,
+            "C-rate": I / param.Q,
+        }
         Q_Ah = pybamm.standard_variables.Q_Ah
 
-        variables = {"Discharge capacity [A.h]": Q_Ah}
+        variables.update({"Discharge capacity [A.h]": Q_Ah})
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = pybamm.standard_variables.Q_Wh
             Qt_Wh = pybamm.standard_variables.Qt_Wh

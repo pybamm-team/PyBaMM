@@ -14,19 +14,9 @@ class ExplicitCurrentControl(BaseModel):
     def get_fundamental_variables(self):
         # Current is given as a function of time
         i_cell = self.param.current_with_time
-        i_cell_dim = self.param.dimensional_current_density_with_time
-        I = self.param.dimensional_current_with_time
-
-        variables = {
-            "Current density variable": pybamm.Scalar(1, name="i_cell"),
-            "Total current density": i_cell,
-            "Total current density [A.m-2]": i_cell_dim,
-            "Current [A]": I,
-            "C-rate": I / self.param.Q,
-        }
 
         # Add discharge capacity variable
-        variables.update(super().get_fundamental_variables())
+        variables.update(super().get_external_variable_fundamental_variables(i_cell))
 
         return variables
 

@@ -108,13 +108,8 @@ class Experiment:
                     badly_typed_conditions = []
                 badly_typed_conditions = badly_typed_conditions or [cycle]
                 raise TypeError(
-                    """Operating conditions should be strings or tuples of strings, not
-                    {}. For example: {}
-                    """.format(
-                        type(badly_typed_conditions[0]), examples
-                    ).replace(
-                        "\n                    ", " "
-                    )
+                    "Operating conditions should be strings or tuples of strings, not "
+                    f"{type(badly_typed_conditions[0])}. For example: {examples}"
                 )
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
         operating_conditions = [
@@ -263,13 +258,8 @@ class Experiment:
                 events = self.convert_electric(cond_list[idx + 1 :])
             else:
                 raise ValueError(
-                    """Operating conditions must contain keyword 'for' or 'until' or
-                    'Run'. For example: {}
-                    """.format(
-                        examples
-                    ).replace(
-                        "\n                    ", " "
-                    )
+                    "Operating conditions must contain keyword 'for' or 'until' or "
+                    f"'Run'. For example: {examples}"
                 )
 
         return (
@@ -297,7 +287,6 @@ class Experiment:
         ext_drive_cycle = np.column_stack((time, drive_data))
         # Limit the drive cycle to the specified end_time
         ext_drive_cycle = ext_drive_cycle[ext_drive_cycle[:, 0] <= end_time]
-        del temp_time
         return ext_drive_cycle
 
     def convert_electric(self, electric):
@@ -334,12 +323,8 @@ class Experiment:
                     sign = -1
                 else:
                     raise ValueError(
-                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or
-                        'Run'. For example: {}""".format(
-                            examples
-                        ).replace(
-                            "\n                        ", " "
-                        )
+                        "Instruction must be 'discharge', 'charge', 'rest', 'hold' or "
+                        f"'Run'. For example: {examples}"
                     )
             elif len(electric) == 2:
                 # e.g. 3 A, 4.1 V
@@ -468,3 +453,100 @@ class Experiment:
             if events == next_op["electric"]:
                 return True
         return False
+
+    def process_parameters(self, nominal_capacity, timescale):
+        return _ParameterisedExperiment(self, nominal_capacity, timescale)
+
+
+class _ParameterisedExperiment(Experiment):
+    def __init__(self, experiment, nominal_capacity, timescale):
+        self.experiment = experiment
+        operating_conditions = []
+        for op in experiment.operating_conditions:
+            op = list(op)
+            if op[1] == "C":
+                op[0] = op[0] * nominal_capacity
+            operating_conditions.append(tuple(op))
+        self.operating_conditions = operating_conditions
+        self.operating_conditions_cycles = experiment.operating_conditions_cycles
+        self.operating_conditions_strings = experiment.operating_conditions_strings
+        self.events = experiment.events
+        self.termination = experiment.termination
+        self.termination_string = experiment.termination_string
+        self.cycle_lengths = experiment.cycle_lengths
+
+        # Save the experiment
+        self.experiment = experiment
+        # Create a new submodel for each set of operating conditions and update
+        # parameters and events accordingly
+        self._experiment_inputs = []
+        self._experiment_times = []
+        for op, events in zip(experiment.operating_conditions, experiment.events):
+            operating_inputs = {}
+            op_value = op["electric"][0]
+            op_units = op["electric"][1]
+            if op["dc_data"] is not None:
+                # If operating condition includes a drive cycle, define the interpolant
+                op_value = pybamm.Interpolant(
+                    op["dc_data"][:, 0],
+                    op["dc_data"][:, 1],
+                    timescale * (pybamm.t - pybamm.InputParameter("start time")),
+                )
+            if op_units == "A":
+                Crate = op_value / nominal_capacity
+                if len(op["electric"]) == 4:
+                    # Update inputs for CCCV
+                    V = op["electric"][2]
+                    operating_inputs.update(
+                        {
+                            "CCCV switch": 1,
+                            "Current input [A]": op_value,
+                            "Voltage input [V]": V,
+                        }
+                    )
+                    op_units = "CCCV"
+                else:
+                    # Update inputs for constant current
+                    operating_inputs.update(
+                        {"Current switch": 1, "Current input [A]": op_value}
+                    )
+            elif op_units == "V":
+                # Update inputs for constant voltage
+                operating_inputs.update(
+                    {"Voltage switch": 1, "Voltage input [V]": op_value}
+                )
+            elif op_units == "W":
+                # Update inputs for constant power
+                operating_inputs.update(
+                    {"Power switch": 1, "Power input [W]": op_value}
+                )
+
+            # Update period
+            operating_inputs["period"] = op["period"]
+
+            # Update events
+            if events is None:
+                pass
+            else:
+                event_value, event_units = events
+                if event_units == "A":
+                    # update current cut-off, make voltage a value that won't be hit
+                    operating_inputs.update({"Current cut-off [A]": event_value})
+                elif event_units == "V":
+                    # update voltage cut-off, make current a value that won't be hit
+                    operating_inputs.update({"Voltage cut-off [V]": event_value})
+
+            self._experiment_inputs.append(operating_inputs)
+            # Add time to the experiment times
+            dt = op["time"]
+            if dt is None:
+                if op_units in ["A", "CCCV"]:
+                    # Current control: max simulation time: 3 * max simulation time
+                    # based on C-rate
+                    dt = 3 / abs(Crate) * 3600  # seconds
+                    if op_units == "CCCV":
+                        dt *= 5  # 5x longer for CCCV
+                else:
+                    # max simulation time: 1 day
+                    dt = 24 * 3600  # seconds
+            self._experiment_times.append(dt)

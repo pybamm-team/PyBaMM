@@ -375,6 +375,51 @@ class TestExperiment(unittest.TestCase):
             )
 
 
+class TestParameterizedExperiment(unittest.TestCase):
+    def test_parameterized_experiment(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 2C for 0.5 hours",
+                    "Charge at 0.5 A until 1V",
+                    "Hold at 1V until C/50",
+                    "Discharge at C/20 for 0.5 hours",
+                ),
+            ],
+        )
+        nominal_capacity = 2.5
+        timescale = 0.1
+        processed_experiment = experiment.process_parameters(nominal_capacity, timescale)
+        self.assertEqual(
+            processed_experiment.operating_conditions,
+            [
+                {
+                    "electric": (5, "A"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (-0.5, "A"),
+                    "time": 2700.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (1, "V"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (0.125, "A"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+            ],
+        )
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

@@ -156,14 +156,18 @@ class Simulation:
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
-        self.op_cond_to_model = []
-        for op_cond in self.experiment.operating_conditions:
+        self.op_conds_to_model_and_param = {}
+        for op_cond, op_inputs in zip(
+            self.experiment.operating_conditions, self._experiment_inputs
+        ):
             # Create model for this operating condition if it has not already been seen
             # before
-            if op_cond["electric"] not in self.op_cond_to_model:
-                # Make a new copy of the model (we will update events later))
-                new_model = model.new_copy()
-                if op_inputs.get("Current switch") != 1:
+            if op_cond["electric"] not in self.op_conds_to_model_and_param:
+                if op_inputs.get("Current switch") == 1:
+                    # Current control
+                    # Make a new copy of the model (we will update events later))
+                    new_model = model.new_copy()
+                else:
                     # Voltage or power control
                     # Create a new model where the current density is now a variable
                     # To do so, we replace all instances of the current density in the
@@ -182,6 +186,18 @@ class Simulation:
                         ).get_fundamental_variables()
                     )
 
+                    # Perform the replacement
+                    symbol_replacement_map = {
+                        model.variables[name]: variable
+                        for name, variable in external_circuit_variables.items()
+                    }
+                    # Don't replace initial conditions, as these should not contain
+                    # Variable objects
+                    replacer = pybamm.SymbolReplacer(
+                        symbol_replacement_map, process_initial_conditions=False
+                    )
+                    new_model = replacer.process_model(model, inplace=False)
+
                     # Update the rhs or algebraic equation and initial conditions for
                     # FunctionControl
                     # This creates a differential or algebraic equation for the current
@@ -190,7 +206,7 @@ class Simulation:
                     # External circuit submodels are always equations on the current
                     # The external circuit function should fix either the current, or
                     # the voltage, or a combination (e.g. I*V for power control)
-                    i_cell = external_circuit_variables["Current density variable"]
+                    i_cell = new_model.variables["Current density variable"]
                     new_model.initial_conditions[
                         i_cell
                     ] = new_model.param.current_with_time
@@ -324,19 +340,10 @@ class Simulation:
                         check_already_exists=False,
                     )
 
-                # Perform the replacement
-                symbol_replacement_map = {
-                    model.variables[name]: variable
-                    for name, variable in external_circuit_variables.items()
-                }
-                # Don't replace initial conditions, as these should not contain
-                # Variable objects
-                replacer = pybamm.SymbolReplacer(
-                    symbol_replacement_map, process_initial_conditions=False
+                self.op_conds_to_model_and_param[op_cond["electric"]] = (
+                    new_model,
+                    new_parameter_values,
                 )
-                new_model = replacer.process_model(model, inplace=False)
-                new_parameter_values.process_model(new_model, inplace=True)
-                self.op_conds_to_model[op_cond["electric"]] = new_model
         self.model = model
 
     def set_parameters(self):
