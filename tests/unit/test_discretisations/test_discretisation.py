@@ -740,8 +740,11 @@ class TestDiscretise(unittest.TestCase):
         # turn debug mode off to not check well posedness
         debug_mode = pybamm.settings.debug_mode
         pybamm.settings.debug_mode = False
+        # The error will only be raised when the variable is called, since the
+        # variables are not processed until they are called
+        disc.process_model(model)
         with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
-            disc.process_model(model)
+            model.variables["d"]
         pybamm.settings.debug_mode = debug_mode
 
     def test_process_model_dae(self):
@@ -1231,7 +1234,7 @@ class TestDiscretise(unittest.TestCase):
         # check raises error if different sized key and output var
         model.variables = {c_n.name: c_s}
         with self.assertRaisesRegex(pybamm.ModelError, "variable and its eqn"):
-            disc.process_model(model)
+            disc.process_model(model, inplace=False)
 
         # check doesn't raise if concatenation
         model.variables = {c_n.name: pybamm.concatenation(2 * c_n, 3 * c_s)}

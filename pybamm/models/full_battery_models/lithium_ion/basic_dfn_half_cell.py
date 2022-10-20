@@ -353,11 +353,3 @@ class BasicDFNHalfCell(BaseModel):
             "Instantaneous power [W.m-2]": i_cell * i_typ * voltage_dim,
             "Pore-wall flux [mol.m-2.s-1]": j_w,
         }
-
-    def new_copy(self, build=False):
-        new_model = self.__class__(name=self.name, options=self.options)
-        new_model.use_jacobian = self.use_jacobian
-        new_model.convert_to_format = self.convert_to_format
-        new_model._timescale = self.timescale
-        new_model._length_scales = self.length_scales
-        return new_model

@@ -82,9 +82,6 @@ class _BaseEquations:
     def variables(self):
         return self._variables
 
-    def variable_names(self):
-        return list(self._variables.keys())
-
     @functools.cached_property
     def variables_and_events(self):
         """
@@ -439,11 +436,27 @@ class _OnTheFlyUpdateDict(dict):
         self.variables_update_function = variables_update_function
 
     def __getitem__(self, key):
-        if key not in self:
-            self.update(
-                {key: self.variables_update_function(self.unprocessed_variables[key])}
-            )
-        return super().__getitem__(key)
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            item = self.variables_update_function(self.unprocessed_variables[key])
+            self.update({key: item})
+            return item
+
+    def search(self, *args, **kwargs):
+        return self.unprocessed_variables.search(*args, **kwargs)
+
+    def __len__(self):
+        return len(self.unprocessed_variables)
+
+    def __iter__(self):
+        return iter(self.unprocessed_variables)
+
+    def __contains__(self, key):
+        return key in self.unprocessed_variables
+
+    def keys(self):
+        return self.unprocessed_variables.keys()
 
     def copy(self):
         return self.__class__(

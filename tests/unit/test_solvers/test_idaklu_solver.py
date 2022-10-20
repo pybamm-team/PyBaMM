@@ -439,7 +439,9 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_equal(solution.y, -1)
 
             # change initial_conditions and re-solve (to test if ics_only works)
-            model._equations._concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
+            model._equations._concatenated_initial_conditions = pybamm.Vector(
+                np.array([[1]])
+            )
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)
 

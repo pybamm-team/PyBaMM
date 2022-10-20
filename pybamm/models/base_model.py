@@ -8,6 +8,25 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.operations.latexify import Latexify
 
+_EQUATION_ATTRIBUTES = [
+    "rhs",
+    "algebraic",
+    "initial_conditions",
+    "boundary_conditions",
+    "variables",
+    "external_variables",
+    "events",
+    "len_rhs",
+    "len_alg",
+    "len_rhs_and_alg",
+    "bounds",
+    "mass_matrix",
+    "mass_matrix_inv",
+    "concatenated_rhs",
+    "concatenated_algebraic",
+    "concatenated_initial_conditions",
+]
+
 
 class BaseModel:
     """
@@ -65,56 +84,20 @@ class BaseModel:
     def name(self, value):
         self._name = value
 
-    @property
-    def rhs(self):
-        return self._equations.rhs
+    def __getattr__(self, name):
+        if name in _EQUATION_ATTRIBUTES:
+            return getattr(self._equations, name)
+        else:
+            return self.__getattribute__(name)
 
-    @rhs.setter
-    def rhs(self, rhs):
-        self._equations.rhs = rhs
-
-    @property
-    def algebraic(self):
-        return self._equations.algebraic
-
-    @algebraic.setter
-    def algebraic(self, algebraic):
-        self._equations.algebraic = algebraic
-
-    @property
-    def initial_conditions(self):
-        return self._equations.initial_conditions
-
-    @initial_conditions.setter
-    def initial_conditions(self, initial_conditions):
-        self._equations.initial_conditions = initial_conditions
-
-    @property
-    def boundary_conditions(self):
-        return self._equations.boundary_conditions
-
-    @boundary_conditions.setter
-    def boundary_conditions(self, boundary_conditions):
-        self._equations.boundary_conditions = boundary_conditions
-
-    @property
-    def variables(self):
-        return self._equations.variables
-
-    @variables.setter
-    def variables(self, variables):
-        self._equations.variables = variables
+    def __setattr__(self, name, value):
+        if name in _EQUATION_ATTRIBUTES:
+            self._equations.__setattr__(name, value)
+        else:
+            super().__setattr__(name, value)
 
     def variable_names(self):
         return list(self._equations._variables.keys())
-
-    @property
-    def external_variables(self):
-        return self._equations.external_variables
-
-    @external_variables.setter
-    def external_variables(self, variables):
-        self._equations.external_variables = variables
 
     @property
     def variables_and_events(self):
@@ -122,14 +105,6 @@ class BaseModel:
         Returns variables and events in a single dictionary
         """
         return self._equations.variables_and_events
-
-    @property
-    def events(self):
-        return self._equations.events
-
-    @events.setter
-    def events(self, events):
-        self._equations.events = events
 
     @property
     def param(self):
@@ -150,7 +125,7 @@ class BaseModel:
     @property
     def timescale(self):
         """Timescale of model, to be used for non-dimensionalising time when solving"""
-        return self._equations._timescale
+        return self._equations.timescale
 
     @timescale.setter
     def timescale(self, value):
@@ -160,7 +135,7 @@ class BaseModel:
     @property
     def length_scales(self):
         "Length scales of model"
-        return self._equations._length_scales
+        return self._equations.length_scales
 
     @length_scales.setter
     def length_scales(self, values):
@@ -211,42 +186,6 @@ class BaseModel:
 
     def print_parameter_info(self):
         self._equations.print_parameter_info()
-
-    @property
-    def bounds(self):
-        return self._equations._bounds
-
-    @property
-    def len_rhs(self):
-        return self._equations._len_rhs
-
-    @property
-    def len_alg(self):
-        return self._equations._len_alg
-
-    @property
-    def len_rhs_and_alg(self):
-        return self._equations._len_rhs_and_alg
-
-    @property
-    def mass_matrix(self):
-        return self._equations._mass_matrix
-
-    @property
-    def mass_matrix_inv(self):
-        return self._equations._mass_matrix_inv
-
-    @property
-    def concatenated_rhs(self):
-        return self._equations._concatenated_rhs
-
-    @property
-    def concatenated_algebraic(self):
-        return self._equations._concatenated_algebraic
-
-    @property
-    def concatenated_initial_conditions(self):
-        return self._equations._concatenated_initial_conditions
 
     def new_copy(self, equations=None):
         """

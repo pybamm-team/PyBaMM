@@ -477,12 +477,12 @@ class TestCasadiSolver(unittest.TestCase):
         # be a diag of 10s here for testing. Note that the algebraic part is all
         # zeros
         mass_matrix = 10 * model.mass_matrix.entries
-        model.mass_matrix = pybamm.Matrix(mass_matrix)
+        model._equations._mass_matrix = pybamm.Matrix(mass_matrix)
 
         # Note that mass_matrix_inv is just the inverse of the ode block of the
         # mass matrix
         mass_matrix_inv = 0.1 * eye(int(mass_matrix.shape[0] / 2))
-        model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
+        model._equations._mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
 
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)

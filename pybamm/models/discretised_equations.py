@@ -5,6 +5,18 @@ import pybamm
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
 
+_READ_ONLY_ATTRIBUTES = [
+    "len_rhs",
+    "len_alg",
+    "len_rhs_and_alg",
+    "bounds",
+    "mass_matrix",
+    "mass_matrix_inv",
+    "concatenated_rhs",
+    "concatenated_algebraic",
+    "concatenated_initial_conditions",
+]
+
 
 class _DiscretisedEquations(pybamm._BaseProcessedEquations):
     """
@@ -102,6 +114,18 @@ class _DiscretisedEquations(pybamm._BaseProcessedEquations):
 
         self._mass_matrix = mass_matrix
         self._mass_matrix_inv = rhs_mass_matrix_inv
+
+    def __getattr__(self, name):
+        if name in _READ_ONLY_ATTRIBUTES:
+            return getattr(self, "_" + name)
+        else:
+            return self.__getattribute__(name)
+
+    def __setattr__(self, name, value):
+        if name in _READ_ONLY_ATTRIBUTES:
+            raise AttributeError("can't set attribute")
+        else:
+            super().__setattr__(name, value)
 
     def variables_update_function(self, variable):
         return self._discretisation.process_symbol(variable)

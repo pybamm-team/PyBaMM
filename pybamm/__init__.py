@@ -108,7 +108,7 @@ from .expression_tree.operations.evaluate_julia import (
 from .models.base_model import BaseModel
 from .models.base_equations import _BaseEquations, _BaseProcessedEquations
 from .models.symbolic_equations import _SymbolicEquations
-from .models.parameterised_equations import _ParameterisedEquations
+from .models.parameterised_equations import _ParameterisedEquations, _ReplacedEquations
 from .models.discretised_equations import _DiscretisedEquations
 from .models.standard_variables import standard_variables
 from .models.event import Event

@@ -66,20 +66,6 @@ class _SymbolicEquations(pybamm._BaseEquations):
                 )
         self._variables = pybamm.FuzzyDict(variables)
 
-    @property
-    def variables_and_events(self):
-        """
-        Returns variables and events in a single dictionary
-        """
-        try:
-            return self._variables_and_events
-        except AttributeError:
-            self._variables_and_events = self.variables.copy()
-            self._variables_and_events.update(
-                {f"Event: {event.name}": event.expression for event in self.events}
-            )
-            return self._variables_and_events
-
     @pybamm._BaseEquations.events.setter
     def events(self, events):
         self._events = events
