@@ -388,14 +388,6 @@ class TestSimulation(unittest.TestCase):
 
         os.remove("plot.gif")
 
-    def test_drive_cycle_data(self):
-        model = pybamm.lithium_ion.SPM()
-        param = model.default_parameter_values
-        param["Current function [A]"] = "[current data]US06"
-
-        with self.assertRaisesRegex(NotImplementedError, "Drive cycle from data"):
-            pybamm.Simulation(model, parameter_values=param)
-
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
