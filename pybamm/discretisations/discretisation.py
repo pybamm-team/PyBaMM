@@ -3,9 +3,7 @@
 #
 import pybamm
 import numpy as np
-from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csc_matrix, csr_matrix
-from scipy.sparse.linalg import inv
+from collections import defaultdict
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -193,10 +191,8 @@ class Discretisation(object):
         )
         self.set_internal_boundary_conditions(model)
 
-        kwargs = {}
-
         # Keep a record of y_slices in the model
-        y_slices = self.y_slices_explicit
+        y_slices = self.y_slices
         # Keep a record of the bounds in the model
         bounds = self.bounds
 
@@ -257,10 +253,6 @@ class Discretisation(object):
             # create a copy of the original model
             model_disc = model.new_copy(equations=discretised_equations)
 
-        # Create mass matrix
-        pybamm.logger.verbose("Create mass matrix for {}".format(model.name))
-        mass_matrix, mass_matrix_inv = self.create_mass_matrix(model_disc)
-
         # Check that resulting model makes sense
         if check_model:
             pybamm.logger.verbose("Performing model checks for {}".format(model.name))
@@ -281,7 +273,6 @@ class Discretisation(object):
         """
         # Set up y_slices and bounds
         y_slices = defaultdict(list)
-        y_slices_explicit = defaultdict(list)
         start = 0
         end = 0
         lower_bounds = []
@@ -293,7 +284,7 @@ class Discretisation(object):
                 start_ = start
                 spatial_method = self.spatial_methods[variable.domain[0]]
                 children = variable.children
-                meshes = OrderedDict()
+                meshes = {}
                 for child in children:
                     meshes[child] = [spatial_method.mesh[dom] for dom in child.domain]
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
@@ -305,7 +296,6 @@ class Discretisation(object):
                             end += domain_mesh.npts_for_broadcast_to_nodes
                         # Add to slices
                         y_slices[child].append(slice(start_, end))
-                        y_slices_explicit[child].append(slice(start_, end))
                         # Increment start_
                         start_ = end
             else:
@@ -313,7 +303,6 @@ class Discretisation(object):
 
             # Add to slices
             y_slices[variable].append(slice(start, end))
-            y_slices_explicit[variable].append(slice(start, end))
             # Add to bounds
             lower_bounds.extend([variable.bounds[0]] * (end - start))
             upper_bounds.extend([variable.bounds[1]] * (end - start))
@@ -322,8 +311,6 @@ class Discretisation(object):
 
         # Convert y_slices back to normal dictionary
         self.y_slices = dict(y_slices)
-        # Also keep a record of what the y_slices are, to be stored in the model
-        self.y_slices_explicit = dict(y_slices_explicit)
 
         # Also keep a record of bounds
         self.bounds = (np.array(lower_bounds), np.array(upper_bounds))
@@ -571,86 +558,6 @@ class Discretisation(object):
                 bcs["left"] = bcs.pop("no tab")
 
         return bcs
-
-    def create_mass_matrix(self, model):
-        """Creates mass matrix of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Discretised model. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The mass matrix
-        :class:`pybamm.Matrix`
-            The inverse of the ode part of the mass matrix (required by solvers
-            which only accept the ODEs in explicit form)
-        """
-        # Create list of mass matrices for each equation to be put into block
-        # diagonal mass matrix for the model
-        mass_list = []
-        mass_inv_list = []
-
-        # get a list of model rhs variables that are sorted according to
-        # where they are in the state vector
-        model_variables = model.rhs.keys()
-        model_slices = []
-        for v in model_variables:
-            model_slices.append(self.y_slices[v][0])
-        sorted_model_variables = [
-            v for _, v in sorted(zip(model_slices, model_variables))
-        ]
-
-        # Process mass matrices for the differential equations
-        for var in sorted_model_variables:
-            if var.domain == []:
-                # If variable domain empty then mass matrix is just 1
-                mass_list.append(1.0)
-                mass_inv_list.append(1.0)
-            else:
-                mass = (
-                    self.spatial_methods[var.domain[0]]
-                    .mass_matrix(var, self.bcs)
-                    .entries
-                )
-                mass_list.append(mass)
-                if isinstance(
-                    self.spatial_methods[var.domain[0]],
-                    (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
-                ):
-                    # for 0D methods the mass matrix is just a scalar 1 and for
-                    # finite volumes the mass matrix is identity, so no need to
-                    # compute the inverse
-                    mass_inv_list.append(mass)
-                else:
-                    # inverse is more efficient in csc format
-                    mass_inv = inv(csc_matrix(mass))
-                    mass_inv_list.append(mass_inv)
-
-        # Create lumped mass matrix (of zeros) of the correct shape for the
-        # discretised algebraic equations
-        if model.algebraic.keys():
-            mass_algebraic_size = model.concatenated_algebraic.shape[0]
-            mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
-            mass_list.append(mass_algebraic)
-
-        # Create block diagonal (sparse) mass matrix (if model is not empty)
-        # and inverse (if model has odes)
-        if len(model.rhs) + len(model.algebraic) > 0:
-            mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
-            if len(model.rhs) > 0:
-                mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
-            else:
-                mass_matrix_inv = None
-        else:
-            mass_matrix, mass_matrix_inv = None, None
-
-        return mass_matrix, mass_matrix_inv
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary

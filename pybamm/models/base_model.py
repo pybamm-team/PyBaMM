@@ -1,10 +1,6 @@
 #
 # Base model class
 #
-import numbers
-import warnings
-from collections import OrderedDict
-
 import copy
 import casadi
 import numpy as np
@@ -120,15 +116,12 @@ class BaseModel:
     def external_variables(self, variables):
         self._equations.external_variables = variables
 
-    def variable_names(self):
-        return list(self._equations._variables.keys())
-
     @property
     def variables_and_events(self):
         """
         Returns variables and events in a single dictionary
         """
-        return self._equations._variables_and_events
+        return self._equations.variables_and_events
 
     @property
     def events(self):
@@ -221,19 +214,39 @@ class BaseModel:
 
     @property
     def bounds(self):
-        return self._equations.bounds
+        return self._equations._bounds
 
     @property
     def len_rhs(self):
-        return self._equations.len_rhs
+        return self._equations._len_rhs
 
     @property
-    def len_algebraic(self):
-        return self._equations.len_algebraic
+    def len_alg(self):
+        return self._equations._len_alg
 
     @property
     def len_rhs_and_alg(self):
-        return self._equations.len_rhs_and_alg
+        return self._equations._len_rhs_and_alg
+
+    @property
+    def mass_matrix(self):
+        return self._equations._mass_matrix
+
+    @property
+    def mass_matrix_inv(self):
+        return self._equations._mass_matrix_inv
+
+    @property
+    def concatenated_rhs(self):
+        return self._equations._concatenated_rhs
+
+    @property
+    def concatenated_algebraic(self):
+        return self._equations._concatenated_algebraic
+
+    @property
+    def concatenated_initial_conditions(self):
+        return self._equations._concatenated_initial_conditions
 
     def new_copy(self, equations=None):
         """
@@ -488,7 +501,7 @@ class BaseModel:
         jac_algebraic = casadi.jacobian(algebraic, y_casadi)
 
         # For specified variables, convert to casadi
-        variables = OrderedDict()
+        variables = {}
         for name in variable_names:
             var = self.variables[name]
             variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)

@@ -51,17 +51,6 @@ class BasicDFNHalfCell(BaseModel):
         # `ParameterValues` class when the model is processed.
         param = self.param
 
-        R_w_typ = param.p.prim.R_typ
-
-        # Set default length scales
-        self._length_scales = {
-            "separator": param.L_x,
-            "positive electrode": param.L_x,
-            "positive particle": R_w_typ,
-            "current collector y": param.L_z,
-            "current collector z": param.L_z,
-        }
-
         ######################
         # Variables
         ######################

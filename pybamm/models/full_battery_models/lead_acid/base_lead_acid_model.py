@@ -23,16 +23,18 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.param = pybamm.LeadAcidParameters()
 
         # Default timescale
-        self._timescale = self.param.timescale
+        self.set_timescale(self.param.timescale)
 
         # Set default length scales
-        self._length_scales = {
-            "negative electrode": self.param.L_x,
-            "separator": self.param.L_x,
-            "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
+        self.set_length_scales(
+            {
+                "negative electrode": self.param.L_x,
+                "separator": self.param.L_x,
+                "positive electrode": self.param.L_x,
+                "current collector y": self.param.L_z,
+                "current collector z": self.param.L_z,
+            }
+        )
 
         self.set_standard_output_variables()
 

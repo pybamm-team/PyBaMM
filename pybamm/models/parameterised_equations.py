@@ -1,16 +1,7 @@
 #
 # Parameterized equations class
 #
-import numbers
-import warnings
-from collections import OrderedDict
-
-import copy
-import casadi
-import numpy as np
-
 import pybamm
-from pybamm.expression_tree.operations.latexify import Latexify
 
 
 class _ParameterisedEquations(pybamm._BaseProcessedEquations):
@@ -30,6 +21,5 @@ class _ParameterisedEquations(pybamm._BaseProcessedEquations):
 
         super().__init__(*args)
 
-    def variables_update_function(self, key):
-        return self._parameter_values.process_symbol(self._unprocessed_variables[key])
-    
+    def variables_update_function(self, variable):
+        return self._parameter_values.process_symbol(variable)

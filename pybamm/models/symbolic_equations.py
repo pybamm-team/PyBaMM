@@ -113,7 +113,7 @@ class _SymbolicEquations(pybamm._BaseEquations):
 
         # Set the submodels that are external
         for sub in model.options["external submodels"]:
-            submodels[sub].external = True
+            model.submodels[sub].external = True
 
         # Set any external variables
         self.external_variables = []

@@ -486,13 +486,13 @@ class Solution(object):
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
                     var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
-                    model._variables_casadi[key] = var_casadi
+                    # model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
-                elif key in model._variables_casadi:
-                    var_casadi = model._variables_casadi[key]
+                # elif key in model._variables_casadi:
+                #     var_casadi = model._variables_casadi[key]
                 else:
                     var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
-                    model._variables_casadi[key] = var_casadi
+                    # model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
             var = pybamm.ProcessedVariable(
                 vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic

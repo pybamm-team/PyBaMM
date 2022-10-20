@@ -13,7 +13,6 @@ import pickle
 import subprocess
 import sys
 import timeit
-from collections import defaultdict
 from platform import system
 import difflib
 import collections

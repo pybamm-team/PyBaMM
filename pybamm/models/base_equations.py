@@ -85,19 +85,16 @@ class _BaseEquations:
     def variable_names(self):
         return list(self._variables.keys())
 
-    @property
+    @functools.cached_property
     def variables_and_events(self):
         """
         Returns variables and events in a single dictionary
         """
-        try:
-            return self._variables_and_events
-        except AttributeError:
-            self._variables_and_events = self.variables.copy()
-            self._variables_and_events.update(
-                {f"Event: {event.name}": event.expression for event in self.events}
-            )
-            return self._variables_and_events
+        variables_and_events = self.variables.copy()
+        variables_and_events.update(
+            {f"Event: {event.name}": event.expression for event in self.events}
+        )
+        return variables_and_events
 
     @property
     def events(self):
@@ -436,13 +433,14 @@ class _BaseProcessedEquations(_BaseEquations):
             boundary_conditions=pybamm.ReadOnlyDict(boundary_conditions),
             # Variables is initially empty, but will be filled in when variables are
             # called
-            variables=_OnTheFlyUpdatedDict(self.variables_update_function),
+            variables=_OnTheFlyUpdatedDict(
+                unprocessed_variables, self.variables_update_function
+            ),
             events=events,
             external_variables=external_variables,
             timescale=timescale,
             length_scales=length_scales,
         )
-        self._unprocessed_variables = unprocessed_variables
 
     @_BaseEquations.rhs.setter
     def rhs(self, value):
@@ -454,11 +452,19 @@ class _OnTheFlyUpdatedDict(dict):
     A dictionary that updates itself when a key is called.
     """
 
-    def __init__(self, variables_update_function):
+    def __init__(self, unprocessed_variables, variables_update_function):
         super().__init__({})
+        self.unprocessed_variables = unprocessed_variables
         self.variables_update_function = variables_update_function
 
     def __getitem__(self, key):
         if key not in self:
-            self.update(self.variables_update_function(key))
+            self.update(
+                {key: self.variables_update_function(self.unprocessed_variables[key])}
+            )
         return super().__getitem__(key)
+
+    def copy(self):
+        return self.__class__(
+            self.unprocessed_variables, self.variables_update_function
+        )

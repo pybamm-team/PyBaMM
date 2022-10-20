@@ -702,7 +702,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @pybamm.BaseModel.timescale.setter
     def timescale(self, value):
-        """Set the timescale"""
         raise NotImplementedError(
             "Timescale cannot be directly overwritten for this model. "
             "Pass a timescale to the 'timescale' option instead."
@@ -710,10 +709,17 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @pybamm.BaseModel.length_scales.setter
     def length_scales(self, value):
-        """Set the length scales"""
         raise NotImplementedError(
             "Length scales cannot be directly overwritten for this model. "
         )
+
+    def set_timescale(self, value):
+        """Set the timescale"""
+        self._equations.timescale = value
+
+    def set_length_scales(self, value):
+        """Set the length scales"""
+        self._equations.length_scales = value
 
     @property
     def default_geometry(self):

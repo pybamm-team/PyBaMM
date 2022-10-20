@@ -516,8 +516,7 @@ class ProcessedVariable(object):
         except KeyError:
             if self.warn:  # pragma: no cover
                 pybamm.logger.warning(
-                    "No length scale set for {}. "
-                    "Using default of 1 [m].".format(domain)
+                    f"No length scale set for {domain}. Using default of 1 [m]."
                 )
             return 1
 
