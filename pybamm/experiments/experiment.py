@@ -475,8 +475,6 @@ class _ParameterisedExperiment(Experiment):
         self.termination_string = experiment.termination_string
         self.cycle_lengths = experiment.cycle_lengths
 
-        # Save the experiment
-        self.experiment = experiment
         # Create a new submodel for each set of operating conditions and update
         # parameters and events accordingly
         self._experiment_inputs = []
