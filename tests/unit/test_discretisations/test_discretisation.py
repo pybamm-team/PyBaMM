@@ -129,7 +129,7 @@ class TestDiscretise(unittest.TestCase):
 
         self.assertEqual(disc.y_slices[a][0], slice(0, 10, None))
 
-        self.assertEqual(model.y_slices[a][0], slice(0, 10, None))
+        self.assertEqual(model._equations._y_slices[a][0], slice(0, 10, None))
         self.assertEqual(model.bounds, disc.bounds)
 
         b_test = np.ones((10, 1))
@@ -138,8 +138,8 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # check that b is added to the boundary conditions
-        model.bcs[b]["left"]
-        model.bcs[b]["right"]
+        disc.bcs[b]["left"]
+        disc.bcs[b]["right"]
 
         # check that grad and div(grad ) produce the correct shapes
         self.assertEqual(model.variables["b"].shape_for_testing, (10, 1))
@@ -205,8 +205,8 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # check that b is added to the boundary conditions
-        model.bcs[b]["left"]
-        model.bcs[b]["right"]
+        disc.bcs[b]["left"]
+        disc.bcs[b]["right"]
 
         # check that grad and div(grad ) produce the correct shapes
         self.assertEqual(model.variables["b"].shape_for_testing, (15, 1))

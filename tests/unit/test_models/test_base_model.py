@@ -283,7 +283,7 @@ class TestBaseModel(unittest.TestCase):
         var = pybamm.Variable("var")
         model.algebraic = {var: var}
         with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
-            model.check_no_repeated_keys()
+            model._equations.check_no_repeated_keys()
 
     def test_check_well_posedness_variables(self):
         # Well-posed ODE model
@@ -1009,9 +1009,9 @@ class TestBaseModel(unittest.TestCase):
             "submodel 1": Submodel1(None, "negative"),
             "submodel 2": Submodel2(None, "negative"),
         }
-        self.assertFalse(model._built)
+        self.assertFalse(model._equations._built)
         model.build_model()
-        self.assertTrue(model._built)
+        self.assertTrue(model._equations._built)
         u = model.variables["u"]
         v = model.variables["v"]
         self.assertEqual(model.rhs[u].value, 2)

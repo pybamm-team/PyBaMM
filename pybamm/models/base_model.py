@@ -281,6 +281,9 @@ class BaseModel:
 
         self._equations.build_model_equations(self)
 
+    def update(self, *submodels):
+        self._equations.update(*submodels)
+
     def set_initial_conditions_from(self, solution, inplace=True, return_type="model"):
         """
         Update initial conditions with the final states from a Solution object or from
@@ -355,26 +358,10 @@ class BaseModel:
         # Also update the concatenated initial conditions if the model is already
         # discretised
         if self.is_discretised:
-            # Unpack slices for sorting
-            y_slices = {var: slce for var, slce in self.y_slices.items()}
-            slices = []
-            for symbol in self.initial_conditions.keys():
-                if isinstance(symbol, pybamm.Concatenation):
-                    # must append the slice for the whole concatenation, so that
-                    # equations get sorted correctly
-                    slices.append(
-                        slice(
-                            y_slices[symbol.children[0]][0].start,
-                            y_slices[symbol.children[-1]][0].stop,
-                        )
-                    )
-                else:
-                    slices.append(y_slices[symbol][0])
-            equations = list(initial_conditions.values())
-            # sort equations according to slices
-            sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
-            concatenated_initial_conditions = pybamm.NumpyConcatenation(
-                *sorted_equations
+            concatenated_initial_conditions = (
+                self._equations._discretisation._concatenate_in_order(
+                    initial_conditions
+                )
             )
         else:
             concatenated_initial_conditions = None
@@ -385,8 +372,12 @@ class BaseModel:
             else:
                 model = self.new_copy()
 
-            model.initial_conditions = initial_conditions
-            model.concatenated_initial_conditions = concatenated_initial_conditions
+            model._equations._initial_conditions = pybamm.ReadOnlyDict(
+                initial_conditions
+            )
+            model._equations._concatenated_initial_conditions = (
+                concatenated_initial_conditions
+            )
             return model
         elif return_type == "ics":
             return initial_conditions, concatenated_initial_conditions

@@ -360,7 +360,7 @@ class ParameterValues:
                     "by 3600 to get the same results as before."
                 )
 
-    def process_model(self, unprocessed_model, inplace=None):
+    def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
@@ -447,7 +447,7 @@ class ParameterValues:
             new_scale = self.process_symbol(scale)
             new_length_scales[domain] = new_scale
 
-        parameterized_equations = pybamm._ParameterisedEquations(
+        parameterised_equations = pybamm._ParameterisedEquations(
             self,
             new_rhs,
             new_algebraic,
@@ -463,10 +463,10 @@ class ParameterValues:
         # inplace vs not inplace
         if inplace:
             model = unprocessed_model
-            model._equations = parameterized_equations
+            model._equations = parameterised_equations
         else:
             # create a copy of the model
-            model = unprocessed_model.new_copy(equations=parameterized_equations)
+            model = unprocessed_model.new_copy(equations=parameterised_equations)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 

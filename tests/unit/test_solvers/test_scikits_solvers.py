@@ -915,15 +915,6 @@ class TestScikitsSolvers(unittest.TestCase):
                 )
                 np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
 
-    def test_ode_solver_fail_with_dae(self):
-        model = pybamm.BaseModel()
-        a = pybamm.Scalar(1)
-        model.algebraic = {a: a}
-        model.concatenated_initial_conditions = a
-        solver = pybamm.ScikitsOdeSolver()
-        with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
-            solver.set_up(model)
-
     def test_dae_solver_algebraic_model(self):
         model = pybamm.BaseModel()
         var = pybamm.Variable("var")

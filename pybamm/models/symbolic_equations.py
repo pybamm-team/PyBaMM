@@ -245,7 +245,7 @@ class _SymbolicEquations(pybamm._BaseEquations):
 
 class _EquationDict(dict):
     def __init__(self, name, equations):
-        name = name
+        self.name = name
         equations = self.check_and_convert_equations(equations)
         super().__init__(equations)
 

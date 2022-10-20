@@ -302,7 +302,7 @@ class TestScipySolver(unittest.TestCase):
         ninputs = 8
         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-        model.events = [
+        model._equations._events = [
             pybamm.Event(
                 "discontinuity",
                 pybamm.Scalar(t_eval[-1] / 2),
@@ -495,7 +495,7 @@ class TestScipySolver(unittest.TestCase):
         )
 
         # Change initial conditions and solve again
-        model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+        model._equations._concatenated_initial_conditions = pybamm.NumpyConcatenation(
             pybamm.Vector([[2]])
         )
         solution = solver.solve(model, t_eval)

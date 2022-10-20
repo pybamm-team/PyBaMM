@@ -126,6 +126,9 @@ class ReadOnlyDict(collections.abc.Mapping):
     def __iter__(self):
         return iter(self._items)
 
+    def copy(self):
+        return ReadOnlyDict(self._items.copy())
+
 
 class Timer(object):
     """

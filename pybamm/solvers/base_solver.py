@@ -380,7 +380,7 @@ class BaseSolver(object):
         # First, we reset the mass matrix and bounds back to their original form
         # if they have been extended
         if model.bounds[0].shape[0] > model.len_rhs_and_alg:
-            model.bounds = (
+            model._equations._bounds = (
                 model.bounds[0][: model.len_rhs_and_alg],
                 model.bounds[1][: model.len_rhs_and_alg],
             )
@@ -389,10 +389,10 @@ class BaseSolver(object):
             and model.mass_matrix.shape[0] > model.len_rhs_and_alg
         ):
             if model.mass_matrix_inv is not None:
-                model.mass_matrix_inv = pybamm.Matrix(
+                model._equations._mass_matrix_inv = pybamm.Matrix(
                     model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
                 )
-            model.mass_matrix = pybamm.Matrix(
+            model._equations._mass_matrix = pybamm.Matrix(
                 model.mass_matrix.entries[
                     : model.len_rhs_and_alg, : model.len_rhs_and_alg
                 ]
@@ -406,7 +406,7 @@ class BaseSolver(object):
             elif model.len_alg != 0:
                 n_inputs = model.len_alg_sens // model.len_alg
             if model.bounds[0].shape[0] == model.len_rhs_and_alg:
-                model.bounds = (
+                model._equations._bounds = (
                     np.repeat(model.bounds[0], n_inputs + 1),
                     np.repeat(model.bounds[1], n_inputs + 1),
                 )
@@ -416,13 +416,13 @@ class BaseSolver(object):
             ):
 
                 if model.mass_matrix_inv is not None:
-                    model.mass_matrix_inv = pybamm.Matrix(
+                    model._equations._mass_matrix_inv = pybamm.Matrix(
                         block_diag(
                             [model.mass_matrix_inv.entries] * (n_inputs + 1),
                             format="csr",
                         )
                     )
-                model.mass_matrix = pybamm.Matrix(
+                model._equations._mass_matrix = pybamm.Matrix(
                     block_diag(
                         [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
                     )

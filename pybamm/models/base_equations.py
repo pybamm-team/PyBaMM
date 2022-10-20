@@ -414,7 +414,7 @@ class _BaseProcessedEquations(_BaseEquations):
             boundary_conditions=pybamm.ReadOnlyDict(boundary_conditions),
             # Variables is initially empty, but will be filled in when variables are
             # called
-            variables=_OnTheFlyUpdatedDict(
+            variables=_OnTheFlyUpdateDict(
                 unprocessed_variables, self.variables_update_function
             ),
             events=events,
@@ -428,7 +428,7 @@ class _BaseProcessedEquations(_BaseEquations):
         raise AttributeError(f"Attributes of {self} are read-only")
 
 
-class _OnTheFlyUpdatedDict(dict):
+class _OnTheFlyUpdateDict(dict):
     """
     A dictionary that updates itself when a key is called.
     """
