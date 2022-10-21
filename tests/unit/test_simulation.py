@@ -24,8 +24,6 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
-        self.assertEqual(model.__class__, sim._model_class)
-
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)

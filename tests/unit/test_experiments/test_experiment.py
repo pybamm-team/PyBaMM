@@ -220,13 +220,13 @@ class TestExperiment(unittest.TestCase):
                 },
                 {
                     "type": "CCCV",
+                    "C-rate input [-]": -0.5,
                     "Voltage input [V]": 1,
                     "time": None,
                     "period": 60.0,
                     "dc_data": None,
                     "string": "Charge at 0.5 C until 1V then hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
-                    "C-rate input [-]": -0.5,
                 },
                 {
                     "C-rate input [-]": 0.05,
@@ -252,20 +252,22 @@ class TestExperiment(unittest.TestCase):
             experiment.operating_conditions,
             [
                 {
-                    "Current input [A]": -0.5,
+                    "C-rate input [-]": -0.5,
                     "type": "C-rate",
                     "time": None,
                     "period": 60.0,
                     "dc_data": None,
-                    "events": None,
+                    "string": "Charge at 0.5 C until 2V",
+                    "events": {"Voltage input [V]": 2, "type": "voltage"},
                 },
                 {
-                    "Current input [A]": 1,
+                    "Voltage input [V]": 1,
                     "type": "voltage",
                     "time": None,
                     "period": 60.0,
                     "dc_data": None,
-                    "events": None,
+                    "string": "Hold at 1V until C/50",
+                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
                 },
             ],
         )
@@ -280,20 +282,22 @@ class TestExperiment(unittest.TestCase):
             experiment.operating_conditions,
             [
                 {
-                    "Current input [A]": -0.5,
+                    "C-rate input [-]": -0.5,
                     "type": "C-rate",
                     "time": 120.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at 0.5 C for 2 minutes",
                     "events": None,
                 },
                 {
-                    "Current input [A]": 1,
+                    "Voltage input [V]": 1,
                     "type": "voltage",
                     "time": None,
                     "period": 60.0,
                     "dc_data": None,
-                    "events": None,
+                    "string": "Hold at 1V until C/50",
+                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
                 },
             ],
         )

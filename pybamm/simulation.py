@@ -92,6 +92,9 @@ class Simulation:
                         }
                     )
         else:
+            if not isinstance(experiment, pybamm.Experiment):
+                raise TypeError("experiment must be a pybamm `Experiment` instance")
+
             self.operating_mode = "with experiment"
             # Save the experiment
             self.experiment = experiment.copy()
@@ -134,47 +137,44 @@ class Simulation:
         """
         experiment = self.experiment
         model = self.model
-        if not isinstance(experiment, pybamm.Experiment):
-            raise TypeError("experiment must be a pybamm `Experiment` instance")
-
         # Update experiment using parameters such as timescale and capacity
         timescale = self._parameter_values.evaluate(model.timescale)
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-        for op in experiment.operating_conditions:
-            op_type = op["type"]
-            if op["dc_data"] is not None:
+        for op_conds in experiment.operating_conditions:
+            op_type = op_conds["type"]
+            if op_conds["dc_data"] is not None:
                 # If operating condition includes a drive cycle, define the interpolant
                 drive_cycle_interpolant = pybamm.Interpolant(
-                    op["dc_data"][:, 0],
-                    op["dc_data"][:, 1],
+                    op_conds["dc_data"][:, 0],
+                    op_conds["dc_data"][:, 1],
                     timescale * (pybamm.t - pybamm.InputParameter("start time")),
                 )
                 if op_type == "current":
-                    operating_inputs["Current input [A]"] = drive_cycle_interpolant
+                    op_conds["Current input [A]"] = drive_cycle_interpolant
                 if op_type == "voltage":
-                    operating_inputs["Voltage input [V]"] = drive_cycle_interpolant
+                    op_conds["Voltage input [V]"] = drive_cycle_interpolant
                 if op_type == "power":
-                    operating_inputs["Power input [W]"] = drive_cycle_interpolant
+                    op_conds["Power input [W]"] = drive_cycle_interpolant
             else:
                 if op_type == "C-rate":
-                    Crate = op.pop("C-rate input [-]")
-                    op["type"] = "current"
-                    op["Current input [A]"] = Crate * capacity
+                    Crate = op_conds.pop("C-rate input [-]")
+                    op_conds["type"] = "current"
+                    op_conds["Current input [A]"] = Crate * capacity
                 elif op_type == "current":
-                    Crate = op["Current input [A]"] / capacity
+                    Crate = op_conds["Current input [A]"] / capacity
 
             # Update events
-            events = op.pop("events")
+            events = op_conds.pop("events")
             if events is not None:
                 event_type = events.pop("type")
                 if event_type == "C-rate":
                     # Scale C-rate with capacity to obtain current
-                    events["Current cut-off [A]"] = (
-                        events["C-rate cut-off [C]"] * capacity
+                    events["Current input [A]"] = (
+                        events.pop("C-rate input [-]") * capacity
                     )
                 # Update the dictionary of operating conditions, replacing
                 # "xxx input [unit]" with "xxx cut-off [unit]"
-                op.update(
+                op_conds.update(
                     {
                         key.replace("input", "cut-off"): value
                         for key, value in events.items()
@@ -182,18 +182,18 @@ class Simulation:
                 )
 
             # Add time to the experiment times
-            dt = op["time"]
+            dt = op_conds["time"]
             if dt is None:
-                if op["type"] in ["current", "CCCV"]:
+                if op_conds["type"] in ["current", "CCCV"]:
                     # Current control: max simulation time: 3 * max simulation time
                     # based on C-rate
                     dt = 3 / abs(Crate) * 3600  # seconds
-                    if op["type"] == "CCCV":
+                    if op_conds["type"] == "CCCV":
                         dt *= 5  # 5x longer for CCCV
                 else:
                     # max simulation time: 1 day
                     dt = 24 * 3600  # seconds
-            op["time"] = dt
+            op_conds["time"] = dt
 
         # Set up model for experiment
         self.set_up_and_parameterise_model_for_experiment()
@@ -206,7 +206,6 @@ class Simulation:
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
-        model = self.model
         self.op_type_to_model = {}
         self.op_string_to_model = {}
         for op in self.experiment.operating_conditions:
@@ -214,7 +213,7 @@ class Simulation:
             # if it has not already been seen before
             if op["type"] not in self.op_type_to_model:
                 if op["type"] == "current":
-                    new_model, submodel = model, None
+                    new_model, submodel = self.model, None
                 else:
                     # Voltage or power control
                     # Create a new model where the current density is now a variable
@@ -230,7 +229,7 @@ class Simulation:
                     elif op["type"] == "CCCV":
                         submodel_class = pybamm.external_circuit.CCCVFunctionControl
 
-                    new_model = model.new_copy()
+                    new_model = self.model.new_copy()
                     # Build the new submodel and update the model with it
                     submodel = submodel_class(new_model.param, new_model.options)
                     variables = new_model.variables
@@ -264,7 +263,7 @@ class Simulation:
                 if submodel is not None:
                     new_parameter_values["Current function [A]"] = submodel.variables[
                         "Current density variable"
-                    ]
+                    ] * abs(model.param.I_typ)
                 parameterised_model = new_parameter_values.process_model(
                     new_model, inplace=False
                 )
@@ -283,11 +282,11 @@ class Simulation:
                 new_model.events.append(
                     pybamm.Event(
                         "Current cut-off (CCCV) [A] [experiment]",
-                        -variables["Current [A]"]
+                        -new_model.variables["Current [A]"]
                         - abs(pybamm.InputParameter("Current cut-off [A]"))
                         + 1e4
                         * (
-                            variables["Battery voltage [V]"]
+                            new_model.variables["Battery voltage [V]"]
                             < (pybamm.InputParameter("Voltage input [V]") - 1e-4)
                         ),
                     )
@@ -403,17 +402,6 @@ class Simulation:
                 "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
             }
         )
-        # For experiments also update the following
-        if hasattr(self, "op_conds_to_model_and_param"):
-            for key, (model, param) in self.op_conds_to_model_and_param.items():
-                param.update(
-                    {
-                        "Initial concentration in negative electrode [mol.m-3]": x
-                        * c_n_max,
-                        "Initial concentration in positive electrode [mol.m-3]": y
-                        * c_p_max,
-                    }
-                )
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
         return c_n_init, c_p_init
@@ -452,11 +440,14 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def build_for_experiment(self, check_model=True):
+    def build_for_experiment(self, check_model=True, initial_soc=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
         experiment, where there may be several models to build
         """
+        if initial_soc is not None:
+            self.set_initial_soc(initial_soc)
+
         if self.op_conds_to_built_models:
             return
         else:
@@ -546,11 +537,8 @@ class Simulation:
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
         logs = {}
 
-        if initial_soc is not None:
-            c_n_init, c_p_init = self.set_initial_soc(initial_soc)
-
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            self.build(check_model=check_model)
+            self.build(check_model=check_model, initial_soc=initial_soc)
             if save_at_cycles is not None:
                 raise ValueError(
                     "'save_at_cycles' option can only be used if simulating an "
@@ -629,7 +617,7 @@ class Simulation:
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
-            self.build_for_experiment(check_model=check_model)
+            self.build_for_experiment(check_model=check_model, initial_soc=initial_soc)
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
@@ -859,15 +847,6 @@ class Simulation:
 
             callbacks.on_experiment_end(logs)
 
-        # reset parameter values
-        if initial_soc is not None:
-            self.parameter_values.update(
-                {
-                    "Initial concentration in negative electrode [mol.m-3]": c_n_init,
-                    "Initial concentration in positive electrode [mol.m-3]": c_p_init,
-                }
-            )
-
         return self.solution
 
     def step(
@@ -987,7 +966,6 @@ class Simulation:
     @model.setter
     def model(self, model):
         self._model = copy.copy(model)
-        self._model_class = model.__class__
 
     @property
     def model_with_set_params(self):

@@ -116,12 +116,7 @@ class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
     def __init__(self, param, options, control="algebraic"):
-        super().__init__(
-            param,
-            self.constant_power,
-            options,
-            control=control,
-        )
+        super().__init__(param, self.constant_power, options, control=control)
 
     def constant_power(self, variables):
         I = variables["Current [A]"]
