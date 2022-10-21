@@ -26,17 +26,6 @@ JAX_VERSION = "0.2.12"
 JAXLIB_VERSION = "0.1.70"
 
 
-def tree_search(tree, item, solutions):
-    for child in tree.children:
-        tree_search(child, item, solutions)
-        if (child == item) or (child.name == item.name):
-            solutions.append(True)
-        else:
-            solutions.append(False)
-    solutions.append((tree == item) or (tree.name == item.name))
-    return None
-
-
 def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent)

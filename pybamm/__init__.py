@@ -43,7 +43,6 @@ from .util import (
     rmse,
     load,
     is_constant_and_can_evaluate,
-    tree_search,
 )
 from .util import (
     get_parameters_filepath,
