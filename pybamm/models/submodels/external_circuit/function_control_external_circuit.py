@@ -35,6 +35,14 @@ class FunctionControl(BaseModel):
         if self.control in ["algebraic", "differential without max"]:
             i_cell = i_var
         elif self.control == "differential with max":
+            i_input = (
+                pybamm.FunctionParameter(
+                    "CCCV current function [A]",
+                    {"Time [s]": pybamm.t * param.timescale},
+                )
+                / param.I_typ
+                * pybamm.sign(param.I_typ)
+            )
             i_cell = pybamm.maximum(i_var, param.current_with_time)
 
         # Update derived variables
@@ -58,7 +66,7 @@ class FunctionControl(BaseModel):
         super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current density variable"]
-        self.initial_conditions[i_cell] = self.param.current_with_time
+        self.initial_conditions[i_cell] = self.param.I_typ / self.param.A_cc
 
     def set_rhs(self, variables):
         super().set_rhs(variables)
