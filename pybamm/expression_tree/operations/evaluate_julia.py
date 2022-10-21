@@ -524,7 +524,9 @@ class JuliaConverter(object):
             self._function_string = self._function_string.replace(top_var_name, "out")
             self._function_string += "end\nend\nend"
             self._function_string = (
-                "@inbounds function {}(out, dy, y, p, t)\n".format(funcname + "_with_consts")
+                "@inbounds function {}(out, dy, y, p, t)\n".format(
+                    funcname + "_with_consts"
+                )
                 + self._function_string
             )
         return 0
