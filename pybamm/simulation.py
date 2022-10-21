@@ -258,6 +258,7 @@ class Simulation:
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
+        pybamm.logger.notice("HERE")
         self.op_conds_to_model_and_param = {}
         for op_cond, op_inputs in zip(
             self.experiment.operating_conditions, self._experiment_inputs
@@ -265,11 +266,14 @@ class Simulation:
             # Create model for this operating condition if it has not already been seen
             # before
             if op_cond["electric"] not in self.op_conds_to_model_and_param:
-                if op_inputs.get("Current switch") == 1:
-                    # Current control
-                    # Make a new copy of the model (we will update events later))
-                    new_model = model.new_copy()
-                else:
+                # Make a new copy of the model (we will update events later))
+                new_model = model.new_copy()
+                if op_inputs.get("Current switch") != 1:
+                    experiment_events = [
+                        x
+                        for x in ["Current cut-off [A]", "Voltage cut-off [V]"]
+                        if x in op_inputs
+                    ]
                     # Voltage or power control
                     # Create a new model where the current density is now a variable
                     # To do so, we replace all instances of the current density in the
@@ -277,176 +281,96 @@ class Simulation:
                     # FunctionControl submodel
                     # check which kind of external circuit model we need (differential
                     # or algebraic)
-                    if op_inputs.get("CCCV switch") == 1:
-                        control = "differential with max"
-                    else:
-                        control = "algebraic"
-                    # create the FunctionControl submodel and extract variables
-                    external_circuit_variables = (
-                        pybamm.external_circuit.FunctionControl(
-                            model.param, None, model.options, control=control
-                        ).get_fundamental_variables()
-                    )
-
-                    # Perform the replacement
-                    symbol_replacement_map = {
-                        model.variables[name]: variable
-                        for name, variable in external_circuit_variables.items()
-                    }
-                    # Don't replace initial conditions, as these should not contain
-                    # Variable objects
-                    replacer = pybamm.SymbolReplacer(
-                        symbol_replacement_map, process_initial_conditions=False
-                    )
-                    new_model = replacer.process_model(model, inplace=False)
-
-                    # Update the rhs or algebraic equation and initial conditions for
-                    # FunctionControl
-                    # This creates a differential or algebraic equation for the current
-                    # to allow current, voltage, or power control, together with the
-                    # appropriate guess for the initial condition.
-                    # External circuit submodels are always equations on the current
-                    # The external circuit function should fix either the current, or
-                    # the voltage, or a combination (e.g. I*V for power control)
-                    i_cell = new_model.variables["Current density variable"]
-                    new_model.initial_conditions[
-                        i_cell
-                    ] = new_model.param.current_with_time
-
-                    # add current events to the model
-                    if "Current cut-off [A]" in op_inputs:
-                        if op_inputs.get("CCCV switch") == 1:
-                            # for the CCCV model we need to make sure that the current
-                            # cut-off is only reached at the end of the CV phase
-                            # Current is negative for a charge so this event will be
-                            # negative until it is zero
-                            # So we take away a large number times a heaviside switch
-                            # for the CV phase to make sure that the event can only be
-                            # hit during CV
-                            new_model.events.append(
-                                pybamm.Event(
-                                    "Current cut-off (CCCV) [A] [experiment]",
-                                    -new_model.variables["Current [A]"]
-                                    - abs(pybamm.InputParameter("Current cut-off [A]"))
-                                    + 1e4
-                                    * (
-                                        new_model.variables["Battery voltage [V]"]
-                                        < (
-                                            pybamm.InputParameter("Voltage input [V]")
-                                            - 1e-4
-                                        )
-                                    ),
-                                )
-                            )
-                        else:
-                            # current event
-                            new_model.events.extend(
-                                [
-                                    pybamm.Event(
-                                        "Current cut-off [A] [experiment]",
-                                        abs(new_model.variables["Current [A]"])
-                                        - pybamm.InputParameter("Current cut-off [A]"),
-                                    ),
-                                ]
-                            )
                     if op_inputs.get("Voltage switch") == 1:
-                        new_model.algebraic[
-                            i_cell
-                        ] = pybamm.external_circuit.VoltageFunctionControl(
-                            new_model.param, model.options
-                        ).constant_voltage(
-                            new_model.variables
-                        )
+                        submodel_class = pybamm.external_circuit.VoltageFunctionControl
                     elif op_inputs.get("Power switch") == 1:
-                        new_model.algebraic[
-                            i_cell
-                        ] = pybamm.external_circuit.PowerFunctionControl(
-                            new_model.param, new_model.options, control="algebraic"
-                        ).constant_power(
-                            new_model.variables
-                        )
+                        submodel_class = pybamm.external_circuit.PowerFunctionControl
                     elif op_inputs.get("CCCV switch") == 1:
-                        new_model.rhs[
-                            i_cell
-                        ] = pybamm.external_circuit.CCCVFunctionControl(
-                            new_model.param, new_model.options
-                        ).cccv(
-                            new_model.variables
-                        )
+                        submodel_class = pybamm.external_circuit.CCCVFunctionControl
 
-                # add voltage events to the model
-                if "Voltage cut-off [V]" in op_inputs:
-                    # The voltage event should be positive at the start of charge/
-                    # discharge. We use the sign of the current or power input to
-                    # figure out whether the voltage event is greater than the starting
-                    # voltage (charge) or less (discharge) and set the sign of the
-                    # event accordingly
-                    if op_inputs.get("Power switch") == 1:
-                        inp = op_inputs["Power input [W]"]
-                    else:
-                        inp = op_inputs["Current input [A]"]
-                    sign = np.sign(inp)
-                    if sign > 0:
-                        name = "Discharge"
-                    else:
-                        name = "Charge"
-                    if sign != 0:
-                        # Event should be positive at initial conditions for both
-                        # charge and discharge
-                        new_model.events.append(
-                            pybamm.Event(
-                                f"{name} voltage cut-off [V] [experiment]",
-                                sign
-                                * (
-                                    new_model.variables["Battery voltage [V]"]
-                                    - pybamm.InputParameter("Voltage cut-off [V]")
-                                ),
-                            )
-                        )
+                    submodel = submodel_class(
+                        new_model.param,
+                        new_model.options,
+                        experiment_events=experiment_events,
+                    )
 
-                # Keep the min and max voltages as safeguards but add some tolerances
-                # so that they are not triggered before the voltage limits in the
-                # experiment
-                for i, event in enumerate(new_model.events):
-                    if event.name in ["Minimum voltage", "Maximum voltage"]:
-                        new_model.events[i] = pybamm.Event(
-                            event.name, event.expression + 1, event.event_type
-                        )
+                    new_model.submodels["external circuit"] = submodel
+                    new_model._equations = pybamm._SymbolicEquations()
+                    new_model.build_model()
+
+                self.update_new_model_events(new_model, op_inputs)
 
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
-                if op_inputs.get("Current switch") == 1:
-                    new_parameter_values.update(
-                        {"Current function [A]": op_inputs["Current input [A]"]}
-                    )
-                elif op_inputs.get("Voltage switch") == 1:
-                    new_parameter_values.update(
-                        {
-                            "Voltage function [V]": op_inputs["Voltage input [V]"]
-                            / model.param.n_cells
-                        },
-                        check_already_exists=False,
-                    )
-                elif op_inputs.get("Power switch") == 1:
-                    new_parameter_values.update(
-                        {"Power function [W]": op_inputs["Power input [W]"]},
-                        check_already_exists=False,
-                    )
-                elif op_inputs.get("CCCV switch") == 1:
-                    new_parameter_values.update(
-                        {
-                            "Current function [A]": op_inputs["Current input [A]"],
-                            "Voltage function [V]": op_inputs["Voltage input [V]"]
-                            / model.param.n_cells,
-                        },
-                        check_already_exists=False,
-                    )
+                experiment_parameter_values = self.get_experiment_parameter_values(
+                    op_inputs
+                )
+                new_parameter_values.update(
+                    experiment_parameter_values, check_already_exists=False
+                )
 
                 self.op_conds_to_model_and_param[op_cond["electric"]] = (
                     new_model,
                     new_parameter_values,
                 )
         self.model = model
+        pybamm.logger.notice("DONE")
+
+    def update_new_model_events(self, new_model, op_inputs):
+        # add voltage events to the model
+        if "Voltage cut-off [V]" in op_inputs:
+            # The voltage event should be positive at the start of charge/
+            # discharge. We use the sign of the current or power input to
+            # figure out whether the voltage event is greater than the starting
+            # voltage (charge) or less (discharge) and set the sign of the
+            # event accordingly
+            if op_inputs.get("Power switch") == 1:
+                inp = op_inputs["Power input [W]"]
+            else:
+                inp = op_inputs["Current input [A]"]
+            sign = np.sign(inp)
+            if sign > 0:
+                name = "Discharge"
+            else:
+                name = "Charge"
+            if sign != 0:
+                # Event should be positive at initial conditions for both
+                # charge and discharge
+                new_model.events.append(
+                    pybamm.Event(
+                        f"{name} voltage cut-off [V] [experiment]",
+                        sign
+                        * (
+                            new_model.variables["Battery voltage [V]"]
+                            - pybamm.InputParameter("Voltage cut-off [V]")
+                        ),
+                    )
+                )
+
+        # Keep the min and max voltages as safeguards but add some tolerances
+        # so that they are not triggered before the voltage limits in the
+        # experiment
+        for i, event in enumerate(new_model.events):
+            if event.name in ["Minimum voltage", "Maximum voltage"]:
+                new_model.events[i] = pybamm.Event(
+                    event.name, event.expression + 1, event.event_type
+                )
+
+    def get_experiment_parameter_values(self, op_inputs):
+        experiment_parameter_values = {}
+        if op_inputs.get("Current switch") == 1 or op_inputs.get("CCCV switch") == 1:
+            experiment_parameter_values.update(
+                {"Current function [A]": op_inputs["Current input [A]"]}
+            )
+        if op_inputs.get("Voltage switch") == 1 or op_inputs.get("CCCV switch") == 1:
+            experiment_parameter_values.update(
+                {"Voltage function [V]": op_inputs["Voltage input [V]"]}
+            )
+        if op_inputs.get("Power switch") == 1:
+            experiment_parameter_values.update(
+                {"Power function [W]": op_inputs["Power input [W]"]}
+            )
+        return experiment_parameter_values
 
     def set_parameters(self):
         """

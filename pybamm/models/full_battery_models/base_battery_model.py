@@ -1192,22 +1192,19 @@ class BaseBatteryModel(pybamm.BaseModel):
         V_dim = self.variables["Terminal voltage [V]"]
         eta_e_av_dim = self.variables["X-averaged electrolyte ohmic losses [V]"]
         eta_c_av_dim = self.variables["X-averaged concentration overpotential [V]"]
-        num_cells = pybamm.Parameter(
-            "Number of cells connected in series to make a battery"
-        )
+        n_cells = self.param.n_cells
         self.variables.update(
             {
-                "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
-                "Measured battery open circuit voltage [V]": ocv_dim * num_cells,
-                "X-averaged battery reaction overpotential [V]": eta_r_av_dim
-                * num_cells,
+                "X-averaged battery open circuit voltage [V]": ocv_av_dim * n_cells,
+                "Measured battery open circuit voltage [V]": ocv_dim * n_cells,
+                "X-averaged battery reaction overpotential [V]": eta_r_av_dim * n_cells,
                 "X-averaged battery solid phase ohmic losses [V]": delta_phi_s_av_dim
-                * num_cells,
+                * n_cells,
                 "X-averaged battery electrolyte ohmic losses [V]": eta_e_av_dim
-                * num_cells,
+                * n_cells,
                 "X-averaged battery concentration overpotential [V]": eta_c_av_dim
-                * num_cells,
-                "Battery voltage [V]": V_dim * num_cells,
+                * n_cells,
+                "Battery voltage [V]": V_dim * n_cells,
             }
         )
         # Variables for calculating the equivalent circuit model (ECM) resistance
