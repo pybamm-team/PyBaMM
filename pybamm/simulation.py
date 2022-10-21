@@ -847,15 +847,6 @@ class Simulation:
 
             callbacks.on_experiment_end(logs)
 
-        # reset parameter values
-        if initial_soc is not None:
-            self.parameter_values.update(
-                {
-                    "Initial concentration in negative electrode [mol.m-3]": c_n_init,
-                    "Initial concentration in positive electrode [mol.m-3]": c_p_init,
-                }
-            )
-
         return self.solution
 
     def step(
