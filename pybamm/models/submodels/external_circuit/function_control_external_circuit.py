@@ -43,7 +43,7 @@ class FunctionControl(BaseModel):
                 / param.I_typ
                 * pybamm.sign(param.I_typ)
             )
-            i_cell = pybamm.maximum(i_var, param.current_with_time)
+            i_cell = pybamm.maximum(i_var, i_input)
 
         # Update derived variables
         I = i_cell * abs(param.I_typ)
@@ -104,7 +104,7 @@ class VoltageFunctionControl(FunctionControl):
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
-    def __init__(self, param, options, control):
+    def __init__(self, param, options, control="algebraic"):
         super().__init__(param, self.constant_power, options, control=control)
 
     def constant_power(self, variables):

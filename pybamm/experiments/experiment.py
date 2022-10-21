@@ -97,7 +97,9 @@ class Experiment:
                             next_step = None
                             finished = True
                         if self.is_cccv(step, next_step):
-                            processed_cycle.append(step + " then " + next_step)
+                            processed_cycle.append(
+                                f"{step} then {next_step[0].lower()}{next_step[1:]}"
+                            )
                             idx += 2
                         else:
                             processed_cycle.append(step)
@@ -167,6 +169,7 @@ class Experiment:
                 "time": op_CV["time"],
                 "period": op_CV["period"],
                 "dc_data": None,
+                "string": cond,
                 "events": op_CV["events"],
             }
             if "Current input [A]" in op_CC:
@@ -241,15 +244,8 @@ class Experiment:
                     f"'Run'. For example: {examples}"
                 )
 
-        unit = electric.pop("unit")
-        if unit == "C":
-            electric["type"] = "C-rate"
-        elif unit == "A":
-            electric["type"] = "current"
-        elif unit == "V":
-            electric["type"] = "voltage"
-        elif unit == "W":
-            electric["type"] = "power"
+        self.unit_to_type(electric)
+        self.unit_to_type(events)
 
         return {
             **electric,
@@ -259,6 +255,19 @@ class Experiment:
             "string": cond,
             "events": events,
         }
+
+    def unit_to_type(self, electric):
+        if electric is not None:
+            unit = electric.pop("unit")
+            if unit == "C":
+                electric["type"] = "C-rate"
+            elif unit == "A":
+                electric["type"] = "current"
+            elif unit == "V":
+                electric["type"] = "voltage"
+            elif unit == "W":
+                electric["type"] = "power"
+            return electric
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
@@ -287,7 +296,7 @@ class Experiment:
         """Convert electrical instructions to consistent output"""
         # Rest == zero current
         if electric[0].lower() == "rest":
-            return {"Current input [A]": 0, "type": "current"}
+            return {"Current input [A]": 0, "unit": "A"}
         else:
             if len(electric) in [3, 4]:
                 if len(electric) == 4:
