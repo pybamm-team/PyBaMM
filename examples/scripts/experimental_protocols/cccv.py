@@ -4,7 +4,7 @@
 import pybamm
 import matplotlib.pyplot as plt
 
-# pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("INFO")
 experiment = pybamm.Experiment(
     [
         (
@@ -17,7 +17,7 @@ experiment = pybamm.Experiment(
     ]
     * 3
 )
-model = pybamm.lithium_ion.SPM()
+model = pybamm.lithium_ion.DFN()
 
 sim = pybamm.Simulation(
     model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")

@@ -161,18 +161,23 @@ class Experiment:
             cond_CC, cond_CV = cond.split(" then ")
             op_CC = self.read_string(cond_CC, drive_cycles)
             op_CV = self.read_string(cond_CV, drive_cycles)
-            return {
+            outputs = {
                 "type": "CCCV",
-                "Current input [A]": op_CC["Current input [A]"],
                 "Voltage input [V]": op_CV["Voltage input [V]"],
                 "time": op_CV["time"],
                 "period": op_CV["period"],
                 "dc_data": None,
                 "events": op_CV["events"],
             }
+            if "Current input [A]" in op_CC:
+                outputs["Current input [A]"] = op_CC["Current input [A]"]
+            else:
+                outputs["C-rate input [-]"] = op_CC["C-rate input [-]"]
+            return outputs
+
         # Read period
         if " period)" in cond:
-            cond, time_period = cond.split("(")
+            cond, time_period = cond.split(" (")
             time, _ = time_period.split(" period)")
             period = self.convert_time_to_seconds(time.split())
         else:
@@ -188,36 +193,24 @@ class Experiment:
                     "Type of drive cycle must be specified using '(A)', '(V)' or '(W)'."
                     f" For example: {examples}"
                 )
-            # Check for Events
-            elif "for" in cond:
-                # e.g. for 3 hours
-                idx = cond_list.index("for")
-                end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
-                ext_drive_cycle = self.extend_drive_cycle(
-                    drive_cycles[cond_list[1]], end_time
-                )
-                # Drive cycle as numpy array
-                dc_name = cond_list[1] + "_ext_{}".format(end_time)
-                dc_data = ext_drive_cycle
-                # Find the type of drive cycle ("A", "V", or "W")
-                typ = cond_list[2][1]
-                electric = (dc_name, typ)
-                time = ext_drive_cycle[:, 0][-1]
-                period = np.min(np.diff(ext_drive_cycle[:, 0]))
-                events = None
             else:
-                # e.g. Run US06
-                # Drive cycle as numpy array
-                dc_name = cond_list[1]
                 dc_data = drive_cycles[cond_list[1]]
-                # Find the type of drive cycle ("A", "V", or "W")
-                typ = cond_list[2][1]
-                electric = (dc_name, typ)
-                # Set time and period to 1 second for first step and
-                # then calculate the difference in consecutive time steps
-                time = drive_cycles[cond_list[1]][:, 0][-1]
-                period = np.min(np.diff(drive_cycles[cond_list[1]][:, 0]))
-                events = None
+                # Check for Events
+                if "for" in cond:
+                    # e.g. for 3 hours
+                    idx = cond_list.index("for")
+                    end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
+                    ext_drive_cycle = self.extend_drive_cycle(dc_data, end_time)
+                    # Drive cycle as numpy array
+                    dc_data = ext_drive_cycle
+            # Set time and period to 1 second for first step and
+            # then calculate the difference in consecutive time steps
+            time = dc_data[:, 0][-1]
+            period = np.min(np.diff(dc_data[:, 0]))
+            # Find the unit of drive cycle ("A", "V", or "W")
+            unit = cond_list[2][1]
+            electric = {"dc_data": dc_data, "unit": unit}
+            events = None
         else:
             dc_data = None
             if "for" in cond and "or until" in cond:
@@ -247,6 +240,16 @@ class Experiment:
                     "Operating conditions must contain keyword 'for' or 'until' or "
                     f"'Run'. For example: {examples}"
                 )
+
+        unit = electric.pop("unit")
+        if unit == "C":
+            electric["type"] = "C-rate"
+        elif unit == "A":
+            electric["type"] = "current"
+        elif unit == "V":
+            electric["type"] = "voltage"
+        elif unit == "W":
+            electric["type"] = "power"
 
         return {
             **electric,
@@ -335,13 +338,13 @@ class Experiment:
                     value = float(value_unit[:-1])
             # Read value and units
             if unit == "C":
-                return {"C-rate input [-]": sign * float(value), "type": "C-rate"}
+                return {"C-rate input [-]": sign * float(value), "unit": unit}
             elif unit == "A":
-                return {"Current input [A]": sign * float(value), "type": "current"}
+                return {"Current input [A]": sign * float(value), "unit": unit}
             elif unit == "V":
-                return {"Voltage input [V]": float(value), "type": "voltage"}
+                return {"Voltage input [V]": float(value), "unit": unit}
             elif unit == "W":
-                return {"Power input [W]": sign * float(value), "type": "power"}
+                return {"Power input [W]": sign * float(value), "unit": unit}
             else:
                 raise ValueError(
                     """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW', not '{}'.
@@ -425,8 +428,6 @@ class Experiment:
             op = self.read_string(step, None)
             next_op = self.read_string(next_step, None)
             # Check that the event conditions are the same as the hold conditions
-            if op["events"] == {
-                k: v for k, v in next_op["electric"] if k in op["events"]
-            }:
+            if op["events"] == {k: v for k, v in next_op.items() if k in op["events"]}:
                 return True
         return False
