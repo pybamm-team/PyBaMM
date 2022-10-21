@@ -66,7 +66,7 @@ class FunctionControl(BaseModel):
         super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current density variable"]
-        self.initial_conditions[i_cell] = self.param.I_typ / self.param.A_cc
+        self.initial_conditions[i_cell] = pybamm.Scalar(1)
 
     def set_rhs(self, variables):
         super().set_rhs(variables)
