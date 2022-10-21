@@ -3,24 +3,60 @@
 #
 import pybamm
 from copy import deepcopy
+import networkx as nx
+import numpy as np
+import pandas as pd
+import liionpack as lp
 
 
 class Pack(object):
-    def __init__(self, built_model, num_cells):
+    def __init__(self, model, netlist, parameter_values=None):
         # this is going to be a work in progress for a while:
         # for now, will just do it at the julia level
-        self.cell_size = built_model.size
-        self.cell_model = built_model
-        self._offset = self.cell_size
-        self.built_model = built_model
+
+        # Build the cell expression tree with necessary parameters.
+        # think about moving this to a separate function.
+        if parameter_values is not None:
+            raise AssertionError("parameter values not supported")
+        parameter_values = model.default_parameter_values
+        parameter_values.update(
+            {"Current function [A]": pybamm.PsuedoInputParameter("cell_current")}
+        )
+        self.cell_parameter_values = parameter_values
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sim.build()
+        self.cell_model = pybamm.numpy_concatenation(
+            sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
+        )
+        self.cell_size = self.cell_model.shape[0]
         self._sv_done = []
-        self._cells = (built_model,)
-        self.repeat_cells(num_cells)
+
+        self.netlist = netlist
+        self.cell_currents = {}
+
+        self.process_netlist()
+
+        # get x and y coords for nodes from graph.
+        node_xs = [n for n in range(max(self.circuit_graph.nodes) + 1)]
+        node_ys = [n for n in range(max(self.circuit_graph.nodes) + 1)]
+        for row in netlist.itertuples():
+            node_xs[row.node1] = row.node1_x
+            node_ys[row.node1] = row.node1_y
+        self.node_xs = node_xs
+        self.node_ys = node_ys
+
+    def process_netlist(self):
+        curr = [{} for i in range(len(self.netlist))]
+        self.netlist.insert(0, "currents", curr)
+        self.netlist = self.netlist.rename(
+            columns={"node1": "source", "node2": "target"}
+        )
+        self.circuit_graph = nx.from_pandas_edgelist(self.netlist, edge_attr=True)
 
     def repeat_cells(self, num_cells):
         for n in range(num_cells - 1):
             self.add_new_cell()
-            self._offset += self.cell_size
+            self.offset += self.cell_size
             self._sv_done = []
             print("adding cell {} of {}".format(n, num_cells))
         self.built_model = pybamm.NumpyConcatenation(*self._cells)
@@ -28,10 +64,13 @@ class Pack(object):
         print("done building pack")
 
     def add_new_cell(self):
+        # TODO: deal with variables dict here too.
+        # This is the place to get clever.
         new_model = deepcopy(self.cell_model)
         # at some point need to figure out parameters
         self.add_offset_to_state_vectors(new_model)
-        self._cells += (new_model,)
+        new_model.set_id()
+        return new_model
 
     def add_offset_to_state_vectors(self, symbol):
         # this function adds an offset to the state vectors
@@ -40,8 +79,8 @@ class Pack(object):
             # need to make sure its in place
             if symbol.id not in self._sv_done:
                 for this_slice in symbol.y_slices:
-                    start = this_slice.start + self._offset
-                    stop = this_slice.stop + self._offset
+                    start = this_slice.start + self.offset
+                    stop = this_slice.stop + self.offset
                     step = this_slice.step
                     new_slice = slice(start, stop, step)
                     new_y_slices += (new_slice,)
@@ -57,7 +96,180 @@ class Pack(object):
                 child.set_id()
             symbol.set_id()
 
+    def build_pack(self):
+        # this function builds expression trees to compute the current.
 
-class InternalPackParameter(object):
-    def __init__(self):
-        pass
+        # cycle basis is the list of loops over which we will do kirchoff mesh analysis
+        mcb = nx.minimum_cycle_basis(self.circuit_graph)
+
+        # generate loop currents and current source voltages-- this is what we don't know.
+        num_loops = len(mcb)
+        num_curr_sources = sum([desc[0] == "I" for desc in self.netlist.desc])
+
+        loop_currents = [
+            pybamm.StateVector(slice(n, n + 1), name="current_{}".format(n))
+            for n in range(num_loops)
+        ]
+        curr_source_voltages = [
+            pybamm.StateVector(slice(n, n + 1), name="current_source_{}".format(n))
+            for n in range(num_loops, num_loops + num_curr_sources)
+        ]
+
+        # now we know the offset, we should "build" the batteries here. will still need to replace the currents later.
+        self.offset = len(loop_currents) + len(curr_source_voltages)
+        self.batteries = {}
+        for desc in self.netlist.desc:
+            if desc[0] == "V":
+                new_cell = self.add_new_cell()
+                self.batteries.update({desc: new_cell})
+                self.offset += self.cell_size
+
+        if len(curr_source_voltages) != 1:
+            raise NotImplementedError("can't do this yet")
+        # copy the basis which we can use to place the loop currents
+        basis_to_place = deepcopy(mcb)
+
+        self.place_currents(loop_currents, basis_to_place)
+
+    def build_pack_equations(self, loop_currents, curr_source_voltages):
+        # start by looping through the loop currents. Sum Voltages
+        for i, loop_current in enumerate(loop_currents):
+            # loop through the edges
+            eq = []
+            for edge in self.circuit_graph.edges:
+                if loop_current in edge["currents"]:
+                    this_edge_equation = []
+                    edge_type = edge["desc"][0]
+                    positive_direction = edge["currents"][loop_current]
+                    this_edge_current = loop_current
+                    for current in edge["currents"]:
+                        if current == loop_current:
+                            continue
+                        if edge["currents"][current] == positive_direction:
+                            this_edge_current = this_edge_current + current
+                        else:
+                            this_edge_current = this_edge_current - current
+                    if edge_type == "R":
+                        eq.append(this_edge_current * edge["value"])
+                    elif edge_type == "I":
+                        curr_source_num = edge["desc"][1:]
+                        if curr_source_num != "0":
+                            raise NotImplementedError(
+                                "multiple current sources is not yet supported"
+                            )
+                        # need to check sign here.
+                        eq.append(curr_source_voltages[0])
+                    elif edge_type == "V":
+                        # voltage sources always point up.
+                        # note that right now this is actually
+                        # just a battery, not a voltage
+                        voltage = self.batteries[edge["desc"]]
+                        if (
+                            self.node_ys[positive_direction[0]]
+                            > self.node_ys[positive_direction[1]]
+                        ):
+                            # voltage source is negative.
+                            eq.append(-voltage)
+                        else:
+                            eq.append(voltage)
+            if len(eq) == 0:
+                raise NotImplementedError("uh oh")
+            elif len(eq) == 1:
+                expr = eq[0]
+            else:
+                expr = eq[0] + eq[1]
+                for e in range(2, len(eq)):
+                    expr = expr + eq[e]
+            # add equation to the pack.
+
+        # then loop through the current source voltages. Sum Currents.
+
+    # This function places the currents on the edges in a predefined order.
+    # it begins at loop 0, and loops through each "loop" -- really a cycle
+    # of the mcb (minimum cycle basis) of the graph which defines the circuit.
+    # Once it finds a loop in which the current node is in, it places the
+    # loop current on each edge. Once the loop is finished, it removes the
+    # loop and then proceeds to the next node and does the same thing. It
+    # loops until all the loop currents have been placed.
+    def place_currents(self, loop_currents, mcb):
+        for node in sorted(self.circuit_graph.nodes):
+            if mcb == []:
+                # loops are all done!
+                break
+            this_loop = -1
+            for i, loop in enumerate(mcb):
+                # in each loop use x and y to figure out direction.
+                # Within the same loop, go right first.
+                if node not in loop:
+                    continue
+                if node in loop:
+                    # print("starting loop {}".format(loop))
+                    # setting var to remove the loop later
+                    this_loop = i
+                    done_nodes = set()
+                    # doesn't actually matter where we start.
+                    # loop will always be a set.
+                    if len(loop) != len(set(loop)):
+                        raise NotImplementedError()
+                    inner_node = node
+                    # calculate the centroid of the loop
+                    loop_xs = [self.node_xs[n] for n in loop]
+                    loop_ys = [self.node_ys[n] for n in loop]
+                    centroid_x = np.mean(loop_xs)
+                    centroid_y = np.mean(loop_ys)
+                    last_one = False
+                    while True:
+                        done_nodes.add(inner_node)
+
+                        my_neighbors = set(
+                            self.circuit_graph.neighbors(inner_node)
+                        ).intersection(set(loop))
+
+                        # if there are no neighbors in the group that have not been done, ur done!
+                        my_neighbors = my_neighbors - done_nodes
+
+                        if len(my_neighbors) == 0:
+                            break
+                        elif len(loop) == len(done_nodes) + 1 and not last_one:
+                            last_one = True
+                            done_nodes.remove(node)
+
+                        # calculate the angle to all the neighbors.
+                        # then, to go clockwise, pick the one with
+                        # the largest angle.
+                        my_x = self.node_xs[inner_node]
+                        my_y = self.node_ys[inner_node]
+                        angles = {
+                            n: np.arctan2(
+                                self.node_xs[n] - centroid_x,
+                                self.node_ys[n] - centroid_y,
+                            )
+                            for n in my_neighbors
+                        }
+                        next_node = max(angles, key=angles.get)
+                        # print("at node {}, now going to node {}".format(inner_node, next_node))
+                        # print(len(angles))
+
+                        # now, define the vector from the current node to the next node.
+                        next_coords = [
+                            self.node_xs[next_node] - my_x,
+                            self.node_ys[next_node] - my_y,
+                        ]
+
+                        # go find the edge.
+
+                        edge = self.circuit_graph.edges.get((inner_node, next_node))
+                        if edge is None:
+                            edge = self.circuit_graph.edges.get((next_node, inner_node))
+                        if edge is None:
+                            raise KeyError("uh oh")
+
+                        # add this current to the loop.
+                        edge["currents"].update(
+                            {loop_currents[this_loop]: (inner_node, next_node)}
+                        )
+                        inner_node = next_node
+                    break
+            if this_loop == -1:
+                continue
+            del mcb[this_loop]
