@@ -31,6 +31,7 @@ class ParameterSets(Mapping):
     See also: :ref:`adding-parameter-sets`
 
     """
+
     def __init__(self):
         # Load Parameter Sets registered to `pybamm_parameter_set`
         ps = dict()
@@ -40,8 +41,8 @@ class ParameterSets(Mapping):
         self.all_parameter_sets = ps
 
     def __new__(cls):
-        """ Ensure only one instance of ParameterSets exists """
-        if not hasattr(cls, 'instance'):
+        """Ensure only one instance of ParameterSets exists"""
+        if not hasattr(cls, "instance"):
             cls.instance = super(ParameterSets, cls).__new__(cls)
         return cls.instance
 
@@ -55,7 +56,7 @@ class ParameterSets(Mapping):
         return len(self.all_parameter_sets)
 
     def get_docstring(self, key):
-        """ Return the docstring for the ``key`` parameter set """
+        """Return the docstring for the ``key`` parameter set"""
         return textwrap.dedent(self.all_parameter_sets[key].__doc__)
 
     def __getattribute__(self, name):
