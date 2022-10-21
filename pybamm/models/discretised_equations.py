@@ -27,7 +27,7 @@ class _DiscretisedEquations(pybamm._BaseProcessedEquations):
 
     def __init__(self, discretisation, *args, y_slices, bounds):
         # Save discretisation used to create this model
-        self._discretisation = discretisation
+        self._discretisation = discretisation.copy_with_discretised_symbols()
 
         super().__init__(*args)
         self._y_slices = y_slices

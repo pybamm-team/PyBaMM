@@ -13,7 +13,7 @@ class _ParameterisedEquations(pybamm._BaseProcessedEquations):
 
     def __init__(self, parameter_values, *args):
         # Save parameter values used to create this model
-        self._parameter_values = parameter_values
+        self._parameter_values = parameter_values.copy_with_processed_symbols()
 
         super().__init__(*args)
 

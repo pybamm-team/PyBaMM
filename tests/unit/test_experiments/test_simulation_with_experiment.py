@@ -25,12 +25,12 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim.experiment, experiment)
         self.assertEqual(
             sim._experiment_inputs[0],
-            {"Current switch": 1, "Current input [A]": C / 20, "period": 60},
+            {"type": "current", "Current input [A]": C / 20, "period": 60},
         )
         self.assertEqual(
             sim._experiment_inputs[1],
             {
-                "Current switch": 1,
+                "type": "current",
                 "Current input [A]": -1,
                 "period": 60,
                 "Voltage cut-off [V]": 4.1,
@@ -39,7 +39,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(
             sim._experiment_inputs[2],
             {
-                "Voltage switch": 1,
+                "type": "voltage",
                 "Voltage input [V]": 4.1,
                 "period": 60,
                 "Current cut-off [A]": 0.05,
@@ -48,7 +48,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(
             sim._experiment_inputs[3],
             {
-                "Power switch": 1,
+                "type": "power",
                 "Power input [W]": 2,
                 "period": 60,
                 "Voltage cut-off [V]": 3.5,

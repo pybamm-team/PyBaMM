@@ -934,11 +934,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         value : list of strings
             Names of the summary variables. Must all be in self.variables.
         """
-        for var in value:
-            if var not in self.variables:
-                raise KeyError(
-                    f"No cycling variable defined for summary variable '{var}'"
-                )
+        # for var in value:
+        #     if var not in self.variables:
+        #         raise KeyError(
+        #             f"No cycling variable defined for summary variable '{var}'"
+        #         )
         self._summary_variables = value
 
     def set_summary_variables(self):

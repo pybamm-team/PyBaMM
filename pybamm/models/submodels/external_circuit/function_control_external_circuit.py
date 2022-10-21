@@ -21,8 +21,6 @@ class FunctionControl(BaseModel):
     control : str, optional
         The type of control to use. Must be one of 'algebraic' (default)
         or 'differential'.
-    experiment_events : list, optional
-        Which experiment events are included. Default is None (empty list).
     """
 
     def __init__(
@@ -31,12 +29,10 @@ class FunctionControl(BaseModel):
         external_circuit_function,
         options,
         control="algebraic",
-        experiment_events=None,
     ):
         super().__init__(param, options)
         self.external_circuit_function = external_circuit_function
         self.control = control
-        self.experiment_events = experiment_events or []
 
     def get_fundamental_variables(self):
         param = self.param
@@ -45,7 +41,14 @@ class FunctionControl(BaseModel):
         if self.control in ["algebraic", "differential without max"]:
             i_cell = i_var
         elif self.control == "differential with max":
-            i_cell = pybamm.maximum(i_var, param.current_with_time)
+            current_function = (
+                pybamm.FunctionParameter(
+                    "CCCV current function [A]", {"Time[s]": pybamm.t * param.timescale}
+                )
+                / self.I_typ
+                * pybamm.sign(self.I_typ)
+            )
+            i_cell = pybamm.maximum(i_var, current_function)
 
         # Update derived variables
         I = i_cell * abs(param.I_typ)
@@ -68,7 +71,7 @@ class FunctionControl(BaseModel):
         super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current density variable"]
-        self.initial_conditions[i_cell] = self.param.current_with_time
+        self.initial_conditions[i_cell] = self.param.I_typ / self.param.A_cc
 
     def set_rhs(self, variables):
         super().set_rhs(variables)
@@ -88,28 +91,17 @@ class FunctionControl(BaseModel):
             self.algebraic[i_cell] = self.external_circuit_function(variables)
 
 
-class VoltagePowerFunctionControl(FunctionControl):
-    def set_events(self, variables):
-        if "Current cut-off [A]" in self.experiment_events:
-            pybamm.Event(
-                "Current cut-off [A] [experiment]",
-                abs(new_model.variables["Current [A]"])
-                - pybamm.InputParameter("Current cut-off [A]"),
-            )
-
-
 class VoltageFunctionControl(FunctionControl):
     """
     External circuit with voltage control, implemented as an extra algebraic equation.
     """
 
-    def __init__(self, param, options, experiment_events=None):
+    def __init__(self, param, options):
         super().__init__(
             param,
             self.constant_voltage,
             options,
             control="algebraic",
-            experiment_events=experiment_events,
         )
 
     def constant_voltage(self, variables):
@@ -122,13 +114,12 @@ class VoltageFunctionControl(FunctionControl):
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
-    def __init__(self, param, options, control="algebraic", experiment_events=None):
+    def __init__(self, param, options, control="algebraic"):
         super().__init__(
             param,
             self.constant_power,
             options,
             control=control,
-            experiment_events=experiment_events,
         )
 
     def constant_power(self, variables):
@@ -149,13 +140,12 @@ class PowerFunctionControl(FunctionControl):
 class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
-    def __init__(self, param, options, control, experiment_events=None):
+    def __init__(self, param, options, control):
         super().__init__(
             param,
             self.constant_resistance,
             options,
             control=control,
-            experiment_events=experiment_events,
         )
 
     def constant_resistance(self, variables):
@@ -186,13 +176,12 @@ class CCCVFunctionControl(FunctionControl):
 
     """
 
-    def __init__(self, param, options, experiment_events=None):
+    def __init__(self, param, options):
         super().__init__(
             param,
             self.cccv,
             options,
             control="differential with max",
-            experiment_events=experiment_events,
         )
         pybamm.citations.register("Mohtat2021")
 
@@ -206,28 +195,6 @@ class CCCVFunctionControl(FunctionControl):
         V = variables["Terminal voltage [V]"] * self.param.n_cells
         V_CCCV = pybamm.Parameter("Voltage function [V]")
         return -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)
-
-    def set_events(self, variables):
-        if "Current cut-off [A]" in self.experiment_events:
-            # for the CCCV model we need to make sure that the current
-            # cut-off is only reached at the end of the CV phase
-            # Current is negative for a charge so this event will be
-            # negative until it is zero
-            # So we take away a large number times a heaviside switch
-            # for the CV phase to make sure that the event can only be
-            # hit during CV
-            self.events.append(
-                pybamm.Event(
-                    "Current cut-off (CCCV) [A] [experiment]",
-                    -variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]"))
-                    + 1e4
-                    * (
-                        variables["Terminal voltage [V]"] * self.param.n_cells
-                        < (pybamm.InputParameter("Voltage input [V]") - 1e-4)
-                    ),
-                )
-            )
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):

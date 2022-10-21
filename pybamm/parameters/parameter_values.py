@@ -162,6 +162,11 @@ class ParameterValues:
         )
         return new_copy
 
+    def copy_with_processed_symbols(self):
+        copy = self.copy()
+        copy._processed_symbols = self._processed_symbols.copy()
+        return copy
+
     def search(self, key, print_values=True):
         """
         Search dictionary for keys containing 'key'.

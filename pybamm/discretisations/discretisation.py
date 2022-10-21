@@ -92,6 +92,17 @@ class Discretisation(object):
         # reset discretised_symbols
         self._discretised_symbols = {}
 
+    def copy_with_discretised_symbols(self):
+        """
+        Return a copy of the discretisation
+        """
+        copy = Discretisation(self.mesh, self.spatial_methods)
+        copy.bcs = self.bcs.copy()
+        copy.y_slices = self.y_slices.copy()
+        copy._discretised_symbols = self._discretised_symbols.copy()
+        copy.external_variables = self.external_variables.copy()
+        return copy
+
     def process_model(
         self,
         model,
