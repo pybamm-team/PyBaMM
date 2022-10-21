@@ -41,14 +41,15 @@ class FunctionControl(BaseModel):
         if self.control in ["algebraic", "differential without max"]:
             i_cell = i_var
         elif self.control == "differential with max":
-            current_function = (
+            i_input = (
                 pybamm.FunctionParameter(
-                    "CCCV current function [A]", {"Time[s]": pybamm.t * param.timescale}
+                    "CCCV current function [A]",
+                    {"Time [s]": pybamm.t * param.timescale},
                 )
-                / self.I_typ
-                * pybamm.sign(self.I_typ)
+                / param.I_typ
+                * pybamm.sign(param.I_typ)
             )
-            i_cell = pybamm.maximum(i_var, current_function)
+            i_cell = pybamm.maximum(i_var, i_input)
 
         # Update derived variables
         I = i_cell * abs(param.I_typ)

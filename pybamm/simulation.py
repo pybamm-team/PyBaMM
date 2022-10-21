@@ -81,11 +81,6 @@ class Simulation:
             current = self._parameter_values.get("Current function [A]")
             if isinstance(current, pybamm.Interpolant):
                 self.operating_mode = "drive cycle"
-            elif isinstance(current, tuple):
-                raise NotImplementedError(
-                    "Drive cycle from data has been deprecated. "
-                    + "Define an Interpolant instead."
-                )
             else:
                 self.operating_mode = "without experiment"
                 if C_rate:
@@ -99,7 +94,7 @@ class Simulation:
         else:
             self.operating_mode = "with experiment"
             # Save the experiment
-            self.experiment = experiment
+            self.experiment = experiment.copy()
 
         self._unprocessed_model = model
         self.model = model
@@ -169,7 +164,7 @@ class Simulation:
                     Crate = op["Current input [A]"] / capacity
 
             # Update events
-            events = op["events"]
+            events = op.pop("events")
             if events is not None:
                 event_type = events.pop("type")
                 if event_type == "C-rate":
@@ -177,7 +172,14 @@ class Simulation:
                     events["Current cut-off [A]"] = (
                         events["C-rate cut-off [C]"] * capacity
                     )
-                op.update(events)
+                # Update the dictionary of operating conditions, replacing
+                # "xxx input [unit]" with "xxx cut-off [unit]"
+                op.update(
+                    {
+                        key.replace("input", "cut-off"): value
+                        for key, value in events.items()
+                    }
+                )
 
             # Add time to the experiment times
             dt = op["time"]
@@ -208,12 +210,12 @@ class Simulation:
         self.op_type_to_model = {}
         self.op_string_to_model = {}
         for op in self.experiment.operating_conditions:
-            # Create model for this operating condition if it has not already been seen
-            # before
+            # Create model for this operating condition type (current/voltage/power)
+            # if it has not already been seen before
             if op["type"] not in self.op_type_to_model:
-                # Make a new copy of the model (we will update events later))
-                new_model = model.new_copy()
-                if op["type"] != "current":
+                if op["type"] == "current":
+                    new_model, submodel = model, None
+                else:
                     # Voltage or power control
                     # Create a new model where the current density is now a variable
                     # To do so, we replace all instances of the current density in the
@@ -228,8 +230,9 @@ class Simulation:
                     elif op["type"] == "CCCV":
                         submodel_class = pybamm.external_circuit.CCCVFunctionControl
 
+                    new_model = model.new_copy()
+                    # Build the new submodel and update the model with it
                     submodel = submodel_class(new_model.param, new_model.options)
-
                     variables = new_model.variables
                     submodel.variables = submodel.get_fundamental_variables()
                     variables.update(submodel.variables)
@@ -241,17 +244,16 @@ class Simulation:
                     new_model.rhs.update(submodel.rhs)
                     new_model.algebraic.update(submodel.algebraic)
                     new_model.initial_conditions.update(submodel.initial_conditions)
-                else:
-                    submodel = None
-
-                self.update_new_model_events(new_model, op)
 
                 self.op_type_to_model[op["type"]] = (new_model, submodel)
 
-            else:
-                new_model, submodel = self.op_type_to_model[op["type"]]
-
             if op["string"] not in self.op_string_to_model:
+                model, submodel = self.op_type_to_model[op["type"]]
+                # Create a new model for this operating condition, since we will update
+                # the events differently (based on parameter values and inputs) for
+                # different models of the same type (current/voltage/power)
+                new_model = model.new_copy()
+                self.update_new_model_events(new_model, op)
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
                 experiment_parameter_values = self.get_experiment_parameter_values(op)
@@ -713,7 +715,6 @@ class Simulation:
                 for step_num in range(1, cycle_length + 1):
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
-                    # op = self._experiment_inputs[idx]
                     op_conds = self.experiment.operating_conditions[idx]
                     dt = op_conds["time"]
                     op_conds_str = op_conds["string"]
@@ -726,7 +727,7 @@ class Simulation:
                     start_time = current_solution.t[-1]
                     kwargs["inputs"] = {
                         **user_inputs,
-                        # **op,
+                        **op_conds,
                         "start time": start_time,
                     }
                     # Make sure we take at least 2 timesteps

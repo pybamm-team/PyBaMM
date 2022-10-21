@@ -108,7 +108,7 @@ class Discretisation(object):
         model,
         inplace=True,
         check_model=True,
-        check_for_independent_variables=True,
+        remove_independent_variables_from_rhs=True,
     ):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
@@ -127,7 +127,7 @@ class Discretisation(object):
             option to False. When developing, testing or debugging it is recommended
             to leave this option as True as it may help to identify any errors.
             Default is True.
-        check_for_independent_variables : bool, optional
+        remove_independent_variables_from_rhs : bool, optional
             If True, model checks to see whether any variables from the RHS are used
             in any other equation. If a variable meets all of the following criteria
             (not used anywhere in the model, len(rhs)>1), then the variable
@@ -171,8 +171,8 @@ class Discretisation(object):
         # set variables (we require the full variable not just id)
 
         # Search Equations for Independence
-        # if check_for_independent_variables:
-        #     model = self.check_for_independent_variables(model)
+        # if remove_independent_variables_from_rhs:
+        #     model = self.remove_independent_variables_from_rhs(model)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
@@ -1000,7 +1000,7 @@ class Discretisation(object):
                         )
                     )
 
-    def search_for_independent_var(self, var, all_vars_in_eqns):
+    def is_variable_independent(self, var, all_vars_in_eqns):
         pybamm.logger.verbose("Removing independent blocks.")
         if not isinstance(var, pybamm.Variable):
             return False
@@ -1014,7 +1014,7 @@ class Discretisation(object):
         )
         return this_var_is_independent
 
-    def check_for_independent_variables(self, model):
+    def remove_independent_variables_from_rhs(self, model):
         rhs_vars_to_search_over = list(model.rhs.keys())
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         eqns_to_check = (
@@ -1033,7 +1033,7 @@ class Discretisation(object):
         all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
 
         for var in rhs_vars_to_search_over:
-            this_var_is_independent = self.search_for_independent_var(
+            this_var_is_independent = self.is_variable_independent(
                 var, all_vars_in_eqns
             )
             if this_var_is_independent:
