@@ -39,7 +39,7 @@ class ParameterSets(Mapping):
         for entry_point in pkg_resources.iter_entry_points("pybamm_parameter_set"):
             ps[entry_point.name] = entry_point.load()
 
-        self.all_parameter_sets = ps
+        self.__all_parameter_sets = ps
 
     def __new__(cls):
         """Ensure only one instance of ParameterSets exists"""
@@ -48,17 +48,17 @@ class ParameterSets(Mapping):
         return cls.instance
 
     def __getitem__(self, key) -> dict:
-        return self.all_parameter_sets[key]()
+        return self.__all_parameter_sets[key]()
 
     def __iter__(self):
-        return self.all_parameter_sets.__iter__()
+        return self.__all_parameter_sets.__iter__()
 
     def __len__(self) -> int:
-        return len(self.all_parameter_sets)
+        return len(self.__all_parameter_sets)
 
     def get_docstring(self, key):
         """Return the docstring for the ``key`` parameter set"""
-        return textwrap.dedent(self.all_parameter_sets[key].__doc__)
+        return textwrap.dedent(self.__all_parameter_sets[key].__doc__)
 
     def __getattribute__(self, name):
         try:
@@ -67,7 +67,7 @@ class ParameterSets(Mapping):
             # For backwards compatibility, parameter sets that used to be defined in
             # this file now return the name as a string, which will load the same
             # parameter set as before when passed to `ParameterValues`
-            if name in self.all_parameter_sets:
+            if name in self.__all_parameter_sets:
                 out = name
             else:
                 raise error
