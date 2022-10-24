@@ -169,11 +169,20 @@ class TestInterpolant(unittest.TestCase):
         value = interp.evaluate(y=np.array([0, 0, 0]))
         np.testing.assert_equal(value, np.nan)
 
-        # Check testing for shape works
+        # Check testing for shape works (i.e. using nans)
         interp = pybamm.Interpolant(
             x_in, data, (var1, var2, var3), interpolator="cubic"
         )
         interp.test_shape()
+
+        # test with inconsistent children shapes
+        # (this can occur is one child is a scaler and the others
+        # are vaiables)
+        evaluated_children = [np.array([[1]]), 4, np.array([[7]])]
+        value = interp._function_evaluate(evaluated_children)
+
+        evaluated_children = [np.array([[1]]), np.ones(()) * 4, np.array([[7]])]
+        value = interp._function_evaluate(evaluated_children)
 
     def test_name(self):
         a = pybamm.Symbol("a")
