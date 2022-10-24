@@ -252,3 +252,20 @@ class Interpolant(pybamm.Function):
             return res[:, np.newaxis]
         else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
+
+    def _evaluate_for_shape(self):
+        """
+        Default behaviour: has same shape as all child
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        evaluated_children = [child.evaluate_for_shape() for child in self.children]
+
+        # RegularGridInterpolator cannot accept nan values so run the
+        # interpolation with the average values the interpolation range
+        if self.dimension == 3:
+            new_evaluated_children = []
+            for child, interp_range in zip(evaluated_children, self.function.grid):
+                new_evaluated_children.append(np.ones_like(child) * interp_range.mean())
+            return self._function_evaluate(new_evaluated_children) * np.nan
+        else:
+            return self._function_evaluate(evaluated_children)

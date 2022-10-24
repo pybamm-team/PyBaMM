@@ -169,6 +169,12 @@ class TestInterpolant(unittest.TestCase):
         value = interp.evaluate(y=np.array([0, 0, 0]))
         np.testing.assert_equal(value, np.nan)
 
+        # Check testing for shape works
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="cubic"
+        )
+        interp.test_shape()
+
     def test_name(self):
         a = pybamm.Symbol("a")
         x = np.linspace(0, 1, 200)
