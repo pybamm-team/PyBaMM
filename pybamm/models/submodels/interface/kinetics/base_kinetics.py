@@ -222,7 +222,6 @@ class BaseKinetics(BaseInterface):
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
-            param = self.param
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
                 "interfacial current density variable"
