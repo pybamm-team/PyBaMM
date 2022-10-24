@@ -184,6 +184,15 @@ class TestInterpolant(unittest.TestCase):
         evaluated_children = [np.array([[1]]), np.ones(()) * 4, np.array([[7]])]
         value = interp._function_evaluate(evaluated_children)
 
+        # Test evaluation fails with different child shapes
+        with self.assertRaisesRegex(ValueError, "All children must"):
+            evaluated_children = [np.array([[1, 1]]), np.ones(()) * 4, np.array([[7]])]
+            value = interp._function_evaluate(evaluated_children)
+
+        # Test runs when all children are scalsrs
+        evaluated_children = [1, 4, 7]
+        value = interp._function_evaluate(evaluated_children)
+
     def test_name(self):
         a = pybamm.Symbol("a")
         x = np.linspace(0, 1, 200)

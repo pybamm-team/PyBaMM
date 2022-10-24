@@ -264,16 +264,14 @@ class Interpolant(pybamm.Function):
                     "All children must have the same shape for 3D interpolation"
                 )
 
-            if shapes == {}:
+            if len(shapes) == 0:
                 shape = (1,)
             else:
                 shape = shapes.pop()
             new_evaluated_children = []
             for child in evaluated_children:
 
-                if isinstance(child, (float, int)):
-                    new_evaluated_children.append(np.reshape(child, shape).flatten())
-                elif child.shape == shape:
+                if hasattr(child, "shape") and child.shape == shape:
                     new_evaluated_children.append(child.flatten())
                 else:
                     new_evaluated_children.append(np.reshape(child, shape).flatten())
