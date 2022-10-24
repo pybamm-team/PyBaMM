@@ -47,13 +47,6 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "same length"):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
-    def test_infinite_nested_dict(self):
-        d = pybamm.get_infinite_nested_dict()
-        d[1][2][3] = "x"
-        self.assertEqual(d[1][2][3], "x")
-        d[4][5] = "y"
-        self.assertEqual(d[4][5], "y")
-
     def test_is_constant_and_can_evaluate(self):
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
@@ -74,16 +67,6 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
             d.__getitem__("test3")
-        with self.assertRaisesRegex(
-            KeyError, "'negative electrode SEI current' not found. All SEI parameters"
-        ):
-            d.__getitem__("negative electrode SEI current")
-        with self.assertRaisesRegex(
-            KeyError,
-            "'negative electrode lithium plating current' not found. "
-            "All lithium plating parameters",
-        ):
-            d.__getitem__("negative electrode lithium plating current")
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
