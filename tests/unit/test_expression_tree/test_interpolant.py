@@ -124,6 +124,13 @@ class TestInterpolant(unittest.TestCase):
             value, np.array([[f(1, 5, 8)], [f(1, 4, 7)], [f(1, 4, 7)]])
         )
 
+        # check also works for cubic
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="cubic"
+        )
+        value = interp.evaluate(y=np.array([1, 5, 8]))
+        np.testing.assert_equal(value, f(1, 5, 8))
+
         # Test raising error if data is not 3D
         data_4d = np.zeros((11, 22, 33, 5))
         with self.assertRaisesRegex(ValueError, "y should be three-dimensional"):
@@ -148,9 +155,9 @@ class TestInterpolant(unittest.TestCase):
             )
 
         # Raise error if not linear
-        with self.assertRaisesRegex(ValueError, "interpolator should be 'linear'"):
+        with self.assertRaisesRegex(ValueError, "interpolator should be 'linear' or 'cubic'"):
             interp = pybamm.Interpolant(
-                x_in, data, (var1, var2, var3), interpolator="cubic"
+                x_in, data, (var1, var2, var3), interpolator="pchip"
             )
 
         # Check returns nan if extrapolate set to False

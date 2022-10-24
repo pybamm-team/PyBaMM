@@ -30,7 +30,8 @@ class Interpolant(pybamm.Function):
         function" is given.
     interpolator : str, optional
         Which interpolator to use. Can be "linear", "cubic", or "pchip". Default is
-        "linear". For 3D interpolation, only "linear" is currently supported.
+        "linear". For 3D interpolation, only "linear" an "cubic" are currently
+        supported.
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -163,15 +164,17 @@ class Interpolant(pybamm.Function):
             else:
                 fill_value = np.nan
 
-            if interpolator != "linear":
+            possible_interpolators = ["linear", "cubic"]
+            if interpolator not in possible_interpolators:
                 raise ValueError(
-                    "interpolator should be 'linear' if x is three-dimensional"
+                    """interpolator should be 'linear' or 'cubic'
+                    for 3D interpolation"""
                 )
             else:
                 interpolating_function = interpolate.RegularGridInterpolator(
                     (x1, x2, x3),
                     y,
-                    method="linear",
+                    method=interpolator,
                     bounds_error=False,
                     fill_value=fill_value,
                 )
