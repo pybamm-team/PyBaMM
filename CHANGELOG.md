@@ -1,6 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+
 - Added three-dimensional interpolation [#2380](https://github.com/pybamm-team/PyBaMM/pull/2380)
 
 ## Bug fixes
