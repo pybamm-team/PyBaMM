@@ -10,6 +10,7 @@ chemistries, as well as, a growing set of :ref:`third-party parameter sets <thir
     :members:
 
 .. _adding-parameter-sets:
+
 *********************
 Adding Parameter Sets
 *********************
@@ -57,18 +58,22 @@ see SetupTools' documentation for registering `entry points`_.
 .. _entry points: https://setuptools.pypa.io/en/latest/userguide/entry_point.html#entry-points-for-plugins
 
 If you're willing to open-source your parameter set,
-`let us know <https://github.com/pybamm-team/PyBaMM/issues/new/choose>`_,
-and we can add an entry to :ref:`third-party-parameter-sets`.
+`let us know`_, and we can add an entry to
+:ref:`third-party-parameter-sets`.
+
+.. _let us know: https://github.com/pybamm-team/PyBaMM/issues/new/choose
 
 .. _third-party-parameter-sets:
+
 **************************
 Third-Party Parameter Sets
 **************************
+
 Registered a new parameter set to ``pybamm_parameter_sets``?
-`Let us know<https://github.com/pybamm-team/PyBaMM/issues/new/choose>`_,
-and we'll update our list.
+`Let us know`_, and we'll update our list.
 
 .. _bundled-parameter-sets:
+
 **********************
 Bundled Parameter Sets
 **********************
@@ -94,4 +99,3 @@ Lithium-ion Parameter Sets
 {{ parameter_sets.get_docstring(k) }}
 {% endfor %}
 
-.. _pybamm-new-issue: https://github.com/pybamm-team/PyBaMM/issues/new/choose

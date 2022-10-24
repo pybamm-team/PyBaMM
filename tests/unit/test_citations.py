@@ -2,11 +2,25 @@
 # Tests the citations class.
 #
 import pybamm
+import os
 import io
 import unittest
 import contextlib
 import warnings
+from pybtex.database import Entry
 from tempfile import NamedTemporaryFile
+
+
+@contextlib.contextmanager
+def temporary_filename():
+    """Create a temporary-file and return yield it's filename"""
+
+    f = NamedTemporaryFile(delete=False)
+    try:
+        f.close()
+        yield f.name
+    finally:
+        os.remove(f.name)
 
 
 class TestCitations(unittest.TestCase):
@@ -28,16 +42,16 @@ class TestCitations(unittest.TestCase):
         pybamm.citations._reset()
 
         # Text Style
-        with NamedTemporaryFile() as f:
-            pybamm.print_citations(f.name, "text")
-            f.flush()
-            self.assertTrue(len(f.readlines()) > 0)
+        with temporary_filename() as filename:
+            pybamm.print_citations(filename, "text")
+            with open(filename, "r") as f:
+                self.assertTrue(len(f.readlines()) > 0)
 
         # Bibtext Style
-        with NamedTemporaryFile() as f:
-            pybamm.print_citations(f.name, "bibtex")
-            f.flush()
-            self.assertTrue(len(f.readlines()) > 0)
+        with temporary_filename() as filename:
+            pybamm.print_citations(filename, "text")
+            with open(filename, "r") as f:
+                self.assertTrue(len(f.readlines()) > 0)
 
         # Write to stdout
         f = io.StringIO()
@@ -70,6 +84,17 @@ class TestCitations(unittest.TestCase):
         self.assertNotEqual(
             pybamm.citations._all_citations["NotACitation"], old_citation
         )
+
+    def test_input_validation(self):
+        """Test type validation of ``_add_citation``"""
+        with self.assertRaises(TypeError):
+            pybamm.citations.register(1)
+
+        with self.assertRaises(TypeError):
+            pybamm.citations._add_citation("NotACitation", "NotAEntry")
+
+        with self.assertRaises(TypeError):
+            pybamm.citations._add_citation(1001, Entry("misc"))
 
     def test_andersson_2019(self):
         citations = pybamm.citations

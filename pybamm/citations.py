@@ -24,9 +24,7 @@ class Citations:
     --------
     >>> import pybamm
     >>> pybamm.citations.register("Sulzer2021")
-    >>> pybamm.citations.register(
-            "@book{van1995python, title={Python reference manual}}"
-        )
+    >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
     >>> pybamm.print_citations("citations.txt")
     """
 
@@ -63,8 +61,7 @@ class Citations:
         """
 
         # Check input types are correct
-        key = str(key)
-        if not isinstance(entry, Entry):
+        if not isinstance(key, str) or not isinstance(entry, Entry):
             raise TypeError()
 
         # Warn if overwriting an previous citation
@@ -76,7 +73,7 @@ class Citations:
         self._all_citations[key] = new_citation
 
     @property
-    def _cited(self) -> list[str]:
+    def _cited(self):
         """Return a list of the BibTex entries that have been cited"""
         return [self._all_citations[key] for key in self._papers_to_cite]
 
