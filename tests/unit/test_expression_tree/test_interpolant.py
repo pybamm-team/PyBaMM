@@ -97,7 +97,7 @@ class TestInterpolant(unittest.TestCase):
             interp.evaluate(y=np.array([0, 0])), 0, decimal=3
         )
 
-    def test_interpolation_3d(self):
+    def test_interpolation_3_x(self):
         def f(x, y, z):
             return 2 * x**3 + 3 * y**2 - z
 
@@ -118,6 +118,47 @@ class TestInterpolant(unittest.TestCase):
 
         value = interp.evaluate(y=np.array([1, 5, 8]))
         np.testing.assert_equal(value, f(1, 5, 8))
+
+        value = interp.evaluate(y=np.array([[1, 1, 1], [5, 4, 4], [8, 7, 7]]))
+        np.testing.assert_array_equal(
+            value, np.array([[f(1, 5, 8)], [f(1, 4, 7)], [f(1, 4, 7)]])
+        )
+
+        # Test raising error if data is not 3D
+        data_4d = np.zeros((11, 22, 33, 5))
+        with self.assertRaisesRegex(ValueError, "y should be three-dimensional"):
+            interp = pybamm.Interpolant(
+                x_in, data_4d, (var1, var2, var3), interpolator="linear"
+            )
+
+        # Test raising error if wrong shapes
+        with self.assertRaisesRegex(ValueError, "x1.shape"):
+            interp = pybamm.Interpolant(
+                x_in, np.zeros((12, 22, 33)), (var1, var2, var3), interpolator="linear"
+            )
+
+        with self.assertRaisesRegex(ValueError, "x2.shape"):
+            interp = pybamm.Interpolant(
+                x_in, np.zeros((11, 23, 33)), (var1, var2, var3), interpolator="linear"
+            )
+
+        with self.assertRaisesRegex(ValueError, "x3.shape"):
+            interp = pybamm.Interpolant(
+                x_in, np.zeros((11, 22, 34)), (var1, var2, var3), interpolator="linear"
+            )
+
+        # Raise error if not linear
+        with self.assertRaisesRegex(ValueError, "interpolator should be 'linear'"):
+            interp = pybamm.Interpolant(
+                x_in, data, (var1, var2, var3), interpolator="cubic"
+            )
+
+        # Check returns nan if extrapolate set to False
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="linear", extrapolate=False
+        )
+        value = interp.evaluate(y=np.array([0, 0, 0]))
+        np.testing.assert_equal(value, np.nan)
 
     def test_name(self):
         a = pybamm.Symbol("a")
