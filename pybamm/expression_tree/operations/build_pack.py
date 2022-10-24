@@ -1,6 +1,14 @@
 #
 # convert an expression tree into a pack model
 #
+
+#TODO
+# - Build Batteries
+# -- Current In Batteries
+# -- Terminal voltage from batteries
+# - Test sign convention
+# - Eliminate node1x & node1y (use graph only)
+# - Thermals
 import pybamm
 from copy import deepcopy
 import networkx as nx
@@ -23,6 +31,7 @@ class Pack(object):
             {"Current function [A]": pybamm.PsuedoInputParameter("cell_current")}
         )
         self.cell_parameter_values = parameter_values
+
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.build()
         self.cell_model = pybamm.numpy_concatenation(
@@ -48,21 +57,15 @@ class Pack(object):
     def process_netlist(self):
         curr = [{} for i in range(len(self.netlist))]
         self.netlist.insert(0, "currents", curr)
+
         self.netlist = self.netlist.rename(
             columns={"node1": "source", "node2": "target"}
         )
+        self.netlist["positive_node"] = self.netlist["source"]
+        self.netlist["negative_node"] = self.netlist["target"]
         self.circuit_graph = nx.from_pandas_edgelist(self.netlist, edge_attr=True)
 
-    def repeat_cells(self, num_cells):
-        for n in range(num_cells - 1):
-            self.add_new_cell()
-            self.offset += self.cell_size
-            self._sv_done = []
-            print("adding cell {} of {}".format(n, num_cells))
-        self.built_model = pybamm.NumpyConcatenation(*self._cells)
-        self.built_model.set_id()
-        print("done building pack")
-
+    #Function that adds new cells, and puts them in the appropriate places.
     def add_new_cell(self):
         # TODO: deal with variables dict here too.
         # This is the place to get clever.
@@ -104,19 +107,25 @@ class Pack(object):
 
         # generate loop currents and current source voltages-- this is what we don't know.
         num_loops = len(mcb)
-        num_curr_sources = sum([desc[0] == "I" for desc in self.netlist.desc])
+
+        curr_sources = [edge for edge in self.circuit_graph.edges if self.circuit_graph.edges[edge]["desc"][0]=="I"]
+        num_curr_sources = len(curr_sources)
 
         loop_currents = [
             pybamm.StateVector(slice(n, n + 1), name="current_{}".format(n))
             for n in range(num_loops)
         ]
-        curr_source_voltages = [
-            pybamm.StateVector(slice(n, n + 1), name="current_source_{}".format(n))
-            for n in range(num_loops, num_loops + num_curr_sources)
-        ]
+
+        curr_sources = []
+        n = num_loops
+        for edge in self.circuit_graph.edges:
+            if self.circuit_graph.edges[edge]["desc"][0] == "I":
+                self.circuit_graph.edges[edge]["voltage"] = pybamm.StateVector(slice(n, n + 1), name="current_source_{}".format(n))
+                n += 1
+                curr_sources.append(edge)
 
         # now we know the offset, we should "build" the batteries here. will still need to replace the currents later.
-        self.offset = len(loop_currents) + len(curr_source_voltages)
+        self.offset = len(loop_currents) + len(curr_sources)
         self.batteries = {}
         for desc in self.netlist.desc:
             if desc[0] == "V":
@@ -124,56 +133,64 @@ class Pack(object):
                 self.batteries.update({desc: new_cell})
                 self.offset += self.cell_size
 
-        if len(curr_source_voltages) != 1:
+        if len(curr_sources) != 1:
             raise NotImplementedError("can't do this yet")
         # copy the basis which we can use to place the loop currents
         basis_to_place = deepcopy(mcb)
 
         self.place_currents(loop_currents, basis_to_place)
 
-    def build_pack_equations(self, loop_currents, curr_source_voltages):
+        pack_eqs = self.build_pack_equations(loop_currents, curr_sources)
+
+
+
+
+
+
+    def build_pack_equations(self, loop_currents, curr_sources):
         # start by looping through the loop currents. Sum Voltages
+        pack_equations = []
         for i, loop_current in enumerate(loop_currents):
             # loop through the edges
             eq = []
             for edge in self.circuit_graph.edges:
-                if loop_current in edge["currents"]:
-                    this_edge_equation = []
-                    edge_type = edge["desc"][0]
-                    positive_direction = edge["currents"][loop_current]
+                if loop_current in self.circuit_graph.edges[edge]["currents"]:
+                    #get the name of the edge current. 
+                    edge_type = self.circuit_graph.edges[edge]["desc"][0]
+                    direction = self.circuit_graph.edges[edge]["currents"][loop_current]
                     this_edge_current = loop_current
-                    for current in edge["currents"]:
+                    for current in self.circuit_graph.edges[edge]["currents"]:
                         if current == loop_current:
                             continue
-                        if edge["currents"][current] == positive_direction:
+                        if self.circuit_graph.edges[edge]["currents"][current] == "positive":
                             this_edge_current = this_edge_current + current
                         else:
                             this_edge_current = this_edge_current - current
                     if edge_type == "R":
-                        eq.append(this_edge_current * edge["value"])
+                        eq.append(this_edge_current * self.circuit_graph.edges[edge]["value"])
                     elif edge_type == "I":
-                        curr_source_num = edge["desc"][1:]
+                        curr_source_num = self.circuit_graph.edges[edge]["desc"][1:]
                         if curr_source_num != "0":
                             raise NotImplementedError(
                                 "multiple current sources is not yet supported"
                             )
-                        # need to check sign here.
-                        eq.append(curr_source_voltages[0])
-                    elif edge_type == "V":
-                        # voltage sources always point up.
-                        # note that right now this is actually
-                        # just a battery, not a voltage
-                        voltage = self.batteries[edge["desc"]]
-                        if (
-                            self.node_ys[positive_direction[0]]
-                            > self.node_ys[positive_direction[1]]
-                        ):
-                            # voltage source is negative.
-                            eq.append(-voltage)
+
+                        if direction == "positive":
+                            eq.append(self.circuit_graph.edges[edge]["voltage"])
                         else:
+                            eq.append(-self.circuit_graph.edges[edge]["voltage"])
+                    elif edge_type == "V":
+                        #
+                        voltage = self.batteries[self.circuit_graph.edges[edge]["desc"]]
+                        if direction =="positive":
                             eq.append(voltage)
+                        else:
+                            eq.append(-voltage)
+
             if len(eq) == 0:
-                raise NotImplementedError("uh oh")
+                raise NotImplementedError(
+                    "packs must include at least 1 circuit element"
+                )
             elif len(eq) == 1:
                 expr = eq[0]
             else:
@@ -181,8 +198,28 @@ class Pack(object):
                 for e in range(2, len(eq)):
                     expr = expr + eq[e]
             # add equation to the pack.
+            pack_equations.append(expr)
 
         # then loop through the current source voltages. Sum Currents.
+        for i,curr_source in enumerate(curr_sources):
+            currents = list(self.circuit_graph.edges[curr_source]["currents"])
+            if self.circuit_graph.edges[curr_source]["currents"][currents[0]] == "positive":
+                expr = currents[0]
+            else:
+                expr = -currents[0]
+            for current in currents[1:]:
+                if self.circuit_graph.edges[curr_source]["currents"][current] == "positive":
+                    expr = expr+current
+                else:
+                    expr = expr-current
+            pack_equations.append(expr)
+        
+        #concatenate all the pack equations and return it.
+        pack_eqs = pybamm.numpy_concatenation(*pack_equations)
+        return pack_eqs
+
+
+            
 
     # This function places the currents on the edges in a predefined order.
     # it begins at loop 0, and loops through each "loop" -- really a cycle
@@ -192,20 +229,11 @@ class Pack(object):
     # loop and then proceeds to the next node and does the same thing. It
     # loops until all the loop currents have been placed.
     def place_currents(self, loop_currents, mcb):
-        for node in sorted(self.circuit_graph.nodes):
-            if mcb == []:
-                # loops are all done!
-                break
-            this_loop = -1
-            for i, loop in enumerate(mcb):
-                # in each loop use x and y to figure out direction.
-                # Within the same loop, go right first.
-                if node not in loop:
-                    continue
+        bottom_loop = 0
+        for this_loop, loop in enumerate(mcb):
+            for node in sorted(self.circuit_graph.nodes):
                 if node in loop:
-                    # print("starting loop {}".format(loop))
                     # setting var to remove the loop later
-                    this_loop = i
                     done_nodes = set()
                     # doesn't actually matter where we start.
                     # loop will always be a set.
@@ -265,11 +293,13 @@ class Pack(object):
                             raise KeyError("uh oh")
 
                         # add this current to the loop.
+                        if inner_node == edge["positive_node"]:
+                            direction = "negative"
+                        else:
+                            direction = "positive"
+
                         edge["currents"].update(
-                            {loop_currents[this_loop]: (inner_node, next_node)}
+                            {loop_currents[this_loop]: direction}
                         )
                         inner_node = next_node
                     break
-            if this_loop == -1:
-                continue
-            del mcb[this_loop]
