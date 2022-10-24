@@ -248,24 +248,61 @@ class Interpolant(pybamm.Function):
             else:
                 return res[:, np.newaxis]
         elif self.dimension == 3:
-            res = self.function(np.transpose(children_eval_flat))
-            return res[:, np.newaxis]
+
+            # If the children are scalars, we need to add a dimension
+            shapes = []
+            for child in evaluated_children:
+                if isinstance(child, float):
+                    shapes.append(())
+                else:
+                    shapes.append(child.shape)
+            shapes = set(shapes)
+            shapes.discard(())
+
+            if len(shapes) > 1:
+                raise ValueError(
+                    "All children must have the same shape for 3D interpolation"
+                )
+
+            if shapes == {}:
+                shape = (1,)
+            else:
+                shape = shapes.pop()
+            new_evaluated_children = []
+            for child in evaluated_children:
+
+                if isinstance(child, float):
+                    new_evaluated_children.append(np.reshape(child, shape))
+                elif child.shape == shape:
+                    new_evaluated_children.append(child)
+                else:
+                    new_evaluated_children.append(np.reshape(child, shape))
+
+            # return nans if there are any within the children
+            nans = np.isnan(new_evaluated_children)
+            if np.any(nans):
+                nan_children = []
+                for child, interp_range in zip(
+                    new_evaluated_children, self.function.grid
+                ):
+                    nan_children.append(np.ones_like(child) * interp_range.mean())
+                return self.function(np.transpose(nan_children)) * np.nan
+            else:
+                res = self.function(np.transpose(new_evaluated_children))
+                return res[:, np.newaxis]
+
         else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
 
-    def _evaluate_for_shape(self):
-        """
-        Default behaviour: has same shape as all child
-        See :meth:`pybamm.Symbol.evaluate_for_shape()`
-        """
-        evaluated_children = [child.evaluate_for_shape() for child in self.children]
+    # def _evaluate_for_shape(self):
+    #     """
+    #     Default behaviour: has same shape as all child
+    #     See :meth:`pybamm.Symbol.evaluate_for_shape()`
+    #     """
+    #     evaluated_children = [child.evaluate_for_shape() for child in self.children]
 
-        # RegularGridInterpolator cannot accept nan values so run the
-        # interpolation with the average values the interpolation range
-        if self.dimension == 3:
-            new_evaluated_children = []
-            for child, interp_range in zip(evaluated_children, self.function.grid):
-                new_evaluated_children.append(np.ones_like(child) * interp_range.mean())
-            return self._function_evaluate(new_evaluated_children) * np.nan
-        else:
-            return self._function_evaluate(evaluated_children)
+    #     # RegularGridInterpolator cannot accept nan values so run the
+    #     # interpolation with the average values the interpolation range
+    #     if self.dimension == 3:
+    #     else:
+    #         return self._function_evaluate(evaluated_children)
