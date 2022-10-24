@@ -155,7 +155,9 @@ class TestInterpolant(unittest.TestCase):
             )
 
         # Raise error if not linear
-        with self.assertRaisesRegex(ValueError, "interpolator should be 'linear' or 'cubic'"):
+        with self.assertRaisesRegex(
+            ValueError, "interpolator should be 'linear' or 'cubic'"
+        ):
             interp = pybamm.Interpolant(
                 x_in, data, (var1, var2, var3), interpolator="pchip"
             )
