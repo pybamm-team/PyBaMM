@@ -7,7 +7,7 @@
 ## Bug fixes
 
 - For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2337](https://github.com/pybamm-team/PyBaMM/pull/2337))
-- `pybamm.have_julia()` now checks that julia is properly configured ([#2402]((https://github.com/pybamm-team/PyBaMM/pull/2402)))
+- `pybamm.have_julia()` now checks that julia is properly configured ([#2402](<(https://github.com/pybamm-team/PyBaMM/pull/2402)>))
 
 ## Optimizations
 
