@@ -3,9 +3,7 @@
 #
 
 #TODO
-# - Build Batteries
 # -- Current In Batteries
-# -- Terminal voltage from batteries
 # - Test sign convention
 # - Eliminate node1x & node1y (use graph only)
 # - Thermals
@@ -16,6 +14,32 @@ import numpy as np
 import pandas as pd
 import liionpack as lp
 
+class PsuedoInputParameter(pybamm.InputParameter):
+    def create_copy(self):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        new_input_parameter = PsuedoInputParameter(
+            self.name, self.domain, expected_size=self._expected_size
+        )
+        return new_input_parameter
+    
+    @property
+    def children(self):
+        return self._children
+    
+    @children.setter
+    def children(self, expr):
+        self._children = expr
+    
+
+def set_psuedo(symbol, expr):
+    if isinstance(symbol, PsuedoInputParameter):
+        symbol.children = [expr]
+    else:
+        for child in symbol.children:
+            set_psuedo(child, expr)
+    symbol.set_id()
+
+
 
 class Pack(object):
     def __init__(self, model, netlist, parameter_values=None):
@@ -24,6 +48,7 @@ class Pack(object):
 
         # Build the cell expression tree with necessary parameters.
         # think about moving this to a separate function.
+
         if parameter_values is not None:
             raise AssertionError("parameter values not supported")
         parameter_values = model.default_parameter_values
@@ -31,7 +56,7 @@ class Pack(object):
             {"Current function [A]": pybamm.PsuedoInputParameter("cell_current")}
         )
         self.cell_parameter_values = parameter_values
-
+#
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.build()
         self.cell_model = pybamm.numpy_concatenation(
@@ -39,10 +64,9 @@ class Pack(object):
         )
         self.cell_size = self.cell_model.shape[0]
         self._sv_done = []
+        self.built_model = sim.built_model
 
         self.netlist = netlist
-        self.cell_currents = {}
-
         self.process_netlist()
 
         # get x and y coords for nodes from graph.
@@ -99,6 +123,11 @@ class Pack(object):
                 child.set_id()
             symbol.set_id()
 
+    def get_new_terminal_voltage(self):
+        symbol = self.built_model.variables["Terminal voltage [V]"]
+        self.add_offset_to_state_vectors(symbol)
+        return symbol
+
     def build_pack(self):
         # this function builds expression trees to compute the current.
 
@@ -109,12 +138,14 @@ class Pack(object):
         num_loops = len(mcb)
 
         curr_sources = [edge for edge in self.circuit_graph.edges if self.circuit_graph.edges[edge]["desc"][0]=="I"]
-        num_curr_sources = len(curr_sources)
 
         loop_currents = [
-            pybamm.StateVector(slice(n, n + 1), name="current_{}".format(n))
+            pybamm.StateVector(slice(n,n+1), name="current_{}".format(n))
             for n in range(num_loops)
         ]
+        for loop_current in loop_currents:
+            print(loop_current.y_slices)
+        #print(loop_current.y_slices for loop_current in loop_currents)
 
         curr_sources = []
         n = num_loops
@@ -125,31 +156,41 @@ class Pack(object):
                 curr_sources.append(edge)
 
         # now we know the offset, we should "build" the batteries here. will still need to replace the currents later.
-        self.offset = len(loop_currents) + len(curr_sources)
+        self.offset = 0
         self.batteries = {}
+        cells = []
         for desc in self.netlist.desc:
             if desc[0] == "V":
                 new_cell = self.add_new_cell()
-                self.batteries.update({desc: new_cell})
+                cells.append(new_cell)
+                terminal_voltage = self.get_new_terminal_voltage()
+                self.batteries.update({desc: {"cell" : new_cell, "voltage" : terminal_voltage, "current_replaced" : False}})
                 self.offset += self.cell_size
+        cell_eqs = pybamm.numpy_concatenation(*cells)
 
         if len(curr_sources) != 1:
             raise NotImplementedError("can't do this yet")
         # copy the basis which we can use to place the loop currents
         basis_to_place = deepcopy(mcb)
-
         self.place_currents(loop_currents, basis_to_place)
-
         pack_eqs = self.build_pack_equations(loop_currents, curr_sources)
+        
+        self.pack = pybamm.numpy_concatenation(pack_eqs, cell_eqs)
+        self.ics = self.initialize_pack(num_loops, len(curr_sources))
 
 
-
-
+    def initialize_pack(self, num_loops, num_curr_sources):
+        curr_ics = pybamm.Vector([1.0 for curr_source in range(num_loops)])
+        curr_source_v_ics = pybamm.Vector([1.0 for curr_source in range(num_curr_sources)])
+        cell_ics = pybamm.numpy_concatenation(*[self.built_model.concatenated_initial_conditions for n in range(len(self.batteries))])
+        ics = pybamm.numpy_concatenation(*[curr_ics, curr_source_v_ics, cell_ics])
+        return ics
 
 
     def build_pack_equations(self, loop_currents, curr_sources):
         # start by looping through the loop currents. Sum Voltages
         pack_equations = []
+        cells = []
         for i, loop_current in enumerate(loop_currents):
             # loop through the edges
             eq = []
@@ -157,6 +198,7 @@ class Pack(object):
                 if loop_current in self.circuit_graph.edges[edge]["currents"]:
                     #get the name of the edge current. 
                     edge_type = self.circuit_graph.edges[edge]["desc"][0]
+                    desc = self.circuit_graph.edges[edge]["desc"]
                     direction = self.circuit_graph.edges[edge]["currents"][loop_current]
                     this_edge_current = loop_current
                     for current in self.circuit_graph.edges[edge]["currents"]:
@@ -180,12 +222,28 @@ class Pack(object):
                         else:
                             eq.append(-self.circuit_graph.edges[edge]["voltage"])
                     elif edge_type == "V":
-                        #
-                        voltage = self.batteries[self.circuit_graph.edges[edge]["desc"]]
+                        #first, check and see if the battery has been done yet.
+                        if not self.batteries[self.circuit_graph.edges[edge]["desc"]]["current_replaced"]:
+                            currents = list(self.circuit_graph.edges[edge]["currents"])
+                            
+                            if self.circuit_graph.edges[edge]["currents"][currents[0]] == "positive":
+                                expr = currents[0]
+                            else:
+                                expr = -currents[0]
+                            for current in currents[1:]:
+                                if self.circuit_graph.edges[edge]["currents"][current] == "positive":
+                                    expr = expr+current
+                                else:
+                                    expr = expr-current
+                            set_psuedo(self.batteries[self.circuit_graph.edges[edge]["desc"]]["cell"], expr)
+                        voltage = self.batteries[self.circuit_graph.edges[edge]["desc"]]["voltage"]
                         if direction =="positive":
                             eq.append(voltage)
                         else:
                             eq.append(-voltage)
+                        #check to see if the battery input current has been replaced yet. 
+                        #If not, replace the current with the actual current.
+                        
 
             if len(eq) == 0:
                 raise NotImplementedError(
@@ -203,11 +261,8 @@ class Pack(object):
         # then loop through the current source voltages. Sum Currents.
         for i,curr_source in enumerate(curr_sources):
             currents = list(self.circuit_graph.edges[curr_source]["currents"])
-            if self.circuit_graph.edges[curr_source]["currents"][currents[0]] == "positive":
-                expr = currents[0]
-            else:
-                expr = -currents[0]
-            for current in currents[1:]:
+            expr = pybamm.Scalar(self.circuit_graph.edges[curr_source]["value"])
+            for current in currents:
                 if self.circuit_graph.edges[curr_source]["currents"][current] == "positive":
                     expr = expr+current
                 else:
@@ -303,3 +358,4 @@ class Pack(object):
                         )
                         inner_node = next_node
                     break
+    

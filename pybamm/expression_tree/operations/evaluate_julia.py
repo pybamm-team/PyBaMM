@@ -275,6 +275,8 @@ class JuliaConverter(object):
         elif isinstance(symbol, pybamm.Time):
             my_id = symbol.id
             self._intermediate[my_id] = JuliaTime(my_id)
+        elif isinstance(symbol, pybamm.PsuedoInputParameter):
+            my_id = self._convert_tree_to_intermediate(symbol.children[0])
         elif isinstance(symbol, pybamm.InputParameter):
             my_id = symbol.id
             name = symbol.name

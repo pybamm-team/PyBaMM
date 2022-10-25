@@ -71,7 +71,7 @@ from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
-from .expression_tree.input_parameter import InputParameter, PsuedoInputParameter
+from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import *
@@ -98,7 +98,7 @@ from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.replace_symbols import SymbolReplacer
 from .expression_tree.operations.evaluate_julia import JuliaConverter
-from .expression_tree.operations.build_pack import Pack
+from .expression_tree.operations.build_pack import Pack, PsuedoInputParameter
 
 #
 # Model classes

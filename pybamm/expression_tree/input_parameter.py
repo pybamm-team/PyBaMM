@@ -101,11 +101,3 @@ class InputParameter(pybamm.Symbol):
                     self._expected_size
                 )
             )
-
-class PsuedoInputParameter(InputParameter):
-    def create_copy(self):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_input_parameter = PsuedoInputParameter(
-            self.name, self.domain, expected_size=self._expected_size
-        )
-        return new_input_parameter
