@@ -92,7 +92,7 @@ class TestUtil(unittest.TestCase):
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
 
-    @unittest.skipIf(not pybamm.have_julia())
+    @unittest.skipIf(not pybamm.have_julia(), "Julia not installed")
     def test_have_julia(self):
         # Remove julia from the path
         with unittest.mock.patch.dict(
