@@ -1132,12 +1132,11 @@ class TestParameterValues(unittest.TestCase):
             pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
 
             model = pybamm.lithium_ion.DFN()
-            model.events = []
             experiment = pybamm.Experiment([
                 "Discharge at C/5 for 1 hour",
             ])
             sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
-            sim.solve(calc_esoh=False)
+            sim.solve()
 
 
 if __name__ == "__main__":
