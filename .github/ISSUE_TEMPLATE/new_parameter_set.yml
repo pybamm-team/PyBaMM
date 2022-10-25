@@ -4,13 +4,9 @@ body:
   - type: markdown
     attributes:
       value: |
-      Third-party parameter sets can be added to PyBaMM by registering an entry
-      point with `pybamm-parameter-sets` as described in our
-      [documentation](https://pybamm.readthedocs.io/en/latest/source/parameters/parameter_sets.html).
-
-      If you've created a parameter set and want to share it with the PyBamm Community,
-      let us know, so we can add it to our list of
-      [third-party parameter sets](https://pybamm.readthedocs.io/en/latest/source/parameters/parameter_sets.html#third-party-parameter-sets)
+        Third-party parameter sets can be added to PyBaMM by registering an entry
+        point with `pybamm-parameter-sets` as described in our
+        [documentation](https://pybamm.readthedocs.io/en/latest/source/parameters/parameter_sets.html).
   - type: input
     attributes:
       id: parameter-set-url
@@ -29,4 +25,3 @@ body:
       id: feedback
       label: Any additional information?
       description: Thank you for making parameter set! Is there anything else we should know about it?
-

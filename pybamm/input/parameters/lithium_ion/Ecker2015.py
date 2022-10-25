@@ -415,8 +415,8 @@ def get_parameter_values():
     The tab placement parameters are taken from measurements in
 
         Hales, Alastair, et al. "The cell cooling coefficient: a standard to define heat
-        rejection from lithium-ion batteries." Journal of The Electrochemical Society 166.12
-        (2019): A2383.
+        rejection from lithium-ion batteries." Journal of The Electrochemical Society
+        166.12 (2019): A2383.
 
     The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
     are extracted from
