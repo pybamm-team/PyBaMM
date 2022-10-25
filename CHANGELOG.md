@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added three-dimensional interpolation [#2380](https://github.com/pybamm-team/PyBaMM/pull/2380)
+
 ## Bug fixes
 
 - For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2337](https://github.com/pybamm-team/PyBaMM/pull/2337))
