@@ -1030,52 +1030,87 @@ class TestParameterValues(unittest.TestCase):
         bpx_obj = {
             "Header": {
                 "BPX": 1.0,
+                "Title": 'Parametrisation example',
+                "Description": "NMC Pouch",
                 "Model": "Newman",
             },
             "Parameterisation": {
                 "Cell": {
-                    "Initial temperature [K]": 299.0,
-                    "Reference temperature [K]": 299.0,
+                    "Initial temperature [K]": 298.15,
+                    "Reference temperature [K]": 298.15,
                     "Nominal cell capacity [A.h]": 5.0,
-                    "Electrode area [m2]": 2.0,
-                    "Number of electrodes connected in parallel to make a cell": 1,
+                    "Lower voltage cut-off [V]": 2.8,
+                    "Upper voltage cut-off [V]": 4.2,
+                    "Nominal cell capacity [A.h]": 12.5,
+                    "Specific heat capacity [J.K-1.kg-1]": 913,
+                    "Thermal conductivity [W.m-1.K-1]": 2,
+                    "Density [kg.m-3]": 1847,
+                    "Electrode area [m2]": 0.016808,
+                    "Number of electrodes connected in parallel to make a cell": 34,
+                    "Cell height [m]": 191e-03,
+                    "Cell width [m]": 88e-03,
+                    "Cell thickness [m]": 7.6e-03,
                 },
                 "Electrolyte": {
                     "Initial concentration [mol.m-3]": 1000,
                     "Cation transference number": 0.259,
-                    "Conductivity [S.m-1]": 1.0,
-                    "Diffusivity [m2.s-1]": (
-                        "8.794e-7 * x * x - 3.972e-6 * x + 4.862e-6"
+                    "Conductivity [S.m-1]": (
+                        '0.1297 * (x / 1000) ** 3 '
+                        '- 2.51 * (x / 1000) ** 1.5 + 3.329 * (x / 1000)'
                     ),
+                    "Diffusivity [m2.s-1]": (
+                        '8.794e-11 * (x / 1000) ** 2 '
+                        '- 3.972e-10 * (x / 1000) + 4.862e-10'
+                    ),
+                    "Conductivity activation energy [J.mol-1]": 34200,
+                    "Diffusivity activation energy [J.mol-1]": 34200,
                 },
                 "Anode": {
-                    "Particle radius [m]": 5.86e-6,
-                    "Thickness [m]": 85.2e-6,
-                    "Diffusivity [m2.s-1]": 3.3e-14,
-                    "OCP [V]": {"x": [0, 0.1, 1], "y": [1.72, 1.2, 0.06]},
-                    "Conductivity [S.m-1]": 215.0,
-                    "Surface area per unit volume": 383959,
-                    "Porosity": 0.25,
-                    "Transport efficiency": 0.125,
-                    "Reaction rate [mol.m-2.s-1]": 1e-10,
-                    "Initial concentration [mol.m-3]": 29866.1,
-                    "Maximum concentration [mol.m-3]": 33133,
+                    "Particle radius [m]": 4.12e-06,
+                    "Thickness [m]": 5.86e-6,
+                    "Diffusivity [m2.s-1]": '8.6e-13 * exp(-13.5 * x) + 9.5e-15',
+                    "OCP [V]": (
+                        '7.84108819e-01 * exp(-5.16822591e01 * x) + '
+                        '5.99914745e02 + '
+                        '2.62306941e-02 * tanh(-1.71992993e01 * (x - 5.48687033e-01)) +'
+                        '9.41099327e02 * tanh(-6.91080049e-01 * (x + 2.49433043e00)) + '
+                        '3.40646063e02 * tanh(7.27243978e-01 * (x + 1.64297574e00))'
+                    ),
+                    "Conductivity [S.m-1]": 0.39,
+                    "Surface area per unit volume": 487864,
+                    "Porosity": 0.33,
+                    "Transport efficiency": 0.19,
+                    "Reaction rate [mol.m-2.s-1]": 5.75e-06,
+                    "Initial concentration [mol.m-3]": 23370,
+                    "Maximum concentration [mol.m-3]": 28500,
+                    "Diffusivity activation energy [J.mol-1]": 108000,
+                    "Reaction rate activation energy [J.mol-1]": 53400,
                 },
                 "Cathode": {
-                    "Particle radius [m]": 5.22e-6,
-                    "Thickness [m]": 75.6e-6,
-                    "Diffusivity [m2.s-1]": 4.0e-15,
-                    "OCP [V]": {"x": [0, 0.1, 1], "y": [1.72, 1.2, 0.06]},
-                    "Conductivity [S.m-1]": 0.18,
-                    "Surface area per unit volume": 382184,
-                    "Porosity": 0.335,
-                    "Transport efficiency": 0.1939,
-                    "Reaction rate [mol.m-2.s-1]": 1e-10,
-                    "Initial concentration [mol.m-3]": 167920,
-                    "Maximum concentration [mol.m-3]": 631040,
+                    "Particle radius [m]": 4.6e-06,
+                    "Thickness [m]": 5.23e-05,
+                    "Diffusivity [m2.s-1]": (
+                        '5e-13 - x * 8e-14 - 4.1e-13 * exp(-12 * (x - 0.98) ** 2)'
+                    ),
+                    "OCP [V]": (
+                        '-2.59073509 * x + '
+                        '4.17659428 - '
+                        '11.03429916 * tanh(-9.343666 * (x - 0.79475919)) - '
+                        '1.63480454 * tanh(82.26606342 * (x - 1.00945121)) - '
+                        '10.70641562 * tanh(9.43939843 * (x - 0.79469384))'
+                    ),
+                    "Conductivity [S.m-1]": 1.464,
+                    "Surface area per unit volume": 404348,
+                    "Porosity": 0.385,
+                    "Transport efficiency": 0.2389,
+                    "Reaction rate [mol.m-2.s-1]": 2.5e-05,
+                    "Initial concentration [mol.m-3]": 26290,
+                    "Maximum concentration [mol.m-3]": 56500,
+                    "Diffusivity activation energy [J.mol-1]": 62400,
+                    "Reaction rate activation energy [J.mol-1]": 27010,
                 },
                 "Separator": {
-                    "Thickness [m]": 1.2e-5,
+                    "Thickness [m]": 2e-5,
                     "Porosity": 0.47,
                     "Transport efficiency": 0.3222,
                 },

@@ -5,6 +5,20 @@ from dataclasses import dataclass
 import numpy as np
 from pybamm import constants
 from pybamm import exp
+import copy
+
+
+import types
+import functools
+
+def copy_func(f):
+    """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                           argdefs=f.__defaults__,
+                           closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
 
 
 @dataclass
@@ -45,11 +59,12 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         bpx.parameterisation.separator, pybamm_dict, experiment
     )
 
-    # set a default current function
-    pybamm_dict['Current function [A]'] = 1
+    # set a default current function and typical current
+    pybamm_dict['Current function [A]'] = pybamm_dict['Nominal cell capacity [A.h]']
+    pybamm_dict['Typical current [A]'] = pybamm_dict['Nominal cell capacity [A.h]']
 
     # Ambient temp
-    pybamm_dict['Ambient temperature [K]'] = pybamm_dict['Reference temperature [K]']
+    pybamm_dict['Ambient temperature [K]'] = pybamm_dict['Initial temperature [K]']
 
     for domain in [anode, cathode]:
         pybamm_dict[domain.pre_name + 'electrons in reaction'] = 1.0
@@ -72,6 +87,20 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     equal_len_width = math.sqrt(pybamm_dict['Electrode area [m2]'])
     pybamm_dict['Electrode width [m]'] = equal_len_width
     pybamm_dict['Electrode height [m]'] = equal_len_width
+
+    # cell geometry
+    pybamm_dict['Cell volume [m3]'] = (
+        pybamm_dict['Cell width [m]']
+        * pybamm_dict['Cell height [m]']
+        * pybamm_dict['Cell thickness [m]']
+    )
+    pybamm_dict['Cell cooling surface area [m2]'] = (
+        2 * pybamm_dict['Cell width [m]'] * pybamm_dict['Cell thickness [m]']
+        + 2 * pybamm_dict['Cell width [m]'] * pybamm_dict['Cell height [m]']
+        + 2 * pybamm_dict['Cell thickness [m]'] * pybamm_dict['Cell height [m]']
+    )
+
+    pybamm_dict['1 + dlnf/dlnc'] = 1.0
 
     # lumped parameters
     for name in [
@@ -114,21 +143,83 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         k_norm = pybamm_dict[
             domain.pre_name + 'reaction rate [mol.m-2.s-1]'
         ]
+        E_a = pybamm_dict.get(
+            domain.pre_name + "reaction rate activation energy [J.mol-1]",
+            0.0
+        )
+        T_ref = pybamm_dict["Reference temperature [K]"]
         F = 96485
         k = k_norm * F / (c_max * c_e ** 0.5)
+
         def exchange_current_density(c_e, c_s_surf, c_s_max, T):
-            k_ref = k  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
-            E_r = 53400
-            arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+            k_ref = k  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return (
-                k_ref * arrhenius * c_e ** 0.5 *
-                c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
+                k_ref
+                * arrhenius
+                * c_e**0.5
+                * c_s_surf**0.5
+                * (c_s_max - c_s_surf) ** 0.5
             )
         pybamm_dict[domain.pre_name + 'exchange-current density [A.m-2]'] = (
-            exchange_current_density
+            copy_func(exchange_current_density)
         )
 
+    # diffusivity
+    for domain in [anode, electrolyte, cathode]:
+        T_ref = pybamm_dict["Reference temperature [K]"]
+        E_a = pybamm_dict.get(
+            domain.pre_name + 'diffusivity activation energy [J.mol-1]',
+            0.0
+        )
+        D_ref_value = pybamm_dict[domain.pre_name + 'diffusivity [m2.s-1]']
 
+        if callable(D_ref_value):
+            D_ref_fun = copy.copy(D_ref_value)
+
+            def diffusivity(sto, T):
+                D_ref = D_ref_fun(sto)
+                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+                return arrhenius * D_ref
+        else:
+            D_ref_number = D_ref_value
+
+            def diffusivity(sto, T):
+                D_ref = D_ref_number
+                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+                return arrhenius * D_ref
+
+        pybamm_dict[domain.pre_name + 'diffusivity [m2.s-1]'] = copy_func(diffusivity)
+
+    # conductivity
+    for domain in [electrolyte]:
+        T_ref = pybamm_dict["Reference temperature [K]"]
+        E_a = pybamm_dict.get(
+            domain.pre_name + 'conductivity activation energy [J.mol-1]',
+            0.0
+        )
+        C_ref_value = pybamm_dict[domain.pre_name + 'conductivity [S.m-1]']
+
+        if callable(C_ref_value):
+            C_ref_fun = copy.copy(C_ref_value)
+
+            def conductivity(c_e, T):
+                C_ref = C_ref_fun(c_e)
+                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+                return arrhenius * C_ref
+        else:
+            C_ref_number = C_ref_value
+
+            def conductivity(c_e, T):
+                C_ref = C_ref_number
+                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+                return arrhenius * C_ref
+
+        pybamm_dict[domain.pre_name + 'conductivity [S.m-1]'] = copy_func(conductivity)
+
+    import pprint
+    pp = pprint.PrettyPrinter(indent=2)
+    pp.pprint(pybamm_dict)
     return pybamm_dict
 
 
