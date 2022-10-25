@@ -899,7 +899,7 @@ class BaseSolver(object):
 
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
-                last_state = solutions[0].y[:, -1]
+                last_state = solutions[0].last_state
                 # update y0 (for DAE solvers, this updates the initial guess for the
                 # rootfinder)
                 model.y0 = last_state
@@ -1175,7 +1175,7 @@ class BaseSolver(object):
         if not isinstance(old_solution, pybamm.EmptySolution):
             if old_solution.all_models[-1] == model:
                 # initialize with old solution
-                model.y0 = old_solution.all_ys[-1][:, -1]
+                model.y0 = old_solution.all_ys[-1]
             else:
                 _, concatenated_initial_conditions = model.set_initial_conditions_from(
                     old_solution, return_type="ics"

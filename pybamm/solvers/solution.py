@@ -75,15 +75,19 @@ class Solution(object):
         sensitivities=False,
         check_solution=True,
     ):
+        len_t = len(all_ts)
+        # Store t, y, model, inputs as lists of length len_t
+        # This is the fastest way of accessing, and we will be accessing index-by-index
+        # anyway when we create variable objects
         if not isinstance(all_ts, list):
-            all_ts = [all_ts]
+            all_ts = np.split(all_ts, len_t)
         if not isinstance(all_ys, list):
-            all_ys = [all_ys]
+            all_ys = np.split(all_ys, len_t, axis=1)
+
         if not isinstance(all_models, list):
-            all_models = [all_models]
+            all_models = [all_models] * len_t
         self._all_ts = all_ts
         self._all_ys = all_ys
-        self._all_ys_and_sens = all_ys
         self._all_models = all_models
 
         # Set up inputs
@@ -92,7 +96,7 @@ class Solution(object):
             for key, value in all_inputs_copy.items():
                 if isinstance(value, numbers.Number):
                     all_inputs_copy[key] = np.array([value])
-            self.all_inputs = [all_inputs_copy]
+            self.all_inputs = [all_inputs_copy] * len_t
         else:
             self.all_inputs = all_inputs
 
@@ -147,113 +151,76 @@ class Solution(object):
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
-    def extract_explicit_sensitivities(self):
-        # if we got here, we haven't set y yet
-        self.set_y()
+    def extract_and_set_explicit_sensitivities(self):
+        """
+        Extracts the sensitivities from the solution, index-by-index. Updates
+        self._all_ys to no longer include the sensitivities, and saves sensitivities
+        to the dict self.sensitivities.
+        """
+        len_t = len(self.all_ts)
+        sensitivities = {"all": [None] * len_t}
+        # model.calculate_sensitivities is the same for all models
+        for name in self.all_models[0].calculate_sensitivities:
+            sensitivities[name] = [None] * len_t
 
-        # extract sensitivities from full y solution
-        self._y, self._sensitivities = self._extract_explicit_sensitivities(
-            self.all_models[0], self.y, self.t, self.all_inputs[0]
-        )
-
-        # make sure we remove all sensitivities from all_ys
-        for index, (model, ys, ts, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
+        for idx, (y, model, inputs) in enumerate(
+            zip(self.all_ys, self.all_models, self.all_inputs)
         ):
-            self._all_ys[index], _ = self._extract_explicit_sensitivities(
-                model, ys, ts, inputs
+            n_states = model.len_rhs_and_alg
+            len_rhs = model.len_rhs
+            len_alg = model.len_alg
+            # Get the point where the algebraic equations start
+            if model.len_rhs != 0:
+                n_p = model.len_rhs_sens // model.len_rhs
+            else:
+                n_p = model.len_alg_sens // model.len_alg
+            len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
+
+            # save sensitivities as a dictionary
+            # first save the whole sensitivity matrix
+            # reshape using Fortran order to get the right array:
+            #   x0_p0, x0_p1, ..., x0_pn
+            #   x1_p0, x1_p1, ..., x1_pn
+            #   ...
+            #   xn_p0, xn_p1, ..., xn_pn
+            # 1, Extract rhs and alg sensitivities and reshape into 2D matrices
+            # with shape (n_p, n_states)
+            if isinstance(y, casadi.DM):
+                y = y.full()
+            ode_sens = y[len_rhs:len_rhs_and_sens].reshape(n_p, len_rhs).T
+            if len_alg > 0:
+                alg_sens = y[len_rhs_and_sens + len_alg :].reshape(n_p, len_alg).T
+            # 2. Concatenate into a single 2D matrix with shape (n_p, n_states)
+            # i.e. along first axis
+            if len_alg == 0:
+                full_sens_matrix = ode_sens
+            else:
+                full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=0)
+
+            # Save the full sensitivity matrix
+            sensitivities["all"][idx] = casadi.DM(full_sens_matrix)
+
+            # also save the sensitivity wrt each parameter (read the columns of the
+            # sensitivity matrix)
+            start = 0
+            for name in model.calculate_sensitivities:
+                inp = inputs[name]
+                input_size = inp.shape[0]
+                end = start + input_size
+                if input_size == 1:
+                    sensitivities[name][idx] = full_sens_matrix[:, start]
+                else:
+                    sensitivities[name][idx] = full_sens_matrix[:, start:end]
+                start = end
+
+            # y gets the part of the solution vector that correspond to the
+            # actual ODE/DAE solution
+            self.all_ys[idx] = casadi.DM(
+                np.vstack(
+                    [y[:len_rhs], y[len_rhs_and_sens : len_rhs_and_sens + len_alg]]
+                )
             )
-
-    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
-        """
-        given a model and a solution y, extracts the sensitivities
-
-        Parameters
-        --------
-        model : :class:`pybamm.BaseModel`
-            A model that has been already setup by this base solver
-        y: ndarray
-            The solution of the full explicit sensitivity equations
-        t_eval: ndarray
-            The evaluation times
-        inputs: dict
-            parameter inputs
-
-        Returns
-        -------
-        y: ndarray
-            The solution of the ode/dae in model
-        sensitivities: dict of (string: ndarray)
-            A dictionary of parameter names, and the corresponding solution of
-            the sensitivity equations
-        """
-
-        n_states = model.len_rhs_and_alg
-        n_rhs = model.len_rhs
-        n_alg = model.len_alg
-        # Get the point where the algebraic equations start
-        if model.len_rhs != 0:
-            n_p = model.len_rhs_sens // model.len_rhs
-        else:
-            n_p = model.len_alg_sens // model.len_alg
-        len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
-
-        n_t = len(t_eval)
-        # y gets the part of the solution vector that correspond to the
-        # actual ODE/DAE solution
-
-        # save sensitivities as a dictionary
-        # first save the whole sensitivity matrix
-        # reshape using Fortran order to get the right array:
-        #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
-        #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
-        #   ...
-        #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
-        #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
-        #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
-        #   ...
-        #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
-        #   ...
-        #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
-        #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
-        #   ...
-        #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
-        # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
-        # with shape (n_p, n_states, n_t)
-        if isinstance(y, casadi.DM):
-            y_full = y.full()
-        else:
-            y_full = y
-        ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
-        # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
-        # i.e. along first axis
-        full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
-        # Transpose and reshape into a (n_states * n_t, n_p) matrix
-        full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
-            n_t * n_states, n_p
-        )
-
-        # Save the full sensitivity matrix
-        sensitivity = {"all": full_sens_matrix}
-
-        # also save the sensitivity wrt each parameter (read the columns of the
-        # sensitivity matrix)
-        start = 0
-        for name in model.calculate_sensitivities:
-            inp = inputs[name]
-            input_size = inp.shape[0]
-            end = start + input_size
-            sensitivity[name] = full_sens_matrix[:, start:end]
-            start = end
-
-        y_dae = np.vstack(
-            [
-                y[: model.len_rhs, :],
-                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
-            ]
-        )
-        return y_dae, sensitivity
+        self.sensitivities = sensitivities
 
     @property
     def t(self):
@@ -272,23 +239,19 @@ class Solution(object):
     @property
     def y(self):
         """Values of the solution"""
-        try:
-            return self._y
-        except AttributeError:
-            self.set_y()
-
-            # if y is evaluated before sensitivities then need to extract them
-            if isinstance(self._sensitivities, bool) and self._sensitivities:
-                self.extract_explicit_sensitivities()
-
-            return self._y
+        raise NotImplementedError(
+            "Solution.y is not implemented as it is slow to build, and not needed to "
+            "evaluate individual variables (Solution.all_ys, which is a list of the "
+            "Solution states at each time, is used instead). "
+            "Use Solution.all_ys to construct Solution.y if needed."
+        )
 
     @property
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array"""
         if isinstance(self._sensitivities, bool):
             if self._sensitivities:
-                self.extract_explicit_sensitivities()
+                self.extract_and_set_explicit_sensitivities()
             else:
                 self._sensitivities = {}
         return self._sensitivities
@@ -301,24 +264,11 @@ class Solution(object):
             raise TypeError("sensitivities arg needs to be a bool or dict")
         self._sensitivities = value
 
-    def set_y(self):
-        try:
-            if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
-                self._y = casadi.horzcat(*self.all_ys)
-            else:
-                self._y = np.hstack(self.all_ys)
-        except ValueError:
-            raise pybamm.SolverError(
-                "The solution is made up from different models, so `y` cannot be "
-                "computed explicitly."
-            )
-
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
         y, model = self.all_ys[-1], self.all_models[-1]
-        y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
                 y_var = y[model.variables[var.name].y_slices[0]]
@@ -385,8 +335,8 @@ class Solution(object):
             return self._first_state
         except AttributeError:
             new_sol = Solution(
-                self.all_ts[0][:1],
-                self.all_ys[0][:, :1],
+                self.all_ts[:1],
+                self.all_ys[:1],
                 self.all_models[:1],
                 self.all_inputs[:1],
                 None,
@@ -414,8 +364,8 @@ class Solution(object):
             return self._last_state
         except AttributeError:
             new_sol = Solution(
-                self.all_ts[-1][-1:],
-                self.all_ys[-1][:, -1:],
+                self.all_ts[-1:],
+                self.all_ys[-1:],
                 self.all_models[-1:],
                 self.all_inputs[-1:],
                 self.t_event,
@@ -464,7 +414,7 @@ class Solution(object):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # make sure that sensitivities are extracted if required
         if isinstance(self._sensitivities, bool) and self._sensitivities:
-            self.extract_explicit_sensitivities()
+            self.extract_and_set_explicit_sensitivities()
 
         # Convert single entry to list
         if isinstance(variables, str):
@@ -477,41 +427,68 @@ class Solution(object):
 
             # Iterate through all models, some may be in the list several times and
             # therefore only get set up once
-            vars_casadi = []
-            for (i, (model, ys, inputs, var_pybamm)) in enumerate(
+            outputs_casadi = []
+            for (i, (model, y, inputs, var_pybamm)) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
                 if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
-                    model._variables_casadi[key] = var_casadi
+                    output_casadi = self.process_casadi_var(var_pybamm, inputs, y)
+                    model._variables_casadi[key] = output_casadi
                     vars_pybamm[i] = var_pybamm
                 elif key in model._variables_casadi:
-                    var_casadi = model._variables_casadi[key]
+                    output_casadi = model._variables_casadi[key]
                 else:
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
-                    model._variables_casadi[key] = var_casadi
-                vars_casadi.append(var_casadi)
+                    output_casadi = self.process_casadi_var(var_pybamm, inputs, y)
+                    model._variables_casadi[key] = output_casadi
+                outputs_casadi.append(output_casadi)
             var = pybamm.ProcessedVariable(
-                vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
+                vars_pybamm, outputs_casadi, self, cumtrapz_ic=cumtrapz_ic
             )
 
             # Save variable and data
             self._variables[key] = var
             self.data[key] = var.data
 
-    def process_casadi_var(self, var_pybamm, inputs, ys):
+    def process_casadi_var(self, var_pybamm, inputs, y):
         t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", ys.shape[0])
+        y_MX = casadi.MX.sym("y", y.shape[0])
         inputs_MX_dict = {
-            key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
+            key: casadi.MX.sym(key, value.shape[0]) for key, value in inputs.items()
         }
         inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
         var_casadi = casadi.Function("variable", [t_MX, y_MX, inputs_MX], [var_sym])
-        return var_casadi
+
+        outputs = {"variable": var_casadi}
+
+        # Set up symbolic variables if sensitivities are required
+        if self._sensitivities:
+            # Calculate dvar_dy @ dy_dp using CasADi's jtimes function (more efficient
+            # than calculating dvar_dy then multiplying by dy_dp)
+            dydp_MX = casadi.MX.sym("dydp", y.shape[0], inputs_MX.shape[0])
+            dvar_dy_times_dy_dp = casadi.jtimes(var_sym, y_MX, dydp_MX)
+            # Convert to function if non-zero
+            if not dvar_dy_times_dy_dp.is_zero():
+                func = casadi.Function(
+                    "name", [t_MX, y_MX, dydp_MX, inputs_MX], [dvar_dy_times_dy_dp]
+                )
+            else:
+                func = None
+            outputs["dvar_dy_times_dy_dp"] = func
+
+            # Calculate dvar_dp with casadi's jacobian function
+            dvar_dp = casadi.jacobian(var_sym, inputs_MX)
+            # Convert to function if non-zero
+            if not dvar_dp.is_zero():
+                func = casadi.Function("name", [t_MX, y_MX, inputs_MX], [dvar_dp])
+            else:
+                func = None
+            outputs["dvar_dp"] = func
+
+        return outputs
 
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
@@ -691,11 +668,7 @@ class Solution(object):
             )
         # Special case: new solution only has one timestep and it is already in the
         # existing solution. In this case, return a copy of the existing solution
-        if (
-            len(other.all_ts) == 1
-            and len(other.all_ts[0]) == 1
-            and other.all_ts[0][0] == self.all_ts[-1][-1]
-        ):
+        if len(other.all_ts) == 1 and other.all_ts[0] == self.all_ts[-1]:
             new_sol = self.copy()
             # Update termination using the latter solution
             new_sol._termination = other.termination
@@ -704,19 +677,17 @@ class Solution(object):
             return new_sol
 
         # Update list of sub-solutions
-        if other.all_ts[0][0] == self.all_ts[-1][-1]:
+        if other.all_ts[0] == self.all_ts[-1]:
             # Skip first time step if it is repeated
-            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
-            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+            start = 1
         else:
-            all_ts = self.all_ts + other.all_ts
-            all_ys = self.all_ys + other.all_ys
+            start = 0
 
         new_sol = Solution(
-            all_ts,
-            all_ys,
-            self.all_models + other.all_models,
-            self.all_inputs + other.all_inputs,
+            self.all_ts + other.all_ts[start:],
+            self.all_ys + other.all_ys[start:],
+            self.all_models + other.all_models[start:],
+            self.all_inputs + other.all_inputs[start:],
             other.t_event,
             other.y_event,
             other.termination,

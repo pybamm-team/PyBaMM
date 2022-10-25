@@ -7,501 +7,541 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
 import sys
 
+length_scales = {
+    "negative electrode": 1,
+    "separator": 1,
+    "positive electrode": 1,
+}
 
-class TestScipySolver(unittest.TestCase):
-    def test_model_solver_python_and_jax(self):
 
-        if pybamm.have_jax():
-            formats = ["python", "jax"]
-        else:
-            formats = ["python"]
+# class TestScipySolver(unittest.TestCase):
+#     def test_model_solver_python_and_jax(self):
 
-        for convert_to_format in formats:
-            # Create model
-            model = pybamm.BaseModel()
-            model.convert_to_format = convert_to_format
-            domain = ["negative electrode", "separator", "positive electrode"]
-            var = pybamm.Variable("var", domain=domain)
-            model.rhs = {var: 0.1 * var}
-            model.initial_conditions = {var: 1}
-            # No need to set parameters;
-            # can use base discretisation (no spatial operators)
+#         if pybamm.have_jax():
+#             formats = ["python", "jax"]
+#         else:
+#             formats = ["python"]
 
-            # create discretisation
-            mesh = get_mesh_for_testing()
-            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-            disc = pybamm.Discretisation(mesh, spatial_methods)
-            disc.process_model(model)
-            # Solve
-            # Make sure that passing in extra options works
-            solver = pybamm.ScipySolver(
-                rtol=1e-8, atol=1e-8, method="RK45", extra_options={"first_step": 1e-4}
-            )
-            t_eval = np.linspace(0, 1, 80)
-            solution = solver.solve(model, t_eval)
-            np.testing.assert_array_equal(solution.t, t_eval)
-            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+#         for convert_to_format in formats:
+#             # Create model
+#             model = pybamm.BaseModel()
+#             model.convert_to_format = convert_to_format
+#             domain = ["negative electrode", "separator", "positive electrode"]
+#             var = pybamm.Variable("var", domain=domain)
+#             model.length_scales = length_scales
+#             model.rhs = {var: 0.1 * var}
+#             model.initial_conditions = {var: 1}
+#             model.variables = {"var": var}
+#             # No need to set parameters;
+#             # can use base discretisation (no spatial operators)
 
-            # Test time
-            self.assertEqual(
-                solution.total_time, solution.solve_time + solution.set_up_time
-            )
-            self.assertEqual(solution.termination, "final time")
+#             # create discretisation
+#             mesh = get_mesh_for_testing()
+#             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#             disc = pybamm.Discretisation(mesh, spatial_methods)
+#             disc.process_model(model)
+#             # Solve
+#             # Make sure that passing in extra options works
+#             solver = pybamm.ScipySolver(
+#                 rtol=1e-8, atol=1e-8, method="RK45", extra_options={"first_step": 1e-4}
+#             )
+#             t_eval = np.linspace(0, 1, 80)
+#             solution = solver.solve(model, t_eval)
+#             np.testing.assert_array_equal(solution.t, t_eval)
+#             np.testing.assert_allclose(
+#                 solution["var"].data[0], np.exp(0.1 * solution.t)
+#             )
 
-    def test_model_solver_failure(self):
-        # Turn off warnings to ignore sqrt error
-        warnings.simplefilter("ignore")
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        var = pybamm.Variable("var")
-        model.rhs = {var: -pybamm.sqrt(var)}
-        model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial operators)
+#             # Test time
+#             self.assertEqual(
+#                 solution.total_time, solution.solve_time + solution.set_up_time
+#             )
+#             self.assertEqual(solution.termination, "final time")
 
-        # create discretisation
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
+#     def test_model_solver_failure(self):
+#         # Turn off warnings to ignore sqrt error
+#         warnings.simplefilter("ignore")
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "python"
+#         var = pybamm.Variable("var")
+#         model.rhs = {var: -pybamm.sqrt(var)}
+#         model.initial_conditions = {var: 1}
+#         # No need to set parameters; can use base discretisation (no spatial operators)
 
-        t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        # Expect solver to fail when y goes negative
-        with self.assertRaises(pybamm.SolverError):
-            solver.solve(model, t_eval)
+#         # create discretisation
+#         disc = pybamm.Discretisation()
+#         disc.process_model(model)
 
-        # Turn warnings back on
-        warnings.simplefilter("default")
+#         t_eval = np.linspace(0, 3, 100)
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         # Expect solver to fail when y goes negative
+#         with self.assertRaises(pybamm.SolverError):
+#             solver.solve(model, t_eval)
 
-    def test_model_solver_with_event_python(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -0.1 * var}
-        model.initial_conditions = {var: 1}
-        # needs to work with multiple events (to avoid bug where only last event is
-        # used)
-        model.events = [
-            pybamm.Event("var=0.5", pybamm.min(var - 0.5)),
-            pybamm.Event("var=-0.5", pybamm.min(var + 0.5)),
-        ]
-        # No need to set parameters; can use base discretisation (no spatial operators)
+#         # Turn warnings back on
+#         warnings.simplefilter("default")
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval)
-        self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
-        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+#     def test_model_solver_with_event_python(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "python"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var = pybamm.Variable("var", domain=domain)
+#         model.rhs = {var: -0.1 * var}
+#         model.initial_conditions = {var: 1}
+#         model.variables = {"var": var}
+#         # needs to work with multiple events (to avoid bug where only last event is
+#         # used)
+#         model.events = [
+#             pybamm.Event("var=0.5", pybamm.min(var - 0.5)),
+#             pybamm.Event("var=-0.5", pybamm.min(var + 0.5)),
+#         ]
+#         # No need to set parameters; can use base discretisation (no spatial operators)
 
-        # Test event in solution variables_and_events
-        np.testing.assert_array_almost_equal(solution["Event: var=0.5"].data[-1], 0)
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         t_eval = np.linspace(0, 10, 100)
+#         solution = solver.solve(model, t_eval)
+#         self.assertLess(len(solution.t), len(t_eval))
+#         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
+#         np.testing.assert_allclose(solution["var"].data[0], np.exp(-0.1 * solution.t))
+#         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+#         np.testing.assert_array_equal(
+#             solution.y_event[:, 0], solution.all_ys[-1].flatten()
+#         )
 
-    def test_model_solver_ode_with_jacobian_python(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=whole_cell)
-        var2 = pybamm.Variable("var2", domain=whole_cell)
-        model.rhs = {var1: var1, var2: 1 - var1}
-        model.initial_conditions = {var1: 1.0, var2: -1.0}
-        model.variables = {"var1": var1, "var2": var2}
+#         # Test event in solution variables_and_events
+#         np.testing.assert_array_almost_equal(solution["Event: var=0.5"].data[-1], 0)
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+#     def test_model_solver_ode_with_jacobian_python(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "python"
+#         whole_cell = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var1 = pybamm.Variable("var1", domain=whole_cell)
+#         var2 = pybamm.Variable("var2", domain=whole_cell)
+#         model.rhs = {var1: var1, var2: 1 - var1}
+#         model.initial_conditions = {var1: 1.0, var2: -1.0}
+#         model.variables = {"var1": var1, "var2": var2}
 
-        # Add user-supplied Jacobian to model
-        combined_submesh = mesh.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-        N = combined_submesh.npts
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
 
-        # construct jacobian in order of model.rhs
-        J = []
-        for var in model.rhs.keys():
-            if var == var1:
-                J.append([np.eye(N), np.zeros((N, N))])
-            else:
-                J.append([-1.0 * np.eye(N), np.zeros((N, N))])
+#         # Add user-supplied Jacobian to model
+#         combined_submesh = mesh.combine_submeshes(
+#             "negative electrode", "separator", "positive electrode"
+#         )
+#         N = combined_submesh.npts
 
-        J = np.block(J)
+#         # construct jacobian in order of model.rhs
+#         J = []
+#         for var in model.rhs.keys():
+#             if var == var1:
+#                 J.append([np.eye(N), np.zeros((N, N))])
+#             else:
+#                 J.append([-1.0 * np.eye(N), np.zeros((N, N))])
 
-        def jacobian(t, y):
-            return J
+#         J = np.block(J)
 
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-9, atol=1e-9)
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
+#         def jacobian(t, y):
+#             return J
 
-        T, Y = solution.t, solution.y
-        np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(T, Y),
-            np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["var2"].evaluate(T, Y),
-            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
-        )
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-9, atol=1e-9)
+#         t_eval = np.linspace(0, 1, 100)
+#         solution = solver.solve(model, t_eval)
+#         np.testing.assert_array_equal(solution.t, t_eval)
 
-    def test_model_step_python(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: 0.1 * var}
-        model.initial_conditions = {var: 1}
+#         T = solution.t
+#         np.testing.assert_array_almost_equal(
+#             solution["var1"].data,
+#             np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
+#         )
+#         np.testing.assert_array_almost_equal(
+#             solution["var2"].data,
+#             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
+#         )
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+#     def test_model_step_python(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "python"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         var = pybamm.Variable("var", domain=domain)
+#         model.length_scales = length_scales
+#         model.rhs = {var: 0.1 * var}
+#         model.initial_conditions = {var: 1}
+#         model.variables = {"var": var}
 
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
 
-        # Step once
-        dt = 1
-        step_sol = solver.step(None, model, dt)
-        np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_array_almost_equal(step_sol.y[0], np.exp(0.1 * step_sol.t))
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
-        # Step again (return 5 points)
-        step_sol_2 = solver.step(step_sol, model, dt, npts=5)
-        np.testing.assert_array_equal(
-            step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
-        )
-        np.testing.assert_array_almost_equal(
-            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
-        )
+#         # Step once
+#         dt = 1
+#         step_sol = solver.step(None, model, dt)
+#         np.testing.assert_array_equal(step_sol.t, [0, dt])
+#         np.testing.assert_array_almost_equal(
+#             step_sol["var"].data[0], np.exp(0.1 * step_sol.t)
+#         )
 
-        # Check steps give same solution as solve
-        t_eval = step_sol.t
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
+#         # Step again (return 5 points)
+#         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
+#         np.testing.assert_array_equal(
+#             step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
+#         )
+#         np.testing.assert_array_almost_equal(
+#             step_sol_2["var"].data[0], np.exp(0.1 * step_sol_2.t)
+#         )
 
-    def test_step_different_model(self):
-        disc = pybamm.Discretisation()
+#         # Check steps give same solution as solve
+#         t_eval = step_sol.t
+#         solution = solver.solve(model, t_eval)
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data[0], step_sol["var"].data[0]
+#         )
 
-        # Create and discretise model1
-        model1 = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        var2 = pybamm.Variable("var2")
-        model1.rhs = {var: 0.1 * var}
-        model1.initial_conditions = {var: 1}
-        model1.variables = {"var": var, "mul_var": 2 * var, "var2": var}
-        disc.process_model(model1)
+#     def test_step_different_model(self):
+#         disc = pybamm.Discretisation()
 
-        # Create and discretise model2, which is slightly different
-        model2 = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        var2 = pybamm.Variable("var2")
-        model2.rhs = {var: 0.2 * var, var2: -0.5 * var2}
-        model2.initial_conditions = {var: 1, var2: 1}
-        model2.variables = {"var": var, "mul_var": 3 * var, "var2": var2}
-        disc.process_model(model2)
+#         # Create and discretise model1
+#         model1 = pybamm.BaseModel()
+#         var = pybamm.Variable("var")
+#         var2 = pybamm.Variable("var2")
+#         model1.rhs = {var: 0.1 * var}
+#         model1.initial_conditions = {var: 1}
+#         model1.variables = {"var": var, "mul_var": 2 * var, "var2": var}
+#         disc.process_model(model1)
 
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         # Create and discretise model2, which is slightly different
+#         model2 = pybamm.BaseModel()
+#         var = pybamm.Variable("var")
+#         var2 = pybamm.Variable("var2")
+#         model2.rhs = {var: 0.2 * var, var2: -0.5 * var2}
+#         model2.initial_conditions = {var: 1, var2: 1}
+#         model2.variables = {"var": var, "mul_var": 3 * var, "var2": var2}
+#         disc.process_model(model2)
 
-        # Step once
-        dt = 1
-        step_sol1 = solver.step(None, model1, dt)
-        np.testing.assert_array_equal(step_sol1.t, [0, dt])
-        np.testing.assert_array_almost_equal(step_sol1.y[0], np.exp(0.1 * step_sol1.t))
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
-        # Step again, the model has changed
-        step_sol2 = solver.step(step_sol1, model2, dt)
-        np.testing.assert_array_equal(step_sol2.t, [0, dt, 2 * dt])
-        np.testing.assert_array_almost_equal(
-            step_sol2.all_ys[0][0], np.exp(0.1 * step_sol1.t)
-        )
+#         # Step once
+#         dt = 1
+#         step_sol1 = solver.step(None, model1, dt)
+#         np.testing.assert_array_equal(step_sol1.t, [0, dt])
+#         np.testing.assert_array_almost_equal(
+#             step_sol1["var"].data, np.exp(0.1 * step_sol1.t)
+#         )
 
-    def test_model_solver_with_inputs(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
-        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+#         # Step again, the model has changed
+#         step_sol2 = solver.step(step_sol1, model2, dt)
+#         np.testing.assert_array_equal(step_sol2.t, [0, dt, 2 * dt])
+#         np.testing.assert_array_almost_equal(
+#             step_sol2["var"].data[: len(step_sol1.t)], np.exp(0.1 * step_sol1.t)
+#         )
 
-    def test_model_solver_multiple_inputs_happy_path(self):
-        for convert_to_format in ["python", "casadi"]:
-            # Create model
-            model = pybamm.BaseModel()
-            model.convert_to_format = convert_to_format
-            domain = ["negative electrode", "separator", "positive electrode"]
-            var = pybamm.Variable("var", domain=domain)
-            model.rhs = {var: -pybamm.InputParameter("rate") * var}
-            model.initial_conditions = {var: 1}
-            # create discretisation
-            mesh = get_mesh_for_testing()
-            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-            disc = pybamm.Discretisation(mesh, spatial_methods)
-            disc.process_model(model)
+#     def test_model_solver_with_inputs(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "python"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var = pybamm.Variable("var", domain=domain)
+#         model.rhs = {var: -pybamm.InputParameter("rate") * var}
+#         model.initial_conditions = {var: 1}
+#         model.variables = {"var": var}
+#         # No need to set parameters; can use base discretisation (no spatial
+#         # operators)
+#         model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         t_eval = np.linspace(0, 10, 100)
+#         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
+#         self.assertLess(len(solution.t), len(t_eval))
+#         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
+#         np.testing.assert_allclose(solution["var"].data[0], np.exp(-0.1 * solution.t))
 
-            solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-            t_eval = np.linspace(0, 10, 100)
-            ninputs = 8
-            inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+#     def test_model_solver_multiple_inputs_happy_path(self):
+#         for convert_to_format in ["python", "casadi"]:
+#             # Create model
+#             model = pybamm.BaseModel()
+#             model.convert_to_format = convert_to_format
+#             domain = ["negative electrode", "separator", "positive electrode"]
+#             model.length_scales = length_scales
+#             var = pybamm.Variable("var", domain=domain)
+#             model.rhs = {var: -pybamm.InputParameter("rate") * var}
+#             model.initial_conditions = {var: 1}
+#             model.variables = {"var": var}
+#             # create discretisation
+#             mesh = get_mesh_for_testing()
+#             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#             disc = pybamm.Discretisation(mesh, spatial_methods)
+#             disc.process_model(model)
 
-            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
-            for i in range(ninputs):
-                with self.subTest(i=i):
-                    solution = solutions[i]
-                    np.testing.assert_array_equal(solution.t, t_eval)
-                    np.testing.assert_allclose(
-                        solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
-                    )
+#             solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#             t_eval = np.linspace(0, 10, 100)
+#             ninputs = 8
+#             inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-    def test_model_solver_multiple_inputs_discontinuity_error(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 1}
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+#             solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+#             for i in range(ninputs):
+#                 with self.subTest(i=i):
+#                     solution = solutions[i]
+#                     np.testing.assert_array_equal(solution.t, t_eval)
+#                     np.testing.assert_allclose(
+#                         solution["var"].data[0], np.exp(-0.01 * (i + 1) * solution.t)
+#                     )
 
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        ninputs = 8
-        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+#     def test_model_solver_multiple_inputs_discontinuity_error(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "casadi"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var = pybamm.Variable("var", domain=domain)
+#         model.rhs = {var: -pybamm.InputParameter("rate") * var}
+#         model.initial_conditions = {var: 1}
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
 
-        model.events = [
-            pybamm.Event(
-                "discontinuity",
-                pybamm.Scalar(t_eval[-1] / 2),
-                event_type=pybamm.EventType.DISCONTINUITY,
-            )
-        ]
-        with self.assertRaisesRegex(
-            pybamm.SolverError,
-            (
-                "Cannot solve for a list of input parameters"
-                " sets with discontinuities"
-            ),
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         t_eval = np.linspace(0, 10, 100)
+#         ninputs = 8
+#         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-    def test_model_solver_multiple_inputs_initial_conditions_error(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+#         model._events = [
+#             pybamm.Event(
+#                 "discontinuity",
+#                 pybamm.Scalar(t_eval[-1] / 2),
+#                 event_type=pybamm.EventType.DISCONTINUITY,
+#             )
+#         ]
+#         with self.assertRaisesRegex(
+#             pybamm.SolverError,
+#             (
+#                 "Cannot solve for a list of input parameters"
+#                 " sets with discontinuities"
+#             ),
+#         ):
+#             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        ninputs = 8
-        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+#     def test_model_solver_multiple_inputs_initial_conditions_error(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "casadi"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var = pybamm.Variable("var", domain=domain)
+#         model.rhs = {var: -pybamm.InputParameter("rate") * var}
+#         model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
 
-        with self.assertRaisesRegex(
-            pybamm.SolverError,
-            ("Input parameters cannot appear in expression " "for initial conditions."),
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         t_eval = np.linspace(0, 10, 100)
+#         ninputs = 8
+#         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-    def test_model_solver_multiple_inputs_jax_format_error(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "jax"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+#         with self.assertRaisesRegex(
+#             pybamm.SolverError,
+#             ("Input parameters cannot appear in expression " "for initial conditions."),
+#         ):
+#             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        ninputs = 8
-        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+#     def test_model_solver_multiple_inputs_jax_format_error(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "jax"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var = pybamm.Variable("var", domain=domain)
+#         model.rhs = {var: -pybamm.InputParameter("rate") * var}
+#         model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
+#         # No need to set parameters; can use base discretisation (no spatial
+#         # operators)
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
 
-        with self.assertRaisesRegex(
-            pybamm.SolverError,
-            (
-                "Cannot solve list of inputs with multiprocessing "
-                'when model in format "jax".'
-            ),
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         t_eval = np.linspace(0, 10, 100)
+#         ninputs = 8
+#         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-    def test_model_solver_with_external(self):
-        # Create model
-        model = pybamm.BaseModel()
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=domain)
-        var2 = pybamm.Variable("var2", domain=domain)
-        model.rhs = {var1: -var2}
-        model.initial_conditions = {var1: 1}
-        model.external_variables = [var2]
-        model.variables = {"var2": var2}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
+#         with self.assertRaisesRegex(
+#             pybamm.SolverError,
+#             (
+#                 "Cannot solve list of inputs with multiprocessing "
+#                 'when model in format "jax".'
+#             ),
+#         ):
+#             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(
-            model, t_eval, external_variables={"var2": 0.5 * np.ones(100)}
-        )
-        np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
+#     def test_model_solver_with_external(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var1 = pybamm.Variable("var1", domain=domain)
+#         var2 = pybamm.Variable("var2", domain=domain)
+#         model.rhs = {var1: -var2}
+#         model.initial_conditions = {var1: 1}
+#         model.external_variables = [var2]
+#         model.variables = {"var1": var1, "var2": var2}
+#         # No need to set parameters; can use base discretisation (no spatial
+#         # operators)
 
-    def test_model_solver_with_event_with_casadi(self):
-        # Create model
-        model = pybamm.BaseModel()
-        for use_jacobian in [True, False]:
-            model.use_jacobian = use_jacobian
-            model.convert_to_format = "casadi"
-            domain = ["negative electrode", "separator", "positive electrode"]
-            var = pybamm.Variable("var", domain=domain)
-            model.rhs = {var: -0.1 * var}
-            model.initial_conditions = {var: 1}
-            # needs to work with multiple events (to avoid bug where only last event is
-            # used)
-            model.events = [
-                pybamm.Event("var=0.5", pybamm.min(var - 0.5)),
-                pybamm.Event("var=-0.5", pybamm.min(var + 0.5)),
-            ]
-            # No need to set parameters; can use base discretisation (no spatial
-            # operators)
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+#         t_eval = np.linspace(0, 10, 100)
+#         solution = solver.solve(
+#             model, t_eval, external_variables={"var2": 0.5 * np.ones(100)}
+#         )
+#         np.testing.assert_allclose(
+#             solution["var1"].data[0], 1 - 0.5 * solution.t, rtol=1e-06
+#         )
 
-            # create discretisation
-            mesh = get_mesh_for_testing()
-            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-            disc = pybamm.Discretisation(mesh, spatial_methods)
-            model_disc = disc.process_model(model, inplace=False)
-            # Solve
-            solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-            t_eval = np.linspace(0, 10, 100)
-            solution = solver.solve(model_disc, t_eval)
-            self.assertLess(len(solution.t), len(t_eval))
-            np.testing.assert_array_equal(
-                solution.t[:-1], t_eval[: len(solution.t) - 1]
-            )
-            np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+#     def test_model_solver_with_event_with_casadi(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         for use_jacobian in [True, False]:
+#             model.use_jacobian = use_jacobian
+#             model.convert_to_format = "casadi"
+#             domain = ["negative electrode", "separator", "positive electrode"]
+#             model.length_scales = length_scales
+#             var = pybamm.Variable("var", domain=domain)
+#             model.rhs = {var: -0.1 * var}
+#             model.initial_conditions = {var: 1}
+#             model.variables = {"var": var}
+#             # needs to work with multiple events (to avoid bug where only last event is
+#             # used)
+#             model.events = [
+#                 pybamm.Event("var=0.5", pybamm.min(var - 0.5)),
+#                 pybamm.Event("var=-0.5", pybamm.min(var + 0.5)),
+#             ]
+#             # No need to set parameters; can use base discretisation (no spatial
+#             # operators)
 
-    def test_model_solver_with_inputs_with_casadi(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 1}
-        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
+#             # create discretisation
+#             mesh = get_mesh_for_testing()
+#             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#             disc = pybamm.Discretisation(mesh, spatial_methods)
+#             model_disc = disc.process_model(model, inplace=False)
+#             # Solve
+#             solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#             t_eval = np.linspace(0, 10, 100)
+#             solution = solver.solve(model_disc, t_eval)
+#             self.assertLess(len(solution.t), len(t_eval))
+#             np.testing.assert_array_equal(
+#                 solution.t[:-1], t_eval[: len(solution.t) - 1]
+#             )
+#             np.testing.assert_allclose(
+#                 solution["var"].data[0], np.exp(-0.1 * solution.t)
+#             )
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+#     def test_model_solver_with_inputs_with_casadi(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         model.convert_to_format = "casadi"
+#         domain = ["negative electrode", "separator", "positive electrode"]
+#         model.length_scales = length_scales
+#         var = pybamm.Variable("var", domain=domain)
+#         model.rhs = {var: -pybamm.InputParameter("rate") * var}
+#         model.initial_conditions = {var: 1}
+#         model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
+#         model.variables = {"var": var}
 
-    def test_model_solver_inputs_in_initial_conditions(self):
-        # Create model
-        model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1")
-        model.rhs = {var1: pybamm.InputParameter("rate") * var1}
-        model.initial_conditions = {var1: pybamm.InputParameter("ic 1")}
+#         # No need to set parameters; can use base discretisation (no spatial
+#         # operators)
 
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(model, t_eval, inputs={"rate": -1, "ic 1": 0.1})
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 0.1 * np.exp(-solution.t), decimal=5
-        )
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+#         t_eval = np.linspace(0, 10, 100)
+#         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
+#         self.assertLess(len(solution.t), len(t_eval))
+#         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
+#         np.testing.assert_allclose(solution["var"].data[0], np.exp(-0.1 * solution.t))
 
-        # Solve again with different initial conditions
-        solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
-        )
+#     def test_model_solver_inputs_in_initial_conditions(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         var = pybamm.Variable("var")
+#         model.rhs = {var: pybamm.InputParameter("rate") * var}
+#         model.initial_conditions = {var: pybamm.InputParameter("ic 1")}
+#         model.variables = {"var": var}
 
-    def test_model_solver_manually_update_initial_conditions(self):
-        # Create model
-        model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1")
-        model.rhs = {var1: -var1}
-        model.initial_conditions = {var1: 1}
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+#         t_eval = np.linspace(0, 5, 100)
+#         solution = solver.solve(model, t_eval, inputs={"rate": -1, "ic 1": 0.1})
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data, 0.1 * np.exp(-solution.t), decimal=5
+#         )
 
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 1 * np.exp(-solution.t), decimal=5
-        )
+#         # Solve again with different initial conditions
+#         solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data, 1 * np.exp(-0.1 * solution.t), decimal=5
+#         )
 
-        # Change initial conditions and solve again
-        model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
-            pybamm.Vector([[2]])
-        )
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 2 * np.exp(-solution.t), decimal=5
-        )
+#     def test_model_solver_manually_update_initial_conditions(self):
+#         # Create model
+#         model = pybamm.BaseModel()
+#         var = pybamm.Variable("var")
+#         model.rhs = {var: -var}
+#         model.initial_conditions = {var: 1}
+#         model.variables = {"var": var}
+
+#         # Solve
+#         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+#         t_eval = np.linspace(0, 5, 100)
+#         solution = solver.solve(model, t_eval)
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data, 1 * np.exp(-solution.t), decimal=5
+#         )
+
+#         # Change initial conditions and solve again
+#         model._concatenated_initial_conditions = pybamm.Vector([[2]])
+#         solution = solver.solve(model, t_eval)
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data, 2 * np.exp(-solution.t), decimal=5
+#         )
 
 
 class TestScipySolverWithSensitivity(unittest.TestCase):
@@ -512,7 +552,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {var: p * var}
         model.initial_conditions = {var: 1}
-        model.variables = {"var squared": var**2}
+        model.variables = {"var": var, "var squared": var**2}
 
         # Solve
         # Make sure that passing in extra options works
@@ -522,7 +562,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
         )
         np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution["var"].data, np.exp(0.1 * solution.t))
         np.testing.assert_allclose(
             solution.sensitivities["p"],
             (solution.t * np.exp(0.1 * solution.t))[:, np.newaxis],
@@ -532,9 +572,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
         np.testing.assert_allclose(
             solution["var squared"].sensitivities["p"],
-            (2 * np.exp(0.1 * solution.t) * solution.t * np.exp(0.1 * solution.t))[
-                :, np.newaxis
-            ],
+            (2 * np.exp(0.1 * solution.t) * solution.t * np.exp(0.1 * solution.t)),
         )
 
         # More complicated model
@@ -547,7 +585,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         s = pybamm.InputParameter("s")
         model.rhs = {var: p * q}
         model.initial_conditions = {var: r}
-        model.variables = {"var times s": var * s}
+        model.variables = {"var": var, "var times s": var * s}
 
         # Solve
         # Make sure that passing in extra options works
@@ -559,7 +597,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
             calculate_sensitivities=True,
         )
-        np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
+        np.testing.assert_allclose(solution["var"].data, -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
             solution.sensitivities["p"],
             (2 * solution.t)[:, np.newaxis],
@@ -570,36 +608,34 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
         np.testing.assert_allclose(solution.sensitivities["r"], 1)
         np.testing.assert_allclose(solution.sensitivities["s"], 0)
-        np.testing.assert_allclose(
-            solution.sensitivities["all"],
-            np.hstack(
-                [
-                    solution.sensitivities["p"],
-                    solution.sensitivities["q"],
-                    solution.sensitivities["r"],
-                    solution.sensitivities["s"],
-                ]
-            ),
-        )
+        for idx in range(len(solution.t)):
+            np.testing.assert_allclose(
+                solution.sensitivities["all"][idx].full().flatten(),
+                np.hstack(
+                    [
+                        solution.sensitivities["p"][idx],
+                        solution.sensitivities["q"][idx],
+                        solution.sensitivities["r"][idx],
+                        solution.sensitivities["s"][idx],
+                    ]
+                ),
+            )
         np.testing.assert_allclose(
             solution["var times s"].data, 0.5 * (-1 + 0.2 * solution.t)
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivities["p"],
-            0.5 * (2 * solution.t)[:, np.newaxis],
+            solution["var times s"].sensitivities["p"], 0.5 * (2 * solution.t)
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivities["q"],
-            0.5 * (0.1 * solution.t)[:, np.newaxis],
+            solution["var times s"].sensitivities["q"], 0.5 * (0.1 * solution.t)
         )
         np.testing.assert_allclose(solution["var times s"].sensitivities["r"], 0.5)
         np.testing.assert_allclose(
-            solution["var times s"].sensitivities["s"],
-            (-1 + 0.2 * solution.t)[:, np.newaxis],
+            solution["var times s"].sensitivities["s"], (-1 + 0.2 * solution.t)
         )
         np.testing.assert_allclose(
             solution["var times s"].sensitivities["all"],
-            np.hstack(
+            np.vstack(
                 [
                     solution["var times s"].sensitivities["p"],
                     solution["var times s"].sensitivities["q"],
@@ -718,86 +754,87 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             ),
         )
 
-    def test_solve_sensitivity_vector_var_vector_input(self):
-        var = pybamm.Variable("var", "negative electrode")
-        model = pybamm.BaseModel()
-        # Set length scales to avoid warning
-        model.length_scales = {"negative electrode": 1}
 
-        param = pybamm.InputParameter("param", "negative electrode")
-        model.rhs = {var: -param * var}
-        model.initial_conditions = {var: 2}
-        model.variables = {
-            "var": var,
-            "integral of var": pybamm.Integral(var, pybamm.standard_spatial_vars.x_n),
-        }
+#     def test_solve_sensitivity_vector_var_vector_input(self):
+#         var = pybamm.Variable("var", "negative electrode")
+#         model = pybamm.BaseModel()
+#         # Set length scales to avoid warning
+#         model.length_scales = {"negative electrode": 1}
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        n = disc.mesh["negative electrode"].npts
+#         param = pybamm.InputParameter("param", "negative electrode")
+#         model.rhs = {var: -param * var}
+#         model.initial_conditions = {var: 2}
+#         model.variables = {
+#             "var": var,
+#             "integral of var": pybamm.Integral(var, pybamm.standard_spatial_vars.x_n),
+#         }
 
-        # Solve - constant input
-        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
-        t_eval = np.linspace(0, 1)
-        solution = solver.solve(
-            model,
-            t_eval,
-            inputs={"param": 7 * np.ones(n)},
-            calculate_sensitivities=True,
-        )
-        l_n = mesh["negative electrode"].edges[-1]
-        np.testing.assert_array_almost_equal(
-            solution["var"].data,
-            np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
-            decimal=4,
-        )
+#         # create discretisation
+#         mesh = get_mesh_for_testing()
+#         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+#         disc = pybamm.Discretisation(mesh, spatial_methods)
+#         disc.process_model(model)
+#         n = disc.mesh["negative electrode"].npts
 
-        np.testing.assert_array_almost_equal(
-            solution["var"].sensitivities["param"],
-            np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
-        )
-        np.testing.assert_array_almost_equal(
-            solution["integral of var"].data,
-            2 * np.exp(-7 * t_eval) * l_n,
-            decimal=4,
-        )
-        np.testing.assert_array_almost_equal(
-            solution["integral of var"].sensitivities["param"],
-            np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / n, (n, 1)).T,
-        )
+#         # Solve - constant input
+#         solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
+#         t_eval = np.linspace(0, 1)
+#         solution = solver.solve(
+#             model,
+#             t_eval,
+#             inputs={"param": 7 * np.ones(n)},
+#             calculate_sensitivities=True,
+#         )
+#         l_n = mesh["negative electrode"].edges[-1]
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data,
+#             np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
+#             decimal=4,
+#         )
 
-        # Solve - linspace input
-        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
-        t_eval = np.linspace(0, 1)
-        p_eval = np.linspace(1, 2, n)
-        solution = solver.solve(
-            model, t_eval, inputs={"param": p_eval}, calculate_sensitivities=True
-        )
-        l_n = mesh["negative electrode"].edges[-1]
-        np.testing.assert_array_almost_equal(
-            solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4
-        )
-        np.testing.assert_array_almost_equal(
-            solution["var"].sensitivities["param"],
-            np.vstack([np.diag(-2 * t * np.exp(-p_eval * t)) for t in t_eval]),
-        )
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].sensitivities["param"],
+#             np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
+#         )
+#         np.testing.assert_array_almost_equal(
+#             solution["integral of var"].data,
+#             2 * np.exp(-7 * t_eval) * l_n,
+#             decimal=4,
+#         )
+#         np.testing.assert_array_almost_equal(
+#             solution["integral of var"].sensitivities["param"],
+#             np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / n, (n, 1)).T,
+#         )
 
-        np.testing.assert_array_almost_equal(
-            solution["integral of var"].data,
-            np.sum(
-                2
-                * np.exp(-p_eval[:, np.newaxis] * t_eval)
-                * mesh["negative electrode"].d_edges[:, np.newaxis],
-                axis=0,
-            ),
-        )
-        np.testing.assert_array_almost_equal(
-            solution["integral of var"].sensitivities["param"],
-            np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
-        )
+#         # Solve - linspace input
+#         solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
+#         t_eval = np.linspace(0, 1)
+#         p_eval = np.linspace(1, 2, n)
+#         solution = solver.solve(
+#             model, t_eval, inputs={"param": p_eval}, calculate_sensitivities=True
+#         )
+#         l_n = mesh["negative electrode"].edges[-1]
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4
+#         )
+#         np.testing.assert_array_almost_equal(
+#             solution["var"].sensitivities["param"],
+#             np.vstack([np.diag(-2 * t * np.exp(-p_eval * t)) for t in t_eval]),
+#         )
+
+#         np.testing.assert_array_almost_equal(
+#             solution["integral of var"].data,
+#             np.sum(
+#                 2
+#                 * np.exp(-p_eval[:, np.newaxis] * t_eval)
+#                 * mesh["negative electrode"].d_edges[:, np.newaxis],
+#                 axis=0,
+#             ),
+#         )
+#         np.testing.assert_array_almost_equal(
+#             solution["integral of var"].sensitivities["param"],
+#             np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
+#         )
 
 
 if __name__ == "__main__":

@@ -36,13 +36,14 @@ class ProcessedVariable(object):
     def __init__(
         self,
         base_variables,
-        base_variables_casadi,
+        outputs_casadi,
         solution,
         warn=True,
         cumtrapz_ic=None,
     ):
         self.base_variables = base_variables
-        self.base_variables_casadi = base_variables_casadi
+        self.outputs_casadi = outputs_casadi
+        self.base_variables_casadi = [out["variable"] for out in outputs_casadi]
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
@@ -68,7 +69,7 @@ class ProcessedVariable(object):
 
         # Evaluate base variable at initial time
         self.base_eval = self.base_variables_casadi[0](
-            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
+            self.all_ts[0], self.all_ys[0], self.all_inputs_casadi[0]
         ).full()
 
         # handle 2D (in space) finite element variables differently
@@ -113,31 +114,26 @@ class ProcessedVariable(object):
     def initialise_0D(self):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_pts))
-        idx = 0
         last_t = 0
         # Evaluate the base_variable index-by-index
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        for idx, (t, y, inputs, base_var_casadi) in enumerate(
+            zip(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs_casadi,
+                self.base_variables_casadi,
+            )
         ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                if self.cumtrapz_ic is not None:
-                    if idx == 0:
-                        new_val = t * base_var_casadi(t, y, inputs).full()[0, 0]
-                        entries[idx] = self.cumtrapz_ic + (
-                            t * base_var_casadi(t, y, inputs).full()[0, 0]
-                        )
-                    else:
-                        new_val = (t - last_t) * (
-                            base_var_casadi(t, y, inputs).full()[0, 0]
-                        )
-                        entries[idx] = new_val + entries[idx - 1]
+            eval_casadi = float(base_var_casadi(t, y, inputs))
+            if self.cumtrapz_ic is not None:
+                if idx == 0:
+                    entries[idx] = self.cumtrapz_ic + t * eval_casadi
                 else:
-                    entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
-
-                idx += 1
-                last_t = t
+                    new_val = (t - last_t) * eval_casadi
+                    entries[idx] = new_val + entries[idx - 1]
+            else:
+                entries[idx] = eval_casadi
+            last_t = t
 
         # set up interpolation
         if len(self.t_pts) == 1:
@@ -161,15 +157,15 @@ class ProcessedVariable(object):
         entries = np.empty((len_space, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        for idx, (t, y, inputs, base_var_casadi) in enumerate(
+            zip(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs_casadi,
+                self.base_variables_casadi,
+            )
         ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
-                idx += 1
+            entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
 
         # Get node and edge values
         nodes = self.mesh.nodes
@@ -259,19 +255,19 @@ class ProcessedVariable(object):
         entries = np.empty((first_dim_size, second_dim_size, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        for idx, (t, y, inputs, base_var_casadi) in enumerate(
+            zip(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs_casadi,
+                self.base_variables_casadi,
+            )
         ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                idx += 1
+            entries[:, :, idx] = np.reshape(
+                base_var_casadi(t, y, inputs).full(),
+                [first_dim_size, second_dim_size],
+                order="F",
+            )
 
         # add points outside first dimension domain for extrapolation to
         # boundaries
@@ -410,19 +406,19 @@ class ProcessedVariable(object):
         entries = np.empty((len_y, len_z, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        for idx, (t, y, inputs, base_var_casadi) in enumerate(
+            zip(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs_casadi,
+                self.base_variables_casadi,
+            )
         ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [len_y, len_z],
-                    order="C",
-                )
-                idx += 1
+            entries[:, :, idx] = np.reshape(
+                base_var_casadi(t, y, inputs).full(),
+                [len_y, len_z],
+                order="C",
+            )
 
         # assign attributes for reference
         self.entries = entries
@@ -554,45 +550,34 @@ class ProcessedVariable(object):
         "Set up the sensitivity dictionary"
         inputs_stacked = self.all_inputs_casadi[0]
 
-        # Set up symbolic variables
-        t_casadi = casadi.MX.sym("t")
-        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
-        p_casadi = {
-            name: casadi.MX.sym(name, value.shape[0])
-            for name, value in self.all_inputs[0].items()
-        }
+        dy_dps = self.solution_sensitivities["all"]
+        if self.dimensions == 0:
+            S_var = np.zeros((inputs_stacked.shape[0], len(self.t_pts)))
+        elif self.dimensions == 1:
+            S_var = np.zeros(
+                (inputs_stacked.shape[0], self.base_eval.shape[0], len(self.t_pts))
+            )
 
-        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-
-        # Convert variable to casadi format for differentiating
-        var_casadi = self.base_variables[0].to_casadi(
-            t_casadi, y_casadi, inputs=p_casadi
-        )
-        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
-        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
-
-        # Convert to functions and evaluate index-by-index
-        dvar_dy_func = casadi.Function(
-            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
-        )
-        dvar_dp_func = casadi.Function(
-            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
-        )
-        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
-            for idx, t in enumerate(ts):
-                u = ys[:, idx]
-                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
-                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if index == 0 and idx == 0:
-                    dvar_dy_eval = next_dvar_dy_eval
-                    dvar_dp_eval = next_dvar_dp_eval
-                else:
-                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
-                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
-
-        # Compute sensitivity
-        dy_dp = self.solution_sensitivities["all"]
-        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+        # Compute sensitivity index-by-index
+        for idx, (t, y, outputs_casadi, inputs_stacked) in enumerate(
+            zip(self.all_ts, self.all_ys, self.outputs_casadi, self.all_inputs_casadi)
+        ):
+            dvar_dy_times_dy_dp_func = outputs_casadi["dvar_dy_times_dy_dp"]
+            dvar_dp_func = outputs_casadi["dvar_dp"]
+            dydp = dy_dps[idx]
+            S = 0
+            if dvar_dy_times_dy_dp_func is not None:
+                dvar_dy_times_dy_dp_eval = dvar_dy_times_dy_dp_func(
+                    t, y, dydp, inputs_stacked
+                )
+                S += dvar_dy_times_dy_dp_eval
+            if dvar_dp_func is not None:
+                dvar_dp_eval = dvar_dp_func(t, y, inputs_stacked)
+                S += dvar_dp_eval
+            if self.dimensions == 0:
+                S_var[:, idx] = S.full().flatten()
+            else:
+                S_var[:, :, idx] = S.full().T
 
         sensitivities = {"all": S_var}
 
@@ -600,7 +585,10 @@ class ProcessedVariable(object):
         start = 0
         for name, inp in self.all_inputs[0].items():
             end = start + inp.shape[0]
-            sensitivities[name] = S_var[:, start:end]
+            if inp.shape[0] == 1:
+                sensitivities[name] = S_var[start]
+            else:
+                sensitivities[name] = S_var[start:end]
             start = end
 
         # Save attribute

@@ -121,7 +121,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_less(solution.y[0, :-1], 1.5)
             np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
             np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-            np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+            np.testing.assert_array_equal(solution.y_event[:, 0], solution.all_ys[-1])
             np.testing.assert_array_almost_equal(
                 solution.y[0], np.exp(0.1 * solution.t), decimal=5
             )
