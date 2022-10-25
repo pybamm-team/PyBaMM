@@ -49,7 +49,7 @@ class TestCitations(unittest.TestCase):
 
         # Bibtext Style
         with temporary_filename() as filename:
-            pybamm.print_citations(filename, "text")
+            pybamm.print_citations(filename, "bibtex")
             with open(filename, "r") as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
