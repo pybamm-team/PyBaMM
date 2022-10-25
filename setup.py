@@ -186,7 +186,7 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.7,<3.10",
+    python_requires=">=3.8,<3.10",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
