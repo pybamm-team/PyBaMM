@@ -300,16 +300,16 @@ def have_julia():
         return False
 
     # Compatibility: Checks
-    if not info.is_pycall_built():
+    if not info.is_pycall_built():  # pragma: no cover
         return False
-    if not info.is_compatible_python():
+    if not info.is_compatible_python():  # pragma: no cover
         return False
 
     # Confirm Julia() is callable
     try:
         Julia()
         return True
-    except JuliaError:
+    except JuliaError:  # pragma: no cover
         return False
 
 
