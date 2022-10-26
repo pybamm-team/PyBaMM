@@ -93,6 +93,12 @@ class Pack(object):
         self.cell_model = pybamm.numpy_concatenation(
             sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
         )
+
+        self.timescale = sim.built_model.timescale
+
+        self.len_cell_rhs = sim.built_model.len_rhs
+        self.len_cell_algebraic = self.built_model.len_algebraic
+
         self.cell_size = self.cell_model.shape[0]
         self._sv_done = []
         self.built_model = sim.built_model
@@ -185,6 +191,7 @@ class Pack(object):
                 terminal_voltage = self.get_new_terminal_voltage()
                 self.batteries.update({desc: {"cell" : new_cell, "voltage" : terminal_voltage, "current_replaced" : False}})
                 self.offset += self.cell_size
+        self.num_cells = len(cells)
         cell_eqs = pybamm.numpy_concatenation(*cells)
 
         if len(curr_sources) != 1:
@@ -194,6 +201,7 @@ class Pack(object):
         self.place_currents(loop_currents, basis_to_place)
         pack_eqs = self.build_pack_equations(loop_currents, curr_sources)
         pack_eqs = pybamm.numpy_concatenation(*pack_eqs)
+        self.len_pack_eqs = len(pack_eqs)
         
         self.pack = pybamm.numpy_concatenation(pack_eqs, cell_eqs)
         self.ics = self.initialize_pack(num_loops, len(curr_sources))
