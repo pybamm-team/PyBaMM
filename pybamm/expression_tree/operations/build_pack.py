@@ -3,16 +3,48 @@
 #
 
 #TODO
-# -- Current In Batteries
 # - Test sign convention
 # - Eliminate node1x & node1y (use graph only)
 # - Thermals
+# - FunctionPack
 import pybamm
 from copy import deepcopy
 import networkx as nx
 import numpy as np
 import pandas as pd
 import liionpack as lp
+
+class offsetter(object):
+    def __init__(self, offset):
+        self._sv_done = []
+        self.offset = offset
+
+
+    def add_offset_to_state_vectors(self, symbol):
+        # this function adds an offset to the state vectors
+        new_y_slices = ()
+        if isinstance(symbol, pybamm.StateVector):
+            # need to make sure its in place
+            if symbol.id not in self._sv_done:
+                for this_slice in symbol.y_slices:
+                    start = this_slice.start + self.offset
+                    stop = this_slice.stop + self.offset
+                    step = this_slice.step
+                    new_slice = slice(start, stop, step)
+                    new_y_slices += (new_slice,)
+                symbol.replace_y_slices(*new_y_slices)
+                symbol.set_id()
+                self._sv_done += [symbol.id]
+
+        elif isinstance(symbol, pybamm.StateVectorDot):
+            raise NotImplementedError("Idk what this means")
+        else:
+            for child in symbol.children:
+                self.add_offset_to_state_vectors(child)
+                child.set_id()
+            symbol.set_id()
+
+
 
 class PsuedoInputParameter(pybamm.InputParameter):
     def create_copy(self):
@@ -38,7 +70,6 @@ def set_psuedo(symbol, expr):
         for child in symbol.children:
             set_psuedo(child, expr)
     symbol.set_id()
-
 
 
 class Pack(object):
@@ -77,6 +108,18 @@ class Pack(object):
             node_ys[row.node1] = row.node1_y
         self.node_xs = node_xs
         self.node_ys = node_ys
+        self.batt_string = None
+
+    def lolz(self, Ns, Np):
+        if self.batt_string is None:
+            one_parallel = ""
+            for np in range(Np):
+                one_parallel += "🔋"
+            batt = ""
+            for ns in range(Ns):
+                batt += one_parallel + "\n"
+            self.batt_string = batt
+        print(self.batt_string)
 
     def process_netlist(self):
         curr = [{} for i in range(len(self.netlist))]
@@ -95,37 +138,15 @@ class Pack(object):
         # This is the place to get clever.
         new_model = deepcopy(self.cell_model)
         # at some point need to figure out parameters
-        self.add_offset_to_state_vectors(new_model)
+        my_offsetter = offsetter(self.offset)
+        my_offsetter.add_offset_to_state_vectors(new_model)
         new_model.set_id()
         return new_model
 
-    def add_offset_to_state_vectors(self, symbol):
-        # this function adds an offset to the state vectors
-        new_y_slices = ()
-        if isinstance(symbol, pybamm.StateVector):
-            # need to make sure its in place
-            if symbol.id not in self._sv_done:
-                for this_slice in symbol.y_slices:
-                    start = this_slice.start + self.offset
-                    stop = this_slice.stop + self.offset
-                    step = this_slice.step
-                    new_slice = slice(start, stop, step)
-                    new_y_slices += (new_slice,)
-                symbol.replace_y_slices(*new_y_slices)
-                symbol.set_id()
-                self._sv_done += [symbol.id]
-
-        elif isinstance(symbol, pybamm.StateVectorDot):
-            raise NotImplementedError("Idk what this means")
-        else:
-            for child in symbol.children:
-                self.add_offset_to_state_vectors(child)
-                child.set_id()
-            symbol.set_id()
-
     def get_new_terminal_voltage(self):
-        symbol = self.built_model.variables["Terminal voltage [V]"]
-        self.add_offset_to_state_vectors(symbol)
+        symbol = deepcopy(self.built_model.variables["Terminal voltage [V]"])
+        my_offsetter = offsetter(self.offset)
+        my_offsetter.add_offset_to_state_vectors(symbol)
         return symbol
 
     def build_pack(self):
@@ -143,8 +164,6 @@ class Pack(object):
             pybamm.StateVector(slice(n,n+1), name="current_{}".format(n))
             for n in range(num_loops)
         ]
-        for loop_current in loop_currents:
-            print(loop_current.y_slices)
         #print(loop_current.y_slices for loop_current in loop_currents)
 
         curr_sources = []
@@ -156,7 +175,7 @@ class Pack(object):
                 curr_sources.append(edge)
 
         # now we know the offset, we should "build" the batteries here. will still need to replace the currents later.
-        self.offset = 0
+        self.offset = num_loops + len(curr_sources)
         self.batteries = {}
         cells = []
         for desc in self.netlist.desc:
@@ -174,6 +193,7 @@ class Pack(object):
         basis_to_place = deepcopy(mcb)
         self.place_currents(loop_currents, basis_to_place)
         pack_eqs = self.build_pack_equations(loop_currents, curr_sources)
+        pack_eqs = pybamm.numpy_concatenation(*pack_eqs)
         
         self.pack = pybamm.numpy_concatenation(pack_eqs, cell_eqs)
         self.ics = self.initialize_pack(num_loops, len(curr_sources))
@@ -270,8 +290,7 @@ class Pack(object):
             pack_equations.append(expr)
         
         #concatenate all the pack equations and return it.
-        pack_eqs = pybamm.numpy_concatenation(*pack_equations)
-        return pack_eqs
+        return pack_equations
 
 
             
@@ -358,4 +377,3 @@ class Pack(object):
                         )
                         inner_node = next_node
                     break
-    

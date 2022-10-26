@@ -8,6 +8,11 @@ from collections import OrderedDict
 from math import floor
 import graphlib
 
+class FunctionRepeat(object):
+    def __init__(self, expr, inputs):
+        pass
+    pass
+
 
 def remove_lines_with(input_string, pattern):
     string_list = input_string.split("\n")
@@ -1037,11 +1042,11 @@ class JuliaConcatenation(object):
                 continue
             elif child_var.shape[0] == 1:
                 start_row = end_row + 1
-                end_row = start_row + 1
+                end_row = start_row
                 if converter._preallocate:
                     if vec:
-                        code += "{}[{}{} = {} \n".format(
-                            my_name, start_row, right_parenthesis, child_var_name
+                        code += "@. {}[{}:{}{} =  {}\n".format(
+                            my_name, start_row, start_row, right_parenthesis, child_var_name
                         )
                     else:
                         code += "@. {}[{}{} = {} \n".format(
