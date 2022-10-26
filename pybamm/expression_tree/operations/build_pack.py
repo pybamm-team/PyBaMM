@@ -200,8 +200,9 @@ class Pack(object):
         basis_to_place = deepcopy(mcb)
         self.place_currents(loop_currents, basis_to_place)
         pack_eqs = self.build_pack_equations(loop_currents, curr_sources)
-        pack_eqs = pybamm.numpy_concatenation(*pack_eqs)
         self.len_pack_eqs = len(pack_eqs)
+        pack_eqs = pybamm.numpy_concatenation(*pack_eqs)
+        
         
         self.pack = pybamm.numpy_concatenation(pack_eqs, cell_eqs)
         self.ics = self.initialize_pack(num_loops, len(curr_sources))
