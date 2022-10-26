@@ -30,7 +30,8 @@ class JuliaConverter(object):
         inline=True,
         parallel="legacy-serial",
         outputs = [],
-        inputs = []
+        inputs = [],
+        black_box = False
     ):
         #if len(outputs) != 1:
         #    raise NotImplementedError("Julia black box can only have 1 output")
@@ -56,6 +57,7 @@ class JuliaConverter(object):
         self._type = "Float64"
         self._inline = inline
         self._parallel = parallel
+        self._black_box = black_box
         # "Caches"
         # Stores Constants to be Declared in the initial cache
         # insight: everything is just a line of code
@@ -483,6 +485,52 @@ class JuliaConverter(object):
         else:
             raise NotImplementedError()
 
+    def write_black_box(self, funcname):
+        top = self._intermediate[next(reversed(self._intermediate))]
+        if len(self.outputs) != 1:
+            raise NotImplementedError(
+                "only 1 output is allowed!"
+            )
+        if not self._preallocate:
+            raise NotImplementedError(
+                "black box only supports preallocation."
+            )
+        #this will automatically be in place with the correct function name
+        top_var_name = top._convert_intermediate_to_code(self, inline=False, cache_name=self.outputs[0])
+        
+        #still need to write the function.
+        self.write_function()
+        self._cache_and_const_string = (
+            "begin\n{} = let \n".format(funcname) + self._cache_and_const_string
+        )
+        
+        #No need to write a cache since it's in the input.
+        self._cache_and_const_string = remove_lines_with(
+            self._cache_and_const_string, top_var_name
+        )
+
+        #may need to modify this logic a bit in the future.
+        if "p" in self.inputs:
+            parameter_string = ""
+            for parameter in self.input_parameter_order:
+                parameter_string += "{},".format(parameter)
+            parameter_string += "= p\n"
+            self._function_string = parameter_string + self._function_string
+        
+        #same as _easy
+        self._function_string = (
+            self._cache_initialization_string + self._function_string
+        )
+
+        #no support for not preallocating. (for now)
+        self._function_string += "\n   return nothing\nend\nend\nend"
+        header_string = "@inbounds function(" + top_var_name
+        for this_input in self.inputs:
+            header_string = header_string + "," + this_input
+        header_string +=")\n"
+        self._function_string = header_string + self._function_string
+        return 0
+
     # Just get something working here, so can start actual testing
     def write_function_easy(self, funcname, inline=True):
         # start with the closure
@@ -562,9 +610,46 @@ class JuliaConverter(object):
     # rework this at some point
     def build_julia_code(self, funcname="f", inline=True):
         # get top node of tree
-        self.write_function_easy(funcname, inline=inline)
+        if self._black_box:
+            self.write_black_box(funcname)
+        else:
+            self.write_function_easy(funcname, inline=inline)
         string = self._cache_and_const_string + self._function_string
         return string
+
+#this is a bit of a weird one, may change it at some point
+class JuliaBlackBox(object):
+    def __init__(self, inputs, output, shape, name):
+        self.inputs = inputs
+        self.output = output
+        self.shape = shape
+        self.name = name
+    
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False, cache_name=None):
+        if converter.cache_exists(self.output, self.inputs):
+            return converter._cache_dict[self.output]
+        result_var_name = converter.create_cache(self, cache_name = cache_name)
+
+        input_var_names = []
+        for input in self.inputs:
+            input_var_names.append(
+                converter._intermediate[input]._convert_intermediate_to_code(converter, inline=inline)
+            )
+        result_var_name = converter._cache_dict[self.output]
+        code = "{}({}".format(self.name, self.output)
+        for input in input_var_names:
+            code = code+","+input
+        code = code+")\n"
+
+        #black box always generates a cache.
+        self.generate_code_and_dag(converter, code)
+        return result_var_name
+    
+    def generate_code_and_dag(self, converter, code):
+        converter._code[self.output] = code
+        converter._dag[self.output] = set(self.inputs)
+        if converter._parallel == "legacy-serial":
+            converter._function_string += code
 
 
 # BINARY OPERATORS: NEED TO DEFINE ONE FOR EACH MULTIPLE DISPATCH
