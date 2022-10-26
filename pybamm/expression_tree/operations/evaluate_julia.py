@@ -29,7 +29,12 @@ class JuliaConverter(object):
         input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
+        outputs = [],
+        inputs = []
     ):
+        #if len(outputs) != 1:
+        #    raise NotImplementedError("Julia black box can only have 1 output")
+        
         if ismtk:
             raise NotImplementedError("mtk is not supported")
 
@@ -335,12 +340,14 @@ class JuliaConverter(object):
     #  between the two. So, we have to do that with an if statement.
 
     # Cache and Const Creation
-    def create_cache(self, symbol):
+    def create_cache(self, symbol, cache_name=None):
         my_id = symbol.output
         cache_shape = self._intermediate[my_id].shape
         cache_id = self._cache_id
         self._cache_id += 1
-        cache_name = "cache_{}".format(cache_id)
+        if cache_name is None:
+            cache_name = "cache_{}".format(cache_id)
+        
         if self._preallocate:
             if self._cache_type == "standard":
                 if cache_shape[1] == 1:
@@ -401,11 +408,14 @@ class JuliaConverter(object):
             self._cache_dict[symbol.output] = cache_name
             return self._cache_dict[symbol.output]
 
-    def create_const(self, symbol):
+    def create_const(self, symbol, cache_name=None):
         my_id = symbol.output
         const_id = self._const_id + 1
         self._const_id = const_id
-        const_name = "const_{}".format(const_id)
+        if cache_name is None:
+            const_name = "const_{}".format(const_id)
+        else:
+            const_name = cache_name
         self._const_dict[my_id] = const_name
         mat_value = symbol.value
         val_line = self.write_const(mat_value)
@@ -591,10 +601,10 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
         self.output = output
         self.shape = shape
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False, cache_name=None):
         if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
-        result_var_name = converter.create_cache(self)
+        result_var_name = converter.create_cache(self, cache_name = cache_name)
         left_input_var_name, right_input_var_name = self.get_binary_inputs(
             converter, inline=False
         )
@@ -621,12 +631,12 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         self.shape = shape
         self.operator = operator
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
         if not inline:
-            result_var_name = converter.create_cache(self)
+            result_var_name = converter.create_cache(self, cache_name=cache_name)
             left_input_var_name, right_input_var_name = self.get_binary_inputs(
                 converter, inline=True
             )
@@ -686,7 +696,7 @@ class JuliaMinMax(JuliaBinaryOperation):
         self.shape = shape
         self.name = name
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
@@ -741,12 +751,12 @@ class JuliaBroadcastableFunction(JuliaFunction):
         if converter._parallel == "legacy-serial":
             converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
         if not inline:
-            result_var_name = converter.create_cache(self)
+            result_var_name = converter.create_cache(self, cache_name=cache_name)
             input_var_name = converter._intermediate[
                 self.input
             ]._convert_intermediate_to_code(converter, inline=True)
@@ -769,13 +779,13 @@ class JuliaBroadcastableFunction(JuliaFunction):
 
 
 class JuliaNegation(JuliaBroadcastableFunction):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
 
         if not inline:
-            result_var_name = converter.create_cache(self)
+            result_var_name = converter.create_cache(self, cache_name=cache_name)
             input_var_name = converter._intermediate[
                 self.input
             ]._convert_intermediate_to_code(converter, inline=True)
@@ -793,10 +803,10 @@ class JuliaNegation(JuliaBroadcastableFunction):
 
 
 class JuliaMinimumMaximum(JuliaBroadcastableFunction):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
-        result_var_name = converter.create_cache(self)
+        result_var_name = converter.create_cache(self, cache_name=cache_name)
         input_var_name = converter._intermediate[
             self.input
         ]._convert_intermediate_to_code(converter, inline=False)
@@ -823,7 +833,7 @@ class JuliaIndex(object):
         if converter._parallel == "legacy-serial":
             converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         index = self.index
@@ -902,8 +912,8 @@ class JuliaConstant(JuliaValue):
         self.value = value
         self.shape = value.shape
 
-    def _convert_intermediate_to_code(self, converter, inline=True):
-        converter.create_const(self)
+    def _convert_intermediate_to_code(self, converter, inline=True, cache_name=None):
+        converter.create_const(self, cache_name=cache_name)
         self.generate_code_and_dag(converter)
         return converter._const_dict[self.output]
 
@@ -914,7 +924,7 @@ class JuliaStateVector(JuliaValue):
         self.loc = loc
         self.shape = shape
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         start = self.loc[0] + 1
         end = self.loc[1]
         self.generate_code_and_dag(converter)
@@ -925,7 +935,7 @@ class JuliaStateVector(JuliaValue):
 
 
 class JuliaStateVectorDot(JuliaStateVector):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         start = self.loc[0] + 1
         end = self.loc[1]
         self.generate_code_and_dag(converter)
@@ -941,7 +951,7 @@ class JuliaScalar(JuliaConstant):
         self.value = float(value)
         self.shape = (1, 1)
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         self.generate_code_and_dag(converter)
         return self.value
 
@@ -951,7 +961,7 @@ class JuliaTime(JuliaScalar):
         self.output = my_id
         self.shape = (1, 1)
 
-    def _convert_intermediate_to_code(self, converter, inline=True):
+    def _convert_intermediate_to_code(self, converter, inline=True, cache_name=None):
         self.generate_code_and_dag(converter)
         return "t"
 
@@ -962,7 +972,7 @@ class JuliaInput(JuliaScalar):
         self.shape = (1, 1)
         self.name = name
 
-    def _convert_intermediate_to_code(self, converter, inline=True):
+    def _convert_intermediate_to_code(self, converter, inline=True, cache_name=None):
         self.generate_code_and_dag(converter)
         return self.name
 
@@ -981,11 +991,11 @@ class JuliaConcatenation(object):
         if converter._parallel == "legacy-serial":
             converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, self.children):
             return converter._cache_dict[self.output]
         num_cols = self.shape[1]
-        my_name = converter.create_cache(self)
+        my_name = converter.create_cache(self, cache_name=cache_name)
 
         # assume we don't have tensors. Already asserted
         # concatenations have to have the same width.
@@ -1085,11 +1095,11 @@ class JuliaDomainConcatenation(JuliaConcatenation):
         self.secondary_dimension_npts = secondary_dimension_npts
         self.children_slices = children_slices
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True):
+    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
         if converter.cache_exists(self.output, self.children):
             return converter._cache_dict[self.output]
         num_cols = self.shape[1]
-        result_var_name = converter.create_cache(self)
+        result_var_name = converter.create_cache(self, cache_name=cache_name)
 
         # assume we don't have tensors. Already asserted
         # that concatenations have to have the same width.
