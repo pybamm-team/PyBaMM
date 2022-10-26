@@ -97,7 +97,7 @@ class Pack(object):
         self.timescale = sim.built_model.timescale
 
         self.len_cell_rhs = sim.built_model.len_rhs
-        self.len_cell_algebraic = self.built_model.len_algebraic
+        self.len_cell_algebraic = sim.built_model.len_algebraic
 
         self.cell_size = self.cell_model.shape[0]
         self._sv_done = []
