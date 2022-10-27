@@ -920,7 +920,11 @@ class ParameterValues:
             if os.path.isfile(trial_path):
                 pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
                 return trial_path
-        raise FileNotFoundError("Could not find parameter {}".format(path))
+        raise FileNotFoundError(
+            f"Could not find parameter {path}. If you have a developer install, try "
+            "re-installing pybamm (e.g. `pip install -e .`) to expose recently-added "
+            "parameter entry points."
+        )
 
     def export_python_script(
         self, name, old_parameters_path="", new_parameters_path=""
