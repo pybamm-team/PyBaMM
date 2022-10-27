@@ -20,23 +20,17 @@ def remove_lines_with(input_string, pattern):
 #Wrapper to designate a function.
 #Bottom needs to already have a julia
 #conversion. (for shape.)
-class BlackBox(object):
-    def __init__(self, jl_shape, children, expr, name):
-        self.jl_shape = jl_shape
-        self.children = children
+class PybammJuliaFunction(pybamm.Symbol):
+    def __init__(self, children, expr, name):
         self.expr = expr
-        self.name = name
-    def set_id(self):
-        """
-        Set the immutable "identity" of a variable (e.g. for identifying y_slices).
-
-        Hashing can be slow, so we set the id when we create the node, and hence only
-        need to hash once.
-        """
-        self._id = hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-        )
+        super().__init__(name, children)
+    def evaluate_for_shape(self):
+        return self.expr.evaluate_for_shape()
+    
+    @property
+    def shape(self):
+        return self.expr.shape
+    
 
 
 
@@ -173,15 +167,15 @@ class JuliaConverter(object):
                 symbol.secondary_dimensions_npts,
                 symbol._children_slices,
             )
-        elif isinstance(symbol, BlackBox):
+        elif isinstance(symbol, PybammJuliaFunction):
             my_id = symbol.id
             child_ids = []
             for child in symbol.children:
-                child_id = self._convert_intermediate_to_code(child)
+                child_id = self._convert_tree_to_intermediate(child)
                 child_ids.append(child_id)
-            shape = symbol.jl_shape
+            shape = symbol.shape
             name = symbol.name
-            self._intermediate[my_id] = JuliaBlackBox(
+            self._intermediate[my_id] = JuliaJuliaFunction(
                 child_ids,
                 my_id,
                 shape,
@@ -561,7 +555,7 @@ class JuliaConverter(object):
 
         #no support for not preallocating. (for now)
         self._function_string += "\n   return nothing\nend\nend\nend"
-        header_string = "@inbounds function(" + top_var_name
+        header_string = "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
         for this_input in self.inputs:
             header_string = header_string + "," + this_input
         header_string +=")\n"
@@ -628,7 +622,16 @@ class JuliaConverter(object):
 
     # this function will be the top level.
     def convert_tree_to_intermediate(self, symbol, len_rhs=None):
-        if self._dae_type == "implicit":
+        if isinstance(symbol, pybamm.PybammJuliaFunction):
+            #need to hash this out a bit more.
+            self._black_box = True
+            self.outputs = ["out"]
+            self.inputs = []
+            self.funcname = symbol.name
+            #process inputs: input types can be StateVectors,
+            #StateVectorDots, parameters, time, and psuedo
+            # parameters. 
+        elif self._dae_type == "implicit":
             symbol_minus_dy = []
             end = 0
             for child in symbol.orphans:
@@ -641,13 +644,17 @@ class JuliaConverter(object):
                 else:
                     symbol_minus_dy.append(child)
             symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
-        self._convert_tree_to_intermediate(symbol)
+        if isinstance(symbol, pybamm.PybammJuliaFunction):
+            self._convert_tree_to_intermediate(symbol.expr)
+        else:
+            self._convert_tree_to_intermediate(symbol)
         return 0
 
     # rework this at some point
     def build_julia_code(self, funcname="f", inline=True):
         # get top node of tree
         if self._black_box:
+            funcname = self.funcname
             self.write_black_box(funcname)
         else:
             self.write_function_easy(funcname, inline=inline)
@@ -655,7 +662,7 @@ class JuliaConverter(object):
         return string
 
 #this is a bit of a weird one, may change it at some point
-class JuliaBlackBox(object):
+class JuliaJuliaFunction(object):
     def __init__(self, inputs, output, shape, name):
         self.inputs = inputs
         self.output = output
@@ -673,7 +680,7 @@ class JuliaBlackBox(object):
                 converter._intermediate[input]._convert_intermediate_to_code(converter, inline=inline)
             )
         result_var_name = converter._cache_dict[self.output]
-        code = "{}({}".format(self.name, self.output)
+        code = "{}({}".format(self.name, result_var_name)
         for input in input_var_names:
             code = code+","+input
         code = code+")\n"
