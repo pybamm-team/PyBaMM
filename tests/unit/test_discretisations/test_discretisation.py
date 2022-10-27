@@ -692,11 +692,6 @@ class TestDiscretise(unittest.TestCase):
         jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
-        # test jacobian by eqn gives same as jacobian of concatenated rhs
-        model.jacobian, _, _ = disc.create_jacobian(model)
-        model_jacobian = model.jacobian.evaluate(0, y0)
-        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
-
         # test that discretising again gives an error
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot re-discretise a model"):
             disc.process_model(model)
@@ -830,11 +825,6 @@ class TestDiscretise(unittest.TestCase):
             ]
         )
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
-
-        # test jacobian by eqn gives same as jacobian of concatenated rhs & algebraic
-        model.jacobian, _, _ = disc.create_jacobian(model)
-        model_jacobian = model.jacobian.evaluate(0, y0)
-        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
 
         # check that any time derivatives of variables in algebraic raises an
         # error

@@ -5,7 +5,7 @@ import platform
 import unittest
 import pybamm
 
-have_julia = True  # pybamm.have_julia()
+have_julia = pybamm.have_julia()
 if have_julia and platform.system() != "Windows":
     from juliacall import Main
 

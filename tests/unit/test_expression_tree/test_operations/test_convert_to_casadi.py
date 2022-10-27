@@ -194,16 +194,17 @@ class TestCasadiConverter(unittest.TestCase):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
         # error for converted children count
-        y3 = (
+        y4 = (
+            pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
         )
-        x3_ = [np.linspace(0, 1) for _ in range(3)]
-        x3 = np.column_stack(x3_)
-        data3 = 2 * x3  # np.tile(2 * x3, (10, 1)).T
+        x4_ = [np.linspace(0, 1) for _ in range(4)]
+        x4 = np.column_stack(x4_)
+        data4 = 2 * x4  # np.tile(2 * x3, (10, 1)).T
         with self.assertRaisesRegex(ValueError, "Invalid dimension of x"):
-            interp = pybamm.Interpolant(x3_, data3, y3, interpolator="linear")
+            interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
     def test_interpolation_2d(self):
@@ -245,6 +246,38 @@ class TestCasadiConverter(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "interpolator should be"):
             interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
             interp_casadi = interp.to_casadi(y=casadi_y)
+
+    def test_interpolation_3d(self):
+        def f(x, y, z):
+            return 2 * x**3 + 3 * y**2 - z
+
+        x = np.linspace(1, 4, 11)
+        y = np.linspace(4, 7, 22)
+        z = np.linspace(7, 9, 33)
+        xg, yg, zg = np.meshgrid(x, y, z, indexing="ij", sparse=True)
+        data = f(xg, yg, zg)
+
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        var3 = pybamm.StateVector(slice(2, 3))
+
+        x_in = (x, y, z)
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="linear"
+        )
+
+        casadi_y = casadi.MX.sym("y", 3)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        y_test = np.array([1, 5, 8])
+
+        casadi_sol = casadi_f(y_test)
+        true_value = f(1, 5, 8)
+
+        self.assertIsInstance(casadi_sol, casadi.DM)
+
+        np.testing.assert_equal(true_value, casadi_sol.__float__())
 
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]

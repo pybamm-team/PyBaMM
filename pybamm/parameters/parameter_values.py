@@ -65,41 +65,30 @@ class ParameterValues:
             self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
-            if isinstance(values, dict) and "chemistry" in values:
-                warnings.warn(
-                    "Creating a parameter set from a dictionary of components has "
-                    "been deprecated and will be removed in a future release. "
-                    "Define the parameter set in a python script instead.",
-                    DeprecationWarning,
-                )
-                self.update_from_chemistry(values)
-            else:
-                if isinstance(values, str):
-                    # Look for the values name in the standard pybamm parameter sets
-                    found_parameter_set = False
-                    parameter_sets_path = os.path.join(
-                        pybamm.ABSOLUTE_PATH, "pybamm", "input", "parameters"
+            if isinstance(values, dict):
+                if "chemistry" in values:
+                    warnings.warn(
+                        "Creating a parameter set from a dictionary of components has "
+                        "been deprecated and will be removed in a future release. "
+                        "Define the parameter set in a python script instead.",
+                        DeprecationWarning,
                     )
-                    for chemistry in ["lead_acid", "lithium_ion"]:
-                        path = os.path.join(parameter_sets_path, chemistry)
-                        filename = os.path.join(path, f"{values}.py")
-                        if os.path.exists(filename):
-                            # Use a function call to avoid issues with updating the
-                            # dictionary in place later
-                            func = pybamm.load_function(
-                                filename, "get_parameter_values"
-                            )
-                            values = func()
-                            found_parameter_set = True
-                    if not found_parameter_set:
-                        # In this case it might be a filename, load from that filename
-                        file_path = self.find_parameter(values)
-                        path = os.path.split(file_path)[0]
-                        values = self.read_parameters_csv(file_path)
+                    self.update_from_chemistry(values)
                 else:
-                    path = ""
-                # Don't check parameter already exists when first creating it
-                self.update(values, check_already_exists=False, path=path)
+                    self.update(values, check_already_exists=False)
+            else:
+                # Check if values is a named parameter set
+                if isinstance(values, str) and values in pybamm.parameter_sets:
+                    values = pybamm.parameter_sets[values]
+                    values.pop("chemistry")
+                    self.update(values, check_already_exists=False)
+
+                else:
+                    # In this case it might be a filename, load from that filename
+                    file_path = self.find_parameter(values)
+                    path = os.path.split(file_path)[0]
+                    values = self.read_parameters_csv(file_path)
+                    self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
