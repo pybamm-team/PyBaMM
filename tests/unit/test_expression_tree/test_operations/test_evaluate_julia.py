@@ -10,7 +10,7 @@ import scipy.sparse
 from platform import system
 from collections import OrderedDict
 
-have_julia = pybamm.have_julia()
+have_julia = true
 if have_julia and system() != "Windows":
 
     from juliacall import Main
