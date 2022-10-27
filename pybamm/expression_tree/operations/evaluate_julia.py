@@ -8,12 +8,12 @@ from collections import OrderedDict
 from math import floor
 import graphlib
 
+
 class FunctionRepeat(object):
     def __init__(self, expr, inputs):
         pass
+
     pass
-
-
 
 
 class PsuedoInputParameter(pybamm.InputParameter):
@@ -23,15 +23,15 @@ class PsuedoInputParameter(pybamm.InputParameter):
             self.name, self.domain, expected_size=self._expected_size
         )
         return new_input_parameter
-    
+
     @property
     def children(self):
         return self._children
-    
+
     @children.setter
     def children(self, expr):
         self._children = expr
-    
+
 
 def set_psuedo(symbol, expr):
     if isinstance(symbol, PsuedoInputParameter):
@@ -50,22 +50,21 @@ def remove_lines_with(input_string, pattern):
             my_string = my_string + s + "\n"
     return my_string
 
-#Wrapper to designate a function.
-#Bottom needs to already have a julia
-#conversion. (for shape.)
+
+# Wrapper to designate a function.
+# Bottom needs to already have a julia
+# conversion. (for shape.)
 class PybammJuliaFunction(pybamm.Symbol):
     def __init__(self, children, expr, name):
         self.expr = expr
         super().__init__(name, children)
+
     def evaluate_for_shape(self):
         return self.expr.evaluate_for_shape()
-    
+
     @property
     def shape(self):
         return self.expr.shape
-    
-
-
 
 
 class JuliaConverter(object):
@@ -79,13 +78,13 @@ class JuliaConverter(object):
         input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
-        outputs = [],
-        inputs = [],
-        black_box = False
+        outputs=[],
+        inputs=[],
+        black_box=False,
     ):
-        #if len(outputs) != 1:
+        # if len(outputs) != 1:
         #    raise NotImplementedError("Julia black box can only have 1 output")
-        
+
         if ismtk:
             raise NotImplementedError("mtk is not supported")
 
@@ -209,10 +208,7 @@ class JuliaConverter(object):
             shape = symbol.shape
             name = symbol.name
             self._intermediate[my_id] = JuliaJuliaFunction(
-                child_ids,
-                my_id,
-                shape,
-                name
+                child_ids, my_id, shape, name
             )
         elif isinstance(symbol, pybamm.MatrixMultiplication):
             # Break down the binary tree
@@ -415,7 +411,7 @@ class JuliaConverter(object):
         self._cache_id += 1
         if cache_name is None:
             cache_name = "cache_{}".format(cache_id)
-        
+
         if self._preallocate:
             if self._cache_type == "standard":
                 if cache_shape[1] == 1:
@@ -554,46 +550,46 @@ class JuliaConverter(object):
     def write_black_box(self, funcname):
         top = self._intermediate[next(reversed(self._intermediate))]
         if len(self.outputs) != 1:
-            raise NotImplementedError(
-                "only 1 output is allowed!"
-            )
+            raise NotImplementedError("only 1 output is allowed!")
         if not self._preallocate:
-            raise NotImplementedError(
-                "black box only supports preallocation."
-            )
-        #this will automatically be in place with the correct function name
-        top_var_name = top._convert_intermediate_to_code(self, inline=False, cache_name=self.outputs[0])
-        
-        #still need to write the function.
+            raise NotImplementedError("black box only supports preallocation.")
+        # this will automatically be in place with the correct function name
+        top_var_name = top._convert_intermediate_to_code(
+            self, inline=False, cache_name=self.outputs[0]
+        )
+
+        # still need to write the function.
         self.write_function()
         self._cache_and_const_string = (
             "begin\n{} = let \n".format(funcname) + self._cache_and_const_string
         )
-        
-        #No need to write a cache since it's in the input.
+
+        # No need to write a cache since it's in the input.
         self._cache_and_const_string = remove_lines_with(
             self._cache_and_const_string, top_var_name
         )
 
-        #may need to modify this logic a bit in the future.
+        # may need to modify this logic a bit in the future.
         if "p" in self.inputs:
             parameter_string = ""
             for parameter in self.input_parameter_order:
                 parameter_string += "{},".format(parameter)
             parameter_string += "= p\n"
             self._function_string = parameter_string + self._function_string
-        
-        #same as _easy
+
+        # same as _easy
         self._function_string = (
             self._cache_initialization_string + self._function_string
         )
 
-        #no support for not preallocating. (for now)
+        # no support for not preallocating. (for now)
         self._function_string += "\n   return nothing\nend\nend\nend"
-        header_string = "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
+        header_string = (
+            "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
+        )
         for this_input in self.inputs:
             header_string = header_string + "," + this_input
-        header_string +=")\n"
+        header_string += ")\n"
         self._function_string = header_string + self._function_string
         return 0
 
@@ -658,14 +654,14 @@ class JuliaConverter(object):
     # this function will be the top level.
     def convert_tree_to_intermediate(self, symbol, len_rhs=None):
         if isinstance(symbol, pybamm.PybammJuliaFunction):
-            #need to hash this out a bit more.
+            # need to hash this out a bit more.
             self._black_box = True
             self.outputs = ["out"]
             self.inputs = []
             self.funcname = symbol.name
-            #process inputs: input types can be StateVectors,
-            #StateVectorDots, parameters, time, and psuedo
-            # parameters. 
+            # process inputs: input types can be StateVectors,
+            # StateVectorDots, parameters, time, and psuedo
+            # parameters.
         elif self._dae_type == "implicit":
             symbol_minus_dy = []
             end = 0
@@ -696,34 +692,39 @@ class JuliaConverter(object):
         string = self._cache_and_const_string + self._function_string
         return string
 
-#this is a bit of a weird one, may change it at some point
+
+# this is a bit of a weird one, may change it at some point
 class JuliaJuliaFunction(object):
     def __init__(self, inputs, output, shape, name):
         self.inputs = inputs
         self.output = output
         self.shape = shape
         self.name = name
-    
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False, cache_name=None):
+
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=False, cache_name=None
+    ):
         if converter.cache_exists(self.output, self.inputs):
             return converter._cache_dict[self.output]
-        result_var_name = converter.create_cache(self, cache_name = cache_name)
+        result_var_name = converter.create_cache(self, cache_name=cache_name)
 
         input_var_names = []
         for input in self.inputs:
             input_var_names.append(
-                converter._intermediate[input]._convert_intermediate_to_code(converter, inline=inline)
+                converter._intermediate[input]._convert_intermediate_to_code(
+                    converter, inline=inline
+                )
             )
         result_var_name = converter._cache_dict[self.output]
         code = "{}({}".format(self.name, result_var_name)
         for input in input_var_names:
-            code = code+","+input
-        code = code+")\n"
+            code = code + "," + input
+        code = code + ")\n"
 
-        #black box always generates a cache.
+        # black box always generates a cache.
         self.generate_code_and_dag(converter, code)
         return result_var_name
-    
+
     def generate_code_and_dag(self, converter, code):
         converter._code[self.output] = code
         converter._dag[self.output] = set(self.inputs)
@@ -765,10 +766,12 @@ class JuliaMatrixMultiplication(JuliaBinaryOperation):
         self.output = output
         self.shape = shape
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=False, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=False, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
-        result_var_name = converter.create_cache(self, cache_name = cache_name)
+        result_var_name = converter.create_cache(self, cache_name=cache_name)
         left_input_var_name, right_input_var_name = self.get_binary_inputs(
             converter, inline=False
         )
@@ -795,7 +798,9 @@ class JuliaBitwiseBinaryOperation(JuliaBinaryOperation):
         self.shape = shape
         self.operator = operator
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
@@ -860,7 +865,9 @@ class JuliaMinMax(JuliaBinaryOperation):
         self.shape = shape
         self.name = name
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.left_input, self.right_input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
@@ -915,7 +922,9 @@ class JuliaBroadcastableFunction(JuliaFunction):
         if converter._parallel == "legacy-serial":
             converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
@@ -943,7 +952,9 @@ class JuliaBroadcastableFunction(JuliaFunction):
 
 
 class JuliaNegation(JuliaBroadcastableFunction):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         inline = inline & converter._inline
@@ -967,7 +978,9 @@ class JuliaNegation(JuliaBroadcastableFunction):
 
 
 class JuliaMinimumMaximum(JuliaBroadcastableFunction):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         result_var_name = converter.create_cache(self, cache_name=cache_name)
@@ -997,7 +1010,9 @@ class JuliaIndex(object):
         if converter._parallel == "legacy-serial":
             converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, [self.input]):
             return converter._cache_dict[self.output]
         index = self.index
@@ -1088,7 +1103,9 @@ class JuliaStateVector(JuliaValue):
         self.loc = loc
         self.shape = shape
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         start = self.loc[0] + 1
         end = self.loc[1]
         self.generate_code_and_dag(converter)
@@ -1099,7 +1116,9 @@ class JuliaStateVector(JuliaValue):
 
 
 class JuliaStateVectorDot(JuliaStateVector):
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         start = self.loc[0] + 1
         end = self.loc[1]
         self.generate_code_and_dag(converter)
@@ -1115,7 +1134,9 @@ class JuliaScalar(JuliaConstant):
         self.value = float(value)
         self.shape = (1, 1)
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         self.generate_code_and_dag(converter)
         return self.value
 
@@ -1155,7 +1176,9 @@ class JuliaConcatenation(object):
         if converter._parallel == "legacy-serial":
             converter._function_string += code
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, self.children):
             return converter._cache_dict[self.output]
         num_cols = self.shape[1]
@@ -1215,7 +1238,11 @@ class JuliaConcatenation(object):
                 if converter._preallocate:
                     if vec:
                         code += "@. {}[{}:{}{} =  {}\n".format(
-                            my_name, start_row, start_row, right_parenthesis, child_var_name
+                            my_name,
+                            start_row,
+                            start_row,
+                            right_parenthesis,
+                            child_var_name,
                         )
                     else:
                         code += "@. {}[{}{} = {} \n".format(
@@ -1259,7 +1286,9 @@ class JuliaDomainConcatenation(JuliaConcatenation):
         self.secondary_dimension_npts = secondary_dimension_npts
         self.children_slices = children_slices
 
-    def _convert_intermediate_to_code(self, converter: JuliaConverter, inline=True, cache_name=None):
+    def _convert_intermediate_to_code(
+        self, converter: JuliaConverter, inline=True, cache_name=None
+    ):
         if converter.cache_exists(self.output, self.children):
             return converter._cache_dict[self.output]
         num_cols = self.shape[1]
