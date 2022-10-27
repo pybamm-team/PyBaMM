@@ -8,20 +8,21 @@ body:
         point with `pybamm-parameter-sets` as described in our
         [documentation](https://pybamm.readthedocs.io/en/latest/source/parameters/parameter_sets.html).
   - type: input
+    id: parameter-set-url
     attributes:
-      id: parameter-set-url
       label: Where can we find your parameter set?
       description: Provide the Github URL or PyPi package name for your parameter set
       placeholder: https://github.com/AwesomeOrg/NewParameterSet
     validations:
       required: true
   - type: dropdown
+    id: open-source-approved
     attributes:
-      id: open-source-approved
-      label: Is it licensed under an [Open Source Initiative Approved License](https://opensource.org/licenses)?
+      label: Is your package open source?
+      description: See the [Open Source Initiative's List of Approved Licenses](https://opensource.org/licenses)
       options: ["Yes", "No"]
   - type: textarea
+    id: feedback
     attributes:
-      id: feedback
       label: Any additional information?
       description: Thank you for making parameter set! Is there anything else we should know about it?
