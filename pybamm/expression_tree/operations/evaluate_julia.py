@@ -9,6 +9,34 @@ from math import floor
 import graphlib
 
 
+
+
+class PsuedoInputParameter(pybamm.InputParameter):
+    def create_copy(self):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        new_input_parameter = PsuedoInputParameter(
+            self.name, self.domain, expected_size=self._expected_size
+        )
+        return new_input_parameter
+    
+    @property
+    def children(self):
+        return self._children
+    
+    @children.setter
+    def children(self, expr):
+        self._children = expr
+    
+
+def set_psuedo(symbol, expr):
+    if isinstance(symbol, PsuedoInputParameter):
+        symbol.children = [expr]
+    else:
+        for child in symbol.children:
+            set_psuedo(child, expr)
+    symbol.set_id()
+
+
 def remove_lines_with(input_string, pattern):
     string_list = input_string.split("\n")
     my_string = ""
