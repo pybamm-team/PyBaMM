@@ -92,10 +92,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: tox -e pybamm-requires
 
-      - name: Install Julia
-        if: matrix.os != 'windows-latest'
-        run: tox -e julia
-
       - name: Run unit tests for GNU/Linux with Python 3.8
         if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
         run: python -m tox -e unit
