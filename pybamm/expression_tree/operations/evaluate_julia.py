@@ -17,6 +17,29 @@ def remove_lines_with(input_string, pattern):
             my_string = my_string + s + "\n"
     return my_string
 
+#Wrapper to designate a function.
+#Bottom needs to already have a julia
+#conversion. (for shape.)
+class BlackBox(object):
+    def __init__(self, jl_shape, children, expr, name):
+        self.jl_shape = jl_shape
+        self.children = children
+        self.expr = expr
+        self.name = name
+    def set_id(self):
+        """
+        Set the immutable "identity" of a variable (e.g. for identifying y_slices).
+
+        Hashing can be slow, so we set the id when we create the node, and hence only
+        need to hash once.
+        """
+        self._id = hash(
+            (self.__class__, self.name)
+            + tuple([child.id for child in self.children])
+        )
+
+
+
 
 class JuliaConverter(object):
     def __init__(
@@ -149,6 +172,20 @@ class JuliaConverter(object):
                 children_julia,
                 symbol.secondary_dimensions_npts,
                 symbol._children_slices,
+            )
+        elif isinstance(symbol, BlackBox):
+            my_id = symbol.id
+            child_ids = []
+            for child in symbol.children:
+                child_id = self._convert_intermediate_to_code(child)
+                child_ids.append(child_id)
+            shape = symbol.jl_shape
+            name = symbol.name
+            self._intermediate[my_id] = JuliaBlackBox(
+                child_ids,
+                my_id,
+                shape,
+                name
             )
         elif isinstance(symbol, pybamm.MatrixMultiplication):
             # Break down the binary tree
