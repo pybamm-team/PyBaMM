@@ -8,14 +8,6 @@ from collections import OrderedDict
 from math import floor
 import graphlib
 
-
-class FunctionRepeat(object):
-    def __init__(self, expr, inputs):
-        pass
-
-    pass
-
-
 class PsuedoInputParameter(pybamm.InputParameter):
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -78,9 +70,7 @@ class JuliaConverter(object):
         input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
-        outputs=[],
-        inputs=[],
-        black_box=False,
+        black_box=False
     ):
         # if len(outputs) != 1:
         #    raise NotImplementedError("Julia black box can only have 1 output")
@@ -709,7 +699,7 @@ class JuliaJuliaFunction(object):
         result_var_name = converter.create_cache(self, cache_name=cache_name)
 
         input_var_names = []
-        for input in self.inputs:
+        for this_input in self.inputs:
             input_var_names.append(
                 converter._intermediate[input]._convert_intermediate_to_code(
                     converter, inline=inline
@@ -717,8 +707,8 @@ class JuliaJuliaFunction(object):
             )
         result_var_name = converter._cache_dict[self.output]
         code = "{}({}".format(self.name, result_var_name)
-        for input in input_var_names:
-            code = code + "," + input
+        for this_input in input_var_names:
+            code = code + "," + this_input
         code = code + ")\n"
 
         # black box always generates a cache.
