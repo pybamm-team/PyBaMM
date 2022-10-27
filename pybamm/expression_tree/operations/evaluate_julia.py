@@ -8,6 +8,7 @@ from collections import OrderedDict
 from math import floor
 import graphlib
 
+
 class PsuedoInputParameter(pybamm.InputParameter):
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -70,7 +71,7 @@ class JuliaConverter(object):
         input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
-        black_box=False
+        black_box=False,
     ):
         # if len(outputs) != 1:
         #    raise NotImplementedError("Julia black box can only have 1 output")
