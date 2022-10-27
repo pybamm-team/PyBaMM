@@ -103,15 +103,6 @@ class TestEvaluate(unittest.TestCase):
         converter.clear()
         self.assertEqual(converter._intermediate, OrderedDict())
 
-    def test_pack(self):
-        a = pybamm.StateVector(slice(0, 2))
-        A = pybamm.Matrix(np.random.rand(2, 2))
-
-        expr = A @ a
-        y_test = np.random.rand(6)
-        pack = pybamm.Pack(expr, 2)
-        self.evaluate_and_test_equal(pack.built_model, y_test, decimal=1e-8)
-
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
