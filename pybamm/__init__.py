@@ -99,7 +99,7 @@ from .expression_tree.operations.replace_symbols import SymbolReplacer
 from .expression_tree.operations.evaluate_julia import (
     JuliaConverter,
     PybammJuliaFunction,
-    PsuedoInputParameter
+    PsuedoInputParameter,
 )
 
 #
