@@ -100,7 +100,6 @@ from .expression_tree.operations.evaluate_julia import (
     JuliaConverter,
     PybammJuliaFunction
 )
-from .expression_tree.operations.build_pack import Pack, PsuedoInputParameter
 
 #
 # Model classes
