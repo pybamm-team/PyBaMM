@@ -225,6 +225,21 @@ setup(
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
             "pybamm_install_jax = pybamm.util:install_jax",
-        ]
+        ],
+        "pybamm_parameter_set": [
+            "Sulzer2019 = pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values",  # noqa: E501
+            "Ai2020 = pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values",  # noqa: E501
+            "Chen2020 = pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values",  # noqa: E501
+            "Chen2020_composite = pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values",  # noqa: E501
+            "Ecker2015 = pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values",  # noqa: E501
+            "Marquis2019 = pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values",  # noqa: E501
+            "Mohtat2020 = pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values",  # noqa: E501
+            "NCA_Kim2011 = pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values",  # noqa: E501
+            "OKane2022 = pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values",  # noqa: E501
+            "ORegan2022 = pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values",  # noqa: E501
+            "Prada2013 = pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values",  # noqa: E501
+            "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
+            "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
+        ],
     },
 )

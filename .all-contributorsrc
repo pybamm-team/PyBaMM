@@ -530,6 +530,17 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "awadell1",
+      "name": "Alex Wadell",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5857298?v=4",
+      "profile": "https://github.com/awadell1",
+      "contributions": [
+        "code",
+        "test",
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
