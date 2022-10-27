@@ -108,9 +108,15 @@ class StateVectorBase(pybamm.Symbol):
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
+        starts = tuple([s.start for s in self.y_slices])
+        stops = tuple([s.stop for s in self.y_slices])
+        steps = tuple([s.step for s in self.y_slices])
         self._id = hash(
             (self.__class__, self.name, tuple(self.evaluation_array))
             + tuple(self.domain)
+            + starts
+            + stops
+            + steps
         )
 
     def _jac_diff_vector(self, variable):
@@ -195,6 +201,33 @@ class StateVectorBase(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return np.nan * np.ones((self.size, 1))
+
+    def replace_y_slices(self, *new_y_slices):
+        for y_slice in new_y_slices:
+            if not isinstance(y_slice, slice):
+                raise TypeError("all y_slices must be slice objects")
+        name_split = self.name.split("[")
+        base_name = name_split[0]
+        if new_y_slices[0].start is None:
+            name = base_name + "[:{:d}".format(y_slice.stop)
+        else:
+            name = base_name + "[{:d}:{:d}".format(
+                new_y_slices[0].start, new_y_slices[0].stop
+            )
+        if len(new_y_slices) > 1:
+            name += ",{:d}:{:d}".format(new_y_slices[1].start, new_y_slices[1].stop)
+            if len(new_y_slices) > 2:
+                name += ",...,{:d}:{:d}]".format(
+                    new_y_slices[-1].start, new_y_slices[-1].stop
+                )
+            else:
+                name += "]"
+        else:
+            name += "]"
+        self._y_slices = new_y_slices
+        self._first_point = new_y_slices[0].start
+        self._last_point = new_y_slices[-1].stop
+        self.set_evaluation_array(new_y_slices, None)
 
 
 class StateVector(StateVectorBase):

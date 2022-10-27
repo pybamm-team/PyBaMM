@@ -344,55 +344,54 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Ramadass2004 parameter set. This is a bit of a Frankenstein parameter set and
-    should be used with caution.
+    Ramadass2004 parameter set. This is a bit of a Frankenstein parameter set and should
+    be used with caution.
 
     Parameters for a graphite negative electrode, Lithium Cobalt Oxide positive
     electrode, and LiPF6 electrolyte are from the papers
 
-    > Marquis, S. G., Sulzer, V., Timms, R., Please, C. P., & Chapman, S. J. (2019). “An
-     asymptotic derivation of a single particle model with electrolyte”. [Journal of The
-     Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15),
-    A3693-A3706.
-    > P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko N.
-    Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
-    (2004)
-    > P. Ramadass, Bala Haran, Ralph White, and Branko N. Popov. "Capacity fade of Sony
-    18650 cells cycled at elevated temperatures part I." (2002)
+        Scott G. Marquis, Valentin Sulzer, Robert Timms, Colin P. Please, and S. Jon
+        Chapman. An asymptotic derivation of a single particle model with electrolyte.
+        Journal of The Electrochemical Society, 166(15):A3693-A3706, 2019.
+        doi:10.1149/2.0341915jes.
+
+        P Ramadass, Bala Haran, Parthasarathy M Gomadam, Ralph White, and Branko N
+        Popov. Development of first principles capacity fade model for li-ion cells.
+        Journal of the Electrochemical Society, 151(2):A196, 2004.
+        doi:10.1149/1.1634273.
 
     and references therein.
 
     Parameters for the separator are from the papers
 
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery i. determination of parameters." Journal of the Electrochemical
-    Society 162.9 (2015): A1836-A1848.
-    > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-    lithium-ion battery II. Model validation." Journal of The Electrochemical Society
-    162.9 (2015): A1849-A1857.
+        Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
+        lithium-ion battery i. determination of parameters." Journal of the
+        Electrochemical Society 162.9 (2015): A1836-A1848.
 
     The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
     are extracted from
 
-    > Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
-    surface cooling on lithium ion cell performance."" Journal of The Electrochemical
-    Society, 165.13 (2018): A3169-A3178.
-    # Lithium Cobalt Oxide positive electrode parameters
+        Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
+        surface cooling on lithium ion cell performance."" Journal of The
+        Electrochemical Society, 165.13 (2018): A3169-A3178. # Lithium Cobalt Oxide
+        positive electrode parameters
 
     Parameters for SEI growth are from the papers
 
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-    Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203.
-    > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
-    Electrochemical Society, 156(3),
+        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
+        Development of first principles capacity fade model for Li-ion cells. Journal of
+        the Electrochemical Society, 151(2), A196-A203.
 
-    Note: Ramadass 2004 has mistakes in units and values of SEI parameters, corrected
-    by Safari 2009.
+        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
+        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
+        The Electrochemical Society, 156(3),
+
+    Note: Ramadass 2004 has mistakes in units and values of SEI parameters, corrected by
+    Safari 2009.
     """
 
     return {
+        "chemistry": "lithium_ion",
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
         "Inner SEI reaction proportion": 0.5,
