@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
+
 ## Features
 
 - Added three-dimensional interpolation [#2380](https://github.com/pybamm-team/PyBaMM/pull/2380)
