@@ -922,22 +922,23 @@ def get_parameter_values():
     """
     Parameters for an LG M50 cell, from the paper
 
-    > Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-    ["Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-    battery."](https://www.sciencedirect.com/science/article/pii/S0013468622008593)
-    Electrochimica Acta 425 (2022): 140700
+        Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+        Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+        battery. Electrochimica Acta, 425:140700, 2022.
+        doi:10.1016/j.electacta.2022.140700.
 
     Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte are from the paper
 
-    > Johannes Landesfeind and Hubert A. Gasteiger, ["Temperature and Concentration
-    Dependence of the Ionic Transport Properties of Lithium-Ion Battery
-    Electrolytes."](https://iopscience.iop.org/article/10.1149/2.0571912jes) Journal of
-    the Electrochemical Society 166 (2019): A3079.
+        Johannes Landesfeind and Hubert A. Gasteiger, Temperature and Concentration
+        Dependence of the Ionic Transport Properties of Lithium-Ion Battery
+        Electrolytes. Journal of the Electrochemical Society 166 (2019): A3079.
+        doi:10.1149/2.0571912jes
 
     and references therein.
     """
 
     return {
+        "chemistry": "lithium_ion",
         # cell
         "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,
