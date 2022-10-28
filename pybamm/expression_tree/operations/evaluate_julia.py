@@ -585,7 +585,12 @@ class JuliaConverter(object):
         if self._inplace:
             self._function_string += "\n   return nothing\nend\nend\nend"
             header_string = (
-                "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name + ","
+                "@inbounds function "
+                + funcname
+                + "_with_consts"
+                + "("
+                + top_var_name
+                + ","
             )
         else:
             self._function_string += "\n    return {}\nend\nend\nend".format(
@@ -594,7 +599,7 @@ class JuliaConverter(object):
             header_string = "@inbounds function " + funcname + "_with_consts" + "("
 
         for this_input in self.inputs:
-            header_string = header_string + this_input + "," 
+            header_string = header_string + this_input + ","
         header_string = header_string[:-1]
         header_string += ")\n"
         self._function_string = header_string + self._function_string
@@ -666,15 +671,22 @@ class JuliaConverter(object):
             self.outputs = ["out"]
             self.inputs = []
             for child in symbol.children:
-                if isinstance(child, pybamm.PsuedoInputParameter) and symbol.name not in self.inputs:
+                if (
+                    isinstance(child, pybamm.PsuedoInputParameter)
+                    and symbol.name not in self.inputs
+                ):
                     self.inputs.append(child.name)
                 elif isinstance(child, pybamm.StateVector) and "y" not in self.inputs:
                     self.inputs.append("y")
-                elif isinstance(child, pybamm.StateVectorDot) and "dy" not in self.inputs:
+                elif (
+                    isinstance(child, pybamm.StateVectorDot) and "dy" not in self.inputs
+                ):
                     self.inputs.append("dy")
                 elif isinstance(child, pybamm.Time) and "t" not in self.inputs:
                     self.inputs.append("t")
-                elif isinstance(child, pybamm.InputParameter) and "p" not in self.inputs:
+                elif (
+                    isinstance(child, pybamm.InputParameter) and "p" not in self.inputs
+                ):
                     self.inputs.append("p")
             self.funcname = symbol.name
             # process inputs: input types can be StateVectors,
