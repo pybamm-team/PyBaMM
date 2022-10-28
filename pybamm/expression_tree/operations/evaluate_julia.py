@@ -337,19 +337,17 @@ class JuliaConverter(object):
         elif isinstance(symbol, pybamm.Time):
             my_id = symbol.id
             self._intermediate[my_id] = JuliaTime(my_id)
-            if self._black_box and "t" not in self.inputs:
-                self.inputs.append("t")
         elif isinstance(symbol, pybamm.PsuedoInputParameter):
-            if self._black_box and symbol.name not in self.inputs:
-                self.inputs.append(symbol.name)
+            if self._black_box:
+                my_id = symbol.id
+                name = symbol.name
+                self._intermediate[my_id] = JuliaInput(my_id, name)
             else:
                 my_id = self._convert_tree_to_intermediate(symbol.children[0])
         elif isinstance(symbol, pybamm.InputParameter):
             my_id = symbol.id
             name = symbol.name
             self._intermediate[my_id] = JuliaInput(my_id, name)
-            if self._black_box and "p" not in self.inputs:
-                self.inputs.append("p")
         elif isinstance(symbol, pybamm.StateVector):
             my_id = symbol.id
             first_point = symbol.first_point
@@ -357,8 +355,6 @@ class JuliaConverter(object):
             points = (first_point, last_point)
             shape = symbol.shape
             self._intermediate[my_id] = JuliaStateVector(my_id, points, shape)
-            if self._black_box and "y" not in self.inputs:
-                self.inputs.append("y")
         elif isinstance(symbol, pybamm.StateVectorDot):
             my_id = symbol.id
             first_point = symbol.first_point
@@ -366,8 +362,6 @@ class JuliaConverter(object):
             points = (first_point, last_point)
             shape = symbol.shape
             self._intermediate[my_id] = JuliaStateVectorDot(my_id, points, shape)
-            if self._black_box and "dy" not in self.inputs:
-                self.inputs.append("dy")
         else:
             raise NotImplementedError(
                 "Conversion to Julia not implemented for a symbol of type '{}'".format(
@@ -591,7 +585,7 @@ class JuliaConverter(object):
         if self._inplace:
             self._function_string += "\n   return nothing\nend\nend\nend"
             header_string = (
-                "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
+                "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name + ","
             )
         else:
             self._function_string += "\n    return {}\nend\nend\nend".format(top_var_name)
@@ -600,7 +594,8 @@ class JuliaConverter(object):
             )
         
         for this_input in self.inputs:
-            header_string = header_string + "," + this_input
+            header_string = header_string + this_input + "," 
+        header_string = header_string[:-1]
         header_string += ")\n"
         self._function_string = header_string + self._function_string
         return 0
@@ -670,10 +665,21 @@ class JuliaConverter(object):
             self._black_box = True
             self.outputs = ["out"]
             self.inputs = []
+            for child in symbol.children:
+                if isinstance(child, pybamm.PsuedoInputParameter) and symbol.name not in self.inputs:
+                    self.inputs.append(child.name)
+                elif isinstance(child, pybamm.StateVector) and "y" not in self.inputs:
+                    self.inputs.append("y")
+                elif isinstance(child, pybamm.StateVectorDot) and "dy" not in self.inputs:
+                    self.inputs.append("dy")
+                elif isinstance(child, pybamm.Time) and "t" not in self.inputs:
+                    self.inputs.append("t")
+                elif isinstance(child, pybamm.InputParameter) and "p" not in self.inputs:
+                    self.inputs.append("p")
             self.funcname = symbol.name
             # process inputs: input types can be StateVectors,
             # StateVectorDots, parameters, time, and psuedo
-            # parameters.
+            # parameters
         elif self._dae_type == "implicit":
             symbol_minus_dy = []
             end = 0
