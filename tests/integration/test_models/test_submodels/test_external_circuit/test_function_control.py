@@ -175,8 +175,10 @@ class TestFunctionControl(unittest.TestCase):
         # load parameter values and process models and geometry
         param = model.default_parameter_values
 
-        # First model: 4W charge
-        param.update({"Voltage function [V]": 4.2}, check_already_exists=False)
+        param.update(
+            {"CCCV current function [A]": -0.5, "Voltage function [V]": 4.2},
+            check_already_exists=False,
+        )
 
         # set parameters and discretise models
         # create geometry

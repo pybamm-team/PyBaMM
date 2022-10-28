@@ -222,16 +222,11 @@ class BaseKinetics(BaseInterface):
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
-            param = self.param
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
                 "interfacial current density variable"
             ]
-            current_at_0 = (
-                pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})
-                / param.I_typ
-                * pybamm.sign(param.I_typ)
-            )
+            current_at_0 = pybamm.Scalar(1)  # dimensionless current initially
             sgn = 1 if self.domain == "negative" else -1
             # i / (a*l), assuming a=1 initially
             j_tot_av_init = sgn * current_at_0 / self.domain_param.l
