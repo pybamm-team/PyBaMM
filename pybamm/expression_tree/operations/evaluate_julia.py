@@ -71,7 +71,7 @@ class JuliaConverter(object):
         input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
-        inplace = True,
+        inplace=True,
         black_box=False,
     ):
         # if len(outputs) != 1:
@@ -594,11 +594,11 @@ class JuliaConverter(object):
                 "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
             )
         else:
-            self._function_string += "\n    return {}\nend\nend\nend".format(top_var_name)
-            header_string = (
-                "@inbounds function " + funcname + "_with_consts" + "("
+            self._function_string += "\n    return {}\nend\nend\nend".format(
+                top_var_name
             )
-        
+            header_string = "@inbounds function " + funcname + "_with_consts" + "("
+
         for this_input in self.inputs:
             header_string = header_string + "," + this_input
         header_string += ")\n"
