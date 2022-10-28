@@ -71,6 +71,7 @@ class JuliaConverter(object):
         input_parameter_order=None,
         inline=True,
         parallel="legacy-serial",
+        inplace = True,
         black_box=False,
     ):
         # if len(outputs) != 1:
@@ -92,6 +93,7 @@ class JuliaConverter(object):
         self._ismtk = ismtk
         self._jacobian_type = jacobian_type
         self._preallocate = preallocate
+        self._inplace = inplace
         self._dae_type = dae_type
 
         self._type = "Float64"
@@ -125,6 +127,8 @@ class JuliaConverter(object):
         self._function_string = ""
         self._return_string = ""
         self._cache_initialization_string = ""
+        self.inputs = []
+        self.outputs = []
 
     def cache_exists(self, my_id, inputs):
         existance = self._cache_dict.get(my_id) is not None
@@ -333,12 +337,19 @@ class JuliaConverter(object):
         elif isinstance(symbol, pybamm.Time):
             my_id = symbol.id
             self._intermediate[my_id] = JuliaTime(my_id)
+            if self._black_box and "t" not in self.inputs:
+                self.inputs.append("t")
         elif isinstance(symbol, pybamm.PsuedoInputParameter):
-            my_id = self._convert_tree_to_intermediate(symbol.children[0])
+            if self._black_box and symbol.name not in self.inputs:
+                self.inputs.append(symbol.name)
+            else:
+                my_id = self._convert_tree_to_intermediate(symbol.children[0])
         elif isinstance(symbol, pybamm.InputParameter):
             my_id = symbol.id
             name = symbol.name
             self._intermediate[my_id] = JuliaInput(my_id, name)
+            if self._black_box and "p" not in self.inputs:
+                self.inputs.append("p")
         elif isinstance(symbol, pybamm.StateVector):
             my_id = symbol.id
             first_point = symbol.first_point
@@ -346,6 +357,8 @@ class JuliaConverter(object):
             points = (first_point, last_point)
             shape = symbol.shape
             self._intermediate[my_id] = JuliaStateVector(my_id, points, shape)
+            if self._black_box and "y" not in self.inputs:
+                self.inputs.append("y")
         elif isinstance(symbol, pybamm.StateVectorDot):
             my_id = symbol.id
             first_point = symbol.first_point
@@ -353,6 +366,8 @@ class JuliaConverter(object):
             points = (first_point, last_point)
             shape = symbol.shape
             self._intermediate[my_id] = JuliaStateVectorDot(my_id, points, shape)
+            if self._black_box and "dy" not in self.inputs:
+                self.inputs.append("dy")
         else:
             raise NotImplementedError(
                 "Conversion to Julia not implemented for a symbol of type '{}'".format(
@@ -542,8 +557,6 @@ class JuliaConverter(object):
         top = self._intermediate[next(reversed(self._intermediate))]
         if len(self.outputs) != 1:
             raise NotImplementedError("only 1 output is allowed!")
-        if not self._preallocate:
-            raise NotImplementedError("black box only supports preallocation.")
         # this will automatically be in place with the correct function name
         top_var_name = top._convert_intermediate_to_code(
             self, inline=False, cache_name=self.outputs[0]
@@ -556,9 +569,10 @@ class JuliaConverter(object):
         )
 
         # No need to write a cache since it's in the input.
-        self._cache_and_const_string = remove_lines_with(
-            self._cache_and_const_string, top_var_name
-        )
+        if self._inplace:
+            self._cache_and_const_string = remove_lines_with(
+                self._cache_and_const_string, top_var_name
+            )
 
         # may need to modify this logic a bit in the future.
         if "p" in self.inputs:
@@ -574,10 +588,17 @@ class JuliaConverter(object):
         )
 
         # no support for not preallocating. (for now)
-        self._function_string += "\n   return nothing\nend\nend\nend"
-        header_string = (
-            "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
-        )
+        if self._inplace:
+            self._function_string += "\n   return nothing\nend\nend\nend"
+            header_string = (
+                "@inbounds function " + funcname + "_with_consts" + "(" + top_var_name
+            )
+        else:
+            self._function_string += "\n    return {}\nend\nend\nend".format(top_var_name)
+            header_string = (
+                "@inbounds function " + funcname + "_with_consts" + "("
+            )
+        
         for this_input in self.inputs:
             header_string = header_string + "," + this_input
         header_string += ")\n"
@@ -613,7 +634,7 @@ class JuliaConverter(object):
         self._function_string = (
             self._cache_initialization_string + self._function_string
         )
-        if self._preallocate:
+        if self._inplace:
             self._function_string += "\n   return nothing\n"
         else:
             self._function_string += "\n   return {}\n".format(top_var_name)
