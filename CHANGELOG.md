@@ -4,13 +4,13 @@
 
 ## Features
 
-- Added three-dimensional interpolation [#2380](https://github.com/pybamm-team/PyBaMM/pull/2380)
 - Third-party parameter sets can be added by registering entry points to `pybamm_parameter_set` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396))
+- Added three-dimensional interpolation ([#2380](https://github.com/pybamm-team/PyBaMM/pull/2380))
 
 ## Bug fixes
 
+- `pybamm.have_julia()` now checks that julia is properly configured ([#2402](https://github.com/pybamm-team/PyBaMM/pull/2402))
 - For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2337](https://github.com/pybamm-team/PyBaMM/pull/2337))
-- `pybamm.have_julia()` now checks that julia is properly configured ([#2402](<(https://github.com/pybamm-team/PyBaMM/pull/2402)>))
 
 ## Optimizations
 
