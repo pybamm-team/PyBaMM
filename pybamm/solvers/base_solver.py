@@ -752,9 +752,7 @@ class BaseSolver(object):
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
         ext_and_inputs_list = [
-            self._set_up_ext_and_inputs(
-                model, external_variables, inputs, calculate_sensitivities_list
-            )
+            self._set_up_ext_and_inputs(model, external_variables, inputs)
             for inputs in inputs_list
         ]
 
@@ -1138,17 +1136,7 @@ class BaseSolver(object):
         timer = pybamm.Timer()
 
         # Set up external variables and inputs
-        external_variables = external_variables or {}
-        inputs = inputs or {}
-
-        # Remove interpolant inputs as Casadi can't handle them
-        if isinstance(inputs.get("Current input [A]"), pybamm.Interpolant):
-            del inputs["Current input [A]"]
-        elif isinstance(inputs.get("Voltage input [V]"), pybamm.Interpolant):
-            del inputs["Voltage input [V]"]
-        elif isinstance(inputs.get("Power input [W]"), pybamm.Interpolant):
-            del inputs["Power input [W]"]
-        ext_and_inputs = {**external_variables, **inputs}
+        ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
 
         if (
             isinstance(old_solution, pybamm.EmptySolution)
@@ -1358,18 +1346,21 @@ class BaseSolver(object):
 
         return [k for k, v in extrap_events.items() if v]
 
-    def _set_up_ext_and_inputs(
-        self, model, external_variables, inputs, calculate_sensitivities
-    ):
+    def _set_up_ext_and_inputs(self, model, external_variables, inputs):
         """Set up external variables and input parameters"""
         inputs = inputs or {}
 
         # Go through all input parameters that can be found in the model
+        # Only keep the ones that are actually used in the model
         # If any of them are *not* provided by "inputs", raise an error
+        inputs_in_model = {}
         for input_param in model.input_parameters:
             name = input_param.name
-            if name not in inputs:
+            if name in inputs:
+                inputs_in_model[name] = inputs[name]
+            else:
                 raise pybamm.SolverError(f"No value provided for input '{name}'")
+        inputs = inputs_in_model
 
         external_variables = external_variables or {}
 

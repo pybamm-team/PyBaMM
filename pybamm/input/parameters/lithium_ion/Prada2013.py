@@ -203,27 +203,29 @@ def get_parameter_values():
     """
     Parameters for an A123 LFP cell, from the paper
 
-    > Lain, M. J., Brandon, J., & Kendrick, E. (2019). Design Strategies for High Power
-    vs. High Energy Lithium Ion Cells.
-    [Batteries](https://doi.org/10.3390/batteries5040064), 5(4), 64.
-    # LG M50 Graphite negative electrode parameters
+        Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
+        power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.
+        doi:10.3390/batteries5040064.
+
+    LG M50 Graphite negative electrode parameters
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     Parameters for negative electrode (graphite) and separator are from the paper
 
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
+        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
+        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
 
     and references therein.
 
     Parameters for positive electrode (LFP) are from the paper
 
-    > Prada, E., Di Domenico, D., Creff, Y., Bernard, J., Sauvant-Moynot, V., & Huet, F.
-     (2013). A simplified electrochemical and thermal aging model of LiFePO4-graphite
-    Li-ion batteries: power and capacity fade simulations. [Journal of The
-    Electrochemical Society](https://doi.org/10.1149/2.053304jes), 160(4), A616.
+        Eric Prada, D. Di Domenico, Y. Creff, J. Bernard, Valérie Sauvant-Moynot, and
+        François Huet. A simplified electrochemical and thermal aging model of
+        LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
+        of The Electrochemical Society, 160(4):A616, 2013. doi:10.1149/2.053304jes.
+
 
     and references therein. The functions used for OCP and exchange-current density are
     from separate references (documented within the functions), to provide better fit to
@@ -231,15 +233,16 @@ def get_parameter_values():
 
     Parameters for a LiPF6 electrolyte are from the paper
 
-    > A. Nyman, M. Behm, and G. Lindbergh, ["Electrochemical characterisation and
-    modelling of the mass transport phenomena in LiPF6-EC-EMC
-    electrolyte,"](https://www.sciencedirect.com/science/article/pii/S0013468608005045)
-    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+        Andreas Nyman, Mårten Behm, and Göran Lindbergh. Electrochemical
+        characterisation and modelling of the mass transport phenomena in lipf6-ec-emc
+        electrolyte. Electrochimica Acta, 53(22):6356-6365, 2008.
+
 
     and references therein.
     """
 
     return {
+        "chemistry": "lithium_ion",
         # cell
         "Negative current collector thickness [m]": 1e-05,
         "Negative electrode thickness [m]": 3.6e-05,

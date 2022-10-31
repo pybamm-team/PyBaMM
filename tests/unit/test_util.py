@@ -3,6 +3,7 @@
 #
 import numpy as np
 import os
+import sys
 import pybamm
 import tempfile
 import unittest
@@ -91,6 +92,17 @@ class TestUtil(unittest.TestCase):
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
 
+    @unittest.skipIf(not pybamm.have_julia(), "Julia not installed")
+    def test_have_julia(self):
+        # Remove julia from the path
+        with unittest.mock.patch.dict(
+            "os.environ", {"PATH": os.path.dirname(sys.executable)}
+        ):
+            self.assertFalse(pybamm.have_julia())
+
+        # Add it back
+        self.assertTrue(pybamm.have_julia())
+
 
 class TestSearch(unittest.TestCase):
     def test_url_gets_to_stdout(self):
@@ -122,7 +134,6 @@ class TestSearch(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import sys
 
     if "-v" in sys.argv:
         debug = True
