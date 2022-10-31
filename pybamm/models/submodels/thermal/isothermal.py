@@ -26,20 +26,17 @@ class Isothermal(BaseThermal):
     def get_fundamental_variables(self):
         T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
         T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
-        T_vol_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
 
-        T_cn = T_x_av
-        if self.half_cell:
-            T_n = None
-        else:
-            T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
-        T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
-        T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T_cp = T_x_av
+        T_dict = {
+            "negative current collector": T_x_av,
+            "positive current collector": T_x_av,
+            "x-averaged cell": T_x_av,
+            "volume-averaged cell": T_x_av,
+        }
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
-        variables = self._get_standard_fundamental_variables(
-            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
-        )
+        variables = self._get_standard_fundamental_variables(T_dict)
 
         return variables
 
@@ -47,34 +44,22 @@ class Isothermal(BaseThermal):
         if self.options["calculate heat source for isothermal models"] == "true":
             variables.update(self._get_standard_coupled_variables(variables))
         else:
-            ieh = "irreversible electrochemical heating"
-            variables.update(
-                {
-                    "Ohmic heating": pybamm.Scalar(0),
-                    "Ohmic heating [W.m-3]": pybamm.Scalar(0),
-                    "X-averaged Ohmic heating": pybamm.Scalar(0),
-                    "X-averaged Ohmic heating [W.m-3]": pybamm.Scalar(0),
-                    "Volume-averaged Ohmic heating": pybamm.Scalar(0),
-                    "Volume-averaged Ohmic heating [W.m-3]": pybamm.Scalar(0),
-                    "Irreversible electrochemical heating": pybamm.Scalar(0),
-                    "Irreversible electrochemical heating [W.m-3]": pybamm.Scalar(0),
-                    "X-averaged " + ieh: pybamm.Scalar(0),
-                    "X-averaged " + ieh + " [W.m-3]": pybamm.Scalar(0),
-                    "Volume-averaged " + ieh: pybamm.Scalar(0),
-                    "Volume-averaged " + ieh + "[W.m-3]": pybamm.Scalar(0),
-                    "Reversible heating": pybamm.Scalar(0),
-                    "Reversible heating [W.m-3]": pybamm.Scalar(0),
-                    "X-averaged reversible heating": pybamm.Scalar(0),
-                    "X-averaged reversible heating [W.m-3]": pybamm.Scalar(0),
-                    "Volume-averaged reversible heating": pybamm.Scalar(0),
-                    "Volume-averaged reversible heating [W.m-3]": pybamm.Scalar(0),
-                    "Total heating": pybamm.Scalar(0),
-                    "Total heating [W.m-3]": pybamm.Scalar(0),
-                    "X-averaged total heating": pybamm.Scalar(0),
-                    "X-averaged total heating [W.m-3]": pybamm.Scalar(0),
-                    "Volume-averaged total heating": pybamm.Scalar(0),
-                    "Volume-averaged total heating [W.m-3]": pybamm.Scalar(0),
-                }
-            )
+            zero = pybamm.Scalar(0)
+            for var in [
+                "Ohmic heating",
+                "X-averaged Ohmic heating",
+                "Volume-averaged Ohmic heating",
+                "Irreversible electrochemical heating",
+                "X-averaged irreversible electrochemical heating",
+                "Volume-averaged irreversible electrochemical heating",
+                "Reversible heating",
+                "X-averaged reversible heating",
+                "Volume-averaged reversible heating",
+                "Total heating",
+                "X-averaged total heating",
+                "Volume-averaged total heating",
+            ]:
+                # Both dimensionless and dimensional variable are zero
+                variables.update({var: zero, f"{var} [W.m-3]": zero})
 
         return variables

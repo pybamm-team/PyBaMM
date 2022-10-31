@@ -42,7 +42,9 @@ class FirstOrder(BaseElectrolyteDiffusion):
         tor_n_0 = variables[
             "Leading-order x-averaged negative electrolyte transport efficiency"
         ]
-        tor_s_0 = variables["Leading-order x-averaged separator transport efficiency"]
+        tor_s_0 = variables[
+            "Leading-order x-averaged separator electrolyte transport efficiency"
+        ]
         tor_p_0 = variables[
             "Leading-order x-averaged positive electrolyte transport efficiency"
         ]
@@ -113,40 +115,28 @@ class FirstOrder(BaseElectrolyteDiffusion):
         A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
             l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
         )
-        c_e_n_1 += A_e
-        c_e_s_1 += A_e
-        c_e_p_1 += A_e
-        c_e_n_1_av += A_e
-        c_e_s_1_av += A_e
-        c_e_p_1_av += A_e
+        c_e_dict = {}
+        for domain, var, var_av in [
+            ("negative electrode", c_e_n_1, c_e_n_1_av),
+            ("separator", c_e_s_1, c_e_s_1_av),
+            ("positive electrode", c_e_p_1, c_e_p_1_av),
+        ]:
+            var += A_e
+            c_e_dict[domain] = c_e_0 + param.C_e * var
+            # Update with analytical expressions for first-order x-averages
+            var_av += A_e
+            variables.update({f"X-averaged first-order {domain} concentration": var_av})
 
         # Update variables
-        c_e_n = c_e_0 + param.C_e * c_e_n_1
-        c_e_s = c_e_0 + param.C_e * c_e_s_1
-        c_e_p = c_e_0 + param.C_e * c_e_p_1
-        variables.update(
-            self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
-        )
-        # Update with analytical expressions for first-order x-averages
-        variables.update(
-            {
-                "X-averaged first-order negative electrolyte concentration": c_e_n_1_av,
-                "X-averaged first-order separator concentration": c_e_s_1_av,
-                "X-averaged first-order positive electrolyte concentration": c_e_p_1_av,
-            }
-        )
+        variables.update(self._get_standard_concentration_variables(c_e_dict))
 
         N_e = pybamm.concatenation(
             param.C_e * N_e_n_1, param.C_e * N_e_s_1, param.C_e * N_e_p_1
         )
         variables.update(self._get_standard_flux_variables(N_e))
 
-        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
-        eps = pybamm.concatenation(
-            pybamm.PrimaryBroadcast(eps_n_0, "negative electrode"),
-            pybamm.PrimaryBroadcast(eps_s_0, "separator"),
-            pybamm.PrimaryBroadcast(eps_p_0, "positive electrode"),
-        )
+        c_e = variables["Electrolyte concentration"]
+        eps = variables["Leading-order porosity"]
 
         variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 

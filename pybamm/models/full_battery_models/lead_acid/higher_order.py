@@ -108,16 +108,16 @@ class BaseHigherOrderModel(BaseModel):
             "x-averaged negative interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
             self.param,
-            "Negative",
-            self.leading_order_reaction_submodels["Negative"],
+            "negative",
+            self.leading_order_reaction_submodels["negative"],
             self.options,
         )
         self.submodels[
             "x-averaged positive interface"
         ] = pybamm.kinetics.InverseFirstOrderKinetics(
             self.param,
-            "Positive",
-            self.leading_order_reaction_submodels["Positive"],
+            "positive",
+            self.leading_order_reaction_submodels["positive"],
             self.options,
         )
 
@@ -130,12 +130,12 @@ class BaseHigherOrderModel(BaseModel):
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Negative"
+            self.param, "negative"
         )
 
     def set_positive_electrode_submodel(self):
         self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Positive"
+            self.param, "positive"
         )
 
     def set_full_interface_submodel(self):
@@ -146,17 +146,17 @@ class BaseHigherOrderModel(BaseModel):
         # Main reaction
         self.submodels["negative interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
-            "Negative",
+            "negative",
             pybamm.kinetics.SymmetricButlerVolmer(
-                self.param, "Negative", "lead-acid main", self.options
+                self.param, "negative", "lead-acid main", self.options
             ),
             self.options,
         )
         self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
-            "Positive",
+            "positive",
             pybamm.kinetics.SymmetricButlerVolmer(
-                self.param, "Positive", "lead-acid main", self.options
+                self.param, "positive", "lead-acid main", self.options
             ),
             self.options,
         )
@@ -167,9 +167,9 @@ class BaseHigherOrderModel(BaseModel):
                 "positive oxygen interface"
             ] = pybamm.kinetics.FirstOrderKinetics(
                 self.param,
-                "Positive",
+                "positive",
                 pybamm.kinetics.ForwardTafel(
-                    self.param, "Positive", "lead-acid oxygen", self.options
+                    self.param, "positive", "lead-acid oxygen", self.options
                 ),
                 self.options,
             )
@@ -177,7 +177,7 @@ class BaseHigherOrderModel(BaseModel):
                 "negative oxygen interface"
             ] = pybamm.kinetics.DiffusionLimited(
                 self.param,
-                "Negative",
+                "negative",
                 "lead-acid oxygen",
                 self.options,
                 order="composite",

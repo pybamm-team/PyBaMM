@@ -15,7 +15,7 @@ class SurfaceForm(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
 
@@ -27,22 +27,23 @@ class SurfaceForm(BaseModel):
         super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain.capitalize()
 
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
         i_boundary_cc = variables["Current collector current density"]
-        i_e = variables[self.domain + " electrolyte current density"]
-        tor = variables[self.domain + " electrode transport efficiency"]
+        i_e = variables[f"{Domain} electrolyte current density"]
+        tor = variables[f"{Domain} electrode transport efficiency"]
         phi_s_cn = variables["Negative current collector potential"]
-        T = variables[self.domain + " electrode temperature"]
+        T = variables[f"{Domain} electrode temperature"]
 
         conductivity = self.domain_param.sigma(T) * tor
         i_s = i_boundary_cc - i_e
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s = phi_s_cn - pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
 
             phi_e_s = variables["Separator electrolyte potential"]
             delta_phi_p = variables["Positive electrode surface potential difference"]
@@ -56,7 +57,8 @@ class SurfaceForm(BaseModel):
         variables.update(self._get_standard_current_variables(i_s))
 
         if (
-            self.half_cell or "Negative electrode current density" in variables
+            self.options.electrode_types["negative"] == "planar"
+            or "Negative electrode current density" in variables
         ) and "Positive electrode current density" in variables:
             variables.update(self._get_standard_whole_cell_variables(variables))
 

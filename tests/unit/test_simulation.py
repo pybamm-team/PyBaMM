@@ -24,8 +24,6 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
-        self.assertEqual(model.__class__, sim._model_class)
-
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
@@ -244,6 +242,10 @@ class TestSimulation(unittest.TestCase):
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.build(initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
@@ -383,14 +385,6 @@ class TestSimulation(unittest.TestCase):
         sim.create_gif(number_of_images=3, duration=1)
 
         os.remove("plot.gif")
-
-    def test_drive_cycle_data(self):
-        model = pybamm.lithium_ion.SPM()
-        param = model.default_parameter_values
-        param["Current function [A]"] = "[current data]US06"
-
-        with self.assertRaisesRegex(NotImplementedError, "Drive cycle from data"):
-            pybamm.Simulation(model, parameter_values=param)
 
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()

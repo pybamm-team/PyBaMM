@@ -94,7 +94,13 @@ class Discretisation(object):
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True, check_model=True):
+    def process_model(
+        self,
+        model,
+        inplace=True,
+        check_model=True,
+        remove_independent_variables_from_rhs=True,
+    ):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -109,8 +115,14 @@ class Discretisation(object):
         check_model : bool, optional
             If True, model checks are performed after discretisation. For large
             systems these checks can be slow, so can be skipped by setting this
-            option to False. When developing, testing or debugging it is recommened
+            option to False. When developing, testing or debugging it is recommended
             to leave this option as True as it may help to identify any errors.
+            Default is True.
+        remove_independent_variables_from_rhs : bool, optional
+            If True, model checks to see whether any variables from the RHS are used
+            in any other equation. If a variable meets all of the following criteria
+            (not used anywhere in the model, len(rhs)>1), then the variable
+            is moved to be explicitly integrated when called by the solution object.
             Default is True.
 
         Returns
@@ -148,7 +160,12 @@ class Discretisation(object):
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
+
+        # Search Equations for Independence
+        if remove_independent_variables_from_rhs:
+            model = self.remove_independent_variables_from_rhs(model)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
             for var in variables:
                 if var.domain != []:
@@ -711,62 +728,6 @@ class Discretisation(object):
 
         return mass_matrix, mass_matrix_inv
 
-    def create_jacobian(self, model):
-        """Creates Jacobian of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
-
-        Note: At present, calculation of the Jacobian is deferred until after
-        simplification, since it is much faster to compute the Jacobian of the
-        simplified model. However, in some use cases (e.g. running the same
-        model multiple times but with different parameters) it may be more
-        efficient to compute the Jacobian once, before simplification, so that
-        parameters in the Jacobian can be updated (see PR #670).
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Discretised model. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-
-        Returns
-        -------
-        :class:`pybamm.Concatenation`
-            The expression trees corresponding to the Jacobian of the model
-        """
-        # create state vector to differentiate with respect to
-        y = pybamm.StateVector(slice(0, np.size(model.concatenated_initial_conditions)))
-        # set up Jacobian object, for re-use of dict
-        jacobian = pybamm.Jacobian()
-
-        # calculate Jacobian of rhs by equation
-        jac_rhs_eqn_dict = {}
-        for eqn_key, eqn in model.rhs.items():
-            pybamm.logger.debug(
-                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
-            )
-            jac_rhs_eqn_dict[eqn_key] = jacobian.jac(eqn, y)
-        jac_rhs = self._concatenate_in_order(jac_rhs_eqn_dict, sparse=True)
-
-        # calculate Jacobian of algebraic by equation
-        jac_algebraic_eqn_dict = {}
-        for eqn_key, eqn in model.algebraic.items():
-            pybamm.logger.debug(
-                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
-            )
-            jac_algebraic_eqn_dict[eqn_key] = jacobian.jac(eqn, y)
-        jac_algebraic = self._concatenate_in_order(jac_algebraic_eqn_dict, sparse=True)
-
-        # full Jacobian
-        if model.rhs.keys() and model.algebraic.keys():
-            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
-        elif not model.algebraic.keys():
-            jac = jac_rhs
-        else:
-            jac = jac_algebraic
-
-        return jac, jac_rhs, jac_algebraic
-
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.algebraic, model.initial_conditions or
@@ -1005,7 +966,6 @@ class Discretisation(object):
                     out = pybamm.Index(ext, slice(start, end))
                     out.copy_domains(symbol)
                     return out
-
             else:
                 # add a try except block for a more informative error if a variable
                 # can't be found. This should usually be caught earlier by
@@ -1197,3 +1157,57 @@ class Discretisation(object):
                             var.shape, model.rhs[rhs_var].shape, var
                         )
                     )
+
+    def is_variable_independent(self, var, all_vars_in_eqns):
+        pybamm.logger.verbose("Removing independent blocks.")
+        if not isinstance(var, pybamm.Variable):
+            return False
+
+        this_var_is_independent = not (var.name in all_vars_in_eqns)
+        not_in_y_slices = not (var in list(self.y_slices.keys()))
+        not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+        is_0D = len(var.domain) == 0
+        this_var_is_independent = (
+            this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D
+        )
+        return this_var_is_independent
+
+    def remove_independent_variables_from_rhs(self, model):
+        rhs_vars_to_search_over = list(model.rhs.keys())
+        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
+        eqns_to_check = (
+            list(model.rhs.values())
+            + list(model.algebraic.values())
+            + [
+                x[side][0]
+                for x in model.boundary_conditions.values()
+                for side in x.keys()
+            ]
+            # only check children of variables, this will skip the variable itself
+            # and catch any other cases
+            + [child for var in model.variables.values() for child in var.children]
+        )
+        all_vars_in_eqns = unpacker.unpack_list_of_symbols(eqns_to_check)
+        all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
+
+        for var in rhs_vars_to_search_over:
+            this_var_is_independent = self.is_variable_independent(
+                var, all_vars_in_eqns
+            )
+            if this_var_is_independent:
+                if len(model.rhs) != 1:
+                    pybamm.logger.info("removing variable {} from rhs".format(var))
+                    my_initial_condition = model.initial_conditions[var]
+                    model.variables[var.name] = pybamm.ExplicitTimeIntegral(
+                        model.rhs[var], my_initial_condition
+                    )
+                    # edge case where a variable appears
+                    # in variables twice under different names
+                    for key in model.variables:
+                        if model.variables[key] == var:
+                            model.variables[key] = model.variables[var.name]
+                    del model.rhs[var]
+                    del model.initial_conditions[var]
+                else:
+                    break
+        return model

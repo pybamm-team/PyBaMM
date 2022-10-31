@@ -97,6 +97,102 @@ class TestInterpolant(unittest.TestCase):
             interp.evaluate(y=np.array([0, 0])), 0, decimal=3
         )
 
+    def test_interpolation_3_x(self):
+        def f(x, y, z):
+            return 2 * x**3 + 3 * y**2 - z
+
+        x = np.linspace(1, 4, 11)
+        y = np.linspace(4, 7, 22)
+        z = np.linspace(7, 9, 33)
+        xg, yg, zg = np.meshgrid(x, y, z, indexing="ij", sparse=True)
+        data = f(xg, yg, zg)
+
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        var3 = pybamm.StateVector(slice(2, 3))
+
+        x_in = (x, y, z)
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="linear"
+        )
+
+        value = interp.evaluate(y=np.array([1, 5, 8]))
+        np.testing.assert_equal(value, f(1, 5, 8))
+
+        value = interp.evaluate(y=np.array([[1, 1, 1], [5, 4, 4], [8, 7, 7]]))
+        np.testing.assert_array_equal(
+            value, np.array([[f(1, 5, 8)], [f(1, 4, 7)], [f(1, 4, 7)]])
+        )
+
+        # check also works for cubic
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="cubic"
+        )
+        value = interp.evaluate(y=np.array([1, 5, 8]))
+        np.testing.assert_equal(value, f(1, 5, 8))
+
+        # Test raising error if data is not 3D
+        data_4d = np.zeros((11, 22, 33, 5))
+        with self.assertRaisesRegex(ValueError, "y should be three-dimensional"):
+            interp = pybamm.Interpolant(
+                x_in, data_4d, (var1, var2, var3), interpolator="linear"
+            )
+
+        # Test raising error if wrong shapes
+        with self.assertRaisesRegex(ValueError, "x1.shape"):
+            interp = pybamm.Interpolant(
+                x_in, np.zeros((12, 22, 33)), (var1, var2, var3), interpolator="linear"
+            )
+
+        with self.assertRaisesRegex(ValueError, "x2.shape"):
+            interp = pybamm.Interpolant(
+                x_in, np.zeros((11, 23, 33)), (var1, var2, var3), interpolator="linear"
+            )
+
+        with self.assertRaisesRegex(ValueError, "x3.shape"):
+            interp = pybamm.Interpolant(
+                x_in, np.zeros((11, 22, 34)), (var1, var2, var3), interpolator="linear"
+            )
+
+        # Raise error if not linear
+        with self.assertRaisesRegex(
+            ValueError, "interpolator should be 'linear' or 'cubic'"
+        ):
+            interp = pybamm.Interpolant(
+                x_in, data, (var1, var2, var3), interpolator="pchip"
+            )
+
+        # Check returns nan if extrapolate set to False
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="linear", extrapolate=False
+        )
+        value = interp.evaluate(y=np.array([0, 0, 0]))
+        np.testing.assert_equal(value, np.nan)
+
+        # Check testing for shape works (i.e. using nans)
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="cubic"
+        )
+        interp.test_shape()
+
+        # test with inconsistent children shapes
+        # (this can occur is one child is a scaler and the others
+        # are vaiables)
+        evaluated_children = [np.array([[1]]), 4, np.array([[7]])]
+        value = interp._function_evaluate(evaluated_children)
+
+        evaluated_children = [np.array([[1]]), np.ones(()) * 4, np.array([[7]])]
+        value = interp._function_evaluate(evaluated_children)
+
+        # Test evaluation fails with different child shapes
+        with self.assertRaisesRegex(ValueError, "All children must"):
+            evaluated_children = [np.array([[1, 1]]), np.ones(()) * 4, np.array([[7]])]
+            value = interp._function_evaluate(evaluated_children)
+
+        # Test runs when all children are scalsrs
+        evaluated_children = [1, 4, 7]
+        value = interp._function_evaluate(evaluated_children)
+
     def test_name(self):
         a = pybamm.Symbol("a")
         x = np.linspace(0, 1, 200)

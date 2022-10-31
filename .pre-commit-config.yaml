@@ -4,13 +4,13 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0-alpha.0
+    rev: v3.0.0-alpha.3
     hooks:
       - id: prettier
         exclude: assets/js/webapp\.js
 
   - repo: https://github.com/psf/black
-    rev: 22.8.0
+    rev: 22.10.0
     hooks:
       - id: black
 

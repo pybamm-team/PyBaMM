@@ -6,9 +6,7 @@ import pybamm
 
 all_options = pybamm.BatteryModelOptions({}).possible_options
 all_parameter_sets = [
-    x
-    for x in dir(pybamm.parameter_sets)
-    if not x.startswith("__") and x not in ["Sulzer2019"]
+    k for k, v in pybamm.parameter_sets.items() if v["chemistry"] == "lithium_ion"
 ]
 
 for option_name, option_list in all_options.items():

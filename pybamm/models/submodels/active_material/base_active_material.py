@@ -27,13 +27,12 @@ class BaseModel(pybamm.BaseSubModel):
     def _get_standard_active_material_variables(self, eps_solid):
         param = self.param
         phase_name = self.phase_name
-        Domain = self.domain
-        domain = Domain.lower()
+        domain, Domain = self.domain_Domain
 
         if eps_solid.domain == []:
             eps_solid = pybamm.PrimaryBroadcast(eps_solid, "current collector")
         if eps_solid.domain == ["current collector"]:
-            eps_solid = pybamm.PrimaryBroadcast(eps_solid, domain + " electrode")
+            eps_solid = pybamm.PrimaryBroadcast(eps_solid, f"{domain} electrode")
         eps_solid_av = pybamm.x_average(eps_solid)
 
         variables = {
@@ -52,13 +51,10 @@ class BaseModel(pybamm.BaseSubModel):
                 {
                     f"{Domain} electrode surface area to volume ratio": a,
                     f"{Domain} electrode surface area to volume ratio [m-1]": a * a_typ,
-                    "X-averaged "
-                    + domain
-                    + " electrode surface area to volume ratio": pybamm.x_average(a),
-                    "X-averaged "
-                    + domain
-                    + " electrode surface area"
-                    + " to volume ratio [m-1]": pybamm.x_average(a) * a_typ,
+                    f"X-averaged {domain} electrode surface area "
+                    "to volume ratio": pybamm.x_average(a),
+                    f"X-averaged {domain} electrode surface area "
+                    "to volume ratio [m-1]": pybamm.x_average(a) * a_typ,
                 }
             )
             return variables
@@ -91,9 +87,9 @@ class BaseModel(pybamm.BaseSubModel):
                 R = self.phase_param.R
                 R_dim = self.phase_param.R_dimensional
             elif self.options["particle size"] == "distribution":
-                if self.domain == "Negative":
+                if self.domain == "negative":
                     R_ = pybamm.standard_spatial_vars.R_n
-                elif self.domain == "Positive":
+                elif self.domain == "positive":
                     R_ = pybamm.standard_spatial_vars.R_p
                 R = pybamm.size_average(R_)
                 R_dim = R * self.phase_param.R_typ
@@ -128,18 +124,20 @@ class BaseModel(pybamm.BaseSubModel):
             return variables
 
     def _get_standard_active_material_change_variables(self, deps_solid_dt):
+        domain, Domain = self.domain_Domain
+
         if deps_solid_dt.domain == ["current collector"]:
             deps_solid_dt_av = deps_solid_dt
             deps_solid_dt = pybamm.PrimaryBroadcast(
-                deps_solid_dt_av, self.domain.lower() + " electrode"
+                deps_solid_dt_av, f"{domain} electrode"
             )
         else:
             deps_solid_dt_av = pybamm.x_average(deps_solid_dt)
 
         variables = {
-            f"{self.domain} electrode {self.phase_name}"
+            f"{Domain} electrode {self.phase_name}"
             "active material volume fraction change": deps_solid_dt,
-            f"X-averaged {self.domain.lower()} electrode {self.phase_name}"
+            f"X-averaged {domain} electrode {self.phase_name}"
             "active material volume fraction change": deps_solid_dt_av,
         }
 

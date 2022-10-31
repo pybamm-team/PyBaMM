@@ -33,7 +33,14 @@ class ProcessedVariable(object):
         Default is True.
     """
 
-    def __init__(self, base_variables, base_variables_casadi, solution, warn=True):
+    def __init__(
+        self,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        warn=True,
+        cumtrapz_ic=None,
+    ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
 
@@ -46,6 +53,7 @@ class ProcessedVariable(object):
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
         self.warn = warn
+        self.cumtrapz_ic = cumtrapz_ic
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
@@ -106,6 +114,7 @@ class ProcessedVariable(object):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_pts))
         idx = 0
+        last_t = 0
         # Evaluate the base_variable index-by-index
         for ts, ys, inputs, base_var_casadi in zip(
             self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
@@ -113,8 +122,22 @@ class ProcessedVariable(object):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
-                entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
+                if self.cumtrapz_ic is not None:
+                    if idx == 0:
+                        new_val = t * base_var_casadi(t, y, inputs).full()[0, 0]
+                        entries[idx] = self.cumtrapz_ic + (
+                            t * base_var_casadi(t, y, inputs).full()[0, 0]
+                        )
+                    else:
+                        new_val = (t - last_t) * (
+                            base_var_casadi(t, y, inputs).full()[0, 0]
+                        )
+                        entries[idx] = new_val + entries[idx - 1]
+                else:
+                    entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
+
                 idx += 1
+                last_t = t
 
         # set up interpolation
         if len(self.t_pts) == 1:

@@ -14,7 +14,7 @@
 #
 import os
 import sys
-
+import pybamm
 import guzzle_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
@@ -27,7 +27,7 @@ copyright = "2018-2022, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "22.9"
+version = "22.10"
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -212,4 +212,29 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable", None),
     # "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
     "matplotlib": ("https://matplotlib.org", None),
+}
+
+# -- Jinja templating --------------------------------------------------------
+# Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
+
+
+def rstjinja(app, docname, source):
+    """
+    Render our pages as a jinja template for fancy templating goodness.
+    """
+    # Make sure we're outputting HTML
+    if app.builder.format != "html":
+        return
+    src = source[0]
+    rendered = app.builder.templates.render_string(src, app.config.html_context)
+    source[0] = rendered
+
+
+def setup(app):
+    app.connect("source-read", rstjinja)
+
+
+# Context for Jinja Templates
+html_context = {
+    "parameter_sets": pybamm.parameter_sets,
 }
