@@ -570,6 +570,7 @@ class TestBinaryOperators(unittest.TestCase):
         B = pybamm.Matrix(np.random.rand(10, 10))
         # C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
+        sym = pybamm.Symbol("sym")
         # var2 = pybamm.StateVector(slice(10, 20))
         vec = pybamm.Vector(np.random.rand(10))
 
@@ -679,6 +680,11 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr, ((5 / 7) * var))
         expr = 5 / (var / 7)
         self.assertEqual(expr, (35 / var))
+
+        expr = (var * sym) / sym
+        self.assertEqual(expr, var)
+        expr = (sym * var) / sym
+        self.assertEqual(expr, var)
 
         # use power rules on multiplications and divisions
         expr = (var * 5) ** 2

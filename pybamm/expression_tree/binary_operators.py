@@ -1254,15 +1254,20 @@ def simplified_division(left, right):
             return (left * r_right) / r_left
 
     # Cancelling out common terms
-    if isinstance(left, Multiplication) and isinstance(right, Multiplication):
-        if left.left == right.left:
-            _, l_right = left.orphans
-            _, r_right = right.orphans
-            return l_right / r_right
-        if left.right == right.right:
-            l_left, _ = left.orphans
-            r_left, _ = right.orphans
-            return l_left / r_left
+    if isinstance(left, Multiplication):
+        if left.left == right:
+            return left.right
+        elif left.right == right:
+            return left.left
+        elif isinstance(right, Multiplication):
+            if left.left == right.left:
+                _, l_right = left.orphans
+                _, r_right = right.orphans
+                return l_right / r_right
+            if left.right == right.right:
+                l_left, _ = left.orphans
+                r_left, _ = right.orphans
+                return l_left / r_left
 
     # Negation simplifications
     if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
