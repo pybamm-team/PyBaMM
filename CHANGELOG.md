@@ -1,11 +1,20 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
+
+## Features
+
+- Third-party parameter sets can be added by registering entry points to `pybamm_parameter_set` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396))
+- Added three-dimensional interpolation ([#2380](https://github.com/pybamm-team/PyBaMM/pull/2380))
+
 ## Bug fixes
 
+- `pybamm.have_julia()` now checks that julia is properly configured ([#2402](https://github.com/pybamm-team/PyBaMM/pull/2402))
 - For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2337](https://github.com/pybamm-team/PyBaMM/pull/2337))
 
 ## Optimizations
 
+- Reformatted how simulations with experiments are built ([#2395](https://github.com/pybamm-team/PyBaMM/pull/2395))
 - Added small perturbation to initial conditions for casadi solver. This seems to help the solver converge better in some cases ([#2356](https://github.com/pybamm-team/PyBaMM/pull/2356))
 - Added `ExplicitTimeIntegral` functionality to move variables which do not appear anywhere on the rhs to a new location, and to integrate those variables explicitly when `get` is called by the solution object. ([#2348](https://github.com/pybamm-team/PyBaMM/pull/2348))
 - Added more rules for simplifying expressions ([#2211](https://github.com/pybamm-team/PyBaMM/pull/2211))
@@ -13,6 +22,9 @@
 
 ## Breaking change
 
+- Removed `pybamm.SymbolReplacer` as it is no longer needed to set up simulations with experiments, which is the only place where it was being used ([#2395](https://github.com/pybamm-team/PyBaMM/pull/2395))
+- Removed `get_infinite_nested_dict`, `BaseModel.check_default_variables_dictionaries`, and `Discretisation.create_jacobian` methods, which were not used by any other functionality in the repository ([#2384](https://github.com/pybamm-team/PyBaMM/pull/2384))
+- Dropped support for Python 3.7 after the release of Numpy v1.22.0 ([#2379](https://github.com/pybamm-team/PyBaMM/pull/2379))
 - Removed parameter cli tools (add/edit/remove parameters). Parameter sets can now more easily be added via python scripts. ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
 - Parameter sets should now be provided as single python files containing all parameters and functions. Parameters provided as "data" (e.g. OCP vs SOC) can still be csv files, but must be either in the same folder as the parameter file or in a subfolder called "data/". See for example [Ai2020](https://github.com/pybamm-team/PyBaMM/tree/develop/pybamm/input/parameters/lithium_ion/Ai2020.py) ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
 

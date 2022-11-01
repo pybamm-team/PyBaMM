@@ -41,10 +41,8 @@ from .util import (
     root_dir,
     load_function,
     rmse,
-    get_infinite_nested_dict,
     load,
     is_constant_and_can_evaluate,
-    tree_search,
 )
 from .util import (
     get_parameters_filepath,
@@ -98,7 +96,6 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.replace_symbols import SymbolReplacer
 from .expression_tree.operations.evaluate_julia import (
     get_julia_function,
     get_julia_mtk_model,

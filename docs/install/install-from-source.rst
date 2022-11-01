@@ -25,7 +25,7 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.7, 3.8, and 3.9)
+- Python 3 (PyBaMM supports versions 3.8 and 3.9)
 - The python headers file for your current python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
@@ -177,7 +177,7 @@ The default command
 will run the full test suite (integration and unit tests).
 This can take several minutes.
 
-Is is often sufficient to run the unit tests only. To do so, use
+It is often sufficient to run the unit tests only. To do so, use
 
    .. code:: bash
 

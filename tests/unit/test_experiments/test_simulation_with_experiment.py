@@ -20,48 +20,24 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
+        sim.build_for_experiment()
         C = model.default_parameter_values["Nominal cell capacity [A.h]"]
 
-        self.assertEqual(sim.experiment, experiment)
-        self.assertEqual(
-            sim._experiment_inputs[0],
-            {"Current switch": 1, "Current input [A]": C / 20, "period": 60},
-        )
-        self.assertEqual(
-            sim._experiment_inputs[1],
-            {
-                "Current switch": 1,
-                "Current input [A]": -1,
-                "period": 60,
-                "Voltage cut-off [V]": 4.1,
-            },
-        )
-        self.assertEqual(
-            sim._experiment_inputs[2],
-            {
-                "Voltage switch": 1,
-                "Voltage input [V]": 4.1,
-                "period": 60,
-                "Current cut-off [A]": 0.05,
-            },
-        )
-        self.assertEqual(
-            sim._experiment_inputs[3],
-            {
-                "Power switch": 1,
-                "Power input [W]": 2,
-                "period": 60,
-                "Voltage cut-off [V]": 3.5,
-            },
-        )
+        self.assertEqual(sim.experiment.args, experiment.args)
+        op_conds = sim.experiment.operating_conditions
+        self.assertEqual(op_conds[0]["Current input [A]"], C / 20)
+        self.assertEqual(op_conds[1]["Current input [A]"], -1)
+        self.assertEqual(op_conds[2]["Voltage input [V]"], 4.1)
+        self.assertEqual(op_conds[3]["Power input [W]"], 2)
 
         Crate = 1 / C
         self.assertEqual(
-            sim._experiment_times, [3600, 3 / Crate * 3600, 24 * 3600, 24 * 3600]
+            [op["time"] for op in op_conds],
+            [3600, 3 / Crate * 3600, 24 * 3600, 24 * 3600],
         )
 
-        model_I = sim.op_conds_to_model_and_param[(-1.0, "A")][0]
-        model_V = sim.op_conds_to_model_and_param[(4.1, "V")][0]
+        model_I = sim.op_string_to_model["Charge at 1 A until 4.1 V"]
+        model_V = sim.op_string_to_model["Hold at 4.1 V until 50 mA"]
         self.assertIn(
             "Current cut-off [A] [experiment]",
             [event.name for event in model_V.events],
@@ -92,6 +68,16 @@ class TestSimulationExperiment(unittest.TestCase):
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(len(sol.cycles), 1)
+
+        # Test outputs
+        np.testing.assert_array_equal(sol.cycles[0].steps[0]["C-rate"].data, 1 / 20)
+        np.testing.assert_array_equal(sol.cycles[0].steps[1]["Current [A]"].data, -1)
+        np.testing.assert_array_almost_equal(
+            sol.cycles[0].steps[2]["Terminal voltage [V]"].data, 4.1, decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
+        )
 
         for i, step in enumerate(sol.cycles[0].steps[:-1]):
             len_rhs = sol.all_models[0].concatenated_rhs.size
@@ -199,9 +185,10 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
-        self.assertIn(("drive_cycle", "A"), sim.op_conds_to_model_and_param)
-        self.assertIn(("drive_cycle", "V"), sim.op_conds_to_model_and_param)
-        self.assertIn(("drive_cycle", "W"), sim.op_conds_to_model_and_param)
+        sim.build_for_experiment()
+        self.assertIn(("Run drive_cycle (A)"), sim.op_string_to_model)
+        self.assertIn(("Run drive_cycle (V)"), sim.op_string_to_model)
+        self.assertIn(("Run drive_cycle (W)"), sim.op_string_to_model)
 
     def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])

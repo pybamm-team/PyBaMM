@@ -497,19 +497,20 @@ def get_parameter_values():
     """
     Parameters for an LG M50 cell, from the paper
 
-    > Simon O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert Timms,
-    Valentin Sulzer, Jacqueline Edge, Billy Wu, Gregory Offer, and Monica Marinescu.
-    ["Lithium-ion battery degradation: how to model
-    it."](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00417h) Physical
-    Chemistry: Chemical Physics 24 (2022): 7909-7922
+        Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert
+        Timms, Valentin Sulzer, Jacqueline Sophie Edge, Billy Wu, Gregory J. Offer, and
+        Monica Marinescu. Lithium-ion battery degradation: how to model it. Phys. Chem.
+        Chem. Phys., 24:7909-7922, 2022. URL: http://dx.doi.org/10.1039/D2CP00417H,
+        doi:10.1039/D2CP00417H.
+
 
     based on the paper
 
-    > Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery
-    Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of
-    the Electrochemical Society 167 (2020): 080534
+        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
+        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+
 
     and references therein.
 
@@ -519,6 +520,7 @@ def get_parameter_values():
     """
 
     return {
+        "chemistry": "lithium_ion",
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
