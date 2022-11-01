@@ -46,15 +46,11 @@ class BaseModel(pybamm.BaseSubModel):
         # some models (e.g. lead-acid) do not have particles
         if self.options["particle shape"] == "no particles":
             a = self.phase_param.a
-            a_typ = self.phase_param.a_typ
             variables.update(
                 {
                     f"{Domain} electrode surface area to volume ratio [m-1]": a,
-                    f"{Domain} electrode surface area to volume ratio [m-1]": a * a_typ,
                     f"X-averaged {domain} electrode surface area "
-                    "to volume ratio": pybamm.x_average(a),
-                    f"X-averaged {domain} electrode surface area "
-                    "to volume ratio [m-1]": pybamm.x_average(a) * a_typ,
+                    "to volume ratio [m-1]": pybamm.x_average(a),
                 }
             )
             return variables
@@ -101,6 +97,7 @@ class BaseModel(pybamm.BaseSubModel):
 
             variables.update(
                 {
+                    f"{Domain} {phase_name}particle radius": R / self.phase_param.R_typ,
                     f"{Domain} {phase_name}particle radius [m]": R,
                     f"{Domain} electrode {phase_name}"
                     "surface area to volume ratio [m-1]": a,

@@ -78,21 +78,19 @@ class Plating(BasePlating):
 
         eta_stripping = delta_phi + phi_ref + eta_sei
         eta_plating = -eta_stripping
-        prefactor = 1 / (1 + self.param.Theta * T)
+        F_RT = param.F / (param.R * T)
         # NEW: transfer coefficients can be set by the user
         alpha_stripping = self.param.alpha_stripping
         alpha_plating = self.param.alpha_plating
 
         if self.options["lithium plating"] in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(
-                prefactor * alpha_stripping * eta_stripping
-            ) - j0_plating * pybamm.exp(prefactor * alpha_plating * eta_plating)
+                F_RT * alpha_stripping * eta_stripping
+            ) - j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
         elif self.options["lithium plating"] == "irreversible":
             # j_stripping is always negative, because there is no stripping, only
             # plating
-            j_stripping = -j0_plating * pybamm.exp(
-                prefactor * alpha_plating * eta_plating
-            )
+            j_stripping = -j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
 
         variables.update(self._get_standard_overpotential_variables(eta_stripping))
         variables.update(self._get_standard_reaction_variables(j_stripping))

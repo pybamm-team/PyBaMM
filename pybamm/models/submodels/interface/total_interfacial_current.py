@@ -169,6 +169,6 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 else:
                     var_dict[domain] = variables[variable_template.format(domain + " ")]
             var = pybamm.concatenation(*var_dict.values())
-            variables.update({variable_template.format("").capitalize(): var})
+            variables.update({variable_template.format(""): var})
 
         return variables

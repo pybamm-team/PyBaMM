@@ -29,7 +29,7 @@ class Full(BaseElectrolyteDiffusion):
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
             eps_c_e_k = pybamm.Variable(
-                f"{Domain} porosity times concentration",
+                f"{Domain} porosity times concentration [mol.m-3]",
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, np.inf),

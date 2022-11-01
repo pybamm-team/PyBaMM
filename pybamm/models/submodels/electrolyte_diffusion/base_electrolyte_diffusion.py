@@ -77,7 +77,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
     def _get_standard_porosity_times_concentration_variables(self, eps_c_e_dict):
         eps_c_e = pybamm.concatenation(*eps_c_e_dict.values())
-        variables = {"Porosity times concentration": eps_c_e}
+        variables = {"Porosity times concentration [mol.m-3]": eps_c_e}
 
         for domain, eps_c_e_k in eps_c_e_dict.items():
             Domain = domain.capitalize()

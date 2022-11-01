@@ -28,7 +28,7 @@ class Full(BaseElectrolyteConductivity):
         phi_e_dict = {}
         for domain in self.options.whole_cell_domains:
             phi_e_k = pybamm.Variable(
-                f"{domain.capitalize().split()[0]} electrolyte potential",
+                f"{domain.capitalize().split()[0]} electrolyte potential [V]",
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
             )
@@ -62,7 +62,7 @@ class Full(BaseElectrolyteConductivity):
         i_e = variables["Electrolyte current density [A.m-2]"]
 
         # Variable summing all of the interfacial current densities
-        sum_a_j = variables["Sum of volumetric interfacial current densities"]
+        sum_a_j = variables["Sum of volumetric interfacial current densities [A.m-3]"]
 
         # Override print_name
         sum_a_j.print_name = "aj"

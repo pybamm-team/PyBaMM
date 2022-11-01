@@ -46,18 +46,8 @@ class ThermalParameters(BaseParameters):
         self.h_edge = pybamm.Parameter("Edge heat transfer coefficient [W.m-2.K-1]")
         self.h_total = pybamm.Parameter("Total heat transfer coefficient [W.m-2.K-1]")
 
-        # Typical temperature rise
-        # self.Delta_T = pybamm.Scalar(1)
-
         # Initial temperature
         self.T_init = pybamm.Parameter("Initial temperature [K]")
-
-        # References
-        # self.rho_eff_ref = self.rho_eff(self.T_ref)
-        # self.lambda_eff_ref = self.lambda_eff(self.T_ref)
-
-        # Planar (y,z) thermal diffusion timescale
-        # self.tau_th_yz = self.rho_eff_ref * (self.geo.L_z**2) / self.lambda_eff_ref
 
     def T_amb(self, t):
         """Dimensional ambient temperature"""
@@ -83,21 +73,6 @@ class ThermalParameters(BaseParameters):
             + self.p.lambda_cc(T) * self.geo.p.L_cc
         ) / self.geo.L
 
-    # def _set_dimensionless_parameters(self):
-    #     """Defines the dimensionless parameters"""
-    #     for domain in self.domain_params.values():
-    #         domain._set_dimensionless_parameters()
-
-    #     # Relative temperature rise
-    #     self.Theta = self.Delta_T / self.T_ref
-
-    #     # Cooling coefficient
-    #     self.h_edge = self.h_edge_dim * self.geo.L_x / self.lambda_eff_dim_ref
-    #     self.h_total = self.h_total_dim * self.geo.L_x / self.lambda_eff_dim_ref
-
-    #     # Initial temperature
-    #     self.T_init = (self.T_init_dim - self.T_ref) / self.Delta_T
-
     def rho(self, T):
         """
         Dimensionless effective density, not to be confused with rho_eff_dim,
@@ -110,10 +85,6 @@ class ThermalParameters(BaseParameters):
             + self.p.rho(T) * self.geo.p.l
             + self.p.rho_cc(T) * self.geo.p.l_cc
         ) / self.geo.l
-
-    # def T_amb(self, t):
-    #     """Dimensionless ambient temperature"""
-    #     return (self.T_amb_dim(t) - self.T_ref) / self.Delta_T
 
 
 class DomainThermalParameters(BaseParameters):
@@ -185,37 +156,6 @@ class DomainThermalParameters(BaseParameters):
         return pybamm.FunctionParameter(
             f"{Domain} current collector density [kg.m-3]", inputs
         )
-
-    # def _set_dimensionless_parameters(self):
-    #     main = self.main_param
-    #     self.h_cc = self.h_cc_dim * main.geo.L_x / main.lambda_eff_dim_ref
-    #     self.h_tab = self.h_tab_dim * main.geo.L_x / main.lambda_eff_dim_ref
-
-    # def rho(self, T):
-    #     """Dimensionless electrode density"""
-    #     T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-    #     return (
-    #         self.rho_dim(T_dim) * self.c_p_dim(T_dim) / self.main_param.rho_eff_dim_ref
-    #     )
-
-    # def rho_cc(self, T):
-    #     """Dimensionless current collector density"""
-    #     T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-    #     return (
-    #         self.rho_cc_dim(T_dim)
-    #         * self.c_p_cc_dim(T_dim)
-    #         / self.main_param.rho_eff_dim_ref
-    #     )
-
-    # def lambda_(self, T):  # cannot call a function "lambda"
-    #     """Dimensionless electrode thermal conductivity"""
-    #     T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-    #     return self.lambda_dim(T_dim) / self.main_param.lambda_eff_dim_ref
-
-    # def lambda_cc(self, T):
-    #     """Dimensionless current collector thermal conductivity"""
-    #     T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-    #     return self.lambda_cc_dim(T_dim) / self.main_param.lambda_eff_dim_ref
 
 
 thermal_parameters = ThermalParameters()

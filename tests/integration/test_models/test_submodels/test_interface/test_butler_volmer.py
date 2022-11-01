@@ -58,14 +58,14 @@ class TestButlerVolmer(unittest.TestCase):
             "Positive electrode interface utilisation": 1,
             "Negative electrode open circuit potential": pybamm.Scalar(0),
             "Positive electrode open circuit potential": pybamm.Scalar(0),
-            "Sum of electrolyte reaction source terms": pybamm.Scalar(1),
+            "Sum of electrolyte reaction source terms [A.m-3]": pybamm.Scalar(1),
             "Sum of interfacial current densities": pybamm.Scalar(1),
             "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
             "Sum of positive electrode interfacial current densities": pybamm.Scalar(1),
-            "Sum of negative electrode electrolyte reaction source terms": 1,
-            "Sum of positive electrode electrolyte reaction source terms": 1,
-            "Sum of x-averaged negative electrode electrolyte reaction source terms": 1,
-            "Sum of x-averaged positive electrode electrolyte reaction source terms": 1,
+            "Sum of negative electrode electrolyte reaction source terms [A.m-3]": 1,
+            "Sum of positive electrode electrolyte reaction source terms [A.m-3]": 1,
+            "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]": 1,
+            "Sum of x-averaged positive electrode electrolyte reaction source terms [A.m-3]": 1,
         }
 
     def tearDown(self):

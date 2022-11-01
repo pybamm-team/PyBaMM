@@ -31,7 +31,7 @@ class Composite(BaseElectrolyteDiffusion):
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize().split()[0]
             c_e_k = pybamm.Variable(
-                f"{Domain} electrolyte concentration",
+                f"{Domain} electrolyte concentration [mol.m-3]",
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, np.inf),
@@ -58,8 +58,8 @@ class Composite(BaseElectrolyteDiffusion):
         param = self.param
 
         N_e_diffusion = -tor_0 * param.D_e(c_e_0_av, T_0) * pybamm.grad(c_e)
-        N_e_migration = param.C_e * param.t_plus(c_e, T_0) * i_e / param.gamma_e
-        N_e_convection = param.C_e * c_e_0_av * v_box_0
+        N_e_migration = param.t_plus(c_e, T_0) * i_e / param.F
+        N_e_convection = c_e_0_av * v_box_0
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
@@ -78,28 +78,27 @@ class Composite(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration [mol.m-3]"]
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
-            sum_s_j = variables[
-                "Leading-order sum of electrolyte reaction source terms"
+            sum_s_a_j = variables[
+                "Leading-order sum of electrolyte reaction source terms [A.m-3]"
             ]
         elif self.extended == "distributed":
-            sum_s_j = variables["Sum of electrolyte reaction source terms"]
+            sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
         elif self.extended == "average":
-            sum_s_j_n_av = variables[
-                "Sum of x-averaged negative electrode electrolyte reaction source terms"
+            sum_s_a_j_n_av = variables[
+                "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]"
             ]
-            sum_s_j_p_av = variables[
-                "Sum of x-averaged positive electrode electrolyte reaction source terms"
+            sum_s_a_j_p_av = variables[
+                "Sum of x-averaged positive electrode electrolyte reaction source terms [A.m-3]"
             ]
-            sum_s_j = pybamm.concatenation(
-                pybamm.PrimaryBroadcast(sum_s_j_n_av, "negative electrode"),
+            sum_s_a_j = pybamm.concatenation(
+                pybamm.PrimaryBroadcast(sum_s_a_j_n_av, "negative electrode"),
                 pybamm.FullBroadcast(0, "separator", "current collector"),
-                pybamm.PrimaryBroadcast(sum_s_j_p_av, "positive electrode"),
+                pybamm.PrimaryBroadcast(sum_s_a_j_p_av, "positive electrode"),
             )
-        source_terms = sum_s_j / self.param.gamma_e
+        source_terms = sum_s_a_j / param.F
 
         self.rhs = {
-            c_e: (1 / eps_0)
-            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_0_dt)
+            c_e: (1 / eps_0) * (-pybamm.div(N_e) + source_terms - c_e * deps_0_dt)
         }
 
     def set_initial_conditions(self, variables):

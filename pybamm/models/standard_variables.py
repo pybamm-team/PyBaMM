@@ -16,12 +16,12 @@ class StandardVariables:
 
         # Electrode potential
         self.phi_s_n = pybamm.Variable(
-            "Negative electrode potential",
+            "Negative electrode potential [V]",
             domain="negative electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
         self.phi_s_p = pybamm.Variable(
-            "Positive electrode potential",
+            "Positive electrode potential [V]",
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
@@ -49,22 +49,25 @@ class StandardVariables:
 
         # current collector variables
         self.phi_s_cn = pybamm.Variable(
-            "Negative current collector potential", domain="current collector"
+            "Negative current collector potential [V]", domain="current collector"
         )
         self.phi_s_cp = pybamm.Variable(
-            "Positive current collector potential", domain="current collector"
+            "Positive current collector potential [V]", domain="current collector"
         )
         self.i_boundary_cc = pybamm.Variable(
-            "Current collector current density", domain="current collector"
+            "Current collector current density [A.m-2]", domain="current collector"
         )
         self.phi_s_cn_composite = pybamm.Variable(
-            "Composite negative current collector potential", domain="current collector"
+            "Composite negative current collector potential [V]",
+            domain="current collector",
         )
         self.phi_s_cp_composite = pybamm.Variable(
-            "Composite positive current collector potential", domain="current collector"
+            "Composite positive current collector potential [V]",
+            domain="current collector",
         )
         self.i_boundary_cc_composite = pybamm.Variable(
-            "Composite current collector current density", domain="current collector"
+            "Composite current collector current density [A.m-2]",
+            domain="current collector",
         )
 
     def __setattr__(self, name, value):

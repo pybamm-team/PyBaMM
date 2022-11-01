@@ -73,11 +73,11 @@ class FirstOrder(BaseElectrolyteDiffusion):
         ]
         sum_s_j_n_0 = variables[
             "Leading-order sum of x-averaged "
-            "negative electrode electrolyte reaction source terms"
+            "negative electrode electrolyte reaction source terms [A.m-3]"
         ]
         sum_s_j_p_0 = variables[
             "Leading-order sum of x-averaged "
-            "positive electrode electrolyte reaction source terms"
+            "positive electrode electrolyte reaction source terms [A.m-3]"
         ]
         rhs_n = (
             d_epsc_n_0_dt

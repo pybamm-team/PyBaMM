@@ -42,6 +42,6 @@ class Uniform(BaseModel):
         # using current structure of lithium-ion models
         variables[
             "Leading-order current collector current density [A.m-2]"
-        ] = variables["Current collector current density"]
+        ] = variables["Current collector current density [A.m-2]"]
 
         return variables

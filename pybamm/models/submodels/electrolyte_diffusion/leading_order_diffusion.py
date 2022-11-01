@@ -82,10 +82,10 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "interfacial current densities"
         ]
         sum_s_j_n_0 = variables[
-            "Sum of x-averaged negative electrode electrolyte reaction source terms"
+            "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]"
         ]
         sum_s_j_p_0 = variables[
-            "Sum of x-averaged positive electrode electrolyte reaction source terms"
+            "Sum of x-averaged positive electrode electrolyte reaction source terms [A.m-3]"
         ]
         source_terms = (
             param.n.l * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
