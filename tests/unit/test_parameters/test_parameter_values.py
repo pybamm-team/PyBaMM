@@ -1030,7 +1030,7 @@ class TestParameterValues(unittest.TestCase):
         bpx_obj = {
             "Header": {
                 "BPX": 1.0,
-                "Title": 'Parametrisation example',
+                "Title": "Parametrisation example",
                 "Description": "NMC Pouch",
                 "Model": "Newman",
             },
@@ -1055,26 +1055,25 @@ class TestParameterValues(unittest.TestCase):
                     "Initial concentration [mol.m-3]": 1000,
                     "Cation transference number": 0.259,
                     "Conductivity [S.m-1]": (
-                        '0.1297 * (x / 1000) ** 3 '
-                        '- 2.51 * (x / 1000) ** 1.5 + 3.329 * (x / 1000)'
+                        "0.1297 * (x / 1000) ** 3 "
+                        "- 2.51 * (x / 1000) ** 1.5 + 3.329 * (x / 1000)"
                     ),
                     "Diffusivity [m2.s-1]": (
-                        '8.794e-11 * (x / 1000) ** 2 '
-                        '- 3.972e-10 * (x / 1000) + 4.862e-10'
+                        "8.794e-11 * (x / 1000) ** 2 " "- 3.972e-10 * (x / 1000) + 4.862e-10"
                     ),
                     "Conductivity activation energy [J.mol-1]": 34200,
                     "Diffusivity activation energy [J.mol-1]": 34200,
                 },
                 "Anode": {
                     "Particle radius [m]": 4.12e-06,
-                    "Thickness [m]": 5.86e-6,
-                    "Diffusivity [m2.s-1]": '8.6e-13 * exp(-13.5 * x) + 9.5e-15',
+                    "Thickness [m]": 5.62e-05,
+                    "Diffusivity [m2.s-1]": "8.6e-13 * exp(-13.5 * x) + 9.5e-15",
                     "OCP [V]": (
-                        '7.84108819e-01 * exp(-5.16822591e01 * x) + '
-                        '5.99914745e02 + '
-                        '2.62306941e-02 * tanh(-1.71992993e01 * (x - 5.48687033e-01)) +'
-                        '9.41099327e02 * tanh(-6.91080049e-01 * (x + 2.49433043e00)) + '
-                        '3.40646063e02 * tanh(7.27243978e-01 * (x + 1.64297574e00))'
+                        "7.84108819e-01 * exp(-5.16822591e01 * x) + "
+                        "5.99914745e02 + "
+                        "2.62306941e-02 * tanh(-1.71992993e01 * (x - 5.48687033e-01)) +"
+                        "9.41099327e02 * tanh(-6.91080049e-01 * (x + 2.49433043e00)) + "
+                        "3.40646063e02 * tanh(7.27243978e-01 * (x + 1.64297574e00))"
                     ),
                     "Conductivity [S.m-1]": 0.39,
                     "Surface area per unit volume": 487864,
@@ -1090,14 +1089,14 @@ class TestParameterValues(unittest.TestCase):
                     "Particle radius [m]": 4.6e-06,
                     "Thickness [m]": 5.23e-05,
                     "Diffusivity [m2.s-1]": (
-                        '5e-13 - x * 8e-14 - 4.1e-13 * exp(-12 * (x - 0.98) ** 2)'
+                        "5e-13 - x * 8e-14 - 4.1e-13 * exp(-12 * (x - 0.98) ** 2)"
                     ),
                     "OCP [V]": (
-                        '-2.59073509 * x + '
-                        '4.17659428 - '
-                        '11.03429916 * tanh(-9.343666 * (x - 0.79475919)) - '
-                        '1.63480454 * tanh(82.26606342 * (x - 1.00945121)) - '
-                        '10.70641562 * tanh(9.43939843 * (x - 0.79469384))'
+                        "-2.59073509 * x + "
+                        "4.17659428 - "
+                        "11.03429916 * tanh(-9.343666 * (x - 0.79475919)) - "
+                        "1.63480454 * tanh(82.26606342 * (x - 1.00945121)) - "
+                        "10.70641562 * tanh(9.43939843 * (x - 0.79469384))"
                     ),
                     "Conductivity [S.m-1]": 1.464,
                     "Surface area per unit volume": 404348,

@@ -130,7 +130,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
 
-    # doing this in a loop doesn't work? problem with copy_func?
+    # TODO: allow setting function parameters in a loop over domains
     c_e = pybamm_dict["Typical electrolyte concentration [mol.m-3]"]
     T_ref = pybamm_dict["Reference temperature [K]"]
     F = 96485
@@ -188,30 +188,73 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # diffusivity
-    for domain in [anode, electrolyte, cathode]:
-        T_ref = pybamm_dict["Reference temperature [K]"]
-        E_a = pybamm_dict.get(
-            domain.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
-        )
-        D_ref_value = pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"]
 
-        if callable(D_ref_value):
-            D_ref_fun = copy.copy(D_ref_value)
+    # TODO: allow setting function parameters in a loop over domains
+    T_ref = pybamm_dict["Reference temperature [K]"]
 
-            def diffusivity(sto, T):
-                D_ref = D_ref_fun(sto)
-                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-                return arrhenius * D_ref
+    # anode
+    E_a = pybamm_dict.get(
+        anode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    )
+    D_n_ref = pybamm_dict[anode.pre_name + "diffusivity [m2.s-1]"]
 
-        else:
-            D_ref_number = D_ref_value
+    if callable(D_n_ref):
 
-            def diffusivity(sto, T):
-                D_ref = D_ref_number
-                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-                return arrhenius * D_ref
+        def anode_diffusivity(sto, T):
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * D_n_ref(sto)
 
-        pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = copy_func(diffusivity)
+    else:
+
+        def anode_diffusivity(sto, T):
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * D_n_ref
+
+    pybamm_dict[anode.pre_name + "diffusivity [m2.s-1]"] = copy_func(anode_diffusivity)
+
+    # cathode
+    E_a = pybamm_dict.get(
+        cathode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    )
+    D_p_ref = pybamm_dict[cathode.pre_name + "diffusivity [m2.s-1]"]
+
+    if callable(D_p_ref):
+
+        def cathode_diffusivity(sto, T):
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * D_p_ref(sto)
+
+    else:
+
+        def cathode_diffusivity(sto, T):
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * D_p_ref
+
+    pybamm_dict[cathode.pre_name + "diffusivity [m2.s-1]"] = copy_func(
+        cathode_diffusivity
+    )
+
+    # electrolyte
+    E_a = pybamm_dict.get(
+        electrolyte.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    )
+    D_e_ref = pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"]
+
+    if callable(D_e_ref):
+
+        def electrolyte_diffusivity(sto, T):
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * D_e_ref(sto)
+
+    else:
+
+        def electrolyte_diffusivity(sto, T):
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * D_e_ref
+
+    pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = copy_func(
+        electrolyte_diffusivity
+    )
 
     # conductivity
     for domain in [electrolyte]:
