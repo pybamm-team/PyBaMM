@@ -113,7 +113,7 @@ t = np.linspace(0, 1, 100)
 solution = solver.solve(model, t)
 
 # Extract output variables
-L_out = solution["SEi thickness [m]"]
+L_out = solution["SEI thickness [m]"]
 
 # plot
 plt.plot(solution.t, L_out(solution.t))

@@ -14,31 +14,29 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
 
             T = variables[f"{Domain} electrode temperature [K]"]
             # For "particle-size distribution" models, take distribution version
-            # of c_s_surf that depends on particle size.
+            # of sto that depends on particle size.
             if self.options["particle size"] == "distribution":
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration distribution"
+                sto = variables[
+                    f"{Domain} {phase_name}particle surface stoichiometry distribution"
                 ]
                 # If variable was broadcast, take only the orphan
-                if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(
+                if isinstance(sto, pybamm.Broadcast) and isinstance(
                     T, pybamm.Broadcast
                 ):
-                    c_s_surf = c_s_surf.orphans[0]
+                    sto = sto.orphans[0]
                     T = T.orphans[0]
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
             else:
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration"
-                ]
+                sto = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
                 # If variable was broadcast, take only the orphan
-                if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(
+                if isinstance(sto, pybamm.Broadcast) and isinstance(
                     T, pybamm.Broadcast
                 ):
-                    c_s_surf = c_s_surf.orphans[0]
+                    sto = sto.orphans[0]
                     T = T.orphans[0]
 
-            ocp = self.phase_param.U(c_s_surf, T)
-            dUdT = self.phase_param.dUdT(c_s_surf)
+            ocp = self.phase_param.U(sto, T)
+            dUdT = self.phase_param.dUdT(sto)
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature [K]"]
             ocp = self.param.n.U_ref

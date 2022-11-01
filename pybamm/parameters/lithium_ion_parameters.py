@@ -389,7 +389,7 @@ class ParticleLithiumIonParameters(BaseParameters):
                 f"{pref}Outer SEI partial molar volume [m3.mol-1]"
             )
 
-            self.m_sei = pybamm.Parameter(
+            self.j0_sei = pybamm.Parameter(
                 f"{pref}SEI reaction exchange current density [A.m-2]"
             )
 

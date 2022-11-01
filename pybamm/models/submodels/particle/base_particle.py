@@ -83,6 +83,7 @@ class BaseParticle(pybamm.BaseSubModel):
             c_s_av = pybamm.r_average(c_s_xav)
 
         variables = {
+            f"{Domain} {phase_name}particle stoichiometry": c_s / c_scale,
             f"{Domain} {phase_name}particle concentration": c_s / c_scale,
             f"{Domain} {phase_name}particle concentration [mol.m-3]": c_s,
             f"X-averaged {domain} {phase_name}particle concentration": c_s_xav
@@ -93,8 +94,9 @@ class BaseParticle(pybamm.BaseSubModel):
             f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]": c_s_rav,
             f"Average {domain} {phase_name}particle concentration": c_s_av / c_scale,
             f"Average {domain} {phase_name}particle concentration [mol.m-3]": c_s_av,
+            f"{Domain} {phase_name}particle surface stoichiometry": c_s_surf / c_scale,
             f"{Domain} {phase_name}particle surface concentration": c_s_surf / c_scale,
-            f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_scale,
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_s_surf,
             f"X-averaged {domain} {phase_name}particle "
             "surface concentration": c_s_surf_av / c_scale,
             f"X-averaged {domain} {phase_name}particle "

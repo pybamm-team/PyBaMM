@@ -35,8 +35,8 @@ class Composite(BaseModel):
         ]
 
         # import parameters and spatial variables
-        l_n = param.n.l
-        l_p = param.p.l
+        L_n = param.n.L
+        L_p = param.p.L
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -49,9 +49,9 @@ class Composite(BaseModel):
         sigma_eff_0 = self.domain_param.sigma(T) * tor_0
         if self._domain == "negative":
             phi_s = phi_s_cn + (i_boundary_cc_0 / sigma_eff_0) * (
-                x_n * (x_n - 2 * l_n) / (2 * l_n)
+                x_n * (x_n - 2 * L_n) / (2 * L_n)
             )
-            i_s = i_boundary_cc_0 * (1 - x_n / l_n)
+            i_s = i_boundary_cc_0 * (1 - x_n / L_n)
 
         elif self.domain == "positive":
             delta_phi_p_av = variables[
@@ -62,13 +62,13 @@ class Composite(BaseModel):
             const = (
                 delta_phi_p_av
                 + phi_e_p_av
-                + (i_boundary_cc_0 / sigma_eff_0) * (1 - l_p / 3)
+                + (i_boundary_cc_0 / sigma_eff_0) * (1 - L_p / 3)
             )
 
             phi_s = const - (i_boundary_cc_0 / sigma_eff_0) * (
-                x_p + (x_p - 1) ** 2 / (2 * l_p)
+                x_p + (x_p - 1) ** 2 / (2 * L_p)
             )
-            i_s = i_boundary_cc_0 * (1 - (1 - x_p) / l_p)
+            i_s = i_boundary_cc_0 * (1 - (1 - x_p) / L_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))

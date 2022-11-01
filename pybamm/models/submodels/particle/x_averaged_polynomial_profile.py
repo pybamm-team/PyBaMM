@@ -42,13 +42,13 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # For all orders we solve an equation for the average concentration
         if self.size_distribution is False:
             c_s_av = pybamm.Variable(
-                f"Average {domain} particle concentration",
+                f"Average {domain} particle concentration [mol.m-3]",
                 domain="current collector",
                 bounds=(0, 1),
             )
         else:
             c_s_av_distribution = pybamm.Variable(
-                f"Average {domain} particle concentration distribution",
+                f"Average {domain} particle concentration distribution [mol.m-3]",
                 domain=f"{domain} particle size",
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, 1),
@@ -80,7 +80,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             ]
             c_s_av = pybamm.Integral(f_v_dist * c_s_av_distribution, R)
 
-        variables.update({f"Average {domain} particle concentration": c_s_av})
+        variables.update({f"Average {domain} particle concentration [mol.m-3]": c_s_av})
 
         # For the fourth order polynomial approximation we also solve an
         # equation for the average concentration gradient. Note: in the original
@@ -89,11 +89,11 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # gradient q = dc/dr
         if self.name == "quartic profile":
             q_s_av = pybamm.Variable(
-                f"Average {domain} particle concentration gradient",
+                f"Average {domain} particle concentration gradient [mol.m-4]",
                 domain="current collector",
             )
             variables.update(
-                {f"Average {domain} particle concentration gradient": q_s_av}
+                {f"Average {domain} particle concentration gradient [mol.m-4]": q_s_av}
             )
 
         return variables
@@ -137,19 +137,16 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # an extra algebraic equation to solve. For now, using the average c is an
             # ok approximation and means the SPM(e) still gives a system of ODEs rather
             # than DAEs.
-            c_s_surf_xav = c_s_av - phase_param.C_diff * (
-                j_xav / 5 / phase_param.a_R / phase_param.gamma / D_eff_av
-            )
+            c_s_surf_xav = c_s_av - (j_xav / 5 / param.F / D_eff_av)
         elif self.name == "quartic profile":
             # The surface concentration is computed from the average concentration,
             # the average concentration gradient and the boundary flux (see notes
             # for the quadratic profile)
-            q_s_av = variables[f"Average {domain} particle concentration gradient"]
+            q_s_av = variables[
+                f"Average {domain} particle concentration gradient [mol.m-4]"
+            ]
             c_s_surf_xav = (
-                c_s_av
-                + 8 * q_s_av / 35
-                - phase_param.C_diff
-                * (j_xav / 35 / phase_param.a_R / phase_param.gamma / D_eff_av)
+                c_s_av + 8 * q_s_av / 35 - (j_xav / 35 / phase_param.F / D_eff_av)
             )
 
         # Set concentration depending on polynomial order
@@ -276,12 +273,16 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         if self.size_distribution is False:
             c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
         else:
-            c_s_av = variables[f"Average {domain} particle concentration distribution"]
+            c_s_av = variables[
+                f"Average {domain} particle concentration distribution [mol.m-3]"
+            ]
             c_init = c_init = pybamm.PrimaryBroadcast(c_init, f"{domain} particle size")
 
         self.initial_conditions = {c_s_av: c_init}
         if self.name == "quartic profile":
             # We also need to provide an initial condition for the average
             # concentration gradient
-            q_s_av = variables[f"Average {domain} particle concentration gradient"]
+            q_s_av = variables[
+                f"Average {domain} particle concentration gradient [mol.m-4]"
+            ]
             self.initial_conditions.update({q_s_av: 0})

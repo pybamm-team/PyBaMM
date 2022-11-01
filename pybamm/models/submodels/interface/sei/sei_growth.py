@@ -98,13 +98,12 @@ class SEIGrowth(BaseModel):
         L_sei = variables[f"Total {self.reaction_name}thickness [m]"]
 
         R_sei = phase_param.R_sei
-        eta_SEI = delta_phi - j * L_sei * R_sei
+        eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
         # Thermal prefactor for reaction, interstitial and EC models
         F_RT = param.F / (param.R * T)
 
         if self.options["SEI"] == "reaction limited":
-            C_sei = phase_param.C_sei_reaction
-            j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * F_RT * eta_SEI)
+            j_sei = -phase_param.j0_sei * pybamm.exp(-0.5 * F_RT * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":
             U_inner = phase_param.U_inner_electron
@@ -112,8 +111,9 @@ class SEIGrowth(BaseModel):
             j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
-            C_sei = phase_param.C_sei_inter
-            j_sei = -pybamm.exp(-F_RT * delta_phi) / (C_sei * L_sei_inner)
+            j_sei = -pybamm.exp(-F_RT * delta_phi) * (
+                phase_param.D_li * phase_param.c_li_0 * param.F
+            )
 
         elif self.options["SEI"] == "solvent-diffusion limited":
             C_sei = phase_param.C_sei_solvent

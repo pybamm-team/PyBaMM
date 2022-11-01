@@ -63,9 +63,14 @@ class Integrated(BaseElectrolyteConductivity):
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
+        RT_F_av = param.R * T_av / param.F
+        RT_F_av_n = param.R * T_av_n / param.F
+        RT_F_av_s = param.R * T_av_s / param.F
+        RT_F_av_p = param.R * T_av_p / param.F
+
         param = self.param
-        l_n = param.n.l
-        l_p = param.p.l
+        L_n = param.n.L
+        L_p = param.p.L
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
@@ -78,36 +83,24 @@ class Integrated(BaseElectrolyteConductivity):
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
 
         # electrolyte current
-        i_e_n = i_boundary_cc_0 * x_n / l_n
+        i_e_n = i_boundary_cc_0 * x_n / L_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
-        i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
+        i_e_p = i_boundary_cc_0 * (1 - x_p) / L_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
-        i_e_n_edge = i_boundary_cc_0 * x_n_edge / l_n
+        i_e_n_edge = i_boundary_cc_0 * x_n_edge / L_n
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc_0, "separator")
-        i_e_p_edge = i_boundary_cc_0 * (1 - x_p_edge) / l_p
+        i_e_p_edge = i_boundary_cc_0 * (1 - x_p_edge) / L_p
 
         # electrolyte potential
-        indef_integral_n = (
-            pybamm.IndefiniteIntegral(
-                i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
-            )
-            * param.C_e
-            / param.gamma_e
+        indef_integral_n = pybamm.IndefiniteIntegral(
+            i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
         )
-        indef_integral_s = (
-            pybamm.IndefiniteIntegral(
-                i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
-            )
-            * param.C_e
-            / param.gamma_e
+        indef_integral_s = pybamm.IndefiniteIntegral(
+            i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
         )
-        indef_integral_p = (
-            pybamm.IndefiniteIntegral(
-                i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
-            )
-            * param.C_e
-            / param.gamma_e
+        indef_integral_p = pybamm.IndefiniteIntegral(
+            i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
         )
 
         integral_n = indef_integral_n
@@ -119,7 +112,7 @@ class Integrated(BaseElectrolyteConductivity):
             + phi_s_n_av
             - (
                 chi_av
-                * (1 + param.Theta * T_av)
+                * RT_F_av
                 * pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_n0))
             )
             + pybamm.x_average(integral_n)
@@ -129,7 +122,7 @@ class Integrated(BaseElectrolyteConductivity):
             phi_e_const
             + (
                 chi_av_n
-                * (1 + param.Theta * T_av_n)
+                * RT_F_av_n
                 * self._higher_order_macinnes_function(c_e_n / c_e_n0)
             )
             - integral_n
@@ -139,7 +132,7 @@ class Integrated(BaseElectrolyteConductivity):
             phi_e_const
             + (
                 chi_av_s
-                * (1 + param.Theta * T_av_s)
+                * RT_F_av_s
                 * self._higher_order_macinnes_function(c_e_s / c_e_n0)
             )
             - integral_s
@@ -149,7 +142,7 @@ class Integrated(BaseElectrolyteConductivity):
             phi_e_const
             + (
                 chi_av_p
-                * (1 + param.Theta * T_av_p)
+                * RT_F_av_p
                 * self._higher_order_macinnes_function(c_e_p / c_e_n0)
             )
             - integral_p
@@ -158,7 +151,7 @@ class Integrated(BaseElectrolyteConductivity):
         # concentration overpotential
         eta_c_av = (
             chi_av
-            * (1 + param.Theta * T_av)
+            * RT_F_av
             * (
                 pybamm.x_average(self._higher_order_macinnes_function(c_e_p / c_e_av))
                 - pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_av))
