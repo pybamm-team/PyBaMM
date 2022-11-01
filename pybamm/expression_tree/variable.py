@@ -39,6 +39,9 @@ class VariableBase(pybamm.Symbol):
         Physical bounds on the variable
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be divided by this scale. Default is 1.
 
     *Extends:* :class:`Symbol`
     """
@@ -51,6 +54,7 @@ class VariableBase(pybamm.Symbol):
         domains=None,
         bounds=None,
         print_name=None,
+        scale=1,
     ):
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
@@ -65,6 +69,9 @@ class VariableBase(pybamm.Symbol):
                 )
         self.bounds = bounds
         self.print_name = print_name
+        if isinstance(scale, numbers.Number):
+            scale = pybamm.Scalar(scale)
+        self.scale = scale
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -73,6 +80,7 @@ class VariableBase(pybamm.Symbol):
             domains=self.domains,
             bounds=self.bounds,
             print_name=self._raw_print_name,
+            scale=self.scale,
         )
 
     def _evaluate_for_shape(self):
@@ -129,6 +137,7 @@ class Variable(VariableBase):
         domains=None,
         bounds=None,
         print_name=None,
+        scale=1,
     ):
         super().__init__(
             name,
@@ -137,13 +146,16 @@ class Variable(VariableBase):
             domains=domains,
             bounds=bounds,
             print_name=print_name,
+            scale=scale,
         )
 
     def diff(self, variable):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
-            return pybamm.VariableDot(self.name + "'", domains=self.domains)
+            return pybamm.VariableDot(
+                self.name + "'", domains=self.domains, scale=self.scale
+            )
         else:
             return pybamm.Scalar(0)
 
@@ -192,6 +204,7 @@ class VariableDot(VariableBase):
         domains=None,
         bounds=None,
         print_name=None,
+        scale=1,
     ):
         super().__init__(
             name,
@@ -200,6 +213,7 @@ class VariableDot(VariableBase):
             domains=domains,
             bounds=bounds,
             print_name=print_name,
+            scale=scale,
         )
 
     def get_variable(self):
@@ -209,7 +223,7 @@ class VariableDot(VariableBase):
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
         """
-        return Variable(self.name[:-1], domains=self.domains)
+        return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
 
     def diff(self, variable):
         if variable == self:
@@ -250,9 +264,11 @@ class ExternalVariable(Variable):
     *Extends:* :class:`pybamm.Variable`
     """
 
-    def __init__(self, name, size, domain=None, auxiliary_domains=None, domains=None):
+    def __init__(
+        self, name, size, domain=None, auxiliary_domains=None, domains=None, scale=1
+    ):
         self._size = size
-        super().__init__(name, domain, auxiliary_domains, domains)
+        super().__init__(name, domain, auxiliary_domains, domains, scale=scale)
 
     @property
     def size(self):

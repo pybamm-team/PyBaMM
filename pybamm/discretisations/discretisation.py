@@ -539,12 +539,15 @@ class Discretisation(object):
             if any("tab" in side for side in list(bcs.keys())):
                 bcs = self.check_tab_conditions(key, bcs)
 
+            # Calculate scale if the key has a scale
+            scale = getattr(key, "scale", 1)
+
             # Process boundary conditions
             for side, bc in bcs.items():
                 eqn, typ = bc
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
-                processed_bcs[key][side] = (processed_eqn, typ)
+                processed_bcs[key][side] = (processed_eqn / scale, typ)
 
         return processed_bcs
 
@@ -756,7 +759,9 @@ class Discretisation(object):
 
             processed_eqn = self.process_symbol(eqn)
 
-            new_var_eqn_dict[eqn_key] = processed_eqn
+            # Calculate scale if the key has a scale
+            scale = getattr(eqn_key, "scale", 1)
+            new_var_eqn_dict[eqn_key] = processed_eqn / scale
 
         return new_var_eqn_dict
 
@@ -982,7 +987,11 @@ class Discretisation(object):
                             symbol.name
                         )
                     )
-                return pybamm.StateVector(*y_slices, domains=symbol.domains)
+                # Multiply the output by the symbol's scale so that the state vector
+                # is of order 1
+                return (
+                    pybamm.StateVector(*y_slices, domains=symbol.domains) * symbol.scale
+                )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)
