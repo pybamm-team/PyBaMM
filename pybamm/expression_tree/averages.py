@@ -150,15 +150,15 @@ def x_average(symbol):
         isinstance(child, pybamm.Broadcast) for child in symbol.children
     ):
         geo = pybamm.geometric_parameters
-        l_n = geo.n.l
-        l_s = geo.s.l
-        l_p = geo.p.l
+        L_n = geo.n.L
+        L_s = geo.s.L
+        L_p = geo.p.L
         if symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             a, b, c = [orp.orphans[0] for orp in symbol.orphans]
-            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+            out = (L_n * a + L_s * b + L_p * c) / (L_n + L_s + L_p)
         elif symbol.domain == ["separator", "positive electrode"]:
             b, c = [orp.orphans[0] for orp in symbol.orphans]
-            out = (l_s * b + l_p * c) / (l_s + l_p)
+            out = (L_s * b + L_p * c) / (L_s + L_p)
         # To respect domains we may need to broadcast the child back out
         child = symbol.children[0]
         # If symbol being returned doesn't have empty domain, return it

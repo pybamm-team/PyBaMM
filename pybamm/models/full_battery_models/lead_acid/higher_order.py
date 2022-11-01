@@ -100,7 +100,9 @@ class BaseHigherOrderModel(BaseModel):
         self.variables[
             "Leading-order electrolyte concentration change"
         ] = leading_order_model.rhs[
-            leading_order_model.variables["X-averaged electrolyte concentration"]
+            leading_order_model.variables[
+                "X-averaged electrolyte concentration [mol.m-3]"
+            ]
         ]
 
     def set_average_interfacial_submodel(self):
@@ -129,14 +131,14 @@ class BaseHigherOrderModel(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "negative"
-        )
+        self.submodels[
+            "negative electrode potential [V]"
+        ] = pybamm.electrode.ohm.Composite(self.param, "negative")
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "positive"
-        )
+        self.submodels[
+            "positive electrode potential [V]"
+        ] = pybamm.electrode.ohm.Composite(self.param, "positive")
 
     def set_full_interface_submodel(self):
         """

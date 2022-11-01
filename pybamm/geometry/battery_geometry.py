@@ -34,25 +34,24 @@ def battery_geometry(
     """
     options = pybamm.BatteryModelOptions(options or {})
     geo = pybamm.geometric_parameters
-    l_n = geo.n.l
-    l_s = geo.s.l
-    l_n_l_s = l_n + l_s
+    L_n = geo.n.L
+    L_s = geo.s.L
+    L_n_L_s = L_n + L_s
     # Override print_name
-    l_n_l_s.print_name = "l_n + l_s"
+    L_n_L_s.print_name = "L_n + L_s"
 
     # Set up electrode/separator/electrode geometry
     geometry = {
-        "negative electrode": {"x_n": {"min": 0, "max": l_n}},
-        "separator": {"x_s": {"min": l_n, "max": l_n_l_s}},
-        "positive electrode": {"x_p": {"min": l_n_l_s, "max": 1}},
+        "negative electrode": {"x_n": {"min": 0, "max": L_n}},
+        "separator": {"x_s": {"min": L_n, "max": L_n_L_s}},
+        "positive electrode": {"x_p": {"min": L_n_L_s, "max": geo.L_x}},
     }
     # Add particle domains
     if include_particles is True:
-        zero_one = {"min": 0, "max": 1}
         geometry.update(
             {
-                "negative particle": {"r_n": zero_one},
-                "positive particle": {"r_p": zero_one},
+                "negative particle": {"r_n": {"min": 0, "max": geo.n.prim.R_typ}},
+                "positive particle": {"r_p": {"min": 0, "max": geo.p.prim.R_typ}},
             }
         )
         for domain in ["negative", "positive"]:
@@ -60,8 +59,12 @@ def battery_geometry(
             if phases >= 2:
                 geometry.update(
                     {
-                        f"{domain} primary particle": {"r_n_prim": zero_one},
-                        f"{domain} secondary particle": {"r_n_sec": zero_one},
+                        f"{domain} primary particle": {
+                            "r_n_prim": {"min": 0, "max": geo.n.prim.R_typ}
+                        },
+                        f"{domain} secondary particle": {
+                            "r_n_sec": {"min": 0, "max": geo.n.sec.R_typ}
+                        },
                     }
                 )
     # Add particle size domains
@@ -90,18 +93,18 @@ def battery_geometry(
             }
         elif current_collector_dimension == 2:
             geometry["current collector"] = {
-                "y": {"min": 0, "max": geo.l_y},
-                "z": {"min": 0, "max": geo.l_z},
+                "y": {"min": 0, "max": geo.L_y},
+                "z": {"min": 0, "max": geo.L_z},
                 "tabs": {
                     "negative": {
                         "y_centre": geo.n.centre_y_tab,
                         "z_centre": geo.n.centre_z_tab,
-                        "width": geo.n.l_tab,
+                        "width": geo.n.L_tab,
                     },
                     "positive": {
                         "y_centre": geo.p.centre_y_tab,
                         "z_centre": geo.p.centre_z_tab,
-                        "width": geo.p.l_tab,
+                        "width": geo.p.L_tab,
                     },
                 },
             }

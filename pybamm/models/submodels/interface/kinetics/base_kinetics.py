@@ -63,10 +63,12 @@ class BaseKinetics(BaseInterface):
 
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
-                "Lithium metal interface surface potential difference"
+                "Lithium metal interface surface potential difference [V]"
             ]
         else:
-            delta_phi = variables[f"{Domain} electrode surface potential difference"]
+            delta_phi = variables[
+                f"{Domain} electrode surface potential difference [V]"
+            ]
             # If delta_phi was broadcast, take only the orphan.
             if isinstance(delta_phi, pybamm.Broadcast):
                 delta_phi = delta_phi.orphans[0]
@@ -86,7 +88,9 @@ class BaseKinetics(BaseInterface):
                 f"{Domain} electrode {reaction_name}open circuit potential distribution"
             ]
         else:
-            ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
+            ocp = variables[
+                f"{Domain} electrode {reaction_name}open circuit potential [V]"
+            ]
         # If ocp was broadcast, take only the orphan.
         if isinstance(ocp, pybamm.Broadcast):
             ocp = ocp.orphans[0]
@@ -100,15 +104,17 @@ class BaseKinetics(BaseInterface):
         if self.domain == "negative":
             if self.options.electrode_types["negative"] == "planar":
                 R_sei = self.phase_param.R_sei
-                L_sei = variables[f"Total {phase_name}SEI thickness"]  # on interface
+                L_sei = variables[
+                    f"Total {phase_name}SEi thickness [m]"
+                ]  # on interface
                 eta_sei = -j_tot_av * L_sei * R_sei
             elif self.options["SEI film resistance"] == "average":
                 R_sei = self.phase_param.R_sei
-                L_sei_av = variables[f"X-averaged total {phase_name}SEI thickness"]
+                L_sei_av = variables[f"X-averaged total {phase_name}SEi thickness [m]"]
                 eta_sei = -j_tot_av * L_sei_av * R_sei
             elif self.options["SEI film resistance"] == "distributed":
                 R_sei = self.phase_param.R_sei
-                L_sei = variables[f"Total {phase_name}SEI thickness"]
+                L_sei = variables[f"Total {phase_name}SEi thickness [m]"]
                 j_tot = variables[
                     f"Total negative electrode {phase_name}"
                     "interfacial current density variable"
@@ -126,23 +132,23 @@ class BaseKinetics(BaseInterface):
         ne = self._get_number_of_electrons_in_reaction()
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
-            T = variables["X-averaged cell temperature"]
+            T = variables["X-averaged cell temperature [K]"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature"]
+            T = variables["X-averaged cell temperature [K]"]
             u = variables[f"X-averaged {domain} electrode interface utilisation"]
         elif j0.domain == [f"{domain} particle size"]:
             if j0.domains["secondary"] != [f"{domain} electrode"]:
-                T = variables["X-averaged cell temperature"]
+                T = variables["X-averaged cell temperature [K]"]
                 u = variables[f"X-averaged {domain} electrode interface utilisation"]
             else:
-                T = variables[f"{Domain} electrode temperature"]
+                T = variables[f"{Domain} electrode temperature [K]"]
                 u = variables[f"{Domain} electrode interface utilisation"]
 
             # Broadcast T onto "particle size" domain
             T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
         else:
-            T = variables[f"{Domain} electrode temperature"]
+            T = variables[f"{Domain} electrode temperature [K]"]
             u = variables[f"{Domain} electrode interface utilisation"]
 
         # Update j, except in the "distributed SEI resistance" model, where j will be
@@ -207,7 +213,7 @@ class BaseKinetics(BaseInterface):
                 "volumetric interfacial current densities"
             ]
             a = variables[
-                f"{Domain} electrode {phase_name}surface area to volume ratio"
+                f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
             ]
 
             # Algebraic equation to set the variable j_tot_var
@@ -241,12 +247,12 @@ class BaseKinetics(BaseInterface):
         domain, Domain = self.domain_Domain
 
         c_e_0 = pybamm.NotConstant(
-            variables["Leading-order x-averaged electrolyte concentration"]
+            variables["Leading-order x-averaged electrolyte concentration [mol.m-3]"]
         )
         c_e = pybamm.PrimaryBroadcast(c_e_0, f"{domain} electrode")
         hacked_variables = {**variables, f"{Domain} electrolyte concentration": c_e}
         delta_phi = variables[
-            f"Leading-order x-averaged {domain} electrode surface potential difference"
+            f"Leading-order x-averaged {domain} electrode surface potential difference [V]"
         ]
         j0 = self._get_exchange_current_density(hacked_variables)
         ne = self._get_number_of_electrons_in_reaction()
@@ -255,7 +261,7 @@ class BaseKinetics(BaseInterface):
         elif self.reaction == "lead-acid oxygen":
             ocp = self.phase_param.U_Ox
 
-        T = variables["X-averaged cell temperature"]
+        T = variables["X-averaged cell temperature [K]"]
         u = variables[f"X-averaged {domain} electrode interface utilisation"]
 
         return c_e_0, delta_phi, j0, ne, ocp, T, u

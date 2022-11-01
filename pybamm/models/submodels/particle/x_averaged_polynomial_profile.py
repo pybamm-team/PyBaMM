@@ -103,14 +103,14 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         phase_param = self.phase_param
         phase_param = self.phase_param
 
-        c_s_av = variables[f"Average {domain} particle concentration"]
-        T_av = variables[f"X-averaged {domain} electrode temperature"]
+        c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
+        T_av = variables[f"X-averaged {domain} electrode temperature [K]"]
 
         if self.name != "uniform profile":
             D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
-            i_boundary_cc = variables["Current collector current density"]
+            i_boundary_cc = variables["Current collector current density [A.m-2]"]
             a_av = variables[
-                f"X-averaged {domain} electrode surface area to volume ratio"
+                f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
             ]
             sgn = 1 if self.domain == "negative" else -1
 
@@ -229,7 +229,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         phase_param = self.phase_param
 
         if self.size_distribution is False:
-            c_s_av = variables[f"Average {domain} particle concentration"]
+            c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
             j_xav = variables[
                 f"X-averaged {domain} electrode interfacial current density"
             ]
@@ -274,7 +274,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         c_init = pybamm.x_average(pybamm.r_average(self.phase_param.c_init))
 
         if self.size_distribution is False:
-            c_s_av = variables[f"Average {domain} particle concentration"]
+            c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
         else:
             c_s_av = variables[f"Average {domain} particle concentration distribution"]
             c_init = c_init = pybamm.PrimaryBroadcast(c_init, f"{domain} particle size")

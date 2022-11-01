@@ -32,9 +32,11 @@ class FirstOrder(BaseElectrolyteDiffusion):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
-        T_0 = variables["Leading-order cell temperature"]
-        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
-        # v_box_0 = variables["Leading-order volume-averaged velocity"]
+        T_0 = variables["Leading-order cell temperature [K]"]
+        c_e_0 = variables[
+            "Leading-order x-averaged electrolyte concentration [mol.m-3]"
+        ]
+        # v_box_0 = variables["Leading-order volume-averaged velocity [m.s-1]"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
         eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_0 = variables["Leading-order x-averaged separator porosity"]
@@ -135,7 +137,7 @@ class FirstOrder(BaseElectrolyteDiffusion):
         )
         variables.update(self._get_standard_flux_variables(N_e))
 
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
         eps = variables["Leading-order porosity"]
 
         variables.update(self._get_total_concentration_electrolyte(eps * c_e))

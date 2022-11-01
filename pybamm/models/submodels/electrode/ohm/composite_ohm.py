@@ -30,7 +30,9 @@ class Composite(BaseModel):
         domain = self.domain
         param = self.param
 
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
+        i_boundary_cc_0 = variables[
+            "Leading-order current collector current density [A.m-2]"
+        ]
 
         # import parameters and spatial variables
         l_n = param.n.l
@@ -41,8 +43,8 @@ class Composite(BaseModel):
         tor_0 = variables[
             f"Leading-order x-averaged {domain} electrode transport efficiency"
         ]
-        phi_s_cn = variables["Negative current collector potential"]
-        T = variables[f"X-averaged {domain} electrode temperature"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
         sigma_eff_0 = self.domain_param.sigma(T) * tor_0
         if self._domain == "negative":
@@ -53,9 +55,9 @@ class Composite(BaseModel):
 
         elif self.domain == "positive":
             delta_phi_p_av = variables[
-                "X-averaged positive electrode surface potential difference"
+                "X-averaged positive electrode surface potential difference [V]"
             ]
-            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
 
             const = (
                 delta_phi_p_av
@@ -79,12 +81,14 @@ class Composite(BaseModel):
     def set_boundary_conditions(self, variables):
         domain, Domain = self.domain_Domain
 
-        phi_s = variables[f"{Domain} electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
         tor_0 = variables[
             f"Leading-order x-averaged {domain} electrode transport efficiency"
         ]
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        T = variables[f"X-averaged {domain} electrode temperature"]
+        i_boundary_cc_0 = variables[
+            "Leading-order current collector current density [A.m-2]"
+        ]
+        T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
         if self.domain == "negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")

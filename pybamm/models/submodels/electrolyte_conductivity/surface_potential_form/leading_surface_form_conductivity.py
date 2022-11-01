@@ -52,7 +52,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     def set_initial_conditions(self, variables):
         domain = self.domain
         delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference [V]"
         ]
         delta_phi_init = self.domain_param.prim.U_init
 
@@ -60,7 +60,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
 
     def set_boundary_conditions(self, variables):
         if self.domain == "negative":
-            phi_e = variables["Electrolyte potential"]
+            phi_e = variables["Electrolyte potential [V]"]
             self.boundary_conditions = {
                 phi_e: {
                     "left": (pybamm.Scalar(0), "Neumann"),
@@ -100,7 +100,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
             "interfacial current density"
         ]
         delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference [V]"
         ]
 
         C_dl = self.domain_param.C_dl
@@ -139,7 +139,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
             "interfacial current density"
         ]
         delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference"
+            f"X-averaged {domain} electrode surface potential difference [V]"
         ]
 
         self.algebraic[delta_phi] = sum_a_j_av - sum_a_j

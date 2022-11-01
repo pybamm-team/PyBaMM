@@ -37,9 +37,9 @@ class Full(BaseModel):
     def get_coupled_variables(self, variables):
         Domain = self.domain.capitalize()
 
-        phi_s = variables[f"{Domain} electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
         tor = variables[f"{Domain} electrode transport efficiency"]
-        T = variables[f"{Domain} electrode temperature"]
+        T = variables[f"{Domain} electrode temperature [K]"]
 
         sigma = self.domain_param.sigma(T)
 
@@ -58,8 +58,8 @@ class Full(BaseModel):
     def set_algebraic(self, variables):
         domain, Domain = self.domain_Domain
 
-        phi_s = variables[f"{Domain} electrode potential"]
-        i_s = variables[f"{Domain} electrode current density"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
+        i_s = variables[f"{Domain} electrode current density [A.m-2]"]
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
@@ -71,10 +71,10 @@ class Full(BaseModel):
     def set_boundary_conditions(self, variables):
         Domain = self.domain.capitalize()
 
-        phi_s = variables[f"{Domain} electrode potential"]
-        phi_s_cn = variables["Negative current collector potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
         tor = variables[f"{Domain} electrode transport efficiency"]
-        T = variables[f"{Domain} electrode temperature"]
+        T = variables[f"{Domain} electrode temperature [K]"]
 
         if self.domain == "negative":
             lbc = (phi_s_cn, "Dirichlet")
@@ -83,7 +83,7 @@ class Full(BaseModel):
         elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             sigma_eff = self.param.p.sigma(T) * tor
-            i_boundary_cc = variables["Current collector current density"]
+            i_boundary_cc = variables["Current collector current density [A.m-2]"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
                 "Neumann",
@@ -94,7 +94,7 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
         Domain = self.domain.capitalize()
 
-        phi_s = variables[f"{Domain} electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
 
         if self.domain == "negative":
             phi_s_init = pybamm.Scalar(0)

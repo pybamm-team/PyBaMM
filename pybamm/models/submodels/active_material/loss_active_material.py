@@ -94,17 +94,19 @@ class LossActiveMaterial(BaseModel):
         if "reaction" in lam_option:
             if self.x_average is True:
                 a = variables[
-                    f"X-averaged {domain} electrode surface area to volume ratio"
+                    f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
                 ]
             else:
-                a = variables[f"{Domain} electrode surface area to volume ratio"]
+                a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
 
             beta_LAM_sei = self.domain_param.beta_LAM_sei
             if self.domain == "negative":
                 if self.x_average is True:
-                    j_sei = variables["X-averaged SEI interfacial current density"]
+                    j_sei = variables[
+                        "X-averaged SEI interfacial current density [A.m-2]"
+                    ]
                 else:
-                    j_sei = variables["SEI interfacial current density"]
+                    j_sei = variables["SEI interfacial current density [A.m-2]"]
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM
                 # until other reactions are implemented

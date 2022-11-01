@@ -46,8 +46,8 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
-        model_T_eqn = model.rhs[model.variables["Cell temperature"]]
-        new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature"]]
+        model_T_eqn = model.rhs[model.variables["Cell temperature [K]"]]
+        new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature [K]"]]
         self.assertEqual(new_model_T_eqn, model_T_eqn)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)

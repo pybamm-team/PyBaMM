@@ -81,7 +81,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         for domain, eps_c_e_k in eps_c_e_dict.items():
             Domain = domain.capitalize()
-            variables[f"{Domain} porosity times concentration"] = eps_c_e_k
+            variables[f"{Domain} porosity times concentration [mol.m-3]"] = eps_c_e_k
 
         # Total lithium concentration in electrolyte
         variables.update(self._get_total_concentration_electrolyte(eps_c_e))
@@ -106,12 +106,8 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         param = self.param
-        flux_scale = param.D_e_typ * param.c_e_typ / param.L_x
 
-        variables = {
-            "Electrolyte flux": N_e,
-            "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
-        }
+        variables = {"Electrolyte flux [mol.m-2.s-1]": N_e}
 
         return variables
 

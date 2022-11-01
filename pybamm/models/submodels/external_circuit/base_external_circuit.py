@@ -51,15 +51,15 @@ class BaseModel(pybamm.BaseSubModel):
         Q_Ah = variables["Discharge capacity [A.h]"]
         I = variables["Current [A]"]
 
-        self.rhs[Q_Ah] = I * self.param.timescale / 3600
+        self.rhs[Q_Ah] = I / 3600
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = variables["Discharge energy [W.h]"]
             Qt_Wh = variables["Throughput energy [W.h]"]
             Qt_Ah = variables["Throughput capacity [A.h]"]
             V = variables["Terminal voltage [V]"]
-            self.rhs[Q_Wh] = I * V * self.param.timescale / 3600
-            self.rhs[Qt_Wh] = abs(I * V) * self.param.timescale / 3600
-            self.rhs[Qt_Ah] = abs(I) * self.param.timescale / 3600
+            self.rhs[Q_Wh] = I * V / 3600
+            self.rhs[Qt_Wh] = abs(I * V) / 3600
+            self.rhs[Qt_Ah] = abs(I) / 3600
 
 
 class LeadingOrderBaseModel(BaseModel):

@@ -38,35 +38,35 @@ class FickianDiffusion(BaseParticle):
         if self.size_distribution is False:
             if self.x_average is False:
                 c_s = pybamm.Variable(
-                    f"{Domain} {phase_name}particle concentration",
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]",
                     f"{domain} {phase_name}particle",
                     auxiliary_domains={
                         "secondary": f"{domain} electrode",
                         "tertiary": "current collector",
                     },
-                    bounds=(0, 1),
+                    # bounds=(0, 1),
                 )
                 c_s.print_name = f"c_s_{domain[0]}"
             else:
                 c_s_xav = pybamm.Variable(
-                    f"X-averaged {domain} {phase_name}particle concentration",
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]",
                     f"{domain} {phase_name}particle",
                     auxiliary_domains={"secondary": "current collector"},
-                    bounds=(0, 1),
+                    # bounds=(0, 1),
                 )
                 c_s_xav.print_name = f"c_s_{domain[0]}_xav"
                 c_s = pybamm.SecondaryBroadcast(c_s_xav, f"{domain} electrode")
         else:
             if self.x_average is False:
                 c_s_distribution = pybamm.Variable(
-                    f"{Domain} {phase_name}particle concentration distribution",
+                    f"{Domain} {phase_name}particle concentration distribution [mol.m-3]",
                     domain=f"{domain} {phase_name}particle",
                     auxiliary_domains={
                         "secondary": f"{domain} {phase_name}particle size",
                         "tertiary": f"{domain} electrode",
                         "quaternary": "current collector",
                     },
-                    bounds=(0, 1),
+                    # bounds=(0, 1),
                 )
                 R = pybamm.SpatialVariable(
                     f"R_{domain[0]}",
@@ -79,18 +79,18 @@ class FickianDiffusion(BaseParticle):
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
-                    f"{Domain} volume-weighted particle-size distribution"
+                    f"{Domain} volume-weighted particle-size distribution [m]"
                 ]
             else:
                 c_s_distribution = pybamm.Variable(
                     f"X-averaged {domain} {phase_name}particle "
-                    "concentration distribution",
+                    "concentration distribution [mol.m-3]",
                     domain=f"{domain} {phase_name}particle",
                     auxiliary_domains={
                         "secondary": f"{domain} {phase_name}particle size",
                         "tertiary": "current collector",
                     },
-                    bounds=(0, 1),
+                    # bounds=(0, 1),
                 )
                 R = pybamm.SpatialVariable(
                     f"R_{domain[0]}",
@@ -100,7 +100,7 @@ class FickianDiffusion(BaseParticle):
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
-                    f"X-averaged {domain} volume-weighted particle-size distribution"
+                    f"X-averaged {domain} volume-weighted particle-size distribution [m]"
                 ]
 
             # Standard concentration distribution variables (size-dependent)
@@ -125,65 +125,70 @@ class FickianDiffusion(BaseParticle):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         phase_param = self.phase_param
+        param = self.param
 
         if self.size_distribution is False:
             if self.x_average is False:
-                c_s = variables[f"{Domain} {phase_name}particle concentration"]
+                c_s = variables[
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]"
+                ]
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"{Domain} electrode temperature"],
+                    variables[f"{Domain} electrode temperature [K]"],
                     [f"{domain} {phase_name}particle"],
                 )
-                R = variables[f"{Domain} {phase_name}particle radius"]
+                R_nondim = variables[f"{Domain} {phase_name}particle radius"]
                 j = variables[
-                    f"{Domain} electrode {phase_name}interfacial current density"
+                    f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
                 ]
             else:
                 c_s = variables[
-                    f"X-averaged {domain} {phase_name}particle concentration"
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
                 ]
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"X-averaged {domain} electrode temperature"],
+                    variables[f"X-averaged {domain} electrode temperature [K]"],
                     [f"{domain} {phase_name}particle"],
                 )
-                R = 1
+                R_nondim = 1
                 j = variables[
                     f"X-averaged {domain} electrode {phase_name}"
-                    "interfacial current density"
+                    "interfacial current density [A.m-2]"
                 ]
-            R_broad = R
+            R_broad_nondim = R_nondim
         else:
-            R = variables[f"{Domain} {phase_name}particle sizes"]
-            R_broad = pybamm.PrimaryBroadcast(R, [f"{domain} {phase_name}particle"])
+            R_nondim = variables[f"{Domain} {phase_name}particle sizes"]
+            R_broad_nondim = pybamm.PrimaryBroadcast(
+                R, [f"{domain} {phase_name}particle"]
+            )
             if self.x_average is False:
                 c_s = variables[
-                    f"{Domain} {phase_name}particle concentration distribution"
+                    f"{Domain} {phase_name}particle concentration distribution [mol.m-3]"
                 ]
 
                 # broadcast T to "particle size" domain then again into "particle"
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"{Domain} electrode temperature"],
+                    variables[f"{Domain} electrode temperature [K]"],
                     [f"{domain} {phase_name}particle size"],
                 )
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
                 j = variables[
                     f"{Domain} electrode {phase_name}interfacial "
-                    "current density distribution"
+                    "current density distribution [A.m-2]"
                 ]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
-                    "concentration distribution"
+                    "concentration distribution [mol.m-3]"
                 ]
 
                 # broadcast to "particle size" domain then again into "particle"
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"X-averaged {domain} electrode temperature"],
+                    variables[f"X-averaged {domain} electrode temperature [K]"],
                     [f"{domain} {phase_name}particle size"],
                 )
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
                 j = variables[
                     f"X-averaged {domain} electrode {phase_name}interfacial "
-                    "current density distribution"
+                    "current density distribution [A.m-2]"
                 ]
 
         D_eff = self._get_effective_diffusivity(c_s, T)
@@ -191,15 +196,13 @@ class FickianDiffusion(BaseParticle):
 
         variables.update(
             {
-                f"{Domain} {phase_name}particle rhs": -(
-                    1 / (R_broad**2 * phase_param.C_diff)
+                f"{Domain} {phase_name}particle rhs [mol.m-3.s-1]": -(
+                    1 / (R_broad_nondim**2)
                 )
                 * pybamm.div(N_s),
-                f"{Domain} {phase_name}particle bc": -phase_param.C_diff
-                * j
-                * R
-                / phase_param.a_R
-                / phase_param.gamma
+                f"{Domain} {phase_name}particle bc [mol.m-2]": -j
+                * R_nondim
+                / param.F
                 / pybamm.surf(D_eff),
             }
         )
@@ -237,22 +240,25 @@ class FickianDiffusion(BaseParticle):
 
         if self.size_distribution is False:
             if self.x_average is False:
-                c_s = variables[f"{Domain} {phase_name}particle concentration"]
+                c_s = variables[
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]"
+                ]
             else:
                 c_s = variables[
-                    f"X-averaged {domain} {phase_name}particle concentration"
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
                 ]
         else:
             if self.x_average is False:
                 c_s = variables[
-                    f"{Domain} {phase_name}particle concentration distribution"
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
                 ]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
-                    "concentration distribution"
+                    "concentration distribution [mol.m-3]"
                 ]
-        self.rhs = {c_s: variables[f"{Domain} {phase_name}particle rhs"]}
+        self.rhs = {c_s: variables[f"{Domain} {phase_name}particle rhs [mol.m-3.s-1]"]}
 
     def set_boundary_conditions(self, variables):
         domain, Domain = self.domain_Domain
@@ -260,23 +266,26 @@ class FickianDiffusion(BaseParticle):
 
         if self.size_distribution is False:
             if self.x_average is False:
-                c_s = variables[f"{Domain} {phase_name}particle concentration"]
+                c_s = variables[
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]"
+                ]
             else:
                 c_s = variables[
-                    f"X-averaged {domain} {phase_name}particle concentration"
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
                 ]
         else:
             if self.x_average is False:
                 c_s = variables[
-                    f"{Domain} {phase_name}particle concentration distribution"
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
                 ]
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
-                    "concentration distribution"
+                    "concentration distribution [mol.m-3]"
                 ]
 
-        rbc = variables[f"{Domain} {phase_name}particle bc"]
+        rbc = variables[f"{Domain} {phase_name}particle bc [mol.m-2]"]
         self.boundary_conditions = {
             c_s: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }
@@ -288,16 +297,19 @@ class FickianDiffusion(BaseParticle):
         c_init = self.phase_param.c_init
         if self.size_distribution is False:
             if self.x_average is False:
-                c_s = variables[f"{Domain} {phase_name}particle concentration"]
+                c_s = variables[
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]"
+                ]
             else:
                 c_s = variables[
-                    f"X-averaged {domain} {phase_name}particle concentration"
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
                 ]
                 c_init = pybamm.x_average(c_init)
         else:
             if self.x_average is False:
                 c_s = variables[
-                    f"{Domain} {phase_name}particle concentration distribution"
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
                 ]
                 c_init = pybamm.SecondaryBroadcast(
                     c_init, f"{domain} {phase_name}particle size"
@@ -305,7 +317,7 @@ class FickianDiffusion(BaseParticle):
             else:
                 c_s = variables[
                     f"X-averaged {domain} {phase_name}particle "
-                    "concentration distribution"
+                    "concentration distribution [mol.m-3]"
                 ]
 
                 c_init = pybamm.SecondaryBroadcast(

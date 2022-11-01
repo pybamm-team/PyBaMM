@@ -78,8 +78,12 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
 
             # Compare each phase in the two-phase model
             np.testing.assert_array_almost_equal(
-                sol_two_phase["Negative primary particle concentration"].entries,
-                sol_two_phase["Negative secondary particle concentration"].entries,
+                sol_two_phase[
+                    "Negative primary particle concentration [mol.m-3]"
+                ].entries,
+                sol_two_phase[
+                    "Negative secondary particle concentration [mol.m-3]"
+                ].entries,
                 decimal=6,
             )
             np.testing.assert_array_almost_equal(

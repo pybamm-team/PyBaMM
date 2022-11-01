@@ -47,11 +47,13 @@ class Composite(BaseElectrolyteDiffusion):
 
         tor_0 = variables["Leading-order electrolyte transport efficiency"]
         eps = variables["Leading-order porosity"]
-        c_e_0_av = variables["Leading-order x-averaged electrolyte concentration"]
-        c_e = variables["Electrolyte concentration"]
-        i_e = variables["Electrolyte current density"]
-        v_box_0 = variables["Leading-order volume-averaged velocity"]
-        T_0 = variables["Leading-order cell temperature"]
+        c_e_0_av = variables[
+            "Leading-order x-averaged electrolyte concentration [mol.m-3]"
+        ]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
+        i_e = variables["Electrolyte current density [A.m-2]"]
+        v_box_0 = variables["Leading-order volume-averaged velocity [m.s-1]"]
+        T_0 = variables["Leading-order cell temperature [K]"]
 
         param = self.param
 
@@ -73,7 +75,7 @@ class Composite(BaseElectrolyteDiffusion):
 
         eps_0 = variables["Leading-order porosity"]
         deps_0_dt = variables["Leading-order porosity change"]
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
             sum_s_j = variables[
@@ -102,13 +104,13 @@ class Composite(BaseElectrolyteDiffusion):
 
     def set_initial_conditions(self, variables):
 
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
 
         self.initial_conditions = {c_e: self.param.c_e_init}
 
     def set_boundary_conditions(self, variables):
 
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
 
         self.boundary_conditions = {
             c_e: {

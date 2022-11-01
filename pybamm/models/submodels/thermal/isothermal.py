@@ -24,7 +24,7 @@ class Isothermal(BaseThermal):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-        T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
+        T_amb = self.param.T_amb(pybamm.t)
         T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
 
         T_dict = {

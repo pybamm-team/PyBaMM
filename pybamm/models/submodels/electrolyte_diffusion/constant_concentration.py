@@ -44,7 +44,9 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
             eps_k = variables[f"{Domain} porosity"]
-            c_e_k = variables[f"{Domain.split()[0]} electrolyte concentration"]
+            c_e_k = variables[
+                f"{Domain.split()[0]} electrolyte concentration [mol.m-3]"
+            ]
             eps_c_e_dict[domain] = eps_k * c_e_k
         variables.update(
             self._get_standard_porosity_times_concentration_variables(eps_c_e_dict)
@@ -59,7 +61,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         discretisation.
         """
 
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
 
         self.boundary_conditions = {
             c_e: {

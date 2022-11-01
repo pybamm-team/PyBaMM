@@ -16,7 +16,7 @@ class TestSPMe(BaseUnitTestLithiumIon, unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         self.assertEqual(
             model.external_variables[0],
-            model.variables["Porosity times concentration"],
+            model.variables["Porosity times concentration [mol.m-3]"],
         )
 
         # a variable
@@ -24,7 +24,7 @@ class TestSPMe(BaseUnitTestLithiumIon, unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         self.assertEqual(
             model.external_variables[0],
-            model.variables["Volume-averaged cell temperature"],
+            model.variables["Volume-averaged cell temperature [K]"],
         )
 
     def test_electrolyte_options(self):

@@ -47,14 +47,16 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
     def set_algebraic(self, variables):
 
         param = self.param
-        applied_current = variables["Total current density"]
+        applied_current = variables["Total current density [A.m-2]"]
         cc_area = self._get_effective_current_collector_area()
         z = pybamm.standard_spatial_vars.z
 
-        phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
-        i_boundary_cc = variables["Current collector current density"]
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        phi_s_cp = variables["Positive current collector potential [V]"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        i_boundary_cc_0 = variables[
+            "Leading-order current collector current density [A.m-2]"
+        ]
         c = variables["Lagrange multiplier"]
 
         # Note that the second argument of 'source' must be the same as the argument
@@ -75,8 +77,8 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         param = self.param
         applied_current = param.current_with_time
         cc_area = self._get_effective_current_collector_area()
-        phi_s_cn = variables["Negative current collector potential"]
-        i_boundary_cc = variables["Current collector current density"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         c = variables["Lagrange multiplier"]
 
         self.initial_conditions = {

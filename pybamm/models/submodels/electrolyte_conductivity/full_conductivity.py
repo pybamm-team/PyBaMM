@@ -40,12 +40,12 @@ class Full(BaseElectrolyteConductivity):
 
     def get_coupled_variables(self, variables):
         param = self.param
-        T = variables["Cell temperature"]
+        T = variables["Cell temperature [K]"]
         tor = variables["Electrolyte transport efficiency"]
-        c_e = variables["Electrolyte concentration"]
-        phi_e = variables["Electrolyte potential"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
+        phi_e = variables["Electrolyte potential [V]"]
 
-        i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
+        i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
 
@@ -58,8 +58,8 @@ class Full(BaseElectrolyteConductivity):
         return variables
 
     def set_algebraic(self, variables):
-        phi_e = variables["Electrolyte potential"]
-        i_e = variables["Electrolyte current density"]
+        phi_e = variables["Electrolyte potential [V]"]
+        i_e = variables["Electrolyte current density [A.m-2]"]
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables["Sum of volumetric interfacial current densities"]
@@ -70,5 +70,5 @@ class Full(BaseElectrolyteConductivity):
         self.algebraic = {phi_e: pybamm.div(i_e) - sum_a_j}
 
     def set_initial_conditions(self, variables):
-        phi_e = variables["Electrolyte potential"]
+        phi_e = variables["Electrolyte potential [V]"]
         self.initial_conditions = {phi_e: -self.param.n.prim.U_init}

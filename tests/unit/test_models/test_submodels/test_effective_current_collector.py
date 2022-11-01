@@ -68,7 +68,7 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
         solution_1D = models[0].default_solver.solve(models[0], t_eval)
         # Process SPM V and I
         V = solution_1D["Terminal voltage"]
-        I = solution_1D["Total current density"]
+        I = solution_1D["Total current density [A.m-2]"]
 
         # Test potential can be constructed and evaluated without raising error
         # for each current collector model

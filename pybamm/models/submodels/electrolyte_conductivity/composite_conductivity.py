@@ -40,23 +40,27 @@ class Composite(BaseElectrolyteConductivity):
 
     def get_coupled_variables(self, variables):
         if self.higher_order_terms == "composite":
-            c_e_av = variables["X-averaged electrolyte concentration"]
+            c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
         elif self.higher_order_terms == "first-order":
-            c_e_av = variables["Leading-order x-averaged electrolyte concentration"]
-
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        if self.options.electrode_types["negative"] == "porous":
-            c_e_n = variables["Negative electrolyte concentration"]
-            delta_phi_n_av = variables[
-                "X-averaged negative electrode surface potential difference"
+            c_e_av = variables[
+                "Leading-order x-averaged electrolyte concentration [mol.m-3]"
             ]
-            phi_s_n_av = variables["X-averaged negative electrode potential"]
+
+        i_boundary_cc_0 = variables[
+            "Leading-order current collector current density [A.m-2]"
+        ]
+        if self.options.electrode_types["negative"] == "porous":
+            c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
+            delta_phi_n_av = variables[
+                "X-averaged negative electrode surface potential difference [V]"
+            ]
+            phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
             tor_n_av = variables[
                 "Leading-order x-averaged negative electrolyte transport efficiency"
             ]
 
-        c_e_s = variables["Separator electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
+        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
+        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
 
         tor_s_av = variables[
             "Leading-order x-averaged separator electrolyte transport efficiency"
@@ -65,7 +69,7 @@ class Composite(BaseElectrolyteConductivity):
             "Leading-order x-averaged positive electrolyte transport efficiency"
         ]
 
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
@@ -100,7 +104,7 @@ class Composite(BaseElectrolyteConductivity):
 
         # electrolyte potential
         if self.options.electrode_types["negative"] == "planar":
-            phi_e_li = variables["Lithium metal interface electrolyte potential"]
+            phi_e_li = variables["Lithium metal interface electrolyte potential [V]"]
             c_e_n = pybamm.boundary_value(c_e_s, "left")
             phi_e_const = (
                 phi_e_li

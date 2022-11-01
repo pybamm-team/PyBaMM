@@ -27,20 +27,20 @@ class LeadingOrder(BaseElectrolyteConductivity):
 
     def get_coupled_variables(self, variables):
         if "negative electrode" not in self.options.whole_cell_domains:
-            phi_e_av = variables["Lithium metal interface electrolyte potential"]
+            phi_e_av = variables["Lithium metal interface electrolyte potential [V]"]
         else:
             # delta_phi = phi_s - phi_e
             delta_phi_n_av = variables[
-                "X-averaged negative electrode surface potential difference"
+                "X-averaged negative electrode surface potential difference [V]"
             ]
-            phi_s_n_av = variables["X-averaged negative electrode potential"]
+            phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
             phi_e_av = phi_s_n_av - delta_phi_n_av
 
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         param = self.param
-        l_n = param.n.l
-        l_p = param.p.l
+        l_n = param.n.L
+        l_p = param.p.L
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 

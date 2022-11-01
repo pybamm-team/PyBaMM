@@ -34,11 +34,9 @@ class TotalSEI(pybamm.BaseSubModel):
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
             f"Negative electrode {{}}{self.reaction} volumetric "
-            "interfacial current density",
-            f"Negative electrode {{}}{self.reaction} volumetric "
             "interfacial current density [A.m-3]",
             f"X-averaged negative electrode {{}}{self.reaction} volumetric "
-            "interfacial current density",
+            "interfacial current density [A.m-3]",
             f"Loss of lithium to {{}}{self.reaction} [mol]",
             f"Loss of capacity to {{}}{self.reaction} [A.h]",
         ]:

@@ -46,9 +46,9 @@ class BasePotentialPair(BaseModel):
         # Note that this should be different from the actual (composite) current
         # collector current density for 2+1D models, but not sure how to implement this
         # using current structure of lithium-ion models
-        variables["Leading-order current collector current density"] = variables[
-            "Current collector current density"
-        ]
+        variables[
+            "Leading-order current collector current density [A.m-2]"
+        ] = variables["Current collector current density"]
 
         return variables
 
@@ -56,9 +56,9 @@ class BasePotentialPair(BaseModel):
 
         param = self.param
 
-        phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
-        i_boundary_cc = variables["Current collector current density"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        phi_s_cp = variables["Positive current collector potential [V]"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         self.algebraic = {
             phi_s_cn: (param.n.sigma_cc * param.delta**2 * param.n.l_cc)
@@ -72,8 +72,8 @@ class BasePotentialPair(BaseModel):
     def set_initial_conditions(self, variables):
 
         applied_current = self.param.current_with_time
-        phi_s_cn = variables["Negative current collector potential"]
-        i_boundary_cc = variables["Current collector current density"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
@@ -89,11 +89,11 @@ class PotentialPair1plus1D(BasePotentialPair):
 
     def set_boundary_conditions(self, variables):
 
-        phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        phi_s_cp = variables["Positive current collector potential [V]"]
 
         param = self.param
-        applied_current = variables["Total current density"]
+        applied_current = variables["Total current density [A.m-2]"]
         cc_area = self._get_effective_current_collector_area()
 
         # cc_area appears here due to choice of non-dimensionalisation
@@ -129,11 +129,11 @@ class PotentialPair2plus1D(BasePotentialPair):
 
     def set_boundary_conditions(self, variables):
 
-        phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        phi_s_cp = variables["Positive current collector potential [V]"]
 
         param = self.param
-        applied_current = variables["Total current density"]
+        applied_current = variables["Total current density [A.m-2]"]
         cc_area = self._get_effective_current_collector_area()
 
         # Note: we divide by the *numerical* tab area so that the correct total

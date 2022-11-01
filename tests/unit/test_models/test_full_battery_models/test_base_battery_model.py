@@ -71,9 +71,9 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertIsInstance(processed_c.right, pybamm.StateVector)
         # Process flux manually and check result against flux computed in particle
         # submodel
-        c_n = model.variables["X-averaged negative particle concentration"]
+        c_n = model.variables["X-averaged negative particle concentration [mol.m-3]"]
         T = pybamm.PrimaryBroadcast(
-            model.variables["X-averaged negative electrode temperature"],
+            model.variables["X-averaged negative electrode temperature [K]"],
             ["negative particle"],
         )
         D = model.param.n.prim.D(c_n, T)

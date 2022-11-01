@@ -49,7 +49,7 @@ class BaseModel(pybamm.BaseSubModel):
             a_typ = self.phase_param.a_typ
             variables.update(
                 {
-                    f"{Domain} electrode surface area to volume ratio": a,
+                    f"{Domain} electrode surface area to volume ratio [m-1]": a,
                     f"{Domain} electrode surface area to volume ratio [m-1]": a * a_typ,
                     f"X-averaged {domain} electrode surface area "
                     "to volume ratio": pybamm.x_average(a),
@@ -85,39 +85,27 @@ class BaseModel(pybamm.BaseSubModel):
             # calculated the same way
             if self.options["particle size"] == "single":
                 R = self.phase_param.R
-                R_dim = self.phase_param.R_dimensional
             elif self.options["particle size"] == "distribution":
                 if self.domain == "negative":
                     R_ = pybamm.standard_spatial_vars.R_n
                 elif self.domain == "positive":
                     R_ = pybamm.standard_spatial_vars.R_p
                 R = pybamm.size_average(R_)
-                R_dim = R * self.phase_param.R_typ
-            a_typ = self.phase_param.a_typ
 
-            R_dim_av = pybamm.x_average(R_dim)
+            R_av = pybamm.x_average(R)
 
             # Compute dimensional particle shape
             if self.options["particle shape"] == "spherical":
-                a_dim = 3 * eps_solid / R_dim
-                a_dim_av = 3 * eps_solid_av / R_dim_av
+                a = 3 * eps_solid / R
+                a_av = 3 * eps_solid_av / R_av
 
-            # Surface area to volume ratio is scaled with a_typ, so that it is equal to
-            # 1 when eps_solid and R are uniform in space and time
-            a = a_dim / a_typ
-            a_av = a_dim_av / a_typ
             variables.update(
                 {
-                    f"{Domain} {phase_name}particle radius": R,
-                    f"{Domain} {phase_name}particle radius [m]": R_dim,
+                    f"{Domain} {phase_name}particle radius [m]": R,
                     f"{Domain} electrode {phase_name}"
-                    "surface area to volume ratio": a,
-                    f"{Domain} electrode {phase_name}"
-                    "surface area to volume ratio [m-1]": a_dim,
+                    "surface area to volume ratio [m-1]": a,
                     f"X-averaged {domain} electrode {phase_name}"
-                    "surface area to volume ratio": a_av,
-                    f"X-averaged {domain} electrode {phase_name}"
-                    "surface area to volume ratio [m-1]": a_dim_av,
+                    "surface area to volume ratio [m-1]": a_av,
                 }
             )
 

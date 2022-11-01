@@ -68,7 +68,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         # State of Charge defined as function of dimensionless electrolyte concentration
         z = pybamm.standard_spatial_vars.z
         soc = (
-            pybamm.Integral(self.variables["X-averaged electrolyte concentration"], z)
+            pybamm.Integral(
+                self.variables["X-averaged electrolyte concentration [mol.m-3]"], z
+            )
             * 100
         )
         self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
@@ -77,7 +79,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         if "Fractional Charge Input" not in self.variables:
             fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
             self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.variables["Total current density"] * 100
+            self.rhs[fci] = -self.variables["Total current density [A.m-2]"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
 
     def set_open_circuit_potential_submodel(self):

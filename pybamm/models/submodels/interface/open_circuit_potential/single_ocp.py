@@ -12,7 +12,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
 
         if self.reaction == "lithium-ion main":
 
-            T = variables[f"{Domain} electrode temperature"]
+            T = variables[f"{Domain} electrode temperature [K]"]
             # For "particle-size distribution" models, take distribution version
             # of c_s_surf that depends on particle size.
             if self.options["particle size"] == "distribution":
@@ -40,11 +40,11 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             ocp = self.phase_param.U(c_s_surf, T)
             dUdT = self.phase_param.dUdT(c_s_surf)
         elif self.reaction == "lithium metal plating":
-            T = variables[f"{Domain} electrode temperature"]
+            T = variables[f"{Domain} electrode temperature [K]"]
             ocp = self.param.n.U_ref
             dUdT = 0 * T
         elif self.reaction == "lead-acid main":
-            c_e = variables[f"{Domain} electrolyte concentration"]
+            c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
             # If c_e was broadcast, take only the orphan
             if isinstance(c_e, pybamm.Broadcast):
                 c_e = c_e.orphans[0]

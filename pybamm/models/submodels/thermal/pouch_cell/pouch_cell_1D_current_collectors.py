@@ -60,9 +60,9 @@ class CurrentCollector1D(BaseThermal):
         return variables
 
     def set_rhs(self, variables):
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating"]
-        T_amb = variables["Ambient temperature"]
+        T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio of pouch cell in cooling
         # coefficient. Note: the factor 1/delta^2 comes from the choice of
@@ -97,8 +97,8 @@ class CurrentCollector1D(BaseThermal):
 
     def set_boundary_conditions(self, variables):
         param = self.param
-        T_amb = variables["Ambient temperature"]
-        T_av = variables["X-averaged cell temperature"]
+        T_amb = variables["Ambient temperature [K]"]
+        T_av = variables["X-averaged cell temperature [K]"]
         T_av_top = pybamm.boundary_value(T_av, "right")
         T_av_bottom = pybamm.boundary_value(T_av, "left")
 
@@ -164,5 +164,5 @@ class CurrentCollector1D(BaseThermal):
         }
 
     def set_initial_conditions(self, variables):
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         self.initial_conditions = {T_av: self.param.T_init}

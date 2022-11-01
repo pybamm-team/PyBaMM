@@ -43,7 +43,9 @@ class TestExternalCC(unittest.TestCase):
             sim.step(dt, external_variables=external_variables)
 
             # obtain phi_s_n from the pybamm solution at the current time
-            phi_s_p = sim.solution["Positive current collector potential"].data[:, -1]
+            phi_s_p = sim.solution["Positive current collector potential [V]"].data[
+                :, -1
+            ]
 
         self.assertTrue(phi_s_p.shape, (yz_pts**2, 1))
 

@@ -71,10 +71,10 @@ class OneDimensionalX(BaseThermal):
         return variables
 
     def set_rhs(self, variables):
-        T = variables["Cell temperature"]
-        T_n = variables["Negative electrode temperature"]
-        T_s = variables["Separator temperature"]
-        T_p = variables["Positive electrode temperature"]
+        T = variables["Cell temperature [K]"]
+        T_n = variables["Negative electrode temperature [K]"]
+        T_s = variables["Separator temperature [K]"]
+        T_p = variables["Positive electrode temperature [K]"]
 
         Q = variables["Total heating"]
 
@@ -102,10 +102,10 @@ class OneDimensionalX(BaseThermal):
         }
 
     def set_boundary_conditions(self, variables):
-        T = variables["Cell temperature"]
+        T = variables["Cell temperature [K]"]
         T_n_left = pybamm.boundary_value(T, "left")
         T_p_right = pybamm.boundary_value(T, "right")
-        T_amb = variables["Ambient temperature"]
+        T_amb = variables["Ambient temperature [K]"]
 
         # N.B only y-z surface cooling is implemented for this thermal model.
         # Tab and edge cooling is not accounted for.
@@ -127,5 +127,5 @@ class OneDimensionalX(BaseThermal):
         }
 
     def set_initial_conditions(self, variables):
-        T = variables["Cell temperature"]
+        T = variables["Cell temperature [K]"]
         self.initial_conditions = {T: self.param.T_init}

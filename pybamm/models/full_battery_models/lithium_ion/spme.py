@@ -78,7 +78,7 @@ class SPMe(SPM):
                     solid_submodel = pybamm.electrode.ohm.LithiumMetalExplicit
                 else:
                     solid_submodel = pybamm.electrode.ohm.LithiumMetalSurfaceForm
-            self.submodels[f"{domain} electrode potential"] = solid_submodel(
+            self.submodels[f"{domain} electrode potential [V]"] = solid_submodel(
                 self.param, domain, self.options
             )
 
@@ -115,6 +115,6 @@ class SPMe(SPM):
 
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
-                self.submodels[f"{domain} surface potential difference"] = surf_model(
-                    self.param, domain, self.options
-                )
+                self.submodels[
+                    f"{domain} surface potential difference [V]"
+                ] = surf_model(self.param, domain, self.options)

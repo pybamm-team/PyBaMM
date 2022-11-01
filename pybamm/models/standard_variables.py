@@ -28,22 +28,22 @@ class StandardVariables:
 
         # Potential difference
         self.delta_phi_n = pybamm.Variable(
-            "Negative electrode surface potential difference",
+            "Negative electrode surface potential difference [V]",
             domain="negative electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
         self.delta_phi_p = pybamm.Variable(
-            "Positive electrode surface potential difference",
+            "Positive electrode surface potential difference [V]",
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
 
         self.delta_phi_n_av = pybamm.Variable(
-            "X-averaged negative electrode surface potential difference",
+            "X-averaged negative electrode surface potential difference [V]",
             domain="current collector",
         )
         self.delta_phi_p_av = pybamm.Variable(
-            "X-averaged positive electrode surface potential difference",
+            "X-averaged positive electrode surface potential difference [V]",
             domain="current collector",
         )
 

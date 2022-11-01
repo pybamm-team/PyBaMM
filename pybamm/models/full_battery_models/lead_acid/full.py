@@ -99,8 +99,8 @@ class Full(BaseModel):
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "positive")
 
-        self.submodels["negative electrode potential"] = submod_n
-        self.submodels["positive electrode potential"] = submod_p
+        self.submodels["negative electrode potential [V]"] = submod_n
+        self.submodels["positive electrode potential [V]"] = submod_p
 
     def set_electrolyte_submodel(self):
 
@@ -121,7 +121,7 @@ class Full(BaseModel):
             surf_model = surf_form.FullAlgebraic
 
         for domain in ["negative", "separator", "positive"]:
-            self.submodels[f"{domain} surface potential difference"] = surf_model(
+            self.submodels[f"{domain} surface potential difference [V]"] = surf_model(
                 self.param, domain, self.options
             )
 

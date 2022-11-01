@@ -30,5 +30,5 @@ class Linear(BaseKinetics):
         super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        prefactor = ne / (2 * (1 + self.param.Theta * T))
-        return 2 * u * j0 * prefactor * eta_r
+        Feta_RT = param.F * eta_r / (param.R * T)
+        return 2 * u * j0 * ne * Feta_RT

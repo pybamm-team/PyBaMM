@@ -49,24 +49,24 @@ class Full(BaseElectrolyteDiffusion):
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
             eps_k = variables[f"{Domain} porosity"]
-            eps_c_e_k = variables[f"{Domain} porosity times concentration"]
+            eps_c_e_k = variables[f"{Domain} porosity times concentration [mol.m-3]"]
             c_e_k = eps_c_e_k / eps_k
             c_e_dict[domain] = c_e_k
 
         variables.update(self._get_standard_concentration_variables(c_e_dict))
 
         # Whole domain
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
         tor = variables["Electrolyte transport efficiency"]
-        i_e = variables["Electrolyte current density"]
-        v_box = variables["Volume-averaged velocity"]
-        T = variables["Cell temperature"]
+        i_e = variables["Electrolyte current density [A.m-2]"]
+        v_box = variables["Volume-averaged velocity [m.s-1]"]
+        T = variables["Cell temperature [K]"]
 
         param = self.param
 
         N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-        N_e_migration = param.C_e * param.t_plus(c_e, T) * i_e / param.gamma_e
-        N_e_convection = param.C_e * c_e * v_box
+        N_e_migration = param.t_plus(c_e, T) * i_e / param.F
+        N_e_convection = c_e * v_box
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
@@ -78,22 +78,20 @@ class Full(BaseElectrolyteDiffusion):
 
         param = self.param
 
-        eps_c_e = variables["Porosity times concentration"]
-        c_e = variables["Electrolyte concentration"]
-        N_e = variables["Electrolyte flux"]
-        div_Vbox = variables["Transverse volume-averaged acceleration"]
+        eps_c_e = variables["Porosity times concentration [mol.m-3]"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
+        N_e = variables["Electrolyte flux [mol.m-2.s-1]"]
+        div_Vbox = variables["Transverse volume-averaged acceleration [m.s-2]"]
 
-        sum_s_j = variables["Sum of electrolyte reaction source terms"]
-        sum_s_j.print_name = "a"
-        source_terms = sum_s_j / self.param.gamma_e
+        sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
+        sum_s_a_j.print_name = "aj"
+        source_terms = sum_s_a_j / self.param.F
 
-        self.rhs = {
-            eps_c_e: -pybamm.div(N_e) / param.C_e + source_terms - c_e * div_Vbox
-        }
+        self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
     def set_initial_conditions(self, variables):
 
-        eps_c_e = variables["Porosity times concentration"]
+        eps_c_e = variables["Porosity times concentration [mol.m-3]"]
 
         self.initial_conditions = {
             eps_c_e: self.param.epsilon_init * self.param.c_e_init
@@ -101,22 +99,20 @@ class Full(BaseElectrolyteDiffusion):
 
     def set_boundary_conditions(self, variables):
         param = self.param
-        c_e = variables["Electrolyte concentration"]
-        T = variables["Cell temperature"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
+        T = variables["Cell temperature [K]"]
         tor = variables["Electrolyte transport efficiency"]
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         def flux_bc(side):
             # returns the flux at a separator/electrode interface
             # assuming v_box = 0 for now
             return (
                 pybamm.boundary_value(
-                    -(1 - param.t_plus(c_e, T))
-                    / (tor * param.gamma_e * param.D_e(c_e, T)),
+                    -(1 - param.t_plus(c_e, T)) / (tor * param.D_e(c_e, T) * param.F),
                     side,
                 )
                 * i_boundary_cc
-                * param.C_e
             )
 
         if self.options.whole_cell_domains[0] == "negative electrode":

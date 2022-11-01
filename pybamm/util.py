@@ -59,6 +59,8 @@ class FuzzyDict(dict):
             return super().__getitem__(key)
         except KeyError:
             best_matches = self.get_best_matches(key)
+            if any(key in k for k in best_matches):
+                print(f"only dimensional variable found for {key}")
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
     def search(self, key, print_values=False):

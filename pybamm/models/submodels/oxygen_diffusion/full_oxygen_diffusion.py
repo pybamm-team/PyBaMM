@@ -54,7 +54,9 @@ class Full(BaseModel):
         tor_p = variables["Positive electrolyte transport efficiency"]
         tor = pybamm.concatenation(tor_s, tor_p)
 
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        c_ox = variables[
+            "Separator and positive electrode oxygen concentration [mol.m-3]"
+        ]
         # TODO: allow charge and convection?
         v_box = pybamm.Scalar(0)
 
@@ -84,10 +86,14 @@ class Full(BaseModel):
         deps_dt_p = variables["Positive electrode porosity change"]
         deps_dt = pybamm.concatenation(deps_dt_s, deps_dt_p)
 
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        c_ox = variables[
+            "Separator and positive electrode oxygen concentration [mol.m-3]"
+        ]
         N_ox = variables["Oxygen flux"].orphans[1]
 
-        j_ox = variables["Positive electrode oxygen interfacial current density"]
+        j_ox = variables[
+            "Positive electrode oxygen interfacial current density [A.m-2]"
+        ]
         source_terms = pybamm.concatenation(
             pybamm.FullBroadcast(0, "separator", "current collector"),
             param.s_ox_Ox * j_ox,
@@ -100,7 +106,9 @@ class Full(BaseModel):
 
     def set_boundary_conditions(self, variables):
 
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        c_ox = variables[
+            "Separator and positive electrode oxygen concentration [mol.m-3]"
+        ]
 
         self.boundary_conditions = {
             c_ox: {
@@ -111,6 +119,8 @@ class Full(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        c_ox = variables[
+            "Separator and positive electrode oxygen concentration [mol.m-3]"
+        ]
 
         self.initial_conditions = {c_ox: self.param.c_ox_init}

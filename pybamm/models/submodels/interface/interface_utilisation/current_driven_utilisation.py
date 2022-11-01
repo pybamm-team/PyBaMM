@@ -57,18 +57,22 @@ class CurrentDriven(BaseModel):
 
         if self.reaction_loc == "full electrode":
             u = variables[f"{Domain} electrode interface utilisation variable"]
-            a = variables[f"{Domain} electrode surface area to volume ratio"]
-            j = variables[f"{Domain} electrode interfacial current density"]
+            a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
+            j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
         elif self.reaction_loc == "x-average":
             u = variables[
                 f"X-averaged {domain} electrode interface utilisation variable"
             ]
-            a = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
-            j = variables[f"X-averaged {domain} electrode interfacial current density"]
+            a = variables[
+                f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
+            ]
+            j = variables[
+                f"X-averaged {domain} electrode interfacial current density [A.m-2]"
+            ]
         else:
             u = variables["Lithium metal interface utilisation variable"]
             a = 1
-            j = variables["Lithium metal total interfacial current density"]
+            j = variables["Lithium metal total interfacial current density [A.m-2]"]
 
         beta = self.domain_param.beta_utilisation
 

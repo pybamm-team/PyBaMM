@@ -36,7 +36,7 @@ class Uniform(BaseTransverseModel):
 
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         v_box_n_right = param.n.beta * i_boundary_cc
         v_box_p_left = param.p.beta * i_boundary_cc
         d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.s.l

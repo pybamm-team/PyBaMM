@@ -35,7 +35,7 @@ class DiffusionLimited(BaseInterface):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
-        delta_phi_s = variables[f"{Domain} electrode surface potential difference"]
+        delta_phi_s = variables[f"{Domain} electrode surface potential difference [V]"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
             delta_phi_s = delta_phi_s.orphans[0]
@@ -43,7 +43,7 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential [V]"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
@@ -96,7 +96,7 @@ class DiffusionLimited(BaseInterface):
                 j = -self.param.p.l * j_p / self.param.n.l
             elif self.order in ["composite", "full"]:
                 tor_s = variables["Separator electrolyte transport efficiency"]
-                c_ox_s = variables["Separator oxygen concentration"]
+                c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
                     * param.curlyD_ox

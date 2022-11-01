@@ -24,11 +24,13 @@ class Explicit(BaseThroughCellModel):
 
         # Set up
         param = self.param
-        p_s = variables["X-averaged separator pressure"]
+        p_s = variables["X-averaged separator pressure [Pa]"]
         for domain in self.options.whole_cell_domains:
             if domain == "separator":
                 continue
-            j_k_av = variables[f"X-averaged {domain} interfacial current density"]
+            j_k_av = variables[
+                f"X-averaged {domain} interfacial current density [A.m-2]"
+            ]
             if domain == "negative electrode":
                 x_n = pybamm.standard_spatial_vars.x_n
                 beta_k = param.n.beta
@@ -49,9 +51,9 @@ class Explicit(BaseThroughCellModel):
 
         # Transverse velocity in the separator determines through-cell velocity
         div_Vbox_s = variables[
-            "X-averaged separator transverse volume-averaged acceleration"
+            "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
         ]
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         v_box_n_right = param.n.beta * i_boundary_cc
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")

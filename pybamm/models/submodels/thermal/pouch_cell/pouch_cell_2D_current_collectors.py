@@ -60,9 +60,9 @@ class CurrentCollector2D(BaseThermal):
         return variables
 
     def set_rhs(self, variables):
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating"]
-        T_amb = variables["Ambient temperature"]
+        T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio of pouch cell in cooling
         # coefficient. Note: the factor 1/delta^2 comes from the choice of
@@ -97,8 +97,8 @@ class CurrentCollector2D(BaseThermal):
         # TODO: Make h_edge a function of position to have bottom/top/side cooled cells.
 
     def set_boundary_conditions(self, variables):
-        T_av = variables["X-averaged cell temperature"]
-        T_amb = variables["Ambient temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
+        T_amb = variables["Ambient temperature [K]"]
 
         # Subtract the edge cooling from the tab portion so as to not double count
         # Note: tab cooling is also only applied on the current collector hence
@@ -126,5 +126,5 @@ class CurrentCollector2D(BaseThermal):
         }
 
     def set_initial_conditions(self, variables):
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         self.initial_conditions = {T_av: self.param.T_init}

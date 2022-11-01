@@ -536,14 +536,14 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
         sim.build()
-        variable_names = ["Volume-averaged cell temperature"]
+        variable_names = ["Volume-averaged cell temperature [K]"]
         out = sim.built_model.export_casadi_objects(variable_names)
 
         # Test fails if not discretised
         with self.assertRaisesRegex(
             pybamm.DiscretisationError, "Cannot automatically discretise model"
         ):
-            model.export_casadi_objects(["Electrolyte concentration"])
+            model.export_casadi_objects(["Electrolyte concentration [mol.m-3]"])
 
     @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
     def test_generate_casadi(self):

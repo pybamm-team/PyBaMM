@@ -39,12 +39,12 @@ class LeadingOrder(BaseModel):
         """
         param = self.param
 
-        i_boundary_cc = variables["Current collector current density"]
-        phi_s_cn = variables["Negative current collector potential"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
 
         # import parameters and spatial variables
-        l_n = param.n.l
-        l_p = param.p.l
+        l_n = param.n.L
+        l_p = param.p.L
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -55,9 +55,9 @@ class LeadingOrder(BaseModel):
         elif self.domain == "positive":
             # recall delta_phi = phi_s - phi_e
             delta_phi_p_av = variables[
-                "X-averaged positive electrode surface potential difference"
+                "X-averaged positive electrode surface potential difference [V]"
             ]
-            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
 
             v = delta_phi_p_av + phi_e_p_av
 
@@ -75,7 +75,7 @@ class LeadingOrder(BaseModel):
     def set_boundary_conditions(self, variables):
         Domain = self.domain.capitalize()
 
-        phi_s = variables[f"{Domain} electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
 
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")

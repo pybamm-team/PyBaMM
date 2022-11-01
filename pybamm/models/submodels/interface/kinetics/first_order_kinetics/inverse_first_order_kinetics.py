@@ -31,8 +31,10 @@ class InverseFirstOrderKinetics(BaseInterface):
         self.leading_order_models = leading_order_models
 
     def _get_die1dx(self, variables):
-        i_boundary_cc = variables["Current collector current density"]
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        i_boundary_cc_0 = variables[
+            "Leading-order current collector current density [A.m-2]"
+        ]
         i_boundary_cc_1 = (i_boundary_cc - i_boundary_cc_0) / self.param.C_e
 
         sgn = 1 if self.domain == "negative" else -1
@@ -42,10 +44,12 @@ class InverseFirstOrderKinetics(BaseInterface):
         domain = self.domain
         # Unpack
         delta_phi_0 = variables[
-            f"Leading-order x-averaged {domain} electrode surface potential difference"
+            f"Leading-order x-averaged {domain} electrode surface potential difference [V]"
         ]
-        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
-        c_e_av = variables[f"X-averaged {domain} electrolyte concentration"]
+        c_e_0 = variables[
+            "Leading-order x-averaged electrolyte concentration [mol.m-3]"
+        ]
+        c_e_av = variables[f"X-averaged {domain} electrolyte concentration [mol.m-3]"]
         c_e_1_av = (c_e_av - c_e_0) / self.param.C_e
 
         # Get first-order current (this is zero in 1D)

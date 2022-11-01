@@ -63,7 +63,7 @@ class ReactionDrivenODE(BaseModel):
                     depsdt_k = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
                 else:
                     Domain = domain.capitalize()
-                    j_k = variables[f"{Domain} interfacial current density"]
+                    j_k = variables[f"{Domain} interfacial current density [A.m-2]"]
                     depsdt_k = -domain_param.beta_surf * j_k
 
             depsdt_dict[domain] = depsdt_k

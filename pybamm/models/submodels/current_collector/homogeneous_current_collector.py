@@ -31,7 +31,7 @@ class Uniform(BaseModel):
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
         i_boundary_cc = pybamm.PrimaryBroadcast(
-            variables["Total current density"], "current collector"
+            variables["Total current density [A.m-2]"], "current collector"
         )
 
         variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
@@ -40,8 +40,8 @@ class Uniform(BaseModel):
         # Note that this should be different from the actual (composite) current
         # collector current density for 2+1D models, but not sure how to implement this
         # using current structure of lithium-ion models
-        variables["Leading-order current collector current density"] = variables[
-            "Current collector current density"
-        ]
+        variables[
+            "Leading-order current collector current density [A.m-2]"
+        ] = variables["Current collector current density"]
 
         return variables

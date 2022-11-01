@@ -56,7 +56,7 @@ class Full(BaseThroughCellModel):
         div_Vbox_s = variables[
             "X-averaged separator transverse volume-averaged acceleration"
         ]
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         v_box_n_right = param.n.beta * i_boundary_cc
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
@@ -79,11 +79,11 @@ class Full(BaseThroughCellModel):
         p_n = variables["Negative electrode pressure"]
         p_p = variables["Positive electrode pressure"]
 
-        j_n = variables["Negative electrode interfacial current density"]
-        j_p = variables["Positive electrode interfacial current density"]
+        j_n = variables["Negative electrode interfacial current density [A.m-2]"]
+        j_p = variables["Positive electrode interfacial current density [A.m-2]"]
 
-        v_box_n = variables["Negative electrode volume-averaged velocity"]
-        v_box_p = variables["Positive electrode volume-averaged velocity"]
+        v_box_n = variables["Negative electrode volume-averaged velocity [m.s-1]"]
+        v_box_p = variables["Positive electrode volume-averaged velocity [m.s-1]"]
 
         # Problems in the x-direction for p_n and p_p
         self.algebraic = {

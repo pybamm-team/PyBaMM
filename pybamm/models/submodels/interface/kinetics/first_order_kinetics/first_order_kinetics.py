@@ -33,16 +33,16 @@ class FirstOrderKinetics(BaseInterface):
         reaction_name = self.reaction_name
 
         # Unpack
-        c_e_0 = variables[f"Leading-order {domain} electrolyte concentration"]
-        c_e = variables[f"{Domain} electrolyte concentration"]
+        c_e_0 = variables[f"Leading-order {domain} electrolyte concentration [mol.m-3]"]
+        c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         c_e_1 = (c_e - c_e_0) / self.param.C_e
 
         dj_dc_0 = self.leading_order_model._get_dj_dc(variables)
         dj_ddeltaphi_0 = self.leading_order_model._get_dj_ddeltaphi(variables)
 
         # Update delta_phi with new phi_e and phi_s
-        phi_s = variables[f"{Domain} electrode potential"]
-        phi_e = variables[f"{Domain} electrolyte potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
+        phi_e = variables[f"{Domain} electrolyte potential [V]"]
         delta_phi = phi_s - phi_e
         variables.update(
             self._get_standard_average_surface_potential_difference_variables(
@@ -54,7 +54,7 @@ class FirstOrderKinetics(BaseInterface):
         )
 
         delta_phi_0 = variables[
-            f"Leading-order {domain} electrode surface potential difference"
+            f"Leading-order {domain} electrode surface potential difference [V]"
         ]
         delta_phi_1 = (delta_phi - delta_phi_0) / self.param.C_e
 
@@ -67,7 +67,7 @@ class FirstOrderKinetics(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential [V]"]
         eta_r = delta_phi - ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))

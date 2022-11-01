@@ -47,7 +47,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         return variables
 
     def get_coupled_variables(self, variables):
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
         eps = variables["Porosity"]
 
         variables.update(self._get_total_concentration_electrolyte(eps * c_e))
@@ -58,9 +58,9 @@ class LeadingOrder(BaseElectrolyteDiffusion):
 
         param = self.param
 
-        c_e_av = variables["X-averaged electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
 
         eps_n_av = variables["X-averaged negative electrode porosity"]
         eps_s_av = variables["X-averaged separator porosity"]
@@ -103,5 +103,5 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         }
 
     def set_initial_conditions(self, variables):
-        c_e = variables["X-averaged electrolyte concentration"]
+        c_e = variables["X-averaged electrolyte concentration [mol.m-3]"]
         self.initial_conditions = {c_e: self.param.c_e_init}

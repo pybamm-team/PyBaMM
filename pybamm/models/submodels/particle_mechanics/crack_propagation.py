@@ -42,29 +42,32 @@ class CrackPropagation(BaseMechanics):
 
         if self.x_average is True:
             l_cr_av = pybamm.Variable(
-                f"X-averaged {domain} particle crack length",
+                f"X-averaged {domain} particle crack length [m]",
                 domain="current collector",
             )
             l_cr = pybamm.PrimaryBroadcast(l_cr_av, f"{domain} electrode")
         else:
             l_cr = pybamm.Variable(
-                f"{Domain} particle crack length",
+                f"{Domain} particle crack length [m]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
-        return self._get_standard_variables(l_cr)
+
+        variables.updaate(self._get_standard_variables(l_cr))
+
+        return variables
 
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
 
         variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
-        T = variables[f"{Domain} electrode temperature"]
+        T = variables[f"{Domain} electrode temperature [K]"]
         k_cr = self.domain_param.k_cr(T)
         m_cr = self.domain_param.m_cr
         b_cr = self.domain_param.b_cr
         stress_t_surf = variables[f"{Domain} particle surface tangential stress"]
-        l_cr = variables[f"{Domain} particle crack length"]
+        l_cr = variables[f"{Domain} particle crack length [m]"]
         # # compressive stress will not lead to crack propagation
         dK_SIF = stress_t_surf * b_cr * pybamm.Sqrt(np.pi * l_cr) * (stress_t_surf >= 0)
         dl_cr = k_cr * (dK_SIF**m_cr) / self.param.t0_cr
@@ -80,10 +83,10 @@ class CrackPropagation(BaseMechanics):
         domain, Domain = self.domain_Domain
 
         if self.x_average is True:
-            l_cr = variables[f"X-averaged {domain} particle crack length"]
+            l_cr = variables[f"X-averaged {domain} particle crack length [m]"]
             dl_cr = variables[f"X-averaged {domain} particle cracking rate"]
         else:
-            l_cr = variables[f"{Domain} particle crack length"]
+            l_cr = variables[f"{Domain} particle crack length [m]"]
             dl_cr = variables[f"{Domain} particle cracking rate"]
         self.rhs = {l_cr: dl_cr}
 
@@ -91,10 +94,10 @@ class CrackPropagation(BaseMechanics):
         domain, Domain = self.domain_Domain
 
         if self.x_average is True:
-            l_cr = variables[f"X-averaged {domain} particle crack length"]
+            l_cr = variables[f"X-averaged {domain} particle crack length [m]"]
             l0 = 1
         else:
-            l_cr = variables[f"{Domain} particle crack length"]
+            l_cr = variables[f"{Domain} particle crack length [m]"]
             l0 = pybamm.PrimaryBroadcast(1, f"{domain} electrode")
         self.initial_conditions = {l_cr: l0}
 
@@ -102,9 +105,9 @@ class CrackPropagation(BaseMechanics):
         domain, Domain = self.domain_Domain
 
         if self.x_average is True:
-            l_cr = variables[f"X-averaged {domain} particle crack length"]
+            l_cr = variables[f"X-averaged {domain} particle crack length [m]"]
         else:
-            l_cr = variables[f"{Domain} particle crack length"]
+            l_cr = variables[f"{Domain} particle crack length [m]"]
         self.events.append(
             pybamm.Event(
                 f"{domain} particle crack length larger than particle radius",

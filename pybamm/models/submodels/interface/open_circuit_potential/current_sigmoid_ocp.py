@@ -7,7 +7,7 @@ from . import BaseOpenCircuitPotential
 
 class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_coupled_variables(self, variables):
-        current = variables["Total current density"]
+        current = variables["Total current density [A.m-2]"]
         k = 100
         m_lith = pybamm.sigmoid(current, 0, k)  # for lithation (current < 0)
         m_delith = 1 - m_lith  # for delithiation (current > 0)
@@ -16,7 +16,7 @@ class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
-            T = variables[f"{Domain} electrode temperature"]
+            T = variables[f"{Domain} electrode temperature [K]"]
             # Particle size distribution is not yet implemented
             if self.options["particle size"] != "distribution":
                 c_s_surf = variables[

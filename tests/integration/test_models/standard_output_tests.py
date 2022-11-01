@@ -270,8 +270,12 @@ class ParticleConcentrationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.c_s_n = solution[f"Negative {self.phase_name_n}particle concentration"]
-        self.c_s_p = solution[f"Positive {self.phase_name_p}particle concentration"]
+        self.c_s_n = solution[
+            f"Negative {self.phase_name_n}particle concentration [mol.m-3]"
+        ]
+        self.c_s_p = solution[
+            f"Positive {self.phase_name_p}particle concentration [mol.m-3]"
+        ]
 
         self.c_s_n_rav = solution[
             f"R-averaged negative {self.phase_name_n}particle concentration"
@@ -476,16 +480,22 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.c_e = solution["Electrolyte concentration"]
+        self.c_e = solution["Electrolyte concentration [mol.m-3]"]
 
-        self.c_e_n = solution["Negative electrolyte concentration"]
-        self.c_e_s = solution["Separator electrolyte concentration"]
-        self.c_e_p = solution["Positive electrolyte concentration"]
+        self.c_e_n = solution["Negative electrolyte concentration [mol.m-3]"]
+        self.c_e_s = solution["Separator electrolyte concentration [mol.m-3]"]
+        self.c_e_p = solution["Positive electrolyte concentration [mol.m-3]"]
 
-        self.c_e_av = solution["X-averaged electrolyte concentration"]
-        self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
-        self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
-        self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_av = solution["X-averaged electrolyte concentration [mol.m-3]"]
+        self.c_e_n_av = solution[
+            "X-averaged negative electrolyte concentration [mol.m-3]"
+        ]
+        self.c_e_s_av = solution[
+            "X-averaged separator electrolyte concentration [mol.m-3]"
+        ]
+        self.c_e_p_av = solution[
+            "X-averaged positive electrolyte concentration [mol.m-3]"
+        ]
         self.c_e_tot = solution["Total lithium in electrolyte [mol]"]
 
         self.N_e_hat = solution["Electrolyte flux"]
@@ -589,10 +599,10 @@ class PotentialTests(BaseOutputTest):
             "X-averaged positive electrode surface potential difference [V]"
         ]
 
-        self.grad_phi_e = solution["Gradient of electrolyte potential"]
-        self.grad_phi_e_n = solution["Gradient of negative electrolyte potential"]
-        self.grad_phi_e_s = solution["Gradient of separator electrolyte potential"]
-        self.grad_phi_e_p = solution["Gradient of positive electrolyte potential"]
+        self.grad_phi_e = solution["Gradient of electrolyte potential [V]"]
+        self.grad_phi_e_n = solution["Gradient of negative electrolyte potential [V]"]
+        self.grad_phi_e_s = solution["Gradient of separator electrolyte potential [V]"]
+        self.grad_phi_e_p = solution["Gradient of positive electrolyte potential [V]"]
 
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
@@ -682,10 +692,10 @@ class CurrentTests(BaseOutputTest):
             "volumetric interfacial current density"
         ]
 
-        self.i_s_n = solution["Negative electrode current density"]
-        self.i_s_p = solution["Positive electrode current density"]
-        self.i_s = solution["Electrode current density"]
-        self.i_e = solution["Electrolyte current density"]
+        self.i_s_n = solution["Negative electrode current density [A.m-2]"]
+        self.i_s_p = solution["Positive electrode current density [A.m-2]"]
+        self.i_s = solution["Electrode current density [A.m-2]"]
+        self.i_e = solution["Electrolyte current density [A.m-2]"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)
@@ -752,9 +762,9 @@ class VelocityTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.v_box = solution["Volume-averaged velocity"]
-        self.i_e = solution["Electrolyte current density"]
-        self.dVbox_dz = solution["Transverse volume-averaged acceleration"]
+        self.v_box = solution["Volume-averaged velocity [m.s-1]"]
+        self.i_e = solution["Electrolyte current density [A.m-2]"]
+        self.dVbox_dz = solution["Transverse volume-averaged acceleration [m.s-2]"]
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""

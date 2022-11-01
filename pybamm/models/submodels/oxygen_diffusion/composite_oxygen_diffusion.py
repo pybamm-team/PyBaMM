@@ -35,7 +35,9 @@ class Composite(Full):
         tor_0_p = variables["Leading-order positive electrolyte transport efficiency"]
         tor_0 = pybamm.concatenation(tor_0_s, tor_0_p)
 
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        c_ox = variables[
+            "Separator and positive electrode oxygen concentration [mol.m-3]"
+        ]
 
         param = self.param
 
@@ -65,7 +67,9 @@ class Composite(Full):
         deps_0_dt_p = variables["Leading-order positive electrode porosity change"]
         deps_0_dt = pybamm.concatenation(deps_0_dt_s, deps_0_dt_p)
 
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        c_ox = variables[
+            "Separator and positive electrode oxygen concentration [mol.m-3]"
+        ]
         N_ox = variables["Oxygen flux"].orphans[1]
 
         if self.extended is False:
@@ -74,7 +78,9 @@ class Composite(Full):
             ]
             pos_reactions = param.s_ox_Ox * j_ox_0
         else:
-            j_ox_0 = variables["Positive electrode oxygen interfacial current density"]
+            j_ox_0 = variables[
+                "Positive electrode oxygen interfacial current density [A.m-2]"
+            ]
             pos_reactions = param.s_ox_Ox * j_ox_0
         sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
         source_terms_0 = (

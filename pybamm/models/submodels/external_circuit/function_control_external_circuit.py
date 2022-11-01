@@ -166,7 +166,7 @@ class CCCVFunctionControl(FunctionControl):
         K_aw = 1 * self.param.timescale  # anti-windup
         K_V = 1 * self.param.timescale
         i_var = variables["Current density variable"]
-        i_cell = variables["Total current density"]
+        i_cell = variables["Total current density [A.m-2]"]
         V = variables["Terminal voltage [V]"]
         V_CCCV = pybamm.Parameter("Voltage function [V]")
         return -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)

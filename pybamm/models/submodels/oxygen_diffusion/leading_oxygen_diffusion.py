@@ -48,7 +48,7 @@ class LeadingOrder(BaseModel):
 
         param = self.param
 
-        c_ox_av = variables["X-averaged oxygen concentration"]
+        c_ox_av = variables["X-averaged oxygen concentration [mol.m-3]"]
 
         eps_n_av = variables["X-averaged negative electrode porosity"]
         eps_s_av = variables["X-averaged separator porosity"]
@@ -79,5 +79,5 @@ class LeadingOrder(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        c_ox = variables["X-averaged oxygen concentration"]
+        c_ox = variables["X-averaged oxygen concentration [mol.m-3]"]
         self.initial_conditions = {c_ox: self.param.c_ox_init}

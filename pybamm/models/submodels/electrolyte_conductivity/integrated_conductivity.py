@@ -39,24 +39,26 @@ class Integrated(BaseElectrolyteConductivity):
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
-        c_e_av = variables["X-averaged electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        c_e_n = variables["Negative electrolyte concentration"]
-        c_e_s = variables["Separator electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
+        i_boundary_cc_0 = variables[
+            "Leading-order current collector current density [A.m-2]"
+        ]
+        c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
+        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
+        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
         c_e_n0 = pybamm.boundary_value(c_e_n, "left")
 
         delta_phi_n_av = variables[
-            "X-averaged negative electrode surface potential difference"
+            "X-averaged negative electrode surface potential difference [V]"
         ]
-        phi_s_n_av = variables["X-averaged negative electrode potential"]
+        phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
 
         tor_n = variables["Negative electrolyte transport efficiency"]
         tor_s = variables["Separator electrolyte transport efficiency"]
         tor_p = variables["Positive electrolyte transport efficiency"]
 
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")

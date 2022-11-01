@@ -46,14 +46,16 @@ class Full(BaseTransverseModel):
         p_s = variables["X-averaged separator pressure"]
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         v_box_n_right = param.n.beta * i_boundary_cc
         v_box_p_left = param.p.beta * i_boundary_cc
         d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.s.l
 
         # Simple formula for velocity in the separator
         div_Vbox_s = -d_vbox_s_dx
-        Vbox_s = variables["X-averaged separator transverse volume-averaged velocity"]
+        Vbox_s = variables[
+            "X-averaged separator transverse volume-averaged velocity [m.s-1]"
+        ]
 
         # Problem in the z-direction for p_s
         self.algebraic = {p_s: pybamm.div(Vbox_s) - div_Vbox_s}

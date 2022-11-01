@@ -11,12 +11,12 @@ import numpy as np
 class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
         self.delta_phi_s_n = pybamm.Variable(
-            "surface potential difference",
+            "surface potential difference [V]",
             ["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
         self.delta_phi_s_p = pybamm.Variable(
-            "surface potential difference",
+            "surface potential difference [V]",
             ["positive electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
@@ -41,8 +41,8 @@ class TestButlerVolmer(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         self.variables = {
-            "Negative electrode surface potential difference": self.delta_phi_s_n,
-            "Positive electrode surface potential difference": self.delta_phi_s_p,
+            "Negative electrode surface potential difference [V]": self.delta_phi_s_n,
+            "Positive electrode surface potential difference [V]": self.delta_phi_s_p,
             "Negative electrolyte concentration": self.c_e_n,
             "Positive electrolyte concentration": self.c_e_p,
             "Negative particle surface concentration": self.c_s_n_surf,
@@ -50,10 +50,10 @@ class TestButlerVolmer(unittest.TestCase):
             "Current collector current density": pybamm.Scalar(1),
             "Negative electrode temperature": 0,
             "Positive electrode temperature": 0,
-            "Negative electrode surface area to volume ratio": 1 + 0 * self.c_e_n,
-            "Positive electrode surface area to volume ratio": 1 + 0 * self.c_e_p,
-            "X-averaged negative electrode surface area to volume ratio": 1,
-            "X-averaged positive electrode surface area to volume ratio": 1,
+            "Negative electrode surface area to volume ratio [m-1]": 1 + 0 * self.c_e_n,
+            "Positive electrode surface area to volume ratio [m-1]": 1 + 0 * self.c_e_p,
+            "X-averaged negative electrode surface area to volume ratio [m-1]": 1,
+            "X-averaged positive electrode surface area to volume ratio [m-1]": 1,
             "Negative electrode interface utilisation": 1,
             "Positive electrode interface utilisation": 1,
             "Negative electrode open circuit potential": pybamm.Scalar(0),
@@ -255,7 +255,7 @@ class TestButlerVolmer(unittest.TestCase):
         def j_n(c_e):
             variables = {
                 **self.variables,
-                "Negative electrode surface potential difference": 1,
+                "Negative electrode surface potential difference [V]": 1,
                 "Negative electrolyte concentration": c_e,
             }
             return model_n.get_coupled_variables(variables)[
@@ -265,7 +265,7 @@ class TestButlerVolmer(unittest.TestCase):
         def j_p(c_e):
             variables = {
                 **self.variables,
-                "Positive electrode surface potential difference": 1,
+                "Positive electrode surface potential difference [V]": 1,
                 "Positive electrolyte concentration": c_e,
             }
             return model_p.get_coupled_variables(variables)[
@@ -326,7 +326,7 @@ class TestButlerVolmer(unittest.TestCase):
         def j_n(delta_phi):
             variables = {
                 **self.variables,
-                "Negative electrode surface potential difference": delta_phi,
+                "Negative electrode surface potential difference [V]": delta_phi,
                 "Negative electrolyte concentration": 1,
             }
             return model_n.get_coupled_variables(variables)[
@@ -336,7 +336,7 @@ class TestButlerVolmer(unittest.TestCase):
         def j_p(delta_phi):
             variables = {
                 **self.variables,
-                "Positive electrode surface potential difference": delta_phi,
+                "Positive electrode surface potential difference [V]": delta_phi,
                 "Positive electrolyte concentration": 1,
             }
             return model_p.get_coupled_variables(variables)[
