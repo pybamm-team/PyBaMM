@@ -142,6 +142,36 @@ class LithiumIonParameters(BaseParameters):
         self.ocv_ref = self.p.U_ref - self.n.U_ref
         self.ocv_init_dim = self.p.prim.U_init_dim - self.n.prim.U_init_dim
 
+    def chi_dimensional(self, c_e, T):
+        """
+        Thermodynamic factor:
+            (1-2*t_plus) is for Nernst-Planck,
+            2*(1-t_plus) for Stefan-Maxwell,
+        see Bizeray et al (2016) "Resolving a discrepancy ...".
+        """
+        return (2 * (1 - self.t_plus_dimensional(c_e, T))) * (
+            self.one_plus_dlnf_dlnc_dimensional(c_e, T)
+        )
+
+    def chiRT_over_Fc_dimensional(self, c_e, T):
+        """
+        chi * (1 + Theta * T) / c,
+        as it appears in the electrolyte potential equation
+        """
+        tol = pybamm.settings.tolerances["chi__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
+        return (self.R * T / self.F) * self.chi_dimensional(c_e, T) / c_e
+
+    def t_plus_dimensional(self, c_e, T):
+        """Cation transference number (dimensionless)"""
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
+        return pybamm.FunctionParameter("Cation transference number", inputs)
+
+    def one_plus_dlnf_dlnc_dimensional(self, c_e, T):
+        """Thermodynamic factor (dimensionless)"""
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
+        return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
+
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
         tol = pybamm.settings.tolerances["D_e__c_e"]
@@ -301,9 +331,11 @@ class LithiumIonParameters(BaseParameters):
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        return (2 * (1 - self.t_plus(c_e, T))) * (self.one_plus_dlnf_dlnc(c_e, T))
+        c_e_dimensional = c_e * self.c_e_typ
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.chi_dimensional(c_e_dimensional, T_dim)
 
-    def chiT_over_c(self, c_e, T):
+    def chiRT_over_Fc(self, c_e, T):
         """
         chi * (1 + Theta * T) / c,
         as it appears in the electrolyte potential equation
@@ -314,19 +346,15 @@ class LithiumIonParameters(BaseParameters):
 
     def t_plus(self, c_e, T):
         """Cation transference number (dimensionless)"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
-            "Temperature [K]": self.Delta_T * T + self.T_ref,
-        }
-        return pybamm.FunctionParameter("Cation transference number", inputs)
+        c_e_dimensional = c_e * self.c_e_typ
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.t_plus_dimensional(c_e_dimensional, T_dim)
 
     def one_plus_dlnf_dlnc(self, c_e, T):
         """Thermodynamic factor (dimensionless)"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
-            "Temperature [K]": self.Delta_T * T + self.T_ref,
-        }
-        return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
+        c_e_dimensional = c_e * self.c_e_typ
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.one_plus_dlnf_dlnc_dimensional(c_e_dimensional, T_dim)
 
     def D_e(self, c_e, T):
         """Dimensionless electrolyte diffusivity"""
@@ -763,18 +791,16 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} electrode active material volume fraction",
             {"Through-cell distance (x) [m]": x},
         )
-        self.c_init = (
-            pybamm.FunctionParameter(
-                f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
-                {
-                    "Radial distance (r) [m]": r,
-                    "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
-                        x, f"{domain} {phase_name}particle"
-                    ),
-                },
-            )
-            / self.c_max
+        self.c_init_dimensional = pybamm.FunctionParameter(
+            f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
+            {
+                "Radial distance (r) [m]": r,
+                "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+                    x, f"{domain} {phase_name}particle"
+                ),
+            },
         )
+        self.c_init = self.c_init_dimensional / self.c_max
         self.c_init_av = pybamm.xyz_average(pybamm.r_average(self.c_init))
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
