@@ -11,7 +11,7 @@ Negative electrode OCP [V],[function]graphite_ocp_PeymanMPM,Peyman MPM,
 # Microstructure,,,
 Negative electrode porosity,0.3,Peyman MPM,
 Negative electrode active material volume fraction,0.61,Peyman MPM,rest is binder
-Negative particle radius [m],2.5E-06,Peyman MPM,
+Negative particle radius [m],10E-06,Peyman MPM,
 Negative electrode Bruggeman coefficient (electrode),1.5,Peyman MPM,
 Negative electrode Bruggeman coefficient (electrolyte),1.5,Peyman MPM,
 Negative electrode transport efficiency, 0.16,

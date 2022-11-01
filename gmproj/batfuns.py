@@ -164,15 +164,26 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
                 "X-averaged negative particle concentration",
                 "X-averaged positive particle concentration",
                 "Discharge capacity [A.h]",
+                "Porosity times concentration",
             ]:
                 value = sol[var.name].data
                 if value.ndim == 1:
                     value = value[pos]
                 elif value.ndim == 2:
-                    value = value[:, pos]
+                    value = np.average(value[:, pos])
                 elif value.ndim == 3:
-                    value = value[:, :, pos]
+                    value = np.average(value[:, :, pos])
                 y = np.concatenate([y, value.flatten()])
+            elif var.name == "Porosity times concentration":
+                for child in var.children:
+                    value = sol[child.name].data
+                    if value.ndim == 1:
+                        value = value[pos]
+                    elif value.ndim == 2:
+                        value = np.average(value[:, pos])
+                    elif value.ndim == 3:
+                        value = np.average(value[:, :, pos])
+                    y = np.concatenate([y, value.flatten()])
         return y
 
     def y_to_sol(y, esoh_sim, model):
@@ -199,9 +210,19 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
             elif var.name == "Discharge capacity [A.h]":
                 ics[var.name] = np.zeros(1)
             else:
-                end = start + model.variables[var.name].size
-                ics[var.name] = y[start:end, np.newaxis]
-                start = end
+                if var.name == "Porosity times concentration":
+                    for child in var.children:
+                        # end = start + model.variables[child.name].size
+                        # ics[child.name] = y[start:end, np.newaxis]
+                        end = start + 1
+                        ics[child.name] = y[start] * np.ones((model.variables[var.name].size, 1))
+                        start = end
+                else:
+                    # end = start + model.variables[var.name].size
+                    # ics[var.name] = y[start:end, np.newaxis]
+                    end = start + 1
+                    ics[var.name] = y[start] * np.ones((model.variables[var.name].size, 1))
+                    start = end
         model.set_initial_conditions_from(ics)
         return pybamm.Solution(
             [np.array([0])],
@@ -340,15 +361,15 @@ def plotc2(all_sumvars_dict1,all_sumvars_dict2,esoh_data):
     fig, axes = plt.subplots(3,2,figsize=(7,7))
     for k, name in enumerate(esoh_vars):
         ax = axes.flat[k]
-        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"r.")
-        ax.plot(all_sumvars_dict2["Cycle number"],all_sumvars_dict2[name],"bv")
+        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"b.")
+        ax.plot(all_sumvars_dict2["Cycle number"],all_sumvars_dict2[name],"rv")
         ax.plot(esoh_data["N"],esoh_data[name],"kx")
         ax.set_title(split_long_string(name))
         if k ==2 or k==3:
             ax.set_ylim([3,6.2])
         if k>3:
             ax.set_xlabel("Cycle number")
-    fig.legend(["Old", "New" , "Data"], 
+    fig.legend(["sim1", "sim2" , "Data"], 
            loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
@@ -430,7 +451,7 @@ def init_exp_calendar(cell_no,dfe,param,parameter_values):
         SOC_0 = 0.5
         Temp = 45
     elif cell_no=='24':
-        SOC_0 = 1
+        SOC_0 = 0.98
         Temp = -5
     elif cell_no=='25':
         SOC_0 = 0.5

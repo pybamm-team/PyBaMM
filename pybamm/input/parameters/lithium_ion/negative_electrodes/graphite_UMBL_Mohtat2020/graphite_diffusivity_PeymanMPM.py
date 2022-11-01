@@ -23,7 +23,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 5.0 * 10 ** (-15)
+    D_ref = 16*5.0 * 10 ** (-15)
     E_D_s = 42770
     arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
