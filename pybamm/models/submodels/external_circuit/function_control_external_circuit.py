@@ -37,8 +37,7 @@ class FunctionControl(BaseModel):
         elif self.control == "differential with max":
             i_input = (
                 pybamm.FunctionParameter(
-                    "CCCV current function [A]",
-                    {"Time [s]": pybamm.t}
+                    "CCCV current function [A]", {"Time [s]": pybamm.t}
                 )
                 / param.I_typ
                 * pybamm.sign(param.I_typ)
