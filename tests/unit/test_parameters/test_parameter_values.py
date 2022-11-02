@@ -132,9 +132,6 @@ class TestParameterValues(unittest.TestCase):
             param.update({"b": 1})
 
     def test_check_parameter_values(self):
-        # Can't provide a current density of 0, as this will cause a ZeroDivision error
-        with self.assertRaisesRegex(ValueError, "Typical current"):
-            pybamm.ParameterValues({"Typical current [A]": 0})
         with self.assertRaisesRegex(ValueError, "propotional term"):
             pybamm.ParameterValues(
                 {"Negative electrode LAM constant propotional term": 1}
@@ -834,8 +831,6 @@ class TestParameterValues(unittest.TestCase):
             "grad_var1": pybamm.grad(var1),
             "d_var1": d * var1,
         }
-        model.timescale = b
-        model.length_scales = {"test": c}
 
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
@@ -866,9 +861,6 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
-        # timescale and length scales
-        self.assertEqual(model.timescale.evaluate(), 2)
-        self.assertEqual(model.length_scales["test"].evaluate(), 3)
 
         # bad boundary conditions
         model = pybamm.BaseModel()
@@ -877,33 +869,6 @@ class TestParameterValues(unittest.TestCase):
         model.boundary_conditions = {var1: {"left": (x, "Dirichlet")}}
         with self.assertRaises(KeyError):
             parameter_values.process_model(model)
-
-    def test_process_model_timescale_lengthscale_not_inputs(self):
-        model = pybamm.BaseModel()
-
-        v = pybamm.Variable("v")
-        model.rhs = {v: 1}
-        model.initial_conditions = {v: 0}
-
-        # Model defined with timescale as an input parameter
-        model.timescale = pybamm.InputParameter("a")
-        param = pybamm.ParameterValues({})
-        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
-            param.process_model(model)
-
-        # Input parameter in parameter values
-        model.timescale = pybamm.Parameter("a")
-        param = pybamm.ParameterValues({"a": "[input]"})
-        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
-            param.process_model(model)
-
-        # Geometry
-        geometry = geometry = {
-            "negative electrode": {"x_n": {"min": 0, "max": pybamm.Parameter("a")}}
-        }
-        parameter_values = pybamm.ParameterValues({"a": "[input]"})
-        with self.assertRaisesRegex(ValueError, "Geometry parameters must be Scalars"):
-            parameter_values.process_geometry(geometry)
 
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()

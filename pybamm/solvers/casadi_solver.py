@@ -47,8 +47,7 @@ class CasadiSolver(pybamm.BaseSolver):
         raised. Default is 5.
     dt_max : float, optional
         The maximum global step size (in seconds) used in "safe" mode. If None
-        the default value corresponds to a non-dimensional time of 0.01
-        (i.e. ``0.01 * model.timescale_eval``).
+        the default value is 600 seconds.
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
@@ -205,11 +204,8 @@ class CasadiSolver(pybamm.BaseSolver):
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
             # by some tolerance, here 1.01) to avoid an empty integration window below
-            if self.dt_max:
-                # Non-dimensionalise provided dt_max
-                dt_max = self.dt_max / model.timescale_eval
-            else:
-                dt_max = 0.01
+            if self.dt_max is None:
+                dt_max = 600
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             dt_max = np.max([dt_max, dt_eval_max])
             termination_due_to_small_dt = False
@@ -258,13 +254,11 @@ class CasadiSolver(pybamm.BaseSolver):
                         if first_ts_solved:
                             dt_max = dt
                         if count >= self.max_step_decrease_count:
-                            t_dim = t * model.timescale_eval
-                            dt_max_dim = dt_max * model.timescale_eval
                             message = (
                                 "Maximum number of decreased steps occurred at "
-                                f"t={t_dim} (final SolverError: '{error}'). "
+                                f"t={t} (final SolverError: '{error}'). "
                                 "For a full solution try reducing dt_max (currently, "
-                                f"dt_max={dt_max_dim}) and/or reducing the size of the "
+                                f"dt_max={dt_max}) and/or reducing the size of the "
                                 "time steps or period of the experiment."
                             )
                             if first_ts_solved and self.return_solution_if_failed_early:

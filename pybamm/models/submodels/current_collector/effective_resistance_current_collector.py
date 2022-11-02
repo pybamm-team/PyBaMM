@@ -130,12 +130,6 @@ class EffectiveResistance(BaseEffectiveResistance):
         self.options = options
         self.param = pybamm.LithiumIonParameters()
 
-        # Set default length scales
-        self.length_scales = {
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
-
         self.variables = self.get_fundamental_variables()
         self.set_algebraic(self.variables)
         self.set_boundary_conditions(self.variables)
@@ -317,12 +311,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         self.name = "Effective resistance in current collector model (2D)"
         self.param = pybamm.LithiumIonParameters()
 
-        # Set default length scales
-        self.length_scales = {
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
-
         # Get necessary parameters
         param = self.param
         l_cn = param.n.l_cc
@@ -417,8 +405,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         l_cp = param_values.evaluate(param.p.l_cc)
         sigma_cn_dbl_prime = param_values.evaluate(param.n.sigma_cc_dbl_prime)
         sigma_cp_dbl_prime = param_values.evaluate(param.p.sigma_cc_dbl_prime)
-        pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.ocv_ref)
 
         # Process unit solutions
         f_n = solution["Unit solution in negative current collector"]
@@ -442,18 +428,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
 
         def V_cc(t, y, z):
             return phi_s_cp(t, y, z) - phi_s_cn(t, y, z)
-
-        def V_dim(t):
-            return U_ref + V(t) * pot_scale
-
-        def phi_s_cn_dim(t, y, z):
-            return phi_s_cn(t, y, z) * pot_scale
-
-        def phi_s_cp_dim(t, y, z):
-            return U_ref + phi_s_cp(t, y, z) * pot_scale
-
-        def V_cc_dim(t, y, z):
-            return U_ref + V_cc(t, y, z) * pot_scale
 
         processed_vars = {
             "Negative current collector potential": phi_s_cn,

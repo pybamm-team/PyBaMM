@@ -123,10 +123,6 @@ class BaseModel:
         self.is_discretised = False
         self.y_slices = None
 
-        # Default timescale is 1 second
-        self._timescale = pybamm.Scalar(1)
-        self._length_scales = {}
-
     @property
     def name(self):
         return self._name
@@ -405,8 +401,6 @@ class BaseModel:
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
-            + [self.timescale]
-            + list(self.length_scales.values())
         )
         return list(all_input_parameters)
 

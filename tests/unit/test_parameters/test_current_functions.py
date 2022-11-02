@@ -12,13 +12,7 @@ class TestCurrentFunctions(unittest.TestCase):
         # test simplify
         param = pybamm.electrical_parameters
         current = param.current_with_time
-        parameter_values = pybamm.ParameterValues(
-            {
-                "Typical current [A]": 2,
-                "Typical timescale [s]": 1,
-                "Current function [A]": 2,
-            }
-        )
+        parameter_values = pybamm.ParameterValues({"Current function [A]": 2})
         processed_current = parameter_values.process_symbol(current)
         self.assertIsInstance(processed_current, pybamm.Scalar)
 
@@ -27,11 +21,7 @@ class TestCurrentFunctions(unittest.TestCase):
         param = pybamm.electrical_parameters
         dimensional_current = param.dimensional_current_with_time
         parameter_values = pybamm.ParameterValues(
-            {
-                "Typical current [A]": 2,
-                "Typical timescale [s]": 1,
-                "Current function [A]": "[current data]car_current",
-            }
+            {"Current function [A]": "[current data]car_current"}
         )
         dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
 
@@ -57,8 +47,6 @@ class TestCurrentFunctions(unittest.TestCase):
         # set and process parameters
         parameter_values = pybamm.ParameterValues(
             {
-                "Typical current [A]": 2,
-                "Typical timescale [s]": 1,
                 "omega": 3,
                 "Current function [A]": current,
             }

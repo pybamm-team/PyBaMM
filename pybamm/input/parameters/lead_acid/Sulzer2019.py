@@ -251,7 +251,6 @@ def get_parameter_values():
         "Cell cooling surface area [m2]": 0.154,
         "Cell volume [m3]": 0.00027,
         "Nominal cell capacity [A.h]": 17.0,
-        "Typical current [A]": 1.0,
         "Current function [A]": 1.0,
         "Negative current collector density [kg.m-3]": 11300.0,
         "Positive current collector density [kg.m-3]": 9375.0,

@@ -17,35 +17,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(options)
 
-        # Default timescale
-        # self._timescale = self.param.timescale
-
-        # Set default length scales
-        # self._length_scales = {
-        #     "negative electrode": self.param.L_x,
-        #     "separator": self.param.L_x,
-        #     "positive electrode": self.param.L_x,
-        #     "current collector y": self.param.L_z,
-        #     "current collector z": self.param.L_z,
-        # }
-
-        # for domain in ["negative", "positive"]:
-        #     if self.options.electrode_types[domain] == "porous":
-        #         domain_param = self.param.domain_params[domain]
-        #         self.length_scales.update(
-        #             {
-        #                 f"{domain} particle": domain_param.prim.R_typ,
-        #                 f"{domain} primary particle": domain_param.prim.R_typ,
-        #                 f"{domain} particle size": domain_param.prim.R_typ,
-        #             }
-        #         )
-
-        #         # Add relevant secondary length scales
-        #         if len(self.options.phases[domain]) >= 2:
-        #             self._length_scales[
-        #                 f"{domain} secondary particle"
-        #             ] = domain_param.sec.R_typ
-
         self.set_standard_output_variables()
 
     def set_submodels(self, build):

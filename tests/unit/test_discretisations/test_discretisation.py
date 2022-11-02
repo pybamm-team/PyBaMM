@@ -1422,9 +1422,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var")
         model.rhs = {var: pybamm.Scalar(1)}
         model.initial_conditions = {var: pybamm.Scalar(1)}
-        model.length_scales = {"negative electrode": pybamm.Vector([1])}
         disc.process_model(model)
-        self.assertEqual(model.length_scales["negative electrode"], pybamm.Scalar(1))
 
     def test_independent_rhs(self):
         a = pybamm.Variable("a")

@@ -253,16 +253,6 @@ class Discretisation(object):
             model_disc
         )
 
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            if isinstance(new_scale, pybamm.Array):
-                # Convert possible arrays of length 1 to scalars
-                new_scale = pybamm.Scalar(float(new_scale.evaluate()))
-            new_length_scales[domain] = new_scale
-        model_disc._length_scales = new_length_scales
-
         # Check that resulting model makes sense
         if check_model:
             pybamm.logger.verbose("Performing model checks for {}".format(model.name))

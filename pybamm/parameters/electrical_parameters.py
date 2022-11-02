@@ -37,11 +37,7 @@ class ElectricalParameters(BaseParameters):
         self.voltage_low_cut = pybamm.Parameter("Lower voltage cut-off [V]")
         self.voltage_high_cut = pybamm.Parameter("Upper voltage cut-off [V]")
 
-        # Current as a function of *dimensional* time. The below is overwritten in
-        # lithium_ion_parameters.py and lead_acid_parameters.py to use the correct
-        # timescale used for non-dimensionalisation. For a base model, the user may
-        # provide the typical timescale as a parameter.
-        # self.timescale = pybamm.Parameter("Typical timescale [s]")
+        # Current as a function of time
         self.current_with_time = pybamm.FunctionParameter(
             "Current function [A]", {"Time[s]": pybamm.t}
         )

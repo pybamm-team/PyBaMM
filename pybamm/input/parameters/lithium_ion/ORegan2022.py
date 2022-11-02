@@ -961,7 +961,6 @@ def get_parameter_values():
         "": copper_thermal_conductivity_CRC,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 5.0,
-        "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,

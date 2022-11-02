@@ -40,8 +40,6 @@ class TestScikitsSolvers(unittest.TestCase):
             mass_matrix = pybamm.Matrix([[1.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
-            timescale_eval = 1
-            length_scales = {}
             convert_to_format = "python"
 
             def rhs_algebraic_eval(self, t, y, inputs):
@@ -62,7 +60,6 @@ class TestScikitsSolvers(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         model = pybamm.BaseModel()
-        model.timescale_eval = 1
         var = pybamm.Variable("var")
         var2 = pybamm.Variable("var2")
         model.rhs = {var: 0.5}
@@ -91,8 +88,6 @@ class TestScikitsSolvers(unittest.TestCase):
             mass_matrix = pybamm.Matrix([[4.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
-            timescale_eval = 1
-            length_scales = {}
             convert_to_format = "python"
             len_rhs_and_alg = 2
 
@@ -789,12 +784,10 @@ class TestScikitsSolvers(unittest.TestCase):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
 
-        # if this is 1 it gets simplified out
-        model.timescale = pybamm.Scalar(1.000001)
         a = 0.6
         discontinuities = (np.arange(3) + 1) * a
 
-        model.rhs = {var1: pybamm.Modulo(pybamm.t * model.timescale, a)}
+        model.rhs = {var1: pybamm.Modulo(pybamm.t, a)}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 0, var2: 0}
         model.events = [

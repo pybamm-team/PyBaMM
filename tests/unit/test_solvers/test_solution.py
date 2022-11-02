@@ -237,7 +237,6 @@ class TestSolution(unittest.TestCase):
 
     def test_save(self):
         model = pybamm.BaseModel()
-        model.length_scales = {"negative electrode": pybamm.Scalar(1)}
         # create both 1D and 2D variables
         c = pybamm.Variable("c")
         d = pybamm.Variable("d", domain="negative electrode")

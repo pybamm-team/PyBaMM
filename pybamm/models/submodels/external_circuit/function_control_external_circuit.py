@@ -38,7 +38,7 @@ class FunctionControl(BaseModel):
             i_input = (
                 pybamm.FunctionParameter(
                     "CCCV current function [A]",
-                    {"Time [s]": pybamm.t * param.timescale},
+                    {"Time [s]": pybamm.t}
                 )
                 / param.I_typ
                 * pybamm.sign(param.I_typ)
@@ -97,7 +97,7 @@ class VoltageFunctionControl(FunctionControl):
     def constant_voltage(self, variables):
         V = variables["Terminal voltage [V]"]
         return V - pybamm.FunctionParameter(
-            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
+            "Voltage function [V]", {"Time [s]": pybamm.t}
         )
 
 
@@ -112,13 +112,13 @@ class PowerFunctionControl(FunctionControl):
         V = variables["Terminal voltage [V]"]
         P = V * I
         P_applied = pybamm.FunctionParameter(
-            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+            "Power function [W]", {"Time [s]": pybamm.t}
         )
         if self.control == "algebraic":
             return P - P_applied
         else:
             # Multiply by the time scale so that the overshoot only lasts a few seconds
-            K_P = 0.01 * self.param.timescale
+            K_P = 0.01
             return -K_P * (P - P_applied)
 
 
@@ -133,13 +133,13 @@ class ResistanceFunctionControl(FunctionControl):
         V = variables["Terminal voltage [V]"]
         R = V / I
         R_applied = pybamm.FunctionParameter(
-            "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}
+            "Resistance function [Ohm]", {"Time [s]": pybamm.t}
         )
         if self.control == "algebraic":
             return R - R_applied
         else:
             # Multiply by the time scale so that the overshoot only lasts a few seconds
-            K_R = 0.01 * self.param.timescale
+            K_R = 0.01
             return -K_R * (R - R_applied)
 
 
@@ -163,8 +163,8 @@ class CCCVFunctionControl(FunctionControl):
     def cccv(self, variables):
         # Multiply by the time scale so that the votage overshoot only lasts a few
         # seconds
-        K_aw = 1 * self.param.timescale  # anti-windup
-        K_V = 1 * self.param.timescale
+        K_aw = 1  # anti-windup
+        K_V = 1
         i_var = variables["Current density variable"]
         i_cell = variables["Total current density [A.m-2]"]
         V = variables["Terminal voltage [V]"]
@@ -194,7 +194,7 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
     def constant_voltage(self, variables):
         V = variables["Terminal voltage [V]"]
         return V - pybamm.FunctionParameter(
-            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
+            "Voltage function [V]", {"Time [s]": pybamm.t}
         )
 
 
@@ -208,5 +208,5 @@ class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
         I = variables["Current [A]"]
         V = variables["Terminal voltage [V]"]
         return I * V - pybamm.FunctionParameter(
-            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+            "Power function [W]", {"Time [s]": pybamm.t}
         )

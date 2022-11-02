@@ -166,9 +166,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
-            * "timescale" : str or number
-                Sets the timescale of the model. If "default", the discharge timescale,
-                as defined by other parameters, is used. Otherwise, the number is used.
             * "total interfacial current density as a state" : str
                 Whether to make a state for the total interfacial current density and
                 solve an algebraic equation for it. Default is "false", unless "SEI film
@@ -275,7 +272,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
         default_options["external submodels"] = []
-        default_options["timescale"] = "default"
 
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -532,7 +528,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 if isinstance(value, str) or option in [
                     "dimensionality",
                     "operating mode",
-                    "timescale",
                 ]:  # some options accept non-strings
                     value = (value,)
                 else:
@@ -568,13 +563,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     else:
                         value_list.append(val)
                 for val in value_list:
-                    if option == "timescale":
-                        if not (val == "default" or isinstance(val, numbers.Number)):
-                            raise pybamm.OptionError(
-                                "'timescale' option must be either 'default' "
-                                "or a number"
-                            )
-                    elif val not in self.possible_options[option]:
+                    if val not in self.possible_options[option]:
                         if not (option == "operating mode" and callable(val)):
                             raise pybamm.OptionError(
                                 f"\n'{val}' is not recognized in option '{option}'. "
@@ -699,21 +688,6 @@ class BaseBatteryModel(pybamm.BaseModel):
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
-
-    @pybamm.BaseModel.timescale.setter
-    def timescale(self, value):
-        """Set the timescale"""
-        raise NotImplementedError(
-            "Timescale cannot be directly overwritten for this model. "
-            "Pass a timescale to the 'timescale' option instead."
-        )
-
-    @pybamm.BaseModel.length_scales.setter
-    def length_scales(self, value):
-        """Set the length scales"""
-        raise NotImplementedError(
-            "Length scales cannot be directly overwritten for this model. "
-        )
 
     @property
     def default_geometry(self):
@@ -860,10 +834,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Time
         self.variables.update(
             {
-                "Time": pybamm.t,
-                "Time [s]": pybamm.t * self.timescale,
-                "Time [min]": pybamm.t * self.timescale / 60,
-                "Time [h]": pybamm.t * self.timescale / 3600,
+                "Time [s]": pybamm.t,
+                "Time [min]": pybamm.t / 60,
+                "Time [h]": pybamm.t / 3600,
             }
         )
 

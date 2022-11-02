@@ -22,7 +22,7 @@ params = pybamm.get_size_distribution_parameters(params, sd_n=0.2, sd_p=0.4)
 # discharge and relaxation: define current function
 t_cutoff = 3450  # [s]
 t_rest = 3600  # [s]
-I_typ = params["Typical current [A]"]  # current for 1C
+I_typ = params["Nominal cell capacity [A.h]"]  # cell capacity gives current for 1C
 
 
 def current(t):

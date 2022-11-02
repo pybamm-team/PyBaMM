@@ -45,7 +45,6 @@ PRINT_OPTIONS_OUTPUT = """\
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 'external submodels': []
-'timescale': 'default'
 """  # noqa: E501
 
 
@@ -92,13 +91,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(model.summary_variables, ["var"])
         with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
             model.summary_variables = ["bad var"]
-
-    def test_timescale_lengthscale_errors(self):
-        model = pybamm.BaseBatteryModel()
-        with self.assertRaisesRegex(NotImplementedError, "Timescale cannot be"):
-            model.timescale = 1
-        with self.assertRaisesRegex(NotImplementedError, "Length scales cannot be"):
-            model.length_scales = {}
 
     def test_default_geometry(self):
 
@@ -384,10 +376,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         a = pybamm.Variable("a")
         model.algebraic = {a: a - 1}
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
-
-    def test_timescale(self):
-        model = pybamm.BaseModel()
-        self.assertEqual(model.timescale.evaluate(), 1)
 
 
 class TestOptions(unittest.TestCase):

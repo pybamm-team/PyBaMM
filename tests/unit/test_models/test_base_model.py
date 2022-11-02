@@ -101,12 +101,6 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.boundary_conditions = bad_bcs
 
-    def test_length_scales(self):
-        model = pybamm.BaseModel()
-        model.length_scales = {"a": 1.3}
-        self.assertIsInstance(model.length_scales["a"], pybamm.Scalar)
-        self.assertEqual(model.length_scales["a"].value, 1.3)
-
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
         variables = {"c": "alpha", "d": "beta"}
@@ -273,7 +267,6 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale, model.timescale)
 
     def test_check_no_repeated_keys(self):
         model = pybamm.BaseModel()
@@ -646,11 +639,6 @@ class TestBaseModel(unittest.TestCase):
             "var_concat_sep": var_concat_sep,
             "var_concat": var_concat,
         }
-        model.length_scales = {
-            "negative electrode": pybamm.Scalar(1),
-            "separator": pybamm.Scalar(1),
-            "negative particle": pybamm.Scalar(1),
-        }
 
         # Test original initial conditions
         self.assertEqual(model.initial_conditions[var_scalar].value, 1)
@@ -791,11 +779,6 @@ class TestBaseModel(unittest.TestCase):
             "var_concat_neg": new_var_concat_neg,
             "var_concat_sep": new_var_concat_sep,
             "var_concat": new_var_concat,
-        }
-        new_model.length_scales = {
-            "negative electrode": pybamm.Scalar(1),
-            "separator": pybamm.Scalar(1),
-            "negative particle": pybamm.Scalar(1),
         }
 
         # Update the new model with the solution from another model

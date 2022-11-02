@@ -111,10 +111,15 @@ class ParameterValues:
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        """Return item correspoonding to key if it exists, otherwise return default"""
+        """Return item corresponding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
+            if key == "Typical current [A]":
+                raise KeyError(
+                    "The 'Typical current [A]' parameter has been removed. "
+                    "Use 'Current function [A]' instead."
+                )
             return default
 
     def __setitem__(self, key, value):
@@ -334,13 +339,6 @@ class ParameterValues:
         self._processed_symbols = {}
 
     def check_parameter_values(self, values):
-        # Make sure typical current is non-zero
-        if "Typical current [A]" in values and values["Typical current [A]"] == 0:
-            raise ValueError(
-                "'Typical current [A]' cannot be zero. A possible alternative is to "
-                "set 'Current function [A]' to `0` instead."
-            )
-
         for param in values:
             if "propotional term" in param:
                 raise ValueError(
@@ -449,27 +447,6 @@ class ParameterValues:
         model.external_variables = [
             self.process_symbol(var) for var in unprocessed_model.external_variables
         ]
-
-        # Process timescale
-        new_timescale = self.process_symbol(unprocessed_model.timescale)
-        if isinstance(new_timescale, pybamm.Scalar):
-            model._timescale = new_timescale
-        else:
-            raise ValueError(
-                "model.timescale must be a Scalar after parameter processing "
-                "(cannot contain 'InputParameter's). "
-                "You have probably set one of the parameters used to calculate the "
-                "timescale to an InputParameter. To avoid this error, hardcode "
-                "model.timescale to a constant value by passing the option "
-                "{'timescale': value} to the model."
-            )
-
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in unprocessed_model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            new_length_scales[domain] = new_scale
-        model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 

@@ -444,7 +444,7 @@ class LeadAcidParameters(BaseParameters):
         """Set the input current"""
 
         self.dimensional_current_with_time = pybamm.FunctionParameter(
-            "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
+            "Current function [A]", {"Time [s]": pybamm.t}
         )
         self.dimensional_current_density_with_time = (
             self.dimensional_current_with_time

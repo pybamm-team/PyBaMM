@@ -32,10 +32,7 @@ class StandardOutputComparison(object):
         for solution in self.solutions:
             np.testing.assert_array_equal(t_common, solution.t[:max_index])
 
-        # Get timescale
-        timescale = self.solutions[0].timescale_eval
-
-        return t_common * timescale
+        return t_common
 
     def run_test_class(self, ClassName, skip_first_timestep=False):
         """Run all tests from a class 'ClassName'"""

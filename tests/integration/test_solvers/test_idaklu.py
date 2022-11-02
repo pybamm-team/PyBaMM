@@ -20,11 +20,10 @@ class TestIDAKLUSolver(unittest.TestCase):
         np.testing.assert_array_less(1, solution.t.size)
 
     def test_on_spme_sensitivities(self):
-        param_name = "Typical current [A]"
+        param_name = "Current function [A]"
         param_value = 0.15652
         param = pybamm.ParameterValues("Marquis2019")
-        timescale = param.evaluate(pybamm.LithiumIonParameters().timescale)
-        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
+        model = pybamm.lithium_ion.SPMe()
         geometry = model.default_geometry
         param.update({param_name: "[input]"})
         inputs = {param_name: param_value}

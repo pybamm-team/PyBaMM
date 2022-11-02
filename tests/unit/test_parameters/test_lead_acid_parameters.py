@@ -88,7 +88,6 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Positive electrode thickness [m]": 1,
                 "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
-                "Typical current [A]": 2,
                 "Current function [A]": 2,
             }
         )

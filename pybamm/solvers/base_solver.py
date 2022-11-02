@@ -268,16 +268,6 @@ class BaseSolver(object):
                     "model should be discretised before solving ({})".format(e)
                 )
 
-        # Set model timescale
-        if not isinstance(model.timescale, pybamm.Scalar):
-            raise ValueError("model.timescale must be a scalar")
-
-        model.timescale_eval = model.timescale.evaluate()
-        # Set model lengthscales
-        model.length_scales_eval = {
-            domain: scale.evaluate(inputs=inputs)
-            for domain, scale in model.length_scales.items()
-        }
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
@@ -449,13 +439,6 @@ class BaseSolver(object):
                     elif symbol.left == pybamm.t:
                         expr = symbol.right
                         found_t = True
-                    # Dimensional
-                    elif symbol.right == (pybamm.t * model.timescale_eval):
-                        expr = symbol.left / symbol.right.right
-                        found_t = True
-                    elif symbol.left == (pybamm.t * model.timescale_eval):
-                        expr = symbol.right / symbol.left.right
-                        found_t = True
 
                     # Update the events if the heaviside function depended on t
                     if found_t:
@@ -471,10 +454,6 @@ class BaseSolver(object):
                     # Dimensionless
                     if symbol.left == pybamm.t:
                         expr = symbol.right
-                        found_t = True
-                    # Dimensional
-                    elif symbol.left == (pybamm.t * model.timescale_eval):
-                        expr = symbol.right / symbol.left.right
                         found_t = True
 
                     # Update the events if the modulo function depended on t
@@ -832,22 +811,17 @@ class BaseSolver(object):
 
         self._set_initial_conditions(model, ext_and_inputs_list[0], update_rhs=True)
 
-        # Non-dimensionalise time
-        t_eval_dimensionless = t_eval / model.timescale_eval
-
         # Check initial conditions don't violate events
         self._check_events_with_initial_conditions(
-            t_eval_dimensionless, model, ext_and_inputs_list[0]
+            t_eval, model, ext_and_inputs_list[0]
         )
 
         # Process discontinuities
         (
             start_indices,
             end_indices,
-            t_eval_dimensionless,
-        ) = self._get_discontinuity_start_end_indices(
-            model, inputs, t_eval_dimensionless
-        )
+            t_eval,
+        ) = self._get_discontinuity_start_end_indices(model, inputs, t_eval)
 
         # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
@@ -857,15 +831,15 @@ class BaseSolver(object):
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.verbose(
                 "Calling solver for {} < t < {}".format(
-                    t_eval_dimensionless[start_index] * model.timescale_eval,
-                    t_eval_dimensionless[end_index - 1] * model.timescale_eval,
+                    t_eval[start_index],
+                    t_eval[end_index - 1],
                 )
             )
             ninputs = len(ext_and_inputs_list)
             if ninputs == 1:
                 new_solution = self._integrate(
                     model,
-                    t_eval_dimensionless[start_index:end_index],
+                    t_eval[start_index:end_index],
                     ext_and_inputs_list[0],
                 )
                 new_solutions = [new_solution]
@@ -875,7 +849,7 @@ class BaseSolver(object):
                         self._integrate,
                         zip(
                             [model] * ninputs,
-                            [t_eval_dimensionless[start_index:end_index]] * ninputs,
+                            [t_eval[start_index:end_index]] * ninputs,
                             ext_and_inputs_list,
                         ),
                     )
@@ -895,7 +869,7 @@ class BaseSolver(object):
             if solutions[0].termination != "final time":
                 break
 
-            if end_index != len(t_eval_dimensionless):
+            if end_index != len(t_eval):
                 # setup for next integration subsection
                 last_state = solutions[0].y[:, -1]
                 # update y0 (for DAE solvers, this updates the initial guess for the
@@ -903,7 +877,7 @@ class BaseSolver(object):
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
+                        model, t_eval[end_index], ext_and_inputs_list[0]
                     )
         solve_time = timer.time()
 
@@ -973,10 +947,10 @@ class BaseSolver(object):
         else:
             return solutions
 
-    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval_dimensionless):
+    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
         if model.discontinuity_events_eval == []:
             pybamm.logger.verbose("No discontinuity events found")
-            return [0], [len(t_eval_dimensionless)], t_eval_dimensionless
+            return [0], [len(t_eval)], t_eval
 
         # Calculate discontinuities
         discontinuities = [
@@ -1003,7 +977,7 @@ class BaseSolver(object):
         ]
 
         # remove any discontinuities after end of t_eval
-        discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
+        discontinuities = [v for v in discontinuities if v < t_eval[-1]]
 
         pybamm.logger.verbose(
             "Discontinuity events found at t = {}".format(discontinuities)
@@ -1020,21 +994,17 @@ class BaseSolver(object):
         end_indices = []
         eps = sys.float_info.epsilon
         for dtime in discontinuities:
-            dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
+            dindex = np.searchsorted(t_eval, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
-            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
-                t_eval_dimensionless[dindex] += eps
-                t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, dtime - eps
-                )
+            if dtime - eps < t_eval[dindex] < dtime + eps:
+                t_eval[dindex] += eps
+                t_eval = np.insert(t_eval, dindex, dtime - eps)
             else:
-                t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
-                )
-        end_indices.append(len(t_eval_dimensionless))
+                t_eval = np.insert(t_eval, dindex, [dtime - eps, dtime + eps])
+        end_indices.append(len(t_eval))
 
-        return start_indices, end_indices, t_eval_dimensionless
+        return start_indices, end_indices, t_eval
 
     def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
@@ -1176,20 +1146,14 @@ class BaseSolver(object):
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=False)
 
-        # Non-dimensionalise dt
-        dt_dimensionless = dt / model.timescale_eval
-        t_eval = np.linspace(t, t + dt_dimensionless, npts)
+        # Calculate t_eval
+        t_eval = np.linspace(t, t + dt, npts)
 
         # Check initial conditions don't violate events
         self._check_events_with_initial_conditions(t_eval, model, ext_and_inputs)
 
         # Step
-        pybamm.logger.verbose(
-            "Stepping for {:.0f} < t < {:.0f}".format(
-                t * model.timescale_eval,
-                (t + dt_dimensionless) * model.timescale_eval,
-            )
-        )
+        pybamm.logger.verbose("Stepping for {:.0f} < t < {:.0f}".format(t, (t + dt)))
         timer.reset()
         solution = self._integrate(model, t_eval, ext_and_inputs)
         solution.solve_time = timer.time()

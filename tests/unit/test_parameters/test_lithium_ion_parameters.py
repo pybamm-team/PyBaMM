@@ -217,33 +217,8 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         np.testing.assert_almost_equal(values.evaluate(param.p.lambda_cc(T)), 3.9901, 2)
 
         # other thermal parameters
-
-        # note: in paper this is 0.0534 * c_rate which conflicts with this
-        # if we do C_th * c_rate we get 0.0534 so probably error in paper
-        # np.testing.assert_almost_equal(
-        #     values.evaluate(param.C_th / c_rate), 0.0253, 2
-        # )
-
         np.testing.assert_almost_equal(values.evaluate(param.Theta / c_rate), 0.008, 2)
-
-        # np.testing.assert_almost_equal(
-        #     values.evaluate(param.B / c_rate), 36.216, 2
-        # )
-
         np.testing.assert_equal(values.evaluate(param.T_init), 0)
-
-        # test timescale
-        # np.testing.assert_almost_equal(
-        #     values.evaluate(param.tau_th_yz), 1.4762 * 10 ** (3), 2
-        # )
-
-        # thermal = pybamm.thermal_parameters
-        # np.testing.assert_almost_equal(
-        # values.evaluate(thermal.rho_eff_dim), 1.8116 * 10 ** (6), 2
-        # )
-        # np.testing.assert_almost_equal(
-        #     values.evaluate(thermal.lambda_eff_dim), 59.3964, 2
-        # )
 
     def test_parameter_functions(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
@@ -254,10 +229,6 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         c_e_test = pybamm.Scalar(1)
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
-
-    def test_timescale(self):
-        param = pybamm.LithiumIonParameters({"timescale": 2.5})
-        self.assertEqual(param.timescale.evaluate(), 2.5)
 
 
 if __name__ == "__main__":

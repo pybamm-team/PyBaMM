@@ -138,7 +138,6 @@ class Simulation:
         experiment = self.experiment
         model = self.model
         # Update experiment using parameters such as timescale and capacity
-        timescale = self._parameter_values.evaluate(model.timescale)
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
         for op_conds in experiment.operating_conditions:
             op_type = op_conds["type"]
@@ -147,7 +146,7 @@ class Simulation:
                 drive_cycle_interpolant = pybamm.Interpolant(
                     op_conds["dc_data"][:, 0],
                     op_conds["dc_data"][:, 1],
-                    timescale * (pybamm.t - pybamm.InputParameter("start time")),
+                    pybamm.t - pybamm.InputParameter("start time"),
                 )
                 if op_type == "current":
                     op_conds["Current input [A]"] = drive_cycle_interpolant

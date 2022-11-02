@@ -75,7 +75,7 @@ class BaseOutputTest(object):
         )
 
         # Use dimensional time and space
-        self.t = solution.t * model.timescale_eval
+        self.t = solution.t
         geo = pybamm.geometric_parameters
 
         L_x = param.evaluate(geo.L_x)

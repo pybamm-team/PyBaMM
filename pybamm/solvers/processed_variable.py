@@ -59,12 +59,8 @@ class ProcessedVariable(object):
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
 
-        # Set timescale
-        self.timescale = solution.timescale_eval
-        self.t_pts = solution.t * self.timescale
-
-        # Store length scales
-        self.length_scales = solution.length_scales_eval
+        # Store time
+        self.t_pts = solution.t
 
         # Evaluate base variable at initial time
         self.base_eval = self.base_variables_casadi[0](
@@ -213,8 +209,7 @@ class ProcessedVariable(object):
             self.x_sol = space
 
         # assign attributes for reference
-        length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
-        pts_for_interp = space * length_scale
+        pts_for_interp = space
         self.internal_boundaries = [
             bnd * length_scale for bnd in self.mesh.internal_boundaries
         ]
@@ -503,23 +498,6 @@ class ProcessedVariable(object):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
-
-    def get_spatial_scale(self, name, domain):
-        """Returns the spatial scale for a named spatial variable"""
-        try:
-            if name == "y" and domain == "current collector":
-                return self.length_scales["current collector y"]
-            elif name == "z" and domain == "current collector":
-                return self.length_scales["current collector z"]
-            else:
-                return self.length_scales[domain]
-        except KeyError:
-            if self.warn:  # pragma: no cover
-                pybamm.logger.warning(
-                    "No length scale set for {}. "
-                    "Using default of 1 [m].".format(domain)
-                )
-            return 1
 
     @property
     def data(self):

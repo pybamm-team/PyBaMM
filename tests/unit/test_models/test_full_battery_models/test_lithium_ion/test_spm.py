@@ -52,7 +52,6 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale, model.timescale)
 
         # with custom submodels
         options = {"stress-induced diffusion": "false", "thermal": "x-full"}

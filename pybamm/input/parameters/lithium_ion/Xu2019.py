@@ -268,7 +268,6 @@ def get_parameter_values():
         "Electrode height [m]": 0.01,
         "Electrode width [m]": 0.0154,
         "Nominal cell capacity [A.h]": 0.0024,
-        "Typical current [A]": 0.0024,
         "Current function [A]": 0.0024,
         # negative electrode
         "Negative electrode OCP [V]": 0.0,

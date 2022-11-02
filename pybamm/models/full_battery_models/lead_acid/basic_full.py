@@ -132,7 +132,7 @@ class BasicFull(BaseModel):
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q] = I * param.timescale / 3600
+        self.rhs[Q] = I / 3600
         # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 

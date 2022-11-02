@@ -173,9 +173,7 @@ class QuickPlot(object):
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
         # Time parameters
-        self.ts_seconds = [
-            solution.t * solution.timescale_eval for solution in solutions
-        ]
+        self.ts_seconds = [solution.t for solution in solutions]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
 
