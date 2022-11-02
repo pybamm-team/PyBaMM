@@ -25,13 +25,7 @@ class Parameter(pybamm.Symbol):
     """
 
     def __init__(self, name):
-        # Read units
-        if "[" in name and "]" in name:
-            units = name[name.index("[") : name.index("]") + 1]
-        else:
-            units = None
-
-        super().__init__(name, units=units)
+        super().__init__(name)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -101,26 +95,8 @@ class FunctionParameter(pybamm.Symbol):
             if isinstance(child, numbers.Number):
                 children_list[idx] = pybamm.Scalar(child)
 
-<<<<<<< HEAD
-        domain = self.get_children_domains(children_list)
-        auxiliary_domains = self.get_children_auxiliary_domains(children_list)
-
-        # Read units
-        if "[" in name and "]" in name:
-            units = name[name.index("[") : name.index("]") + 1]
-        else:
-            units = None
-        super().__init__(
-            name,
-            children=children_list,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-            units=units,
-        )
-=======
         domains = self.get_children_domains(children_list)
         super().__init__(name, children=children_list, domains=domains)
->>>>>>> develop
 
         self.input_names = list(inputs.keys())
 

@@ -524,10 +524,11 @@ def full_like(symbols, fill_value):
     product_symbol = symbols[0]
     for sym in symbols[1:]:
         product_symbol *= sym
+    units = product_symbol.units
 
     # Just return scalar if symbol shape is scalar
     if product_symbol.evaluates_to_number():
-        return pybamm.Scalar(fill_value)
+        return pybamm.Scalar(fill_value, units=units)
     try:
         shape = product_symbol.shape
         # use vector or matrix

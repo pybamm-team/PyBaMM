@@ -144,7 +144,7 @@ class LithiumIonParameters(BaseParameters):
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
-        tol = pybamm.settings.tolerances["D_e__c_e"]
+        tol = pybamm.settings.tolerances["D_e__c_e"] * pybamm.Units("mol.m-3")
         c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
@@ -485,9 +485,6 @@ class DomainLithiumIonParameters(BaseParameters):
         )
         self.b_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant m")
-        self.Eac_cr = pybamm.Parameter(
-            f"{Domain} electrode activation energy for cracking rate [kJ.mol-1]"
-        )
         # intermediate variables  [K*m^3/mol]
         self.theta_dim = (
             (self.Omega / main.R) * 2 * self.Omega * self.E / 9 / (1 - self.nu)
@@ -837,7 +834,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
+        u_ref = u_ref + 1e-6 * pybamm.Units("V") * (1 / sto + 1 / (sto - 1))
         dudt_dim_func = self.dUdT_dimensional(sto)
         d = self.domain[0]
         dudt_dim_func.print_name = r"\frac{dU_{" + d + r"}}{dT}"

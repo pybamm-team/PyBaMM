@@ -157,15 +157,19 @@ def simplify_if_constant(symbol):
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                return pybamm.Scalar(result, symbol.units)
+                return pybamm.Scalar(result, units=symbol.units)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result, domains=symbol.domains)
+                    return pybamm.Vector(
+                        result, domains=symbol.domains, units=symbol.units
+                    )
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(result, domains=symbol.domains)
+                    return pybamm.Matrix(
+                        result, domains=symbol.domains, units=symbol.units
+                    )
 
     return symbol
 
@@ -178,42 +182,50 @@ class Symbol:
     ----------
 
     name : str
-        name for the node
+        name for the node. If it contains a [units] string, this is assigned as the
+        node's units
     children : iterable :class:`Symbol`, optional
         children to attach to this node, default to an empty list
-    domain : iterable of str, or str
+    domain : iterable of str, or str, optional
         list of domains over which the node is valid (empty list indicates the symbol
         is valid over all domains)
-    auxiliary_domains : dict of str
-        dictionary of auxiliary domains over which the node is valid (empty dictionary
-        indicates no auxiliary domains). Keys can be "secondary", "tertiary" or
-        "quaternary". The symbol is broadcast over its auxiliary domains.
-        For example, a symbol might have domain "negative particle", secondary domain
-        "separator" and tertiary domain "current collector" (`domain="negative
-        particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
-        collector"}`).
-<<<<<<< HEAD
-    units : str
-        The units of the symbol
-
-    """
-
-    def __init__(
-        self, name, children=None, domain=None, auxiliary_domains=None, units=None
-=======
-    domains : dict
+    auxiliary_domains : dict of str, optional
+            dictionary of auxiliary domains over which the node is valid (empty dictionary
+            indicates no auxiliary domains). Keys can be "secondary", "tertiary" or
+            "quaternary". The symbol is broadcast over its auxiliary domains.
+            For example, a symbol might have domain "negative particle", secondary domain
+            "separator" and tertiary domain "current collector" (`domain="negative
+            particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
+            collector"}`).
+    domains : dict, optional
         A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
+    units : str, optional
+        The units of the symbol. Defaults to None (dimensionless)
     """
 
     def __init__(
-        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
->>>>>>> develop
+        self,
+        name,
+        children=None,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        units=None,
     ):
         super(Symbol, self).__init__()
         self.name = name
+
+        # Read units
+        if "[" in name and "]" in name:
+            if units is not None:
+                raise pybamm.UnitsError(
+                    "Cannot specify units in name and as argument at the same time"
+                )
+            units = pybamm.Units(name[name.index("[") + 1 : name.index("]")])
+        self.units = units
 
         if children is None:
             children = []
@@ -237,9 +249,6 @@ class Symbol:
                 for x in self.pre_order()
             ):
                 self.test_shape()
-
-        # Units
-        self.units = units
 
     @property
     def children(self):
@@ -439,7 +448,6 @@ class Symbol:
 
     @property
     def units(self):
-        ""
         return self._units
 
     @units.setter
@@ -541,25 +549,13 @@ class Symbol:
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-<<<<<<< HEAD
-        return (
-            "{!s}({}, {!s}, children={!s}, domain={!s}, "
-            "auxiliary_domains={!s}, units={!s})"
-        ).format(
-=======
-        return ("{!s}({}, {!s}, children={!s}, domains={!s})").format(
->>>>>>> develop
+        return ("{!s}({}, {!s}, children={!s}, domains={!s}, units={!s})").format(
             self.__class__.__name__,
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
-<<<<<<< HEAD
-            [str(subdomain) for subdomain in self.domain],
-            {k: str(v) for k, v in self.auxiliary_domains.items()},
-            self.units,
-=======
             {k: v for k, v in self.domains.items() if v != []},
->>>>>>> develop
+            self.units,
         )
 
     def __add__(self, other):
@@ -709,15 +705,9 @@ class Symbol:
         variable : :class:`pybamm.Symbol`
             The variable with respect to which to differentiate
         """
-<<<<<<< HEAD
-        if variable.id == self.id:
-            return pybamm.Scalar(1)  # units cancel out
-        elif any(variable.id == x.id for x in self.pre_order()):
-=======
         if variable == self:
             return pybamm.Scalar(1)
         elif any(variable == x for x in self.pre_order()):
->>>>>>> develop
             return self._diff(variable)
         elif variable == pybamm.t and self.has_symbol_of_classes(
             (pybamm.VariableBase, pybamm.StateVectorBase)

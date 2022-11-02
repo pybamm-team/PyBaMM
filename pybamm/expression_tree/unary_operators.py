@@ -575,7 +575,8 @@ class Integral(SpatialOperator):
                 "tertiary": child.domains["tertiary"],
             }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
-            name += " {}".format(child.domain)
+            # add domain with round brackets (to diinguish from units with square)
+            name += " {}".format(child.domain).replace("[", "(").replace("]", ")")
 
         self._integration_variable = integration_variable
         super().__init__(name, child, domains)

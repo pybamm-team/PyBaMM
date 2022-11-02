@@ -13,7 +13,7 @@ class Scalar(pybamm.Symbol):
 
     Parameters
     ----------
-    value : numeric
+    value : numeric or str
         the value returned by the node when evaluated
     units : str, optional
         The units of the symbol. If not provided, the units are assumed to be
@@ -25,23 +25,20 @@ class Scalar(pybamm.Symbol):
     """
 
     def __init__(self, value, units=None, name=None):
-        # set default name if not provided
+        # value can be given as a string with units (e.g. "1.5 [A]")
+        if isinstance(value, str) and "[" in value and "]" in value:
+            if units is not None:
+                raise pybamm.UnitsError(
+                    "Cannot provide units as both a string and a separate argument"
+                )
+            value, units = value.split(" [")
+            value = float(value)
+            units = units[:-1]
+
         self.value = value
+        # set default name if not provided
         if name is None:
             name = str(self.value)
-            if not (
-                units is None
-                or (isinstance(units, pybamm.Units) and units.units_dict == {})
-            ):
-                name += " " + str(units)
-        else:
-            # If the name is provided, make sure the units are consistent
-            if "[" in name and "]" in name and units is not None:
-                units_from_name = pybamm.Units(
-                    name[name.index("[") : name.index("]") + 1]
-                )
-                if units_from_name != units:
-                    raise pybamm.UnitsError()
 
         super().__init__(name, units=units)
 

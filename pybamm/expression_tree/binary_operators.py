@@ -164,7 +164,7 @@ class Power(BinaryOperator):
         else:
             if not isinstance(self.right, pybamm.Scalar):
                 raise TypeError("If base has units, exponent must be a scalar")
-            self.units = self.left.units ** self.right.value
+            self.units = self.left.units**self.right.value
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -1035,15 +1035,15 @@ def simplified_multiplication(left, right):
 
     # anything multiplied by a scalar one returns itself
     # unless it changes the units
-    if pybamm.is_scalar_one(left) and left.units.units_str == "[-]":
+    if pybamm.is_scalar_one(left) and left.units.units_str == "-":
         return right
-    if pybamm.is_scalar_one(right) and right.units.units_str == "[-]":
+    if pybamm.is_scalar_one(right) and right.units.units_str == "-":
         return left
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_minus_one(left) and left.units.units_str == "[-]":
+    if pybamm.is_scalar_minus_one(left) and left.units.units_str == "-":
         return -right
-    if pybamm.is_scalar_minus_one(right) and right.units.units_str == "[-]":
+    if pybamm.is_scalar_minus_one(right) and right.units.units_str == "-":
         return -left
 
     # Return constant if both sides are constant
@@ -1182,7 +1182,7 @@ def simplified_division(left, right):
 
     # zero divided by anything returns zero (being careful about shape)
     # don't simplify if the division affects the units
-    if pybamm.is_scalar_zero(left) and left.units.units_str == "[-]":
+    if pybamm.is_scalar_zero(left) and left.units.units_str == "-":
         return pybamm.zeros_like(right)
 
     # matrix zero divided by anything returns matrix zero (i.e. itself)
@@ -1195,7 +1195,7 @@ def simplified_division(left, right):
 
     # anything divided by one is itself
     # don't simplify if the division affects the units
-    if pybamm.is_scalar_one(right) and right.units.units_str == "[-]":
+    if pybamm.is_scalar_one(right) and right.units.units_str == "-":
         return left
 
     # a symbol divided by itself is 1s of the same shape

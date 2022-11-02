@@ -4,6 +4,7 @@
 import re
 import pybamm
 from collections import defaultdict
+import numbers
 
 KNOWN_UNITS = [
     "m",
@@ -15,6 +16,7 @@ KNOWN_UNITS = [
     "cd",
     "h",
     "V",
+    "eV",
     "J",
     "W",
     "S",
@@ -38,7 +40,7 @@ class Units:
     def __init__(self, units):
         # encode empty units
         if units is None or units == {}:
-            self.units_str = "[-]"
+            self.units_str = "-"
             self.units_dict = defaultdict(int)
         elif isinstance(units, str):
             self.units_str = units
@@ -64,14 +66,6 @@ class Units:
 
     def str_to_dict(self, units_str):
         "Convert string representation of units to a dictionary"
-        # Extract from square brackets
-        if units_str[0] != "[" or units_str[-1] != "]":
-            raise pybamm.UnitsError(
-                "Units should start with '[' and end with ']' (found '{}')".format(
-                    units_str
-                )
-            )
-        units_str = units_str[1:-1]
         # Find all the units and add to the dictionary
         units = units_str.split(".")
         units_dict = defaultdict(int)
@@ -144,7 +138,7 @@ class Units:
         # Remove the final '.'
         units_str = units_str[:-1]
 
-        return "[" + units_str + "]"
+        return units_str
 
     def reformat_dict(self, units_dict):
         "Reformat units dictionary"
@@ -184,12 +178,8 @@ class Units:
             )
 
     def __sub__(self, other):
-        if self.units_dict == other.units_dict:
-            return Units(self.units_dict)
-        else:
-            raise pybamm.UnitsError(
-                "Cannot subtract different units {!s} and {!s}".format(self, other)
-            )
+        # subtracting units is the same as adding
+        return self + other
 
     def __mul__(self, other):
         # Add common elements and keep distinct elements
@@ -200,6 +190,16 @@ class Units:
             if self.units_dict.get(k, 0) + other.units_dict.get(k, 0) != 0
         }
         return Units(mul_units)
+
+    def __rmul__(self, other):
+        """
+        Allows setting units via multiplication, e.g. 2 * Units("m") returns
+        Scalar(2, "m")
+        """
+        if isinstance(other, numbers.Number):
+            return pybamm.Scalar(other, units=self)
+        else:
+            raise TypeError()
 
     def __truediv__(self, other):
         # Subtract common elements and keep distinct elements

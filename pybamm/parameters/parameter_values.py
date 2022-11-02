@@ -317,12 +317,9 @@ class ParameterValues:
                     self._dict_items[name] = pybamm.parameters.process_2D_data(filename)
 
                 elif value == "[input]":
-                    # Read units
-                    if "[" in name and "]" in name:
-                        units = name[name.index("[") : name.index("]") + 1]
-                    else:
-                        units = None
-                    self._dict_items[name] = pybamm.InputParameter(name, units=units)
+                    self._dict_items[name] = pybamm.InputParameter(
+                        name, units=symbol.units
+                    )
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)

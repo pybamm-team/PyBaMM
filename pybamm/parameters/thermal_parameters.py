@@ -49,7 +49,7 @@ class ThermalParameters(BaseParameters):
         )
 
         # Typical temperature rise
-        self.Delta_T = pybamm.Scalar(1, units="[K]")
+        self.Delta_T = pybamm.Scalar("1 [K]")
 
         # Initial temperature
         self.T_init_dim = pybamm.Parameter("Initial temperature [K]")
