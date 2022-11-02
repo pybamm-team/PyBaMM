@@ -31,13 +31,13 @@ class ThermalParameters(BaseParameters):
         }
 
         # Set parameters
-        self._set_dimensional_parameters()
+        self._set_parameters()
         # self._set_dimensionless_parameters()
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters"""
         for domain in self.domain_params.values():
-            domain._set_dimensional_parameters()
+            domain._set_parameters()
 
         # Reference temperature
         self.T_ref = pybamm.Parameter("Reference temperature [K]")
@@ -92,7 +92,7 @@ class DomainThermalParameters(BaseParameters):
         self.domain = domain
         self.main_param = main_param
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         Domain = self.domain.capitalize()
         self.h_cc = pybamm.Parameter(
             f"{Domain} current collector surface heat transfer coefficient "

@@ -53,15 +53,10 @@ class LithiumIonParameters(BaseParameters):
             "positive": self.p,
         }
 
-        # Set parameters and scales
-        self._set_dimensional_parameters()
-        # self._set_scales()
-        # self._set_dimensionless_parameters()
+        # Set parameters
+        self._set_parameters()
 
-        # Set input current
-        # self._set_input_current()
-
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters"""
         # Physical constants
         self.R = pybamm.constants.R
@@ -73,7 +68,6 @@ class LithiumIonParameters(BaseParameters):
         self.T_ref = self.therm.T_ref
         self.T_init = self.therm.T_init
         self.T_amb = self.therm.T_amb
-        # self.T_init = self.therm.T_init
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -97,7 +91,7 @@ class LithiumIonParameters(BaseParameters):
 
         # Domain parameters
         for domain in self.domain_params.values():
-            domain._set_dimensional_parameters()
+            domain._set_parameters()
 
         # Electrolyte properties
         self.c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
@@ -233,7 +227,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         self.phase_params = {"primary": self.prim, "secondary": self.sec}
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         main = self.main_param
         domain, Domain = self.domain_Domain
 
@@ -247,14 +241,11 @@ class DomainLithiumIonParameters(BaseParameters):
             self.L = self.geo.L
             return
 
-        x = (
-            pybamm.SpatialVariable(
-                f"x_{domain[0]}",
-                domain=[f"{domain} electrode"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="cartesian",
-            )
-            * main.L_x
+        x = pybamm.SpatialVariable(
+            f"x_{domain[0]}",
+            domain=[f"{domain} electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+            coord_sys="cartesian",
         )
 
         # Macroscale geometry
@@ -262,7 +253,7 @@ class DomainLithiumIonParameters(BaseParameters):
         self.L = self.geo.L
 
         for phase in self.phase_params.values():
-            phase._set_dimensional_parameters()
+            phase._set_parameters()
 
         # Tab geometry (for pouch cells)
         self.L_tab = self.geo.L_tab
@@ -363,7 +354,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         elif self.phase == "secondary":
             self.geo = domain_param.geo.sec
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         main = self.main_param
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
@@ -413,52 +404,40 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.c_li_0 = pybamm.Parameter(
                 f"{pref}Lithium interstitial reference concentration [mol.m-3]"
             )
-            self.L_inner_0_dim = pybamm.Parameter(
-                f"{pref}Initial inner SEI thickness [m]"
-            )
-            self.L_outer_0_dim = pybamm.Parameter(
-                f"{pref}Initial outer SEI thickness [m]"
-            )
-            self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
+            self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
+            self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
+            self.L_sei_0 = self.L_inner_0 + self.L_outer_0
             self.E_sei = pybamm.Parameter(
                 f"{pref}SEI growth activation energy [J.mol-1]"
             )
 
             # EC reaction
-            self.c_ec_0_dim = pybamm.Parameter(
+            self.c_ec_0 = pybamm.Parameter(
                 f"{pref}EC initial concentration in electrolyte [mol.m-3]"
             )
-            self.D_ec_dim = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
-            self.k_sei_dim = pybamm.Parameter(
-                f"{pref}SEI kinetic rate constant [m.s-1]"
-            )
-            self.U_sei_dim = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
+            self.D_ec = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
+            self.k_sei = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
+            self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
 
         if main.options.electrode_types[domain] == "planar":
             self.n_Li_init = pybamm.Scalar(0)
-            self.U_init_dim = pybamm.Scalar(0)
+            self.U_init = pybamm.Scalar(0)
             return
 
-        x = (
-            pybamm.SpatialVariable(
-                f"x_{domain[0]}",
-                domain=[f"{domain} electrode"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="cartesian",
-            )
-            * main.L_x
+        x = pybamm.SpatialVariable(
+            f"x_{domain[0]}",
+            domain=[f"{domain} electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+            coord_sys="cartesian",
         )
-        r = (
-            pybamm.SpatialVariable(
-                f"r_{domain[0]}",
-                domain=[f"{domain} {self.phase_name}particle"],
-                auxiliary_domains={
-                    "secondary": f"{domain} electrode",
-                    "tertiary": "current collector",
-                },
-                coord_sys="spherical polar",
-            )
-            * self.geo.R_typ
+        r = pybamm.SpatialVariable(
+            f"r_{domain[0]}",
+            domain=[f"{domain} {self.phase_name}particle"],
+            auxiliary_domains={
+                "secondary": f"{domain} electrode",
+                "tertiary": "current collector",
+            },
+            coord_sys="spherical polar",
         )
 
         # Macroscale geometry
@@ -499,8 +478,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         self.n_Li_init = eps_c_init_av * self.domain_param.L * main.A_cc
 
-        eps_s_av = pybamm.xyz_average(self.epsilon_s)
-        self.elec_loading = eps_s_av * self.domain_param.L * self.c_max * main.F / 3600
+        self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
+        self.elec_loading = (
+            self.epsilon_s_av * self.domain_param.L * self.c_max * main.F / 3600
+        )
         self.cap_init = self.elec_loading * main.A_cc
 
         self.U_init = self.U(self.sto_init_av, main.T_init)
@@ -556,10 +537,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         # this will not affect the OCP for most values of sto
         # see #1435
         u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        dudt_dim_func = self.dUdT(sto)
+        dudt_func = self.dUdT(sto)
         d = self.domain[0]
-        dudt_dim_func.print_name = r"\frac{dU_{" + d + r"}}{dT}"
-        return u_ref + (T - self.main_param.T_ref) * dudt_dim_func
+        dudt_func.print_name = r"\frac{dU_{" + d + r"}}{dT}"
+        return u_ref + (T - self.main_param.T_ref) * dudt_func
 
     def dUdT(self, sto):
         """

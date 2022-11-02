@@ -37,14 +37,14 @@ class LeadAcidParameters(BaseParameters):
         }
 
         # Set parameters and scales
-        self._set_dimensional_parameters()
+        self._set_parameters()
         self._set_scales()
         self._set_dimensionless_parameters()
 
         # Set input current
         self._set_input_current()
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters."""
 
         # Physical constants
@@ -144,7 +144,7 @@ class LeadAcidParameters(BaseParameters):
         self.beta_sei = pybamm.Scalar(0)
 
         for domain in self.domain_params.values():
-            domain._set_dimensional_parameters()
+            domain._set_parameters()
 
         # Electrolyte volumetric capacity
         self.Q_e_max = (
@@ -470,7 +470,7 @@ class DomainLeadAcidParameters(BaseParameters):
 
         self.phase_params = {"primary": self.prim}
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         Domain = self.domain.capitalize()
         main = self.main_param
 
@@ -482,7 +482,7 @@ class DomainLeadAcidParameters(BaseParameters):
             return
 
         for phase in self.phase_params.values():
-            phase._set_dimensional_parameters()
+            phase._set_parameters()
 
         # Macroscale geometry
         self.L = self.geo.L
@@ -647,7 +647,7 @@ class PhaseLeadAcidParameters(BaseParameters):
         self.main_param = domain_param.main_param
         self.geo = domain_param.geo.prim
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         domain, Domain = self.domain_Domain  # Microstructure
         x = (
             pybamm.SpatialVariable(

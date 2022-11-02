@@ -29,14 +29,14 @@ class GeometricParameters(BaseParameters):
         }
 
         # Set parameters and scales
-        self._set_dimensional_parameters()
+        self._set_parameters()
         # self._set_scales()
         # self._set_dimensionless_parameters()
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters."""
         for domain in self.domain_params.values():
-            domain._set_dimensional_parameters()
+            domain._set_parameters()
 
         # Macroscale geometry
         self.L_x = (
@@ -67,10 +67,10 @@ class DomainGeometricParameters(BaseParameters):
         else:
             self.phase_params = {}
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters."""
         for phase in self.phase_params.values():
-            phase._set_dimensional_parameters()
+            phase._set_parameters()
 
         if self.domain == "separator":
             self.L = pybamm.Parameter("Separator thickness [m]")
@@ -105,7 +105,7 @@ class ParticleGeometricParameters(BaseParameters):
         self.main_param = main_param
         self.set_phase_name()
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters."""
         Domain = self.domain.capitalize()
         pref = self.phase_prefactor

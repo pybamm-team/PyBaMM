@@ -21,10 +21,10 @@ class ElectricalParameters(BaseParameters):
         self.geo = pybamm.geometric_parameters
 
         # Set parameters
-        self._set_dimensional_parameters()
+        self._set_parameters()
         # self._set_dimensionless_parameters()
 
-    def _set_dimensional_parameters(self):
+    def _set_parameters(self):
         """Defines the dimensional parameters."""
 
         self.Q = pybamm.Parameter("Nominal cell capacity [A.h]")

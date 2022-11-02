@@ -210,12 +210,10 @@ class ProcessedVariable(object):
 
         # assign attributes for reference
         pts_for_interp = space
-        self.internal_boundaries = [
-            bnd * length_scale for bnd in self.mesh.internal_boundaries
-        ]
+        self.internal_boundaries = self.mesh.internal_boundaries
 
         # Set first_dim_pts to edges for nicer plotting
-        self.first_dim_pts = edges * length_scale
+        self.first_dim_pts = edges
 
         # set up interpolation
         if len(self.t_pts) == 1:
