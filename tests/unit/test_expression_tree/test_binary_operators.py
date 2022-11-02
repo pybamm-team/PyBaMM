@@ -564,7 +564,6 @@ class TestBinaryOperators(unittest.TestCase):
         B = pybamm.Matrix(np.random.rand(10, 10))
         # C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
-        sym = pybamm.Symbol("sym")
         # var2 = pybamm.StateVector(slice(10, 20))
         vec = pybamm.Vector(np.random.rand(10))
 
@@ -608,8 +607,10 @@ class TestBinaryOperators(unittest.TestCase):
         expr = (A @ var) * vec
         self.assertEqual(expr, ((vec * A) @ var))
         # Do (A/vec) first if it is constant
-        # expr = (A @ var) / vec
-        # self.assertEqual(expr, ((A / vec) @ var))
+        expr = (A @ var) / vec
+        self.assertIsInstance(expr, pybamm.MatrixMultiplication)
+        np.testing.assert_array_almost_equal(expr.left.evaluate(), (A / vec).evaluate())
+        self.assertEqual(expr.children[1], var)
 
         # simplify additions and subtractions
         expr = 7 + (var + 5)
