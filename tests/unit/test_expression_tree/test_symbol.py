@@ -119,10 +119,8 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
         # special cases
-        neg_a = -a
-        self.assertEqual(-neg_a, a)
-        abs_a = abs(a)
-        self.assertEqual(abs(abs_a), abs_a)
+        self.assertEqual(-(-a), a)
+        self.assertEqual(abs(abs(a)), abs(a))
 
         # binary - two symbols
         self.assertIsInstance(a + b, pybamm.Addition)
@@ -139,10 +137,10 @@ class TestSymbol(unittest.TestCase):
 
         # binary - symbol and number
         self.assertIsInstance(a + 2, pybamm.Addition)
-        self.assertIsInstance(a - 2, pybamm.Subtraction)
+        self.assertIsInstance(2 - a, pybamm.Subtraction)
         self.assertIsInstance(a * 2, pybamm.Multiplication)
         self.assertIsInstance(a @ 2, pybamm.MatrixMultiplication)
-        self.assertIsInstance(a / 2, pybamm.Division)
+        self.assertIsInstance(2 / a, pybamm.Division)
         self.assertIsInstance(a**2, pybamm.Power)
 
         # binary - number and symbol
