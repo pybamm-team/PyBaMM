@@ -1,9 +1,20 @@
 {
+  "default-registry": {
+    "kind": "builtin",
+    "baseline": ""
+  },
   "registries": [
     {
       "kind": "git",
       "repository": "https://github.com/pybamm-team/sundials-vcpkg-registry.git",
-      "packages": [ "sundials" ]
+      "baseline": "8ce5391ccddb4b3d0bf01a037ece3a6d72a708da",
+      "packages": ["sundials"]
+    },
+    {
+      "kind": "git",
+      "repository": "https://github.com/pybamm-team/casadi-vcpkg-registry.git",
+      "baseline": "70f49f3c22fee4874fb8a36ef1a559f2c185ef1f",
+      "packages": ["casadi"]
     }
   ]
 }

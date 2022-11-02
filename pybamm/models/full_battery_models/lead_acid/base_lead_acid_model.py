@@ -17,16 +17,16 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
         options = options or {}
-        # Specify that there are no particles in lead-acid
+        # Specify that there are no particles in lead-acid, and no half-cell models
         options["particle shape"] = "no particles"
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
 
-        # Default timescale is discharge timescale
-        self.timescale = self.param.tau_discharge
+        # Default timescale
+        self._timescale = self.param.timescale
 
         # Set default length scales
-        self.length_scales = {
+        self._length_scales = {
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
@@ -38,7 +38,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
+        return pybamm.ParameterValues("Sulzer2019")
 
     @property
     def default_geometry(self):
@@ -50,8 +50,18 @@ class BaseModel(pybamm.BaseBatteryModel):
     @property
     def default_var_pts(self):
         # Choose points that give uniform grid for the standard parameter values
-        var = pybamm.standard_spatial_vars
-        return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+        return {"x_n": 25, "x_s": 41, "x_p": 34, "y": 10, "z": 10}
+
+    @property
+    def default_quick_plot_variables(self):
+        return [
+            "Interfacial current density [A.m-2]",
+            "Electrolyte concentration [mol.m-3]",
+            "Current [A]",
+            "Porosity",
+            "Electrolyte potential [V]",
+            "Terminal voltage [V]",
+        ]
 
     def set_soc_variables(self):
         """Set variables relating to the state of charge."""
@@ -70,24 +80,36 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
 
+    def set_open_circuit_potential_submodel(self):
+        for domain in ["negative", "positive"]:
+            self.submodels[
+                f"{domain} open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid main", self.options, "primary"
+            )
+            self.submodels[
+                f"{domain} oxygen open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid oxygen", self.options, "primary"
+            )
+
     def set_active_material_submodel(self):
-        self.submodels["negative active material"] = pybamm.active_material.Constant(
-            self.param, "Negative", self.options
-        )
-        self.submodels["positive active material"] = pybamm.active_material.Constant(
-            self.param, "Positive", self.options
-        )
+        for domain in ["negative", "positive"]:
+            self.submodels[
+                f"{domain} active material"
+            ] = pybamm.active_material.Constant(
+                self.param, domain, self.options, "primary"
+            )
 
     def set_sei_submodel(self):
 
-        self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
-        self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+        self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
 
     def set_lithium_plating_submodel(self):
 
-        self.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
-            self.param, "Negative"
-        )
-        self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
-            self.param, "Positive"
+        self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
+
+    def set_total_interface_submodel(self):
+        self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(
+            self.param, "lead-acid", self.options
         )

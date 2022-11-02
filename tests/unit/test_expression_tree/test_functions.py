@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 import sympy
 from scipy import special
-from scipy.interpolate import interp1d
 
 import pybamm
 
@@ -20,7 +19,7 @@ def test_multi_var_function(arg1, arg2):
 
 
 def test_multi_var_function_cube(arg1, arg2):
-    return arg1 + arg2 ** 3
+    return arg1 + arg2**3
 
 
 class TestFunction(unittest.TestCase):
@@ -55,11 +54,6 @@ class TestFunction(unittest.TestCase):
         y = np.linspace(0, 1, 100)[:, np.newaxis]
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
-
-        # use known_evals
-        np.testing.assert_array_equal(
-            logvar.evaluate(y=y, known_evals={})[0], np.log1p(y)
-        )
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -120,14 +114,13 @@ class TestFunction(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.Function(test_multi_var_function, a, b)
 
+        fun = pybamm.Function(np.cos, pybamm.t)
+        with self.assertRaisesRegex(NotImplementedError, "No julia name"):
+            fun.julia_name
+
     def test_function_unnamed(self):
-        t = np.linspace(0, 1)
-        entries = 2 * t
-        interpfun = interp1d(t, entries)
-        fun = pybamm.Function(interpfun, pybamm.t)
-        self.assertEqual(
-            fun.name, "function (<class 'scipy.interpolate.interpolate.interp1d'>)"
-        )
+        fun = pybamm.Function(np.cos, pybamm.t)
+        self.assertEqual(fun.name, "function (cos)")
 
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test")
@@ -135,10 +128,16 @@ class TestFunction(unittest.TestCase):
         # Test print_name
         func = pybamm.Arcsinh(a)
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test Arcsinh
         self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+
+        # Test Arctan
+        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
+
+        # Test Exp
+        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp(a))
 
         # Test log
         self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
@@ -177,18 +176,18 @@ class TestSpecificFunctions(unittest.TestCase):
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(fun_broad.id, pybamm.PrimaryBroadcast(fun, "test").id)
+        self.assertEqual(fun_broad, pybamm.PrimaryBroadcast(fun, "test"))
 
         broad_a = pybamm.FullBroadcast(a, "test", "test2")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(fun_broad.id, pybamm.FullBroadcast(fun, "test", "test2").id)
+        self.assertEqual(fun_broad, pybamm.FullBroadcast(fun, "test", "test2"))
 
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         fun_broad = pybamm.arcsinh(broad_a)
         self.assertEqual(
-            fun_broad.id,
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2").id,
+            fun_broad,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2"),
         )
 
     def test_arctan(self):
@@ -211,7 +210,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
         self.assertIsInstance(fun, pybamm.Cos)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cos(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -228,7 +227,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.cosh(a)
         self.assertIsInstance(fun, pybamm.Cosh)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cosh(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -244,8 +243,8 @@ class TestSpecificFunctions(unittest.TestCase):
     def test_exp(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.exp(a)
-        self.assertIsInstance(fun, pybamm.Exponential)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertIsInstance(fun, pybamm.Exp)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.exp(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -305,7 +304,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.sin(a)
         self.assertIsInstance(fun, pybamm.Sin)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sin(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -322,7 +321,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.sinh(a)
         self.assertIsInstance(fun, pybamm.Sinh)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sinh(3))
         h = 0.0000001
         self.assertAlmostEqual(

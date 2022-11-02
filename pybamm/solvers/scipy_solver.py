@@ -28,9 +28,19 @@ class ScipySolver(pybamm.BaseSolver):
     """
 
     def __init__(
-        self, method="BDF", rtol=1e-6, atol=1e-6, extrap_tol=0, extra_options=None
+        self,
+        method="BDF",
+        rtol=1e-6,
+        atol=1e-6,
+        extrap_tol=0,
+        extra_options=None,
     ):
-        super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
+        super().__init__(
+            method=method,
+            rtol=rtol,
+            atol=atol,
+            extrap_tol=extrap_tol,
+        )
         self.ode_solver = True
         self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)
@@ -56,6 +66,8 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        # Save inputs dictionary, and if necessary convert inputs to a casadi vector
+        inputs_dict = inputs_dict or {}
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
         else:
@@ -66,15 +78,29 @@ class ScipySolver(pybamm.BaseSolver):
         # Initial conditions
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
-            if model.jacobian_eval:
-                extra_options.update(
-                    {"jac": lambda t, y: model.jacobian_eval(t, y, inputs)}
-                )
+            if model.jac_rhs_eval:
+
+                def jacobian(t, y):
+                    return model.jac_rhs_eval(t, y, inputs)
+
+                extra_options.update({"jac": jacobian})
+
+        # rhs equation
+        if model.convert_to_format == "casadi":
+
+            def rhs(t, y):
+                return model.rhs_eval(t, y, inputs).full().reshape(-1)
+
+        else:
+
+            def rhs(t, y):
+                return model.rhs_eval(t, y, inputs).reshape(-1)
 
         # make events terminal so that the solver stops when they are reached
         if model.terminate_events_eval:
@@ -91,7 +117,7 @@ class ScipySolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         sol = it.solve_ivp(
-            lambda t, y: model.rhs_eval(t, y, inputs),
+            rhs,
             (t_eval[0], t_eval[-1]),
             y0,
             t_eval=t_eval,
@@ -116,7 +142,14 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event = None
                 y_event = np.array(None)
             sol = pybamm.Solution(
-                sol.t, sol.y, model, inputs_dict, t_event, y_event, termination
+                sol.t,
+                sol.y,
+                model,
+                inputs_dict,
+                t_event,
+                y_event,
+                termination,
+                sensitivities=bool(model.calculate_sensitivities),
             )
             sol.integration_time = integration_time
             return sol

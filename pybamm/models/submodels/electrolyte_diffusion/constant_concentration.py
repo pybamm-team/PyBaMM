@@ -13,24 +13,25 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options)
 
     def get_fundamental_variables(self):
-        c_e_n = pybamm.FullBroadcast(1, "negative electrode", "current collector")
-        c_e_s = pybamm.FullBroadcast(1, "separator", "current collector")
-        c_e_p = pybamm.FullBroadcast(1, "positive electrode", "current collector")
-
-        variables = self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
+        c_e_dict = {
+            domain: pybamm.FullBroadcast(1, domain, "current collector")
+            for domain in self.options.whole_cell_domains
+        }
+        variables = self._get_standard_concentration_variables(c_e_dict)
 
         N_e = pybamm.FullBroadcastToEdges(
             0,
-            ["negative electrode", "separator", "positive electrode"],
+            [domain for domain in self.options.whole_cell_domains],
             "current collector",
         )
 
@@ -39,23 +40,15 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         return variables
 
     def get_coupled_variables(self, variables):
-        eps_n = variables["Negative electrode porosity"]
-        eps_s = variables["Separator porosity"]
-        eps_p = variables["Positive electrode porosity"]
-        c_e_n = variables["Negative electrolyte concentration"]
-        c_e_s = variables["Separator electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
-
+        eps_c_e_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            eps_k = variables[f"{Domain} porosity"]
+            c_e_k = variables[f"{Domain.split()[0]} electrolyte concentration"]
+            eps_c_e_dict[domain] = eps_k * c_e_k
         variables.update(
-            self._get_standard_porosity_times_concentration_variables(
-                eps_n * c_e_n, eps_s * c_e_s, eps_p * c_e_p
-            )
+            self._get_standard_porosity_times_concentration_variables(eps_c_e_dict)
         )
-
-        c_e = variables["Electrolyte concentration"]
-        eps = variables["Porosity"]
-
-        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
 
         return variables
 
@@ -74,3 +67,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
+
+    def set_events(self, variables):
+        # No event since the concentration is constant
+        pass

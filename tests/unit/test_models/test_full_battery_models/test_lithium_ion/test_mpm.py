@@ -23,7 +23,7 @@ class TestMPM(unittest.TestCase):
             model.default_parameter_values[
                 "Negative area-weighted mean particle radius [m]"
             ],
-            1E-05
+            1e-05,
         )
 
     def test_lumped_thermal_model_1D(self):
@@ -49,6 +49,11 @@ class TestMPM(unittest.TestCase):
         options = {"particle": "uniform profile"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
+
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_necessary_options(self):
         options = {"particle size": "single"}
@@ -78,11 +83,16 @@ class TestMPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_reversible_plating_with_porosity_not_implemented(self):
+    def test_reversible_plating_with_porosity_not_implemented(self):
         options = {
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
+
+    def test_stress_induced_diffusion_not_implemented(self):
+        options = {"stress-induced diffusion": "true"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
@@ -136,7 +146,7 @@ class TestMPMWithSEI(unittest.TestCase):
             pybamm.lithium_ion.MPM(options)
 
 
-class TestMPMWithCrack(unittest.TestCase):
+class TestMPMWithMechanics(unittest.TestCase):
     def test_well_posed_negative_cracking_not_implemented(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         with self.assertRaises(NotImplementedError):

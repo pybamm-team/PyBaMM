@@ -15,7 +15,9 @@ class LeadingOrder(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
         If True the battery model sets the positve potential based on the current.
         If False, the potential is specified by the user. Default is True.
@@ -23,27 +25,34 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain, set_positive_potential=True):
-        super().__init__(param, domain, set_positive_potential=set_positive_potential)
+    def __init__(self, param, domain, options=None, set_positive_potential=True):
+        super().__init__(
+            param,
+            domain,
+            options=options,
+            set_positive_potential=set_positive_potential,
+        )
 
     def get_coupled_variables(self, variables):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
+        param = self.param
+
         i_boundary_cc = variables["Current collector current density"]
         phi_s_cn = variables["Negative current collector potential"]
 
         # import parameters and spatial variables
-        l_n = self.param.l_n
-        l_p = self.param.l_p
+        l_n = param.n.l
+        l_p = param.p.l
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")
             i_s = i_boundary_cc * (1 - x_n / l_n)
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             # recall delta_phi = phi_s - phi_e
             delta_phi_p_av = variables[
                 "X-averaged positive electrode surface potential difference"
@@ -58,14 +67,15 @@ class LeadingOrder(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 
     def set_boundary_conditions(self, variables):
+        Domain = self.domain.capitalize()
 
-        phi_s = variables[self.domain + " electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential"]
 
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")

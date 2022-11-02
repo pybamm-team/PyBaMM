@@ -78,7 +78,14 @@ class CMakeBuild(build_ext):
         if not self.extensions:
             return
 
-        cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
+        if system() == "Windows":
+            use_python_casadi = False
+        else:
+            use_python_casadi = True
+        cmake_args = [
+            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+            "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
+        ]
         if self.suitesparse_root:
             cmake_args.append(
                 "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))

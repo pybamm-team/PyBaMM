@@ -13,9 +13,8 @@ Install WSL
 Follow the instructions from Microsoft
 `here <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__.
 When given the option, choose the Ubuntu 18.04 LTS distribution to
-install. Don’t forget to initialise the Ubuntu installation using the
-instructions given
-`here <https://docs.microsoft.com/en-us/windows/wsl/initialize-distro>`__.
+install. Best practices for setting up a WSL development environment can be found
+`here <https://docs.microsoft.com/en-us/windows/wsl/setup/environment>`__.
 
 Install PyBaMM
 --------------
@@ -50,7 +49,7 @@ directory in bash using the ``cd`` command:
 
 .. code:: bash
 
-   cd PyBaMM 
+   cd PyBaMM
 
 If you are unfamiliar with the linux command line, you might find it
 useful to work through this
@@ -58,7 +57,7 @@ useful to work through this
 provided by Ubuntu.
 
 Now head over and follow the installation instructions for PyBaMM for
-linux `here <INSTALL-LINUX-MAC.md>`__.
+linux `here <GNU-linux.html>`__.
 
 Use Visual Studio Code to run PyBaMM
 ------------------------------------

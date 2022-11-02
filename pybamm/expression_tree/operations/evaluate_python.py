@@ -1,113 +1,110 @@
 #
 # Write a symbol to python
 #
-import pybamm
+import numbers
+from collections import OrderedDict
 
 import numpy as np
 import scipy.sparse
-from collections import OrderedDict
 
-import numbers
-from platform import system, version
+import pybamm
 
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+if pybamm.have_jax():
     import jax
-
     from jax.config import config
 
     config.update("jax_enable_x64", True)
 
-    class JaxCooMatrix:
-        """
-        A sparse matrix in COO format, with internal arrays using jax device arrays
 
-        This matrix only has two operations supported, a multiply with a scalar, and a
-        dot product with a dense vector. It can also be converted to a dense 2D jax
-        device array
+class JaxCooMatrix:
+    """
+    A sparse matrix in COO format, with internal arrays using jax device arrays
 
-        Parameters
-        ----------
+    This matrix only has two operations supported, a multiply with a scalar, and a
+    dot product with a dense vector. It can also be converted to a dense 2D jax
+    device array
 
-        row: arraylike
-            1D array holding row indices of non-zero entries
-        col: arraylike
-            1D array holding col indices of non-zero entries
-        data: arraylike
-            1D array holding non-zero entries
-        shape: 2-element tuple (x, y)
-            where x is the number of rows, and y the number of columns of the matrix
-        """
+    Parameters
+    ----------
 
-        def __init__(self, row, col, data, shape):
-            self.row = jax.numpy.array(row)
-            self.col = jax.numpy.array(col)
-            self.data = jax.numpy.array(data)
-            self.shape = shape
-            self.nnz = len(self.data)
+    row: arraylike
+        1D array holding row indices of non-zero entries
+    col: arraylike
+        1D array holding col indices of non-zero entries
+    data: arraylike
+        1D array holding non-zero entries
+    shape: 2-element tuple (x, y)
+        where x is the number of rows, and y the number of columns of the matrix
+    """
 
-        def toarray(self):
-            """convert sparse matrix to a dense 2D array"""
-            result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
-            return result.at[self.row, self.col].add(self.data)
-
-        def dot_product(self, b):
-            """
-            dot product of matrix with a dense column vector b
-
-            Parameters
-            ----------
-            b: jax device array
-                must have shape (n, 1)
-            """
-            # assume b is a column vector
-            result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-            return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
-
-        def scalar_multiply(self, b):
-            """
-            multiply of matrix with a scalar b
-
-            Parameters
-            ----------
-            b: Number or 1 element jax device array
-                scalar value to multiply
-            """
-            # assume b is a scalar or ndarray with 1 element
-            return JaxCooMatrix(
-                self.row, self.col, (self.data * b).reshape(-1), self.shape
+    def __init__(self, row, col, data, shape):
+        if not pybamm.have_jax():  # pragma: no cover
+            raise ModuleNotFoundError(
+                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
 
-        def multiply(self, b):
-            """
-            general matrix multiply not supported
-            """
-            raise NotImplementedError
+        self.row = jax.numpy.array(row)
+        self.col = jax.numpy.array(col)
+        self.data = jax.numpy.array(data)
+        self.shape = shape
+        self.nnz = len(self.data)
 
-        def __matmul__(self, b):
-            """see self.dot_product"""
-            return self.dot_product(b)
+    def toarray(self):
+        """convert sparse matrix to a dense 2D array"""
+        result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
+        return result.at[self.row, self.col].add(self.data)
 
-    def create_jax_coo_matrix(value):
+    def dot_product(self, b):
         """
-        Creates a JaxCooMatrix from a scipy.sparse matrix
+        dot product of matrix with a dense column vector b
 
         Parameters
         ----------
-
-        value: scipy.sparse matrix
-            the sparse matrix to be converted
+        b: jax device array
+            must have shape (n, 1)
         """
-        scipy_coo = value.tocoo()
-        row = jax.numpy.asarray(scipy_coo.row)
-        col = jax.numpy.asarray(scipy_coo.col)
-        data = jax.numpy.asarray(scipy_coo.data)
-        return JaxCooMatrix(row, col, data, value.shape)
+        # assume b is a column vector
+        result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
+        return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+
+    def scalar_multiply(self, b):
+        """
+        multiply of matrix with a scalar b
+
+        Parameters
+        ----------
+        b: Number or 1 element jax device array
+            scalar value to multiply
+        """
+        # assume b is a scalar or ndarray with 1 element
+        return JaxCooMatrix(self.row, self.col, (self.data * b).reshape(-1), self.shape)
+
+    def multiply(self, b):
+        """
+        general matrix multiply not supported
+        """
+        raise NotImplementedError
+
+    def __matmul__(self, b):
+        """see self.dot_product"""
+        return self.dot_product(b)
 
 
-else:
+def create_jax_coo_matrix(value):
+    """
+    Creates a JaxCooMatrix from a scipy.sparse matrix
 
-    def create_jax_coo_matrix(value):  # pragma: no cover
-        raise NotImplementedError("Jax is not available on Windows")
+    Parameters
+    ----------
+
+    value: scipy.sparse matrix
+        the sparse matrix to be converted
+    """
+    scipy_coo = value.tocoo()
+    row = jax.numpy.asarray(scipy_coo.row)
+    col = jax.numpy.asarray(scipy_coo.col)
+    data = jax.numpy.asarray(scipy_coo.data)
+    return JaxCooMatrix(row, col, data, value.shape)
 
 
 def id_to_python_variable(symbol_id, constant=False):
@@ -372,7 +369,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
         symbol_str = "t"
 
     elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = "inputs['{}']".format(symbol.name)
+        symbol_str = 'inputs["{}"]'.format(symbol.name)
 
     else:
         raise NotImplementedError(
@@ -416,7 +413,7 @@ def to_python(symbol, debug=False, output_jax=False):
 
     line_format = "{} = {}"
 
-    if debug:
+    if debug:  # pragma: no cover
         variable_lines = [
             "print('{}'); ".format(
                 line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
@@ -467,8 +464,7 @@ class EvaluatorPython:
 
         # add function def to first line
         python_str = (
-            "def evaluate(constants, t=None, y=None, "
-            "y_dot=None, inputs=None, known_evals=None):\n" + python_str
+            "def evaluate(constants, t=None, y=None, " "inputs=None):\n" + python_str
         )
 
         # calculate the final variable that will output the result of calling `evaluate`
@@ -494,21 +490,17 @@ class EvaluatorPython:
         compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def __call__(self, t=None, y=None, inputs=None):
         """
-        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        evaluate function
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        result = self._evaluate(self._constants, t, y, y_dot, inputs, known_evals)
+        result = self._evaluate(self._constants, t, y, inputs)
 
-        # don't need known_evals, but need to reproduce Symbol.evaluate signature
-        if known_evals is not None:
-            return result, known_evals
-        else:
-            return result
+        return result
 
     def __getstate__(self):
         # Control the state of instances of EvaluatorPython
@@ -548,6 +540,11 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
+        if not pybamm.have_jax():  # pragma: no cover
+            raise ModuleNotFoundError(
+                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+            )
+
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)
 
         # replace numpy function calls to jax numpy calls
@@ -559,7 +556,7 @@ class EvaluatorJax:
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
 
         # get a list of constant arguments to input to the function
-        arg_list = [
+        self._arg_list = [
             id_to_python_variable(symbol_id, True) for symbol_id in constants.keys()
         ]
 
@@ -579,9 +576,9 @@ class EvaluatorJax:
         python_str = python_str.replace("\n", "\n   ")
 
         # add function def to first line
-        args = "t=None, y=None, y_dot=None, inputs=None, known_evals=None"
-        if arg_list:
-            args = ",".join(arg_list) + ", " + args
+        args = "t=None, y=None, inputs=None"
+        if self._arg_list:
+            args = ",".join(self._arg_list) + ", " + args
         python_str = "def evaluate_jax({}):\n".format(args) + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
@@ -606,26 +603,45 @@ class EvaluatorJax:
         compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
 
-        n = len(arg_list)
-        static_argnums = tuple(static_argnums)
-        self._jit_evaluate = jax.jit(self._evaluate_jax, static_argnums=static_argnums)
-
-        # store a jit version of evaluate_jax's jacobian
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
-        self._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=static_argnums)
+        self._static_argnums = tuple(static_argnums)
+        self._jit_evaluate = jax.jit(
+            self._evaluate_jax, static_argnums=self._static_argnums
+        )
 
     def get_jacobian(self):
+        n = len(self._arg_list)
+
+        # forward mode autodiff  wrt y, which is argument 1 after arg_list
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
+
+        self._jac_evaluate = jax.jit(
+            jacobian_evaluate, static_argnums=self._static_argnums
+        )
+
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
 
-    def debug(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def get_jacobian_action(self):
+        return self.jvp
+
+    def get_sensitivities(self):
+        n = len(self._arg_list)
+
+        # forward mode autodiff wrt inputs, which is argument 2 after arg_list
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=2 + n)
+
+        self._sens_evaluate = jax.jit(
+            jacobian_evaluate, static_argnums=self._static_argnums
+        )
+
+        return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
+
+    def debug(self, t=None, y=None, inputs=None):
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
         # execute code
-        jaxpr = jax.make_jaxpr(self._evaluate_jax)(
-            *self._constants, t, y, y_dot, inputs, known_evals
-        ).jaxpr
+        jaxpr = jax.make_jaxpr(self._evaluate_jax)(*self._constants, t, y, inputs).jaxpr
         print("invars:", jaxpr.invars)
         print("outvars:", jaxpr.outvars)
         print("constvars:", jaxpr.constvars)
@@ -634,21 +650,33 @@ class EvaluatorJax:
         print()
         print("jaxpr:", jaxpr)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def __call__(self, t=None, y=None, inputs=None):
         """
-        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        evaluate function
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        result = self._jit_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
+        result = self._jit_evaluate(*self._constants, t, y, inputs)
 
-        # don't need known_evals, but need to reproduce Symbol.evaluate signature
-        if known_evals is not None:
-            return result, known_evals
-        else:
-            return result
+        return result
+
+    def jvp(self, t=None, y=None, v=None, inputs=None):
+        """
+        evaluate jacobian vector product of function
+        """
+
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+        if v is not None and v.ndim == 1:
+            v = v.reshape(-1, 1)
+
+        def bind_t_and_inputs(the_y):
+            return self._jit_evaluate(*self._constants, t, the_y, inputs)
+
+        return jax.jvp(bind_t_and_inputs, (y,), (v,))[1]
 
 
 class EvaluatorJaxJacobian:
@@ -656,20 +684,38 @@ class EvaluatorJaxJacobian:
         self._jac_evaluate = jac_evaluate
         self._constants = constants
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def __call__(self, t=None, y=None, inputs=None):
         """
-        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        evaluate function
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
         # execute code
-        result = self._jac_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
+        result = self._jac_evaluate(*self._constants, t, y, inputs)
         result = result.reshape(result.shape[0], -1)
 
-        # don't need known_evals, but need to reproduce Symbol.evaluate signature
-        if known_evals is not None:
-            return result, known_evals
-        else:
-            return result
+        return result
+
+
+class EvaluatorJaxSensitivities:
+    def __init__(self, jac_evaluate, constants):
+        self._jac_evaluate = jac_evaluate
+        self._constants = constants
+
+    def __call__(self, t=None, y=None, inputs=None):
+        """
+        evaluate function
+        """
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+
+        # execute code
+        result = self._jac_evaluate(*self._constants, t, y, inputs)
+        result = {
+            key: value.reshape(value.shape[0], -1) for key, value in result.items()
+        }
+
+        return result

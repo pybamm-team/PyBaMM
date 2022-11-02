@@ -1,13 +1,15 @@
 #
 # Tests for the base model class
 #
-import casadi
-import pybamm
-import numpy as np
-import unittest
 import os
-import subprocess  # nosec
 import platform
+import subprocess  # nosec
+import unittest
+
+import casadi
+import numpy as np
+
+import pybamm
 
 
 class TestBaseModel(unittest.TestCase):
@@ -99,6 +101,12 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.boundary_conditions = bad_bcs
 
+    def test_length_scales(self):
+        model = pybamm.BaseModel()
+        model.length_scales = {"a": 1.3}
+        self.assertIsInstance(model.length_scales["a"], pybamm.Scalar)
+        self.assertEqual(model.length_scales["a"].value, 1.3)
+
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
         variables = {"c": "alpha", "d": "beta"}
@@ -110,14 +118,6 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.jacobian = "test"
         self.assertEqual(model.jacobian, "test")
-
-    def test_model_dict_behaviour(self):
-        model = pybamm.BaseModel()
-        key = pybamm.Symbol("c")
-        rhs = {key: pybamm.Symbol("alpha")}
-        model.rhs = rhs
-        self.assertEqual(model[key], rhs[key])
-        self.assertEqual(model[key], model.rhs[key])
 
     def test_read_parameters(self):
         # Read parameters from different parts of the model
@@ -143,6 +143,10 @@ class TestBaseModel(unittest.TestCase):
             u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
             v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
         }
+
+        # Test variables_and_events
+        self.assertIn("v+f+i", model.variables_and_events)
+        self.assertIn("Event: u=e", model.variables_and_events)
 
         self.assertEqual(
             set([x.name for x in model.parameters]),
@@ -269,23 +273,15 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale.id, model.timescale.id)
+        self.assertEqual(new_model.timescale, model.timescale)
 
     def test_check_no_repeated_keys(self):
         model = pybamm.BaseModel()
 
-        # rhs twice
         var = pybamm.Variable("var")
         model.rhs = {var: -1}
         var = pybamm.Variable("var")
-        model.rhs.update({var: -1})
-        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
-            model.check_no_repeated_keys()
-
-        # rhs and algebraic
-        model.rhs = {var: -1}
-        var = pybamm.Variable("var")
-        model.algebraic.update({var: var})
+        model.algebraic = {var: var}
         with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
             model.check_no_repeated_keys()
 
@@ -449,19 +445,7 @@ class TestBaseModel(unittest.TestCase):
             c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
             d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
-        model._variables = {
-            "something": None,
-            "something else": c,
-            "another thing": None,
-        }
-
-        # Check warning raised
-        with self.assertWarns(pybamm.ModelWarning):
-            model.check_well_posedness()
-
-        # Check None entries have been removed from the variables dictionary
-        for key, item in model._variables.items():
-            self.assertIsNotNone(item)
+        model._variables = {"something else": c}
 
         # check error raised if undefined variable in list of Variables
         pybamm.settings.debug_mode = True
@@ -496,7 +480,7 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {a: q, b: 1}
         model.variables = {"a+b": a + b - t}
 
-        out = model.export_casadi_objects(["a+b"])
+        out = model.export_casadi_objects(["a+b"], input_parameter_order=["p", "q"])
 
         # Try making a function from the outputs
         t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
@@ -575,7 +559,7 @@ class TestBaseModel(unittest.TestCase):
         model.variables = {"a+b": a + b - t}
 
         # Generate C code
-        model.generate("test.c", ["a+b"])
+        model.generate("test.c", ["a+b"], input_parameter_order=["p", "q"])
 
         # Compile
         subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
@@ -590,7 +574,7 @@ class TestBaseModel(unittest.TestCase):
         var_fn = casadi.external("variables", "./test.so")
 
         # Test that function values are as expected
-        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(x0_fn([2, 5]), 5)
         self.assertEqual(z0_fn([0, 0]), 1)
         self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
         self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
@@ -601,6 +585,42 @@ class TestBaseModel(unittest.TestCase):
         # Remove generated files.
         os.remove("test.c")
         os.remove("test.so")
+
+    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
+    def test_generate_julia_diffeq(self):
+        # ODE model with no input parameters
+        model = pybamm.BaseModel(name="ode test model")
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        model.rhs = {a: -a, b: a - b}
+        model.initial_conditions = {a: 1, b: 2}
+
+        # Generate rhs and ics for the Julia model
+        rhs_str, ics_str = model.generate_julia_diffeq()
+        self.assertIsInstance(rhs_str, str)
+        self.assertIn("ode_test_model", rhs_str)
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_u0", ics_str)
+        self.assertIn("(u0, p)", ics_str)
+
+        # ODE model with input parameters
+        model = pybamm.BaseModel(name="ode test model 2")
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.rhs = {a: -a * p, b: a - b}
+        model.initial_conditions = {a: q, b: 2}
+
+        # Generate rhs and ics for the Julia model
+        rhs_str, ics_str = model.generate_julia_diffeq(input_parameter_order=["p", "q"])
+        self.assertIsInstance(rhs_str, str)
+        self.assertIn("ode_test_model_2", rhs_str)
+        self.assertIn("p, q = p", rhs_str)
+
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_2_u0", ics_str)
+        self.assertIn("p, q = p", ics_str)
 
     def test_set_initial_conditions(self):
         # Set up model
@@ -639,18 +659,17 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.initial_conditions[var_concat].value, 1)
 
         # Discretise
-        var = pybamm.standard_spatial_vars
         geometry = {
-            "negative electrode": {var.x_n: {"min": 0, "max": 1}},
-            "separator": {var.x_s: {"min": 1, "max": 2}},
-            "negative particle": {var.r_n: {"min": 0, "max": 1}},
+            "negative electrode": {"x_n": {"min": 0, "max": 1}},
+            "separator": {"x_s": {"min": 1, "max": 2}},
+            "negative particle": {"r_n": {"min": 0, "max": 1}},
         }
         submeshes = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
         }
-        var_pts = {var.x_n: 10, var.x_s: 10, var.r_n: 5}
+        var_pts = {"x_n": 10, "x_s": 10, "r_n": 5}
         mesh = pybamm.Mesh(geometry, submeshes, var_pts)
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume(),
@@ -921,6 +940,70 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
+
+    def test_set_variables_error(self):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        with self.assertRaisesRegex(ValueError, "not var"):
+            model.variables = {"not var": var}
+
+    def test_build_submodels(self):
+        class Submodel1(pybamm.BaseSubModel):
+            def __init__(self, param, domain, options=None):
+                super().__init__(param, domain, options=options)
+
+            def get_fundamental_variables(self):
+                u = pybamm.Variable("u")
+                v = pybamm.Variable("v")
+                return {"u": u, "v": v}
+
+            def get_coupled_variables(self, variables):
+                return variables
+
+            def set_rhs(self, variables):
+                u = variables["u"]
+                self.rhs = {u: 2}
+
+            def set_algebraic(self, variables):
+                v = variables["v"]
+                self.algebraic = {v: v - 1}
+
+            def set_initial_conditions(self, variables):
+                u = variables["u"]
+                v = variables["v"]
+                self.initial_conditions = {u: 0, v: 0}
+
+            def set_events(self, variables):
+                u = variables["u"]
+                self.events.append(
+                    pybamm.Event(
+                        "Large u",
+                        u - 200,
+                        pybamm.EventType.TERMINATION,
+                    )
+                )
+
+        class Submodel2(pybamm.BaseSubModel):
+            def __init__(self, param, domain, options=None):
+                super().__init__(param, domain, options=options)
+
+            def get_coupled_variables(self, variables):
+                u = variables["u"]
+                variables.update({"w": 2 * u})
+                return variables
+
+        model = pybamm.BaseModel()
+        model.submodels = {
+            "submodel 1": Submodel1(None, "negative"),
+            "submodel 2": Submodel2(None, "negative"),
+        }
+        self.assertFalse(model._built)
+        model.build_model()
+        self.assertTrue(model._built)
+        u = model.variables["u"]
+        v = model.variables["v"]
+        self.assertEqual(model.rhs[u].value, 2)
+        self.assertIsInstance(model.algebraic[v], pybamm.Subtraction)
 
 
 if __name__ == "__main__":

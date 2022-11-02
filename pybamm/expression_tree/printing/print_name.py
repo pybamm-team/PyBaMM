@@ -46,19 +46,37 @@ def prettify_print_name(name):
     """Prettify print_name using regex"""
 
     # Skip prettify_print_name() for cases like `new_copy()`
-    if "{" in name:
+    if name is None or "{" in name or "\\" in name:
         return name
 
     # Return print_name if name exists in the dictionary
     if name in PRINT_NAME_OVERRIDES:
         return PRINT_NAME_OVERRIDES[name]
 
+    # Superscripts with comma separated (U_ref_n --> U_{n}^{ref})
+    sup_re1 = re.search(r"^[\da-zA-Z]+_?((?:init|ref|typ|max|0))_?(.*)", name)
+    if sup_re1:
+        sup_str = (
+            r"{"
+            + sup_re1.group(2).replace("_", "\,")
+            + r"}^{"
+            + sup_re1.group(1)
+            + r"}"
+        )
+        sup_var = sup_re1.group(1) + "_" + sup_re1.group(2)
+        name = name.replace(sup_var, sup_str)
+
     # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
-    sup_re = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
-    if sup_re:
-        sup_str = (r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" +
-                   sup_re.group(2) + r"}")
-        sup_var = sup_re.group(1) + "_" + sup_re.group(2)
+    sup_re2 = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
+    if sup_re2:
+        sup_str = (
+            r"{"
+            + sup_re2.group(1).replace("_", "\,")
+            + r"}^{"
+            + sup_re2.group(2)
+            + r"}"
+        )
+        sup_var = sup_re2.group(1) + "_" + sup_re2.group(2)
         name = name.replace(sup_var, sup_str)
 
     # Subscripts with comma separated (a_R_p --> a_{R\,p})
@@ -71,20 +89,37 @@ def prettify_print_name(name):
     dim_re = re.search(r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name)
     if dim_re:
         if "^" in name:
-            name = (r"\hat{" + dim_re.group(1) + r"}_" +
-                    dim_re.group(2).replace("_", "\,"))
+            name = (
+                r"\hat{" + dim_re.group(1) + r"}_" + dim_re.group(2).replace("_", "\,")
+            )
         else:
-            name = (r"\hat{" + dim_re.group(1) + r"}_{" +
-                    dim_re.group(2).replace("_", "\,") + r"}")
+            name = (
+                r"\hat{"
+                + dim_re.group(1)
+                + r"}_{"
+                + dim_re.group(2).replace("_", "\,")
+                + r"}"
+            )
 
     # Bar with comma separated (c_s_n_xav --> \bar{c}_{s\,n})
     bar_re = re.search(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)
     if bar_re:
-        name = (r"\bar{" + bar_re.group(1) + r"}_{" +
-                bar_re.group(2).replace("_", "\,") + r"}")
+        name = (
+            r"\bar{"
+            + bar_re.group(1)
+            + r"}_{"
+            + bar_re.group(2).replace("_", "\,")
+            + r"}"
+        )
 
-    # Greek letters (delta_phi_n --> \delta_\phi_n)
-    greek_re = f"({'|'.join(GREEK_LETTERS)})"
+    # Replace eps with epsilon (eps_n --> epsilon_n)
+    name = re.sub(r"(eps)(?![0-9a-zA-Z])", "epsilon", name)
+
+    # Greek letters (delta --> \delta)
+    greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
     name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
+
+    if name.endswith("{"):
+        name += "}"
 
     return name

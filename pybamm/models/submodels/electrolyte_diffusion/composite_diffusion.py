@@ -2,6 +2,7 @@
 # Class for composite electrolyte diffusion employing stefan-maxwell
 #
 import pybamm
+import numpy as np
 from .base_electrolyte_diffusion import BaseElectrolyteDiffusion
 
 
@@ -14,8 +15,7 @@ class Composite(BaseElectrolyteDiffusion):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict
-        Dictionary of reaction terms
+
     extended : bool
         Whether to include feedback from the first-order terms
 
@@ -27,15 +27,25 @@ class Composite(BaseElectrolyteDiffusion):
         self.extended = extended
 
     def get_fundamental_variables(self):
-        c_e_n = pybamm.standard_variables.c_e_n
-        c_e_s = pybamm.standard_variables.c_e_s
-        c_e_p = pybamm.standard_variables.c_e_p
+        c_e_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize().split()[0]
+            c_e_k = pybamm.Variable(
+                f"{Domain} electrolyte concentration",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+                bounds=(0, np.inf),
+            )
+            c_e_k.print_name = f"c_e_{domain[0]}"
+            c_e_dict[domain] = c_e_k
 
-        return self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
+        variables = self._get_standard_concentration_variables(c_e_dict)
+
+        return variables
 
     def get_coupled_variables(self, variables):
 
-        tor_0 = variables["Leading-order electrolyte tortuosity"]
+        tor_0 = variables["Leading-order electrolyte transport efficiency"]
         eps = variables["Leading-order porosity"]
         c_e_0_av = variables["Leading-order x-averaged electrolyte concentration"]
         c_e = variables["Electrolyte concentration"]
@@ -52,7 +62,7 @@ class Composite(BaseElectrolyteDiffusion):
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
-        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+        variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
         return variables
 

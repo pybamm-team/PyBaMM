@@ -15,7 +15,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         parameter_values.print_parameters(parameters, output_file)
         # test print_parameters with dict and without C-rate
         del parameter_values["Nominal cell capacity [A.h]"]
-        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
+        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.n.sigma}
         parameter_values.print_parameters(parameters)
 
     def test_lithium_ion(self):
@@ -28,94 +28,109 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         c_rate = param.i_typ / 24  # roughly for the numbers I used before
 
-        "particle geometry"
+        # particle geometry
         # Note: in general these can be functions, but are constant for this
         # set, so we just arbitrarily evaluate at 0
 
         # a_n_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_n_typ), 0.18 * 10 ** (6), 2
+            values.evaluate(param.n.prim.a_typ), 0.18 * 10 ** (6), 2
         )
         # R_n dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+            values.evaluate(param.n.prim.R_typ), 1 * 10 ** (-5), 2
         )
 
         # a_R_n = a_n_typ * R_n_typ
-        np.testing.assert_almost_equal(values.evaluate(param.a_R_n), 1.8, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.n.prim.a_R), 1.8, 2)
 
         # a_p_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_p_typ), 0.15 * 10 ** (6), 2
+            values.evaluate(param.p.prim.a_typ), 0.15 * 10 ** (6), 2
         )
 
         # R_p dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+            values.evaluate(param.p.prim.R_typ), 1 * 10 ** (-5), 2
         )
 
         # a_p = a_p_typ * R_p_typ
-        np.testing.assert_almost_equal(values.evaluate(param.a_R_p), 1.5, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.p.prim.a_R), 1.5, 2)
 
         # j0_m
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.j0_n_dimensional(param.c_e_typ, param.c_n_max / 2, param.T_ref)
+                param.n.prim.j0_dimensional(
+                    param.c_e_typ, param.n.prim.c_max / 2, param.T_ref
+                )
             ),
-            values.evaluate(2 * 10 ** (-5) * param.c_e_typ ** 0.5 * param.c_n_max / 2),
+            values.evaluate(
+                2 * 10 ** (-5) * param.c_e_typ**0.5 * param.n.prim.c_max / 2
+            ),
             8,
-        )
-
-        np.testing.assert_almost_equal(
-            values.evaluate(1 / param.C_r_n * c_rate), 26.6639, 3
         )
 
         # j0_p
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.j0_p_dimensional(param.c_e_typ, param.c_p_max / 2, param.T_ref)
+                param.p.prim.j0_dimensional(
+                    param.c_e_typ, param.p.prim.c_max / 2, param.T_ref
+                )
             ),
-            values.evaluate(6 * 10 ** (-7) * param.c_e_typ ** 0.5 * param.c_p_max / 2),
+            values.evaluate(
+                6 * 10 ** (-7) * param.c_e_typ**0.5 * param.p.prim.c_max / 2
+            ),
             8,
         )
 
-        # gamma_p / C_r_p
-        np.testing.assert_almost_equal(
-            values.evaluate(param.gamma_p / param.C_r_p * c_rate), 1.366, 3
-        )
-
-        "particle dynamics"
+        # particle dynamics
         # neg diffusion coefficient
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_n_dimensional(param.c_n_init(0), param.T_ref)),
+            values.evaluate(
+                pybamm.xyz_average(
+                    pybamm.r_average(
+                        param.n.prim.D_dimensional(param.n.prim.c_init, param.T_ref)
+                    )
+                )
+            ),
             3.9 * 10 ** (-14),
             2,
         )
 
         # neg diffusion timescale
         np.testing.assert_almost_equal(
-            values.evaluate(param.tau_diffusion_n), 2.5641 * 10 ** (3), 2
+            values.evaluate(param.n.prim.tau_diffusion), 2.5641 * 10 ** (3), 2
         )
 
         # tau_n / tau_d (1/gamma_n in Scott's transfer)
-        np.testing.assert_almost_equal(values.evaluate(param.C_n / c_rate), 0.11346, 3)
+        np.testing.assert_almost_equal(
+            values.evaluate(param.n.prim.C_diff / c_rate), 0.11346, 3
+        )
 
         # pos diffusion coefficient
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_p_dimensional(param.c_p_init(1), param.T_ref)),
+            values.evaluate(
+                pybamm.xyz_average(
+                    pybamm.r_average(
+                        param.p.prim.D_dimensional(param.p.prim.c_init, param.T_ref)
+                    )
+                )
+            ),
             1 * 10 ** (-13),
             2,
         )
 
         # pos diffusion timescale
         np.testing.assert_almost_equal(
-            values.evaluate(param.tau_diffusion_p), 1 * 10 ** (3), 2
+            values.evaluate(param.p.prim.tau_diffusion), 1 * 10 ** (3), 2
         )
 
         # tau_p / tau_d (1/gamma_p in Scott's transfer)
-        np.testing.assert_almost_equal(values.evaluate(param.C_p / c_rate), 0.044249, 3)
+        np.testing.assert_almost_equal(
+            values.evaluate(param.p.prim.C_diff / c_rate), 0.044249, 3
+        )
 
-        "electrolyte dynamics"
+        # electrolyte dynamics
         # typical diffusion coefficient (we should change the typ value in paper to
         # match this one. We take this parameter excluding the exp(-0.65) in the
         # paper at the moment
@@ -141,44 +156,44 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             3,
         )
 
-        "potential scale"
+        # potential scale
         # F R / T (should be equal to old 1 / Lambda)
         old_Lambda = 38
         np.testing.assert_almost_equal(
             values.evaluate(param.potential_scale), 1 / old_Lambda, 3
         )
 
-        "electrode conductivities"
+        # electrode conductivities
         # neg dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_n_dimensional(param.T_ref)), 100, 3
+            values.evaluate(param.n.sigma_dimensional(param.T_ref)), 100, 3
         )
 
         # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values
         # in paper so check again, it is close enough though for now)
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_n(param.T_ref) * c_rate), 475.7, 1
+            values.evaluate(param.n.sigma(param.T_ref) * c_rate), 475.7, 1
         )
 
         # neg dimensionless rescaled
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_n_prime(param.T_ref) * c_rate), 0.7814, 1
+            values.evaluate(param.n.sigma_prime(param.T_ref) * c_rate), 0.7814, 1
         )
 
         # pos dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_p_dimensional(param.T_ref)), 10, 3
+            values.evaluate(param.p.sigma_dimensional(param.T_ref)), 10, 3
         )
 
         # pos dimensionless (old sigma_n / old_Lambda ) (this is different to values in
         # paper so check again, it is close enough for now though)
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_p(param.T_ref) * c_rate), 47.57, 1
+            values.evaluate(param.p.sigma(param.T_ref) * c_rate), 47.57, 1
         )
 
         # pos dimensionless rescaled
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_p_prime(param.T_ref) * c_rate), 0.07814, 1
+            values.evaluate(param.p.sigma_prime(param.T_ref) * c_rate), 0.07814, 1
         )
 
     def test_thermal_parameters(self):
@@ -188,18 +203,18 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         T = 1  # dummy temperature as the values are constant
 
         # Density
-        np.testing.assert_almost_equal(values.evaluate(param.rho_cn(T)), 1.9019, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_n(T)), 0.6403, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_s(T)), 0.1535, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_p(T)), 1.2605, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_cp(T)), 1.3403, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.n.rho_cc(T)), 1.9019, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.n.rho(T)), 0.6403, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.s.rho(T)), 0.1535, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.p.rho(T)), 1.2605, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.p.rho_cc(T)), 1.3403, 2)
 
         # Thermal conductivity
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn(T)), 6.7513, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_n(T)), 0.0296, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_s(T)), 0.0027, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_p(T)), 0.0354, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp(T)), 3.9901, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.n.lambda_cc(T)), 6.7513, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.n.lambda_(T)), 0.0296, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.s.lambda_(T)), 0.0027, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.p.lambda_(T)), 0.0354, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.p.lambda_cc(T)), 3.9901, 2)
 
         # other thermal parameters
 
@@ -234,20 +249,15 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
 
-        c_test = pybamm.Scalar(0.5)
         T_test = pybamm.Scalar(0)
-
-        values.evaluate(param.U_n(c_test, T_test))
-        values.evaluate(param.U_p(c_test, T_test))
-        values.evaluate(param.dUdT_n(c_test))
-        values.evaluate(param.dUdT_p(c_test))
-
-        values.evaluate(param.D_p(c_test, T_test))
-        values.evaluate(param.D_n(c_test, T_test))
 
         c_e_test = pybamm.Scalar(1)
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
+
+    def test_timescale(self):
+        param = pybamm.LithiumIonParameters({"timescale": 2.5})
+        self.assertEqual(param.timescale.evaluate(), 2.5)
 
 
 if __name__ == "__main__":

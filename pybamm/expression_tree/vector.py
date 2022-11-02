@@ -19,9 +19,10 @@ class Vector(pybamm.Array):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         entries_string=None,
     ):
-        if isinstance(entries, list):
+        if isinstance(entries, (list, np.matrix)):
             entries = np.array(entries)
         # make sure that entries are a vector (can be a column vector)
         if entries.ndim == 1:
@@ -37,4 +38,6 @@ class Vector(pybamm.Array):
         if name is None:
             name = "Column vector of length {!s}".format(entries.shape[0])
 
-        super().__init__(entries, name, domain, auxiliary_domains, entries_string)
+        super().__init__(
+            entries, name, domain, auxiliary_domains, domains, entries_string
+        )

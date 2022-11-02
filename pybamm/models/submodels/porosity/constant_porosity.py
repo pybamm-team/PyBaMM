@@ -19,22 +19,23 @@ class Constant(BaseModel):
     """
 
     def get_fundamental_variables(self):
-
-        eps_n = self.param.epsilon_n
-        eps_s = self.param.epsilon_s
-        eps_p = self.param.epsilon_p
-
-        deps_n_dt = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        deps_s_dt = pybamm.FullBroadcast(0, "separator", "current collector")
-        deps_p_dt = pybamm.FullBroadcast(0, "positive electrode", "current collector")
+        eps_dict = {}
+        depsdt_dict = {}
+        for domain in self.options.whole_cell_domains:
+            eps_dict[domain] = self.param.domain_params[domain.split()[0]].epsilon_init
+            depsdt_dict[domain] = pybamm.FullBroadcast(0, domain, "current collector")
 
         variables = self._get_standard_porosity_variables(
-            eps_n, eps_s, eps_p, set_leading_order=True
+            eps_dict, set_leading_order=True
         )
         variables.update(
             self._get_standard_porosity_change_variables(
-                deps_n_dt, deps_s_dt, deps_p_dt, set_leading_order=True
+                depsdt_dict, set_leading_order=True
             )
         )
 
         return variables
+
+    def set_events(self, variables):
+        # No events since porosity is constant
+        pass

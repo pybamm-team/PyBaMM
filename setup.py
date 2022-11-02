@@ -3,10 +3,8 @@ import glob
 import logging
 import subprocess
 from pathlib import Path
-from platform import system, version
+from platform import system
 import wheel.bdist_wheel as orig
-import site
-import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -86,23 +84,13 @@ class bdist_wheel(orig.bdist_wheel):
         orig.bdist_wheel.run(self)
 
 
-def load_version():
-    # Read version number from file
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "pybamm", "version"), "r") as f:
-            version = f.read().strip().split(",")
-        return ".".join([str(int(x)) for x in version])
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
 def compile_KLU():
     # Return whether or not the KLU extension should be compiled.
     # Return True if:
     # - Not running on Windows AND
     # - CMake is found AND
-    # - The pybind11 directory is found in the PyBaMM project directory
+    # - The pybind11 and casadi-headers directories are found
+    #   in the PyBaMM project directory
     CMakeFound = True
     PyBind11Found = True
     windows = (not system()) or system() == "Windows"
@@ -154,17 +142,29 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     pybamm_data.extend(
         [os.path.join(*Path(filename).parts[1:]) for filename in list_of_files]
     )
-pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
+pybamm_data.append("../CMakeBuild.py")
 
-idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension(
+    "pybamm.solvers.idaklu",
+    [
+        "pybamm/solvers/c_solvers/idaklu.cpp"
+        "pybamm/solvers/c_solvers/idaklu.hpp"
+        "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
+        "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
+        "pybamm/solvers/c_solvers/idaklu_python.cpp"
+        "pybamm/solvers/c_solvers/idaklu_python.hpp"
+        "pybamm/solvers/c_solvers/solution.cpp"
+        "pybamm/solvers/c_solvers/solution.hpp"
+    ],
+)
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
-jax_dependencies = []
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
-    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
-
+# Defines __version__
+root = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(root, "pybamm", "version.py")) as f:
+    exec(f.read())
 
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
@@ -172,7 +172,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=__version__,  # noqa: F821
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -186,7 +186,7 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.6,<3.10",
+    python_requires=">=3.8,<3.10",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
@@ -196,10 +196,13 @@ setup(
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
-        *jax_dependencies,
+        "imageio>=2.9.0",
+        # Julia pip packaged can be installed even if
+        # julia programming language is not installed
+        "julia>=0.5.6",
         "jupyter",  # For example notebooks
-        "pybtex",
-        "sympy==1.8",
+        "pybtex>=0.24.0",
+        "sympy>=1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -219,12 +222,22 @@ setup(
             "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
-        ]
+            "pybamm_install_jax = pybamm.util:install_jax",
+        ],
+        "pybamm_parameter_set": [
+            "Sulzer2019 = pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values",  # noqa: E501
+            "Ai2020 = pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values",  # noqa: E501
+            "Chen2020 = pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values",  # noqa: E501
+            "Chen2020_composite = pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values",  # noqa: E501
+            "Ecker2015 = pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values",  # noqa: E501
+            "Marquis2019 = pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values",  # noqa: E501
+            "Mohtat2020 = pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values",  # noqa: E501
+            "NCA_Kim2011 = pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values",  # noqa: E501
+            "OKane2022 = pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values",  # noqa: E501
+            "ORegan2022 = pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values",  # noqa: E501
+            "Prada2013 = pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values",  # noqa: E501
+            "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
+            "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
+        ],
     },
 )
-
-# pybtex adds a folder "tests" to the site packages, so we manually remove this
-path_to_sitepackages = site.getsitepackages()[0]
-path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
-if os.path.exists(path_to_tests_dir):
-    shutil.rmtree(path_to_tests_dir)

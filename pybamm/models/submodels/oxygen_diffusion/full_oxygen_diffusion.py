@@ -18,8 +18,7 @@ class Full(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
     """
@@ -51,8 +50,8 @@ class Full(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        tor_s = variables["Separator tortuosity"]
-        tor_p = variables["Positive electrode tortuosity"]
+        tor_s = variables["Separator electrolyte transport efficiency"]
+        tor_p = variables["Positive electrolyte transport efficiency"]
         tor = pybamm.concatenation(tor_s, tor_p)
 
         c_ox = variables["Separator and positive electrode oxygen concentration"]

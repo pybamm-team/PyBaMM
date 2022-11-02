@@ -1,6 +1,7 @@
 #
 # Processed Variable class
 #
+import casadi
 import numbers
 import numpy as np
 import pybamm
@@ -32,18 +33,31 @@ class ProcessedVariable(object):
         Default is True.
     """
 
-    def __init__(self, base_variables, base_variables_casadi, solution, warn=True):
+    def __init__(
+        self,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        warn=True,
+        cumtrapz_ic=None,
+    ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
+        self.all_inputs = solution.all_inputs
         self.all_inputs_casadi = solution.all_inputs_casadi
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
-        self.auxiliary_domains = base_variables[0].auxiliary_domains
+        self.domains = base_variables[0].domains
         self.warn = warn
+        self.cumtrapz_ic = cumtrapz_ic
+
+        # Sensitivity starts off uninitialized, only set when called
+        self._sensitivities = None
+        self.solution_sensitivities = solution.sensitivities
 
         # Set timescale
         self.timescale = solution.timescale_eval
@@ -100,6 +114,7 @@ class ProcessedVariable(object):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_pts))
         idx = 0
+        last_t = 0
         # Evaluate the base_variable index-by-index
         for ts, ys, inputs, base_var_casadi in zip(
             self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
@@ -107,8 +122,22 @@ class ProcessedVariable(object):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
-                entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
+                if self.cumtrapz_ic is not None:
+                    if idx == 0:
+                        new_val = t * base_var_casadi(t, y, inputs).full()[0, 0]
+                        entries[idx] = self.cumtrapz_ic + (
+                            t * base_var_casadi(t, y, inputs).full()[0, 0]
+                        )
+                    else:
+                        new_val = (t - last_t) * (
+                            base_var_casadi(t, y, inputs).full()[0, 0]
+                        )
+                        entries[idx] = new_val + entries[idx - 1]
+                else:
+                    entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
+
                 idx += 1
+                last_t = t
 
         # set up interpolation
         if len(self.t_pts) == 1:
@@ -163,7 +192,7 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0] in ["negative particle", "positive particle"]:
+        if self.domain[0].endswith("particle"):
             self.first_dimension = "r"
             self.r_sol = space
         elif self.domain[0] in [
@@ -176,10 +205,7 @@ class ProcessedVariable(object):
         elif self.domain == ["current collector"]:
             self.first_dimension = "z"
             self.z_sol = space
-        elif self.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ]:
+        elif self.domain[0].endswith("particle size"):
             self.first_dimension = "R"
             self.R_sol = space
         else:
@@ -295,66 +321,46 @@ class ProcessedVariable(object):
         )
 
         # Process r-x, x-z, r-R, R-x, or R-z
-        if self.domain[0] in [
-            "negative particle",
-            "positive particle",
-            "working particle",
-        ] and self.auxiliary_domains["secondary"][0] in [
-            "negative electrode",
-            "positive electrode",
-            "working electrode",
-        ]:
+        if self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
             self.first_dimension = "r"
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif (
-            self.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and self.auxiliary_domains["secondary"] == ["current collector"]
-        ):
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and self.domains["secondary"] == ["current collector"]:
             self.first_dimension = "x"
             self.second_dimension = "z"
             self.x_sol = first_dim_pts
             self.z_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative particle",
-            "positive particle",
-        ] and self.auxiliary_domains["secondary"][0] in [
-            "negative particle size",
-            "positive particle size",
-        ]:
+        elif self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("particle size"):
             self.first_dimension = "r"
             self.second_dimension = "R"
             self.r_sol = first_dim_pts
             self.R_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ] and self.auxiliary_domains["secondary"][0] in [
-            "negative electrode",
-            "positive electrode",
-        ]:
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
             self.first_dimension = "R"
             self.second_dimension = "x"
             self.R_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
+            "current collector"
+        ]:
             self.first_dimension = "R"
             self.second_dimension = "z"
             self.R_sol = first_dim_pts
             self.z_sol = second_dim_pts
-        else:
+        else:  # pragma: no cover
             raise pybamm.DomainError(
-                "Cannot process 3D object with domain '{}' "
-                "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
+                f"Cannot process 2D object with domains '{self.domains}'."
             )
 
         # assign attributes for reference
@@ -371,7 +377,7 @@ class ProcessedVariable(object):
         first_dim_pts_for_interp = first_dim_pts * first_length_scale
 
         second_length_scale = self.get_spatial_scale(
-            self.second_dimension, self.auxiliary_domains["secondary"][0]
+            self.second_dimension, self.domains["secondary"][0]
         )
         second_dim_pts_for_interp = second_dim_pts * second_length_scale
 
@@ -519,6 +525,86 @@ class ProcessedVariable(object):
     def data(self):
         """Same as entries, but different name"""
         return self.entries
+
+    @property
+    def sensitivities(self):
+        """
+        Returns a dictionary of sensitivities for each input parameter.
+        The keys are the input parameters, and the value is a matrix of size
+        (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
+        points, and n_p is the size of the input parameter
+        """
+        # No sensitivities if there are no inputs
+        if len(self.all_inputs[0]) == 0:
+            return {}
+        # Otherwise initialise and return sensitivities
+        if self._sensitivities is None:
+            if self.solution_sensitivities != {}:
+                self.initialise_sensitivity_explicit_forward()
+            else:
+                raise ValueError(
+                    "Cannot compute sensitivities. The 'calculate_sensitivities' "
+                    "argument of the solver.solve should be changed from 'None' to "
+                    "allow sensitivities calculations. Check solver documentation for "
+                    "details."
+                )
+        return self._sensitivities
+
+    def initialise_sensitivity_explicit_forward(self):
+        "Set up the sensitivity dictionary"
+        inputs_stacked = self.all_inputs_casadi[0]
+
+        # Set up symbolic variables
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
+        p_casadi = {
+            name: casadi.MX.sym(name, value.shape[0])
+            for name, value in self.all_inputs[0].items()
+        }
+
+        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+
+        # Convert variable to casadi format for differentiating
+        var_casadi = self.base_variables[0].to_casadi(
+            t_casadi, y_casadi, inputs=p_casadi
+        )
+        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+
+        # Convert to functions and evaluate index-by-index
+        dvar_dy_func = casadi.Function(
+            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
+        )
+        dvar_dp_func = casadi.Function(
+            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
+        )
+        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
+            for idx, t in enumerate(ts):
+                u = ys[:, idx]
+                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
+                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
+                if index == 0 and idx == 0:
+                    dvar_dy_eval = next_dvar_dy_eval
+                    dvar_dp_eval = next_dvar_dp_eval
+                else:
+                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
+                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+
+        # Compute sensitivity
+        dy_dp = self.solution_sensitivities["all"]
+        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+        sensitivities = {"all": S_var}
+
+        # Add the individual sensitivity
+        start = 0
+        for name, inp in self.all_inputs[0].items():
+            end = start + inp.shape[0]
+            sensitivities[name] = S_var[:, start:end]
+            start = end
+
+        # Save attribute
+        self._sensitivities = sensitivities
 
 
 class Interpolant0D:

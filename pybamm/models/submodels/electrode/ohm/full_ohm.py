@@ -13,20 +13,21 @@ class Full(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
-
+        Either 'negative' or 'positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s = pybamm.standard_variables.phi_s_n
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             phi_s = pybamm.standard_variables.phi_s_p
 
         variables = self._get_standard_potential_variables(phi_s)
@@ -34,58 +35,54 @@ class Full(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain.capitalize()
 
-        phi_s = variables[self.domain + " electrode potential"]
-        tor = variables[self.domain + " electrode tortuosity"]
-        T = variables[self.domain + " electrode temperature"]
+        phi_s = variables[f"{Domain} electrode potential"]
+        tor = variables[f"{Domain} electrode transport efficiency"]
+        T = variables[f"{Domain} electrode temperature"]
 
-        if self.domain == "Negative":
-            sigma = self.param.sigma_n(T)
-        elif self.domain == "Positive":
-            sigma = self.param.sigma_p(T)
+        sigma = self.domain_param.sigma(T)
 
         sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
-        variables.update({self.domain + " electrode effective conductivity": sigma_eff})
+        variables.update({f"{Domain} electrode effective conductivity": sigma_eff})
 
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 
     def set_algebraic(self, variables):
+        domain, Domain = self.domain_Domain
 
-        phi_s = variables[self.domain + " electrode potential"]
-        i_s = variables[self.domain + " electrode current density"]
-
-        # Get surface area to volume ratio (could be a distribution in x to
-        # account for graded electrodes)
-        a = variables[self.domain + " electrode surface area to volume ratio"]
+        phi_s = variables[f"{Domain} electrode potential"]
+        i_s = variables[f"{Domain} electrode current density"]
 
         # Variable summing all of the interfacial current densities
-        sum_j = variables[
-            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        sum_a_j = variables[
+            f"Sum of {domain} electrode volumetric interfacial current densities"
         ]
 
-        self.algebraic[phi_s] = pybamm.div(i_s) + a * sum_j
+        self.algebraic[phi_s] = pybamm.div(i_s) + sum_a_j
 
     def set_boundary_conditions(self, variables):
+        Domain = self.domain.capitalize()
 
-        phi_s = variables[self.domain + " electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential"]
         phi_s_cn = variables["Negative current collector potential"]
-        tor = variables[self.domain + " electrode tortuosity"]
-        T = variables[self.domain + " electrode temperature"]
+        tor = variables[f"{Domain} electrode transport efficiency"]
+        T = variables[f"{Domain} electrode temperature"]
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
-        elif self.domain == "Positive":
+        elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p(T) * tor
+            sigma_eff = self.param.p.sigma(T) * tor
             i_boundary_cc = variables["Current collector current density"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
@@ -95,15 +92,13 @@ class Full(BaseModel):
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     def set_initial_conditions(self, variables):
+        Domain = self.domain.capitalize()
 
-        phi_s = variables[self.domain + " electrode potential"]
-        T_init = self.param.T_init
+        phi_s = variables[f"{Domain} electrode potential"]
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s_init = pybamm.Scalar(0)
-        elif self.domain == "Positive":
-            phi_s_init = self.param.U_p(
-                self.param.c_p_init(1), T_init
-            ) - self.param.U_n(self.param.c_n_init(0), T_init)
+        elif self.domain == "positive":
+            phi_s_init = self.param.ocv_init
 
         self.initial_conditions[phi_s] = phi_s_init

@@ -3,6 +3,7 @@
 #
 import numpy as np
 import os
+import sys
 import pybamm
 import tempfile
 import unittest
@@ -16,63 +17,24 @@ class TestUtil(unittest.TestCase):
     """
 
     def test_load_function(self):
-        # Test replace function and deprecation warning for lithium-ion
-        with self.assertWarns(Warning):
-            warn_path = os.path.join(
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium-ion",
-                "negative_electrodes",
-                "graphite_Chen2020",
-                "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
-            )
-            pybamm.load_function(warn_path)
-
-        # Test replace function and deprecation warning for lead-acid
-        with self.assertWarns(Warning):
-            warn_path = os.path.join(
-                "pybamm",
-                "input",
-                "parameters",
-                "lead-acid",
-                "negative_electrodes",
-                "lead_Sulzer2019",
-                "lead_exchange_current_density_Sulzer2019.py",
-            )
-            pybamm.load_function(warn_path)
-
-        # Test function load with absolute path
-        abs_test_path = os.path.join(
-            pybamm.root_dir(),
-            "pybamm",
-            "input",
-            "parameters",
-            "lithium_ion",
-            "negative_electrodes",
-            "graphite_Chen2020",
-            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
-        )
-        func = pybamm.load_function(abs_test_path)
-        self.assertEqual(
-            func,
-            pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
-        )
+        function = "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
 
         # Test function load with relative path
         rel_test_path = os.path.join(
-            "pybamm",
-            "input",
-            "parameters",
-            "lithium_ion",
-            "negative_electrodes",
-            "graphite_Chen2020",
-            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
+            "pybamm", "input", "parameters", "lithium_ion", "Chen2020"
         )
-        func = pybamm.load_function(rel_test_path)
+        func = pybamm.load_function(rel_test_path, function)
         self.assertEqual(
             func,
-            pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
+            pybamm.input.parameters.lithium_ion.Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
+        )
+
+        # Test function load with absolute path
+        abs_test_path = os.path.join(pybamm.root_dir(), rel_test_path)
+        func = pybamm.load_function(abs_test_path, function)
+        self.assertEqual(
+            func,
+            pybamm.input.parameters.lithium_ion.Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
         )
 
     def test_rmse(self):
@@ -86,18 +48,26 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "same length"):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
-    def test_infinite_nested_dict(self):
-        d = pybamm.get_infinite_nested_dict()
-        d[1][2][3] = "x"
-        self.assertEqual(d[1][2][3], "x")
-        d[4][5] = "y"
-        self.assertEqual(d[4][5], "y")
+    def test_is_constant_and_can_evaluate(self):
+        symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
+        self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
+        symbol = pybamm.StateVector(slice(0, 1))
+        self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
+        symbol = pybamm.Scalar(0)
+        self.assertEqual(True, pybamm.is_constant_and_can_evaluate(symbol))
 
     def test_fuzzy_dict(self):
-        d = pybamm.FuzzyDict({"test": 1, "test2": 2})
+        d = pybamm.FuzzyDict(
+            {
+                "test": 1,
+                "test2": 2,
+                "SEI current": 3,
+                "Lithium plating current": 4,
+            }
+        )
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
-            d["test3"]
+            d.__getitem__("test3")
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
@@ -110,6 +80,28 @@ class TestUtil(unittest.TestCase):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=package_dir)
         path = os.path.join(package_dir, tempfile_obj.name)
         self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
+        tempfile_obj.close()
+
+    def test_is_jax_compatible(self):
+        if pybamm.have_jax():
+            compatible = pybamm.is_jax_compatible()
+            self.assertTrue(compatible)
+
+    def test_git_commit_info(self):
+        git_commit_info = pybamm.get_git_commit_info()
+        self.assertIsInstance(git_commit_info, str)
+        self.assertEqual(git_commit_info[:2], "v2")
+
+    @unittest.skipIf(not pybamm.have_julia(), "Julia not installed")
+    def test_have_julia(self):
+        # Remove julia from the path
+        with unittest.mock.patch.dict(
+            "os.environ", {"PATH": os.path.dirname(sys.executable)}
+        ):
+            self.assertFalse(pybamm.have_julia())
+
+        # Add it back
+        self.assertTrue(pybamm.have_julia())
 
 
 class TestSearch(unittest.TestCase):
@@ -126,9 +118,9 @@ class TestSearch(unittest.TestCase):
 
         # Test bad var search (returns best matches)
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            model.variables.search("bad var")
+            model.variables.search("Electrolyte cot")
             out = (
-                "No results for search using 'bad var'. "
+                "No results for search using 'Electrolyte cot'. "
                 "Best matches are ['Electrolyte concentration', "
                 "'Electrode potential']\n"
             )
@@ -142,7 +134,6 @@ class TestSearch(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import sys
 
     if "-v" in sys.argv:
         debug = True

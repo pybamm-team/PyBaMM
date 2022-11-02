@@ -14,8 +14,6 @@ class TestParameter(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertEqual(a.name, "a")
         self.assertEqual(a.domain, [])
-        c = pybamm.Parameter("c", domain=["test"])
-        self.assertEqual(c.domain[0], "test")
 
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")
@@ -27,10 +25,10 @@ class TestParameter(unittest.TestCase):
 
         # Test print_name
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test name
-        self.assertEqual(func1.to_equation(), sympy.symbols("test_name"))
+        self.assertEqual(func1.to_equation(), sympy.Symbol("test_name"))
 
 
 class TestFunctionParameter(unittest.TestCase):
@@ -38,7 +36,7 @@ class TestFunctionParameter(unittest.TestCase):
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("func", {"var": var})
         self.assertEqual(func.name, "func")
-        self.assertEqual(func.children[0].id, var.id)
+        self.assertEqual(func.children[0], var)
         self.assertEqual(func.domain, [])
         self.assertEqual(func.diff_variable, None)
 
@@ -113,11 +111,11 @@ class TestFunctionParameter(unittest.TestCase):
 
         # Test print_name
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test name
         func1.print_name = None
-        self.assertEqual(func1.to_equation(), sympy.symbols("func"))
+        self.assertEqual(func1.to_equation(), sympy.Symbol("func"))
 
 
 if __name__ == "__main__":

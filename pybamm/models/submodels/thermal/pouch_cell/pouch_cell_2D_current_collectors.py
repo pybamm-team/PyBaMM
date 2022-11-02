@@ -16,36 +16,42 @@ class CurrentCollector2D(BaseThermal):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
-           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. In
-           preparation, 2020.
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
-    def __init__(self, param):
-        super().__init__(param, cc_dimension=2)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
 
-        T_x_av = pybamm.standard_variables.T_av
+        T_x_av = pybamm.Variable(
+            "X-averaged cell temperature", domain="current collector"
+        )
         T_vol_av = self._yz_average(T_x_av)
 
-        T_cn = T_x_av
-        T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
-        T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
-        T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T_cp = T_x_av
+        T_dict = {
+            "negative current collector": T_x_av,
+            "positive current collector": T_x_av,
+            "x-averaged cell": T_x_av,
+            "volume-averaged cell": T_vol_av,
+        }
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
-        variables = self._get_standard_fundamental_variables(
-            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
-        )
+        variables = self._get_standard_fundamental_variables(T_dict)
 
         return variables
 
@@ -64,10 +70,10 @@ class CurrentCollector2D(BaseThermal):
         yz_surface_area = self.param.l_y * self.param.l_z
         cell_volume = self.param.l * self.param.l_y * self.param.l_z
         yz_surface_cooling_coefficient = (
-            -(self.param.h_cn + self.param.h_cp)
+            -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
-            / (self.param.delta ** 2)
+            / (self.param.delta**2)
         )
 
         edge_cooling_coefficient = self.param.h_edge / self.param.delta
@@ -99,13 +105,13 @@ class CurrentCollector2D(BaseThermal):
         # the (l_cn / l) and (l_cp / l) prefactors.
         # We also still have edge cooling on the region: x in (0, 1)
         h_tab_n_corrected = (
-            (self.param.l_cn / self.param.l)
-            * (self.param.h_tab_n - self.param.h_edge)
+            (self.param.n.l_cc / self.param.l)
+            * (self.param.n.h_tab - self.param.h_edge)
             / self.param.delta
         )
         h_tab_p_corrected = (
-            (self.param.l_cp / self.param.l)
-            * (self.param.h_tab_p - self.param.h_edge)
+            (self.param.p.l_cc / self.param.l)
+            * (self.param.p.h_tab - self.param.h_edge)
             / self.param.delta
         )
 

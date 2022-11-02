@@ -11,13 +11,14 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
 
     def _get_standard_whole_cell_velocity_variables(self, variables):
         """
@@ -38,11 +39,11 @@ class BaseModel(pybamm.BaseSubModel):
 
         vel_scale = self.param.velocity_scale
 
-        v_box_n = variables["Negative electrode volume-averaged velocity"]
-        v_box_s = variables["Separator volume-averaged velocity"]
-        v_box_p = variables["Positive electrode volume-averaged velocity"]
-
-        v_box = pybamm.concatenation(v_box_n, v_box_s, v_box_p)
+        v_box_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            v_box_dict[domain] = variables[f"{Domain} volume-averaged velocity"]
+        v_box = pybamm.concatenation(*v_box_dict.values())
 
         variables = {
             "Volume-averaged velocity": v_box,
@@ -70,11 +71,11 @@ class BaseModel(pybamm.BaseSubModel):
 
         acc_scale = self.param.velocity_scale / self.param.L_x
 
-        div_v_box_n = variables["Negative electrode volume-averaged acceleration"]
-        div_v_box_s = variables["Separator volume-averaged acceleration"]
-        div_v_box_p = variables["Positive electrode volume-averaged acceleration"]
-
-        div_v_box = pybamm.concatenation(div_v_box_n, div_v_box_s, div_v_box_p)
+        div_v_box_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            div_v_box_dict[domain] = variables[f"{Domain} volume-averaged acceleration"]
+        div_v_box = pybamm.concatenation(*div_v_box_dict.values())
         div_v_box_av = pybamm.x_average(div_v_box)
 
         variables = {
@@ -101,12 +102,10 @@ class BaseModel(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the pressure.
         """
-        p_n = variables["Negative electrode pressure"]
-        p_s = variables["Separator pressure"]
-        p_p = variables["Positive electrode pressure"]
-
-        p = pybamm.concatenation(p_n, p_s, p_p)
-
+        p_dict = {}
+        for domain in self.options.whole_cell_domains:
+            Domain = domain.capitalize()
+            p_dict[domain] = variables[f"{Domain} pressure"]
+        p = pybamm.concatenation(*p_dict.values())
         variables = {"Pressure": p}
-
         return variables

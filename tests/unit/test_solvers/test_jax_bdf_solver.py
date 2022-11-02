@@ -4,16 +4,12 @@ from tests import get_mesh_for_testing
 import sys
 import time
 import numpy as np
-from platform import system, version
 
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+if pybamm.have_jax():
     import jax
 
 
-@unittest.skipIf(
-    system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-    "JAX not supported on windows or Mac M1",
-)
+@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver(self):
         # Create model
@@ -37,7 +33,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
         def fun(y, t):
-            return rhs.evaluate(t=t, y=y).reshape(-1)
+            return rhs(t=t, y=y).reshape(-1)
 
         t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
@@ -109,7 +105,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
         def fun(y, t, inputs):
-            return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
+            return rhs(t=t, y=y, inputs=inputs).reshape(-1)
 
         h = 0.0001
         rate = 0.1
@@ -187,7 +183,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
         def fun(y, t, inputs):
-            return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
+            return rhs(t=t, y=y, inputs=inputs).reshape(-1)
 
         y = pybamm.jax_bdf_integrate(
             fun, y0, t_eval, {"rate": 0.1}, rtol=1e-9, atol=1e-9

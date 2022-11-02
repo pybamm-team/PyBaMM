@@ -8,7 +8,9 @@ import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
-from platform import system, version
+
+if pybamm.have_jax():
+    import jax
 
 
 def test_function(arg):
@@ -185,14 +187,14 @@ class TestEvaluate(unittest.TestCase):
         for i in range(len(y)):
             y[i] = i
 
-        # concatenate them the "wrong" way round to check they get reordered correctly
-        expr = pybamm.DomainConcatenation([b, a], mesh)
+        # concatenate
+        expr = pybamm.DomainConcatenation([a, b], mesh)
 
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(list(variable_symbols.keys())[0], b.id)
-        self.assertEqual(list(variable_symbols.keys())[1], a.id)
+        self.assertEqual(list(variable_symbols.keys())[0], a.id)
+        self.assertEqual(list(variable_symbols.keys())[1], b.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         var_a = pybamm.id_to_python_variable(a.id)
@@ -204,13 +206,13 @@ class TestEvaluate(unittest.TestCase):
         )
 
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(y=y)
+        result = evaluator(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check that concatenating a single domain is consistent
         expr = pybamm.DomainConcatenation([a], mesh)
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(y=y)
+        result = evaluator(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check the reordering in case a child vector has to be split up
@@ -241,11 +243,11 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(
             list(variable_symbols.values())[2],
-            "np.concatenate(({},{},{}))".format(b0_str, a0_str, b1_str),
+            "np.concatenate(({},{},{}))".format(a0_str, b0_str, b1_str),
         )
 
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(y=y)
+        result = evaluator(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
     def test_domain_concatenation_2D(self):
@@ -271,13 +273,13 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(len(constant_symbols), 0)
 
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(y=y)
+        result = evaluator(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check that concatenating a single domain is consistent
-        expr = disc.process_symbol(pybamm.Concatenation(a))
+        expr = disc.process_symbol(pybamm.concatenation(a))
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(y=y)
+        result = evaluator(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
     def test_to_python(self):
@@ -305,40 +307,40 @@ class TestEvaluate(unittest.TestCase):
         # test a * b
         expr = a * b
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 6)
-        result = evaluator.evaluate(t=None, y=np.array([[1], [3]]))
+        result = evaluator(t=None, y=np.array([[1], [3]]))
         self.assertEqual(result, 3)
 
         # test function(a*b)
         expr = pybamm.Function(test_function, a * b)
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
         expr = pybamm.Function(test_function2, a, b)
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 5)
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate()
+        result = evaluator()
         self.assertEqual(result, 6)
 
         # test a larger expression
-        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorPython(expr)
         for y in y_tests:
-            result = evaluator.evaluate(t=None, y=y)
+            result = evaluator(t=None, y=y)
             self.assertEqual(result, expr.evaluate(t=None, y=y))
 
         # test something with time
         expr = a * pybamm.t
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a matrix multiplication
@@ -346,7 +348,7 @@ class TestEvaluate(unittest.TestCase):
         expr = A @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a heaviside
@@ -354,13 +356,13 @@ class TestEvaluate(unittest.TestCase):
         expr = a <= pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = a > pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a minimum or maximum
@@ -368,20 +370,20 @@ class TestEvaluate(unittest.TestCase):
         expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a sparse matrix multiplication
@@ -391,13 +393,13 @@ class TestEvaluate(unittest.TestCase):
         expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = B @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test numpy concatenation
@@ -410,12 +412,12 @@ class TestEvaluate(unittest.TestCase):
         expr = pybamm.NumpyConcatenation(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
         expr = pybamm.NumpyConcatenation(a, c)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test sparse stack
@@ -425,18 +427,18 @@ class TestEvaluate(unittest.TestCase):
         expr = pybamm.SparseStack(A, a * B)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y).toarray()
+            result = evaluator(t=t, y=y).toarray()
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
         expr = pybamm.SparseStack(A)
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate().toarray()
+        result = evaluator().toarray()
         np.testing.assert_allclose(result, expr.evaluate().toarray())
 
         # test Inner
         expr = pybamm.Inner(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         v = pybamm.StateVector(slice(0, 2))
@@ -444,7 +446,7 @@ class TestEvaluate(unittest.TestCase):
         for expr in [pybamm.Inner(A, v), pybamm.Inner(v, A)]:
             evaluator = pybamm.EvaluatorPython(expr)
             for t, y in zip(t_tests, y_tests):
-                result = evaluator.evaluate(t=t, y=y).toarray()
+                result = evaluator(t=t, y=y).toarray()
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         y_tests = [np.array([[2], [3], [4], [5]]), np.array([[1], [3], [2], [1]])]
@@ -454,13 +456,10 @@ class TestEvaluate(unittest.TestCase):
         expr = a * b
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_find_symbols_jax(self):
         # test sparse conversion
         constant_symbols = OrderedDict()
@@ -473,10 +472,7 @@ class TestEvaluate(unittest.TestCase):
             list(constant_symbols.values())[0].toarray(), A.entries.toarray()
         )
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -491,41 +487,41 @@ class TestEvaluate(unittest.TestCase):
         # test a * b
         expr = a * b
         evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 6)
-        result = evaluator.evaluate(t=None, y=np.array([[1], [3]]))
+        result = evaluator(t=None, y=np.array([[1], [3]]))
         self.assertEqual(result, 3)
 
         # test function(a*b)
         expr = pybamm.Function(test_function, a * b)
         evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
         # test exp
         expr = pybamm.exp(a * b)
         evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, np.exp(6))
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
         evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate()
+        result = evaluator()
         self.assertEqual(result, 6)
 
         # test a larger expression
-        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorJax(expr)
         for y in y_tests:
-            result = evaluator.evaluate(t=None, y=y)
+            result = evaluator(t=None, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=None, y=y))
 
         # test something with time
         expr = a * pybamm.t
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a matrix multiplication
@@ -533,7 +529,7 @@ class TestEvaluate(unittest.TestCase):
         expr = A @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a heaviside
@@ -541,13 +537,13 @@ class TestEvaluate(unittest.TestCase):
         expr = a <= pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = a > pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a minimum or maximum
@@ -555,20 +551,20 @@ class TestEvaluate(unittest.TestCase):
         expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a sparse matrix-vector multiplication
@@ -578,7 +574,7 @@ class TestEvaluate(unittest.TestCase):
         expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test the sparse-scalar multiplication
@@ -589,7 +585,7 @@ class TestEvaluate(unittest.TestCase):
         ]:
             evaluator = pybamm.EvaluatorJax(expr)
             for t, y in zip(t_tests, y_tests):
-                result = evaluator.evaluate(t=t, y=y)
+                result = evaluator(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test the sparse-scalar division
@@ -597,7 +593,7 @@ class TestEvaluate(unittest.TestCase):
         expr = A / (1.0 + pybamm.t) @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test sparse stack
@@ -622,7 +618,7 @@ class TestEvaluate(unittest.TestCase):
         expr = pybamm.NumpyConcatenation(a, b)
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
+            result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test Inner
@@ -635,56 +631,62 @@ class TestEvaluate(unittest.TestCase):
         ]:
             evaluator = pybamm.EvaluatorJax(expr)
             for t, y in zip(t_tests, y_tests):
-                result = evaluator.evaluate(t=t, y=y)
+                result = evaluator(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_jacobian(self):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
 
-        expr = a ** 2
+        expr = a**2
         expr_jac = 2 * a
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator_jac_test = evaluator.get_jacobian()
         evaluator_jac = pybamm.EvaluatorJax(expr_jac)
         for y in y_tests:
-            result_test = evaluator_jac_test.evaluate(t=None, y=y)
-            result_true = evaluator_jac.evaluate(t=None, y=y)
+            result_test = evaluator_jac_test(t=None, y=y)
+            result_true = evaluator_jac(t=None, y=y)
             np.testing.assert_allclose(result_test, result_true)
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    def test_evaluator_jax_jvp(self):
+        a = pybamm.StateVector(slice(0, 1))
+        y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
+        v_tests = [np.array([[2.9]]), np.array([[0.9]]), np.array([1.3])]
+
+        expr = a**2
+        expr_jac = 2 * a
+        evaluator = pybamm.EvaluatorJax(expr)
+        evaluator_jac_test = evaluator.get_jacobian()
+        evaluator_jac_action_test = evaluator.get_jacobian_action()
+        evaluator_jac = pybamm.EvaluatorJax(expr_jac)
+        for y, v in zip(y_tests, v_tests):
+            result_test = evaluator_jac_test(t=None, y=y)
+            result_test_times_v = evaluator_jac_action_test(t=None, y=y, v=v)
+            result_true = evaluator_jac(t=None, y=y)
+            result_true_times_v = evaluator_jac(t=None, y=y) @ v.reshape(-1, 1)
+            np.testing.assert_allclose(result_test, result_true)
+            np.testing.assert_allclose(result_test_times_v, result_true_times_v)
+
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
-        expr = a ** 2
-        y_test = np.array([[2.0], [3.0]])
+        expr = a**2
+        y_test = np.array([2.0, 3.0])
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_inputs(self):
         a = pybamm.InputParameter("a")
-        expr = a ** 2
+        expr = a**2
         evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate(inputs={"a": 2})
+        result = evaluator(inputs={"a": 2})
         self.assertEqual(result, 4)
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_jax_coo_matrix(self):
-        import jax
-
         A = pybamm.JaxCooMatrix([0, 1], [0, 1], [1.0, 2.0], (2, 2))
         Adense = jax.numpy.array([[1.0, 0], [0, 2.0]])
         v = jax.numpy.array([[2.0], [1.0]])

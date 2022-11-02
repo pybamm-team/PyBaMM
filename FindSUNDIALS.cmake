@@ -27,7 +27,7 @@
 # find the SUNDIALS include directories
 find_path(SUNDIALS_INCLUDE_DIR
   NAMES
-    ida/ida.h
+    idas/idas.h
     sundials/sundials_math.h
     sundials/sundials_types.h
     sunlinsol/sunlinsol_klu.h
@@ -39,7 +39,7 @@ find_path(SUNDIALS_INCLUDE_DIR
   )
 
 set(SUNDIALS_WANT_COMPONENTS
-  sundials_ida
+  sundials_idas
   sundials_sunlinsolklu
   sundials_sunmatrixsparse
   sundials_nvecserial
@@ -78,4 +78,13 @@ endforeach()
 mark_as_advanced(
     SUNDIALS_LIBRARIES
     SUNDIALS_INCLUDE_DIR
+)
+
+# behave like a CMake module is supposed to behave
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(
+  "SUNDIALS"
+  FOUND_VAR SUNDIALS_FOUND
+  REQUIRED_VARS SUNDIALS_INCLUDE_DIR SUNDIALS_LIBRARIES
+  HANDLE_COMPONENTS
 )

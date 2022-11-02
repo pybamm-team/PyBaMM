@@ -311,25 +311,6 @@ ENDIF()
 OPTION(BUILD_STATIC_LIBS "Build static libraries" ON)
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-# Prepare substitution variable SUNDIALS_EXPORT for sundials_config.h
-# When building shared SUNDIALS libraries under Windows, use
-#      #define SUNDIALS_EXPORT __declspec(dllexport)
-# When linking to shared SUNDIALS libraries under Windows, use
-#      #define SUNDIALS_EXPORT __declspec(dllimport)
-# In all other cases (other platforms or static libraries
-# under Windows), the SUNDIALS_EXPORT macro is empty
-
-IF(BUILD_SHARED_LIBS AND WIN32)
-  SET(SUNDIALS_EXPORT
-    "#ifdef BUILD_SUNDIALS_LIBRARY
-#define SUNDIALS_EXPORT __declspec(dllexport)
-#else
-#define SUNDIALS_EXPORT __declspec(dllimport)
-#endif")
-ELSE(BUILD_SHARED_LIBS AND WIN32)
-  SET(SUNDIALS_EXPORT "#define SUNDIALS_EXPORT")
-ENDIF(BUILD_SHARED_LIBS AND WIN32)
-
 # Make sure we build at least one type of libraries
 IF(NOT BUILD_STATIC_LIBS AND NOT BUILD_SHARED_LIBS)
   PRINT_WARNING("Both static and shared library generation were disabled"
@@ -647,13 +628,6 @@ MARK_AS_ADVANCED(FORCE SUNDIALS_DEVTESTS)
 # ===============================================================
 # Add any platform specifc settings
 # ===============================================================
-
-# Under Windows, add compiler directive to inhibit warnings
-# about use of unsecure functions
-
-IF(WIN32)
-  ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
-ENDIF(WIN32)
 
 IF(APPLE)
   SET(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS} -undefined dynamic_lookup")

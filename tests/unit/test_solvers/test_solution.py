@@ -1,6 +1,7 @@
 #
 # Tests for the Solution class
 #
+import json
 import pybamm
 import unittest
 import numpy as np
@@ -22,6 +23,12 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.all_inputs, [{}])
         self.assertIsInstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_sensitivities(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        with self.assertRaises(TypeError):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, sensitivities=1.0)
+
     def test_errors(self):
         bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
         sol = pybamm.Solution(
@@ -31,6 +38,16 @@ class TestSolution(unittest.TestCase):
             ValueError, "Solution time vector must be strictly increasing"
         ):
             sol.set_t()
+
+        ts = [np.array([1, 2, 3])]
+        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
+        model = pybamm.BaseModel()
+        var = pybamm.StateVector(slice(0, 1))
+        model.rhs = {var: 0}
+        model.variables = {var.name: var}
+        with self.assertLogs() as captured:
+            pybamm.Solution(ts, bad_ys, model, {})
+        self.assertIn("exceeds the maximum", captured.records[0].getMessage())
 
     def test_add_solutions(self):
         # Set up first solution
@@ -46,10 +63,10 @@ class TestSolution(unittest.TestCase):
         sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
         sol2.solve_time = 1
         sol2.integration_time = 0.5
+
         sol_sum = sol1 + sol2
 
         # Test
-        self.assertEqual(sol_sum.solve_time, 2.5)
         self.assertEqual(sol_sum.integration_time, 0.8)
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(
@@ -73,9 +90,13 @@ class TestSolution(unittest.TestCase):
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
         self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
 
-        # radd
-        sol4 = None + sol3
+        # add None
+        sol4 = sol3 + None
         self.assertEqual(sol3.all_ys, sol4.all_ys)
+
+        # radd
+        sol5 = None + sol3
+        self.assertEqual(sol3.all_ys, sol5.all_ys)
 
         # radd failure
         with self.assertRaisesRegex(
@@ -231,9 +252,13 @@ class TestSolution(unittest.TestCase):
         # test save data
         with self.assertRaises(ValueError):
             solution.save_data("test.pickle")
+
         # set variables first then save
         solution.update(["c", "d"])
+        with self.assertRaisesRegex(ValueError, "pickle"):
+            solution.save_data(to_format="pickle")
         solution.save_data("test.pickle")
+
         data_load = pybamm.load("test.pickle")
         np.testing.assert_array_equal(solution.data["c"], data_load["c"])
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
@@ -243,6 +268,9 @@ class TestSolution(unittest.TestCase):
         data_load = loadmat("test.mat")
         np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+
+        with self.assertRaisesRegex(ValueError, "matlab"):
+            solution.save_data(to_format="matlab")
 
         # to matlab with bad variables name fails
         solution.update(["c + d"])
@@ -262,10 +290,31 @@ class TestSolution(unittest.TestCase):
             solution.save_data("test.csv", to_format="csv")
         # only save "c" and "2c"
         solution.save_data("test.csv", ["c", "2c"], to_format="csv")
+        csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
+
+        # check string is the same as the file
+        with open("test.csv") as f:
+            # need to strip \r chars for windows
+            self.assertEqual(csv_str.replace("\r", ""), f.read())
+
         # read csv
         df = pd.read_csv("test.csv")
         np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
         np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+
+        # to json
+        solution.save_data("test.json", to_format="json")
+        json_str = solution.save_data(to_format="json")
+
+        # check string is the same as the file
+        with open("test.json") as f:
+            # need to strip \r chars for windows
+            self.assertEqual(json_str.replace("\r", ""), f.read())
+
+        # check if string has the right values
+        json_data = json.loads(json_str)
+        np.testing.assert_array_almost_equal(json_data["c"], solution.data["c"])
+        np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
 
         # raise error if format is unknown
         with self.assertRaisesRegex(ValueError, "format 'wrong_format' not recognised"):
@@ -285,8 +334,7 @@ class TestSolution(unittest.TestCase):
         param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
         param.process_model(model)
         param.process_geometry(geometry)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 10, "r_p": 10}
         spatial_methods = model.default_spatial_methods
         solver = model.default_solver
         sim = pybamm.Simulation(

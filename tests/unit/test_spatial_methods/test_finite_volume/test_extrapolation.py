@@ -16,7 +16,7 @@ def errors(pts, function, method_options, bcs=None):
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
     geometry = {domain: {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-    submesh_types = {domain: pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+    submesh_types = {domain: pybamm.Uniform1DSubMesh}
     var_pts = {x: pts}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -65,7 +65,7 @@ class TestExtrapolation(unittest.TestCase):
         quad = {"extrapolation": {"order": "quadratic"}}
 
         def x_squared(x):
-            y = x ** 2
+            y = x**2
             l_true = 0
             r_true = 1
             return y, l_true, r_true
@@ -92,7 +92,7 @@ class TestExtrapolation(unittest.TestCase):
         np.testing.assert_array_almost_equal(r_errors_quad, 0, decimal=14)
 
         def x_cubed(x):
-            y = x ** 3
+            y = x**3
             l_true = 0
             r_true = 1
             return y, l_true, r_true
@@ -137,7 +137,7 @@ class TestExtrapolation(unittest.TestCase):
 
         def x_cubed(x):
             n = 3
-            f_x = x ** n
+            f_x = x**n
             f_l = 0
             fp_r = n
             y = f_x + (right_flux - fp_r) * x + (left_val - f_l)
@@ -192,7 +192,7 @@ class TestExtrapolation(unittest.TestCase):
 
         def x_cubed(x):
             n = 3
-            f_x = x ** n
+            f_x = x**n
             fp_l = 0
             f_r = 1
             y = f_x + (left_flux - fp_l) * x + (right_val - f_r - left_flux + fp_l)
@@ -387,10 +387,9 @@ class TestExtrapolation(unittest.TestCase):
         )
 
     def test_extrapolate_on_nonuniform_grid(self):
-        var = pybamm.standard_spatial_vars
         geometry = {
-            "negative particle": {var.r_n: {"min": 0, "max": 1}},
-            "positive particle": {var.r_p: {"min": 0, "max": 1}},
+            "negative particle": {"r_n": {"min": 0, "max": 1}},
+            "positive particle": {"r_p": {"min": 0, "max": 1}},
         }
 
         submesh_types = {
@@ -399,7 +398,7 @@ class TestExtrapolation(unittest.TestCase):
         }
 
         rpts = 10
-        var_pts = {var.r_n: rpts, var.r_p: rpts}
+        var_pts = {"r_n": rpts, "r_p": rpts}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
         spatial_methods = {"negative particle": pybamm.FiniteVolume(method_options)}
@@ -447,11 +446,6 @@ class TestExtrapolation(unittest.TestCase):
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
-        # domain for boundary values must now be explicitly set
-        extrap_right.domain = ["negative electrode"]
-        disc.set_variable_slices([var])
-        extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
         # evaluate
         y_macro = mesh["negative electrode"].nodes
         y_micro = mesh["negative particle"].nodes
@@ -466,11 +460,6 @@ class TestExtrapolation(unittest.TestCase):
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, [])
-        # domain for boundary values must now be explicitly set
-        extrap_right.domain = ["positive electrode"]
-        disc.set_variable_slices([var])
-        extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
 
         # 2d macroscale
         mesh = get_1p1d_mesh_for_testing()

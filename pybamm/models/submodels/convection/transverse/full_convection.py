@@ -22,7 +22,9 @@ class Full(BaseTransverseModel):
 
     def get_fundamental_variables(self):
 
-        p_s = pybamm.Variable("Separator pressure", domain="current collector")
+        p_s = pybamm.Variable(
+            "X-averaged separator pressure", domain="current collector"
+        )
         variables = self._get_standard_separator_pressure_variables(p_s)
 
         # TODO: put in permeability and viscosity
@@ -45,9 +47,9 @@ class Full(BaseTransverseModel):
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
         i_boundary_cc = variables["Current collector current density"]
-        v_box_n_right = param.beta_n * i_boundary_cc
-        v_box_p_left = param.beta_p * i_boundary_cc
-        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.l_s
+        v_box_n_right = param.n.beta * i_boundary_cc
+        v_box_p_left = param.p.beta * i_boundary_cc
+        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.s.l
 
         # Simple formula for velocity in the separator
         div_Vbox_s = -d_vbox_s_dx

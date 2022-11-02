@@ -46,7 +46,7 @@ def get_mesh_for_testing(
         "positive particle": pybamm.MeshGenerator(
             pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
-        "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
+        "current collector": pybamm.SubMesh0D,
     }
     if cc_submesh:
         submesh_types["current collector"] = cc_submesh
@@ -55,15 +55,14 @@ def get_mesh_for_testing(
         xn_pts, xs_pts, xp_pts = 40, 25, 35
     else:
         xn_pts, xs_pts, xp_pts = xpts, xpts, xpts
-    var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: xn_pts,
-        var.x_s: xs_pts,
-        var.x_p: xp_pts,
-        var.r_n: rpts,
-        var.r_p: rpts,
-        var.y: ypts,
-        var.z: zpts,
+        "x_n": xn_pts,
+        "x_s": xs_pts,
+        "x_p": xp_pts,
+        "r_n": rpts,
+        "r_p": rpts,
+        "y": ypts,
+        "z": zpts,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -102,7 +101,7 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(np.sin(1) ** 2), "Dirichlet"),
             }
@@ -160,7 +159,7 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
             x_edge = pybamm.standard_spatial_vars.x_edge
 
             # Define flux and bcs
-            N = x_edge ** 2 * pybamm.cos(x_edge)
+            N = x_edge**2 * pybamm.cos(x_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = x**2 * cos(x) --> dNdx = x*(2cos(x) - xsin(x))
@@ -182,7 +181,7 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
     def test_spherical_div_convergence_quadratic(self):
-        # test div( r**2 * sin(r) ) == 4*r*sin(r) - r**2*cos(r)
+        # test div( r**2 * sin(r) ) == 2/r*sin(r) + cos(r)
         spatial_methods = {"negative particle": pybamm.SpectralVolume()}
 
         # Function for convergence testing
@@ -195,11 +194,11 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
             r_edge = pybamm.SpatialVariableEdge("r_n", domain=["negative particle"])
 
             # Define flux and bcs
-            N = r_edge ** 2 * pybamm.sin(r_edge)
+            N = pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**3 --> div(N) = 5 * r**2
-            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            div_exact = 2 / r * np.sin(r) + np.cos(r)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)
@@ -252,7 +251,7 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
         np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
 
     def test_p2d_spherical_convergence_quadratic(self):
-        # test div( r**2 * sin(r) ) == 4*r*sin(r) - r**2*cos(r)
+        # test div( r**2 * sin(r) ) == 2/r*sin(r) + cos(r)
         spatial_methods = {"negative particle": pybamm.SpectralVolume()}
 
         # Function for convergence testing
@@ -264,11 +263,11 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
             r = submesh.nodes
             r_edge = pybamm.standard_spatial_vars.r_n_edge
 
-            N = r_edge ** 2 * pybamm.sin(r_edge)
+            N = pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
-            # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
-            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            # N = r**2*sin(r) --> div(N) = 2/r*sin(r) + cos(r)
+            div_exact = 2 / r * np.sin(r) + np.cos(r)
             div_exact = np.kron(np.ones(mesh["negative electrode"].npts), div_exact)
 
             # Discretise and evaluate
@@ -286,7 +285,7 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
     def test_p2d_with_x_dep_bcs_spherical_convergence(self):
-        # test div_r( (r**2 * sin(r)) * x ) == (4*r*sin(r) - r**2*cos(r)) * x
+        # test div_r( sin(r) * x ) == (2/r*sin(r) + cos(r)) * x
         spatial_methods = {
             "negative particle": pybamm.SpectralVolume(),
             "negative electrode": pybamm.SpectralVolume(),
@@ -302,13 +301,11 @@ class TestSpectralVolumeConvergence(unittest.TestCase):
             r_edge = pybamm.standard_spatial_vars.r_n_edge
             x = pybamm.standard_spatial_vars.x_n
 
-            N = pybamm.PrimaryBroadcast(x, "negative particle") * (
-                r_edge ** 2 * pybamm.sin(r_edge)
-            )
+            N = pybamm.PrimaryBroadcast(x, "negative particle") * (pybamm.sin(r_edge))
             div_eqn = pybamm.div(N)
             # Define exact solutions
-            # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
-            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            # N = sin(r) --> div(N) = 2/r*sin(r) + cos(r)
+            div_exact = 2 / r * np.sin(r) + np.cos(r)
             div_exact = np.kron(mesh["negative electrode"].nodes, div_exact)
 
             # Discretise and evaluate

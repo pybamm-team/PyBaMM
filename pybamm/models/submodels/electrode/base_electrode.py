@@ -12,15 +12,18 @@ class BaseElectrode(pybamm.BaseSubModel):
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative' or 'Positive'
+        Either 'negative' or 'positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
-        If True the battery model sets the positve potential based on the current.
+        If True the battery model sets the positive potential based on the current.
         If False, the potential is specified by the user. Default is True.
+
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, set_positive_potential=True):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None, set_positive_potential=True):
+        super().__init__(param, domain, options=options)
         self.set_positive_potential = set_positive_potential
 
     def _get_standard_potential_variables(self, phi_s):
@@ -39,18 +42,20 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             electrode.
         """
+        domain, Domain = self.domain_Domain
+
         param = self.param
         pot = param.potential_scale
         phi_s_av = pybamm.x_average(phi_s)
 
-        if self.domain == "Negative":
+        if self.domain == "negative":
             phi_s_dim = pot * phi_s
             phi_s_av_dim = pot * phi_s_av
             delta_phi_s = phi_s
 
-        elif self.domain == "Positive":
-            phi_s_dim = param.U_p_ref - param.U_n_ref + pot * phi_s
-            phi_s_av_dim = param.U_p_ref - param.U_n_ref + pot * phi_s_av
+        elif self.domain == "positive":
+            phi_s_dim = param.ocv_ref + pot * phi_s
+            phi_s_av_dim = param.ocv_ref + pot * phi_s_av
 
             v = pybamm.boundary_value(phi_s, "right")
             delta_phi_s = v - phi_s
@@ -59,24 +64,22 @@ class BaseElectrode(pybamm.BaseSubModel):
         delta_phi_s_av_dim = delta_phi_s_av * pot
 
         variables = {
-            self.domain + " electrode potential": phi_s,
-            self.domain + " electrode potential [V]": phi_s_dim,
-            "X-averaged " + self.domain.lower() + " electrode potential": phi_s_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode potential [V]": phi_s_av_dim,
-            self.domain + " electrode ohmic losses": delta_phi_s,
-            self.domain + " electrode ohmic losses [V]": delta_phi_s_dim,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode ohmic losses": delta_phi_s_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode ohmic losses [V]": delta_phi_s_av_dim,
-            "Gradient of "
-            + self.domain.lower()
-            + " electrode potential": pybamm.grad(phi_s),
+            f"{Domain} electrode potential": phi_s,
+            f"{Domain} electrode potential [V]": phi_s_dim,
+            f"X-averaged {domain} electrode potential": phi_s_av,
+            f"X-averaged {domain} electrode potential [V]": phi_s_av_dim,
+            f"{Domain} electrode ohmic losses": delta_phi_s,
+            f"{Domain} electrode ohmic losses [V]": delta_phi_s_dim,
+            f"X-averaged {domain} electrode ohmic losses": delta_phi_s_av,
+            f"X-averaged {domain} electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
+
+        if self.options.electrode_types[self.domain] == "porous":
+            variables.update(
+                {
+                    f"Gradient of {domain} electrode potential": pybamm.grad(phi_s),
+                }
+            )
 
         return variables
 
@@ -96,13 +99,14 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables which can be derived from the current in the
             electrode.
         """
+        Domain = self.domain.capitalize()
         param = self.param
 
         i_s_dim = param.i_typ * i_s
 
         variables = {
-            self.domain + " electrode current density": i_s,
-            self.domain + " electrode current density [A.m-2]": i_s_dim,
+            f"{Domain} electrode current density": i_s,
+            f"{Domain} electrode current density [A.m-2]": i_s_dim,
         }
 
         return variables
@@ -114,8 +118,10 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        phi_cc : :class:`pybamm.Symbol`
-            The potential in the current collector.
+        phi_s_cn : :class:`pybamm.Symbol`
+            The potential in the negative current collector.
+        phi_s_cp : :class:`pybamm.Symbol`
+            The potential in the positive current collector.
 
         Returns
         -------
@@ -125,8 +131,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         """
 
         pot_scale = self.param.potential_scale
-        U_ref = self.param.U_p_ref - self.param.U_n_ref
-        phi_s_cp_dim = U_ref + phi_s_cp * pot_scale
+        phi_s_cp_dim = self.param.ocv_ref + phi_s_cp * pot_scale
 
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
@@ -145,7 +150,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": phi_s_cp_dim,
             "Local voltage": V_cc,
-            "Local voltage [V]": U_ref + V_cc * pot_scale,
+            "Local voltage [V]": self.param.ocv_ref + V_cc * pot_scale,
             "Terminal voltage": V,
             "Terminal voltage [V]": V_dim,
         }
@@ -169,7 +174,10 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
 
-        i_s_n = variables["Negative electrode current density"]
+        if "negative electrode" not in self.options.whole_cell_domains:
+            i_s_n = None
+        else:
+            i_s_n = variables["Negative electrode current density"]
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         i_s_p = variables["Positive electrode current density"]
 

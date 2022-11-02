@@ -16,18 +16,7 @@ class TestBasicHalfCellModels(unittest.TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        chemistry = pybamm.parameter_sets.Xu2019
-        param = pybamm.ParameterValues(chemistry=chemistry)
-
-        # add lithium counter electrode parameter values
-        param.update(
-            {
-                "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
-                "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
-                "Lithium counter electrode thickness [m]": 250e-6,
-            },
-            check_already_exists=False,
-        )
+        param = pybamm.ParameterValues("Xu2019")
 
         param["Current function [A]"] = 2.5e-3
 
@@ -48,7 +37,7 @@ class TestBasicHalfCellModels(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
         solver.solve(model, t_eval)
 
-    def test_runs_Chen2020(self):
+    def test_runs_OKane2022(self):
         # load model
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
@@ -57,20 +46,8 @@ class TestBasicHalfCellModels(unittest.TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        chemistry = pybamm.parameter_sets.Chen2020
-        param = pybamm.ParameterValues(chemistry=chemistry)
+        param = pybamm.ParameterValues("OKane2022")
 
-        # add lithium counter electrode parameter values
-        param.update(
-            {
-                "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
-                "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
-                "Lithium counter electrode thickness [m]": 250e-6,
-            },
-            check_already_exists=False,
-        )
-
-        param["Initial concentration in negative electrode [mol.m-3]"] = 1000
         param["Current function [A]"] = 2.5
 
         # process model and geometry

@@ -17,10 +17,11 @@ class BasePotentialPair(BaseModel):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
-           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. In
-           preparation, 2020.
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
@@ -60,10 +61,10 @@ class BasePotentialPair(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
 
         self.algebraic = {
-            phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
+            phi_s_cn: (param.n.sigma_cc * param.delta**2 * param.n.l_cc)
             * pybamm.laplacian(phi_s_cn)
             - pybamm.source(i_boundary_cc, phi_s_cn),
-            i_boundary_cc: (param.sigma_cp * param.delta ** 2 * param.l_cp)
+            i_boundary_cc: (param.p.sigma_cc * param.delta**2 * param.p.l_cc)
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc, phi_s_cp),
         }
@@ -99,7 +100,7 @@ class PotentialPair1plus1D(BasePotentialPair):
         pos_tab_bc = (
             -applied_current
             * cc_area
-            / (param.sigma_cp * param.delta ** 2 * param.l_cp)
+            / (param.p.sigma_cc * param.delta**2 * param.p.l_cc)
         )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
@@ -140,7 +141,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         # around the boundary gives the applied current exactly.
 
         positive_tab_area = pybamm.BoundaryIntegral(
-            pybamm.PrimaryBroadcast(param.l_cp, "current collector"),
+            pybamm.PrimaryBroadcast(param.p.l_cc, "current collector"),
             region="positive tab",
         )
 
@@ -148,7 +149,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         pos_tab_bc = (
             -applied_current
             * cc_area
-            / (param.sigma_cp * param.delta ** 2 * positive_tab_area)
+            / (param.p.sigma_cc * param.delta**2 * positive_tab_area)
         )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,

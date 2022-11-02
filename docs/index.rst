@@ -46,7 +46,10 @@ PyBaMM is available as a conda package through the conda-forge channel.
 
 Optional solvers
 -----------------
-On GNU/Linux and MacOS, an optional `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver is available, see :ref:`scikits.odes-label`.
+Following GNU/Linux and macOS solvers are optionally available:
+
+*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-scikits-odes-solver>`_.
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver>`_.
 
 Installation
 ============
@@ -78,8 +81,8 @@ API documentation
    source/simulation
    source/plotting/index
    source/util
+   source/callbacks
    source/citations
-   source/parameters_cli
    source/batch_study
 
 Examples
@@ -98,7 +101,6 @@ There are many ways to contribute to PyBaMM:
 .. toctree::
     :maxdepth: 1
 
-    tutorials/add-parameter-values
     tutorials/add-model
     tutorials/add-spatial-method
     tutorials/add-solver

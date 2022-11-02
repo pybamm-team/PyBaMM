@@ -113,9 +113,9 @@ class BasicDFN(BaseModel):
         eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
         eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
-        # Tortuosity
+        # transport_efficiency
         tor = pybamm.concatenation(
-            eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
+            eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
         )
 
         # Interfacial reactions
@@ -123,22 +123,26 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
+        j0_n = param.n.prim.j0(c_e_n, c_s_surf_n, T)
         j_n = (
             2
             * j0_n
             * pybamm.sinh(
-                param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
+                param.n.prim.ne
+                / 2
+                * (phi_s_n - phi_e_n - param.n.prim.U(c_s_surf_n, T))
             )
         )
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
+        j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
             * j0_p
             * pybamm.sinh(
-                param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
+                param.p.prim.ne
+                / 2
+                * (phi_s_p - phi_e_p - param.p.prim.U(c_s_surf_p, T))
             )
         )
         j = pybamm.concatenation(j_n, j_s, j_p)
@@ -159,64 +163,41 @@ class BasicDFN(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+        N_s_n = -param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n] = -(1 / param.n.prim.C_diff) * pybamm.div(N_s_n)
+        self.rhs[c_s_p] = -(1 / param.p.prim.C_diff) * pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
+                -param.n.prim.C_diff
+                * j_n
+                / param.n.prim.a_R
+                / param.n.prim.gamma
+                / param.n.prim.D(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p
+                -param.p.prim.C_diff
                 * j_p
-                / param.a_R_p
-                / param.gamma_p
-                / param.D_p(c_s_surf_p, T),
+                / param.p.prim.a_R
+                / param.p.prim.gamma
+                / param.p.prim.D(c_s_surf_p, T),
                 "Neumann",
             ),
         }
-        # c_n_init and c_p_init can in general be functions of x
-        # Note the broadcasting, for domains
-        x_n = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_n, "negative particle"
-        )
-        self.initial_conditions[c_s_n] = param.c_n_init(x_n)
-        x_p = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_p, "positive particle"
-        )
-        self.initial_conditions[c_s_p] = param.c_p_init(x_p)
-        # Events specify points at which a solution should terminate
-        self.events += [
-            pybamm.Event(
-                "Minimum negative particle surface concentration",
-                pybamm.min(c_s_surf_n) - 0.01,
-            ),
-            pybamm.Event(
-                "Maximum negative particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_n),
-            ),
-            pybamm.Event(
-                "Minimum positive particle surface concentration",
-                pybamm.min(c_s_surf_p) - 0.01,
-            ),
-            pybamm.Event(
-                "Maximum positive particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_p),
-            ),
-        ]
+        self.initial_conditions[c_s_n] = param.n.prim.c_init
+        self.initial_conditions[c_s_p] = param.p.prim.c_init
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n(T) * eps_s_n ** param.b_s_n
+        sigma_eff_n = param.n.sigma(T) * eps_s_n**param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p(T) * eps_s_p ** param.b_s_p
+        sigma_eff_p = param.p.sigma(T) * eps_s_p**param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -233,25 +214,23 @@ class BasicDFN(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
-        # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
-        # guess so actual value is not too important)
+        # We evaluate c_n_init at r=0, x=0 and c_p_init at r=0, x=1
+        # (this is just an initial guess so actual value is not too important)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.U_p(
-            param.c_p_init(1), param.T_init
-        ) - param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chiT_over_c(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # Electrolyte concentration
@@ -266,16 +245,14 @@ class BasicDFN(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events.append(
-            pybamm.Event(
-                "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
-            )
-        )
 
         ######################
         # (Some) variables
         ######################
         voltage = pybamm.boundary_value(phi_s_p, "right")
+        pot_scale = param.potential_scale
+        U_ref = param.ocv_ref
+        voltage_dim = U_ref + voltage * pot_scale
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -287,11 +264,11 @@ class BasicDFN(BaseModel):
             "Electrolyte potential": phi_e,
             "Positive electrode potential": phi_s_p,
             "Terminal voltage": voltage,
+            "Terminal voltage [V]": voltage_dim,
+            "Time [s]": pybamm.t * self.param.timescale,
         }
+        # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+            pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
         ]
-
-    def new_empty_copy(self):
-        return pybamm.BaseModel.new_empty_copy(self)

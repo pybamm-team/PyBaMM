@@ -5,7 +5,6 @@ import pybamm
 import tests
 import numpy as np
 import unittest
-from platform import system
 
 
 class TestMPM(unittest.TestCase):
@@ -13,7 +12,7 @@ class TestMPM(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
         # use Ecker parameters for nonlinear diffusion
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        param = pybamm.ParameterValues("Ecker2015")
         param = pybamm.get_size_distribution_parameters(param)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -24,12 +23,10 @@ class TestMPM(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
-        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if system() != "Windows":
+        if pybamm.have_jax():
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
@@ -59,13 +56,9 @@ class TestMPM(unittest.TestCase):
         # We test that the amount of lithium removed or added to each electrode
         # is the same as for the SPM with the same parameters
         models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()]
-        var = pybamm.standard_spatial_vars
 
         # reduce number of particle sizes, for a crude discretization
-        var_pts = {
-            var.R_n: 3,
-            var.R_p: 3,
-        }
+        var_pts = {"R_n": 3, "R_p": 3}
         solver = pybamm.CasadiSolver(mode="fast")
 
         # solve
@@ -81,15 +74,13 @@ class TestMPM(unittest.TestCase):
             pos_Li.append(pos)
 
         # compare
-        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=14)
-        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=14)
+        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
+        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
 
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
-
-    sys.setrecursionlimit(10000)
 
     if "-v" in sys.argv:
         debug = True

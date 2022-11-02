@@ -1,3 +1,4 @@
+import os
 import pybamm
 import unittest
 import numpy as np
@@ -15,7 +16,7 @@ class TestQuickPlot(unittest.TestCase):
         c = pybamm.Variable("c", domain=[])
 
         # Simple ODEs
-        model.rhs = {a: pybamm.Scalar(2), b: pybamm.Scalar(0), c: -c}
+        model.rhs = {a: pybamm.Scalar(0.2), b: pybamm.Scalar(0), c: -c}
 
         # Simple initial conditions
         model.initial_conditions = {
@@ -27,6 +28,7 @@ class TestQuickPlot(unittest.TestCase):
         # Broadcast some of the variables
         model.variables = {
             "a": a,
+            "b": b,
             "b broadcasted": pybamm.FullBroadcast(b, whole_cell, "current collector"),
             "c broadcasted": pybamm.FullBroadcast(
                 c, ["negative electrode", "separator"], "current collector"
@@ -37,8 +39,13 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
                 c, "positive particle"
             ),
+            "Variable with a very long name": a,
+            "2D variable": pybamm.FullBroadcast(
+                1, "negative particle", {"secondary": "negative electrode"}
+            ),
+            "NaN variable": pybamm.Scalar(np.nan),
         }
-        model.timescale = pybamm.Scalar(1)
+        model._timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use jacobian)
         model.use_jacobian = False
@@ -114,7 +121,6 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.slider_update(0.01)
 
         # Test longer name
-        model.variables["Variable with a very long name"] = model.variables["a"]
         quick_plot = pybamm.QuickPlot(solution, ["Variable with a very long name"])
         quick_plot.plot(0)
 
@@ -145,7 +151,7 @@ class TestQuickPlot(unittest.TestCase):
             quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
         quick_plot.plot(0)
@@ -154,7 +160,7 @@ class TestQuickPlot(unittest.TestCase):
             quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
         quick_plot.plot(0)
@@ -163,7 +169,7 @@ class TestQuickPlot(unittest.TestCase):
             quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
         )
         with self.assertRaisesRegex(ValueError, "time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
@@ -174,22 +180,17 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="m")
         self.assertEqual(quick_plot.spatial_unit, "m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="mm")
         self.assertEqual(quick_plot.spatial_unit, "mm")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="um")
-        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
         with self.assertRaisesRegex(ValueError, "spatial unit"):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
         # Test 2D variables
-        model.variables["2D variable"] = disc.process_symbol(
-            pybamm.FullBroadcast(
-                1, "negative particle", {"secondary": "negative electrode"}
-            )
-        )
         quick_plot = pybamm.QuickPlot(solution, ["2D variable"])
         quick_plot.plot(0)
         quick_plot.dynamic_plot(testing=True)
@@ -254,13 +255,21 @@ class TestQuickPlot(unittest.TestCase):
             )
 
         # No variable can be NaN
-        model.variables["NaN variable"] = disc.process_symbol(pybamm.Scalar(np.nan))
         with self.assertRaisesRegex(
             ValueError, "All-NaN variable 'NaN variable' provided"
         ):
             pybamm.QuickPlot(solution, ["NaN variable"])
 
         pybamm.close_plots()
+
+    def test_plot_with_different_models(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: pybamm.Scalar(0)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        solution = pybamm.CasadiSolver("fast").solve(model, [0, 1])
+        with self.assertRaisesRegex(ValueError, "No default output variables"):
+            pybamm.QuickPlot(solution)
 
     def test_spm_simulation(self):
         # SPM
@@ -270,23 +279,37 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 10, 2)
         sim.solve(t_eval)
 
+        # pass only a simulation object
+        # it should be converted to a list of corresponding solution
+        quick_plot = pybamm.QuickPlot(sim)
+        quick_plot.plot(0)
+
         # mixed simulation and solution input
         # solution should be extracted from the simulation
         quick_plot = pybamm.QuickPlot([sim, sim.solution])
         quick_plot.plot(0)
+
+        # test creating a GIF
+        quick_plot.create_gif(number_of_images=3, duration=3)
+        assert not os.path.exists("plot*.png")
+        assert os.path.exists("plot.gif")
+        os.remove("plot.gif")
 
         pybamm.close_plots()
 
     def test_loqs_spme(self):
         t_eval = np.linspace(0, 10, 2)
 
-        for model in [pybamm.lithium_ion.SPMe(), pybamm.lead_acid.LOQS()]:
+        for model in [
+            pybamm.lithium_ion.SPMe(),
+            pybamm.lead_acid.LOQS(),
+            pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+        ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)
             param.process_geometry(geometry)
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
@@ -366,8 +389,7 @@ class TestQuickPlot(unittest.TestCase):
         param = spm.default_parameter_values
         param.process_model(spm)
         param.process_geometry(geometry)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.z: 5}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "z": 5}
         mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
         disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
         disc_spm.process_model(spm)
@@ -401,16 +423,7 @@ class TestQuickPlot(unittest.TestCase):
         param = spm.default_parameter_values
         param.process_model(spm)
         param.process_geometry(geometry)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
         mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
         disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
         disc_spm.process_model(spm)
@@ -457,9 +470,10 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(1)
 
     def test_model_with_inputs(self):
-        chemistry = pybamm.parameter_sets.Chen2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        model = pybamm.lithium_ion.SPMe()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        # Pass the "timescale" option since we are making electrode height an input
+        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         parameter_values.update({"Electrode height [m]": "[input]"})
         solver = pybamm.CasadiSolver(mode="safe")
         sim1 = pybamm.Simulation(

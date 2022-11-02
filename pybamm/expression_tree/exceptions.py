@@ -32,7 +32,8 @@ class SolverError(Exception):
     Solver error: a solution to the model could not be found with the chosen settings
     """
 
-    pass
+    def __init__(self, *args):
+        self.message = args[0]
 
 
 class SolverWarning(UserWarning):

@@ -30,6 +30,9 @@ x = pybamm.SpatialVariable(
 
 y = pybamm.SpatialVariable("y", domain="current collector", coord_sys="cartesian")
 z = pybamm.SpatialVariable("z", domain="current collector", coord_sys="cartesian")
+r_macro = pybamm.SpatialVariable(
+    "r_macro", domain="current collector", coord_sys="cylindrical polar"
+)
 
 r_n = pybamm.SpatialVariable(
     "r_n",
@@ -43,6 +46,42 @@ r_n = pybamm.SpatialVariable(
 r_p = pybamm.SpatialVariable(
     "r_p",
     domain=["positive particle"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_n_prim = pybamm.SpatialVariable(
+    "r_n_prim",
+    domain=["negative primary particle"],
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_p_prim = pybamm.SpatialVariable(
+    "r_p_prim",
+    domain=["positive primary particle"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_n_sec = pybamm.SpatialVariable(
+    "r_n_sec",
+    domain=["negative secondary particle"],
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+r_p_sec = pybamm.SpatialVariable(
+    "r_p_sec",
+    domain=["positive secondary particle"],
     auxiliary_domains={
         "secondary": "positive electrode",
         "tertiary": "current collector",
@@ -101,6 +140,10 @@ y_edge = pybamm.SpatialVariableEdge(
 z_edge = pybamm.SpatialVariableEdge(
     "z", domain="current collector", coord_sys="cartesian"
 )
+r_macro_edge = pybamm.SpatialVariableEdge(
+    "r_macro", domain="current collector", coord_sys="cylindrical polar"
+)
+
 
 r_n_edge = pybamm.SpatialVariableEdge(
     "r_n",

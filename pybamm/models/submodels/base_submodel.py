@@ -16,6 +16,18 @@ class BaseSubModel(pybamm.BaseModel):
     ----------
     param: parameter class
         The model parameter symbols
+    domain : str
+        The domain of the model either 'Negative' or 'Positive'
+    name: str
+        A string giving the name of the submodel
+    external: bool, optional
+        Whether the variables defined by the submodel will be provided externally
+        by the users. Default is 'False'.
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is None).
 
     Attributes
     ----------
@@ -47,17 +59,55 @@ class BaseSubModel(pybamm.BaseModel):
     """
 
     def __init__(
-        self, param, domain=None, name="Unnamed submodel", external=False, options=None
+        self,
+        param,
+        domain=None,
+        name="Unnamed submodel",
+        external=False,
+        options=None,
+        phase=None,
     ):
         super().__init__(name)
-        self.param = param
-
         self.domain = domain
-        self.set_domain_for_broadcast()
         self.name = name
 
         self.external = external
-        self.options = options or {}
+        self.options = pybamm.BatteryModelOptions(options or {})
+
+        self.param = param
+        if param is None or domain is None:
+            self.domain_param = None
+        else:
+            self.domain_param = param.domain_params[self.domain]
+            if phase is not None:
+                self.phase_param = self.domain_param.phase_params[phase]
+
+        # Error checks for phase and domain
+        self.set_phase(phase)
+
+    def set_phase(self, phase):
+        if phase is not None:
+            if self.domain is None:
+                raise ValueError("Phase must be None if domain is None")
+            options_phase = getattr(self.options, self.domain)["particle phases"]
+            if options_phase == "1" and phase != "primary":
+                raise ValueError("Phase must be 'primary' if there is only one phase")
+            elif options_phase == "2" and phase not in ["primary", "secondary"]:
+                raise ValueError(
+                    "Phase must be either 'primary' or 'secondary' "
+                    "if there are two phases"
+                )
+
+            if options_phase == "1" and phase == "primary":
+                # Only one phase, no need to distinguish between
+                # "primary" and "secondary"
+                self.phase_name = ""
+            else:
+                # add a space so that we can use "" or (e.g.) "primary " interchangeably
+                # when naming variables
+                self.phase_name = phase + " "
+
+        self.phase = phase
 
     @property
     def domain(self):
@@ -65,20 +115,13 @@ class BaseSubModel(pybamm.BaseModel):
 
     @domain.setter
     def domain(self, domain):
-        ok_domain_list = [
-            "Negative",
-            "Separator",
-            "Positive",
-            "Negative electrode",
-            "Negative electrolyte",
-            "Separator electrolyte",
-            "Positive electrode",
-            "Positive electrolyte",
-        ]
+        if domain is not None:
+            domain = domain.lower()
+        ok_domain_list = ["negative", "separator", "positive", None]
         if domain in ok_domain_list:
             self._domain = domain
-        elif domain is None:
-            pass
+            if domain is not None:
+                self._Domain = domain.capitalize()
         else:
             raise pybamm.DomainError(
                 "Domain '{}' not recognised (must be one of {})".format(
@@ -86,12 +129,9 @@ class BaseSubModel(pybamm.BaseModel):
                 )
             )
 
-    def set_domain_for_broadcast(self):
-        if hasattr(self, "_domain"):
-            if self.domain in ["Negative", "Positive"]:
-                self.domain_for_broadcast = self.domain.lower() + " electrode"
-            elif self.domain == "Separator":
-                self.domain_for_broadcast = "separator"
+    @property
+    def domain_Domain(self):
+        return self._domain, self._Domain
 
     def get_fundamental_variables(self):
         """
@@ -143,16 +183,16 @@ class BaseSubModel(pybamm.BaseModel):
             for var in list_of_vars:
                 if var.id not in unique_ids and isinstance(var, pybamm.Concatenation):
                     external_variables += [var]
-                    unique_ids += [var.id]
+                    unique_ids += [var]
                     # also add the ids of the children to unique ids
                     for child in var.children:
-                        unique_ids += [child.id]
+                        unique_ids += [child]
 
             # now add any unique variables that are not part of a concatentation
             for var in list_of_vars:
                 if var.id not in unique_ids:
                     external_variables += [var]
-                    unique_ids += [var.id]
+                    unique_ids += [var]
 
         return external_variables
 

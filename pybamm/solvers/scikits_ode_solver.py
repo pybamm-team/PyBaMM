@@ -49,19 +49,13 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=0,
-        linsolver="deprecated",
         extra_options=None,
     ):
-        if scikits_odes_spec is None:
+        if scikits_odes_spec is None:  # pragma: no cover
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.extra_options = extra_options or {}
-        if linsolver != "deprecated":
-            raise ValueError(
-                "linsolver has been deprecated. Pass 'linsolver' to extra_options "
-                "dictionary instead"
-            )
         self.ode_solver = True
         self.name = "Scikits ODE solver ({})".format(method)
 
@@ -83,21 +77,30 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
 
         """
-        if model.rhs_eval.form == "casadi":
+        inputs_dict = inputs_dict or {}
+        if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
         else:
             inputs = inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
         derivs = model.rhs_eval
         events = model.terminate_events_eval
-        jacobian = model.jacobian_eval
+        jacobian = model.jac_rhs_eval
 
-        def eqsydot(t, y, return_ydot):
-            return_ydot[:] = derivs(t, y, inputs)
+        if model.convert_to_format == "casadi":
+
+            def eqsydot(t, y, return_ydot):
+                return_ydot[:] = derivs(t, y, inputs).full().flatten()
+
+        else:
+
+            def eqsydot(t, y, return_ydot):
+                return_ydot[:] = derivs(t, y, inputs).flatten()
 
         def rootfn(t, y, return_root):
             return_root[:] = [event(t, y, inputs) for event in events]

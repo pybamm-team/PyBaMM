@@ -36,9 +36,7 @@ class TestExperiments(unittest.TestCase):
             ["Rest for 5 minutes", "Discharge at 0.1C until 3V", "Rest for 30 minutes"],
             period="1 minute",
         )
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Chen2020
-        )
+        parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(
             model,
@@ -81,8 +79,7 @@ class TestExperiments(unittest.TestCase):
         )
         sol = sim.solve()
         # this experiment fails during the third cycle (i.e. is infeasible)
-        # so we should just return the successful cycles (2 in this case)
-        self.assertEqual(len(sol.cycles), 2)
+        self.assertEqual(len(sol.cycles), 3)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 import sympy
-from scipy.sparse.coo import coo_matrix
+from scipy.sparse import coo_matrix
 
 import pybamm
 
@@ -22,6 +22,8 @@ class TestBinaryOperators(unittest.TestCase):
         bin2 = pybamm.BinaryOperator("binary test", c, d)
         with self.assertRaises(NotImplementedError):
             bin2.evaluate()
+        with self.assertRaises(NotImplementedError):
+            bin2._binary_jac(a, b)
 
     def test_binary_operator_domains(self):
         # same domain
@@ -49,7 +51,7 @@ class TestBinaryOperators(unittest.TestCase):
 
         # test simplifying
         summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
-        self.assertEqual(summ2.id, pybamm.Scalar(4).id)
+        self.assertEqual(summ2, pybamm.Scalar(4))
 
     def test_power(self):
         a = pybamm.Symbol("a")
@@ -64,46 +66,19 @@ class TestBinaryOperators(unittest.TestCase):
         pow2 = pybamm.Power(a, b)
         self.assertEqual(pow2.evaluate(), 16)
 
-    def test_known_eval(self):
-        # Scalars
-        a = pybamm.Scalar(4)
-        b = pybamm.StateVector(slice(0, 1))
-        expr = (a + b) - (a + b) * (a + b)
-        value = expr.evaluate(y=np.array([2]))
-        self.assertEqual(expr.evaluate(y=np.array([2]), known_evals={})[0], value)
-        self.assertIn((a + b).id, expr.evaluate(y=np.array([2]), known_evals={})[1])
-        self.assertEqual(
-            expr.evaluate(y=np.array([2]), known_evals={})[1][(a + b).id], 6
-        )
-
-        # Matrices
-        a = pybamm.Matrix(np.random.rand(5, 5))
-        b = pybamm.StateVector(slice(0, 5))
-        expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b)
-        y_test = np.linspace(0, 1, 5)
-        value = expr2.evaluate(y=y_test)
-        np.testing.assert_array_equal(
-            expr2.evaluate(y=y_test, known_evals={})[0], value
-        )
-        self.assertIn((a @ b).id, expr2.evaluate(y=y_test, known_evals={})[1])
-        np.testing.assert_array_equal(
-            expr2.evaluate(y=y_test, known_evals={})[1][(a @ b).id],
-            (a @ b).evaluate(y=y_test),
-        )
-
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
         y = np.array([5, 3])
 
         # power
-        self.assertEqual((a ** b).diff(b).evaluate(y=y), 5 ** 3 * np.log(5))
-        self.assertEqual((a ** b).diff(a).evaluate(y=y), 3 * 5 ** 2)
-        self.assertEqual((a ** b).diff(a ** b).evaluate(), 1)
+        self.assertEqual((a**b).diff(b).evaluate(y=y), 5**3 * np.log(5))
+        self.assertEqual((a**b).diff(a).evaluate(y=y), 3 * 5**2)
+        self.assertEqual((a**b).diff(a**b).evaluate(), 1)
         self.assertEqual(
-            (a ** a).diff(a).evaluate(y=y), 5 ** 5 * np.log(5) + 5 * 5 ** 4
+            (a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4
         )
-        self.assertEqual((a ** a).diff(b).evaluate(y=y), 0)
+        self.assertEqual((a**a).diff(b).evaluate(y=y), 0)
 
         # addition
         self.assertEqual((a + b).diff(a).evaluate(), 1)
@@ -170,20 +145,20 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(str((a * b) / (c + d)), "a * b / (c + d)")
         self.assertEqual(str(a * (b / (c + d))), "a * b / (c + d)")
 
-    def test_id(self):
+    def test_eq(self):
         a = pybamm.Scalar(4)
         b = pybamm.Scalar(5)
         bin1 = pybamm.BinaryOperator("test", a, b)
         bin2 = pybamm.BinaryOperator("test", a, b)
         bin3 = pybamm.BinaryOperator("new test", a, b)
-        self.assertEqual(bin1.id, bin2.id)
-        self.assertNotEqual(bin1.id, bin3.id)
+        self.assertEqual(bin1, bin2)
+        self.assertNotEqual(bin1, bin3)
         c = pybamm.Scalar(5)
         bin4 = pybamm.BinaryOperator("test", a, c)
-        self.assertEqual(bin1.id, bin4.id)
+        self.assertEqual(bin1, bin4)
         d = pybamm.Scalar(42)
         bin5 = pybamm.BinaryOperator("test", a, d)
-        self.assertNotEqual(bin1.id, bin5.id)
+        self.assertNotEqual(bin1, bin5)
 
     def test_number_overloading(self):
         a = pybamm.Scalar(4)
@@ -323,6 +298,15 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
+    def test_equality(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        equal = pybamm.Equality(a, b)
+        self.assertEqual(equal.evaluate(y=np.array([1])), 1)
+        self.assertEqual(equal.evaluate(y=np.array([2])), 0)
+        self.assertEqual(str(equal), "1.0 == y[0:1]")
+        self.assertEqual(equal.diff(b), 0)
+
     def test_sigmoid(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
@@ -330,13 +314,13 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 0)
-        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 * (y[0:1] - 1.0))) / 2.0")
+        self.assertEqual(str(sigm), "(1.0 + tanh((10.0 * y[0:1]) - 10.0)) / 2.0")
 
         sigm = pybamm.sigmoid(b, a, 10)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 0)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 1)
-        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 * (1.0 - y[0:1]))) / 2.0")
+        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 - (10.0 * y[0:1]))) / 2.0")
 
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -379,7 +363,12 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
         self.assertEqual(
-            str(maximum), "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"
+            str(maximum)[:15],
+            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"[:15],
+        )
+        self.assertEqual(
+            str(maximum)[-33:],
+            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"[-33:],
         )
 
         # Test that smooth min/max are used when the setting is changed
@@ -400,7 +389,7 @@ class TestBinaryOperators(unittest.TestCase):
         pybamm.settings.max_smoothing = "exact"
 
     def test_binary_simplifications(self):
-        a = pybamm.Scalar(0, domain="domain")
+        a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
         v = pybamm.Vector(np.zeros((10, 1)))
@@ -414,20 +403,20 @@ class TestBinaryOperators(unittest.TestCase):
         broad2_edge = pybamm.PrimaryBroadcastToEdges(2, "domain")
 
         # power
-        self.assertEqual((c ** a).id, pybamm.Scalar(1).id)
-        self.assertEqual((0 ** c).id, pybamm.Scalar(0).id)
-        self.assertEqual((c ** b).id, c.id)
+        self.assertEqual((c**0), pybamm.Scalar(1))
+        self.assertEqual((0**c), pybamm.Scalar(0))
+        self.assertEqual((c**1), c)
         # power with broadcasts
-        self.assertEqual((c ** broad2).id, pybamm.PrimaryBroadcast(c ** 2, "domain").id)
-        self.assertEqual((broad2 ** c).id, pybamm.PrimaryBroadcast(2 ** c, "domain").id)
+        self.assertEqual((c**broad2), pybamm.PrimaryBroadcast(c**2, "domain"))
+        self.assertEqual((broad2**c), pybamm.PrimaryBroadcast(2**c, "domain"))
         self.assertEqual(
-            (broad2 ** pybamm.PrimaryBroadcast(c, "domain")).id,
-            pybamm.PrimaryBroadcast(2 ** c, "domain").id,
+            (broad2 ** pybamm.PrimaryBroadcast(c, "domain")),
+            pybamm.PrimaryBroadcast(2**c, "domain"),
         )
         # power with broadcasts to edge
-        self.assertIsInstance(var ** broad2_edge, pybamm.Power)
-        self.assertEqual((var ** broad2_edge).left.id, var.id)
-        self.assertEqual((var ** broad2_edge).right.id, broad2_edge.id)
+        self.assertIsInstance(var**broad2_edge, pybamm.Power)
+        self.assertEqual((var**broad2_edge).left, var)
+        self.assertEqual((var**broad2_edge).right, broad2_edge)
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)
@@ -438,25 +427,20 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((b + a).evaluate(), 1)
         self.assertIsInstance((0 + b), pybamm.Scalar)
         self.assertEqual((0 + b).evaluate(), 1)
-        self.assertIsInstance((a + c), pybamm.Parameter)
-        self.assertIsInstance((c + a), pybamm.Parameter)
-        self.assertIsInstance((c + b), pybamm.Addition)
-        self.assertIsInstance((b + c), pybamm.Addition)
-        # rearranging additions
-        self.assertEqual(((c + 1) + 2).id, (c + 3).id)
-        self.assertEqual(((1 + c) + 2).id, (3 + c).id)
-        self.assertEqual((2 + (c + 1)).id, (3 + c).id)
-        self.assertEqual((2 + (1 + c)).id, (3 + c).id)
+        self.assertIsInstance((0 + c), pybamm.Parameter)
+        self.assertIsInstance((c + 0), pybamm.Parameter)
+        self.assertIsInstance((c + 1), pybamm.Addition)
+        self.assertIsInstance((1 + c), pybamm.Addition)
         # addition with broadcast zero
-        self.assertIsInstance((b + broad0), pybamm.PrimaryBroadcast)
-        np.testing.assert_array_equal((b + broad0).child.evaluate(), 1)
-        np.testing.assert_array_equal((b + broad0).domain, "domain")
-        self.assertIsInstance((broad0 + b), pybamm.PrimaryBroadcast)
-        np.testing.assert_array_equal((broad0 + b).child.evaluate(), 1)
-        np.testing.assert_array_equal((broad0 + b).domain, "domain")
+        self.assertIsInstance((1 + broad0), pybamm.PrimaryBroadcast)
+        np.testing.assert_array_equal((1 + broad0).child.evaluate(), 1)
+        np.testing.assert_array_equal((1 + broad0).domain, "domain")
+        self.assertIsInstance((broad0 + 1), pybamm.PrimaryBroadcast)
+        np.testing.assert_array_equal((broad0 + 1).child.evaluate(), 1)
+        np.testing.assert_array_equal((broad0 + 1).domain, "domain")
         # addition with broadcasts
-        self.assertEqual((c + broad2).id, pybamm.PrimaryBroadcast(c + 2, "domain").id)
-        self.assertEqual((broad2 + c).id, pybamm.PrimaryBroadcast(2 + c, "domain").id)
+        self.assertEqual((c + broad2), pybamm.PrimaryBroadcast(c + 2, "domain"))
+        self.assertEqual((broad2 + c), pybamm.PrimaryBroadcast(2 + c, "domain"))
 
         # subtraction
         self.assertIsInstance((a - b), pybamm.Scalar)
@@ -466,11 +450,11 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((b - a), pybamm.Scalar)
         self.assertEqual((b - a).evaluate(), 1)
         # subtraction with broadcasts
-        self.assertEqual((c - broad2).id, pybamm.PrimaryBroadcast(c - 2, "domain").id)
-        self.assertEqual((broad2 - c).id, pybamm.PrimaryBroadcast(2 - c, "domain").id)
+        self.assertEqual((c - broad2), pybamm.PrimaryBroadcast(c - 2, "domain"))
+        self.assertEqual((broad2 - c), pybamm.PrimaryBroadcast(2 - c, "domain"))
         # subtraction from itself
-        self.assertEqual((c - c).id, pybamm.Scalar(0).id)
-        self.assertEqual((broad2 - broad2).id, broad0.id)
+        self.assertEqual((c - c), pybamm.Scalar(0))
+        self.assertEqual((broad2 - broad2), broad0)
 
         # addition and subtraction with matrix zero
         self.assertIsInstance((b + v), pybamm.Array)
@@ -498,15 +482,15 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((b * c), pybamm.Parameter)
         self.assertIsInstance((2 * c), pybamm.Multiplication)
         # multiplication with -1
-        self.assertEqual((c * -1).id, (-c).id)
-        self.assertEqual((-1 * c).id, (-c).id)
+        self.assertEqual((c * -1), (-c))
+        self.assertEqual((-1 * c), (-c))
         # multiplication with a negation
-        self.assertEqual((-c * -f).id, (c * f).id)
-        self.assertEqual((-c * 4).id, (c * -4).id)
-        self.assertEqual((4 * -c).id, (-4 * c).id)
+        self.assertEqual((-c * -f), (c * f))
+        self.assertEqual((-c * 4), (c * -4))
+        self.assertEqual((4 * -c), (-4 * c))
         # multiplication with broadcasts
-        self.assertEqual((c * broad2).id, pybamm.PrimaryBroadcast(c * 2, "domain").id)
-        self.assertEqual((broad2 * c).id, pybamm.PrimaryBroadcast(2 * c, "domain").id)
+        self.assertEqual((c * broad2), pybamm.PrimaryBroadcast(c * 2, "domain"))
+        self.assertEqual((broad2 * c), pybamm.PrimaryBroadcast(2 * c, "domain"))
 
         # multiplication with matrix zero
         self.assertIsInstance((b * v), pybamm.Array)
@@ -517,34 +501,38 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((f * v1), f)
         self.assertEqual((v1 * f), f)
         # multiplication with matrix minus one
-        self.assertEqual((f * (-v1)).id, (-f).id)
-        self.assertEqual(((-v1) * f).id, (-f).id)
+        self.assertEqual((f * (-v1)), (-f))
+        self.assertEqual(((-v1) * f), (-f))
         # multiplication with broadcast
-        self.assertEqual((var * broad2).id, (var * 2).id)
-        self.assertEqual((broad2 * var).id, (2 * var).id)
+        self.assertEqual((var * broad2), (var * 2))
+        self.assertEqual((broad2 * var), (2 * var))
         # multiplication with broadcast one
-        self.assertEqual((var * broad1).id, var.id)
-        self.assertEqual((broad1 * var).id, var.id)
+        self.assertEqual((var * broad1), var)
+        self.assertEqual((broad1 * var), var)
         # multiplication with broadcast minus one
-        self.assertEqual((var * -broad1).id, (-var).id)
-        self.assertEqual((-broad1 * var).id, (-var).id)
+        self.assertEqual((var * -broad1), (-var))
+        self.assertEqual((-broad1 * var), (-var))
 
         # division by itself
-        self.assertEqual((c / c).id, pybamm.Scalar(1).id)
-        self.assertEqual((broad2 / broad2).id, broad1.id)
+        self.assertEqual((c / c), pybamm.Scalar(1))
+        self.assertEqual((broad2 / broad2), broad1)
         # division with a negation
-        self.assertEqual((-c / -f).id, (c / f).id)
-        self.assertEqual((-c / 4).id, (c / -4).id)
-        self.assertEqual((4 / -c).id, (-4 / c).id)
+        self.assertEqual((-c / -f), (c / f))
+        self.assertEqual((-c / 4), (c / -4))
+        self.assertEqual((4 / -c), (-4 / c))
         # division with broadcasts
-        self.assertEqual((c / broad2).id, pybamm.PrimaryBroadcast(c / 2, "domain").id)
-        self.assertEqual((broad2 / c).id, pybamm.PrimaryBroadcast(2 / c, "domain").id)
+        self.assertEqual((c / broad2), pybamm.PrimaryBroadcast(c / 2, "domain"))
+        self.assertEqual((broad2 / c), pybamm.PrimaryBroadcast(2 / c, "domain"))
         # division with matrix one
         self.assertEqual((f / v1), f)
-        self.assertEqual((f / -v1).id, (-f).id)
+        self.assertEqual((f / -v1), (-f))
         # division by zero
         with self.assertRaises(ZeroDivisionError):
             b / a
+
+        # division with a common term
+        self.assertEqual((2 * c) / (2 * var), (c / var))
+        self.assertEqual((c * 2) / (var * 2), (c / var))
 
     def test_binary_simplifications_concatenations(self):
         def conc_broad(x, y, z):
@@ -562,9 +550,9 @@ class TestBinaryOperators(unittest.TestCase):
             pybamm.InputParameter("y"),
             pybamm.InputParameter("z"),
         )
-        self.assertEqual((a + 4).id, conc_broad(5, 6, 7).id)
-        self.assertEqual((4 + a).id, conc_broad(5, 6, 7).id)
-        self.assertEqual((a + b).id, conc_broad(12, 14, 16).id)
+        self.assertEqual((a + 4), conc_broad(5, 6, 7))
+        self.assertEqual((4 + a), conc_broad(5, 6, 7))
+        self.assertEqual((a + b), conc_broad(12, 14, 16))
         self.assertIsInstance((a + c), pybamm.Concatenation)
 
         # No simplifications if are Variable or StateVector objects
@@ -580,71 +568,127 @@ class TestBinaryOperators(unittest.TestCase):
         # MatMul simplifications that often appear when discretising spatial operators
         A = pybamm.Matrix(np.random.rand(10, 10))
         B = pybamm.Matrix(np.random.rand(10, 10))
+        # C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
-        d = pybamm.Vector(np.random.rand(10))
-        e = pybamm.Scalar(5)
-        f = pybamm.Scalar(7)
+        # var2 = pybamm.StateVector(slice(10, 20))
+        vec = pybamm.Vector(np.random.rand(10))
 
         # Do A@B first if it is constant
         expr = A @ (B @ var)
-        self.assertEqual(expr.id, ((A @ B) @ var).id)
+        self.assertEqual(expr, ((A @ B) @ var))
 
         # Distribute the @ operator to a sum if one of the symbols being summed is
         # constant
-        expr = A @ (var + d)
-        self.assertEqual(expr.id, ((A @ var) + (A @ d)).id)
+        expr = A @ (var + vec)
+        self.assertEqual(expr, ((A @ var) + (A @ vec)))
+        expr = A @ (var - vec)
+        self.assertEqual(expr, ((A @ var) - (A @ vec)))
 
-        expr = A @ ((B @ var) + d)
-        self.assertEqual(expr.id, (((A @ B) @ var) + (A @ d)).id)
+        expr = A @ ((B @ var) + vec)
+        self.assertEqual(expr, (((A @ B) @ var) + (A @ vec)))
+        expr = A @ ((B @ var) - vec)
+        self.assertEqual(expr, (((A @ B) @ var) - (A @ vec)))
+
+        # Distribute the @ operator to a sum if both symbols being summed are matmuls
+        # expr = A @ (B @ var + C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
+        # expr = A @ (B @ var - C @ var2)
+        # self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
 
         # Reduce (A@var + B@var) to ((A+B)@var)
         expr = A @ var + B @ var
-        self.assertEqual(expr.id, ((A + B) @ var).id)
+        self.assertEqual(expr, ((A + B) @ var))
 
         # Do A*e first if it is constant
-        expr = A @ (e * var)
-        self.assertEqual(expr.id, ((A * e) @ var).id)
-        expr = A @ (var * e)
-        self.assertEqual(expr.id, ((A * e) @ var).id)
+        expr = A @ (5 * var)
+        self.assertEqual(expr, ((A * 5) @ var))
+        expr = A @ (var * 5)
+        self.assertEqual(expr, ((A * 5) @ var))
         # Do A/e first if it is constant
-        expr = A @ (var / e)
-        self.assertEqual(expr.id, ((A / e) @ var).id)
+        expr = A @ (var / 5)
+        self.assertEqual(expr, ((A / 5) @ var))
         # Do (d*A) first if it is constant
-        expr = d * (A @ var)
-        self.assertEqual(expr.id, ((d * A) @ var).id)
-        expr = (A @ var) * d
-        self.assertEqual(expr.id, ((d * A) @ var).id)
+        expr = vec * (A @ var)
+        self.assertEqual(expr, ((vec * A) @ var))
+        expr = (A @ var) * vec
+        self.assertEqual(expr, ((vec * A) @ var))
         # Do (A/d) first if it is constant
-        expr = (A @ var) / d
-        self.assertEqual(expr.id, ((A / d) @ var).id)
+        expr = (A @ var) / vec
+        self.assertEqual(expr, ((A / vec) @ var))
+
+        # simplify additions and subtractions
+        expr = 7 + (var + 5)
+        self.assertEqual(expr, (12 + var))
+        expr = 7 + (5 + var)
+        self.assertEqual(expr, (12 + var))
+        expr = (var + 5) + 7
+        self.assertEqual(expr, (var + 12))
+        expr = (5 + var) + 7
+        self.assertEqual(expr, (12 + var))
+        expr = 7 + (var - 5)
+        self.assertEqual(expr, (2 + var))
+        expr = 7 + (5 - var)
+        self.assertEqual(expr, (12 - var))
+        expr = (var - 5) + 7
+        self.assertEqual(expr, (var + 2))
+        expr = (5 - var) + 7
+        self.assertEqual(expr, (12 - var))
+        expr = 7 - (var + 5)
+        self.assertEqual(expr, (2 - var))
+        expr = 7 - (5 + var)
+        self.assertEqual(expr, (2 - var))
+        expr = (var + 5) - 7
+        self.assertEqual(expr, (var + -2))
+        expr = (5 + var) - 7
+        self.assertEqual(expr, (-2 + var))
+        expr = 7 - (var - 5)
+        self.assertEqual(expr, (12 - var))
+        expr = 7 - (5 - var)
+        self.assertEqual(expr, (2 + var))
+        expr = (var - 5) - 7
+        self.assertEqual(expr, (var - 12))
+        expr = (5 - var) - 7
+        self.assertEqual(expr, (-2 - var))
 
         # simplify multiplications and divisions
-        expr = f * (var * e)
-        self.assertEqual(expr.id, ((f * e) * var).id)
-        expr = (var * e) * f
-        self.assertEqual(expr.id, (var * (e * f)).id)
-        expr = f * (e * var)
-        self.assertEqual(expr.id, ((f * e) * var).id)
-        expr = (e * var) * f
-        self.assertEqual(expr.id, ((e * f) * var).id)
-        expr = f * (var / e)
-        self.assertEqual(expr.id, ((f / e) * var).id)
-        expr = (var / e) * f
-        self.assertEqual(expr.id, (var * (f / e)).id)
-        expr = (var * e) / f
-        self.assertEqual(expr.id, (var * (e / f)).id)
-        expr = (e * var) / f
-        self.assertEqual(expr.id, ((e / f) * var).id)
+        expr = 7 * (var * 5)
+        self.assertEqual(expr, (35 * var))
+        expr = (var * 5) * 7
+        self.assertEqual(expr, (var * 35))
+        expr = 7 * (5 * var)
+        self.assertEqual(expr, (35 * var))
+        expr = (5 * var) * 7
+        self.assertEqual(expr, (35 * var))
+        expr = 7 * (var / 5)
+        self.assertEqual(expr, ((7 / 5) * var))
+        expr = (var / 5) * 7
+        self.assertEqual(expr, (var * (7 / 5)))
+        expr = (var * 5) / 7
+        self.assertEqual(expr, (var * (5 / 7)))
+        expr = (5 * var) / 7
+        self.assertEqual(expr, ((5 / 7) * var))
+        expr = 5 / (7 * var)
+        self.assertEqual(expr, ((5 / 7) / var))
+        expr = 5 / (var * 7)
+        self.assertEqual(expr, ((5 / 7) / var))
+        expr = (var / 5) / 7
+        self.assertEqual(expr, (var / 35))
+        expr = (5 / var) / 7
+        self.assertEqual(expr, ((5 / 7) / var))
+        expr = 5 / (7 / var)
+        self.assertEqual(expr, ((5 / 7) * var))
+        expr = 5 / (var / 7)
+        self.assertEqual(expr, (35 / var))
 
         # use power rules on multiplications and divisions
-        expr = (var * e) ** 2
-        self.assertEqual(expr.id, (var ** 2 * e ** 2).id)
-        expr = (e * var) ** 2
-        self.assertEqual(expr.id, (e ** 2 * var ** 2).id)
-        expr = (var / e) ** 2
-        self.assertEqual(expr.id, (var ** 2 / e ** 2).id)
-        expr = (e / var) ** 2
-        self.assertEqual(expr.id, (e ** 2 / var ** 2).id)
+        expr = (var * 5) ** 2
+        self.assertEqual(expr, (var**2 * 25))
+        expr = (5 * var) ** 2
+        self.assertEqual(expr, (25 * var**2))
+        expr = (var / 5) ** 2
+        self.assertEqual(expr, (var**2 / 25))
+        expr = (5 / var) ** 2
+        self.assertEqual(expr, (25 / var**2))
 
     def test_inner_simplifications(self):
         a1 = pybamm.Scalar(0)
@@ -673,7 +717,7 @@ class TestBinaryOperators(unittest.TestCase):
     def test_to_equation(self):
         # Test print_name
         pybamm.Addition.print_name = "test"
-        self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.symbols("test"))
+        self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))
 
         # Test Power
         self.assertEqual(pybamm.Power(7, 2).to_equation(), 49)

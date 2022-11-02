@@ -6,13 +6,15 @@ from .base_lead_acid_model import BaseModel
 
 
 class BaseHigherOrderModel(BaseModel):
-    """Base model for higher-order models for lead-acid, from [1]_.
+    """
+    Base model for higher-order models for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -36,10 +38,12 @@ class BaseHigherOrderModel(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_leading_order_model()
+        self.set_interface_utilisation_submodel()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
         # Average interface submodel to get average first-order potential differences
+        self.set_open_circuit_potential_submodel()
         self.set_average_interfacial_submodel()
         # Electrolyte and solid submodels to get full first-order potentials
         self.set_negative_electrode_submodel()
@@ -50,11 +54,12 @@ class BaseHigherOrderModel(BaseModel):
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
         self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
+        self.set_transport_efficiency_submodels()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_interface_submodel()
 
         if build:
             self.build_model()
@@ -98,34 +103,22 @@ class BaseHigherOrderModel(BaseModel):
             leading_order_model.variables["X-averaged electrolyte concentration"]
         ]
 
-        # Reset sums
-        self.variables.update(
-            {
-                "Sum of electrolyte reaction source terms": 0,
-                "Sum of negative electrode electrolyte reaction source terms": 0,
-                "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged negative electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of x-averaged positive electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of interfacial current densities": 0,
-                "Sum of negative electrode interfacial current densities": 0,
-                "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged negative electrode interfacial current densities": 0,
-                "Sum of x-averaged positive electrode interfacial current densities": 0,
-            }
-        )
-
     def set_average_interfacial_submodel(self):
         self.submodels[
             "x-averaged negative interface"
-        ] = pybamm.interface.InverseFirstOrderKinetics(
-            self.param, "Negative", self.leading_order_reaction_submodels["Negative"]
+        ] = pybamm.kinetics.InverseFirstOrderKinetics(
+            self.param,
+            "negative",
+            self.leading_order_reaction_submodels["negative"],
+            self.options,
         )
         self.submodels[
             "x-averaged positive interface"
-        ] = pybamm.interface.InverseFirstOrderKinetics(
-            self.param, "Positive", self.leading_order_reaction_submodels["Positive"]
+        ] = pybamm.kinetics.InverseFirstOrderKinetics(
+            self.param,
+            "positive",
+            self.leading_order_reaction_submodels["positive"],
+            self.options,
         )
 
     def set_electrolyte_conductivity_submodel(self):
@@ -137,12 +130,12 @@ class BaseHigherOrderModel(BaseModel):
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Negative"
+            self.param, "negative"
         )
 
     def set_positive_electrode_submodel(self):
         self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
-            self.param, "Positive"
+            self.param, "positive"
         )
 
     def set_full_interface_submodel(self):
@@ -151,36 +144,43 @@ class BaseHigherOrderModel(BaseModel):
         densities
         """
         # Main reaction
-        self.submodels["negative interface"] = pybamm.interface.FirstOrderKinetics(
+        self.submodels["negative interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
-            "Negative",
-            pybamm.interface.ButlerVolmer(
-                self.param, "Negative", "lead-acid main", self.options
+            "negative",
+            pybamm.kinetics.SymmetricButlerVolmer(
+                self.param, "negative", "lead-acid main", self.options
             ),
+            self.options,
         )
-        self.submodels["positive interface"] = pybamm.interface.FirstOrderKinetics(
+        self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
-            "Positive",
-            pybamm.interface.ButlerVolmer(
-                self.param, "Positive", "lead-acid main", self.options
+            "positive",
+            pybamm.kinetics.SymmetricButlerVolmer(
+                self.param, "positive", "lead-acid main", self.options
             ),
+            self.options,
         )
 
         # Oxygen
         if self.options["hydrolysis"] == "true":
             self.submodels[
                 "positive oxygen interface"
-            ] = pybamm.interface.FirstOrderKinetics(
+            ] = pybamm.kinetics.FirstOrderKinetics(
                 self.param,
-                "Positive",
-                pybamm.interface.ForwardTafel(
-                    self.param, "Positive", "lead-acid oxygen", self.options
+                "positive",
+                pybamm.kinetics.ForwardTafel(
+                    self.param, "positive", "lead-acid oxygen", self.options
                 ),
+                self.options,
             )
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="composite"
+            ] = pybamm.kinetics.DiffusionLimited(
+                self.param,
+                "negative",
+                "lead-acid oxygen",
+                self.options,
+                order="composite",
             )
 
     def set_full_convection_submodel(self):
@@ -198,19 +198,21 @@ class BaseHigherOrderModel(BaseModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.ReactionDriven(
+        self.submodels["full porosity"] = pybamm.porosity.ReactionDrivenODE(
             self.param, self.options, False
         )
 
 
 class FOQS(BaseHigherOrderModel):
-    """First-order quasi-static model for lead-acid, from [1]_.
+    """
+    First-order quasi-static model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -246,7 +248,8 @@ class FOQS(BaseHigherOrderModel):
 
 
 class Composite(BaseHigherOrderModel):
-    """Composite model for lead-acid, from [1]_.
+    """
+    Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
@@ -271,19 +274,21 @@ class Composite(BaseHigherOrderModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.ReactionDriven(
+        self.submodels["full porosity"] = pybamm.porosity.ReactionDrivenODE(
             self.param, self.options, False
         )
 
 
 class CompositeExtended(Composite):
-    """Extended composite model for lead-acid.
+    """
+    Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -314,7 +319,8 @@ class CompositeExtended(Composite):
 
 
 class CompositeAverageCorrection(Composite):
-    """Extended composite model for lead-acid.
+    """
+    Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`

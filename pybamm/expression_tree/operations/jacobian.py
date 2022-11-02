@@ -46,14 +46,14 @@ class Jacobian(object):
         """
 
         try:
-            return self._known_jacs[symbol.id]
+            return self._known_jacs[symbol]
         except KeyError:
             jac = self._jac(symbol, variable)
-            self._known_jacs[symbol.id] = jac
+            self._known_jacs[symbol] = jac
             return jac
 
     def _jac(self, symbol, variable):
-        """ See :meth:`Jacobian.jac()`. """
+        """See :meth:`Jacobian.jac()`."""
 
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -76,9 +76,7 @@ class Jacobian(object):
             jac = symbol._function_jac(children_jacs)
 
         elif isinstance(symbol, pybamm.Concatenation):
-            children_jacs = [
-                self.jac(child, variable) for child in symbol.cached_children
-            ]
+            children_jacs = [self.jac(child, variable) for child in symbol.children]
             if len(children_jacs) == 1:
                 jac = children_jacs[0]
             else:

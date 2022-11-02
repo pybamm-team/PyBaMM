@@ -66,6 +66,14 @@ class BaseOutputTest(object):
         self.solution = solution
         self.operating_condition = operating_condition
 
+        # Get phase names
+        self.phase_name_n = (
+            "" if self.model.options.negative["particle phases"] == "1" else "primary "
+        )
+        self.phase_name_p = (
+            "" if self.model.options.positive["particle phases"] == "1" else "primary "
+        )
+
         # Use dimensional time and space
         self.t = solution.t * model.timescale_eval
         geo = pybamm.geometric_parameters
@@ -82,8 +90,8 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n_typ = param.evaluate(model.param.R_n_typ)
-            R_p_typ = param.evaluate(model.param.R_p_typ)
+            R_n_typ = model.length_scales["negative particle"].evaluate()
+            R_p_typ = model.length_scales["positive particle"].evaluate()
             self.r_n = disc.mesh["negative particle"].nodes * R_n_typ
             self.r_p = disc.mesh["positive particle"].nodes * R_p_typ
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n_typ
@@ -93,8 +101,8 @@ class BaseOutputTest(object):
                 self.R_p = disc.mesh["positive particle size"].nodes * R_p_typ
 
         # Useful parameters
-        self.l_n = param.evaluate(geo.l_n)
-        self.l_p = param.evaluate(geo.l_p)
+        self.l_n = param.evaluate(geo.n.l)
+        self.l_p = param.evaluate(geo.p.l)
 
         current_param = self.model.param.current_with_time
 
@@ -105,13 +113,19 @@ class VoltageTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.eta_r_n = solution["Negative electrode reaction overpotential [V]"]
-        self.eta_r_p = solution["Positive electrode reaction overpotential [V]"]
+        self.eta_r_n = solution[
+            f"Negative electrode {self.phase_name_n}reaction overpotential [V]"
+        ]
+        self.eta_r_p = solution[
+            f"Positive electrode {self.phase_name_p}reaction overpotential [V]"
+        ]
         self.eta_r_n_av = solution[
-            "X-averaged negative electrode reaction overpotential [V]"
+            f"X-averaged negative electrode {self.phase_name_n}"
+            "reaction overpotential [V]"
         ]
         self.eta_r_p_av = solution[
-            "X-averaged positive electrode reaction overpotential [V]"
+            f"X-averaged positive electrode {self.phase_name_p}"
+            "reaction overpotential [V]"
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
@@ -121,10 +135,12 @@ class VoltageTests(BaseOutputTest):
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
 
         self.ocp_n_av = solution[
-            "X-averaged negative electrode open circuit potential [V]"
+            f"X-averaged negative electrode {self.phase_name_n}"
+            "open circuit potential [V]"
         ]
         self.ocp_p_av = solution[
-            "X-averaged positive electrode open circuit potential [V]"
+            f"X-averaged positive electrode {self.phase_name_p}"
+            "open circuit potential [V]"
         ]
         self.ocv_av = solution["X-averaged open circuit voltage [V]"]
         self.voltage = solution["Terminal voltage [V]"]
@@ -144,8 +160,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(self.eta_r_n(t, x_n), tol)
             np.testing.assert_array_less(-self.eta_r_p(t, x_p), tol)
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_r_n(t, x_n), 0)
-            np.testing.assert_array_equal(-self.eta_r_p(t, x_p), 0)
+            np.testing.assert_array_almost_equal(self.eta_r_n(t, x_n), 0)
+            np.testing.assert_array_almost_equal(-self.eta_r_p(t, x_p), 0)
 
     def test_overpotentials(self):
         """Testing that all are:
@@ -164,8 +180,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(-self.delta_phi_s_av(self.t), tol)
 
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_r_av(self.t), 0)
-            np.testing.assert_array_equal(self.eta_e_av(self.t), 0)
+            np.testing.assert_array_almost_equal(self.eta_r_av(self.t), 0)
+            np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=16)
             # For some reason SPM gives delta_phi_s_av ~ 1e-17
             np.testing.assert_array_almost_equal(
                 self.delta_phi_s_av(self.t), 0, decimal=16
@@ -254,30 +270,31 @@ class ParticleConcentrationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.c_s_n = solution["Negative particle concentration"]
-        self.c_s_p = solution["Positive particle concentration"]
+        self.c_s_n = solution[f"Negative {self.phase_name_n}particle concentration"]
+        self.c_s_p = solution[f"Positive {self.phase_name_p}particle concentration"]
 
-        self.c_s_n_rav = solution["R-averaged negative particle concentration"]
-        self.c_s_p_rav = solution["R-averaged positive particle concentration"]
+        self.c_s_n_rav = solution[
+            f"R-averaged negative {self.phase_name_n}particle concentration"
+        ]
+        self.c_s_p_rav = solution[
+            f"R-averaged positive {self.phase_name_p}particle concentration"
+        ]
 
-        self.c_s_n_surf = solution["Negative particle surface concentration"]
-        self.c_s_p_surf = solution["Positive particle surface concentration"]
+        self.c_s_n_surf = solution[
+            f"Negative {self.phase_name_n}particle surface concentration"
+        ]
+        self.c_s_p_surf = solution[
+            f"Positive {self.phase_name_p}particle surface concentration"
+        ]
 
         self.c_s_n_tot = solution["Total lithium in negative electrode [mol]"]
         self.c_s_p_tot = solution["Total lithium in positive electrode [mol]"]
 
-        self.N_s_n = solution["Negative particle flux"]
-        self.N_s_p = solution["Positive particle flux"]
+        self.N_s_n = solution[f"Negative {self.phase_name_n}particle flux"]
+        self.N_s_p = solution[f"Positive {self.phase_name_p}particle flux"]
 
-        self.c_SEI_n_tot = solution["Loss of lithium to negative electrode SEI [mol]"]
-        self.c_SEI_p_tot = solution["Loss of lithium to positive electrode SEI [mol]"]
-
-        self.c_Li_n_tot = solution[
-            "Loss of lithium to negative electrode lithium plating [mol]"
-        ]
-        self.c_Li_p_tot = solution[
-            "Loss of lithium to positive electrode lithium plating [mol]"
-        ]
+        self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
+        self.c_Li_tot = solution["Loss of lithium to lithium plating [mol]"]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.
@@ -316,19 +333,20 @@ class ParticleConcentrationTests(BaseOutputTest):
             pos_end_vs_start = self.c_s_p_rav(t[-1], x_p) - self.c_s_p_rav(t[0], x_p)
         elif self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
-            # Test the concentration variables that depend on particle size
-            neg_diff = self.c_s_n_dist(t[1:], r=r_n, R=R_n) - self.c_s_n_dist(
-                t[:-1], r=r_n, R=R_n
+            # Test the concentration variables that depend on x-R (surface values only,
+            # as 3D vars not implemented)
+            neg_diff = self.c_s_n_surf_dist(t[1:], x=x_n, R=R_n) - self.c_s_n_surf_dist(
+                t[:-1], x=x_n, R=R_n
             )
-            pos_diff = self.c_s_p_dist(t[1:], r=r_p, R=R_p) - self.c_s_p_dist(
-                t[:-1], r=r_p, R=R_p
+            pos_diff = self.c_s_p_surf_dist(t[1:], x=x_p, R=R_p) - self.c_s_p_surf_dist(
+                t[:-1], x=x_p, R=R_p
             )
-            neg_end_vs_start = self.c_s_n_dist(t[-1], r=r_n, R=R_n) - self.c_s_n_dist(
-                t[0], r=r_n, R=R_n
-            )
-            pos_end_vs_start = self.c_s_p_dist(t[-1], r=r_p, R=R_p) - self.c_s_p_dist(
-                t[0], r=r_p, R=R_p
-            )
+            neg_end_vs_start = self.c_s_n_surf_dist(
+                t[-1], x=x_n, R=R_n
+            ) - self.c_s_n_surf_dist(t[0], x=x_n, R=R_n)
+            pos_end_vs_start = self.c_s_p_surf_dist(
+                t[-1], x=x_p, R=R_p
+            ) - self.c_s_p_surf_dist(t[0], x=x_p, R=R_p)
             tol = 1e-15
         else:
             neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
@@ -363,34 +381,39 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
         if self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
+            # Cannot have 3D processed variables, so test concs that depend on
+            # r-R and x-R
+
+            # r-R (x-averaged)
             np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
 
             np.testing.assert_array_less(self.c_s_n_dist(t, r=r_n, R=R_n), 1)
             np.testing.assert_array_less(self.c_s_p_dist(t, r=r_p, R=R_p), 1)
 
+            # x-R (surface concentrations)
+            np.testing.assert_array_less(-self.c_s_n_surf_dist(t, x=x_n, R=R_n), 0)
+            np.testing.assert_array_less(-self.c_s_p_surf_dist(t, x=x_p, R=R_p), 0)
+
+            np.testing.assert_array_less(self.c_s_n_surf_dist(t, x=x_n, R=R_n), 1)
+            np.testing.assert_array_less(self.c_s_p_surf_dist(t, x=x_p, R=R_p), 1)
+
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is
         constant."""
-        self.c_s_tot = (
+        c_s_tot = (
             self.c_s_n_tot(self.solution.t)
             + self.c_s_p_tot(self.solution.t)
-            + self.c_SEI_n_tot(self.solution.t)
-            + self.c_SEI_p_tot(self.solution.t)
-            + self.c_Li_n_tot(self.solution.t)
-            + self.c_Li_p_tot(self.solution.t)
+            + self.c_SEI_tot(self.solution.t)
+            + self.c_Li_tot(self.solution.t)
         )
-        diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
-        if "profile" in self.model.options["particle"]:
+        diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
+        if self.model.options["particle"] == "quartic profile":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
-        elif self.model.options["particle size"] == "distribution":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=10)
+        # elif self.model.options["particle size"] == "distribution":
+        #     np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
-        elif self.model.options["SEI"] == "ec reaction limited":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=11)
-        elif self.model.options["lithium plating"] == "irreversible":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=13)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
@@ -602,10 +625,10 @@ class PotentialTests(BaseOutputTest):
         t = self.t
 
         np.testing.assert_array_almost_equal(
-            self.phi_s_n_av(t) - self.phi_e_n_av(t), self.delta_phi_n_av(t)
+            self.phi_s_n_av(t) - self.phi_e_n_av(t), self.delta_phi_n_av(t), decimal=4
         )
         np.testing.assert_array_almost_equal(
-            self.phi_s_p_av(t) - self.phi_e_p_av(t), self.delta_phi_p_av(t)
+            self.phi_s_p_av(t) - self.phi_e_p_av(t), self.delta_phi_p_av(t), decimal=4
         )
 
     def test_gradient_splitting(self):
@@ -633,36 +656,36 @@ class CurrentTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.j = solution["Interfacial current density"]
-        self.j0 = solution["Exchange current density"]
-
-        self.j_n = solution["Negative electrode interfacial current density"]
-        self.j_p = solution["Positive electrode interfacial current density"]
-        self.j_n_av = solution[
-            "X-averaged negative electrode interfacial current density"
+        self.a_j_n = solution[
+            "Negative electrode volumetric interfacial current density"
         ]
-        self.j_p_av = solution[
-            "X-averaged positive electrode interfacial current density"
+        self.a_j_p = solution[
+            "Positive electrode volumetric interfacial current density"
         ]
-        self.j_n_sei = solution["Negative electrode SEI interfacial current density"]
-        self.j_p_sei = solution["Positive electrode SEI interfacial current density"]
-        self.j_n_sei_av = solution[
-            "X-averaged negative electrode SEI interfacial current density"
+        self.a_j_n_av = solution[
+            "X-averaged negative electrode volumetric interfacial current density"
         ]
-        self.j_p_sei_av = solution[
-            "X-averaged positive electrode SEI interfacial current density"
+        self.a_j_p_av = solution[
+            "X-averaged positive electrode volumetric interfacial current density"
         ]
-
-        self.j0_n = solution["Negative electrode exchange current density"]
-        self.j0_p = solution["Positive electrode exchange current density"]
+        self.a_j_n_sei = solution[
+            "Negative electrode SEI volumetric interfacial current density"
+        ]
+        self.a_j_n_sei_av = solution[
+            "X-averaged negative electrode SEI volumetric interfacial current density"
+        ]
+        self.a_j_n_pl = solution[
+            "Negative electrode lithium plating volumetric interfacial current density"
+        ]
+        self.a_j_n_pl_av = solution[
+            "X-averaged negative electrode lithium plating "
+            "volumetric interfacial current density"
+        ]
 
         self.i_s_n = solution["Negative electrode current density"]
         self.i_s_p = solution["Positive electrode current density"]
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
-
-        self.a_n = solution["Negative electrode surface area to volume ratio"]
-        self.a_p = solution["Positive electrode surface area to volume ratio"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)
@@ -671,19 +694,16 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(self.t, self.x_n)
-                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
+                self.a_j_n(self.t, self.x_n)
+                + self.a_j_n_sei(self.t, self.x_n)
+                + self.a_j_n_pl(self.t, self.x_n),
                 axis=0,
             ),
             self.i_cell / self.l_n,
             decimal=3,
         )
         np.testing.assert_array_almost_equal(
-            np.mean(
-                self.a_p(self.t, self.x_p)
-                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
-                axis=0,
-            ),
+            np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.l_p,
             decimal=4,
         )
@@ -753,9 +773,9 @@ class VelocityTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        beta_n = self.model.param.beta_n
+        beta_n = self.model.param.n.beta
         beta_n = self.param.evaluate(beta_n)
-        beta_p = self.model.param.beta_p
+        beta_p = self.model.param.p.beta
         beta_p = self.param.evaluate(beta_p)
 
         np.testing.assert_array_almost_equal(
@@ -783,9 +803,9 @@ class DegradationTests(BaseOutputTest):
 
     def test_degradation_modes(self):
         """Test degradation modes are between 0 and 100%"""
-        np.testing.assert_array_less(-1e-3, self.LLI(self.t))
-        np.testing.assert_array_less(-1e-3, self.LAM_ne(self.t))
-        np.testing.assert_array_less(-1e-3, self.LAM_pe(self.t))
+        np.testing.assert_array_less(-3e-3, self.LLI(self.t))
+        np.testing.assert_array_less(-1e-13, self.LAM_ne(self.t))
+        np.testing.assert_array_less(-1e-13, self.LAM_pe(self.t))
         np.testing.assert_array_less(self.LLI(self.t), 100)
         np.testing.assert_array_less(self.LAM_ne(self.t), 100)
         np.testing.assert_array_less(self.LAM_pe(self.t), 100)
