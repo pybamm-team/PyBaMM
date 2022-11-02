@@ -149,10 +149,12 @@ class EffectiveResistance(BaseEffectiveResistance):
         # Set model variables: Note: we solve using a scaled version that is
         # better conditioned
         R_cn_scaled = pybamm.Variable(
-            "Scaled negative current collector resistance", domain="current collector"
+            "Scaled negative current collector resistance [Ohm]",
+            domain="current collector",
         )
         R_cp_scaled = pybamm.Variable(
-            "Scaled positive current collector resistance", domain="current collector"
+            "Scaled positive current collector resistance [Ohm]",
+            domain="current collector",
         )
         R_cn = delta * R_cn_scaled / (l_cn * sigma_cn_dbl_prime)
         R_cp = delta * R_cp_scaled / (l_cp * sigma_cp_dbl_prime)

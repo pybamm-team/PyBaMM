@@ -79,8 +79,8 @@ class TestSetInitialSOC(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
 
-        V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-        V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
+        V_min = parameter_values.evaluate(param.voltage_low_cut)
+        V_max = parameter_values.evaluate(param.voltage_high_cut)
         C_n = parameter_values.evaluate(param.n.cap_init)
         C_p = parameter_values.evaluate(param.p.cap_init)
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)

@@ -108,10 +108,6 @@ class FunctionParameter(pybamm.Symbol):
             if print_name.startswith("_"):
                 self.print_name = None
             else:
-                if print_name.endswith("_dimensional"):
-                    print_name = print_name[: -len("_dimensional")]
-                elif print_name.endswith("_dim"):
-                    print_name = print_name[: -len("_dim")]
                 try:
                     parent_param = frame.f_locals["self"]
                 except KeyError:

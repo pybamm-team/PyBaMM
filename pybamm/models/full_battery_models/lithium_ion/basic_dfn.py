@@ -28,12 +28,7 @@ class BasicDFN(BaseModel):
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
-        super().__init__({"timescale": 1}, name)
-        self._length_scales = {
-            "negative electrode": pybamm.Scalar(1),
-            "separator": pybamm.Scalar(1),
-            "positive electrode": pybamm.Scalar(1),
-        }
+        super().__init__(name)
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
@@ -46,22 +41,18 @@ class BasicDFN(BaseModel):
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
-        c_e_n_var = pybamm.Variable(
+        c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]", domain="negative electrode"
         )
-        c_e_s_var = pybamm.Variable(
+        c_e_s = pybamm.Variable(
             "Separator electrolyte concentration [mol.m-3]", domain="separator"
         )
-        c_e_p_var = pybamm.Variable(
+        c_e_p = pybamm.Variable(
             "Positive electrolyte concentration [mol.m-3]", domain="positive electrode"
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
-        c_e_var = pybamm.concatenation(c_e_n_var, c_e_s_var, c_e_p_var)
-        c_e = c_e_var * param.c_e_typ
-        c_e_n = c_e_n_var * param.c_e_typ
-        c_e_s = c_e_s_var * param.c_e_typ
-        c_e_p = c_e_p_var * param.c_e_typ
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
@@ -85,21 +76,19 @@ class BasicDFN(BaseModel):
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
         # domains
-        c_s_n_var = pybamm.Variable(
+        c_s_n = pybamm.Variable(
             "Negative particle concentration",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
-        c_s_p_var = pybamm.Variable(
+        c_s_p = pybamm.Variable(
             "Positive particle concentration",
             domain="positive particle",
             auxiliary_domains={"secondary": "positive electrode"},
         )
-        c_s_n = c_s_n_var * param.n.prim.c_max
-        c_s_p = c_s_p_var * param.p.prim.c_max
 
         # Constant temperature
-        T = param.T_init_dim
+        T = param.T_init
 
         ######################
         # Other set-up
@@ -130,34 +119,28 @@ class BasicDFN(BaseModel):
         tor = pybamm.concatenation(
             eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
         )
-        a_n = param.n.prim.a_typ
-        a_p = param.p.prim.a_typ
+        a_n = 3 * param.n.prim.epsilon_s_av / param.n.prim.R_typ
+        a_p = 3 * param.p.prim.epsilon_s_av / param.p.prim.R_typ
 
         # Interfacial reactions
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.n.prim.j0_dimensional(c_e_n, c_s_surf_n, T)
-        eta_n = (
-            phi_s_n
-            - phi_e_n
-            - param.n.prim.U_dimensional(c_s_surf_n / param.n.prim.c_max, T)
-        )
+        sto_surf_n = c_s_surf_n / param.n.prim.c_max
+        j0_n = param.n.prim.j0(c_e_n, c_s_surf_n, T)
+        eta_n = phi_s_n - phi_e_n - param.n.prim.U(sto_surf_n, T)
         Feta_RT_n = param.F * eta_n / (param.R * T)
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
-        # j_n = pybamm.PrimaryBroadcast(i_cell / (a_n * param.n.L), "negative electrode")
+
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.p.prim.j0_dimensional(c_e_p, c_s_surf_p, T)
-        eta_p = (
-            phi_s_p
-            - phi_e_p
-            - param.p.prim.U_dimensional(c_s_surf_p / param.p.prim.c_max, T)
-        )
+        sto_surf_p = c_s_surf_p / param.p.prim.c_max
+        j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
+        eta_p = phi_s_p - phi_e_p - param.p.prim.U(sto_surf_p, T)
         Feta_RT_p = param.F * eta_p / (param.R * T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
-        # j_p = pybamm.PrimaryBroadcast(-i_cell / (a_p * param.p.L), "positive electrode")
+
         j = pybamm.concatenation(j_n, j_s, j_p)
 
         a_j_n = a_n * j_n
@@ -180,43 +163,33 @@ class BasicDFN(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.n.prim.D_dimensional(c_s_n, T) * pybamm.grad(c_s_n_var)
-        N_s_p = -param.p.prim.D_dimensional(c_s_p, T) * pybamm.grad(c_s_p_var)
-        self.rhs[c_s_n_var] = -pybamm.div(N_s_n)
-        self.rhs[c_s_p_var] = -pybamm.div(N_s_p)
+        N_s_n = -param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n] = -pybamm.div(N_s_n)
+        self.rhs[c_s_p] = -pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
-        self.boundary_conditions[c_s_n_var] = {
+        self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_n
-                / (
-                    param.F
-                    * param.n.prim.D_dimensional(c_s_surf_n, T)
-                    * param.n.prim.c_max
-                ),
+                -j_n / (param.F * param.n.prim.D(c_s_surf_n, T)),
                 "Neumann",
             ),
         }
-        self.boundary_conditions[c_s_p_var] = {
+        self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_p
-                / (
-                    param.F
-                    * param.p.prim.D_dimensional(c_s_surf_p, T)
-                    * param.p.prim.c_max
-                ),
+                -j_p / (param.F * param.p.prim.D(c_s_surf_p, T)),
                 "Neumann",
             ),
         }
-        self.initial_conditions[c_s_n_var] = param.n.prim.c_init
-        self.initial_conditions[c_s_p_var] = param.p.prim.c_init
+        self.initial_conditions[c_s_n] = param.n.prim.c_init
+        self.initial_conditions[c_s_p] = param.p.prim.c_init
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.n.sigma_dimensional(T) * eps_s_n**param.n.b_s
+        sigma_eff_n = param.n.sigma(T) * eps_s_n**param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.p.sigma_dimensional(T) * eps_s_p**param.p.b_s
+        sigma_eff_p = param.p.sigma(T) * eps_s_p**param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -234,43 +207,33 @@ class BasicDFN(BaseModel):
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.ocv_init_dim
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Current in the electrolyte
         ######################
-        i_e = (param.kappa_e_dimensional(c_e, T) * tor) * (
-            param.chiRT_over_Fc_dimensional(c_e, T)
-            * pybamm.grad(c_e_var)
-            * param.c_e_typ
-            - pybamm.grad(phi_e)
+        i_e = (param.kappa_e(c_e, T) * tor) * (
+            param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - a_j
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.n.prim.U_init_dim
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # Electrolyte concentration
         ######################
-        N_e = (
-            -tor * param.D_e_dimensional(c_e, T) * pybamm.grad(c_e_var) * param.c_e_typ
+        N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
+        self.rhs[c_e] = (1 / eps) * (
+            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * a_j / param.F
         )
-        self.rhs[c_e_var] = (
-            (1 / eps)
-            * (
-                -pybamm.div(N_e)
-                + (1 - param.t_plus_dimensional(c_e, T)) * a_j / param.F
-            )
-            / param.c_e_typ
-        )
-        self.boundary_conditions[c_e_var] = {
+        self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[c_e_var] = param.c_e_init
+        self.initial_conditions[c_e] = param.c_e_init
 
         ######################
         # (Some) variables
@@ -291,10 +254,6 @@ class BasicDFN(BaseModel):
         }
         # Events specify points at which a solution should terminate
         self.events += [
-            pybamm.Event(
-                "Minimum voltage", voltage - param.voltage_low_cut_dimensional
-            ),
-            pybamm.Event(
-                "Maximum voltage", param.voltage_high_cut_dimensional - voltage
-            ),
+            pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+            pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
         ]

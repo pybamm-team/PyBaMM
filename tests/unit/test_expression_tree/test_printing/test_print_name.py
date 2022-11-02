@@ -23,10 +23,8 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param.p.prim.a_R.print_name, r"a_{R\,p}")
 
         # Test dim and dimensional
-        self.assertEqual(
-            param.n.prim.j0_ref_dimensional.print_name, r"\hat{j0}_{n}^{ref}"
-        )
-        self.assertEqual(param.n.C_dl_dimensional.print_name, r"\hat{C}_{dl\,n}")
+        self.assertEqual(param.n.prim.j0_ref.print_name, r"j0_{n}^{ref}")
+        self.assertEqual(param.n.C_dl.print_name, r"C_{dl\,n}")
 
         # Test bar
         self.assertEqual(param1.c_e_av.print_name, r"\bar{c}_{e}")

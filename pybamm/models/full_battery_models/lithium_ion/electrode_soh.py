@@ -36,8 +36,8 @@ class ElectrodeSOH(pybamm.BaseModel):
 
         param = param or pybamm.LithiumIonParameters()
 
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
+        Un = param.n.prim.U
+        Up = param.p.prim.U
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li")
@@ -109,8 +109,8 @@ class ElectrodeSOHx100(pybamm.BaseModel):
 
         param = param or pybamm.LithiumIonParameters()
 
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
+        Un = param.n.prim.U
+        Up = param.p.prim.U
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li")
@@ -157,8 +157,8 @@ class ElectrodeSOHx0(pybamm.BaseModel):
 
         param = param or pybamm.LithiumIonParameters()
 
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
+        Un = param.n.prim.U
+        Up = param.p.prim.U
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li")
@@ -242,8 +242,7 @@ class ElectrodeSOHSolver:
         x = pybamm.InputParameter("x")
         y = pybamm.InputParameter("y")
         self.OCV_function = parameter_values.process_symbol(
-            self.param.p.prim.U_dimensional(y, T)
-            - self.param.n.prim.U_dimensional(x, T)
+            self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
         )
 
     def _get_electrode_soh_sims_full(self):
@@ -410,8 +409,8 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
 
     param = pybamm.LithiumIonParameters()
 
-    V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-    V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
+    V_min = parameter_values.evaluate(param.voltage_low_cut)
+    V_max = parameter_values.evaluate(param.voltage_high_cut)
     C_n = parameter_values.evaluate(param.n.cap_init)
     C_p = parameter_values.evaluate(param.p.cap_init)
     n_Li = parameter_values.evaluate(param.n_Li_particles_init)

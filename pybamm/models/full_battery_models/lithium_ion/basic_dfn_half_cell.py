@@ -51,46 +51,33 @@ class BasicDFNHalfCell(BaseModel):
         # `ParameterValues` class when the model is processed.
         param = self.param
 
-        R_w_typ = param.p.prim.R_typ
-
-        # Set default length scales
-        self._length_scales = {
-            "separator": param.L_x,
-            "positive electrode": param.L_x,
-            "positive particle": R_w_typ,
-            "current collector y": param.L_z,
-            "current collector z": param.L_z,
-        }
-
         ######################
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        # Define some useful scalings
-        pot_scale = param.potential_scale
-        i_typ = param.current_scale
-
         # Variables that vary spatially are created with a domain.
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration", domain="separator"
+            "Separator electrolyte concentration [mol.m-3]", domain="separator"
         )
         c_e_w = pybamm.Variable(
-            "Positive electrolyte concentration", domain="positive electrode"
+            "Positive electrolyte concentration [mol.m-3]", domain="positive electrode"
         )
         c_e = pybamm.concatenation(c_e_s, c_e_w)
         c_s_w = pybamm.Variable(
-            "Positive particle concentration",
+            "Positive particle concentration [mol.m-3]",
             domain="positive particle",
             auxiliary_domains={"secondary": "positive electrode"},
         )
         phi_s_w = pybamm.Variable(
-            "Positive electrode potential", domain="positive electrode"
+            "Positive electrode potential [V]", domain="positive electrode"
         )
-        phi_e_s = pybamm.Variable("Separator electrolyte potential", domain="separator")
+        phi_e_s = pybamm.Variable(
+            "Separator electrolyte potential [V]", domain="separator"
+        )
         phi_e_w = pybamm.Variable(
-            "Positive electrolyte potential", domain="positive electrode"
+            "Positive electrolyte potential [V]", domain="positive electrode"
         )
         phi_e = pybamm.concatenation(phi_e_s, phi_e_w)
 
@@ -131,8 +118,6 @@ class BasicDFNHalfCell(BaseModel):
         # Particle diffusion parameters
         D_w = param.p.prim.D
         C_w = param.p.prim.cap_init
-        a_R_w = param.p.prim.a_R
-        gamma_e = param.c_e_typ / param.p.prim.c_max
         c_w_init = param.p.prim.c_init
 
         # Electrode equation parameters
@@ -142,27 +127,28 @@ class BasicDFNHalfCell(BaseModel):
 
         # Other parameters (for outputs)
         c_w_max = param.p.prim.c_max
-        U_w_ref = param.p.U_ref
-        U_Li_ref = param.n.U_ref
         L_w = param.p.L
-
-        # gamma_w is always 1 because we choose the timescale based on the working
-        # electrode
-        gamma_w = pybamm.Scalar(1)
 
         eps = pybamm.concatenation(eps_s, eps_w)
         tor = pybamm.concatenation(eps_s**b_e_s, eps_w**b_e_w)
 
+        F_RT = param.F / (param.R * T)
+        RT_F = param.R * T / param.F
+        sto_surf_w = c_s_surf_w / c_w_max
         j_w = (
-            2 * j0_w * pybamm.sinh(ne_w / 2 * (phi_s_w - phi_e_w - U_w(c_s_surf_w, T)))
+            2
+            * j0_w
+            * pybamm.sinh(ne_w / 2 * F_RT * (phi_s_w - phi_e_w - U_w(sto_surf_w, T)))
         )
-        j_s = pybamm.PrimaryBroadcast(0, "separator")
-        j = pybamm.concatenation(j_s, j_w)
+        a_w = 3 * eps_s_w / R_w
+        a_j_w = a_w * j_w
+        a_j_s = pybamm.PrimaryBroadcast(0, "separator")
+        a_j = pybamm.concatenation(a_j_s, a_j_w)
 
         ######################
         # State of Charge
         ######################
-        I = param.dimensional_current_with_time
+        I = param.current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
         self.rhs[Q] = I / 3600
@@ -175,16 +161,13 @@ class BasicDFNHalfCell(BaseModel):
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
         N_s_w = -D_w(c_s_w, T) * pybamm.grad(c_s_w)
-        self.rhs[c_s_w] = -(1 / C_w) * pybamm.div(N_s_w)
+        self.rhs[c_s_w] = -pybamm.div(N_s_w)
 
         # Boundary conditions must be provided for equations with spatial
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                -C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T),
-                "Neumann",
-            ),
+            "right": (-j_w / D_w(c_s_surf_w, T) / param.F, "Neumann"),
         }
         self.initial_conditions[c_s_w] = c_w_init
 
@@ -192,11 +175,11 @@ class BasicDFNHalfCell(BaseModel):
         self.events += [
             pybamm.Event(
                 "Minimum positive particle surface concentration",
-                pybamm.min(c_s_surf_w) - 0.01,
+                pybamm.min(sto_surf_w) - 0.01,
             ),
             pybamm.Event(
                 "Maximum positive particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_w),
+                (1 - 0.01) - pybamm.max(sto_surf_w),
             ),
         ]
 
@@ -212,7 +195,7 @@ class BasicDFNHalfCell(BaseModel):
                 "Neumann",
             ),
         }
-        self.algebraic[phi_s_w] = pybamm.div(i_s_w) + j_w
+        self.algebraic[phi_s_w] = pybamm.div(i_s_w) + a_j_w
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
         # initial conditions
@@ -223,13 +206,10 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e, T)) * j / gamma_e
+            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * j / param.F
         )
         dce_dx = (
-            -(1 - param.t_plus(c_e, T))
-            * i_cell
-            * param.C_e
-            / (tor * gamma_e * param.D_e(c_e, T))
+            -(1 - param.t_plus(c_e, T)) * i_cell / (tor * param.F * param.D_e(c_e, T))
         )
 
         self.boundary_conditions[c_e] = {
@@ -247,21 +227,21 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the electrolyte
         ######################
-        i_e = (param.kappa_e(c_e, T) * tor * gamma_e / param.C_e) * (
+        i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
-        self.algebraic[phi_e] = pybamm.div(i_e) - j
+        self.algebraic[phi_e] = pybamm.div(i_e) - a_j
 
         # dimensionless reference potential so that dimensional reference potential
         # is zero (phi_dim = U_n_ref + pot_scale * phi)
-        l_Li = param.p.l
+        L_Li = param.p.L
         sigma_Li = param.p.sigma
-        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
-        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
+        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), c_w_max, T)
+        eta_Li = 2 * RT_F * pybamm.arcsinh(i_cell / (2 * j_Li))
 
         phi_s_cn = 0
-        delta_phi = eta_Li + U_Li_ref
-        delta_phis_Li = l_Li * i_cell / sigma_Li(T)
+        delta_phi = eta_Li
+        delta_phis_Li = L_Li * i_cell / sigma_Li(T)
         ref_potential = phi_s_cn - delta_phis_Li - delta_phi
 
         self.boundary_conditions[phi_e] = {
@@ -269,7 +249,7 @@ class BasicDFNHalfCell(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[phi_e] = param.n.U_ref / pot_scale
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # (Some) variables
@@ -277,7 +257,6 @@ class BasicDFNHalfCell(BaseModel):
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
         vdrop_Li = -eta_Li - delta_phis_Li
         voltage = vdrop_cell + vdrop_Li
-        voltage_dim = U_w_ref - U_Li_ref + pot_scale * voltage
         c_e_total = pybamm.x_average(eps * c_e)
         c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
 
@@ -286,18 +265,10 @@ class BasicDFNHalfCell(BaseModel):
 
         # Cut-off voltage
         self.events.append(
-            pybamm.Event(
-                "Minimum voltage",
-                voltage_dim - self.param.voltage_low_cut_dimensional,
-                pybamm.EventType.TERMINATION,
-            )
+            pybamm.Event("Minimum voltage", voltage - self.param.voltage_low_cut)
         )
         self.events.append(
-            pybamm.Event(
-                "Maximum voltage",
-                self.param.voltage_high_cut_dimensional - voltage_dim,
-                pybamm.EventType.TERMINATION,
-            )
+            pybamm.Event("Maximum voltage", self.param.voltage_high_cut - voltage)
         )
 
         # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
@@ -306,14 +277,14 @@ class BasicDFNHalfCell(BaseModel):
         self.events.append(
             pybamm.Event(
                 "Minimum voltage switch",
-                voltage_dim - (self.param.voltage_low_cut_dimensional - tol),
+                voltage - (self.param.voltage_low_cut - tol),
                 pybamm.EventType.SWITCH,
             )
         )
         self.events.append(
             pybamm.Event(
                 "Maximum voltage switch",
-                voltage_dim - (self.param.voltage_high_cut_dimensional + tol),
+                voltage - (self.param.voltage_high_cut + tol),
                 pybamm.EventType.SWITCH,
             )
         )
@@ -321,54 +292,23 @@ class BasicDFNHalfCell(BaseModel):
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
-            "Time [s]": self.timescale * pybamm.t,
-            "Positive particle surface concentration": c_s_surf_w,
-            "X-averaged positive particle surface concentration": c_s_surf_w_av,
-            "Positive particle concentration": c_s_w,
-            "Positive particle surface concentration [mol.m-3]": c_w_max * c_s_surf_w,
+            "Time [s]": pybamm.t,
+            "Positive particle surface concentration [mol.m-3]": c_s_surf_w,
             "X-averaged positive particle surface concentration "
-            "[mol.m-3]": c_w_max * c_s_surf_w_av,
-            "Positive particle concentration [mol.m-3]": c_w_max * c_s_w,
-            "Total lithium in positive electrode": c_s_vol_av,
-            "Total lithium in positive electrode [mol]": c_s_vol_av
-            * c_w_max
-            * L_w
-            * param.A_cc,
-            "Electrolyte concentration": c_e,
-            "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
-            "Total lithium in electrolyte": c_e_total,
-            "Total lithium in electrolyte [mol]": c_e_total
-            * param.c_e_typ
-            * param.L_x
-            * param.A_cc,
+            "[mol.m-3]": c_s_surf_w_av,
+            "Positive particle concentration [mol.m-3]": c_s_w,
+            "Total lithium in positive electrode [mol]": c_s_vol_av * L_w * param.A_cc,
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "Total lithium in electrolyte [mol]": c_e_total * param.L_x * param.A_cc,
             "Current [A]": I,
-            "Current density [A.m-2]": i_cell * i_typ,
-            "Positive electrode potential": phi_s_w,
-            "Positive electrode potential [V]": U_w_ref
-            - U_Li_ref
-            + pot_scale * phi_s_w,
-            "Positive electrode open circuit potential": U_w(c_s_surf_w, T),
-            "Positive electrode open circuit potential [V]": U_w_ref
-            + pot_scale * U_w(c_s_surf_w, T),
-            "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -U_Li_ref + pot_scale * phi_e,
-            "Voltage drop in the cell": vdrop_cell,
-            "Voltage drop in the cell [V]": U_w_ref - U_Li_ref + pot_scale * vdrop_cell,
-            "Negative electrode exchange current density": j_Li,
-            "Negative electrode reaction overpotential": eta_Li,
-            "Negative electrode reaction overpotential [V]": pot_scale * eta_Li,
-            "Negative electrode potential drop": delta_phis_Li,
-            "Negative electrode potential drop [V]": pot_scale * delta_phis_Li,
-            "Terminal voltage": voltage,
-            "Terminal voltage [V]": voltage_dim,
-            "Instantaneous power [W.m-2]": i_cell * i_typ * voltage_dim,
-            "Pore-wall flux [mol.m-2.s-1]": j_w,
+            "Current density [A.m-2]": i_cell,
+            "Positive electrode potential [V]": phi_s_w,
+            "Positive electrode open circuit potential [V]": U_w(sto_surf_w, T),
+            "Electrolyte potential [V]": phi_e,
+            "Voltage drop in the cell [V]": vdrop_cell,
+            "Negative electrode exchange current density [A.m-2]": j_Li,
+            "Negative electrode reaction overpotential [V]": eta_Li,
+            "Negative electrode potential drop [V]": delta_phis_Li,
+            "Terminal voltage [V]": voltage,
+            "Instantaneous power [W.m-2]": i_cell * voltage,
         }
-
-    def new_copy(self, build=False):
-        new_model = self.__class__(name=self.name, options=self.options)
-        new_model.use_jacobian = self.use_jacobian
-        new_model.convert_to_format = self.convert_to_format
-        new_model._timescale = self.timescale
-        new_model._length_scales = self.length_scales
-        return new_model
