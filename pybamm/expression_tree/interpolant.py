@@ -195,7 +195,7 @@ class Interpolant(pybamm.Function):
             *children,
             name=name,
             derivative="derivative",
-            units=units
+            units=units,
         )
 
         # Store information as attributes

@@ -2,8 +2,8 @@
 
 ## Features
 
--   Added `Units` object as an attribute to all symbols; units must be consistent
--   Scalars that represent dimensional numbers must be provided with units
+- Added `Units` object as an attribute to all symbols; units must be consistent
+- Scalars that represent dimensional numbers must be provided with units
 
 # [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
 
