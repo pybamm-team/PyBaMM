@@ -171,7 +171,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_sei_asymmetric_reaction_limited(self):
         options = {"SEI": "reaction limited (asymmetric)"}
-        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
                 "SEI growth transfer coefficient": 0.2
@@ -204,7 +204,7 @@ class BaseIntegrationTestLithiumIon:
             "SEI": "ec reaction limited (asymmetric)",
             "SEI porosity change": "true",
         }
-        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
                 "SEI growth transfer coefficient": 0.2
