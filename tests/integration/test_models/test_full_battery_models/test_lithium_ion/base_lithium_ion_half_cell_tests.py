@@ -57,9 +57,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Xu2019")
         parameter_values.update(
-            {
-                "SEI growth transfer coefficient": 0.2
-            },
+            {"SEI growth transfer coefficient": 0.2},
             check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -84,9 +82,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "ec reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Xu2019")
         parameter_values.update(
-            {
-                "SEI growth transfer coefficient": 0.2
-            },
+            {"SEI growth transfer coefficient": 0.2},
             check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
