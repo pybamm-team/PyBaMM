@@ -222,15 +222,11 @@ class TestCitations(unittest.TestCase):
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
         self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
 
-        pybamm.lithium_ion.SPM(
-            build=False, options={"SEI": "ec reaction limited"}
-        )
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
         self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
-        pybamm.lithium_ion.SPMe(
-            build=False, options={"SEI": "ec reaction limited"}
-        )
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "ec reaction limited"})
         self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
