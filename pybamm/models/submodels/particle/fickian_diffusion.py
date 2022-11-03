@@ -59,7 +59,8 @@ class FickianDiffusion(BaseParticle):
         else:
             if self.x_average is False:
                 c_s_distribution = pybamm.Variable(
-                    f"{Domain} {phase_name}particle concentration distribution [mol.m-3]",
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]",
                     domain=f"{domain} {phase_name}particle",
                     auxiliary_domains={
                         "secondary": f"{domain} {phase_name}particle size",
@@ -100,7 +101,8 @@ class FickianDiffusion(BaseParticle):
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
-                    f"X-averaged {domain} volume-weighted particle-size distribution [m]"
+                    f"X-averaged {domain} volume-weighted "
+                    "particle-size distribution [m]"
                 ]
 
             # Standard concentration distribution variables (size-dependent)
@@ -138,7 +140,8 @@ class FickianDiffusion(BaseParticle):
                 )
                 R_nondim = variables[f"{Domain} {phase_name}particle radius"]
                 j = variables[
-                    f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
+                    f"{Domain} electrode {phase_name}"
+                    "interfacial current density [A.m-2]"
                 ]
             else:
                 c_s = variables[
@@ -157,11 +160,12 @@ class FickianDiffusion(BaseParticle):
         else:
             R_nondim = variables[f"{Domain} {phase_name}particle sizes"]
             R_broad_nondim = pybamm.PrimaryBroadcast(
-                R, [f"{domain} {phase_name}particle"]
+                R_nondim, [f"{domain} {phase_name}particle"]
             )
             if self.x_average is False:
                 c_s = variables[
-                    f"{Domain} {phase_name}particle concentration distribution [mol.m-3]"
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
                 ]
 
                 # broadcast T to "particle size" domain then again into "particle"

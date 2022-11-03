@@ -26,7 +26,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
 
     def get_fundamental_variables(self):
         c_e_av = pybamm.Variable(
-            "X-averaged electrolyte concentration",
+            "X-averaged electrolyte concentration [mol.m-3]",
             domain="current collector",
             bounds=(0, np.inf),
         )
@@ -70,16 +70,16 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
         div_Vbox_s_av = variables[
-            "X-averaged separator transverse volume-averaged acceleration"
+            "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
         ]
 
         sum_a_j_n_0 = variables[
             "Sum of x-averaged negative electrode volumetric "
-            "interfacial current densities"
+            "interfacial current densities [A.m-3]"
         ]
         sum_a_j_p_0 = variables[
             "Sum of x-averaged positive electrode volumetric "
-            "interfacial current densities"
+            "interfacial current densities [A.m-3]"
         ]
         sum_s_j_n_0 = variables[
             "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]"

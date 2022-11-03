@@ -11,7 +11,6 @@ class LithiumMetalBaseModel(BaseModel):
 
     def _get_li_metal_interface_variables(self, delta_phi_s, phi_s, phi_e):
         domain, Domain = self.domain_Domain
-        domain_param = self.domain_param
         variables = {
             f"{Domain} electrode potential drop [V]": delta_phi_s,
             f"X-averaged {domain} electrode ohmic losses [V]": delta_phi_s / 2,
@@ -38,8 +37,6 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """
 
     def get_fundamental_variables(self):
-        ocp_ref = self.domain_param.U_ref
-
         delta_phi = pybamm.Variable(
             "Lithium metal interface surface potential difference [V]",
             domain="current collector",
@@ -47,7 +44,6 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         variables = {
             "Lithium metal interface surface potential difference [V]": delta_phi,
         }
-
         return variables
 
     def get_coupled_variables(self, variables):

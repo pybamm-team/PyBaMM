@@ -173,7 +173,6 @@ class BasicDFNComposite(BaseModel):
             * j0_p
             * pybamm.sinh(param.p.prim.ne / 2 * RT_F * (phi_s_p - phi_e_p - ocp_p))
         )
-        j = pybamm.concatenation(j_n, j_s, j_p)
 
         # Volumetric
         a_n_p1 = 3 * param.n.prim.epsilon_s_av / param.n.prim.R_typ
@@ -183,6 +182,7 @@ class BasicDFNComposite(BaseModel):
         a_j_n_p2 = a_n_p2 * j_n_p2
         a_j_n = a_j_n_p1 + a_j_n_p2
         a_j_p = a_p * j_p
+        a_j = pybamm.concatenation(a_j_n, a_j_s, a_j_p)
 
         ######################
         # State of Charge
@@ -320,7 +320,6 @@ class BasicDFNComposite(BaseModel):
         c_s_xrav_p = pybamm.x_average(c_s_rav_p)
         j_n_p1_av = pybamm.x_average(j_n_p1)
         j_n_p2_av = pybamm.x_average(j_n_p2)
-        j_n_av = j_n_p1_av + j_n_p2_av
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -357,13 +356,13 @@ class BasicDFNComposite(BaseModel):
             "X-averaged negative electrode secondary interfacial current density "
             "[A.m-2]": j_n_p2_av,
             "Negative electrode primary volumetric interfacial current density "
-            "[A.m-3]": j_n_p1_v,
+            "[A.m-3]": a_j_n_p1,
             "Negative electrode secondary volumetric interfacial current density "
-            "[A.m-3]": j_n_p2_v,
+            "[A.m-3]": a_j_n_p2,
             "X-averaged negative electrode primary volumetric "
-            "interfacial current density [A.m-3]": j_n_p1_v_av,
+            "interfacial current density [A.m-3]": a_j_n_p1_av,
             "X-averaged negative electrode secondary volumetric "
-            "interfacial current density [A.m-3]": j_n_p2_v_av,
+            "interfacial current density [A.m-3]": a_j_n_p2_av,
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),

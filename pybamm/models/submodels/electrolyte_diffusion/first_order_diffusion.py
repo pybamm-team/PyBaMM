@@ -65,11 +65,11 @@ class FirstOrder(BaseElectrolyteDiffusion):
         # Right-hand sides
         sum_a_j_n_0 = variables[
             "Leading-order sum of x-averaged "
-            "negative electrode volumetric interfacial current densities"
+            "negative electrode volumetric interfacial current densities [A.m-3]"
         ]
         sum_a_j_p_0 = variables[
             "Leading-order sum of x-averaged "
-            "positive electrode volumetric interfacial current densities"
+            "positive electrode volumetric interfacial current densities [A.m-3]"
         ]
         sum_s_j_n_0 = variables[
             "Leading-order sum of x-averaged "

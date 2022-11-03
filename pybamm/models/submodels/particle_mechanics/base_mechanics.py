@@ -65,7 +65,6 @@ class BaseMechanics(pybamm.BaseSubModel):
 
         Omega = domain_param.Omega
         R0 = domain_param.prim.R
-        c_scale = domain_param.prim.c_max
         c_0 = domain_param.c_0
         E0 = domain_param.E
         nu = domain_param.nu

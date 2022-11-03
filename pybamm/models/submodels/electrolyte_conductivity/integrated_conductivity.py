@@ -39,6 +39,7 @@ class Integrated(BaseElectrolyteConductivity):
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
+        param = self.param
         c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
         i_boundary_cc_0 = variables[

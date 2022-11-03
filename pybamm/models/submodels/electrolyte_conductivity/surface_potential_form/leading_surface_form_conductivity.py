@@ -92,7 +92,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         domain = self.domain
         sum_a_j = variables[
             f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities"
+            "interfacial current densities [A.m-3]"
         ]
 
         sum_a_j_av = variables[
@@ -131,7 +131,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         domain = self.domain
         sum_a_j = variables[
             f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities"
+            "interfacial current densities [A.m-3]"
         ]
 
         sum_a_j_av = variables[

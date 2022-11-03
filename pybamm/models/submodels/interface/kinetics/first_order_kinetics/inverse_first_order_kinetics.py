@@ -44,7 +44,8 @@ class InverseFirstOrderKinetics(BaseInterface):
         domain = self.domain
         # Unpack
         delta_phi_0 = variables[
-            f"Leading-order x-averaged {domain} electrode surface potential difference [V]"
+            f"Leading-order x-averaged {domain} electrode "
+            "surface potential difference [V]"
         ]
         c_e_0 = variables[
             "Leading-order x-averaged electrolyte concentration [mol.m-3]"

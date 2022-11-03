@@ -59,9 +59,13 @@ class TestButlerVolmer(unittest.TestCase):
             "Negative electrode open circuit potential": pybamm.Scalar(0),
             "Positive electrode open circuit potential": pybamm.Scalar(0),
             "Sum of electrolyte reaction source terms [A.m-3]": pybamm.Scalar(1),
-            "Sum of interfacial current densities": pybamm.Scalar(1),
-            "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
-            "Sum of positive electrode interfacial current densities": pybamm.Scalar(1),
+            "Sum of interfacial current densities [A.m-3]": pybamm.Scalar(1),
+            "Sum of negative electrode interfacial current densities [A.m-3]": pybamm.Scalar(
+                1
+            ),
+            "Sum of positive electrode interfacial current densities [A.m-3]": pybamm.Scalar(
+                1
+            ),
             "Sum of negative electrode electrolyte reaction source terms [A.m-3]": 1,
             "Sum of positive electrode electrolyte reaction source terms [A.m-3]": 1,
             "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]": 1,

@@ -40,7 +40,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             electrolyte.
         """
 
-        param = self.param
         phi_e = pybamm.concatenation(*phi_e_dict.values())
 
         # Case where negative electrode is not included (half-cell)

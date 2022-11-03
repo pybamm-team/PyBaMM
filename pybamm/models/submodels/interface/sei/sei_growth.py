@@ -65,6 +65,7 @@ class SEIGrowth(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
+        param = self.param
         phase_param = self.phase_param
         # delta_phi = phi_s - phi_e
         T = variables["Negative electrode temperature [K]"]
@@ -131,7 +132,7 @@ class SEIGrowth(BaseModel):
             # so
             #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
             #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
-            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * prefactor * eta_SEI)
+            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * F_RT * eta_SEI)
             j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
             c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
 
@@ -152,7 +153,7 @@ class SEIGrowth(BaseModel):
             inner_sei_proportion = phase_param.inner_sei_proportion
 
         # All SEI growth mechanisms assumed to have Arrhenius dependence
-        Arrhenius = pybamm.exp(phase_param.E_over_RT_sei * (1 - prefactor))
+        Arrhenius = pybamm.exp(phase_param.E_sei / param.R * (1 / param.T_ref - 1 / T))
 
         j_inner = inner_sei_proportion * Arrhenius * j_sei
         j_outer = (1 - inner_sei_proportion) * Arrhenius * j_sei
@@ -166,7 +167,6 @@ class SEIGrowth(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        phase_name = self.phase_name
         phase_param = self.phase_param
         param = self.param
 

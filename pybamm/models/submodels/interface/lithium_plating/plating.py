@@ -105,7 +105,8 @@ class Plating(BasePlating):
             ]
             c_dead_Li = variables["X-averaged dead lithium concentration [mol.m-3]"]
             a_j_stripping = variables[
-                "X-averaged lithium plating volumetric interfacial current density [A.m-3]"
+                "X-averaged lithium plating volumetric "
+                "interfacial current density [A.m-3]"
             ]
             L_sei = variables["X-averaged total SEI thickness [m]"]
         else:

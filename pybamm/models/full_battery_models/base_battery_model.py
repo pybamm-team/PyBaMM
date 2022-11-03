@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import numbers
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):

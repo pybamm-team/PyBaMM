@@ -53,7 +53,7 @@ class CrackPropagation(BaseMechanics):
                 auxiliary_domains={"secondary": "current collector"},
             )
 
-        variables.updaate(self._get_standard_variables(l_cr))
+        variables = self._get_standard_variables(l_cr)
 
         return variables
 

@@ -129,7 +129,6 @@ class BasePlating(BaseInterface):
         """
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general
-        param = self.param
         j_stripping_av = pybamm.x_average(j_stripping)
 
         variables = {

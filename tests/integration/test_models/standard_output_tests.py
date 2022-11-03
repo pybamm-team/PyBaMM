@@ -294,8 +294,12 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_n_tot = solution["Total lithium in negative electrode [mol]"]
         self.c_s_p_tot = solution["Total lithium in positive electrode [mol]"]
 
-        self.N_s_n = solution[f"Negative {self.phase_name_n}particle flux"]
-        self.N_s_p = solution[f"Positive {self.phase_name_p}particle flux"]
+        self.N_s_n = solution[
+            f"Negative {self.phase_name_n}particle flux [mol.m-2.s-1]"
+        ]
+        self.N_s_p = solution[
+            f"Positive {self.phase_name_p}particle flux [mol.m-2.s-1]"
+        ]
 
         self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
         self.c_Li_tot = solution["Loss of lithium to lithium plating [mol]"]
@@ -498,7 +502,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         ]
         self.c_e_tot = solution["Total lithium in electrolyte [mol]"]
 
-        self.N_e_hat = solution["Electrolyte flux"]
+        self.N_e_hat = solution["Electrolyte flux [mol.m-2.s-1]"]
         # self.N_e_hat = solution["Reduced cation flux"]
 
     def test_concentration_limit(self):
@@ -667,29 +671,33 @@ class CurrentTests(BaseOutputTest):
         super().__init__(model, param, disc, solution, operating_condition)
 
         self.a_j_n = solution[
-            "Negative electrode volumetric interfacial current density"
+            "Negative electrode volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_p = solution[
-            "Positive electrode volumetric interfacial current density"
+            "Positive electrode volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_n_av = solution[
-            "X-averaged negative electrode volumetric interfacial current density"
+            "X-averaged negative electrode "
+            "volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_p_av = solution[
-            "X-averaged positive electrode volumetric interfacial current density"
+            "X-averaged positive electrode "
+            "volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_n_sei = solution[
-            "Negative electrode SEI volumetric interfacial current density"
+            "Negative electrode SEI volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_n_sei_av = solution[
-            "X-averaged negative electrode SEI volumetric interfacial current density"
+            "X-averaged negative electrode SEI "
+            "volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_n_pl = solution[
-            "Negative electrode lithium plating volumetric interfacial current density"
+            "Negative electrode lithium plating "
+            "volumetric interfacial current density [A.m-3]"
         ]
         self.a_j_n_pl_av = solution[
             "X-averaged negative electrode lithium plating "
-            "volumetric interfacial current density"
+            "volumetric interfacial current density [A.m-3]"
         ]
 
         self.i_s_n = solution["Negative electrode current density [A.m-2]"]

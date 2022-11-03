@@ -76,7 +76,7 @@ class Composite(BaseElectrolyteDiffusion):
         eps_0 = variables["Leading-order porosity"]
         deps_0_dt = variables["Leading-order porosity change"]
         c_e = variables["Electrolyte concentration [mol.m-3]"]
-        N_e = variables["Electrolyte flux"]
+        N_e = variables["Electrolyte flux [mol.m-2.s-1]"]
         if self.extended is False:
             sum_s_a_j = variables[
                 "Leading-order sum of electrolyte reaction source terms [A.m-3]"
@@ -85,10 +85,12 @@ class Composite(BaseElectrolyteDiffusion):
             sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
         elif self.extended == "average":
             sum_s_a_j_n_av = variables[
-                "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]"
+                "Sum of x-averaged negative electrode electrolyte "
+                "reaction source terms [A.m-3]"
             ]
             sum_s_a_j_p_av = variables[
-                "Sum of x-averaged positive electrode electrolyte reaction source terms [A.m-3]"
+                "Sum of x-averaged positive electrode electrolyte "
+                "reaction source terms [A.m-3]"
             ]
             sum_s_a_j = pybamm.concatenation(
                 pybamm.PrimaryBroadcast(sum_s_a_j_n_av, "negative electrode"),

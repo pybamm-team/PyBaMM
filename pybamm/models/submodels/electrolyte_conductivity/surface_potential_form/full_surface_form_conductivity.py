@@ -237,7 +237,8 @@ class FullAlgebraic(BaseModel):
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of {domain} electrode volumetric " "interfacial current densities"
+            f"Sum of {domain} electrode volumetric "
+            "interfacial current densities [A.m-3]"
         ]
 
         self.algebraic[delta_phi] = pybamm.div(i_e) - sum_a_j
@@ -274,7 +275,8 @@ class FullDifferential(BaseModel):
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of {domain} electrode volumetric interfacial current densities"
+            f"Sum of {domain} electrode volumetric "
+            "interfacial current densities [A.m-3]"
         ]
         a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
 

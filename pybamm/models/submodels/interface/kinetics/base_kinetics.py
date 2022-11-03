@@ -210,7 +210,7 @@ class BaseKinetics(BaseInterface):
 
             a_j_tot = variables[
                 f"Sum of {domain} electrode {phase_name}"
-                "volumetric interfacial current densities"
+                "volumetric interfacial current densities [A.m-3]"
             ]
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
@@ -252,7 +252,8 @@ class BaseKinetics(BaseInterface):
         c_e = pybamm.PrimaryBroadcast(c_e_0, f"{domain} electrode")
         hacked_variables = {**variables, f"{Domain} electrolyte concentration": c_e}
         delta_phi = variables[
-            f"Leading-order x-averaged {domain} electrode surface potential difference [V]"
+            f"Leading-order x-averaged {domain} electrode "
+            "surface potential difference [V]"
         ]
         j0 = self._get_exchange_current_density(hacked_variables)
         ne = self._get_number_of_electrons_in_reaction()

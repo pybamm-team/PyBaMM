@@ -141,8 +141,6 @@ class BasicDFN(BaseModel):
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
 
-        j = pybamm.concatenation(j_n, j_s, j_p)
-
         a_j_n = a_n * j_n
         a_j_p = a_p * j_p
         a_j = pybamm.concatenation(a_j_n, j_s, a_j_p)

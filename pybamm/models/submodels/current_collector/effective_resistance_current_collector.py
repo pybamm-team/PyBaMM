@@ -432,13 +432,9 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
             return phi_s_cp(t, y, z) - phi_s_cn(t, y, z)
 
         processed_vars = {
-            "Negative current collector potential": phi_s_cn,
-            "Negative current collector potential [V]": phi_s_cn_dim,
-            "Positive current collector potential": phi_s_cp,
-            "Positive current collector potential [V]": phi_s_cp_dim,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": V_cc_dim,
-            "Terminal voltage": V,
-            "Terminal voltage [V]": V_dim,
+            "Negative current collector potential [V]": phi_s_cn,
+            "Positive current collector potential [V]": phi_s_cp,
+            "Local current collector potential difference [V]": V_cc,
+            "Terminal voltage [V]": V,
         }
         return processed_vars
