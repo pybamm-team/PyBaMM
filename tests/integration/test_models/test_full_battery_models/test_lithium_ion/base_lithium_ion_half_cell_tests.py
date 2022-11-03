@@ -50,7 +50,11 @@ class BaseIntegrationTestLithiumIonHalfCell:
         self.run_basic_processing_test(options)
 
     def test_sei_reaction_limited(self):
-        options = {"SEI": "reaction limited"}
+        options = {"SEI": "reaction limited (symmetric)"}
+        self.run_basic_processing_test(options)
+
+    def test_sei_asymmetric_reaction_limited(self):
+        options = {"SEI": "reaction limited (asymmetric)"}
         self.run_basic_processing_test(options)
 
     def test_sei_solvent_diffusion_limited(self):
@@ -66,7 +70,11 @@ class BaseIntegrationTestLithiumIonHalfCell:
         self.run_basic_processing_test(options)
 
     def test_sei_ec_reaction_limited(self):
-        options = {"SEI": "ec reaction limited"}
+        options = {"SEI": "ec reaction limited (symmetric)"}
+        self.run_basic_processing_test(options)
+
+    def test_sei_asymmetric_ec_reaction_limited(self):
+        options = {"SEI": "ec reaction limited (asymmetric)"}
         self.run_basic_processing_test(options)
 
     def test_constant_utilisation(self):

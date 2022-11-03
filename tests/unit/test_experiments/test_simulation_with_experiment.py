@@ -259,7 +259,7 @@ class TestSimulationExperiment(unittest.TestCase):
             * 10,
             termination="99% capacity",
         )
-        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited (symmetric)"})
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
@@ -281,7 +281,7 @@ class TestSimulationExperiment(unittest.TestCase):
             * 10,
             termination="5.04Ah capacity",
         )
-        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited (symmetric)"})
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)

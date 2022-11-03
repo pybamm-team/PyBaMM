@@ -56,7 +56,7 @@ class SEIGrowth(BaseModel):
 
         L_inner, L_outer = Ls
 
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
@@ -157,7 +157,7 @@ class SEIGrowth(BaseModel):
                 }
             )
 
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             inner_sei_proportion = 0
         else:
             inner_sei_proportion = phase_param.inner_sei_proportion
@@ -231,7 +231,7 @@ class SEIGrowth(BaseModel):
 
         Gamma_SEI = self.phase_param.Gamma_SEI
 
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             self.rhs = {L_outer: -Gamma_SEI * a * j_outer + spreading_outer}
         else:
             v_bar = self.phase_param.v_bar
@@ -254,7 +254,7 @@ class SEIGrowth(BaseModel):
         else:
             L_inner_0 = self.phase_param.L_inner_0
             L_outer_0 = self.phase_param.L_outer_0
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:
             self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}

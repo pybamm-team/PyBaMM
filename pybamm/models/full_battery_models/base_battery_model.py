@@ -121,9 +121,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
-                - "reaction limited", "solvent-diffusion limited",\
-                    "electron-migration limited", "interstitial-diffusion limited", \
-                    or "ec reaction limited": :class:`pybamm.sei.SEIGrowth`
+                - "reaction limited (symmetric)", "reaction limited (asymmetric)", \
+                    "solvent-diffusion limited", "electron-migration limited", \
+                    "interstitial-diffusion limited", \
+                    "ec reaction limited (symmetric)" \
+                    or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "none" if the "SEI" option is "none", and
@@ -254,11 +256,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "SEI": [
                 "none",
                 "constant",
-                "reaction limited",
+                "reaction limited (symmetric)",
+                "reaction limited (asymmetric)",
                 "solvent-diffusion limited",
                 "electron-migration limited",
                 "interstitial-diffusion limited",
-                "ec reaction limited",
+                "ec reaction limited (symmetric)",
+                "ec reaction limited (asymmetric)",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
