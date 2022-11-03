@@ -1273,6 +1273,21 @@ def _heaviside(left, right, equal):
     if out is not None:
         return out
 
+    # if (
+    #     left.is_constant()
+    #     and isinstance(right, BinaryOperator)
+    #     and right.left.is_constant()
+    # ):
+    #     if isinstance(right, Addition):
+    #         # simplify heaviside(a, b + var) to heaviside(a - b, var)
+    #         return _heaviside(left - right.left, right.right, equal=equal)
+    #     if isinstance(right, Subtraction):
+    #         # simplify heaviside(a, b - var) to heaviside(a - b, var)
+    #         return _heaviside(left - right.right, -right.right, equal=equal)
+    #     elif isinstance(right, Multiplication):
+    #         # simplify heaviside(a, b * var) to heaviside(a/b, var)
+    #         return _heaviside(left / right.left, right.right, equal=equal)
+
     k = pybamm.settings.heaviside_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
