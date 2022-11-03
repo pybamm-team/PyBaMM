@@ -215,6 +215,9 @@ class Symbol:
         # Set domains (and hence id)
         self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
+        # Set scale
+        self.set_scale()
+
         self._saved_evaluates_on_edges = {}
         self._print_name = None
 
@@ -403,6 +406,22 @@ class Symbol:
             + tuple([child.id for child in self.children])
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
+
+    @property
+    def scale(self):
+        return self._scale
+
+    def set_scale(self):
+        scale = None
+        for child in self.children:
+            if child.scale != 1:
+                if scale is None:
+                    scale = child.scale
+                elif scale != child.scale:
+                    raise ValueError("Cannot scale children with different scales")
+        if scale is None:
+            scale = 1
+        self._scale = scale
 
     def __eq__(self, other):
         try:

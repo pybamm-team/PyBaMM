@@ -42,6 +42,7 @@ class Concatenation(pybamm.Symbol):
         else:
             domains = {"primary": []}
         self.concatenation_function = concat_fun
+
         super().__init__(name, children, domains=domains)
 
     def __str__(self):
@@ -90,6 +91,13 @@ class Concatenation(pybamm.Symbol):
         domains = {**auxiliary_domains, "primary": domain}
 
         return domains
+
+    def set_scale(self):
+        if len(self.children) > 0:
+            if all(child.scale == self.children[0].scale for child in self.children):
+                self._scale = self.children[0].scale
+            else:
+                raise ValueError("Cannot concatenate symbols with different scales")
 
     def _concatenation_evaluate(self, children_eval):
         """See :meth:`Concatenation._concatenation_evaluate()`."""

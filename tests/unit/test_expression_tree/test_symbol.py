@@ -111,6 +111,22 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "auxiliary_domains"):
             a.auxiliary_domains
 
+    def test_symbol_scale(self):
+        a = pybamm.Symbol("a")
+        self.assertEqual(a.scale, 1)
+
+        a._scale = 2
+        self.assertEqual(a.scale, 2)
+
+        self.assertEqual((a + 2).scale, 2)
+
+        b = pybamm.Symbol("b")
+        b._scale = 3
+        with self.assertRaisesRegex(
+            ValueError, "Cannot scale children with different scales"
+        ):
+            a + b
+
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

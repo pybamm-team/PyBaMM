@@ -745,7 +745,7 @@ class ParameterValues:
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
-            new_symbol.scale = self.process_symbol(symbol.scale)
+            new_symbol._scale = self.process_symbol(symbol.scale)
             return new_symbol
 
         else:

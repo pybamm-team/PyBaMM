@@ -71,7 +71,11 @@ class VariableBase(pybamm.Symbol):
         self.print_name = print_name
         if isinstance(scale, numbers.Number):
             scale = pybamm.Scalar(scale)
-        self.scale = scale
+        self._scale = scale
+
+    def set_scale(self):
+        # scale is set in init
+        pass
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
