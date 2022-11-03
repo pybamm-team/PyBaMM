@@ -100,9 +100,16 @@ class SEIGrowth(BaseModel):
         # Thermal prefactor for reaction, interstitial and EC models
         prefactor = 1 / (1 + self.param.Theta * T)
 
-        if self.options["SEI"] == "reaction limited":
+        # Define alpha_SEI depending on whether it is symmetric or asymmetric. This
+        # applies to "reaction limited" and "EC reaction limited"
+        if self.options["SEI"].endswith("(asymmetric)"):
+            alpha_SEI = phase_param.alpha_SEI
+        else:
+            alpha_SEI = 0.5
+
+        if self.options["SEI"].startswith("reaction limited"):
             C_sei = phase_param.C_sei_reaction
-            j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * prefactor * eta_SEI)
+            j_sei = -(1 / C_sei) * pybamm.exp(-alpha_SEI * prefactor * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":
             U_inner = phase_param.U_inner_electron
@@ -117,7 +124,7 @@ class SEIGrowth(BaseModel):
             C_sei = phase_param.C_sei_solvent
             j_sei = -1 / (C_sei * L_sei_outer)
 
-        elif self.options["SEI"] == "ec reaction limited":
+        elif self.options["SEI"].startswith("ec reaction limited"):
             C_sei_ec = phase_param.C_sei_ec
             C_ec = phase_param.C_ec
 
@@ -129,7 +136,7 @@ class SEIGrowth(BaseModel):
             # so
             #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
             #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
-            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * prefactor * eta_SEI)
+            C_sei_exp = C_sei_ec * pybamm.exp(-alpha_SEI * prefactor * eta_SEI)
             j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
             c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
 
