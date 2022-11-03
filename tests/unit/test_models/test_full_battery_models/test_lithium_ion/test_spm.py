@@ -28,7 +28,7 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         options = {
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
-            "SEI": "ec reaction limited (symmetric)",
+            "SEI": "ec reaction limited",
             "SEI porosity change": "true",
             "x-average side reactions": "true",
         }

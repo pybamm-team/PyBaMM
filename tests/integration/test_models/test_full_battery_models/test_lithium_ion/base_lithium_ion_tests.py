@@ -166,7 +166,7 @@ class BaseIntegrationTestLithiumIon:
         self.run_basic_processing_test(options, parameter_values=param)
 
     def test_sei_reaction_limited(self):
-        options = {"SEI": "reaction limited (symmetric)"}
+        options = {"SEI": "reaction limited"}
         self.run_basic_processing_test(options)
 
     def test_sei_asymmetric_reaction_limited(self):
@@ -192,7 +192,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_sei_ec_reaction_limited(self):
         options = {
-            "SEI": "ec reaction limited (symmetric)",
+            "SEI": "ec reaction limited",
             "SEI porosity change": "true",
         }
         self.run_basic_processing_test(options)
@@ -270,7 +270,7 @@ class BaseIntegrationTestLithiumIon:
         options = {
             "particle phases": ("2", "1"),
             "open circuit potential": (("single", "current sigmoid"), "single"),
-            "SEI": "ec reaction limited (symmetric)",
+            "SEI": "ec reaction limited",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"

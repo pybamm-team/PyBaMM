@@ -3,7 +3,7 @@ import pybamm as pb
 pb.set_logging_level("NOTICE")
 model = pb.lithium_ion.DFN(
     {
-        "SEI": "ec reaction limited (symmetric)",
+        "SEI": "ec reaction limited",
         "SEI film resistance": "distributed",
         "SEI porosity change": "true",
         "lithium plating": "irreversible",
