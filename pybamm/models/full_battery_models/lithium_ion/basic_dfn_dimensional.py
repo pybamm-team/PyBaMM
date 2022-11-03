@@ -90,7 +90,7 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
             "Negative particle concentration",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
-            scale=param.n.prim.c_max,
+            scale=1 + 0 * param.n.prim.c_max,
         )
         c_s_p = pybamm.Variable(
             "Positive particle concentration",
@@ -98,6 +98,11 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
             auxiliary_domains={"secondary": "positive electrode"},
             scale=param.p.prim.c_max,
         )
+        c_s_p_nondim = c_s_p
+        c_s_p_dim = c_s_p * param.p.prim.c_max
+        c_scale = param.p.prim.c_max
+        # c_s_p_dim = c_s_p
+        # c_s_p_nondim = c_s_p / param.p.prim.c_max
 
         # Constant temperature
         T = param.T_init_dim
@@ -148,13 +153,10 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         Feta_RT_n = param.F * eta_n / (param.R * T)
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
         # j_n = pybamm.PrimaryBroadcast(i_cell / (a_n * param.n.L), "negative electrode")
-        c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.p.prim.j0_dimensional(c_e_p, c_s_surf_p, T)
-        eta_p = (
-            phi_s_p
-            - phi_e_p
-            - param.p.prim.U_dimensional(c_s_surf_p / param.p.prim.c_max, T)
-        )
+        c_s_surf_p_dim = pybamm.surf(c_s_p_dim)
+        c_s_surf_p_nondim = pybamm.surf(c_s_p_nondim)
+        j0_p = param.p.prim.j0_dimensional(c_e_p, c_s_surf_p_dim, T)
+        eta_p = phi_s_p - phi_e_p - param.p.prim.U_dimensional(c_s_surf_p_nondim, T)
         Feta_RT_p = param.F * eta_p / (param.R * T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
@@ -182,7 +184,7 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
         N_s_n = -param.n.prim.D_dimensional(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.p.prim.D_dimensional(c_s_p, T) * pybamm.grad(c_s_p)
+        N_s_p = -param.p.prim.D_dimensional(c_s_p_dim, T) * pybamm.grad(c_s_p) * c_scale
         self.rhs[c_s_n] = -pybamm.div(N_s_n)
         self.rhs[c_s_p] = -pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
@@ -196,7 +198,7 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_p / (param.F * param.p.prim.D_dimensional(c_s_surf_p, T)),
+                -j_p / (param.F * param.p.prim.D_dimensional(c_s_surf_p_dim, T)),
                 "Neumann",
             ),
         }
@@ -264,8 +266,8 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
             "Negative particle surface concentration [mol.m-3]": c_s_surf_n,
             "Negative particle surface concentration": c_s_surf_n / param.n.prim.c_max,
             "Electrolyte concentration [mol.m-3]": c_e,
-            "Positive particle surface concentration [mol.m-3]": c_s_surf_p,
-            "Positive particle surface concentration": c_s_surf_p / param.p.prim.c_max,
+            "Positive particle surface concentration [mol.m-3]": c_s_surf_p_dim,
+            "Positive particle surface concentration": c_s_surf_p_nondim,
             "Current [A]": I,
             "Negative electrode potential [V]": phi_s_n,
             "Electrolyte potential [V]": phi_e,

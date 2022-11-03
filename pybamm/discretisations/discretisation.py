@@ -762,7 +762,6 @@ class Discretisation(object):
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
             new_var_eqn_dict[eqn_key] = processed_eqn / scale
-
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -940,9 +939,14 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.VariableDot):
-            return pybamm.StateVectorDot(
-                *self.y_slices[symbol.get_variable()],
-                domains=symbol.domains,
+            # Multiply the output by the symbol's scale so that the state vector
+            # is of order 1
+            return (
+                pybamm.StateVectorDot(
+                    *self.y_slices[symbol.get_variable()],
+                    domains=symbol.domains,
+                )
+                # * symbol.scale
             )
 
         elif isinstance(symbol, pybamm.Variable):
@@ -989,9 +993,9 @@ class Discretisation(object):
                     )
                 # Multiply the output by the symbol's scale so that the state vector
                 # is of order 1
-                return (
-                    pybamm.StateVector(*y_slices, domains=symbol.domains) * symbol.scale
-                )
+                return pybamm.StateVector(
+                    *y_slices, domains=symbol.domains
+                )  # * symbol.scale
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)
