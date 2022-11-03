@@ -364,15 +364,7 @@ class TestDiscretise(unittest.TestCase):
         # binary operator
         binary = var + scal
         binary_disc = disc.process_symbol(binary)
-        self.assertIsInstance(binary_disc, pybamm.Addition)
-        self.assertIsInstance(binary_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(binary_disc.children[1], pybamm.Scalar)
-
-        bin2 = scal + var
-        bin2_disc = disc.process_symbol(bin2)
-        self.assertIsInstance(bin2_disc, pybamm.Addition)
-        self.assertIsInstance(bin2_disc.children[0], pybamm.Scalar)
-        self.assertIsInstance(bin2_disc.children[1], pybamm.StateVector)
+        self.assertEqual(binary_disc, 5 + pybamm.StateVector(slice(0, 53)))
 
         # non-spatial unary operator
         un1 = -var
@@ -436,27 +428,17 @@ class TestDiscretise(unittest.TestCase):
 
         disc.y_slices = {var1: [slice(53)], var2: [slice(53, 106)]}
         exp_disc = disc.process_symbol(expression)
-        self.assertIsInstance(exp_disc, pybamm.Division)
-        # left side
-        self.assertIsInstance(exp_disc.left, pybamm.Multiplication)
-        self.assertIsInstance(exp_disc.left.left, pybamm.Scalar)
-        self.assertIsInstance(exp_disc.left.right, pybamm.Power)
-        self.assertIsInstance(exp_disc.left.right.left, pybamm.Scalar)
-        self.assertIsInstance(exp_disc.left.right.right, pybamm.StateVector)
         self.assertEqual(
-            exp_disc.left.right.right.y_slices[0],
-            disc.y_slices[var2][0],
+            exp_disc,
+            (5.0 * (3.0 ** pybamm.StateVector(slice(53, 106))))
+            / (
+                -4.0
+                + (
+                    pybamm.StateVector(slice(0, 53))
+                    + pybamm.StateVector(slice(53, 106))
+                )
+            ),
         )
-        # right side
-        self.assertIsInstance(exp_disc.right, pybamm.Addition)
-        self.assertIsInstance(exp_disc.right.left, pybamm.Subtraction)
-        self.assertIsInstance(exp_disc.right.left.left, pybamm.StateVector)
-        self.assertEqual(
-            exp_disc.right.left.left.y_slices[0],
-            disc.y_slices[var1][0],
-        )
-        self.assertIsInstance(exp_disc.right.left.right, pybamm.Scalar)
-        self.assertIsInstance(exp_disc.right.right, pybamm.StateVector)
 
     def test_discretise_spatial_operator(self):
         # create discretisation
@@ -994,16 +976,16 @@ class TestDiscretise(unittest.TestCase):
 
         broad_disc = disc.process_symbol(broad)
         self.assertIsInstance(broad_disc, pybamm.Multiplication)
-        self.assertIsInstance(broad_disc.children[0], pybamm.InputParameter)
-        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Vector)
+        self.assertIsInstance(broad_disc.children[1], pybamm.InputParameter)
 
         # process Broadcast variable
         disc.y_slices = {var: [slice(1)]}
         broad1 = pybamm.FullBroadcast(var, ["negative electrode"], None)
         broad1_disc = disc.process_symbol(broad1)
         self.assertIsInstance(broad1_disc, pybamm.Multiplication)
-        self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad1_disc.children[0], pybamm.Vector)
+        self.assertIsInstance(broad1_disc.children[1], pybamm.StateVector)
 
         # broadcast to edges
         broad_to_edges = pybamm.FullBroadcastToEdges(a, ["negative electrode"], None)

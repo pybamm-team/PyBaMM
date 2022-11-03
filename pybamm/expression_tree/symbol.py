@@ -574,47 +574,19 @@ class Symbol:
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.NotEqualHeaviside(self, other)
-        else:
-            out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.EqualHeaviside(self, other)
-        else:
-            out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(self, other, True)
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.NotEqualHeaviside(other, self)
-        else:
-            out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(other, self, False)
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.EqualHeaviside(other, self)
-        else:
-            out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
     def __neg__(self):
         """return a :class:`Negate` object."""

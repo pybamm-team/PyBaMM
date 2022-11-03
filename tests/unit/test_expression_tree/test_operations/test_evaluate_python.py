@@ -76,7 +76,7 @@ class TestEvaluate(unittest.TestCase):
         # test unary op
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        expr = a + (-b)
+        expr = (-a) + b
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
         self.assertEqual(len(constant_symbols), 0)
 

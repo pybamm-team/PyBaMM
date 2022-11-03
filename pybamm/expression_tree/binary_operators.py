@@ -6,11 +6,12 @@ import numbers
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
+import functools
 
 import pybamm
 
 
-def preprocess_binary(left, right):
+def _preprocess_binary(left, right):
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
     if isinstance(right, numbers.Number):
@@ -54,7 +55,7 @@ class BinaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, left, right):
-        left, right = preprocess_binary(left, right)
+        left, right = _preprocess_binary(left, right)
 
         domains = self.get_children_domains([left, right])
         super().__init__(name, children=[left, right], domains=domains)
@@ -431,7 +432,7 @@ class Inner(BinaryOperator):
 
 def inner(left, right):
     """Return inner product of two symbols."""
-    left, right = preprocess_binary(left, right)
+    left, right = _preprocess_binary(left, right)
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
         return pybamm.zeros_like(right)
@@ -664,8 +665,8 @@ class Maximum(BinaryOperator):
         return sympy.Max(left, right)
 
 
-def simplify_elementwise_binary_broadcasts(left, right):
-    left, right = preprocess_binary(left, right)
+def _simplify_elementwise_binary_broadcasts(left, right):
+    left, right = _preprocess_binary(left, right)
 
     def unpack_broadcast_recursive(symbol):
         if isinstance(symbol, pybamm.Broadcast):
@@ -692,7 +693,7 @@ def simplify_elementwise_binary_broadcasts(left, right):
     return left, right
 
 
-def simplified_binary_broadcast_concatenation(left, right, operator):
+def _simplified_binary_broadcast_concatenation(left, right, operator):
     """
     Check if there are concatenations or broadcasts that we can commute the operator
     with
@@ -741,10 +742,10 @@ def simplified_binary_broadcast_concatenation(left, right, operator):
 
 
 def simplified_power(left, right):
-    left, right = simplify_elementwise_binary_broadcasts(left, right)
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Check for Concatenations and Broadcasts
-    out = simplified_binary_broadcast_concatenation(left, right, simplified_power)
+    out = _simplified_binary_broadcast_concatenation(left, right, simplified_power)
     if out is not None:
         return out
 
@@ -790,14 +791,14 @@ def simplified_addition(left, right):
     (Zero Matrix) + (Zero Scalar)
     should return (Zero Matrix), not (Zero Scalar).
     """
-    left, right = simplify_elementwise_binary_broadcasts(left, right)
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Move constant to always be on the left
     if right.is_constant() and not left.is_constant():
         left, right = right, left
 
     # Check for Concatenations and Broadcasts
-    out = simplified_binary_broadcast_concatenation(left, right, simplified_addition)
+    out = _simplified_binary_broadcast_concatenation(left, right, simplified_addition)
     if out is not None:
         return out
 
@@ -846,20 +847,28 @@ def simplified_addition(left, right):
     # Turn a + (-b) into a - b
     if isinstance(right, pybamm.Negate):
         return left - right.orphans[0]
+    # Turn (-a) + b into b - a
+    if isinstance(right, pybamm.Negate):
+        return right - left.orphans[0]
 
     if left.is_constant():
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
             return right._binary_new_copy(left + r_left, r_right)
-    elif isinstance(left, Subtraction):
+    if isinstance(left, Addition) and left.left.is_constant():
+        # move constants to the left
+        return left.left + (left.right + right)
+    if isinstance(left, Subtraction):
         if right == left.right:
             # Simplify (a - b) + b to a
-            return left.left
-    elif isinstance(right, Subtraction):
+            # Make sure shape is preserved
+            return left.left * pybamm.ones_like(left.right)
+    if isinstance(right, Subtraction):
         if left == right.right:
             # Simplify a + (b - a) to b
-            return right.left
+            # Make sure shape is preserved
+            return right.left * pybamm.ones_like(right.right)
 
     return pybamm.simplify_if_constant(Addition(left, right))
 
@@ -872,7 +881,7 @@ def simplified_subtraction(left, right):
     (Zero Matrix) - (Zero Scalar)
     should return (Zero Matrix), not -(Zero Scalar).
     """
-    left, right = simplify_elementwise_binary_broadcasts(left, right)
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Move constant to always be on the left
     # For a subtraction, this means (var - constant) becomes (-constant + var)
@@ -880,7 +889,9 @@ def simplified_subtraction(left, right):
         return -right + left
 
     # Check for Concatenations and Broadcasts
-    out = simplified_binary_broadcast_concatenation(left, right, simplified_subtraction)
+    out = _simplified_binary_broadcast_concatenation(
+        left, right, simplified_subtraction
+    )
     if out is not None:
         return out
 
@@ -947,14 +958,14 @@ def simplified_subtraction(left, right):
 
 
 def simplified_multiplication(left, right):
-    left, right = simplify_elementwise_binary_broadcasts(left, right)
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Move constant to always be on the left
     if right.is_constant() and not left.is_constant():
         left, right = right, left
 
     # Check for Concatenations and Broadcasts
-    out = simplified_binary_broadcast_concatenation(
+    out = _simplified_binary_broadcast_concatenation(
         left, right, simplified_multiplication
     )
     if out is not None:
@@ -1073,7 +1084,7 @@ def simplified_multiplication(left, right):
 
 
 def simplified_division(left, right):
-    left, right = simplify_elementwise_binary_broadcasts(left, right)
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # anything divided by zero raises error
     if pybamm.is_scalar_zero(right):
@@ -1085,7 +1096,7 @@ def simplified_division(left, right):
         return (1 / right) * left
 
     # Check for Concatenations and Broadcasts
-    out = simplified_binary_broadcast_concatenation(left, right, simplified_division)
+    out = _simplified_binary_broadcast_concatenation(left, right, simplified_division)
     if out is not None:
         return out
 
@@ -1143,7 +1154,7 @@ def simplified_division(left, right):
 
 
 def simplified_matrix_multiplication(left, right):
-    left, right = preprocess_binary(left, right)
+    left, right = _preprocess_binary(left, right)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(MatrixMultiplication(left, right))
 
@@ -1215,6 +1226,12 @@ def minimum(left, right):
     Returns the smaller of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.min`, which returns min function of child.
     """
+    # Check for Concatenations and Broadcasts
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
+    out = _simplified_binary_broadcast_concatenation(left, right, minimum)
+    if out is not None:
+        return out
+
     k = pybamm.settings.min_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
@@ -1230,6 +1247,12 @@ def maximum(left, right):
     Returns the larger of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.max`, which returns max function of child.
     """
+    # Check for Concatenations and Broadcasts
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
+    out = _simplified_binary_broadcast_concatenation(left, right, maximum)
+    if out is not None:
+        return out
+
     k = pybamm.settings.max_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
@@ -1237,6 +1260,29 @@ def maximum(left, right):
         out = Maximum(left, right)
     else:
         out = pybamm.softplus(left, right, k)
+    return pybamm.simplify_if_constant(out)
+
+
+def _heaviside(left, right, equal):
+    """return a :class:`EqualHeaviside` object, or a smooth approximation."""
+    # Check for Concatenations and Broadcasts
+    left, right = _simplify_elementwise_binary_broadcasts(left, right)
+    out = _simplified_binary_broadcast_concatenation(
+        left, right, functools.partial(_heaviside, equal=equal)
+    )
+    if out is not None:
+        return out
+
+    k = pybamm.settings.heaviside_smoothing
+    # Return exact approximation if that is the setting or the outcome is a constant
+    # (i.e. no need for smoothing)
+    if k == "exact" or (is_constant(left) and is_constant(right)):
+        if equal is True:
+            out = pybamm.EqualHeaviside(left, right)
+        else:
+            out = pybamm.NotEqualHeaviside(left, right)
+    else:
+        out = pybamm.sigmoid(left, right, k)
     return pybamm.simplify_if_constant(out)
 
 
