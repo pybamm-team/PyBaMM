@@ -10,6 +10,10 @@ from scipy.sparse import csr_matrix, issparse
 import pybamm
 
 
+def _units(symbol):
+    return getattr(symbol, "units", pybamm.Units(None))
+
+
 def preprocess_binary(left, right):
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
@@ -51,13 +55,15 @@ class BinaryOperator(pybamm.Symbol):
         lhs child node (converted to :class:`Scalar` if Number)
     right : :class:`Symbol` or :class:`Number`
         rhs child node (converted to :class:`Scalar` if Number)
+    units : str, optional
+        units of the node
     """
 
-    def __init__(self, name, left, right):
+    def __init__(self, name, left, right, units=None):
         left, right = preprocess_binary(left, right)
 
         domains = self.get_children_domains([left, right])
-        super().__init__(name, children=[left, right], domains=domains)
+        super().__init__(name, children=[left, right], domains=domains, units=units)
         self.left = self.children[0]
         self.right = self.children[1]
 
@@ -158,13 +164,13 @@ class Power(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        super().__init__("**", left, right)
-        if str(self.left.units) == "[-]":
-            self.units = None
+        if str(_units(left)) == "-":
+            units = None
         else:
-            if not isinstance(self.right, pybamm.Scalar):
+            if not isinstance(right, pybamm.Scalar):
                 raise TypeError("If base has units, exponent must be a scalar")
-            self.units = self.left.units**self.right.value
+            units = _units(left) ** right.value
+        super().__init__("**", left, right, units=units)
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -207,8 +213,8 @@ class Addition(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        super().__init__("+", left, right)
-        self.units = self.left.units + self.right.units
+        units = _units(left) + _units(right)
+        super().__init__("+", left, right, units=units)
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -232,9 +238,8 @@ class Subtraction(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-
-        super().__init__("-", left, right)
-        self.units = self.left.units - self.right.units
+        units = _units(left) - _units(right)
+        super().__init__("-", left, right, units=units)
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -260,9 +265,8 @@ class Multiplication(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-
-        super().__init__("*", left, right)
-        self.units = self.left.units * self.right.units
+        units = _units(left) * _units(right)
+        super().__init__("*", left, right, units=units)
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -302,9 +306,9 @@ class MatrixMultiplication(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        super().__init__("@", left, right)
         # Effect on units is same as multiplying
-        self.units = self.left.units * self.right.units
+        units = _units(left) * _units(right)
+        super().__init__("@", left, right, units=units)
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -353,8 +357,8 @@ class Division(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        super().__init__("/", left, right)
-        self.units = self.left.units / self.right.units
+        units = _units(left) / _units(right)
+        super().__init__("/", left, right, units=units)
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -402,9 +406,9 @@ class Inner(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        super().__init__("inner product", left, right)
         # Effect on units is same as multiplying
-        self.units = self.left.units * self.right.units
+        units = _units(left) * _units(right)
+        super().__init__("inner product", left, right, units=units)
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -518,9 +522,15 @@ class _Heaviside(BinaryOperator):
 
     def __init__(self, name, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        super().__init__(name, left, right)
-        # Effect on units is same as adding
-        self.units = self.left.units + self.right.units
+        # Heaviside removes units
+        if left not in [0, pybamm.Scalar(0)] and right not in [0, pybamm.Scalar(0)]:
+            if _units(left) != _units(right):
+                raise pybamm.UnitsError(
+                    "Heaviside step function arguments must have the same units, unless"
+                    " one of them is zero"
+                )
+        units = pybamm.Units(None)
+        super().__init__(name, left, right, units=units)
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -612,9 +622,9 @@ class Minimum(BinaryOperator):
     """Returns the smaller of two objects."""
 
     def __init__(self, left, right):
-        super().__init__("minimum", left, right)
         # Effect on units is same as adding
-        self.units = self.left.units + self.right.units
+        units = _units(left) + _units(right)
+        super().__init__("minimum", left, right, units=units)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -650,9 +660,9 @@ class Maximum(BinaryOperator):
     """Returns the greater of two objects."""
 
     def __init__(self, left, right):
-        super().__init__("maximum", left, right)
         # Effect on units is same as adding
-        self.units = self.left.units + self.right.units
+        units = _units(left) + _units(right)
+        super().__init__("maximum", left, right, units=units)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -982,7 +992,7 @@ def simplified_multiplication(left, right):
 
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
-        return pybamm.zeros_like(right)
+        return pybamm.zeros_like(right, units=_units(left) * _units(right))
 
     # if one of the children is a zero matrix, we have to be careful about shapes
     if pybamm.is_matrix_zero(left):
@@ -990,11 +1000,11 @@ def simplified_multiplication(left, right):
 
     # anything multiplied by a scalar one returns itself
     # unless it changes the units
-    if pybamm.is_scalar_one(left) and left.units.units_str == "-":
+    if pybamm.is_scalar_one(left) and _units(left).units_str == "-":
         return right
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_minus_one(left) and left.units.units_str == "-":
+    if pybamm.is_scalar_minus_one(left) and _units(left).units_str == "-":
         return -right
 
     # Return constant if both sides are constant
@@ -1112,8 +1122,8 @@ def simplified_division(left, right):
 
     # zero divided by anything returns zero (being careful about shape)
     # don't simplify if the division affects the units
-    if pybamm.is_scalar_zero(left) and left.units.units_str == "-":
-        return pybamm.zeros_like(right)
+    if pybamm.is_scalar_zero(left):
+        return pybamm.zeros_like(right, units=_units(left) / _units(right))
 
     # matrix zero divided by anything returns matrix zero (i.e. itself)
     if pybamm.is_matrix_zero(left):
@@ -1121,7 +1131,7 @@ def simplified_division(left, right):
 
     # a symbol divided by itself is 1s of the same shape
     if left == right:
-        return pybamm.ones_like(left)
+        return pybamm.ones_like(left, units=_units(left) / _units(right))
 
     # Return constant if both sides are constant
     if left.is_constant() and right.is_constant():

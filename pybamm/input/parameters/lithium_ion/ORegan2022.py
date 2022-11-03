@@ -285,7 +285,9 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
     )
 
     E_D_s = d * pybamm.constants.R
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -357,7 +359,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
     i_ref = 2.668  # (A/m2)
     alpha = 0.792
     E_r = 4e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 
@@ -505,7 +509,9 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     """
 
     E_r = 3.5e3
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     sigma = 0.8473 * arrhenius
 
@@ -560,7 +566,9 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
     )
 
     E_D_s = d * pybamm.constants.R
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -631,7 +639,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     i_ref = 5.028  # (A/m2)
     alpha = 0.43
     E_r = 2.401e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 

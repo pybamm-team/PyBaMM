@@ -264,7 +264,7 @@ class SpecificFunction(Function):
                     child, child.units
                 )
                 + "Try non-dimensionalising the operand by dividing it by "
-                "'Scalar(1, {!s})'".format(child.units)
+                "'pybamm.Units({!s})'".format(child.units)
             )
 
     def _function_new_copy(self, children):

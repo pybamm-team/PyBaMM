@@ -26,14 +26,19 @@ class UnaryOperator(pybamm.Symbol):
         name of the node
     child : :class:`Symbol`
         child node
+    domain : dict, optional
+        dictionary of domains the node is defined over
+    units : str, optional
+        units of the node
     """
 
-    def __init__(self, name, child, domains=None):
+    def __init__(self, name, child, domains=None, units=None):
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
+        units = units or child.units
 
-        super().__init__(name, children=[child], domains=domains, units=child.units)
+        super().__init__(name, children=[child], domains=domains, units=units)
         self.child = self.children[0]
 
     def __str__(self):
@@ -161,7 +166,8 @@ class Sign(UnaryOperator):
 
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
-        super().__init__("sign", child)
+        # sign is dimensionless (no units)
+        super().__init__("sign", child, units=pybamm.Units({}))
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""

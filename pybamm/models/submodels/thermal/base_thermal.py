@@ -52,10 +52,11 @@ class BaseThermal(pybamm.BaseSubModel):
         # Calculate dimensional variables
         variables_nondim = variables.copy()
         for name, var in variables_nondim.items():
+            K_to_C = -273.15 * pybamm.Units("K")
             variables.update(
                 {
                     f"{name} [K]": param.Delta_T * var + param.T_ref,
-                    f"{name} [C]": param.Delta_T * var + param.T_ref - 273.15,
+                    f"{name} [C]": param.Delta_T * var + param.T_ref - K_to_C,
                 }
             )
 

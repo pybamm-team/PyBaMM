@@ -39,8 +39,13 @@ class Scalar(pybamm.Symbol):
         # set default name if not provided
         if name is None:
             name = str(self.value)
+            if not (
+                units is None
+                or (isinstance(units, pybamm.Units) and units.units_dict == {})
+            ):
+                name += f" [{str(units)}]"
 
-        super().__init__(name, units=units)
+        super().__init__(name)
 
     def __str__(self):
         return str(self.value)

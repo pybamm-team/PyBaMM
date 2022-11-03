@@ -121,7 +121,9 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     D_ref = 3.3e-14
     E_D_s = 3.03e4
     # E_D_s not given by Chen et al (2020), so taken from Ecker et al. (2015) instead
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -159,7 +161,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
     m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -273,7 +277,9 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
 
     D_ref = 4e-15
     E_D_s = 25000  # O'Kane et al. (2022), after Cabanero et al. (2018)
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -340,7 +346,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     """
     m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 17800
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -440,7 +448,9 @@ def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     # So use temperature dependence from Ecker et al. (2015) instead
 
     E_D_c_e = 17000
-    arrhenius = pybamm.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_c_e / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_c_e * arrhenius
 
@@ -480,7 +490,9 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
     # So use temperature dependence from Ecker et al. (2015) instead
 
     E_sigma_e = 17000
-    arrhenius = pybamm.exp(E_sigma_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_sigma_e / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return sigma_e * arrhenius
 

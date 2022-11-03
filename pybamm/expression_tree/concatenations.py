@@ -41,8 +41,21 @@ class Concatenation(pybamm.Symbol):
             domains = self.get_children_domains(children)
         else:
             domains = {"primary": []}
+
+        # Set units
+        if len(children) > 0:
+            if not all(child.units == children[0].units for child in children):
+                raise pybamm.UnitsError(
+                    "Cannot concatenate children with different units: {}".format(
+                        [child.units for child in children]
+                    )
+                )
+            units = children[0].units
+        else:
+            units = None
+
         self.concatenation_function = concat_fun
-        super().__init__(name, children, domains=domains)
+        super().__init__(name, children, domains=domains, units=units)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""

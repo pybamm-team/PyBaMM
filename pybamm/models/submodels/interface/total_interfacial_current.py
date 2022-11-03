@@ -134,6 +134,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
     def _get_whole_cell_coupled_variables(self, variables):
         # Interfacial current density and exchange-current density for the main reaction
         zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
+        zero_s_dim = zero_s * pybamm.Units("A.m-2")
 
         if (
             self.options.negative["particle phases"] == "1"
@@ -148,7 +149,10 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 var_dict = {}
                 for domain in self.options.whole_cell_domains:
                     if domain == "separator":
-                        var_dict[domain] = zero_s
+                        if "A.m-2" in variable_template:
+                            var_dict[domain] = zero_s_dim
+                        else:
+                            var_dict[domain] = zero_s
                     else:
                         Domain = domain.capitalize()
                         var_dict[domain] = variables[

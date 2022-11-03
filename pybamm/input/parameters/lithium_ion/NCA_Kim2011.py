@@ -28,7 +28,9 @@ def graphite_diffusivity_Kim2011(sto, T):
 
     D_ref = 9 * 10 ** (-14)
     E_D_s = 4e3
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -102,7 +104,9 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     )
 
     E_r = 3e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref
@@ -138,7 +142,9 @@ def nca_diffusivity_Kim2011(sto, T):
     """
     D_ref = 3 * 10 ** (-15)
     E_D_s = 2e4
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -181,7 +187,9 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
         c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha
     )
     E_r = 3e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref

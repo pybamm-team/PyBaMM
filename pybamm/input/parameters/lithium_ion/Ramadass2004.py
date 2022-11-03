@@ -25,7 +25,9 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     D_ref = 3.9 * 10 ** (-14)
     E_D_s = 42770
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -86,7 +88,9 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     """
     m_ref = 4.854 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
     E_r = 37480
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -149,7 +153,9 @@ def lico2_diffusivity_Ramadass2004(sto, T):
     """
     D_ref = 1 * 10 ** (-14)
     E_D_s = 18550
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_ref * arrhenius
 
@@ -224,7 +230,9 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     """
     m_ref = 2.252 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
     E_r = 39570
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -294,7 +302,9 @@ def electrolyte_diffusivity_Ramadass2004(c_e, T):
 
     D_c_e = 7.5e-10
     E_D_e = 37040
-    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_D_e / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return D_c_e * arrhenius
 
@@ -336,7 +346,9 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
     ) * 1e3  # and here there should not be an exponent
 
     E_k_e = 34700
-    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_k_e / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return sigma_e * arrhenius
 

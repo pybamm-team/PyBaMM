@@ -507,7 +507,7 @@ class FullBroadcastToEdges(FullBroadcast):
             )
 
 
-def full_like(symbols, fill_value):
+def full_like(symbols, fill_value, units=None):
     """
     Returns an array with the same shape and domains as the sum of the
     input symbols, with a constant value given by `fill_value`.
@@ -524,7 +524,7 @@ def full_like(symbols, fill_value):
     product_symbol = symbols[0]
     for sym in symbols[1:]:
         product_symbol *= sym
-    units = product_symbol.units
+    units = units or product_symbol.units
 
     # Just return scalar if symbol shape is scalar
     if product_symbol.evaluates_to_number():
@@ -553,7 +553,7 @@ def full_like(symbols, fill_value):
             return FullBroadcast(fill_value, broadcast_domains=product_symbol.domains)
 
 
-def zeros_like(*symbols):
+def zeros_like(*symbols, units=None):
     """
     Returns an array with the same shape and domains as the sum of the
     input symbols, with each entry equal to zero.
@@ -563,10 +563,10 @@ def zeros_like(*symbols):
     symbols : :class:`Symbol`
         Symbols whose shape to copy
     """
-    return full_like(symbols, 0)
+    return full_like(symbols, 0, units=units)
 
 
-def ones_like(*symbols):
+def ones_like(*symbols, units=None):
     """
     Returns an array with the same shape and domains as the sum of the
     input symbols, with each entry equal to one.
@@ -576,4 +576,4 @@ def ones_like(*symbols):
     symbols : :class:`Symbol`
         Symbols whose shape to copy
     """
-    return full_like(symbols, 1)
+    return full_like(symbols, 1, units=units)

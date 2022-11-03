@@ -160,16 +160,12 @@ def simplify_if_constant(symbol):
                 return pybamm.Scalar(result, units=symbol.units)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(
-                        result, domains=symbol.domains, units=symbol.units
-                    )
+                    return pybamm.Vector(result, domains=symbol.domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(
-                        result, domains=symbol.domains, units=symbol.units
-                    )
+                    return pybamm.Matrix(result, domains=symbol.domains)
 
     return symbol
 
@@ -219,12 +215,12 @@ class Symbol:
         self.name = name
 
         # Read units
-        if "[" in name and "]" in name:
+        if " [" in name and "]" in name:
             if units is not None:
                 raise pybamm.UnitsError(
                     "Cannot specify units in name and as argument at the same time"
                 )
-            units = pybamm.Units(name[name.index("[") + 1 : name.index("]")])
+            units = pybamm.Units(name[name.index(" [") + 2 : name.index("]")])
         self.units = units
 
         if children is None:
@@ -576,6 +572,9 @@ class Symbol:
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object."""
+        if isinstance(other, pybamm.Units):
+            # call the __rmul__ method of the units instead
+            return NotImplemented
         return pybamm.simplified_multiplication(self, other)
 
     def __rmul__(self, other):
@@ -592,6 +591,9 @@ class Symbol:
 
     def __truediv__(self, other):
         """return a :class:`Division` object."""
+        if isinstance(other, pybamm.Units):
+            # call the __rtruediv__ method of the units instead
+            return NotImplemented
         return pybamm.simplified_division(self, other)
 
     def __rtruediv__(self, other):

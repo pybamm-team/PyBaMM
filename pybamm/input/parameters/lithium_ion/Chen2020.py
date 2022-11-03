@@ -67,7 +67,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     """
     m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -138,7 +140,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     """
     m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 17800
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5

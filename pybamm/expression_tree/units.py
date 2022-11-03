@@ -198,6 +198,8 @@ class Units:
         """
         if isinstance(other, numbers.Number):
             return pybamm.Scalar(other, units=self)
+        elif isinstance(other, pybamm.Symbol):
+            return other * pybamm.Scalar(1, units=self)
         else:
             raise TypeError()
 
@@ -210,6 +212,15 @@ class Units:
             if self.units_dict.get(k, 0) - other.units_dict.get(k, 0) != 0
         }
         return Units(div_units)
+
+    def __rtruediv__(self, other):
+        """
+        Allows setting units via division
+        """
+        if isinstance(other, pybamm.Symbol):
+            return other / pybamm.Scalar(1, units=self)
+        else:
+            raise TypeError()
 
     def __pow__(self, power):
         # Multiply units by the power

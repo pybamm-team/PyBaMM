@@ -709,7 +709,9 @@ class ParameterValues:
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 # Use ones_like so that we get the right shapes
-                function_out = function * pybamm.ones_like(*new_children)
+                function_out = function * pybamm.ones_like(
+                    *new_children, units=pybamm.Units(None)
+                )
             else:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)

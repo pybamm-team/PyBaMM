@@ -151,7 +151,7 @@ class LithiumIonParameters(BaseParameters):
 
     def kappa_e_dimensional(self, c_e, T):
         """Dimensional electrolyte conductivity"""
-        tol = pybamm.settings.tolerances["D_e__c_e"]
+        tol = pybamm.settings.tolerances["kappa_e__c_e"] * pybamm.Units("mol.m-3")
         c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)

@@ -1328,7 +1328,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
         # the local resistance 'zero' (really, it's not defined when i_cc is zero)
         def x_not_zero(x):
-            return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
+            return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0) * x.units
 
         i_cc_not_zero = x_not_zero(i_cc)
         i_cc_dim_not_zero = x_not_zero(i_cc_dim)

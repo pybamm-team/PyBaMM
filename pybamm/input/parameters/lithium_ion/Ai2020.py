@@ -66,7 +66,9 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
         1 * 10 ** (-11) * pybamm.constants.F
     )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 5000  # activation energy for Temperature Dependent Reaction Constant [J/mol]
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -268,7 +270,9 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     m_ref = 1 * 10 ** (-11) * pybamm.constants.F  # need to match the unit from m/s
     # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 5000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = pybamm.exp(
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+    )
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
