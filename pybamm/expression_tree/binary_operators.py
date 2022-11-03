@@ -1235,7 +1235,7 @@ def minimum(left, right):
     k = pybamm.settings.min_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (pybamm.is_constant(left) and pybamm.is_constant(right)):
+    if k == "exact" or (left.is_constant() and right.is_constant()):
         out = Minimum(left, right)
     else:
         out = pybamm.softminus(left, right, k)
@@ -1256,7 +1256,7 @@ def maximum(left, right):
     k = pybamm.settings.max_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (pybamm.is_constant(left) and pybamm.is_constant(right)):
+    if k == "exact" or (left.is_constant() and right.is_constant()):
         out = Maximum(left, right)
     else:
         out = pybamm.softplus(left, right, k)
@@ -1276,7 +1276,7 @@ def _heaviside(left, right, equal):
     k = pybamm.settings.heaviside_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (is_constant(left) and is_constant(right)):
+    if k == "exact" or (left.is_constant() and right.is_constant()):
         if equal is True:
             out = pybamm.EqualHeaviside(left, right)
         else:
