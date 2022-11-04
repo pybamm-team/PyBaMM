@@ -167,7 +167,7 @@ class BasicDFNComposite(BaseModel):
             * pybamm.sinh(param.n.sec.ne / 2 * RT_F * (phi_s_n - phi_e_n - ocp_n_p2))
         )
         j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
-        j_s = pybamm.PrimaryBroadcast(0, "separator")
+        a_j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
             * j0_p
@@ -295,7 +295,7 @@ class BasicDFNComposite(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * j / param.F
+            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * a_j / param.F
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),

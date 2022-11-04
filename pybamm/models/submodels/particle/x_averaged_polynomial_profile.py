@@ -101,7 +101,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     def get_coupled_variables(self, variables):
         domain = self.domain
         phase_param = self.phase_param
-        phase_param = self.phase_param
+        param = self.param
 
         c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
         T_av = variables[f"X-averaged {domain} electrode temperature [K]"]
@@ -197,7 +197,9 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r
         elif self.name == "quartic profile":
-            q_s_av = variables[f"Average {domain} particle concentration gradient"]
+            q_s_av = variables[
+                f"Average {domain} particle concentration gradient [mol.m-4]"
+            ]
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * (
                 (-70 * c_s_surf_xav + 20 * q_s_av + 70 * c_s_av) * r
@@ -228,13 +230,15 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         if self.size_distribution is False:
             c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
             j_xav = variables[
-                f"X-averaged {domain} electrode interfacial current density"
+                f"X-averaged {domain} electrode interfacial current density [A.m-2]"
             ]
         else:
-            c_s_av = variables[f"Average {domain} particle concentration distribution"]
+            c_s_av = variables[
+                f"Average {domain} particle concentration distribution [mol.m-3]"
+            ]
             j_xav = variables[
                 f"X-averaged {domain} electrode interfacial "
-                "current density distribution"
+                "current density distribution [A.m-2]"
             ]
 
         dcdt = -3 * j_xav / phase_param.a_R / phase_param.gamma
@@ -246,8 +250,12 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle concentration gradient
-            q_s_av = variables[f"Average {domain} particle concentration gradient"]
-            D_eff_xav = variables[f"X-averaged {domain} particle effective diffusivity"]
+            q_s_av = variables[
+                f"Average {domain} particle concentration gradient [mol.m-4]"
+            ]
+            D_eff_xav = variables[
+                f"X-averaged {domain} particle effective diffusivity [mol.m-2.s-1]"
+            ]
 
             self.rhs.update(
                 {

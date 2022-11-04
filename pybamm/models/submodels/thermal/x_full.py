@@ -76,7 +76,7 @@ class OneDimensionalX(BaseThermal):
         T_s = variables["Separator temperature [K]"]
         T_p = variables["Positive electrode temperature [K]"]
 
-        Q = variables["Total heating"]
+        Q = variables["Total heating [W.m-3]"]
 
         # Define volumetric heat capacity
         rho_k = pybamm.concatenation(

@@ -61,7 +61,7 @@ class CurrentCollector1D(BaseThermal):
 
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
-        Q_av = variables["X-averaged total heating"]
+        Q_av = variables["X-averaged total heating [W.m-3]"]
         T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio of pouch cell in cooling

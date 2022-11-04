@@ -55,15 +55,15 @@ class Lumped(BaseThermal):
 
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        Q_vol_av = variables["Volume-averaged total heating"]
+        Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
         T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio in cooling coefficient
         # The factor 1/delta^2 comes from the choice of non-dimensionalisation.
         if self.options["cell geometry"] == "pouch":
-            cell_volume = self.param.l * self.param.l_y * self.param.l_z
+            cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
-            yz_cell_surface_area = self.param.l_y * self.param.l_z
+            yz_cell_surface_area = self.param.L_y * self.param.L_z
             yz_surface_cooling_coefficient = (
                 -(self.param.n.h_cc + self.param.p.h_cc)
                 * yz_cell_surface_area
@@ -71,19 +71,19 @@ class Lumped(BaseThermal):
                 / (self.param.delta**2)
             )
 
-            negative_tab_area = self.param.n.l_tab * self.param.n.l_cc
+            negative_tab_area = self.param.n.L_tab * self.param.n.L_cc
             negative_tab_cooling_coefficient = (
                 -self.param.n.h_tab * negative_tab_area / cell_volume / self.param.delta
             )
 
-            positive_tab_area = self.param.p.l_tab * self.param.p.l_cc
+            positive_tab_area = self.param.p.L_tab * self.param.p.L_cc
             positive_tab_cooling_coefficient = (
                 -self.param.p.h_tab * positive_tab_area / cell_volume / self.param.delta
             )
 
             edge_area = (
-                2 * self.param.l_y * self.param.l
-                + 2 * self.param.l_z * self.param.l
+                2 * self.param.L_y * self.param.L
+                + 2 * self.param.L_z * self.param.L
                 - negative_tab_area
                 - positive_tab_area
             )

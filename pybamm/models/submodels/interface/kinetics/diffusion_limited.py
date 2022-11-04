@@ -99,7 +99,7 @@ class DiffusionLimited(BaseInterface):
                 c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
-                    * param.curlyD_ox
+                    * param.D_ox
                     * pybamm.BoundaryGradient(c_ox_s, "left")
                 )
                 N_ox_neg_sep_interface.domains = {"primary": "current collector"}

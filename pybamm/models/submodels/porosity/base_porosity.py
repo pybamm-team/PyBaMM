@@ -53,8 +53,8 @@ class BaseModel(pybamm.BaseSubModel):
             depsdt_k_av = pybamm.x_average(depsdt_k)
             variables.update(
                 {
-                    f"{Domain} porosity change": depsdt_k,
-                    f"X-averaged {domain} porosity change": depsdt_k_av,
+                    f"{Domain} porosity change [s-1]": depsdt_k,
+                    f"X-averaged {domain} porosity change [s-1]": depsdt_k_av,
                 }
             )
 
@@ -62,7 +62,7 @@ class BaseModel(pybamm.BaseSubModel):
                 variables.update(
                     {
                         f"Leading-order x-averaged {domain}"
-                        " porosity change": depsdt_k_av,
+                        " porosity change [s-1]": depsdt_k_av,
                     }
                 )
 

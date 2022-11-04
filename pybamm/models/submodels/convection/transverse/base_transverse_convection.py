@@ -34,9 +34,9 @@ class BaseTransverseModel(BaseModel):
     def _get_standard_transverse_velocity_variables(self, var_s_av, typ):
         """Vertical acceleration in the separator"""
         if typ == "velocity":
-            typ_dim = "velocity [m.s-1]"
+            typ += " [m.s-1]"
         elif typ == "acceleration":
-            typ_dim = "acceleration [m.s-2]"
+            typ += " [m.s-2]"
 
         var_dict = {}
         variables = {}
@@ -50,14 +50,13 @@ class BaseTransverseModel(BaseModel):
 
             variables.update(
                 {
-                    f"{domain} transverse volume-averaged {typ_dim}": var_k,
-                    f"X-averaged {domain} transverse volume-averaged "
-                    f"{typ_dim}": var_k_av,
+                    f"{domain} transverse volume-averaged {typ}": var_k,
+                    f"X-averaged {domain} transverse volume-averaged {typ}": var_k_av,
                 }
             )
 
         var = pybamm.concatenation(*var_dict.values())
 
-        variables.update({f"Transverse volume-averaged {typ_dim}": var})
+        variables.update({f"Transverse volume-averaged {typ}": var})
 
         return variables

@@ -117,7 +117,6 @@ class BasicDFNHalfCell(BaseModel):
 
         # Particle diffusion parameters
         D_w = param.p.prim.D
-        C_w = param.p.prim.cap_init
         c_w_init = param.p.prim.c_init
 
         # Electrode equation parameters
@@ -206,7 +205,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * j / param.F
+            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * a_j / param.F
         )
         dce_dx = (
             -(1 - param.t_plus(c_e, T)) * i_cell / (tor * param.F * param.D_e(c_e, T))
@@ -232,8 +231,7 @@ class BasicDFNHalfCell(BaseModel):
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - a_j
 
-        # dimensionless reference potential so that dimensional reference potential
-        # is zero (phi_dim = U_n_ref + pot_scale * phi)
+        # reference potential
         L_Li = param.p.L
         sigma_Li = param.p.sigma
         j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), c_w_max, T)

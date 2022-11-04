@@ -85,8 +85,7 @@ class BaseModel(BaseElectrolyteConductivity):
             kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
 
             phi_e = phi_e_n_s + pybamm.IndefiniteIntegral(
-                chiRT_over_Fc_e_s * pybamm.grad(c_e_s)
-                - param.C_e * i_boundary_cc / kappa_s_eff,
+                chiRT_over_Fc_e_s * pybamm.grad(c_e_s) - i_boundary_cc / kappa_s_eff,
                 x_s,
             )
 
@@ -131,7 +130,7 @@ class BaseModel(BaseElectrolyteConductivity):
 
         kappa_eff = param.kappa_e(c_e, T) * tor_e
         sigma_eff = sigma * tor_s
-        conductivity = kappa_eff / (param.C_e / param.gamma_e + kappa_eff / sigma_eff)
+        conductivity = kappa_eff / (1 + kappa_eff / sigma_eff)
 
         return conductivity, sigma_eff
 

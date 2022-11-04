@@ -66,8 +66,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
-        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change [s-1]"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change [s-1]"]
 
         div_Vbox_s_av = variables[
             "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
@@ -82,23 +82,25 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "interfacial current densities [A.m-3]"
         ]
         sum_s_j_n_0 = variables[
-            "Sum of x-averaged negative electrode electrolyte reaction source terms [A.m-3]"
+            "Sum of x-averaged negative electrode electrolyte "
+            "reaction source terms [A.m-3]"
         ]
         sum_s_j_p_0 = variables[
-            "Sum of x-averaged positive electrode electrolyte reaction source terms [A.m-3]"
+            "Sum of x-averaged positive electrode electrolyte "
+            "reaction source terms [A.m-3]"
         ]
         source_terms = (
-            param.n.l * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
-            + param.p.l * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
-        ) / param.gamma_e
+            param.n.L * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
+            + param.p.L * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
+        ) / param.F
 
         self.rhs = {
             c_e_av: 1
-            / (param.n.l * eps_n_av + param.s.l * eps_s_av + param.p.l * eps_p_av)
+            / (param.n.L * eps_n_av + param.s.L * eps_s_av + param.p.L * eps_p_av)
             * (
                 source_terms
-                - c_e_av * (param.n.l * deps_n_dt_av + param.p.l * deps_p_dt_av)
-                - c_e_av * param.s.l * div_Vbox_s_av
+                - c_e_av * (param.n.L * deps_n_dt_av + param.p.L * deps_p_dt_av)
+                - c_e_av * param.s.L * div_Vbox_s_av
             )
         }
 

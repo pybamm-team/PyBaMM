@@ -54,27 +54,29 @@ class LeadingOrder(BaseModel):
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
-        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change [s-1]"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change [s-1]"]
 
-        j_ox_n_av = variables[
-            "X-averaged negative electrode oxygen interfacial current density"
+        a_j_ox_n_av = variables[
+            "X-averaged negative electrode oxygen "
+            "volumetric interfacial current density [A.m-3]"
         ]
-        j_ox_p_av = variables[
-            "X-averaged positive electrode oxygen interfacial current density"
+        a_j_ox_p_av = variables[
+            "X-averaged positive electrode oxygen "
+            "volumetric interfacial current density [A.m-3]"
         ]
 
         source_terms = (
-            param.n.l * param.s_ox_Ox * j_ox_n_av
-            + param.p.l * param.s_ox_Ox * j_ox_p_av
+            param.n.L * param.s_ox_Ox * a_j_ox_n_av
+            + param.p.L * param.s_ox_Ox * a_j_ox_p_av
         )
 
         self.rhs = {
             c_ox_av: 1
-            / (param.n.l * eps_n_av + param.s.l * eps_s_av + param.p.l * eps_p_av)
+            / (param.n.L * eps_n_av + param.s.L * eps_s_av + param.p.L * eps_p_av)
             * (
-                source_terms
-                - c_ox_av * (param.n.l * deps_n_dt_av + param.p.l * deps_p_dt_av)
+                source_terms / param.F
+                - c_ox_av * (param.n.L * deps_n_dt_av + param.p.L * deps_p_dt_av)
             )
         }
 

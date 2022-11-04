@@ -75,9 +75,6 @@ class Full(BaseElectrolyteDiffusion):
         return variables
 
     def set_rhs(self, variables):
-
-        param = self.param
-
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
         c_e = variables["Electrolyte concentration [mol.m-3]"]
         N_e = variables["Electrolyte flux [mol.m-2.s-1]"]

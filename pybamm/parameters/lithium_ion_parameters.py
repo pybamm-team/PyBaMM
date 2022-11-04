@@ -305,9 +305,6 @@ class DomainLithiumIonParameters(BaseParameters):
         )
         self.b_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant m")
-        self.Eac_cr = pybamm.Parameter(
-            f"{Domain} electrode activation energy for cracking rate [kJ.mol-1]"
-        )
         # intermediate variables  [K*m^3/mol]
         self.theta = (self.Omega / main.R) * 2 * self.Omega * self.E / 9 / (1 - self.nu)
 

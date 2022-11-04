@@ -75,7 +75,7 @@ class ReactionDrivenODE(BaseModel):
         if self.x_average is True:
             for domain in self.options.whole_cell_domains:
                 eps_av = variables[f"X-averaged {domain} porosity"]
-                deps_dt_av = variables[f"X-averaged {domain} porosity change"]
+                deps_dt_av = variables[f"X-averaged {domain} porosity change [s-1]"]
                 self.rhs.update({eps_av: deps_dt_av})
         else:
             eps = variables["Porosity"]

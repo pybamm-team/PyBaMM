@@ -51,10 +51,10 @@ class FirstOrder(BaseElectrolyteDiffusion):
             "Leading-order x-averaged positive electrolyte transport efficiency"
         ]
         deps_n_0_dt = variables[
-            "Leading-order x-averaged negative electrode porosity change"
+            "Leading-order x-averaged negative electrode porosity change [s-1]"
         ]
         deps_p_0_dt = variables[
-            "Leading-order x-averaged positive electrode porosity change"
+            "Leading-order x-averaged positive electrode porosity change [s-1]"
         ]
 
         # Combined time derivatives
@@ -81,12 +81,12 @@ class FirstOrder(BaseElectrolyteDiffusion):
         ]
         rhs_n = (
             d_epsc_n_0_dt
-            - (sum_s_j_n_0 - param.t_plus(c_e_0, T_0) * sum_a_j_n_0) / param.gamma_e
+            - (sum_s_j_n_0 - param.t_plus(c_e_0, T_0) * sum_a_j_n_0) / param.F
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = (
             d_epsc_p_0_dt
-            - (sum_s_j_p_0 - param.t_plus(c_e_0, T_0) * sum_a_j_p_0) / param.gamma_e
+            - (sum_s_j_p_0 - param.t_plus(c_e_0, T_0) * sum_a_j_p_0) / param.F
         )
 
         # Diffusivities

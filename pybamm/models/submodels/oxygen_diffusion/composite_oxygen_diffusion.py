@@ -41,7 +41,7 @@ class Composite(Full):
 
         param = self.param
 
-        N_ox_diffusion = -tor_0 * param.curlyD_ox * pybamm.grad(c_ox)
+        N_ox_diffusion = -tor_0 * param.D_ox * pybamm.grad(c_ox)
 
         # Note: no convection because c_ox_0 = 0 (at leading order)
         N_ox = N_ox_diffusion
@@ -63,31 +63,31 @@ class Composite(Full):
         eps_0_p = variables["Leading-order positive electrode porosity"]
         eps_0 = pybamm.concatenation(eps_0_s, eps_0_p)
 
-        deps_0_dt_s = variables["Leading-order separator porosity change"]
-        deps_0_dt_p = variables["Leading-order positive electrode porosity change"]
+        deps_0_dt_s = variables["Leading-order separator porosity change [s-1]"]
+        deps_0_dt_p = variables[
+            "Leading-order positive electrode porosity change [s-1]"
+        ]
         deps_0_dt = pybamm.concatenation(deps_0_dt_s, deps_0_dt_p)
 
         c_ox = variables[
             "Separator and positive electrode oxygen concentration [mol.m-3]"
         ]
-        N_ox = variables["Oxygen flux"].orphans[1]
+        N_ox = variables["Oxygen flux [mol.m-2.s-1]"].orphans[1]
 
         if self.extended is False:
-            j_ox_0 = variables[
-                "Leading-order positive electrode oxygen interfacial current density"
+            a_j_ox_0 = variables[
+                "Leading-order positive electrode oxygen "
+                "volumetric interfacial current density [A.m-3]"
             ]
-            pos_reactions = param.s_ox_Ox * j_ox_0
         else:
-            j_ox_0 = variables[
-                "Positive electrode oxygen interfacial current density [A.m-2]"
+            a_j_ox_0 = variables[
+                "Positive electrode oxygen "
+                "volumetric interfacial current density [A.m-3]"
             ]
-            pos_reactions = param.s_ox_Ox * j_ox_0
+        pos_reactions = param.s_ox_Ox * a_j_ox_0
         sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
-        source_terms_0 = (
-            pybamm.concatenation(sep_reactions, pos_reactions) / param.gamma_e
-        )
+        source_terms_0 = pybamm.concatenation(sep_reactions, pos_reactions) / param.F
 
         self.rhs = {
-            c_ox: (1 / eps_0)
-            * (-pybamm.div(N_ox) / param.C_e + source_terms_0 - c_ox * deps_0_dt)
+            c_ox: (1 / eps_0) * (-pybamm.div(N_ox) + source_terms_0 - c_ox * deps_0_dt)
         }

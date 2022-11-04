@@ -43,13 +43,13 @@ class BasicFull(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
-            "Negative electrolyte concentration", domain="negative electrode"
+            "Negative electrolyte concentration [mol.m-3]", domain="negative electrode"
         )
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration", domain="separator"
+            "Separator electrolyte concentration [mol.m-3]", domain="separator"
         )
         c_e_p = pybamm.Variable(
-            "Positive electrolyte concentration", domain="positive electrode"
+            "Positive electrolyte concentration [mol.m-3]", domain="positive electrode"
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -57,20 +57,22 @@ class BasicFull(BaseModel):
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential", domain="negative electrode"
+            "Negative electrolyte potential [V]", domain="negative electrode"
         )
-        phi_e_s = pybamm.Variable("Separator electrolyte potential", domain="separator")
+        phi_e_s = pybamm.Variable(
+            "Separator electrolyte potential [V]", domain="separator"
+        )
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential", domain="positive electrode"
+            "Positive electrolyte potential [V]", domain="positive electrode"
         )
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
-            "Negative electrode potential", domain="negative electrode"
+            "Negative electrode potential [V]", domain="negative electrode"
         )
         phi_s_p = pybamm.Variable(
-            "Positive electrode potential", domain="positive electrode"
+            "Positive electrode potential [V]", domain="positive electrode"
         )
 
         # Porosity
@@ -85,10 +87,10 @@ class BasicFull(BaseModel):
 
         # Pressure (for convection)
         pressure_n = pybamm.Variable(
-            "Negative electrolyte pressure", domain="negative electrode"
+            "Negative electrolyte pressure [Pa]", domain="negative electrode"
         )
         pressure_p = pybamm.Variable(
-            "Positive electrolyte pressure", domain="positive electrode"
+            "Positive electrolyte pressure [Pa]", domain="positive electrode"
         )
 
         # Constant temperature
@@ -99,7 +101,7 @@ class BasicFull(BaseModel):
         ######################
 
         # Current density
-        i_cell = param.current_with_time
+        i_cell = param.current_density_with_time
 
         # transport_efficiency
         tor = pybamm.concatenation(
@@ -107,24 +109,18 @@ class BasicFull(BaseModel):
         )
 
         # Interfacial reactions
+        F_RT = param.F / (param.R * T)
+        Feta_RT_n = F_RT * (phi_s_n - phi_e_n - param.n.prim.U(c_e_n, T))
         j0_n = param.n.prim.j0(c_e_n, T)
-        j_n = (
-            2
-            * j0_n
-            * pybamm.sinh(
-                param.n.prim.ne / 2 * (phi_s_n - phi_e_n - param.n.prim.U(c_e_n, T))
-            )
-        )
-        j0_p = param.p.prim.j0(c_e_p, T)
+        j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
-        j_p = (
-            2
-            * j0_p
-            * pybamm.sinh(
-                param.p.prim.ne / 2 * (phi_s_p - phi_e_p - param.p.prim.U(c_e_p, T))
-            )
-        )
-        j = pybamm.concatenation(j_n, j_s, j_p)
+        Feta_RT_p = F_RT * (phi_s_p - phi_e_p - param.p.prim.U(c_e_p, T))
+        j0_p = param.p.prim.j0(c_e_p, T)
+        j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * (Feta_RT_p))
+
+        a_j_n = param.n.a * j_n
+        a_j_p = param.p.a * j_p
+        a_j = pybamm.concatenation(a_j_n, j_s, a_j_p)
 
         ######################
         # State of Charge
@@ -164,8 +160,8 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(0, "positive electrode"),
         )
         # Simple formula for velocity in the separator
-        self.algebraic[pressure_n] = pybamm.div(v_n) - param.n.beta * j_n
-        self.algebraic[pressure_p] = pybamm.div(v_p) - param.p.beta * j_p
+        self.algebraic[pressure_n] = pybamm.div(v_n) - param.n.beta * a_j_n
+        self.algebraic[pressure_p] = pybamm.div(v_p) - param.p.beta * a_j_p
         self.boundary_conditions[pressure_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Dirichlet"),
@@ -180,10 +176,10 @@ class BasicFull(BaseModel):
         ######################
         # Current in the electrolyte
         ######################
-        i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
+        i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
-        self.algebraic[phi_e] = pybamm.div(i_e) - j
+        self.algebraic[phi_e] = pybamm.div(i_e) - a_j
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -198,8 +194,8 @@ class BasicFull(BaseModel):
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
-        self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
-        self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
+        self.algebraic[phi_s_n] = pybamm.div(i_s_n) + a_j_n
+        self.algebraic[phi_s_p] = pybamm.div(i_s_p) + a_j_p
         self.boundary_conditions[phi_s_n] = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -222,7 +218,7 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(0, "separator"),
             pybamm.PrimaryBroadcast(param.p.beta_surf, "positive electrode"),
         )
-        deps_dt = -beta_surf * j
+        deps_dt = -beta_surf * a * j / param.F
         self.rhs[eps] = deps_dt
         self.initial_conditions[eps] = param.epsilon_init
         self.events.extend(
@@ -247,8 +243,8 @@ class BasicFull(BaseModel):
         ######################
         N_e = (
             -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-            + param.C_e * param.t_plus(c_e, T) * i_e / param.gamma_e
-            + param.C_e * c_e * v
+            + param.t_plus(c_e, T) * i_e / param.F
+            + c_e * v
         )
         s = pybamm.concatenation(
             pybamm.PrimaryBroadcast(param.n.prim.s_plus_S, "negative electrode"),
@@ -256,10 +252,7 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(param.p.prim.s_plus_S, "positive electrode"),
         )
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e
-            + s * j / param.gamma_e
-            - c_e * deps_dt
-            - c_e * div_V
+            -pybamm.div(N_e) + s * a_j / param.F - c_e * deps_dt - c_e * div_V
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -278,18 +271,16 @@ class BasicFull(BaseModel):
         voltage = pybamm.boundary_value(phi_s_p, "right")
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
-        pot = param.potential_scale
-
         self.variables = {
-            "Electrolyte concentration": c_e,
+            "Electrolyte concentration [mol.m-3]": c_e,
             "Current [A]": I,
-            "Negative electrode potential [V]": pot * phi_s_n,
-            "Electrolyte potential [V]": -param.n.U_ref + pot * phi_e,
-            "Positive electrode potential [V]": param.ocv_ref + pot * phi_s_p,
-            "Terminal voltage [V]": param.ocv_ref + pot * voltage,
+            "Negative electrode potential [V]": phi_s_n,
+            "Electrolyte potential [V]": phi_e,
+            "Positive electrode potential [V]": phi_s_p,
+            "Terminal voltage [V]": voltage,
             "Porosity": eps,
-            "Volume-averaged velocity": v,
-            "X-averaged separator transverse volume-averaged velocity": div_V_s,
+            "Volume-averaged velocity [m.s-1]": v,
+            "X-averaged separator transverse volume-averaged velocity [m.s-1]": div_V_s,
         }
         self.events.extend(
             [

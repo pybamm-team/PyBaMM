@@ -74,7 +74,7 @@ class Composite(BaseElectrolyteDiffusion):
         param = self.param
 
         eps_0 = variables["Leading-order porosity"]
-        deps_0_dt = variables["Leading-order porosity change"]
+        deps_0_dt = variables["Leading-order porosity change [s-1]"]
         c_e = variables["Electrolyte concentration [mol.m-3]"]
         N_e = variables["Electrolyte flux [mol.m-2.s-1]"]
         if self.extended is False:

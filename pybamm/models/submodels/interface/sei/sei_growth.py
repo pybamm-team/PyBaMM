@@ -9,6 +9,14 @@ class SEIGrowth(BaseModel):
     """
     Class for SEI growth.
 
+    Most of the models are from section 5.6.4 of the thesis of
+    Scott Marquis (Marquis, S. G. (2020). Long-term degradation of lithium-ion batteries
+    (Doctoral dissertation, University of Oxford)), and references therein
+
+    The ec reaction limited model is from: Yang, Xiao-Guang, et al. "Modeling of lithium
+    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
+    aging." Journal of Power Sources 360 (2017): 28-40.
+
     Parameters
     ----------
     param : parameter class
@@ -29,6 +37,10 @@ class SEIGrowth(BaseModel):
     def __init__(self, param, reaction_loc, options, phase="primary", cracks=False):
         super().__init__(param, options=options, phase=phase, cracks=cracks)
         self.reaction_loc = reaction_loc
+        if self.options["SEI"] == "ec reaction limited":
+            pybamm.citations.register("Yang2017")
+        else:
+            pybamm.citations.register("Marquis2020")
 
     def get_fundamental_variables(self):
         Ls = []
@@ -73,11 +85,9 @@ class SEIGrowth(BaseModel):
             delta_phi = variables[
                 "Lithium metal interface surface potential difference [V]"
             ]
-            phi_s_n = variables["Lithium metal interface electrode potential [V]"]
             T = pybamm.boundary_value(T, "right")
         else:
             delta_phi = variables["Negative electrode surface potential difference [V]"]
-            phi_s_n = variables["Negative electrode potential [V]"]
 
         # Look for current that contributes to the -IR drop
         # If we can't find the interfacial current density from the main reaction, j,
@@ -104,37 +114,40 @@ class SEIGrowth(BaseModel):
         F_RT = param.F / (param.R * T)
 
         if self.options["SEI"] == "reaction limited":
+            # Scott Marquis thesis (eq. 5.92)
             j_sei = -phase_param.j0_sei * pybamm.exp(-0.5 * F_RT * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":
-            U_inner = phase_param.U_inner_electron
-            C_sei = phase_param.C_sei_electron
-            j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
+            # Scott Marquis thesis (eq. 5.94)
+            eta_inner = delta_phi - phase_param.U_inner
+            j_sei = phase_param.kappa_inner * eta_inner / L_sei_inner
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
-            j_sei = -pybamm.exp(-F_RT * delta_phi) * (
-                phase_param.D_li * phase_param.c_li_0 * param.F
-            )
+            # Scott Marquis thesis (eq. 5.96)
+            j_sei = -(
+                phase_param.D_li * phase_param.c_li_0 * param.F / L_sei_outer
+            ) * pybamm.exp(-F_RT * delta_phi)
 
         elif self.options["SEI"] == "solvent-diffusion limited":
-            C_sei = phase_param.C_sei_solvent
-            j_sei = -1 / (C_sei * L_sei_outer)
+            # Scott Marquis thesis (eq. 5.91)
+            j_sei = -phase_param.D_sol * phase_param.c_sol * param.F / L_sei_outer
 
         elif self.options["SEI"] == "ec reaction limited":
-            C_sei_ec = phase_param.C_sei_ec
-            C_ec = phase_param.C_ec
-
-            # we have a linear system for j_sei and c_ec
-            #  c_ec = 1 + j_sei * L_sei * C_ec
-            #  j_sei = - C_sei_ec * c_ec * exp()
-            # so
-            #  j_sei = - C_sei_ec * exp() - j_sei * L_sei * C_ec * C_sei_ec * exp()
-            # so
-            #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
-            #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
-            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * F_RT * eta_SEI)
-            j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
-            c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
+            # we have a linear system for j and c
+            #  c = c_0 + j * L * D / F          [1] (eq 11 in the Yang2017 paper)
+            #  j = - F * k * c * exp()          [2] (eq 10 in the Yang2017 paper, factor
+            #                                        of a is outside the defn of j here)
+            # [1] into [2] gives (F cancels in the second terms)
+            #  j = - F * k * c_0 * exp() - k * j * L * D * exp()
+            # rearrange
+            #  j = -F * k * c_0 * exp() / (1 + k * L * D * exp())
+            #  c_ec = c_0 - L * D * k * exp() / (1 + k * L * D * exp())
+            #       = c_0 / (1 + k * L * D * exp())
+            k_exp = phase_param.k_sei * pybamm.exp(-0.5 * F_RT * eta_SEI)
+            L_D = L_sei * phase_param.D_ec
+            c_0 = phase_param.c_ec_0
+            j_sei = -param.F * c_0 * k_exp / (1 + L_D * k_exp)
+            c_ec = c_0 / (1 + L_D * k_exp)
 
             # Get variables related to the concentration
             c_ec_av = pybamm.x_average(c_ec)

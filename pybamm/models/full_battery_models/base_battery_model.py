@@ -844,24 +844,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         L_x = self.param.L_x
         L_z = self.param.L_z
         self.variables.update(
-            {
-                "x": var.x,
-                "x [m]": var.x * L_x,
-                "x_n": var.x_n,
-                "x_n [m]": var.x_n * L_x,
-                "x_s": var.x_s,
-                "x_s [m]": var.x_s * L_x,
-                "x_p": var.x_p,
-                "x_p [m]": var.x_p * L_x,
-            }
+            {"x [m]": var.x, "x_n [m]": var.x_n, "x_s [m]": var.x_s, "x_p [m]": var.x_p}
         )
         if self.options["dimensionality"] == 1:
-            self.variables.update({"z": var.z, "z [m]": var.z * L_z})
+            self.variables.update({"z [m]": var.z})
         elif self.options["dimensionality"] == 2:
-            # Note: both y and z are scaled with L_z
-            self.variables.update(
-                {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
-            )
+            self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
     def build_fundamental_and_external(self):
         # Get the fundamental variables

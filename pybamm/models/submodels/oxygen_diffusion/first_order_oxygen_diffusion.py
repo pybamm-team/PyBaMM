@@ -29,9 +29,9 @@ class FirstOrder(BaseModel):
     def get_coupled_variables(self, variables):
 
         param = self.param
-        l_n = param.n.l
-        l_s = param.s.l
-        l_p = param.p.l
+        L_n = param.n.L
+        L_s = param.s.L
+        L_p = param.p.L
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -44,27 +44,27 @@ class FirstOrder(BaseModel):
         ]
 
         # Diffusivities
-        D_ox_s = tor_s_0_av * param.curlyD_ox
-        D_ox_p = tor_p_0_av * param.curlyD_ox
+        D_ox_s = tor_s_0_av * param.D_ox
+        D_ox_p = tor_p_0_av * param.D_ox
 
         # Reactions
-        j_ox_0 = variables[
+        a_j_ox_0 = variables[
             "Leading-order x-averaged positive electrode "
-            "oxygen interfacial current density"
+            "oxygen volumetric interfacial current density [A.m-3]"
         ]
-        sj_ox_p = param.s_ox_Ox * j_ox_0
+        sj_ox_p = param.s_ox_Ox * a_j_ox_0 / param.F
 
         # Fluxes
         N_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        N_ox_s_1 = -pybamm.PrimaryBroadcast(sj_ox_p * l_p, "separator")
+        N_ox_s_1 = -pybamm.PrimaryBroadcast(sj_ox_p * L_p, "separator")
         N_ox_p_1 = sj_ox_p * (x_p - 1)
 
         # Concentrations
         c_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        c_ox_s_1 = sj_ox_p * l_p / D_ox_s * (x_s - l_n)
+        c_ox_s_1 = sj_ox_p * L_p / D_ox_s * (x_s - L_n)
         c_ox_p_1 = (
-            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - l_p**2)
-            + sj_ox_p * l_p * l_s / D_ox_s
+            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - L_p**2)
+            + sj_ox_p * L_p * L_s / D_ox_s
         )
 
         # Update variables
