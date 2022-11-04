@@ -1046,8 +1046,14 @@ def simplified_multiplication(left, right):
             mul_classes = (Multiplication, MatrixMultiplication)
             if (
                 right.left.is_constant()
-                or (isinstance(right.left, mul_classes) and right.left.left.is_constant())
-                or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
+                or (
+                    isinstance(right.left, mul_classes)
+                    and right.left.left.is_constant()
+                )
+                or (
+                    isinstance(right.right, mul_classes)
+                    and right.right.left.is_constant()
+                )
             ):
                 r_left, r_right = right.orphans
                 if (r_left.domain == right.domain or r_left.domain == []) and (
