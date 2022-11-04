@@ -799,7 +799,7 @@ class TestParameterValues(unittest.TestCase):
 
         param = pybamm.ParameterValues({"par1": 2, "par2": 4})
         exp_param = param.process_symbol(expression)
-        self.assertEqual(exp_param, 3.0 * (2.0**var2) / (-4.0 + (var1 + var2)))
+        self.assertEqual(exp_param, 3.0 * (2.0**var2) / ((-4.0 + var1) + var2))
 
     def test_process_model(self):
         model = pybamm.BaseModel()

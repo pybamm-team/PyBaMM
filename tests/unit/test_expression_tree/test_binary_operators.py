@@ -314,13 +314,13 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 0)
-        self.assertEqual(str(sigm), "0.5 * (1.0 + tanh(10.0 * (-1.0 + y[0:1])))")
+        self.assertEqual(str(sigm), "0.5 + 0.5 * tanh(-10.0 + 10.0 * y[0:1])")
 
         sigm = pybamm.sigmoid(b, a, 10)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 0)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 1)
-        self.assertEqual(str(sigm), "0.5 * (1.0 + tanh(10.0 * (1.0 - y[0:1])))")
+        self.assertEqual(str(sigm), "0.5 + 0.5 * tanh(10.0 - (10.0 * y[0:1]))")
 
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))

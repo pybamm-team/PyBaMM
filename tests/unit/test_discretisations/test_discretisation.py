@@ -432,11 +432,8 @@ class TestDiscretise(unittest.TestCase):
             exp_disc,
             (5.0 * (3.0 ** pybamm.StateVector(slice(53, 106))))
             / (
-                -4.0
-                + (
-                    pybamm.StateVector(slice(0, 53))
-                    + pybamm.StateVector(slice(53, 106))
-                )
+                (-4.0 + pybamm.StateVector(slice(0, 53)))
+                + pybamm.StateVector(slice(53, 106))
             ),
         )
 
