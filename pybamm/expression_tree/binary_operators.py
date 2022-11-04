@@ -856,9 +856,6 @@ def simplified_addition(left, right):
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
             return right._binary_new_copy(left + r_left, r_right)
-    if isinstance(left, Addition) and left.left.is_constant():
-        # move constants to the left
-        return left.left + (left.right + right)
     if isinstance(left, Subtraction):
         if right == left.right:
             # Simplify (a - b) + b to a
@@ -1041,26 +1038,25 @@ def simplified_multiplication(left, right):
                 r_left, r_right = right.orphans
                 return (left * r_left) / r_right
 
-    # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) or (a * c) is constant
-    # This is a common construction that appears from discretisation of spatial
-    # operators
-    # Also do this for cases like a * (b @ c + d) where (a * b) is constant
-    elif isinstance(right, (Addition, Subtraction)):
-        mul_classes = (Multiplication, MatrixMultiplication, Division)
-        if (
-            right.left.is_constant()
-            or right.right.is_constant()
-            or (isinstance(right.left, mul_classes) and right.left.left.is_constant())
-            or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
-        ):
-            r_left, r_right = right.orphans
-            if (r_left.domain == right.domain or r_left.domain == []) and (
-                r_right.domain == right.domain or r_right.domain == []
+        # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) is constant
+        # This is a common construction that appears from discretisation of spatial
+        # operators
+        # Also do this for cases like a * (b @ c + d) where (a * b) is constant
+        elif isinstance(right, (Addition, Subtraction)):
+            mul_classes = (Multiplication, MatrixMultiplication)
+            if (
+                right.left.is_constant()
+                or (isinstance(right.left, mul_classes) and right.left.left.is_constant())
+                or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
             ):
-                if isinstance(right, Addition):
-                    return (left * r_left) + (left * r_right)
-                elif isinstance(right, Subtraction):
-                    return (left * r_left) - (left * r_right)
+                r_left, r_right = right.orphans
+                if (r_left.domain == right.domain or r_left.domain == []) and (
+                    r_right.domain == right.domain or r_right.domain == []
+                ):
+                    if isinstance(right, Addition):
+                        return (left * r_left) + (left * r_right)
+                    elif isinstance(right, Subtraction):
+                        return (left * r_left) - (left * r_right)
 
     # Cancelling out common terms
     if isinstance(left, Division):
