@@ -73,10 +73,10 @@ def get_size_distribution_parameters(
     R_max_p = R_max_p or (1 + sd_p * 5)
 
     # Area-weighted particle-size distributions
-    def f_a_dist_n_dim(R):
+    def f_a_dist_n(R):
         return lognormal(R, R_n_av, sd_n * R_n_av)
 
-    def f_a_dist_p_dim(R):
+    def f_a_dist_p(R):
         return lognormal(R, R_p_av, sd_p * R_p_av)
 
     param.update(
@@ -91,10 +91,8 @@ def get_size_distribution_parameters(
             "Positive minimum particle radius [m]": R_min_p * R_p_av,
             "Negative maximum particle radius [m]": R_max_n * R_n_av,
             "Positive maximum particle radius [m]": R_max_p * R_p_av,
-            "Negative area-weighted "
-            + "particle-size distribution [m-1]": f_a_dist_n_dim,
-            "Positive area-weighted "
-            + "particle-size distribution [m-1]": f_a_dist_p_dim,
+            "Negative area-weighted particle-size distribution [m-1]": f_a_dist_n,
+            "Positive area-weighted particle-size distribution [m-1]": f_a_dist_p,
         },
         check_already_exists=False,
     )

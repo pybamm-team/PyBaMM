@@ -9,14 +9,6 @@ from .base_parameters import BaseParameters, NullParameters
 class LeadAcidParameters(BaseParameters):
     """
     Standard Parameters for lead-acid battery models
-
-    Layout:
-        1. Dimensional Parameters
-        2. Dimensional Functions
-        3. Scalings
-        4. Dimensionless Parameters
-        5. Dimensionless Functions
-        6. Input Current
     """
 
     def __init__(self):
@@ -56,7 +48,7 @@ class LeadAcidParameters(BaseParameters):
         self.V_cell = self.geo.V_cell
         self.W = self.L_y
         self.H = self.L_z
-        self.A_cs = self.A_cc
+        self.A_cc = self.A_cc
         self.delta = self.L_x / self.H
 
         # Electrical
@@ -133,7 +125,6 @@ class LeadAcidParameters(BaseParameters):
 
         # SEI parameters (for compatibility)
         self.R_sei = pybamm.Scalar(0)
-        self.beta_sei = pybamm.Scalar(0)
 
         for domain in self.domain_params.values():
             domain._set_parameters()
@@ -149,7 +140,7 @@ class LeadAcidParameters(BaseParameters):
             / (self.p.prim.s_plus_S - self.n.prim.s_plus_S)
         )
         self.Q_e_max = self.Q_e_max * self.c_e_typ * self.F
-        self.capacity = self.Q_e_max * self.n_electrodes_parallel * self.A_cs * self.L_x
+        self.capacity = self.Q_e_max * self.n_electrodes_parallel * self.A_cc * self.L_x
 
         # Concatenations
         self.s_plus_S = pybamm.concatenation(
@@ -159,15 +150,6 @@ class LeadAcidParameters(BaseParameters):
             pybamm.FullBroadcast(0, ["separator"], "current collector"),
             pybamm.FullBroadcast(
                 self.p.prim.s_plus_S, ["positive electrode"], "current collector"
-            ),
-        )
-        self.beta_surf = pybamm.concatenation(
-            pybamm.FullBroadcast(
-                self.n.beta_surf, ["negative electrode"], "current collector"
-            ),
-            pybamm.FullBroadcast(0, ["separator"], "current collector"),
-            pybamm.FullBroadcast(
-                self.p.beta_surf, ["positive electrode"], "current collector"
             ),
         )
         self.beta = pybamm.concatenation(

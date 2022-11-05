@@ -212,6 +212,7 @@ class FickianDiffusion(BaseParticle):
         )
 
         if self.size_distribution is True:
+            R = variables[f"{Domain} {phase_name}particle sizes [m]"]
             # Size-dependent flux variables
             variables.update(self._get_standard_flux_distribution_variables(N_s))
             f_a_dist = self.phase_param.f_a_dist(R)

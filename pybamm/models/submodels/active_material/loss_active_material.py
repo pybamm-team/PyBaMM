@@ -65,16 +65,18 @@ class LossActiveMaterial(BaseModel):
             # This is loss of active material model by mechanical effects
             if self.x_average is True:
                 stress_t_surf = variables[
-                    f"X-averaged {domain} particle surface tangential stress"
+                    f"X-averaged {domain} particle surface tangential stress [Pa]"
                 ]
                 stress_r_surf = variables[
-                    f"X-averaged {domain} particle surface radial stress"
+                    f"X-averaged {domain} particle surface radial stress [Pa]"
                 ]
             else:
                 stress_t_surf = variables[
-                    f"{Domain} particle surface tangential stress"
+                    f"{Domain} particle surface tangential stress [Pa]"
                 ]
-                stress_r_surf = variables[f"{Domain} particle surface radial stress"]
+                stress_r_surf = variables[
+                    f"{Domain} particle surface radial stress [Pa]"
+                ]
 
             beta_LAM = self.domain_param.beta_LAM
             stress_critical = self.domain_param.stress_critical
@@ -112,7 +114,7 @@ class LossActiveMaterial(BaseModel):
                 # until other reactions are implemented
                 j_sei = 0
 
-            j_stress_reaction = beta_LAM_sei * a * j_sei
+            j_stress_reaction = beta_LAM_sei * a * j_sei / param.F
             deps_solid_dt += j_stress_reaction
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
@@ -127,12 +129,13 @@ class LossActiveMaterial(BaseModel):
                 f"X-averaged {domain} electrode active material volume fraction"
             ]
             deps_solid_dt = variables[
-                f"X-averaged {domain} electrode active material volume fraction change"
+                f"X-averaged {domain} electrode active material "
+                "volume fraction change [s-1]"
             ]
         else:
             eps_solid = variables[f"{Domain} electrode active material volume fraction"]
             deps_solid_dt = variables[
-                f"{Domain} electrode active material volume fraction change"
+                f"{Domain} electrode active material volume fraction change [s-1]"
             ]
 
         self.rhs = {eps_solid: deps_solid_dt}

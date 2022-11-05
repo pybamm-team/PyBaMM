@@ -213,12 +213,12 @@ class BasicFull(BaseModel):
         ######################
         # Porosity
         ######################
-        beta_surf = pybamm.concatenation(
-            pybamm.PrimaryBroadcast(param.n.beta_surf, "negative electrode"),
+        Delta_V = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(param.n.Delta_V, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
-            pybamm.PrimaryBroadcast(param.p.beta_surf, "positive electrode"),
+            pybamm.PrimaryBroadcast(param.p.Delta_V, "positive electrode"),
         )
-        deps_dt = -beta_surf * a * j / param.F
+        deps_dt = -Delta_V * a * j / param.F
         self.rhs[eps] = deps_dt
         self.initial_conditions[eps] = param.epsilon_init
         self.events.extend(

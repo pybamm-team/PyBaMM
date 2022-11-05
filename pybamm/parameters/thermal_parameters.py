@@ -53,14 +53,14 @@ class ThermalParameters(BaseParameters):
         """Dimensional ambient temperature"""
         return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
 
-    def rho_eff(self, T):
+    def rho_c_p_eff(self, T):
         """Effective volumetric heat capacity [J.m-3.K-1]"""
         return (
-            self.n.rho_cc(T) * self.n.c_p_cc(T) * self.geo.n.L_cc
-            + self.n.rho(T) * self.n.c_p(T) * self.geo.n.L
-            + self.s.rho(T) * self.s.c_p(T) * self.geo.s.L
-            + self.p.rho(T) * self.p.c_p(T) * self.geo.p.L
-            + self.p.rho_cc(T) * self.p.c_p_cc(T) * self.geo.p.L_cc
+            self.n.rho_c_p_cc(T) * self.geo.n.L_cc
+            + self.n.rho_c_p(T) * self.geo.n.L
+            + self.s.rho_c_p(T) * self.geo.s.L
+            + self.p.rho_c_p(T) * self.geo.p.L
+            + self.p.rho_c_p_cc(T) * self.geo.p.L_cc
         ) / self.geo.L
 
     def lambda_eff(self, T):
@@ -156,6 +156,12 @@ class DomainThermalParameters(BaseParameters):
         return pybamm.FunctionParameter(
             f"{Domain} current collector density [kg.m-3]", inputs
         )
+
+    def rho_c_p(self, T):
+        return self.rho(T) * self.c_p(T)
+
+    def rho_c_p_cc(self, T):
+        return self.rho_cc(T) * self.c_p_cc(T)
 
 
 thermal_parameters = ThermalParameters()

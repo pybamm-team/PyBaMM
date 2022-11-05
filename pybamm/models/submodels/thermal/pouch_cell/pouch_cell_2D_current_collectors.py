@@ -86,12 +86,12 @@ class CurrentCollector2D(BaseThermal):
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
-                + self.param.B * pybamm.source(Q_av, T_av)
+                + pybamm.source(Q_av, T_av)
                 + yz_surface_cooling_coefficient * pybamm.source(T_av - T_amb, T_av)
                 - edge_cooling_coefficient
                 * pybamm.source(T_av - T_amb, T_av, boundary=True)
             )
-            / (self.param.C_th * self.param.rho(T_av))
+            / self.param.rho_c_p(T_av)
         }
 
         # TODO: Make h_edge a function of position to have bottom/top/side cooled cells.

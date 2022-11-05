@@ -89,10 +89,10 @@ class CurrentCollector1D(BaseThermal):
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
-                + self.param.B * Q_av
+                + Q_av
                 + total_cooling_coefficient * (T_av - T_amb)
             )
-            / (self.param.C_th * self.param.rho(T_av))
+            / self.param.rho_c_p(T_av)
         }
 
     def set_boundary_conditions(self, variables):

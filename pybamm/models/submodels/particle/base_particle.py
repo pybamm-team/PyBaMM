@@ -42,9 +42,12 @@ class BaseParticle(pybamm.BaseSubModel):
         stress_option = getattr(self.options, domain)["stress-induced diffusion"]
 
         if stress_option == "true":
-            stress_factor = 1 + domain_param.theta * (c - domain_param.c_0) / (
-                1 + param.Theta * T
-            )
+            # Ai2019 eq [12]
+            Omega = domain_param.Omega
+            E = domain_param.E
+            nu = domain_param.nu
+            theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
+            stress_factor = 1 + theta_M * (c - domain_param.c_0)
         else:
             stress_factor = 1
 

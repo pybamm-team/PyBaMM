@@ -79,27 +79,24 @@ class OneDimensionalX(BaseThermal):
         Q = variables["Total heating [W.m-3]"]
 
         # Define volumetric heat capacity
-        rho_k = pybamm.concatenation(
-            self.param.n.rho(T_n),
-            self.param.s.rho(T_s),
-            self.param.p.rho(T_p),
+        rho_c_p = pybamm.concatenation(
+            self.param.n.rho_c_p(T_n),
+            self.param.s.rho_c_p(T_s),
+            self.param.p.rho_c_p(T_p),
         )
 
         # Devine thermal conductivity
-        lambda_k = pybamm.concatenation(
+        lambda_ = pybamm.concatenation(
             self.param.n.lambda_(T_n),
             self.param.s.lambda_(T_s),
             self.param.p.lambda_(T_p),
         )
 
         # Fourier's law for heat flux
-        q = -lambda_k * pybamm.grad(T)
+        q = -lambda_ * pybamm.grad(T)
 
         # N.B only y-z surface cooling is implemented for this model
-        self.rhs = {
-            T: (-pybamm.div(q) / self.param.delta**2 + self.param.B * Q)
-            / (self.param.C_th * rho_k)
-        }
+        self.rhs = {T: (-pybamm.div(q) / self.param.delta**2 + Q) / rho_c_p}
 
     def set_boundary_conditions(self, variables):
         T = variables["Cell temperature [K]"]

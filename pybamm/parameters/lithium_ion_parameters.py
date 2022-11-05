@@ -136,6 +136,9 @@ class LithiumIonParameters(BaseParameters):
         # Reference OCP based on initial concentration
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
 
+        # Dimensionless mechanical parameters
+        self.t0_cr = 3600 / self.C_rate
+
     def chi(self, c_e, T):
         """
         Thermodynamic factor:
@@ -305,8 +308,6 @@ class DomainLithiumIonParameters(BaseParameters):
         )
         self.b_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant m")
-        # intermediate variables  [K*m^3/mol]
-        self.theta = (self.Omega / main.R) * 2 * self.Omega * self.E / 9 / (1 - self.nu)
 
         # Loss of active material parameters
         self.m_LAM = pybamm.Parameter(
@@ -336,6 +337,15 @@ class DomainLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode conductivity [S.m-1]", inputs
+        )
+
+    def k_cr(self, T):
+        """
+        Cracking rate for the electrode;
+        """
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode cracking rate [m.s-1]", {"Temperature [K]": T}
         )
 
 

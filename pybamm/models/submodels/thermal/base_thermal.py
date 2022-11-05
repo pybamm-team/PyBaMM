@@ -144,8 +144,8 @@ class BaseThermal(pybamm.BaseSubModel):
         else:
             T_n = variables["Negative electrode temperature [K]"]
             dUdT_n = variables["Negative electrode entropic change [V.K-1]"]
-            Q_rev_n = a_j_n * (param.Theta ** (-1) + T_n) * dUdT_n
-        Q_rev_p = a_j_p * (param.Theta ** (-1) + T_p) * dUdT_p
+            Q_rev_n = a_j_n * T_n * dUdT_n
+        Q_rev_p = a_j_p * T_p * dUdT_p
         Q_rev = pybamm.concatenation(
             *[
                 Q_rev_n,
@@ -231,10 +231,10 @@ class BaseThermal(pybamm.BaseSubModel):
         and positive current collectors in the geometry).
         """
         out = (
-            self.param.n.l_cc * var_cn
-            + self.param.l_x * pybamm.x_average(var)
-            + self.param.p.l_cc * var_cp
-        ) / self.param.l
+            self.param.n.L_cc * var_cn
+            + self.param.L_x * pybamm.x_average(var)
+            + self.param.p.L_cc * var_cp
+        ) / self.param.L
         return out
 
     def _yz_average(self, var):

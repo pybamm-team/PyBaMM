@@ -57,32 +57,32 @@ class BaseMechanics(pybamm.BaseSubModel):
         T_xav = variables["X-averaged cell temperature [K]"]
         eps_s = variables[f"{Domain} electrode active material volume fraction"]
 
-        if "Cell thickness change [m]" not in variables:
-            # thermal expansion
-            cell_thickness_change = T_xav * self.param.alpha_T_cell
-        else:
-            cell_thickness_change = variables["Cell thickness change [m]"]
-
         Omega = domain_param.Omega
         R0 = domain_param.prim.R
         c_0 = domain_param.c_0
         E0 = domain_param.E
         nu = domain_param.nu
-        L0 = domain_param.L
         c_init = pybamm.r_average(domain_param.prim.c_init)
         v_change = pybamm.x_average(
             eps_s * domain_param.prim.t_change(c_s_rav)
         ) - pybamm.x_average(eps_s * domain_param.prim.t_change(c_init))
 
-        cell_thickness_change += self.param.n_electrodes_parallel * v_change
+        electrode_thickness_change = self.param.n_electrodes_parallel * v_change
+        # Ai2019 eq [10]
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0)
         # c0 reference concentration for no deformation
         # stress evaluated at the surface of the particles
+        # Ai2019 eq [7] with r=R
         stress_r_surf = pybamm.Scalar(0)
-        # c_s_rav is already multiplied by 3/R^3
+        # Ai2019 eq [8] with r=R
+        # c_s_rav is already multiplied by 3/R^3 inside r_average
         stress_t_surf = Omega * E0 / 3.0 / (1.0 - nu) * (c_s_rav - c_s_surf)
 
-        return {
+        # Averages
+        stress_r_surf_av = pybamm.x_average(stress_r_surf)
+        stress_t_surf_av = pybamm.x_average(stress_t_surf)
+
+        variables = {
             f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
             f"{Domain} particle surface radial stress [Pa]": stress_r_surf,
             f"{Domain} particle surface displacement [m]": disp_surf,
@@ -90,26 +90,26 @@ class BaseMechanics(pybamm.BaseSubModel):
             "radial stress [Pa]": stress_r_surf_av,
             f"X-averaged {domain} particle surface "
             "tangential stress [Pa]": stress_t_surf_av,
-            "Cell thickness change [m]": cell_thickness_change,
+            f"{Domain} electrode thickness change [m]": electrode_thickness_change,
         }
 
+        if (
+            "Negative electrode thickness change [m]" in variables
+            and "Positive electrode thickness change [m]" in variables
+        ):
+            # thermal expansion
+            # Ai2019 eq [13]
+            thermal_expansion = self.param.alpha_T_cell * (T_xav - self.param.T_ref)
+            # calculate total cell thickness change
+            neg_thickness_change = variables["Negative electrode thickness change [m]"]
+            pos_thickness_change = variables["Positive electrode thickness change [m]"]
+            variables["Cell thickness change [m]"] = (
+                neg_thickness_change + pos_thickness_change + thermal_expansion
+            )
+
+        return variables
+
     def _get_standard_surface_variables(self, variables):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the local particle crack surfaces.
-
-        Parameters
-        ----------
-        l_cr : :class:`pybamm.Symbol`
-            The crack length in electrode particles.
-        a0 : :class:`pybamm.Symbol`
-            Smooth surface area to volume ratio.
-
-        Returns
-        -------
-        variables : dict
-            The variables which can be derived from the crack length.
-        """
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
@@ -119,14 +119,13 @@ class BaseMechanics(pybamm.BaseSubModel):
         ]
         R0 = self.domain_param.prim.R
         rho_cr = self.domain_param.rho_cr
-        roughness = l_cr * 2 * rho_cr + 1  # the ratio of cracks to normal surface
-        a_cr = (roughness - 1) * a  # normalised crack surface area
-        a_cr_dim = a_cr / R0  # crack surface area to volume ratio [m-1]
+        w_cr = self.domain_param.w_cr
+        roughness = 1 + 2 * l_cr * rho_cr * w_cr  # ratio of cracks to normal surface
+        a_cr = (roughness - 1) * a  # crack surface area to volume ratio
 
         roughness_xavg = pybamm.x_average(roughness)
         variables = {
-            f"{Domain} crack surface to volume ratio [m-1]": a_cr_dim,
-            f"{Domain} crack surface to volume ratio": a_cr,
+            f"{Domain} crack surface to volume ratio [m-1]": a_cr,
             f"{Domain} electrode roughness ratio": roughness,
             f"X-averaged {domain} electrode roughness ratio": roughness_xavg,
         }
