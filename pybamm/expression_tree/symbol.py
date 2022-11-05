@@ -597,6 +597,9 @@ class Symbol:
             # Move negation inside the broadcast
             # Apply recursively
             return self._unary_new_copy(-self.orphans[0])
+        elif isinstance(self, pybamm.Subtraction):
+            # negation flips the subtraction
+            return self.right - self.left
         elif isinstance(self, pybamm.Concatenation) and all(
             child.is_constant() for child in self.children
         ):

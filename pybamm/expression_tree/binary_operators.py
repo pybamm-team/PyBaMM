@@ -1165,10 +1165,6 @@ def simplified_matrix_multiplication(left, right):
         if right.left.evaluates_to_constant_number():
             r_left, r_right = right.orphans
             return (left * r_left) @ r_right
-        # Simplify A @ (b * c) to (A * c) @ b if (A * c) is constant
-        elif right.right.evaluates_to_constant_number():
-            r_left, r_right = right.orphans
-            return (left * r_right) @ r_left
     elif isinstance(right, Division) and left.is_constant():
         # Simplify A @ (b / c) to (A / c) @ b if (A / c) is constant
         if right.right.evaluates_to_constant_number():
@@ -1203,12 +1199,12 @@ def simplified_matrix_multiplication(left, right):
             (right.left.is_constant() or right.right.is_constant())
             # these lines should work but don't, possibly because of poorly
             # conditioned model?
-            # or (
-            #     isinstance(right.left, MatrixMultiplication)
-            #     and right.left.left.is_constant()
-            #     and isinstance(right.right, MatrixMultiplication)
-            #     and right.right.left.is_constant()
-            # )
+            or (
+                isinstance(right.left, MatrixMultiplication)
+                and right.left.left.is_constant()
+                and isinstance(right.right, MatrixMultiplication)
+                and right.right.left.is_constant()
+            )
         ) and not (
             right.left.size_for_testing == 1 or right.right.size_for_testing == 1
         ):
@@ -1275,20 +1271,21 @@ def _heaviside(left, right, equal):
     if out is not None:
         return out
 
-    # if (
-    #     left.is_constant()
-    #     and isinstance(right, BinaryOperator)
-    #     and right.left.is_constant()
-    # ):
-    #     if isinstance(right, Addition):
-    #         # simplify heaviside(a, b + var) to heaviside(a - b, var)
-    #         return _heaviside(left - right.left, right.right, equal=equal)
-    #     if isinstance(right, Subtraction):
-    #         # simplify heaviside(a, b - var) to heaviside(a - b, var)
-    #         return _heaviside(left - right.right, -right.right, equal=equal)
-    #     elif isinstance(right, Multiplication):
-    #         # simplify heaviside(a, b * var) to heaviside(a/b, var)
-    #         return _heaviside(left / right.left, right.right, equal=equal)
+    if (
+        left.is_constant()
+        and isinstance(right, BinaryOperator)
+        and right.left.is_constant()
+    ):
+        if isinstance(right, Addition):
+            # simplify heaviside(a, b + var) to heaviside(a - b, var)
+            return _heaviside(left - right.left, right.right, equal=equal)
+        # elif isinstance(right, Multiplication):
+        #     # simplify heaviside(a, b * var) to heaviside(a/b, var)
+        #     if right.left.evaluate() > 0:
+        #         return _heaviside(left / right.left, right.right, equal=equal)
+        #     else:
+        #         # maintain the sign of each side
+        #         return _heaviside(left / -right.left, -right.right, equal=equal)
 
     k = pybamm.settings.heaviside_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant

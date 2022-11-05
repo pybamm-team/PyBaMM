@@ -120,6 +120,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
         # special cases
         self.assertEqual(-(-a), a)
+        self.assertEqual(-(a - b), b - a)
         self.assertEqual(abs(abs(a)), abs(a))
 
         # binary - two symbols
