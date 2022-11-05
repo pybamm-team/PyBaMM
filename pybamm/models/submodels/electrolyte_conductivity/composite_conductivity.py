@@ -23,26 +23,17 @@ class Composite(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(
-        self, param, domain=None, options=None, higher_order_terms="composite"
-    ):
+    def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
-        self.higher_order_terms = higher_order_terms
 
     def _higher_order_macinnes_function(self, x):
         "Function to differentiate between composite and first-order models"
-        if self.higher_order_terms == "composite":
-            tol = pybamm.settings.tolerances["macinnes__c_e"]
-            x = pybamm.maximum(x, tol)
-            return pybamm.log(x)
-        elif self.higher_order_terms == "first-order":
-            return x
+        tol = pybamm.settings.tolerances["macinnes__c_e"]
+        x = pybamm.maximum(x, tol)
+        return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
-        if self.higher_order_terms == "composite":
-            c_e_av = variables["X-averaged electrolyte concentration"]
-        elif self.higher_order_terms == "first-order":
-            c_e_av = variables["Leading-order x-averaged electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration"]
 
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
         if self.options.electrode_types["negative"] == "porous":
