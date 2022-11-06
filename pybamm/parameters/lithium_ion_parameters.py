@@ -137,7 +137,8 @@ class LithiumIonParameters(BaseParameters):
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
 
         # Dimensionless mechanical parameters
-        self.t0_cr = 3600 / self.C_rate
+        # time per cycle defaults to 1h
+        self.t0_cr = 3600
 
     def chi(self, c_e, T):
         """
