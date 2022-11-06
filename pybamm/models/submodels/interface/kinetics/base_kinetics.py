@@ -232,4 +232,3 @@ class BaseKinetics(BaseInterface):
             j_tot_av_init = sgn * current_at_0 / self.domain_param.l
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
-
