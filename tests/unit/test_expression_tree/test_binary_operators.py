@@ -443,7 +443,8 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((c + broad2), pybamm.PrimaryBroadcast(c + 2, "domain"))
         self.assertEqual((broad2 + c), pybamm.PrimaryBroadcast(2 + c, "domain"))
         # addition with negate
-        self.assertEqual((c + (-d)), c - d)
+        self.assertEqual(c + -d, c - d)
+        self.assertEqual(-c + d, d - c)
 
         # subtraction
         self.assertEqual(a - b, pybamm.Scalar(-1))
