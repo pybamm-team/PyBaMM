@@ -48,16 +48,6 @@ class SPMe(SPM):
         # Initialize with the SPM
         super().__init__(options, name, build)
 
-    def set_transport_efficiency_submodels(self):
-        self.submodels[
-            "electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(
-            self.param, "Electrolyte", self.options
-        )
-        self.submodels[
-            "electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
-
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":

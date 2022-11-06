@@ -104,14 +104,6 @@ class LOQS(BaseModel):
             self.param, self.options, True
         )
 
-    def set_transport_efficiency_submodels(self):
-        self.submodels[
-            "leading-order electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrolyte")
-        self.submodels[
-            "leading-order electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode")
-
     def set_convection_submodel(self):
 
         if self.options["convection"] == "none":
