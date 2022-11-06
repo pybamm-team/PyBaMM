@@ -66,8 +66,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
         # Get errors
         currents = 0.5 / (2 ** np.arange(3))
-        errs = np.array([get_max_error(current) for current in currents])
-        loqs_errs = [np.array(err) for err in zip(*errs)]
+        loqs_errs = np.array([get_max_error(current) for current in currents])
         # Get rates: expect linear convergence for loqs
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
 

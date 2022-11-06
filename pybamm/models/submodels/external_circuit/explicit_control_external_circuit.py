@@ -2,7 +2,7 @@
 # External circuit with explicit equations for control
 #
 import pybamm
-from .base_external_circuit import BaseModel, LeadingOrderBaseModel
+from .base_external_circuit import BaseModel
 
 
 class ExplicitCurrentControl(BaseModel):
@@ -89,10 +89,3 @@ class ExplicitResistanceControl(BaseModel):
         }
 
         return variables
-
-
-class LeadingOrderExplicitCurrentControl(ExplicitCurrentControl, LeadingOrderBaseModel):
-    """External circuit with current control, for leading order models."""
-
-    def __init__(self, param, options):
-        super().__init__(param, options)

@@ -19,7 +19,7 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param, options):
         super().__init__(param, options=options)
 
-    def _get_standard_porosity_variables(self, eps_dict, set_leading_order=False):
+    def _get_standard_porosity_variables(self, eps_dict):
         eps = pybamm.concatenation(*eps_dict.values())
 
         variables = {"Porosity": eps}
@@ -34,17 +34,9 @@ class BaseModel(pybamm.BaseSubModel):
                 }
             )
 
-        if set_leading_order is True:
-            leading_order_variables = {
-                "Leading-order " + name.lower(): var for name, var in variables.items()
-            }
-            variables.update(leading_order_variables)
-
         return variables
 
-    def _get_standard_porosity_change_variables(
-        self, depsdt_dict, set_leading_order=False
-    ):
+    def _get_standard_porosity_change_variables(self, depsdt_dict):
         deps_dt = pybamm.concatenation(*depsdt_dict.values())
 
         variables = {"Porosity change": deps_dt}
@@ -57,13 +49,5 @@ class BaseModel(pybamm.BaseSubModel):
                     f"X-averaged {domain} porosity change": depsdt_k_av,
                 }
             )
-
-            if set_leading_order is True:
-                variables.update(
-                    {
-                        f"Leading-order x-averaged {domain}"
-                        " porosity change": depsdt_k_av,
-                    }
-                )
 
         return variables
