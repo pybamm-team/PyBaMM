@@ -321,7 +321,6 @@ class TestCasadiConverter(unittest.TestCase):
             return x + y**3
 
         f = pybamm.Function(myfunction, a, b).diff(a)
-        f_casadi = f.to_casadi(inputs={"a": 1, "b": 2})
         self.assert_casadi_equal(
             f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(1), evalf=True
         )
