@@ -48,15 +48,6 @@ class SPMe(SPM):
         # Initialize with the SPM
         super().__init__(options, name, build)
 
-    def set_convection_submodel(self):
-
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
-
     def set_transport_efficiency_submodels(self):
         self.submodels[
             "electrolyte transport efficiency"
