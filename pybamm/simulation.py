@@ -374,7 +374,7 @@ class Simulation:
             self._model_with_set_params = self._parameter_values.process_model(
                 self._unprocessed_model, inplace=False
             )
-            self._parameter_values.process_geometry(self._geometry)
+            self._parameter_values.process_geometry(self.geometry)
         self.model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):

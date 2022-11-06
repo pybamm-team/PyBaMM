@@ -58,9 +58,6 @@ def find_symbols(
         variable, for caching
 
     """
-    # ignore broadcasts for now
-    if isinstance(symbol, pybamm.Broadcast):
-        symbol = symbol.child
     if is_constant_and_can_evaluate(symbol):
         value = symbol.evaluate()
         if round_constants:
@@ -124,8 +121,6 @@ def find_symbols(
     # children variables
     children_vars = []
     for child in symbol.children:
-        if isinstance(child, pybamm.Broadcast):
-            child = child.child
         if is_constant_and_can_evaluate(child):
             child_eval = child.evaluate()
             if isinstance(child_eval, numbers.Number):
@@ -162,25 +157,12 @@ def find_symbols(
             symbol_str = "{}[{}:{}]".format(
                 children_vars[0], symbol.slice.start + 1, symbol.slice.stop
             )
-        elif isinstance(symbol, pybamm.Gradient):
-            symbol_str = "grad_{}({})".format(tuple(symbol.domain), children_vars[0])
-        elif isinstance(symbol, pybamm.Divergence):
-            symbol_str = "div_{}({})".format(tuple(symbol.domain), children_vars[0])
-        elif isinstance(symbol, pybamm.Broadcast):
-            # ignore broadcasts for now
-            symbol_str = children_vars[0]
-        elif isinstance(symbol, pybamm.BoundaryValue):
-            symbol_str = "boundary_value_{}({})".format(symbol.side, children_vars[0])
         else:
             symbol_str = symbol.name + children_vars[0]
 
     elif isinstance(symbol, pybamm.Function):
         # write functions directly
         symbol_str = "{}({})".format(symbol.julia_name, ", ".join(children_vars))
-
-    elif isinstance(symbol, (pybamm.Variable, pybamm.ConcatenationVariable)):
-        # No need to do anything if a Variable is found
-        return
 
     elif isinstance(symbol, pybamm.Concatenation):
         if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
@@ -242,11 +224,6 @@ def find_symbols(
                 symbol_str += "{}::{}, ".format(size, child)
             symbol_str = symbol_str[:-2] + "]"
 
-        else:
-            # A regular Concatenation for the MTK model
-            # We will define the concatenation function separately
-            symbol_str = "concatenation(" + ", ".join(children_vars) + ")"
-
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVectorBase):
         if isinstance(symbol, pybamm.StateVector):
@@ -268,12 +245,6 @@ def find_symbols(
     elif isinstance(symbol, pybamm.InputParameter):
         symbol_str = "inputs['{}']".format(symbol.name)
 
-    elif isinstance(symbol, pybamm.SpatialVariable):
-        symbol_str = symbol.name
-
-    elif isinstance(symbol, pybamm.FunctionParameter):
-        symbol_str = "{}({})".format(symbol.name, ", ".join(children_vars))
-
     else:
         raise NotImplementedError(
             "Conversion to Julia not implemented for a symbol of type '{}'".format(
@@ -284,13 +255,10 @@ def find_symbols(
     variable_symbols[symbol.id] = symbol_str
 
     # Save the size of the symbol
-    try:
-        if symbol.shape == ():
-            variable_symbol_sizes[symbol.id] = 1
-        else:
-            variable_symbol_sizes[symbol.id] = symbol.shape[0]
-    except NotImplementedError:
-        pass
+    if symbol.shape == ():
+        variable_symbol_sizes[symbol.id] = 1
+    else:
+        variable_symbol_sizes[symbol.id] = symbol.shape[0]
 
 
 def to_julia(symbol, round_constants=True):
@@ -595,145 +563,3 @@ def get_julia_function(
     julia_str += "end"
 
     return julia_str
-
-
-def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, typ):
-    """
-    Converts a variable and its equation to a julia string
-
-    Parameters
-    ----------
-    var : :class:`pybamm.Symbol`
-        The variable (key in the dictionary of rhs/algebraic/initial conditions)
-    eqn : :class:`pybamm.Symbol`
-        The equation (value in the dictionary of rhs/algebraic/initial conditions)
-    all_constants_str : str
-        String containing all the constants defined so far
-    all_variables_str : str
-        String containing all the variables defined so far
-    typ : str
-        The type of the variable/equation pair being converted ("equation", "initial
-        condition", or "boundary condition")
-
-    Returns
-    -------
-    all_constants_str : str
-        Updated string of all constants
-    all_variables_str : str
-        Updated string of all variables
-    eqn_str : str
-        The string describing the final equation result, perhaps as a function of some
-        variables and/or constants in all_constants_str and all_variables_str
-
-    """
-    if isinstance(eqn, pybamm.Broadcast):
-        # ignore broadcasts for now
-        eqn = eqn.child
-
-    var_symbols = to_julia(eqn)[1]
-
-    # var_str = ""
-    # for symbol_id, symbol_line in var_symbols.items():
-    #     var_str += f"{id_to_julia_variable(symbol_id)} = {symbol_line}\n"
-    # Pop (get and remove) items from the dictionary of symbols one by one
-    # If they are simple operations (+, -, *, /), replace all future
-    # occurences instead of assigning them.
-    inlineable_symbols = [" + ", " - ", " * ", " / "]
-    var_str = ""
-    while var_symbols:
-        var_symbol_id, symbol_line = var_symbols.popitem(last=False)
-        julia_var = id_to_julia_variable(var_symbol_id, "cache")
-        # inline operation if it can be inlined
-        if "concatenation" not in symbol_line:
-            found_replacement = False
-            # replace all other occurrences of the variable
-            # in the dictionary with the symbol line
-            for next_var_id, next_symbol_line in var_symbols.items():
-                if (
-                    symbol_line == "t"
-                    or " " not in symbol_line
-                    or symbol_line.startswith("grad")
-                    or not any(x in next_symbol_line for x in inlineable_symbols)
-                ):
-                    # cases that don't need brackets
-                    var_symbols[next_var_id] = next_symbol_line.replace(
-                        julia_var, symbol_line
-                    )
-                elif next_symbol_line.startswith("concatenation"):
-                    var_symbols[next_var_id] = next_symbol_line.replace(
-                        julia_var, f"\n   {symbol_line}\n"
-                    )
-                else:
-                    # add brackets so that the order of operations is maintained
-                    var_symbols[next_var_id] = next_symbol_line.replace(
-                        julia_var, "({})".format(symbol_line)
-                    )
-                found_replacement = True
-            if not found_replacement:
-                var_str += "{} = {}\n".format(julia_var, symbol_line)
-
-        # otherwise assign
-        else:
-            var_str += "{} = {}\n".format(julia_var, symbol_line)
-
-    # If we have created a concatenation we need to define it
-    # Hardcoded to the negative electrode, separator, positive electrode case for now
-    if "concatenation" in var_str and "function concatenation" not in all_variables_str:
-        concatenation_def = (
-            "\nfunction concatenation(n, s, p)\n"
-            + "   # A concatenation in the electrolyte domain\n"
-            + "   IfElse.ifelse(\n"
-            + "      x < neg_width, n, IfElse.ifelse(\n"
-            + "         x < neg_plus_sep_width, s, p\n"
-            + "      )\n"
-            + "   )\n"
-            + "end\n"
-        )
-    else:
-        concatenation_def = ""
-
-    # Define the FunctionParameter objects that have not yet been defined
-    function_defs = ""
-    for x in eqn.pre_order():
-        if (
-            isinstance(x, pybamm.FunctionParameter)
-            and f"function {x.name}" not in all_variables_str
-            and typ == "equation"
-        ):
-            function_def = (
-                f"\nfunction {x.name}("
-                + ", ".join(x.arg_names)
-                + ")\n"
-                + "   {}\n".format(str(x.callable).replace("**", "^"))
-                + "end\n"
-            )
-            function_defs += function_def
-
-    if concatenation_def + function_defs != "":
-        function_defs += "\n"
-
-    var_str = concatenation_def + function_defs + var_str
-
-    # add a comment labeling the equation, and the equation itself
-    if var_str == "":
-        all_variables_str += ""
-    else:
-        all_variables_str += f"# '{var.name}' {typ}\n" + var_str + "\n"
-
-    # calculate the final variable that will output the result
-    if eqn.is_constant():
-        result_var = id_to_julia_variable(eqn.id, "const")
-    else:
-        result_var = id_to_julia_variable(eqn.id, "cache")
-    if is_constant_and_can_evaluate(eqn):
-        result_value = eqn.evaluate()
-    else:
-        result_value = None
-
-    # define the variable that goes into the equation
-    if eqn.is_constant() and isinstance(result_value, numbers.Number):
-        eqn_str = str(result_value)
-    else:
-        eqn_str = result_var
-
-    return all_constants_str, all_variables_str, eqn_str
