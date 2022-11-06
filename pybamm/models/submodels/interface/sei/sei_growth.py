@@ -69,7 +69,7 @@ class SEIGrowth(BaseModel):
 
         L_inner, L_outer = Ls
 
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
@@ -113,7 +113,14 @@ class SEIGrowth(BaseModel):
         # Thermal prefactor for reaction, interstitial and EC models
         F_RT = param.F / (param.R * T)
 
-        if self.options["SEI"] == "reaction limited":
+        # Define alpha_SEI depending on whether it is symmetric or asymmetric. This
+        # applies to "reaction limited" and "EC reaction limited"
+        if self.options["SEI"].endswith("(asymmetric)"):
+            alpha_SEI = phase_param.alpha_SEI
+        else:
+            alpha_SEI = 0.5
+
+        if self.options["SEI"].startswith("reaction limited"):
             # Scott Marquis thesis (eq. 5.92)
             j_sei = -phase_param.j0_sei * pybamm.exp(-0.5 * F_RT * eta_SEI)
 
@@ -143,7 +150,7 @@ class SEIGrowth(BaseModel):
             #  j = -F * k * c_0 * exp() / (1 + k * L * D * exp())
             #  c_ec = c_0 - L * D * k * exp() / (1 + k * L * D * exp())
             #       = c_0 / (1 + k * L * D * exp())
-            k_exp = phase_param.k_sei * pybamm.exp(-0.5 * F_RT * eta_SEI)
+            k_exp = phase_param.k_sei * pybamm.exp(-alpha_SEI * F_RT * eta_SEI)
             L_D = L_sei * phase_param.D_ec
             c_0 = phase_param.c_ec_0
             j_sei = -param.F * c_0 * k_exp / (1 + L_D * k_exp)
@@ -160,7 +167,7 @@ class SEIGrowth(BaseModel):
                 {f"{name} [mol.m-3]": c_ec, f"X-averaged {name} [mol.m-3]": c_ec_av}
             )
 
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             inner_sei_proportion = 0
         else:
             inner_sei_proportion = phase_param.inner_sei_proportion
@@ -228,7 +235,7 @@ class SEIGrowth(BaseModel):
         Gamma_SEI = phase_param.V_bar_inner / (param.F * phase_param.z_sei)
         v_bar = phase_param.V_bar_outer / phase_param.V_bar_inner
 
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             self.rhs = {L_outer: -Gamma_SEI * a_j_outer + spreading_outer}
         else:
             self.rhs = {
@@ -250,7 +257,7 @@ class SEIGrowth(BaseModel):
         else:
             L_inner_0 = self.phase_param.L_inner_0
             L_outer_0 = self.phase_param.L_outer_0
-        if self.options["SEI"] == "ec reaction limited":
+        if self.options["SEI"].startswith("ec reaction limited"):
             self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:
             self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}

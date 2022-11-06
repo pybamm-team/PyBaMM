@@ -159,8 +159,9 @@ class BaseModel(BaseInterface):
                 L_to_n_inner = phase_param.a_typ / phase_param.V_bar_inner
                 L_to_n_outer = phase_param.a_typ / phase_param.V_bar_outer
             z_sei = phase_param.z_sei
-            # Set scales for the "EC Reaction Limited" model
-            if self.options["SEI"] == "ec reaction limited":
+            # Set scales for the "EC Reaction Limited" models (both symmetric and
+            # asymmetric)
+            if self.options["SEI"].startswith("ec reaction limited"):
                 L_inner_0 = 0
                 L_outer_0 = 1
                 L_inner_crack_0 = 0

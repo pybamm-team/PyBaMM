@@ -417,6 +417,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.E_sei = pybamm.Parameter(
                 f"{pref}SEI growth activation energy [J.mol-1]"
             )
+            self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
 
             # EC reaction
             self.c_ec_0 = pybamm.Parameter(
