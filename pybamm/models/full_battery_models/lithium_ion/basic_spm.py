@@ -138,8 +138,8 @@ class BasicSPM(BaseModel):
         ######################
         # Interfacial reactions
         RT_F = param.R * T / param.F
-        j0_n = param.n.prim.j0(1, c_s_surf_n, T)
-        j0_p = param.p.prim.j0(1, c_s_surf_p, T)
+        j0_n = param.n.prim.j0(param.c_e_typ, c_s_surf_n, T)
+        j0_p = param.p.prim.j0(param.c_e_typ, c_s_surf_p, T)
         eta_n = (2 / param.n.prim.ne) * RT_F * pybamm.arcsinh(j_n / (2 * j0_n))
         eta_p = (2 / param.p.prim.ne) * RT_F * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0
@@ -159,7 +159,7 @@ class BasicSPM(BaseModel):
                 c_s_surf_n, "negative electrode"
             ),
             "Electrolyte concentration [mol.m-3]": pybamm.PrimaryBroadcast(
-                1, whole_cell
+                param.c_e_typ, whole_cell
             ),
             "Positive particle surface "
             "concentration [mol.m-3]": pybamm.PrimaryBroadcast(

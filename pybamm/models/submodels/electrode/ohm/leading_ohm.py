@@ -43,14 +43,15 @@ class LeadingOrder(BaseModel):
         phi_s_cn = variables["Negative current collector potential [V]"]
 
         # import parameters and spatial variables
-        l_n = param.n.L
-        l_p = param.p.L
+        L_n = param.n.L
+        L_p = param.p.L
+        L_x = param.L_x
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
         if self.domain == "negative":
             phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")
-            i_s = i_boundary_cc * (1 - x_n / l_n)
+            i_s = i_boundary_cc * (1 - x_n / L_n)
 
         elif self.domain == "positive":
             # recall delta_phi = phi_s - phi_e
@@ -62,7 +63,7 @@ class LeadingOrder(BaseModel):
             v = delta_phi_p_av + phi_e_p_av
 
             phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
-            i_s = i_boundary_cc * (1 - (1 - x_p) / l_p)
+            i_s = i_boundary_cc * (1 - (L_x - x_p) / L_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))

@@ -23,8 +23,9 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         super().__init__(param, options)
 
     def get_fundamental_variables(self):
+        c_e_init = self.param.c_e_init
         c_e_dict = {
-            domain: pybamm.FullBroadcast(1, domain, "current collector")
+            domain: pybamm.FullBroadcast(c_e_init, domain, "current collector")
             for domain in self.options.whole_cell_domains
         }
         variables = self._get_standard_concentration_variables(c_e_dict)

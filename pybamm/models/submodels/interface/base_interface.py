@@ -75,7 +75,8 @@ class BaseInterface(pybamm.BaseSubModel):
             # of c_s_surf that depends on particle size.
             if self.options["particle size"] == "distribution":
                 c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration distribution"
+                    f"{Domain} {phase_name}particle surface "
+                    "concentration distribution [mol.m-3]"
                 ]
                 # If all variables were broadcast (in "x"), take only the orphans,
                 # then re-broadcast c_e
@@ -97,7 +98,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
             else:
                 c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration"
+                    f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
                 ]
                 # If all variables were broadcast, take only the orphans
                 if (

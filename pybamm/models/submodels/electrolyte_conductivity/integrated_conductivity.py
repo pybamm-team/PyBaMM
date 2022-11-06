@@ -70,6 +70,7 @@ class Integrated(BaseElectrolyteConductivity):
         param = self.param
         L_n = param.n.L
         L_p = param.p.L
+        L_x = param.L_x
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
@@ -84,12 +85,12 @@ class Integrated(BaseElectrolyteConductivity):
         # electrolyte current
         i_e_n = i_boundary_cc * x_n / L_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
-        i_e_p = i_boundary_cc * (1 - x_p) / L_p
+        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
         i_e_n_edge = i_boundary_cc * x_n_edge / L_n
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
-        i_e_p_edge = i_boundary_cc * (1 - x_p_edge) / L_p
+        i_e_p_edge = i_boundary_cc * (L_x - x_p_edge) / L_p
 
         # electrolyte potential
         indef_integral_n = pybamm.IndefiniteIntegral(

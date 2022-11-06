@@ -39,15 +39,16 @@ class LeadingOrder(BaseElectrolyteConductivity):
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         param = self.param
-        l_n = param.n.L
-        l_p = param.p.L
+        L_n = param.n.L
+        L_p = param.p.L
+        L_x = param.L_x
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
         if "negative electrode" not in self.options.whole_cell_domains:
             i_e_n = None
         else:
-            i_e_n = i_boundary_cc * x_n / l_n
+            i_e_n = i_boundary_cc * x_n / L_n
 
         phi_e_dict = {
             domain: pybamm.PrimaryBroadcast(phi_e_av, domain)
@@ -55,7 +56,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
         }
 
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, ["separator"])
-        i_e_p = i_boundary_cc * (1 - x_p) / l_p
+        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
         variables.update(self._get_standard_potential_variables(phi_e_dict))

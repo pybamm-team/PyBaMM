@@ -37,14 +37,13 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             electrolyte.
         """
 
-        c_e_typ = self.param.c_e_typ
         c_e = pybamm.concatenation(*c_e_dict.values())
         # Override print_name
         c_e.print_name = "c_e"
 
         variables = {
-            "Electrolyte concentration": c_e,
-            "X-averaged electrolyte concentration": pybamm.x_average(c_e),
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "X-averaged electrolyte concentration [mol.m-3]": pybamm.x_average(c_e),
         }
 
         # Case where an electrode is not included (half-cell)
@@ -58,18 +57,20 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             c_e_k_av = pybamm.x_average(c_e_k)
             variables.update(
                 {
-                    f"{Domain} electrolyte concentration": c_e_k,
-                    f"X-averaged {domain} electrolyte concentration": c_e_k_av,
+                    f"{Domain} electrolyte concentration [mol.m-3]": c_e_k,
+                    f"X-averaged {domain} electrolyte "
+                    "concentration [mol.m-3]": c_e_k_av,
                 }
             )
 
-        # Calculate dimensional variables
-        variables_nondim = variables.copy()
-        for name, var in variables_nondim.items():
+        # Calculate dimensionless and molar variables
+        variables_dim = variables.copy()
+        for name, var in variables_dim.items():
+            name = name.replace(" [mol.m-3]", "")
             variables.update(
                 {
-                    f"{name} [mol.m-3]": c_e_typ * var,
-                    f"{name} [Molar]": c_e_typ * var / 1000,
+                    name: var / self.param.c_e_typ,
+                    f"{name} [Molar]": var / 1000,
                 }
             )
 
@@ -119,16 +120,11 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables : dict
             The "Total lithium in electrolyte [mol]" variable.
         """
-
-        c_e_typ = self.param.c_e_typ
         L_x = self.param.L_x
         A = self.param.A_cc
 
         eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
 
-        variables = {
-            "Total lithium in electrolyte": eps_c_e_av,
-            "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av,
-        }
+        variables = {"Total lithium in electrolyte [mol]": L_x * A * eps_c_e_av}
 
         return variables

@@ -100,7 +100,7 @@ class PolynomialProfile(BaseParticle):
             # We solve an equation for the surface concentration, so it is
             # a variable in the model
             c_s_surf = pybamm.Variable(
-                f"{Domain} particle surface concentration",
+                f"{Domain} particle surface concentration [mol.m-3]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, 1),
@@ -112,12 +112,15 @@ class PolynomialProfile(BaseParticle):
             # distinction between the flux defined as N = -D*dc/dr and the
             # concentration gradient q = dc/dr
             q_s_rav = pybamm.Variable(
-                f"R-averaged {domain} particle concentration gradient",
+                f"R-averaged {domain} particle concentration gradient [mol.m-4]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
             variables.update(
-                {f"R-averaged {domain} particle concentration gradient": q_s_rav}
+                {
+                    f"R-averaged {domain} particle "
+                    "concentration gradient [mol.m-4]": q_s_rav
+                }
             )
 
         # Set concentration depending on polynomial order

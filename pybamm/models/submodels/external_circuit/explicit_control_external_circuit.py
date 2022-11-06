@@ -17,7 +17,7 @@ class ExplicitCurrentControl(BaseModel):
         I = self.param.current_with_time
 
         variables = {
-            "Current density variable": pybamm.Scalar(1, name="i_cell"),
+            "Current density variable [A.m-2]": i_cell,
             "Total current density [A.m-2]": i_cell,
             "Current [A]": I,
             "C-rate": I / self.param.Q,

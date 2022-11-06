@@ -160,12 +160,10 @@ class SEIGrowth(BaseModel):
             c_ec_av = pybamm.x_average(c_ec)
 
             if self.reaction == "SEI on cracks":
-                name = "EC concentration on cracks"
+                name = "EC concentration on cracks [mol.m-3]"
             else:
-                name = "EC surface concentration"
-            variables.update(
-                {f"{name} [mol.m-3]": c_ec, f"X-averaged {name} [mol.m-3]": c_ec_av}
-            )
+                name = "EC surface concentration [mol.m-3]"
+            variables.update({name: c_ec, f"X-averaged {name}": c_ec_av})
 
         if self.options["SEI"].startswith("ec reaction limited"):
             inner_sei_proportion = 0

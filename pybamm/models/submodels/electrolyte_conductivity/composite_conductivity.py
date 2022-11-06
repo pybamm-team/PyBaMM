@@ -62,6 +62,7 @@ class Composite(BaseElectrolyteConductivity):
         L_n = param.n.L
         L_s = param.s.L
         L_p = param.p.L
+        L_x = param.L_x
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -84,7 +85,7 @@ class Composite(BaseElectrolyteConductivity):
             kappa_n_av = param.kappa_e(c_e_av, T_av) * tor_n_av
             i_e_n = i_boundary_cc * x_n / L_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
-        i_e_p = i_boundary_cc * (1 - x_p) / L_p
+        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
         phi_e_dict = {}

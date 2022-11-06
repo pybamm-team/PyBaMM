@@ -127,7 +127,7 @@ class LithiumIonParameters(BaseParameters):
 
         # Total lithium
         # Electrolyte
-        c_e_av_init = pybamm.xyz_average(self.epsilon_init) * self.c_e_typ
+        c_e_av_init = pybamm.xyz_average(self.epsilon_init) * self.c_e_init
         self.n_Li_e_init = c_e_av_init * self.L_x * self.A_cc
 
         self.n_Li_particles_init = self.n.n_Li_init + self.p.n_Li_init
