@@ -579,7 +579,7 @@ class TestEvaluate(unittest.TestCase):
 
         # test the sparse-scalar multiplication
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        for expr in [
+        expr =[
             A * pybamm.t @ pybamm.StateVector(slice(0, 2)),
             pybamm.t * A @ pybamm.StateVector(slice(0, 2)),
         ]:

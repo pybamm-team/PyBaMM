@@ -343,9 +343,6 @@ def size_average(symbol, f_a_dist=None):
         "secondary"
     ] in [["negative particle size"], ["positive particle size"]]:
         return symbol.orphans[0]
-    # Average of a sum is sum of averages
-    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
-        return _sum_of_averages(symbol, size_average)
     # Otherwise, define a SizeAverage
     else:
         if f_a_dist is None:

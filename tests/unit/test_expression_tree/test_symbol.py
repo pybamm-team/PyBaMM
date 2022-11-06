@@ -386,7 +386,8 @@ class TestSymbol(unittest.TestCase):
 
     def test_symbol_visualise(self):
         c = pybamm.Variable("c", "negative electrode")
-        sym = pybamm.div(c * pybamm.grad(c)) + (c / 2 + c - 1) ** 5
+        d = pybamm.Variable("d", "negative electrode")
+        sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
         sym.visualise("test_visualize.png")
         self.assertTrue(os.path.exists("test_visualize.png"))
         with self.assertRaises(ValueError):

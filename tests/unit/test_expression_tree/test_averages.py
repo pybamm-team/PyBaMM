@@ -222,16 +222,6 @@ class TestUnaryOperators(TestCase):
         ):
             pybamm.size_average(symbol_on_edges)
 
-        # Addition or Subtraction
-        a = pybamm.Variable("a", domain="domain")
-        b = pybamm.Variable("b", domain="domain")
-        self.assertEqual(
-            pybamm.size_average(a + b), pybamm.size_average(a) + pybamm.size_average(b)
-        )
-        self.assertEqual(
-            pybamm.size_average(a - b), pybamm.size_average(a) - pybamm.size_average(b)
-        )
-
     def test_r_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.r_average(a)

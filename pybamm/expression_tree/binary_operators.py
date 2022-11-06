@@ -268,8 +268,6 @@ class Multiplication(BinaryOperator):
         left, right = self.orphans
         if left.evaluates_to_constant_number():
             return left * right_jac
-        elif right.evaluates_to_constant_number():
-            return right * left_jac
         else:
             return right * left_jac + left * right_jac
 
@@ -357,8 +355,6 @@ class Division(BinaryOperator):
         left, right = self.orphans
         if left.evaluates_to_constant_number():
             return -left / right**2 * right_jac
-        elif right.evaluates_to_constant_number():
-            return left_jac / right
         else:
             return (right * left_jac - left * right_jac) / right**2
 
@@ -1000,13 +996,9 @@ def simplified_multiplication(left, right):
         ):
             if pybamm.is_matrix_one(left):
                 return right
-            elif pybamm.is_matrix_one(right):
-                return left
             # also check for negative one
             if pybamm.is_matrix_minus_one(left):
                 return -right
-            elif pybamm.is_matrix_minus_one(right):
-                return -left
 
     except NotImplementedError:
         pass
@@ -1165,11 +1157,6 @@ def simplified_matrix_multiplication(left, right):
         if right.left.evaluates_to_constant_number():
             r_left, r_right = right.orphans
             return (left * r_left) @ r_right
-    elif isinstance(right, Division) and left.is_constant():
-        # Simplify A @ (b / c) to (A / c) @ b if (A / c) is constant
-        if right.right.evaluates_to_constant_number():
-            r_left, r_right = right.orphans
-            return (left / r_right) @ r_left
 
     # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
     # This is a common construction that appears from discretisation of spatial

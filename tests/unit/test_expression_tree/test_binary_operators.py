@@ -284,19 +284,22 @@ class TestBinaryOperators(unittest.TestCase):
             pybamm.source(v, w)
 
     def test_heaviside(self):
-        a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
-        heav = a < b
+        heav = 1 < b
         self.assertEqual(heav.evaluate(y=np.array([2])), 1)
         self.assertEqual(heav.evaluate(y=np.array([1])), 0)
         self.assertEqual(heav.evaluate(y=np.array([0])), 0)
         self.assertEqual(str(heav), "1.0 < y[0:1]")
 
-        heav = a >= b
+        heav = 1 >= b
         self.assertEqual(heav.evaluate(y=np.array([2])), 0)
         self.assertEqual(heav.evaluate(y=np.array([1])), 1)
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
+
+        # simplifications
+        self.assertEqual(1 < b + 2, -1 < b)
+        self.assertEqual(b + 1 > 2, b > 1)
 
     def test_equality(self):
         a = pybamm.Scalar(1)
@@ -439,6 +442,8 @@ class TestBinaryOperators(unittest.TestCase):
         # addition with broadcasts
         self.assertEqual((c + broad2), pybamm.PrimaryBroadcast(c + 2, "domain"))
         self.assertEqual((broad2 + c), pybamm.PrimaryBroadcast(2 + c, "domain"))
+        # addition with negate
+        self.assertEqual((c + (-d)), c - d)
 
         # subtraction
         self.assertEqual(a - b, pybamm.Scalar(-1))
@@ -456,6 +461,8 @@ class TestBinaryOperators(unittest.TestCase):
         # subtraction from itself
         self.assertEqual((c - c), pybamm.Scalar(0))
         self.assertEqual((broad2 - broad2), broad0)
+        # subtraction with negate
+        self.assertEqual((c - (-d)), c + d)
 
         # addition and subtraction with matrix zero
         self.assertEqual(b + v, pybamm.Vector(np.ones((10, 1))))
