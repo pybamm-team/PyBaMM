@@ -60,5 +60,3 @@ class BaseModel(pybamm.BaseSubModel):
             self.rhs[Q_Wh] = I * V / 3600
             self.rhs[Qt_Wh] = abs(I * V) / 3600
             self.rhs[Qt_Ah] = abs(I) / 3600
-
-
