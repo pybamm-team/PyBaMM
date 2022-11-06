@@ -167,6 +167,16 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(a.domain, ["positive particle"])
         self.assertIsInstance(av_a, pybamm.XAverage)
 
+        # Addition or Subtraction
+        a = pybamm.Variable("a", domain="domain")
+        b = pybamm.Variable("b", domain="domain")
+        self.assertEqual(
+            pybamm.x_average(a + b), pybamm.x_average(a) + pybamm.x_average(b)
+        )
+        self.assertEqual(
+            pybamm.x_average(a - b), pybamm.x_average(a) - pybamm.x_average(b)
+        )
+
     def test_size_average(self):
 
         # no domain
@@ -212,6 +222,16 @@ class TestUnaryOperators(TestCase):
         ):
             pybamm.size_average(symbol_on_edges)
 
+        # Addition or Subtraction
+        a = pybamm.Variable("a", domain="domain")
+        b = pybamm.Variable("b", domain="domain")
+        self.assertEqual(
+            pybamm.size_average(a + b), pybamm.size_average(a) + pybamm.size_average(b)
+        )
+        self.assertEqual(
+            pybamm.size_average(a - b), pybamm.size_average(a) - pybamm.size_average(b)
+        )
+
     def test_r_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.r_average(a)
@@ -246,6 +266,16 @@ class TestUnaryOperators(TestCase):
             ValueError, "Can't take the r-average of a symbol that evaluates on edges"
         ):
             pybamm.r_average(symbol_on_edges)
+
+        # Addition or Subtraction
+        a = pybamm.Variable("a", domain="domain")
+        b = pybamm.Variable("b", domain="domain")
+        self.assertEqual(
+            pybamm.r_average(a + b), pybamm.r_average(a) + pybamm.r_average(b)
+        )
+        self.assertEqual(
+            pybamm.r_average(a - b), pybamm.r_average(a) - pybamm.r_average(b)
+        )
 
     def test_yz_average(self):
         a = pybamm.Scalar(1)
@@ -290,6 +320,22 @@ class TestUnaryOperators(TestCase):
             ValueError, "Can't take the z-average of a symbol that evaluates on edges"
         ):
             pybamm.z_average(symbol_on_edges)
+
+        # Addition or Subtraction
+        a = pybamm.Variable("a", domain="current collector")
+        b = pybamm.Variable("b", domain="current collector")
+        self.assertEqual(
+            pybamm.yz_average(a + b), pybamm.yz_average(a) + pybamm.yz_average(b)
+        )
+        self.assertEqual(
+            pybamm.yz_average(a - b), pybamm.yz_average(a) - pybamm.yz_average(b)
+        )
+        self.assertEqual(
+            pybamm.z_average(a + b), pybamm.z_average(a) + pybamm.z_average(b)
+        )
+        self.assertEqual(
+            pybamm.z_average(a - b), pybamm.z_average(a) - pybamm.z_average(b)
+        )
 
 
 if __name__ == "__main__":
