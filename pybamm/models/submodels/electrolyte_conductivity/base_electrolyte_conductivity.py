@@ -195,6 +195,37 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_surface_potential_difference_variables(self, delta_phi):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the surface potential difference.
+
+        Parameters
+        ----------
+        delta_phi : :class:`pybamm.Symbol`
+            The surface potential difference.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the surface potential difference.
+        """
+        domain, Domain = self.domain_Domain
+
+        ocp_ref = self.domain_param.U_ref
+
+        # Broadcast if necessary
+        if delta_phi.domain == ["current collector"]:
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, f"{domain} electrode")
+
+        variables = {
+            f"{Domain} electrode surface potential difference": delta_phi,
+            f"{Domain} electrode surface potential difference [V]": ocp_ref
+            + delta_phi * self.param.potential_scale,
+        }
+
+        return variables
+
     def _get_electrolyte_overpotentials(self, variables):
         """
         A private function to obtain the electrolyte overpotential and Ohmic losses.
