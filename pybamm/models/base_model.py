@@ -177,9 +177,6 @@ class BaseModel:
                 and var.name != name
                 # Exception if the variable is also there under its own name
                 and not (var.name in variables and variables[var.name] == var)
-                # Exception for the key "Leading-order"
-                and "leading-order" not in var.name.lower()
-                and "leading-order" not in name.lower()
             ):
                 raise ValueError(
                     f"Variable with name '{var.name}' is in variables dictionary with "

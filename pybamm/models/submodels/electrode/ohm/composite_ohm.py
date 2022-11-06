@@ -30,9 +30,7 @@ class Composite(BaseModel):
         domain = self.domain
         param = self.param
 
-        i_boundary_cc_0 = variables[
-            "Leading-order current collector current density [A.m-2]"
-        ]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         # import parameters and spatial variables
         L_n = param.n.L
@@ -40,18 +38,16 @@ class Composite(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        tor_0 = variables[
-            f"Leading-order x-averaged {domain} electrode transport efficiency"
-        ]
+        tor = variables[f"X-averaged {domain} electrode transport efficiency"]
         phi_s_cn = variables["Negative current collector potential [V]"]
         T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
-        sigma_eff_0 = self.domain_param.sigma(T) * tor_0
+        sigma_eff = self.domain_param.sigma(T) * tor
         if self._domain == "negative":
-            phi_s = phi_s_cn + (i_boundary_cc_0 / sigma_eff_0) * (
+            phi_s = phi_s_cn + (i_boundary_cc / sigma_eff) * (
                 x_n * (x_n - 2 * L_n) / (2 * L_n)
             )
-            i_s = i_boundary_cc_0 * (1 - x_n / L_n)
+            i_s = i_boundary_cc * (1 - x_n / L_n)
 
         elif self.domain == "positive":
             delta_phi_p_av = variables[
@@ -62,13 +58,13 @@ class Composite(BaseModel):
             const = (
                 delta_phi_p_av
                 + phi_e_p_av
-                + (i_boundary_cc_0 / sigma_eff_0) * (1 - L_p / 3)
+                + (i_boundary_cc / sigma_eff) * (1 - L_p / 3)
             )
 
-            phi_s = const - (i_boundary_cc_0 / sigma_eff_0) * (
+            phi_s = const - (i_boundary_cc / sigma_eff) * (
                 x_p + (x_p - 1) ** 2 / (2 * L_p)
             )
-            i_s = i_boundary_cc_0 * (1 - (1 - x_p) / L_p)
+            i_s = i_boundary_cc * (1 - (1 - x_p) / L_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
@@ -82,12 +78,8 @@ class Composite(BaseModel):
         domain, Domain = self.domain_Domain
 
         phi_s = variables[f"{Domain} electrode potential [V]"]
-        tor_0 = variables[
-            f"Leading-order x-averaged {domain} electrode transport efficiency"
-        ]
-        i_boundary_cc_0 = variables[
-            "Leading-order current collector current density [A.m-2]"
-        ]
+        tor = variables[f"X-averaged {domain} electrode transport efficiency"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
         if self.domain == "negative":
@@ -96,7 +88,7 @@ class Composite(BaseModel):
 
         elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff_0 = self.param.p.sigma(T) * tor_0
-            rbc = (-i_boundary_cc_0 / sigma_eff_0, "Neumann")
+            sigma_eff = self.param.p.sigma(T) * tor
+            rbc = (-i_boundary_cc / sigma_eff, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}

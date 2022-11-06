@@ -37,33 +37,6 @@ class ForwardTafel(BaseKinetics):
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
         return u * j0 * pybamm.exp(ne * alpha * Feta_RT)
 
-    def _get_dj_dc(self, variables):
-        """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"""
-        alpha = self.phase_param.alpha_bv
-        (
-            c_e,
-            delta_phi,
-            j0,
-            ne,
-            ocp,
-            T,
-            u,
-        ) = self._get_interface_variables_for_first_order(variables)
-        eta_r = delta_phi - ocp
-        Feta_RT = self.param.F * eta_r / (self.param.R * T)
-        return u * j0.diff(c_e) * pybamm.exp(ne * alpha * Feta_RT)
-
-    def _get_dj_ddeltaphi(self, variables):
-        """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"""
-        alpha = self.phase_param.alpha_bv
-        _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
-            variables
-        )
-        eta_r = delta_phi - ocp
-        F_RT = self.param.F / (self.param.R * T)
-        Feta_RT = F_RT * eta_r
-        return u * j0 * (ne * alpha * F_RT) * pybamm.exp(ne * alpha * Feta_RT)
-
 
 # backwardtafel not used by any of the models
 # class BackwardTafel(BaseKinetics):

@@ -37,34 +37,6 @@ class SymmetricButlerVolmer(BaseKinetics):
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
         return 2 * u * j0 * pybamm.sinh(ne * 0.5 * Feta_RT)
 
-    def _get_dj_dc(self, variables):
-        """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"""
-        (
-            c_e,
-            delta_phi,
-            j0,
-            ne,
-            ocp,
-            T,
-            u,
-        ) = self._get_interface_variables_for_first_order(variables)
-        eta_r = delta_phi - ocp
-        F_RT = self.param.F / (self.param.R * T)
-        Feta_RT = F_RT * eta_r
-        return (2 * u * j0.diff(c_e) * pybamm.sinh(ne * 0.5 * Feta_RT)) - (
-            2 * u * j0 * 0.5 * F_RT * ocp.diff(c_e) * pybamm.cosh(ne * 0.5 * Feta_RT)
-        )
-
-    def _get_dj_ddeltaphi(self, variables):
-        """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"""
-        _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
-            variables
-        )
-        eta_r = delta_phi - ocp
-        F_RT = self.param.F / (self.param.R * T)
-        Feta_RT = F_RT * eta_r
-        return 2 * u * j0 * 0.5 * F_RT * pybamm.cosh(ne * 0.5 * Feta_RT)
-
 
 class AsymmetricButlerVolmer(BaseKinetics):
     """

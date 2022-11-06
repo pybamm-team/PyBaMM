@@ -816,7 +816,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
 
         if (
-            isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
+            isinstance(self, pybamm.lead_acid.LOQS)
             and options["surface form"] == "false"
             and options["hydrolysis"] == "true"
         ):

@@ -20,9 +20,8 @@ class Bruggeman(BaseModel):
     **Extends:** :class:`pybamm.transport_efficiency.BaseModel`
     """
 
-    def __init__(self, param, component, options=None, set_leading_order=False):
+    def __init__(self, param, component, options=None):
         super().__init__(param, component, options=options)
-        self.set_leading_order = set_leading_order
 
     def get_coupled_variables(self, variables):
         if self.component == "Electrolyte":
