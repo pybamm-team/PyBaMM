@@ -320,6 +320,11 @@ class BasicDFNComposite(BaseModel):
         c_s_xrav_p = pybamm.x_average(c_s_rav_p)
         j_n_p1_av = pybamm.x_average(j_n_p1)
         j_n_p2_av = pybamm.x_average(j_n_p2)
+        ocp_av_n_p1 = pybamm.x_average(ocp_n_p1)
+        ocp_av_n_p2 = pybamm.x_average(ocp_n_p2)
+        ocp_av_p = pybamm.x_average(ocp_p)
+        a_j_n_p1_av = pybamm.x_average(a_j_n_p1)
+        a_j_n_p2_av = pybamm.x_average(a_j_n_p2)
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {

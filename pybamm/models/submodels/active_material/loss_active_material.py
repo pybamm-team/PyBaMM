@@ -94,27 +94,22 @@ class LossActiveMaterial(BaseModel):
             deps_solid_dt += j_stress_LAM
 
         if "reaction" in lam_option:
-            if self.x_average is True:
-                a = variables[
-                    f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
-                ]
-            else:
-                a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
-
             beta_LAM_sei = self.domain_param.beta_LAM_sei
             if self.domain == "negative":
                 if self.x_average is True:
-                    j_sei = variables[
-                        "X-averaged SEI interfacial current density [A.m-2]"
+                    a_j_sei = variables[
+                        "X-averaged SEI volumetric interfacial current density [A.m32]"
                     ]
                 else:
-                    j_sei = variables["SEI interfacial current density [A.m-2]"]
+                    a_j_sei = variables[
+                        "SEI volumetric interfacial current density [A.m-3]"
+                    ]
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM
                 # until other reactions are implemented
-                j_sei = 0
+                a_j_sei = 0
 
-            j_stress_reaction = beta_LAM_sei * a * j_sei / param.F
+            j_stress_reaction = beta_LAM_sei * a_j_sei / self.param.F
             deps_solid_dt += j_stress_reaction
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)

@@ -139,6 +139,7 @@ class BasicDFNHalfCell(BaseModel):
             * j0_w
             * pybamm.sinh(ne_w / 2 * F_RT * (phi_s_w - phi_e_w - U_w(sto_surf_w, T)))
         )
+        R_w = param.p.prim.R
         a_w = 3 * eps_s_w / R_w
         a_j_w = a_w * j_w
         a_j_s = pybamm.PrimaryBroadcast(0, "separator")

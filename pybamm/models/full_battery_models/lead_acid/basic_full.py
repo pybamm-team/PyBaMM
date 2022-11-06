@@ -218,7 +218,7 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(0, "separator"),
             pybamm.PrimaryBroadcast(param.p.Delta_V, "positive electrode"),
         )
-        deps_dt = -Delta_V * a * j / param.F
+        deps_dt = -Delta_V * a_j / param.F
         self.rhs[eps] = deps_dt
         self.initial_conditions[eps] = param.epsilon_init
         self.events.extend(

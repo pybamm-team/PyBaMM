@@ -126,7 +126,6 @@ class FickianDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        phase_param = self.phase_param
         param = self.param
 
         if self.size_distribution is False:

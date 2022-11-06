@@ -44,7 +44,6 @@ class BaseElectrode(pybamm.BaseSubModel):
         """
         domain, Domain = self.domain_Domain
 
-        param = self.param
         phi_s_av = pybamm.x_average(phi_s)
 
         if self.domain == "negative":

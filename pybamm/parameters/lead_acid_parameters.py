@@ -120,9 +120,6 @@ class LeadAcidParameters(BaseParameters):
         self.M_ox = pybamm.Parameter("Molar mass of oxygen molecules [kg.mol-1]")
         self.M_hy = pybamm.Parameter("Molar mass of hydrogen molecules [kg.mol-1]")
 
-        # Thermal
-        self.Delta_T = self.therm.Delta_T
-
         # SEI parameters (for compatibility)
         self.R_sei = pybamm.Scalar(0)
 
@@ -175,7 +172,7 @@ class LeadAcidParameters(BaseParameters):
 
     def t_plus(self, c_e, T):
         """Dimensionless transference number (i.e. c_e is dimensionless)"""
-        inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
     def D_e(self, c_e, T):
@@ -187,10 +184,6 @@ class LeadAcidParameters(BaseParameters):
         """Dimensional electrolyte conductivity."""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
-
-    def chi(self, c_e):
-        inputs = {"Electrolyte concentration [mol.m-3]": c_e}
-        return pybamm.FunctionParameter("Darken thermodynamic factor", inputs)
 
     def c_T(self, c_e, c_ox=0, c_hy=0):
         """
@@ -238,13 +231,12 @@ class LeadAcidParameters(BaseParameters):
 
     def chi(self, c_e, T, c_ox=0, c_hy=0):
         """Thermodynamic factor"""
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e}
+        chi = pybamm.FunctionParameter("Darken thermodynamic factor", inputs)
         return (
-            self.chi(self.c_e_typ * c_e)
+            chi
             * (2 * (1 - self.t_plus(c_e, T)))
-            / (
-                self.V_w
-                * self.c_T(self.c_e_typ * c_e, self.c_e_typ * c_ox, self.c_e_typ * c_hy)
-            )
+            / (self.V_w * self.c_T(c_e, c_ox, c_hy))
         )
 
 
@@ -338,14 +330,11 @@ class PhaseLeadAcidParameters(BaseParameters):
 
     def _set_parameters(self):
         domain, Domain = self.domain_Domain  # Microstructure
-        x = (
-            pybamm.SpatialVariable(
-                f"x_{domain[0]}",
-                domain=[f"{domain} electrode"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="cartesian",
-            )
-            * self.main_param.L_x
+        x = pybamm.SpatialVariable(
+            f"x_{domain[0]}",
+            domain=[f"{domain} electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+            coord_sys="cartesian",
         )
         self.a = pybamm.FunctionParameter(
             f"{Domain} electrode surface area to volume ratio [m-1]",

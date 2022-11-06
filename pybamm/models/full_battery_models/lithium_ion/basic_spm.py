@@ -154,13 +154,15 @@ class BasicSPM(BaseModel):
         # into a vector of the right shape, for multiplying with other vectors
         self.variables = {
             "Discharge capacity [A.h]": Q,
-            "Negative particle surface concentration [mol.m-3]": pybamm.PrimaryBroadcast(
+            "Negative particle surface "
+            "concentration [mol.m-3]": pybamm.PrimaryBroadcast(
                 c_s_surf_n, "negative electrode"
             ),
             "Electrolyte concentration [mol.m-3]": pybamm.PrimaryBroadcast(
                 1, whole_cell
             ),
-            "Positive particle surface concentration [mol.m-3]": pybamm.PrimaryBroadcast(
+            "Positive particle surface "
+            "concentration [mol.m-3]": pybamm.PrimaryBroadcast(
                 c_s_surf_p, "positive electrode"
             ),
             "Current [A]": I,

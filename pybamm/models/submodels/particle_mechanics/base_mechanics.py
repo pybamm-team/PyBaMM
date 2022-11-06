@@ -69,7 +69,7 @@ class BaseMechanics(pybamm.BaseSubModel):
 
         electrode_thickness_change = self.param.n_electrodes_parallel * v_change
         # Ai2019 eq [10]
-        disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0)
+        disp_surf = Omega * R0 / 3 * (c_s_rav - c_0)
         # c0 reference concentration for no deformation
         # stress evaluated at the surface of the particles
         # Ai2019 eq [7] with r=R
@@ -117,7 +117,6 @@ class BaseMechanics(pybamm.BaseSubModel):
         a = variables[
             f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
         ]
-        R0 = self.domain_param.prim.R
         rho_cr = self.domain_param.rho_cr
         w_cr = self.domain_param.w_cr
         roughness = 1 + 2 * l_cr * rho_cr * w_cr  # ratio of cracks to normal surface

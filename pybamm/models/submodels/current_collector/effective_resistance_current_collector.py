@@ -180,8 +180,6 @@ class EffectiveResistance(BaseEffectiveResistance):
 
         # Add spatial variables
         var = pybamm.standard_spatial_vars
-        L_y = param.L_y
-        L_z = param.L_z
         if self.options["dimensionality"] == 1:
             variables.update({"z [m]": var.z})
         elif self.options["dimensionality"] == 2:
@@ -240,7 +238,6 @@ class EffectiveResistance(BaseEffectiveResistance):
         representing the average cell behaviour and returns a dictionary of
         processed potentials.
         """
-        param = self.param
         # Process resistances
         R_cn = solution["Negative current collector resistance [Ohm]"]
         R_cp = solution["Positive current collector resistance [Ohm]"]
@@ -353,8 +350,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
 
         # Add spatial variables
         var = pybamm.standard_spatial_vars
-        L_y = param.L_y
-        L_z = param.L_z
         self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
         pybamm.citations.register("Timms2021")

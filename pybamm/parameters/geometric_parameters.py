@@ -136,7 +136,7 @@ class ParticleGeometricParameters(BaseParameters):
         elif self.domain == "positive":
             x = pybamm.standard_spatial_vars.x_p
 
-        inputs = {"Through-cell distance (x) [m]": x * self.main_param.L_x}
+        inputs = {"Through-cell distance (x) [m]": x}
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} particle radius [m]", inputs
