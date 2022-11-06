@@ -4,6 +4,7 @@
 
 ## Features
 
+- SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
 - Third-party parameter sets can be added by registering entry points to `pybamm_parameter_set` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396))
 - Added three-dimensional interpolation ([#2380](https://github.com/pybamm-team/PyBaMM/pull/2380))
 
