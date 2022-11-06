@@ -65,9 +65,7 @@ class SPMe(SPM):
         )
         self.submodels[
             "electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(
-            self.param, "Electrode", self.options
-        )
+        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
 
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
