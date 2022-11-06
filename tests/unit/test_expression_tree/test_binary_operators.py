@@ -569,9 +569,9 @@ class TestBinaryOperators(unittest.TestCase):
         # MatMul simplifications that often appear when discretising spatial operators
         A = pybamm.Matrix(np.random.rand(10, 10))
         B = pybamm.Matrix(np.random.rand(10, 10))
-        # C = pybamm.Matrix(np.random.rand(10, 10))
+        C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
-        # var2 = pybamm.StateVector(slice(10, 20))
+        var2 = pybamm.StateVector(slice(10, 20))
         vec = pybamm.Vector(np.random.rand(10))
 
         # Do A@B first if it is constant
@@ -591,10 +591,10 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr, (((A @ B) @ var) - (A @ vec)))
 
         # Distribute the @ operator to a sum if both symbols being summed are matmuls
-        # expr = A @ (B @ var + C @ var2)
-        # self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
-        # expr = A @ (B @ var - C @ var2)
-        # self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
+        expr = A @ (B @ var + C @ var2)
+        self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
+        expr = A @ (B @ var - C @ var2)
+        self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
 
         # Reduce (A@var + B@var) to ((A+B)@var)
         expr = A @ var + B @ var
