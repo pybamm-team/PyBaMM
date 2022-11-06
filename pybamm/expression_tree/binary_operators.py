@@ -844,7 +844,8 @@ def simplified_addition(left, right):
     if isinstance(right, pybamm.Negate):
         return left - right.orphans[0]
     # Turn (-a) + b into b - a
-    if isinstance(left, pybamm.Negate):
+    # check for is_constant() to avoid infinite recursion
+    if isinstance(left, pybamm.Negate) and not left.is_constant():
         return right - left.orphans[0]
 
     if left.is_constant():
