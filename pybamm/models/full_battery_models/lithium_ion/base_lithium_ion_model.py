@@ -383,3 +383,11 @@ class BaseModel(pybamm.BaseBatteryModel):
                 ] = neg_intercalation_kinetics(
                     self.param, domain, "lithium metal plating", self.options, "primary"
                 )
+
+    def set_convection_submodel(self):
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)

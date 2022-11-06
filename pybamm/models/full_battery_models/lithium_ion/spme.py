@@ -48,25 +48,6 @@ class SPMe(SPM):
         # Initialize with the SPM
         super().__init__(options, name, build)
 
-    def set_convection_submodel(self):
-
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
-
-    def set_transport_efficiency_submodels(self):
-        self.submodels[
-            "electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(
-            self.param, "Electrolyte", self.options
-        )
-        self.submodels[
-            "electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
-
     # def set_solid_submodel(self):
     #     for domain in ["negative", "positive"]:
     #         if self.options.electrode_types[domain] == "porous":
@@ -76,7 +57,7 @@ class SPMe(SPM):
     #                 solid_submodel = pybamm.electrode.ohm.LithiumMetalExplicit
     #             else:
     #                 solid_submodel = pybamm.electrode.ohm.LithiumMetalSurfaceForm
-    #         self.submodels[f"{domain} electrode potential [V]"] = solid_submodel(
+    #         self.submodels[f"{domain} electrode potential"] = solid_submodel(
     #             self.param, domain, self.options
     #         )
 
