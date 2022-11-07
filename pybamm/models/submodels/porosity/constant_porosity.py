@@ -25,14 +25,8 @@ class Constant(BaseModel):
             eps_dict[domain] = self.param.domain_params[domain.split()[0]].epsilon_init
             depsdt_dict[domain] = pybamm.FullBroadcast(0, domain, "current collector")
 
-        variables = self._get_standard_porosity_variables(
-            eps_dict, set_leading_order=True
-        )
-        variables.update(
-            self._get_standard_porosity_change_variables(
-                depsdt_dict, set_leading_order=True
-            )
-        )
+        variables = self._get_standard_porosity_variables(eps_dict)
+        variables.update(self._get_standard_porosity_change_variables(depsdt_dict))
 
         return variables
 
