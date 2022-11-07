@@ -1,15 +1,22 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
+
 ## Breaking changes
 
+<<<<<<< HEAD
 - All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by addin the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed
+=======
+- Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
+>>>>>>> develop
 - Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))
 
 # [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
 
 ## Features
 
-- SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
 - Third-party parameter sets can be added by registering entry points to `pybamm_parameter_set` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396))
 - Added three-dimensional interpolation ([#2380](https://github.com/pybamm-team/PyBaMM/pull/2380))
 

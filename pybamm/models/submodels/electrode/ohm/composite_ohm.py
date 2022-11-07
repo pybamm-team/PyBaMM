@@ -58,13 +58,13 @@ class Composite(BaseModel):
             const = (
                 delta_phi_p_av
                 + phi_e_p_av
-                + (i_boundary_cc / sigma_eff) * (1 - L_p / 3)
+                + (i_boundary_cc / sigma_eff) * (L_x - L_p / 3)
             )
 
             phi_s = const - (i_boundary_cc / sigma_eff) * (
-                x_p + (x_p - 1) ** 2 / (2 * L_p)
+                x_p + (x_p - L_x) ** 2 / (2 * L_p)
             )
-            i_s = i_boundary_cc * (1 - (1 - x_p) / L_p)
+            i_s = i_boundary_cc * (1 - (L_x - x_p) / L_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
