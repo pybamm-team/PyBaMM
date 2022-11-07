@@ -60,26 +60,3 @@ class BaseModel(pybamm.BaseSubModel):
             self.rhs[Q_Wh] = I * V * self.param.timescale / 3600
             self.rhs[Qt_Wh] = abs(I * V) * self.param.timescale / 3600
             self.rhs[Qt_Ah] = abs(I) * self.param.timescale / 3600
-
-
-class LeadingOrderBaseModel(BaseModel):
-    """Model to represent the behaviour of the external circuit, at leading order."""
-
-    def __init__(self, param, options):
-        super().__init__(param, options)
-
-    def get_fundamental_variables(self):
-        Q_Ah = pybamm.Variable("Leading-order discharge capacity [A.h]")
-        variables = {"Discharge capacity [A.h]": Q_Ah}
-        if self.options["calculate discharge energy"] == "true":
-            Q_Wh = pybamm.Variable("Leading-order discharge energy [W.h]")
-            Qt_Wh = pybamm.Variable("Leading-order throughput energy [W.h]")
-            Qt_Ah = pybamm.Variable("Leading-order throughput capacity [A.h]")
-            variables.update(
-                {
-                    "Discharge energy [W.h]": Q_Wh,
-                    "Throughput energy [W.h]": Qt_Wh,
-                    "Throughput capacity [A.h]": Qt_Ah,
-                }
-            )
-        return variables
