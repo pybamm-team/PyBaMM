@@ -67,26 +67,20 @@ class LOQS(BaseModel):
         """
         if self.options["operating mode"] == "current":
             self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderExplicitCurrentControl(
-                self.param, self.options
-            )
+                "external circuit"
+            ] = pybamm.external_circuit.ExplicitCurrentControl(self.param, self.options)
         elif self.options["operating mode"] == "voltage":
             self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderVoltageFunctionControl(
-                self.param, self.options
-            )
+                "external circuit"
+            ] = pybamm.external_circuit.VoltageFunctionControl(self.param, self.options)
         elif self.options["operating mode"] == "power":
             self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderPowerFunctionControl(
-                self.param, self.options
-            )
+                "external circuit"
+            ] = pybamm.external_circuit.PowerFunctionControl(self.param, self.options)
         elif callable(self.options["operating mode"]):
             self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderFunctionControl(
+                "external circuit"
+            ] = pybamm.external_circuit.FunctionControl(
                 self.param, self.options["operating mode"], self.options
             )
 
@@ -109,14 +103,6 @@ class LOQS(BaseModel):
         self.submodels["leading-order porosity"] = pybamm.porosity.ReactionDrivenODE(
             self.param, self.options, True
         )
-
-    def set_transport_efficiency_submodels(self):
-        self.submodels[
-            "leading-order electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrolyte")
-        self.submodels[
-            "leading-order electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode")
 
     def set_convection_submodel(self):
 
