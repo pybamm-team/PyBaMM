@@ -60,7 +60,7 @@ class Discretisation(object):
                             )
                         )
 
-        self.bcs = {}
+        self._bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
         self.external_variables = {}
@@ -87,12 +87,6 @@ class Discretisation(object):
     @property
     def bcs(self):
         return self._bcs
-
-    @bcs.setter
-    def bcs(self, value):
-        self._bcs = value
-        # reset discretised_symbols
-        self._discretised_symbols = {}
 
     def process_model(
         self,
@@ -187,7 +181,7 @@ class Discretisation(object):
         pybamm.logger.verbose(
             "Discretise boundary conditions for {}".format(model.name)
         )
-        self.bcs = self.process_boundary_conditions(model)
+        self._bcs = self.process_boundary_conditions(model)
         pybamm.logger.verbose(
             "Set internal boundary conditions for {}".format(model.name)
         )
@@ -489,7 +483,9 @@ class Discretisation(object):
 
         """
         # Discretise initial conditions
-        processed_initial_conditions = self.process_dict(model.initial_conditions)
+        processed_initial_conditions = self.process_dict(
+            model.initial_conditions, ics=True
+        )
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
@@ -728,7 +724,7 @@ class Discretisation(object):
 
         return mass_matrix, mass_matrix_inv
 
-    def process_dict(self, var_eqn_dict):
+    def process_dict(self, var_eqn_dict, ics=False):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.algebraic, model.initial_conditions or
         model.variables).
@@ -739,6 +735,9 @@ class Discretisation(object):
             Equations ({variable: equation} dict) to dicretise
             (can be model.rhs, model.algebraic, model.initial_conditions or
             model.variables)
+        ics : bool, optional
+            Whether the equations are initial conditions. If True, the equations are
+            scaled by the reference value of the variable, if given
 
         Returns
         -------
@@ -753,12 +752,18 @@ class Discretisation(object):
                 eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-
             processed_eqn = self.process_symbol(eqn)
 
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
-            new_var_eqn_dict[eqn_key] = processed_eqn / scale
+            if ics:
+                reference = getattr(eqn_key, "reference", 0)
+            else:
+                reference = 0
+            processed_eqn_with_scale = (processed_eqn - reference) / scale
+            processed_eqn_with_scale.mesh = processed_eqn.mesh
+            processed_eqn_with_scale.secondary_mesh = processed_eqn.secondary_mesh
+            new_var_eqn_dict[eqn_key] = processed_eqn_with_scale
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -788,6 +793,7 @@ class Discretisation(object):
                 discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
             else:
                 discretised_symbol.mesh = None
+
             # Assign secondary mesh
             if symbol.domains["secondary"] != []:
                 discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
@@ -936,14 +942,11 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.VariableDot):
-            # Multiply the output by the symbol's scale so that the state vector
-            # is of order 1
-            return (
-                pybamm.StateVectorDot(
-                    *self.y_slices[symbol.get_variable()],
-                    domains=symbol.domains,
-                )
-                * symbol.scale
+            # Add symbol's reference and multiply by the symbol's scale
+            # so that the state vector is of order 1
+            return symbol.reference + symbol.scale * pybamm.StateVectorDot(
+                *self.y_slices[symbol.get_variable()],
+                domains=symbol.domains,
             )
 
         elif isinstance(symbol, pybamm.Variable):
@@ -988,10 +991,10 @@ class Discretisation(object):
                             symbol.name
                         )
                     )
-                # Multiply the output by the symbol's scale so that the state vector
-                # is of order 1
-                return (
-                    pybamm.StateVector(*y_slices, domains=symbol.domains) * symbol.scale
+                # Add symbol's reference and multiply by the symbol's scale
+                # so that the state vector is of order 1
+                return symbol.reference + symbol.scale * pybamm.StateVector(
+                    *y_slices, domains=symbol.domains
                 )
 
         elif isinstance(symbol, pybamm.SpatialVariable):

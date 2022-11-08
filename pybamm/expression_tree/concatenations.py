@@ -92,13 +92,6 @@ class Concatenation(pybamm.Symbol):
 
         return domains
 
-    def set_scale(self):
-        if len(self.children) > 0:
-            if all(child.scale == self.children[0].scale for child in self.children):
-                self._scale = self.children[0].scale
-            else:
-                raise ValueError("Cannot concatenate symbols with different scales")
-
     def _concatenation_evaluate(self, children_eval):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         if len(children_eval) == 0:
@@ -372,9 +365,22 @@ class ConcatenationVariable(Concatenation):
         name = intersect(children[0].name, children[1].name)
         for child in children[2:]:
             name = intersect(name, child.name)
-        name = name.capitalize()
-        if name == "":
+        if len(name) == 0:
             name = None
+        # name is unchanged if its length is 1
+        elif len(name) > 1:
+            name = name[0].capitalize() + name[1:]
+
+        if len(children) > 0:
+            if all(child.scale == children[0].scale for child in children):
+                self._scale = children[0].scale
+            else:
+                raise ValueError("Cannot concatenate symbols with different scales")
+            if all(child.reference == children[0].reference for child in children):
+                self._reference = children[0].reference
+            else:
+                raise ValueError("Cannot concatenate symbols with different references")
+
         super().__init__(*children, name=name)
         # Overly tight bounds, can edit later if required
         self.bounds = (

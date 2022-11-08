@@ -200,7 +200,12 @@ class Symbol:
     """
 
     def __init__(
-        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
+        self,
+        name,
+        children=None,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
     ):
         super(Symbol, self).__init__()
         self.name = name
@@ -214,9 +219,6 @@ class Symbol:
 
         # Set domains (and hence id)
         self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
-
-        # Set scale
-        self.set_scale()
 
         self._saved_evaluates_on_edges = {}
         self._print_name = None
@@ -411,17 +413,9 @@ class Symbol:
     def scale(self):
         return self._scale
 
-    def set_scale(self):
-        scale = None
-        for child in self.children:
-            if child.scale != 1:
-                if scale is None:
-                    scale = child.scale
-                elif scale != child.scale:
-                    raise ValueError("Cannot scale children with different scales")
-        if scale is None:
-            scale = 1
-        self._scale = scale
+    @property
+    def reference(self):
+        return self._reference
 
     def __eq__(self, other):
         try:
@@ -853,7 +847,7 @@ class Symbol:
         --------
         evaluate : evaluate the expression
         """
-        return self.shape_for_testing == ()
+        return self.shape_for_testing in [(), (1,), (1, 1)]
 
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()

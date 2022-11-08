@@ -715,6 +715,7 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
+            new_symbol._reference = self.process_symbol(symbol.reference)
             return new_symbol
 
         else:

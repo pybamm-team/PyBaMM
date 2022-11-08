@@ -18,7 +18,6 @@ class VariableBase(pybamm.Symbol):
 
     Parameters
     ----------
-
     name : str
         name of the node
     domain : iterable of str
@@ -41,7 +40,12 @@ class VariableBase(pybamm.Symbol):
         The name to use for printing. Default is None, in which case self.name is used.
     scale : float or :class:`pybamm.Symbol`, optional
         The scale of the variable, used for scaling the model when solving. The state
-        vector representing this variable will be divided by this scale. Default is 1.
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`Symbol`
     """
@@ -55,9 +59,13 @@ class VariableBase(pybamm.Symbol):
         bounds=None,
         print_name=None,
         scale=1,
+        reference=0,
     ):
         super().__init__(
-            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
         )
         if bounds is None:
             bounds = (-np.inf, np.inf)
@@ -69,13 +77,8 @@ class VariableBase(pybamm.Symbol):
                 )
         self.bounds = bounds
         self.print_name = print_name
-        if isinstance(scale, numbers.Number):
-            scale = pybamm.Scalar(scale)
         self._scale = scale
-
-    def set_scale(self):
-        # scale is set in init
-        pass
+        self._reference = reference
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -85,6 +88,7 @@ class VariableBase(pybamm.Symbol):
             bounds=self.bounds,
             print_name=self._raw_print_name,
             scale=self.scale,
+            reference=self.reference,
         )
 
     def _evaluate_for_shape(self):
@@ -129,34 +133,23 @@ class Variable(VariableBase):
         Physical bounds on the variable
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`VariableBase`
     """
-
-    def __init__(
-        self,
-        name,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        bounds=None,
-        print_name=None,
-        scale=1,
-    ):
-        super().__init__(
-            name,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-            domains=domains,
-            bounds=bounds,
-            print_name=print_name,
-            scale=scale,
-        )
 
     def diff(self, variable):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
+            # reference gets differentiated out
             return pybamm.VariableDot(
                 self.name + "'", domains=self.domains, scale=self.scale
             )
@@ -196,29 +189,17 @@ class VariableDot(VariableBase):
         but ignored.
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`VariableBase`
     """
-
-    def __init__(
-        self,
-        name,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        bounds=None,
-        print_name=None,
-        scale=1,
-    ):
-        super().__init__(
-            name,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-            domains=domains,
-            bounds=bounds,
-            print_name=print_name,
-            scale=scale,
-        )
 
     def get_variable(self):
         """
@@ -264,15 +245,32 @@ class ExternalVariable(Variable):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`pybamm.Variable`
     """
 
     def __init__(
-        self, name, size, domain=None, auxiliary_domains=None, domains=None, scale=1
+        self,
+        name,
+        size,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        scale=1,
+        reference=0,
     ):
         self._size = size
-        super().__init__(name, domain, auxiliary_domains, domains, scale=scale)
+        super().__init__(
+            name, domain, auxiliary_domains, domains, scale=scale, reference=reference
+        )
 
     @property
     def size(self):

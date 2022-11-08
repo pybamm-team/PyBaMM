@@ -65,14 +65,21 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
+        U_n_init = param.n.prim.U_init_dim
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential [V]", domain="negative electrode"
+            "Negative electrolyte potential [V]",
+            domain="negative electrode",
+            reference=-U_n_init,
         )
         phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential [V]", domain="separator"
+            "Separator electrolyte potential [V]",
+            domain="separator",
+            reference=-U_n_init,
         )
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential [V]", domain="positive electrode"
+            "Positive electrolyte potential [V]",
+            domain="positive electrode",
+            reference=-U_n_init,
         )
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -80,9 +87,12 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         phi_s_n = pybamm.Variable(
             "Negative electrode potential [V]", domain="negative electrode"
         )
-        phi_s_p = pybamm.Variable(
-            "Positive electrode potential [V]", domain="positive electrode"
+        phi_s_p_var = pybamm.Variable(
+            "Positive electrode potential [V]",
+            domain="positive electrode",
+            reference=param.ocv_init_dim,
         )
+        phi_s_p = phi_s_p_var  # + param.ocv_init_dim
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
         # domains
@@ -147,7 +157,6 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         )
         Feta_RT_n = param.F * eta_n / (param.R * T)
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
-        # j_n = pybamm.PrimaryBroadcast(i_cell / (a_n * param.n.L), "negative electrode")
         c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = param.p.prim.j0_dimensional(c_e_p, c_s_surf_p, T)
         eta_p = (
@@ -158,8 +167,6 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         Feta_RT_p = param.F * eta_p / (param.R * T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
-        # j_p = pybamm.PrimaryBroadcast(-i_cell / (a_p * param.p.L), "positive electrode")
-        j = pybamm.concatenation(j_n, j_s, j_p)
 
         a_j_n = a_n * j_n
         a_j_p = a_p * j_p
@@ -212,7 +219,7 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
         self.algebraic[phi_s_n] = pybamm.div(i_s_n) + a_j_n
-        self.algebraic[phi_s_p] = pybamm.div(i_s_p) + a_j_p
+        self.algebraic[phi_s_p_var] = pybamm.div(i_s_p) + a_j_p
         self.boundary_conditions[phi_s_n] = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -225,7 +232,7 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.ocv_init_dim
+        self.initial_conditions[phi_s_p_var] = param.ocv_init_dim
 
         ######################
         # Current in the electrolyte
@@ -288,7 +295,6 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         param = self.param
         L_n = param.n.L
         L_s = param.s.L
-        L_p = param.p.L
         L_n_L_s = L_n + L_s
         geometry = {
             "negative electrode": {"x_n": {"min": 0, "max": L_n}},
