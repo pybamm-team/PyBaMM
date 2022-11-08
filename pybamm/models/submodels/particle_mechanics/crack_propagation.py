@@ -113,6 +113,6 @@ class CrackPropagation(BaseMechanics):
         self.events.append(
             pybamm.Event(
                 f"{domain} particle crack length larger than particle radius",
-                self.domain_param.prim.R - pybamm.max(l_cr),
+                self.domain_param.prim.R_typ - pybamm.max(l_cr),
             )
         )

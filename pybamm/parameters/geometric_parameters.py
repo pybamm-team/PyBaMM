@@ -85,8 +85,8 @@ class DomainGeometricParameters(BaseParameters):
 
         # Tab geometry (for pouch cells)
         self.L_tab = pybamm.Parameter(f"{Domain} tab width [m]")
-        self.Centre_y_tab = pybamm.Parameter(f"{Domain} tab centre y-coordinate [m]")
-        self.Centre_z_tab = pybamm.Parameter(f"{Domain} tab centre z-coordinate [m]")
+        self.centre_y_tab = pybamm.Parameter(f"{Domain} tab centre y-coordinate [m]")
+        self.centre_z_tab = pybamm.Parameter(f"{Domain} tab centre z-coordinate [m]")
         self.A_tab = self.L_tab * self.L_cc  # Area of tab
 
         # Microscale geometry

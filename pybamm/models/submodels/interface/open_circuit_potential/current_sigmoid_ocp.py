@@ -20,7 +20,7 @@ class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
             # Particle size distribution is not yet implemented
             if self.options["particle size"] != "distribution":
                 c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration"
+                    f"{Domain} {phase_name}particle surface stoichiometry"
                 ]
                 # If variable was broadcast, take only the orphan
                 if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(

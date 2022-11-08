@@ -60,8 +60,8 @@ class SurfaceForm(BaseModel):
 
         if (
             self.options.electrode_types["negative"] == "planar"
-            or "Negative electrode current density" in variables
-        ) and "Positive electrode current density" in variables:
+            or "Negative electrode current density [A.m-2]" in variables
+        ) and "Positive electrode current density [A.m-2]" in variables:
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables

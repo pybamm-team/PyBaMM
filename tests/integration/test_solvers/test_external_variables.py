@@ -38,7 +38,7 @@ class TestExternalVariables(unittest.TestCase):
         T_av = 0
         for i in np.arange(1, len(t_eval) - 1):
             dt = t_eval[i + 1] - t_eval[i]
-            external_variables = {"Volume-averaged cell temperature": T_av}
+            external_variables = {"Volume-averaged cell temperature [K]": T_av}
             T_av += 1
             sim.step(dt, external_variables=external_variables)
         V = sim.solution["Terminal voltage [V]"].data

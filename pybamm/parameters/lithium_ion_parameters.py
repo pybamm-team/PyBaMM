@@ -113,6 +113,8 @@ class LithiumIonParameters(BaseParameters):
         self.c_plated_Li_0 = pybamm.Parameter(
             "Initial plated lithium concentration [mol.m-3]"
         )
+        self.alpha_plating = pybamm.Parameter("Lithium plating transfer coefficient")
+        self.alpha_stripping = 1 - self.alpha_plating
 
         # Initial conditions
         # Note: the initial concentration in the electrodes can be set as a function
@@ -235,14 +237,20 @@ class DomainLithiumIonParameters(BaseParameters):
         main = self.main_param
         domain, Domain = self.domain_Domain
 
+        # Parameters that appear in the separator
+        self.b_e = self.geo.b_e
+        self.L = self.geo.L
+
+        # Thermal
+        self.rho_c_p = self.therm.rho_c_p
+        self.lambda_ = self.therm.lambda_
+
         if domain == "separator":
-            x = pybamm.standard_spatial_vars.x_s * main.L_x
+            x = pybamm.standard_spatial_vars.x_s
             self.epsilon_init = pybamm.FunctionParameter(
                 "Separator porosity", {"Through-cell distance (x) [m]": x}
             )
             self.epsilon_inactive = 1 - self.epsilon_init
-            self.b_e = self.geo.b_e
-            self.L = self.geo.L
             return
 
         x = pybamm.SpatialVariable(
@@ -254,15 +262,14 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Macroscale geometry
         self.L_cc = self.geo.L_cc
-        self.L = self.geo.L
 
         for phase in self.phase_params.values():
             phase._set_parameters()
 
         # Tab geometry (for pouch cells)
         self.L_tab = self.geo.L_tab
-        self.Centre_y_tab = self.geo.Centre_y_tab
-        self.Centre_z_tab = self.geo.Centre_z_tab
+        self.centre_y_tab = self.geo.centre_y_tab
+        self.centre_z_tab = self.geo.centre_z_tab
         self.A_tab = self.geo.A_tab
 
         # Particle properties
@@ -285,7 +292,6 @@ class DomainLithiumIonParameters(BaseParameters):
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phase_params.values())
 
         # Tortuosity parameters
-        self.b_e = self.geo.b_e
         self.b_s = self.geo.b_s
 
         self.C_dl = pybamm.Parameter(
@@ -414,11 +420,21 @@ class ParticleLithiumIonParameters(BaseParameters):
             )
             self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
             self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
+
+            # Dividing by 10000 makes initial condition effectively zero
+            # without triggering division by zero errors
+            self.L_inner_crack_0 = self.L_inner_0 / 10000
+            self.L_outer_crack_0 = self.L_outer_0 / 10000
+
             self.L_sei_0 = self.L_inner_0 + self.L_outer_0
             self.E_sei = pybamm.Parameter(
                 f"{pref}SEI growth activation energy [J.mol-1]"
             )
             self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
+            self.inner_sei_proportion = pybamm.Parameter(
+                f"{pref}Inner SEI reaction proportion"
+            )
+            self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
 
             # EC reaction
             self.c_ec_0 = pybamm.Parameter(
@@ -495,6 +511,9 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         self.U_init = self.U(self.sto_init_av, main.T_init)
 
+        if main.options["particle shape"] == "spherical":
+            self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
+
     def D(self, sto, T):
         """Dimensional diffusivity in particle. Note this is defined as a
         function of stochiometry"""
@@ -564,4 +583,18 @@ class ParticleLithiumIonParameters(BaseParameters):
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode OCP entropic change [V.K-1]",
             inputs,
+        )
+
+    def t_change(self, sto):
+        """
+        Volume change for the electrode; sto should be R-averaged
+        """
+        domain, Domain = self.domain_Domain
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode volume change",
+            {
+                "Particle stoichiometry": sto,
+                f"{self.phase_prefactor}Maximum {domain} particle "
+                "surface concentration [mol.m-3]": self.c_max,
+            },
         )

@@ -26,16 +26,28 @@ class Full(BaseElectrolyteConductivity):
 
     def get_fundamental_variables(self):
         phi_e_dict = {}
+        phi_e_var_dict = {}
+        variables = {}
         for domain in self.options.whole_cell_domains:
-            phi_e_k = pybamm.Variable(
-                f"{domain.capitalize().split()[0]} electrolyte potential [V]",
+            Dom = domain.capitalize().split()[0]
+            name = f"{Dom} electrolyte potential variable [V]"
+            phi_e_k_var = pybamm.Variable(
+                name,
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
             )
+            variables[name] = phi_e_k_var
+            phi_e_var_dict[domain] = phi_e_k_var
+            phi_e_k = -self.param.n.prim.U_init + phi_e_k_var
             phi_e_k.print_name = f"phi_e_{domain[0]}"
             phi_e_dict[domain] = phi_e_k
 
-        variables = self._get_standard_potential_variables(phi_e_dict)
+        variables["Electrolyte potential variable [V]"] = pybamm.concatenation(
+            *phi_e_var_dict.values()
+        )
+
+        variables.update(self._get_standard_potential_variables(phi_e_dict))
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -58,7 +70,7 @@ class Full(BaseElectrolyteConductivity):
         return variables
 
     def set_algebraic(self, variables):
-        phi_e = variables["Electrolyte potential [V]"]
+        phi_e = variables["Electrolyte potential variable [V]"]
         i_e = variables["Electrolyte current density [A.m-2]"]
 
         # Variable summing all of the interfacial current densities
@@ -70,5 +82,5 @@ class Full(BaseElectrolyteConductivity):
         self.algebraic = {phi_e: pybamm.div(i_e) - sum_a_j}
 
     def set_initial_conditions(self, variables):
-        phi_e = variables["Electrolyte potential [V]"]
-        self.initial_conditions = {phi_e: -self.param.n.prim.U_init}
+        phi_e = variables["Electrolyte potential variable [V]"]
+        self.initial_conditions = {phi_e: 0}

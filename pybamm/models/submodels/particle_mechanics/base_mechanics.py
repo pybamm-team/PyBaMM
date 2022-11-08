@@ -53,6 +53,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         domain, Domain = self.domain_Domain
 
         c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
+        sto_rav = variables[f"R-averaged {domain} particle concentration"]
         c_s_surf = variables[f"{Domain} particle surface concentration [mol.m-3]"]
         T_xav = variables["X-averaged cell temperature [K]"]
         eps_s = variables[f"{Domain} electrode active material volume fraction"]
@@ -62,10 +63,10 @@ class BaseMechanics(pybamm.BaseSubModel):
         c_0 = domain_param.c_0
         E0 = domain_param.E
         nu = domain_param.nu
-        c_init = pybamm.r_average(domain_param.prim.c_init)
+        sto_init = pybamm.r_average(domain_param.prim.c_init / domain_param.prim.c_max)
         v_change = pybamm.x_average(
-            eps_s * domain_param.prim.t_change(c_s_rav)
-        ) - pybamm.x_average(eps_s * domain_param.prim.t_change(c_init))
+            eps_s * domain_param.prim.t_change(sto_rav)
+        ) - pybamm.x_average(eps_s * domain_param.prim.t_change(sto_init))
 
         electrode_thickness_change = self.param.n_electrodes_parallel * v_change
         # Ai2019 eq [10]

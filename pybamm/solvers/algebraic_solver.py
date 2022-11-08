@@ -208,7 +208,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     )
                     integration_time += timer.time()
 
-                if sol.success:  # and np.all(abs(sol.fun) < self.tol):
+                if sol.success and np.all(abs(sol.fun) < self.tol):
                     # update initial guess for the next iteration
                     y0_alg = sol.x
                     # update solution array

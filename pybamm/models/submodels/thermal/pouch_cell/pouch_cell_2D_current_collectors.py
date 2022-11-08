@@ -38,7 +38,7 @@ class CurrentCollector2D(BaseThermal):
     def get_fundamental_variables(self):
 
         T_x_av = pybamm.Variable(
-            "X-averaged cell temperature", domain="current collector"
+            "X-averaged cell temperature [K]", domain="current collector"
         )
         T_vol_av = self._yz_average(T_x_av)
 

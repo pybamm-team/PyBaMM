@@ -179,6 +179,9 @@ class SEIGrowth(BaseModel):
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
+        # add volumetric variables
+        variables.update(self._get_standard_volumetric_reaction_variables(variables))
+
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
 

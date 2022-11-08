@@ -57,17 +57,18 @@ class ReactionDrivenODE(BaseModel):
                 depsdt_k = pybamm.FullBroadcast(0, domain, "current collector")
             else:
                 if self.x_average is True:
-                    j_k_av = variables[
-                        f"X-averaged {domain} interfacial current density"
+                    a_j_k_av = variables[
+                        f"X-averaged {domain} volumetric "
+                        "interfacial current density [A.m-3]"
                     ]
-                    depsdt_k_av = (
-                        -domain_param.DeltaV * domain_param.a * j_k_av / param.F
-                    )
+                    depsdt_k_av = -domain_param.DeltaV * a_j_k_av / param.F
                     depsdt_k = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
                 else:
                     Domain = domain.capitalize()
-                    j_k = variables[f"{Domain} interfacial current density [A.m-2]"]
-                    depsdt_k = -domain_param.DeltaV * domain_param.a * j_k / param.F
+                    a_j_k = variables[
+                        f"{Domain} volumetric interfacial current density [A.m-3]"
+                    ]
+                    depsdt_k = -domain_param.DeltaV * a_j_k / param.F
 
             depsdt_dict[domain] = depsdt_k
         variables.update(self._get_standard_porosity_change_variables(depsdt_dict))

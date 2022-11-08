@@ -288,20 +288,55 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI currents.
         """
-        j_i_av = pybamm.x_average(j_inner)
-        j_o_av = pybamm.x_average(j_outer)
+        j_inner_av = pybamm.x_average(j_inner)
+        j_outer_av = pybamm.x_average(j_outer)
 
         variables = {
             f"Inner {self.reaction_name}interfacial current density [A.m-2]": j_inner,
             f"X-averaged inner {self.reaction_name}"
-            "interfacial current density [A.m-2]": j_i_av,
+            "interfacial current density [A.m-2]": j_inner_av,
             f"Outer {self.reaction_name}interfacial current density [A.m-2]": j_outer,
             f"X-averaged outer {self.reaction_name}"
-            "interfacial current density [A.m-2]": j_o_av,
+            "interfacial current density [A.m-2]": j_outer_av,
         }
 
         j_sei = j_inner + j_outer
         variables.update(self._get_standard_total_reaction_variables(j_sei))
+
+        return variables
+
+    def _get_standard_volumetric_reaction_variables(self, variables):
+        Domain = self.domain.capitalize()
+        phase_name = self.phase_name
+        reaction_name = self.reaction_name
+        a = variables[
+            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
+        ]
+        j_inner = variables[f"Inner {reaction_name}interfacial current density [A.m-2]"]
+        j_outer = variables[f"Outer {reaction_name}interfacial current density [A.m-2]"]
+
+        if reaction_name == "SEI on cracks ":
+            roughness = variables["Negative electrode roughness ratio"] - 1
+        else:
+            roughness = 1
+
+        a_j_inner = a * j_inner * roughness
+        a_j_inner_av = pybamm.x_average(a_j_inner)
+        a_j_outer = a * j_outer * roughness
+        a_j_outer_av = pybamm.x_average(a_j_outer)
+
+        variables.update(
+            {
+                f"Inner {reaction_name}"
+                "volumetric interfacial current density [A.m-3]": a_j_inner,
+                f"X-averaged inner {reaction_name}"
+                "volumetric interfacial current density [A.m-3]": a_j_inner_av,
+                f"Outer {reaction_name}"
+                "volumetric interfacial current density [A.m-3]": a_j_outer,
+                f"X-averaged outer {reaction_name}"
+                "volumetric interfacial current density [A.m-3]": a_j_outer_av,
+            }
+        )
 
         return variables
 

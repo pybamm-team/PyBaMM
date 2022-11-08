@@ -114,7 +114,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             ]
             sgn = 1 if self.domain == "negative" else -1
 
-            j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
+            j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.L)
 
         # Set surface concentration based on polynomial order
         if self.name == "uniform profile":

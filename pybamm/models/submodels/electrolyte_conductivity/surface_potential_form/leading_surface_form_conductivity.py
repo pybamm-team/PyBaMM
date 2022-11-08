@@ -97,7 +97,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
         sum_a_j_av = variables[
             f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density"
+            "interfacial current density [A.m-3]"
         ]
         delta_phi = variables[
             f"X-averaged {domain} electrode surface potential difference [V]"
@@ -136,7 +136,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
 
         sum_a_j_av = variables[
             f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density"
+            "interfacial current density [A.m-3]"
         ]
         delta_phi = variables[
             f"X-averaged {domain} electrode surface potential difference [V]"

@@ -79,8 +79,8 @@ class TestSolution(unittest.TestCase):
         T_av = 0
         c_s_n_av = np.ones((Nr, 1)) * 0.6
         external_variables = {
-            "Volume-averaged cell temperature": T_av,
-            "X-averaged negative particle concentration": c_s_n_av,
+            "Volume-averaged cell temperature [K]": T_av,
+            "X-averaged negative particle concentration [mol.m-3]": c_s_n_av,
         }
 
         # Step

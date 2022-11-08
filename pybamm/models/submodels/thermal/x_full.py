@@ -43,7 +43,7 @@ class OneDimensionalX(BaseThermal):
         for domain in ["negative electrode", "separator", "positive electrode"]:
             Domain = domain.capitalize()
             T_k = pybamm.Variable(
-                f"{Domain} temperature",
+                f"{Domain} temperature [K]",
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
             )

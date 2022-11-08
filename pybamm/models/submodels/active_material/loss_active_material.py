@@ -98,7 +98,7 @@ class LossActiveMaterial(BaseModel):
             if self.domain == "negative":
                 if self.x_average is True:
                     a_j_sei = variables[
-                        "X-averaged SEI volumetric interfacial current density [A.m32]"
+                        "X-averaged SEI volumetric interfacial current density [A.m-3]"
                     ]
                 else:
                     a_j_sei = variables[

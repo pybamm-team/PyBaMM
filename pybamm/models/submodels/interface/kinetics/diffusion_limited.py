@@ -75,9 +75,9 @@ class DiffusionLimited(BaseInterface):
             if self.order == "leading":
                 j_p = variables[
                     f"X-averaged positive electrode {self.reaction_name}"
-                    "interfacial current density"
+                    "interfacial current density [A.m-2]"
                 ]
-                j = -self.param.p.l * j_p / self.param.n.l
+                j = -self.param.p.L * j_p / self.param.n.L
             elif self.order in ["composite", "full"]:
                 tor_s = variables["Separator electrolyte transport efficiency"]
                 c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
@@ -88,6 +88,6 @@ class DiffusionLimited(BaseInterface):
                 )
                 N_ox_neg_sep_interface.domains = {"primary": "current collector"}
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.L
 
         return j

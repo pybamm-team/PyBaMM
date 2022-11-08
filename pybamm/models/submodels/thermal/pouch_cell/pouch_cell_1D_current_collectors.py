@@ -38,7 +38,7 @@ class CurrentCollector1D(BaseThermal):
     def get_fundamental_variables(self):
 
         T_x_av = pybamm.Variable(
-            "X-averaged cell temperature", domain="current collector"
+            "X-averaged cell temperature [K]", domain="current collector"
         )
         T_vol_av = self._yz_average(T_x_av)
 
@@ -103,18 +103,18 @@ class CurrentCollector1D(BaseThermal):
         T_av_bottom = pybamm.boundary_value(T_av, "left")
 
         # find tab locations (top vs bottom)
-        l_z = param.l_z
+        L_z = param.L_z
         neg_tab_z = param.n.centre_z_tab
         pos_tab_z = param.p.centre_z_tab
-        neg_tab_top_bool = pybamm.Equality(neg_tab_z, l_z)
+        neg_tab_top_bool = pybamm.Equality(neg_tab_z, L_z)
         neg_tab_bottom_bool = pybamm.Equality(neg_tab_z, 0)
-        pos_tab_top_bool = pybamm.Equality(pos_tab_z, l_z)
+        pos_tab_top_bool = pybamm.Equality(pos_tab_z, L_z)
         pos_tab_bottom_bool = pybamm.Equality(pos_tab_z, 0)
 
         # calculate tab vs non-tab area on top and bottom
-        neg_tab_area = param.n.l_tab * param.n.l_cc
-        pos_tab_area = param.p.l_tab * param.p.l_cc
-        total_area = param.l * param.l_y
+        neg_tab_area = param.n.L_tab * param.n.L_cc
+        pos_tab_area = param.p.L_tab * param.p.L_cc
+        total_area = param.l * param.L_y
 
         non_tab_top_area = (
             total_area

@@ -39,23 +39,23 @@ class Plating(BasePlating):
     def get_fundamental_variables(self):
         if self.x_average is True:
             c_plated_Li_av = pybamm.Variable(
-                "X-averaged lithium plating concentration",
+                "X-averaged lithium plating concentration [mol.m-3]",
                 domain="current collector",
             )
             c_plated_Li = pybamm.PrimaryBroadcast(c_plated_Li_av, "negative electrode")
             c_dead_Li_av = pybamm.Variable(
-                "X-averaged dead lithium concentration",
+                "X-averaged dead lithium concentration [mol.m-3]",
                 domain="current collector",
             )
             c_dead_Li = pybamm.PrimaryBroadcast(c_dead_Li_av, "negative electrode")
         else:
             c_plated_Li = pybamm.Variable(
-                "Lithium plating concentration",
+                "Lithium plating concentration [mol.m-3]",
                 domain="negative electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
             c_dead_Li = pybamm.Variable(
-                "Dead lithium concentration",
+                "Dead lithium concentration [mol.m-3]",
                 domain="negative electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )

@@ -81,11 +81,11 @@ class TestReadParameters(unittest.TestCase):
         L_p = geo.p.L
         L_y = geo.L_y
         L_z = geo.L_z
-        tab_n_y = geo.n.Centre_y_tab
-        tab_n_z = geo.n.Centre_z_tab
+        tab_n_y = geo.n.centre_y_tab
+        tab_n_z = geo.n.centre_z_tab
         L_tab_n = geo.n.L_tab
-        tab_p_y = geo.p.Centre_y_tab
-        tab_p_z = geo.p.Centre_z_tab
+        tab_p_y = geo.p.centre_y_tab
+        tab_p_z = geo.p.centre_z_tab
         L_tab_p = geo.p.L_tab
 
         geometry = pybamm.battery_geometry(current_collector_dimension=2)

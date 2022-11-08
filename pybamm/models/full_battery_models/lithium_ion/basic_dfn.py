@@ -129,14 +129,16 @@ class BasicDFN(BaseModel):
         c_s_surf_n = pybamm.surf(c_s_n)
         sto_surf_n = c_s_surf_n / param.n.prim.c_max
         j0_n = param.n.prim.j0(c_e_n, c_s_surf_n, T)
-        eta_n = phi_s_n - phi_e_n - param.n.prim.U(sto_surf_n, T)
+        eta_n = (
+            phi_s_n - phi_e_n - (param.n.prim.U(sto_surf_n, T) - param.n.prim.U_init)
+        )
         Feta_RT_n = param.F * eta_n / (param.R * T)
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
 
         c_s_surf_p = pybamm.surf(c_s_p)
         sto_surf_p = c_s_surf_p / param.p.prim.c_max
         j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
-        eta_p = phi_s_p - phi_e_p - param.p.prim.U(sto_surf_p, T)
+        eta_p = phi_s_p - phi_e_p - (param.p.prim.U(sto_surf_p, T) - param.ocv_init)
         Feta_RT_p = param.F * eta_p / (param.R * T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
@@ -205,7 +207,7 @@ class BasicDFN(BaseModel):
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.ocv_init
+        self.initial_conditions[phi_s_p] = pybamm.Scalar(0)  # param.ocv_init
 
         ######################
         # Current in the electrolyte
@@ -218,7 +220,7 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.n.prim.U_init
+        self.initial_conditions[phi_e] = pybamm.Scalar(0)  # -param.n.prim.U_init
 
         ######################
         # Electrolyte concentration
