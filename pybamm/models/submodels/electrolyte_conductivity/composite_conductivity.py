@@ -147,7 +147,7 @@ class Composite(BaseElectrolyteConductivity):
             - (i_boundary_cc / kappa_p_av)
             * (x_p * (2 - x_p) + L_p**2 - 1)
             / (2 * L_p)
-            - i_boundary_cc * (1 - L_p) / kappa_s_av
+            - i_boundary_cc * (L_x - L_p) / kappa_s_av
         )
 
         phi_e_dict["separator"] = phi_e_s

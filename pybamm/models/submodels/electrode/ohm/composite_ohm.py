@@ -35,6 +35,7 @@ class Composite(BaseModel):
         # import parameters and spatial variables
         L_n = param.n.L
         L_p = param.p.L
+        L_x = param.L_x
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 

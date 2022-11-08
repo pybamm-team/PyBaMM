@@ -135,11 +135,9 @@ class Simulation:
         This needs to be done here and not in the Experiment class because the nominal
         cell capacity (from the parameters) is used to convert C-rate to current.
         """
-        experiment = self.experiment
-        model = self.model
-        # Update experiment using parameters such as timescale and capacity
+        # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-        for op_conds in experiment.operating_conditions:
+        for op_conds in self.experiment.operating_conditions:
             op_type = op_conds["type"]
             if op_conds["dc_data"] is not None:
                 # If operating condition includes a drive cycle, define the interpolant

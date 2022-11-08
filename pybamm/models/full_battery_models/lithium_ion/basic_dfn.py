@@ -28,7 +28,7 @@ class BasicDFN(BaseModel):
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
-        super().__init__(name)
+        super().__init__(name=name)
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
@@ -77,12 +77,12 @@ class BasicDFN(BaseModel):
         # the x-direction (electrode domain) and so must be provided with auxiliary
         # domains
         c_s_n = pybamm.Variable(
-            "Negative particle concentration",
+            "Negative particle concentration [mol.m-3]",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
         c_s_p = pybamm.Variable(
-            "Positive particle concentration",
+            "Positive particle concentration [mol.m-3]",
             domain="positive particle",
             auxiliary_domains={"secondary": "positive electrode"},
         )
@@ -95,7 +95,7 @@ class BasicDFN(BaseModel):
         ######################
 
         # Current density
-        i_cell = param.dimensional_current_density_with_time
+        i_cell = param.current_density_with_time
 
         # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
@@ -148,7 +148,7 @@ class BasicDFN(BaseModel):
         ######################
         # State of Charge
         ######################
-        I = param.dimensional_current_with_time
+        I = param.current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
         self.rhs[Q] = I / 3600
