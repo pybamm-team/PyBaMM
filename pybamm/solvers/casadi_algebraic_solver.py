@@ -130,11 +130,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             "roots",
             "newton",
             dict(x=y_alg_sym, p=t_sym, g=alg),
-            {
-                **self.extra_options,
-                "abstol": self.tol,
-                "constraints": list(constraints[len_rhs:]),
-            },
+            # {
+            #     **self.extra_options,
+            #     "abstol": self.tol,
+            #     "constraints": list(constraints[len_rhs:]),
+            # },
         )
 
         timer = pybamm.Timer()

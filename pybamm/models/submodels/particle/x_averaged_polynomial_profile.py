@@ -137,17 +137,16 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # an extra algebraic equation to solve. For now, using the average c is an
             # ok approximation and means the SPM(e) still gives a system of ODEs rather
             # than DAEs.
-            c_s_surf_xav = c_s_av - (j_xav / 5 / param.F / D_eff_av)
+            c_s_surf_xav = c_s_av - (j_xav * R / 5 / param.F / D_eff_av)
         elif self.name == "quartic profile":
             # The surface concentration is computed from the average concentration,
             # the average concentration gradient and the boundary flux (see notes
             # for the quadratic profile)
+            # eq 31 of Subramanian2005
             q_s_av = variables[
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
-            c_s_surf_xav = (
-                c_s_av + 8 * q_s_av / 35 - (j_xav / 35 / phase_param.F / D_eff_av)
-            )
+            c_s_surf_xav = c_s_av + R / 35 * (8 * q_s_av - (j_xav / param.F / D_eff_av))
 
         # Set concentration depending on polynomial order
         # Since c_s_xav doesn't depend on x, we need to define a spatial
@@ -166,19 +165,21 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             C = pybamm.PrimaryBroadcast(0, "current collector")
         elif self.name == "quadratic profile":
             # The concentration is given by c = A + B*r**2
-            A = (1 / 2) * (5 * c_s_av - 3 * c_s_surf_xav)
+            # eqs 11-12 in Subramanian2005
+            A = 5 / 2 * c_s_av - 3 / 2 * c_s_surf_xav
             B = (5 / 2) * (c_s_surf_xav - c_s_av)
             C = pybamm.PrimaryBroadcast(0, "current collector")
         elif self.name == "quartic profile":
             # The concentration is given by c = A + B*r**2 + C*r**4
-            A = 39 * c_s_surf_xav / 4 - 3 * q_s_av - 35 * c_s_av / 4
-            B = -35 * c_s_surf_xav + 10 * q_s_av + 35 * c_s_av
-            C = 105 * c_s_surf_xav / 4 - 7 * q_s_av - 105 * c_s_av / 4
+            # eqs 24-26 in Subramanian2005
+            A = 39 / 4 * c_s_surf_xav - 3 * q_s_av * R - 35 / 4 * c_s_av
+            B = -35 * c_s_surf_xav + 10 * q_s_av * R + 35 * c_s_av
+            C = 105 / 4 * c_s_surf_xav - 7 * q_s_av * R - 105 / 4 * c_s_av
 
         A = pybamm.PrimaryBroadcast(A, [f"{domain} particle"])
         B = pybamm.PrimaryBroadcast(B, [f"{domain} particle"])
         C = pybamm.PrimaryBroadcast(C, [f"{domain} particle"])
-        c_s_xav = A + B * r**2 + C * r**4
+        c_s_xav = A + B * r**2 / R**2 + C * r**4 / R**4
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [f"{domain} electrode"])
         c_s_surf = pybamm.PrimaryBroadcast(c_s_surf_xav, [f"{domain} electrode"])
 
@@ -195,15 +196,16 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             )
         elif self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
-            N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r
+            N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r / R
         elif self.name == "quartic profile":
             q_s_av = variables[
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * (
-                (-70 * c_s_surf_xav + 20 * q_s_av + 70 * c_s_av) * r
-                + (105 * c_s_surf_xav - 28 * q_s_av - 105 * c_s_av) * r**3
+                (-70 * c_s_surf_xav + 20 * q_s_av * R + 70 * c_s_av) * r / R
+                + (105 * c_s_surf_xav - 28 * q_s_av * R - 105 * c_s_av)
+                * (r**3 / R**3)
             )
 
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])
@@ -224,7 +226,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # using this model with 2D current collectors with the finite element
         # method (see #1399)
         domain = self.domain
-        phase_param = self.phase_param
+        param = self.param
         phase_param = self.phase_param
 
         if self.size_distribution is False:
@@ -241,7 +243,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 "current density distribution [A.m-2]"
             ]
 
-        dcdt = -3 * j_xav / phase_param.a_R / phase_param.gamma
+        # eq 15 of Subramanian2005
+        dcdt = -3 * j_xav / param.F / R
 
         if self.size_distribution is False:
             self.rhs = {c_s_av: pybamm.source(dcdt, c_s_av)}
@@ -257,14 +260,11 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 f"X-averaged {domain} particle effective diffusivity [mol.m-2.s-1]"
             ]
 
-            self.rhs.update(
-                {
-                    q_s_av: pybamm.source(
-                        -30 * pybamm.surf(D_eff_xav) * q_s_av / phase_param.C_diff
-                        - 45 * j_xav / phase_param.a_R / phase_param.gamma / 2,
-                        q_s_av,
-                    )
-                }
+            # eq 30 of Subramanian2005
+            self.rhs[q_s_av] = pybamm.source(
+                -30 * pybamm.surf(D_eff_xav) * q_s_av / R**2
+                - 45 / 2 * j_xav / param.F / R**2,
+                q_s_av,
             )
 
     def set_algebraic(self, variables):
