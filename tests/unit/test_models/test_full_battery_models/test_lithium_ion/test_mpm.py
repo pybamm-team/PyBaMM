@@ -141,7 +141,10 @@ class TestMPMWithSEI(unittest.TestCase):
             pybamm.lithium_ion.MPM(options)
 
     def test_ec_reaction_limited_not_implemented(self):
-        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
+        }
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 

@@ -133,14 +133,6 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.lead_acid.FOQS(build=False)
-        self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
-
-        citations._reset()
-        pybamm.lead_acid.Composite(build=False)
-        self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
-
-        citations._reset()
         pybamm.lead_acid.Full(build=False)
         self.assertIn("Sulzer2019physical", citations._papers_to_cite)
 

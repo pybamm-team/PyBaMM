@@ -42,12 +42,6 @@ class BaseModel(pybamm.BaseSubModel):
                 }
             )
 
-        if self.set_leading_order is True:
-            leading_order_variables = {
-                "Leading-order " + name.lower(): var for name, var in variables.items()
-            }
-            variables.update(leading_order_variables)
-
         # Override print_name
         tor.print_name = r"\epsilon^{b_e}"
 

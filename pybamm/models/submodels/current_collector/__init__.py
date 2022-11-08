@@ -10,13 +10,3 @@ from .potential_pair import (
     PotentialPair1plus1D,
     PotentialPair2plus1D,
 )
-from .composite_potential_pair import (
-    BaseCompositePotentialPair,
-    CompositePotentialPair1plus1D,
-    CompositePotentialPair2plus1D,
-)
-from .quite_conductive_potential_pair import (
-    BaseQuiteConductivePotentialPair,
-    QuiteConductivePotentialPair1plus1D,
-    QuiteConductivePotentialPair2plus1D,
-)

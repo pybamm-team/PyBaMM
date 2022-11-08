@@ -7,10 +7,12 @@ models = [
     pb.lithium_ion.SPM({"SEI": "reaction limited"}),
     pb.lithium_ion.SPMe({"SEI": "reaction limited"}),
     pb.lithium_ion.SPM(
-        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPM"
+        {"SEI": "reaction limited", "surface form": "algebraic"},
+        name="Algebraic SPM",
     ),
     pb.lithium_ion.SPMe(
-        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPMe"
+        {"SEI": "reaction limited", "surface form": "algebraic"},
+        name="Algebraic SPMe",
     ),
     pb.lithium_ion.DFN({"SEI": "reaction limited"}),
 ]
