@@ -174,6 +174,9 @@ def x_average(symbol):
             else:
                 auxiliary_domains = {"secondary": child.domains["tertiary"]}
                 return pybamm.FullBroadcast(out, domain, auxiliary_domains)
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, x_average)
     # Otherwise, use Integral to calculate average value
     else:
         return XAverage(symbol)
@@ -210,6 +213,9 @@ def z_average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, z_average)
     # Otherwise, define a ZAverage
     else:
         return ZAverage(symbol)
@@ -243,6 +249,9 @@ def yz_average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, yz_average)
     # Otherwise, define a YZAverage
     else:
         return YZAverage(symbol)
@@ -288,6 +297,9 @@ def r_average(symbol):
         and has_particle_domain
     ):
         return symbol.reduce_one_dimension()
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, r_average)
     else:
         return RAverage(symbol)
 
@@ -343,3 +355,10 @@ def size_average(symbol, f_a_dist=None):
             elif ["positive particle size"] in symbol.domains.values():
                 f_a_dist = geo.p.prim.f_a_dist(R)
         return SizeAverage(symbol, f_a_dist)
+
+
+def _sum_of_averages(symbol, average_function):
+    if isinstance(symbol, pybamm.Addition):
+        return average_function(symbol.left) + average_function(symbol.right)
+    elif isinstance(symbol, pybamm.Subtraction):
+        return average_function(symbol.left) - average_function(symbol.right)

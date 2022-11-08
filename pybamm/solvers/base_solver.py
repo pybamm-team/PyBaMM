@@ -432,7 +432,6 @@ class BaseSolver(object):
             ):
                 if isinstance(symbol, _Heaviside):
                     found_t = False
-                    # Dimensionless
                     if symbol.right == pybamm.t:
                         expr = symbol.left
                         found_t = True
@@ -450,14 +449,8 @@ class BaseSolver(object):
                             )
                         )
                 elif isinstance(symbol, pybamm.Modulo):
-                    found_t = False
-                    # Dimensionless
                     if symbol.left == pybamm.t:
                         expr = symbol.right
-                        found_t = True
-
-                    # Update the events if the modulo function depended on t
-                    if found_t:
                         if t_eval is None:
                             N_events = 200
                         else:

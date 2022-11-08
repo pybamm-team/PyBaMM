@@ -986,7 +986,7 @@ class TestBaseModel(unittest.TestCase):
         u = model.variables["u"]
         v = model.variables["v"]
         self.assertEqual(model.rhs[u].value, 2)
-        self.assertIsInstance(model.algebraic[v], pybamm.Subtraction)
+        self.assertEqual(model.algebraic[v], -1.0 + v)
 
 
 if __name__ == "__main__":

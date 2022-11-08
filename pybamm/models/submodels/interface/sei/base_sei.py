@@ -234,7 +234,7 @@ class BaseModel(BaseInterface):
 
             # Calculate change in SEI cracks concentration
             # Initial state depends on roughness (to avoid division by zero)
-            roughness_av = pybamm.x_average(roughness)
+            roughness_av = pybamm.yz_average(pybamm.x_average(roughness))
             # choose an initial condition that is as close to zero to get the
             # physics right, but doesn't cause a division by zero error
             n_SEI_cr_init = (

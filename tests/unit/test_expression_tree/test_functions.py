@@ -267,7 +267,7 @@ class TestSpecificFunctions(unittest.TestCase):
 
         # Base 10
         fun = pybamm.log10(a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
+        self.assertAlmostEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
         h = 0.0000001
         self.assertAlmostEqual(
             fun.diff(a).evaluate(inputs={"a": 3}),
