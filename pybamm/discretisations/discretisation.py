@@ -628,6 +628,9 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
+        for v in processed_rhs.values():
+            v.render()
+
         # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs
@@ -769,10 +772,11 @@ class Discretisation(object):
                 reference = getattr(eqn_key, "reference", 0)
             else:
                 reference = 0
-            processed_eqn_with_scale = (processed_eqn - reference) / scale
-            processed_eqn_with_scale.mesh = processed_eqn.mesh
-            processed_eqn_with_scale.secondary_mesh = processed_eqn.secondary_mesh
-            new_var_eqn_dict[eqn_key] = processed_eqn_with_scale
+
+            if scale != 1 or reference != 0:
+                processed_eqn = (processed_eqn - reference) / scale
+
+            new_var_eqn_dict[eqn_key] = processed_eqn
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -913,14 +917,9 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
-                if symbol.domain == []:
-                    raise ValueError
-                    # out = disc_child * pybamm.Vector([1])
-                else:
-                    out = spatial_method.broadcast(
-                        disc_child, symbol.domains, symbol.broadcast_type
-                    )
-                return out
+                return spatial_method.broadcast(
+                    disc_child, symbol.domains, symbol.broadcast_type
+                )
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
@@ -1009,6 +1008,16 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)
+
+        elif isinstance(symbol, pybamm.ConcatenationVariable):
+            # call StateVector directly to bypass setting reference and scale
+            new_children = [
+                pybamm.StateVector(*self.y_slices[child], domains=child.domains)
+                for child in symbol.children
+            ]
+            new_symbol = spatial_method.concatenation(new_children)
+            # apply scale to the whole concatenation
+            return symbol.reference + symbol.scale * new_symbol
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]

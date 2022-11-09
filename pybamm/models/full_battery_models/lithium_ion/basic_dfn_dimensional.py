@@ -307,15 +307,15 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
         return geometry
 
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 model = BasicDFN()
 var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 10, "r_p": 10}
 # sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver("fast", root_method="lm"))
 sim = pybamm.Simulation(
-    model, solver=pybamm.IDAKLUSolver(root_method="lm"), var_pts=var_pts
+    model, solver=pybamm.IDAKLUSolver(root_tol=1e-4), var_pts=var_pts
 )
 sol = sim.solve([0, 3600])
-sol = sim.solve([0, 3600])
+# sol = sim.solve([0, 3600])
 
 # model = pybamm.lithium_ion.DFN()
 # sim = pybamm.Simulation(

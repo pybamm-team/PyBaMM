@@ -177,10 +177,7 @@ class NumpyConcatenation(Concatenation):
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
         for i, child in enumerate(children):
-            if isinstance(child, pybamm.Scalar):
-                children[i] = pybamm.Vector(np.array([[child.value]]))
-            elif child.shape_for_testing == ():
-                raise ValueError()
+            if child.evaluates_to_number():
                 children[i] = child * pybamm.Vector([1])
         super().__init__(
             *children,
