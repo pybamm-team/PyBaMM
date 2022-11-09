@@ -628,9 +628,6 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
-        for v in processed_rhs.values():
-            v.render()
-
         # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs
