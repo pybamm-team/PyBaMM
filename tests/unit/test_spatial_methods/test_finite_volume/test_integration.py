@@ -318,7 +318,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
         # Set boundary conditions (required for shape but don't matter)
-        disc._bcs = {
+        disc.bcs = {
             phi: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
@@ -355,7 +355,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
         int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
-        disc._bcs = {
+        disc.bcs = {
             phi: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
@@ -417,7 +417,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
         c_integral = pybamm.IndefiniteIntegral(N, r_n)
         disc.set_variable_slices([c])  # N is not a fundamental variable
-        disc._bcs = {
+        disc.bcs = {
             c: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
@@ -466,7 +466,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         int_grad_phi = pybamm.BackwardIndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
-        disc._bcs = {
+        disc.bcs = {
             phi: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),

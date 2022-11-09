@@ -422,6 +422,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Remove boundary conditions and check error is raised
         disc.bcs = {}
+        disc._discretised_symbols = {}
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
             disc.process_symbol(upwind)
 

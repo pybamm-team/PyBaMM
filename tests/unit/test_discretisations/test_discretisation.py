@@ -138,8 +138,8 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # check that b is added to the boundary conditions
-        model.bcs[b]["left"]
-        model.bcs[b]["right"]
+        model._bcs[b]["left"]
+        model._bcs[b]["right"]
 
         # check that grad and div(grad ) produce the correct shapes
         self.assertEqual(model.variables["b"].shape_for_testing, (10, 1))
@@ -205,8 +205,8 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # check that b is added to the boundary conditions
-        model.bcs[b]["left"]
-        model.bcs[b]["right"]
+        model._bcs[b]["left"]
+        model._bcs[b]["right"]
 
         # check that grad and div(grad ) produce the correct shapes
         self.assertEqual(model.variables["b"].shape_for_testing, (15, 1))

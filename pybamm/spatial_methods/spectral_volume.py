@@ -537,10 +537,9 @@ class SpectralVolume(pybamm.FiniteVolume):
             lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n, 1))
             lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
             if lbc_value.evaluates_to_number():
-                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                lbc_vector = pybamm.Matrix(lbc_matrix) * lbc_value
             else:
-                left_bc = lbc_value
-            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
+                lbc_vector = pybamm.Matrix(lbc_matrix) @ lbc_value
         elif lbc_type == "Neumann":
             lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         else:
@@ -553,10 +552,9 @@ class SpectralVolume(pybamm.FiniteVolume):
             rbc_sub_matrix = coo_matrix(([1], ([n - 1], [0])), shape=(n, 1))
             rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
             if rbc_value.evaluates_to_number():
-                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                rbc_vector = pybamm.Matrix(rbc_matrix) * rbc_value
             else:
-                right_bc = rbc_value
-            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
+                rbc_vector = pybamm.Matrix(rbc_matrix) @ rbc_value
         elif rbc_type == "Neumann":
             rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         else:

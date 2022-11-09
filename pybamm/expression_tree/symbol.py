@@ -822,7 +822,7 @@ class Symbol:
         --------
         evaluate : evaluate the expression
         """
-        return self.shape_for_testing in [(), (1,), (1, 1)]
+        return self.shape_for_testing == ()
 
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()

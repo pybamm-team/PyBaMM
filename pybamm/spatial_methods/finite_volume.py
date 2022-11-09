@@ -641,8 +641,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        bcs_vector = pybamm.Vector([])  # starts empty
-
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
@@ -660,13 +658,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         if lbc_type == "Dirichlet":
             lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n + n_bcs, 1))
             lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+            left_ghost_constant = 2 * lbc_value
             if lbc_value.evaluates_to_number():
-                left_ghost_constant = (
-                    2 * lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-                )
+                lbc_vector = pybamm.Matrix(lbc_matrix) * left_ghost_constant
             else:
-                left_ghost_constant = 2 * lbc_value
-            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
+                lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
         elif lbc_type == "Neumann":
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
@@ -681,13 +677,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                 ([1], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+            right_ghost_constant = 2 * rbc_value
             if rbc_value.evaluates_to_number():
-                right_ghost_constant = (
-                    2 * rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-                )
+                rbc_vector = pybamm.Matrix(rbc_matrix) * right_ghost_constant
             else:
-                right_ghost_constant = 2 * rbc_value
-            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
+                rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
         elif rbc_type == "Neumann":
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:

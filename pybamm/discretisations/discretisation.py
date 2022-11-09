@@ -88,6 +88,12 @@ class Discretisation(object):
     def bcs(self):
         return self._bcs
 
+    @bcs.setter
+    def bcs(self, value):
+        self._bcs = value
+        # reset discretised_symbols
+        self._discretised_symbols = {}
+
     def process_model(
         self,
         model,
@@ -748,7 +754,11 @@ class Discretisation(object):
         new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
-            if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
+            if (
+                np.prod(eqn.shape_for_testing) == 1
+                and not isinstance(eqn_key, str)
+                and eqn_key.domain != []
+            ):
                 eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
@@ -905,7 +915,8 @@ class Discretisation(object):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
                 if symbol.domain == []:
-                    out = disc_child * pybamm.Vector([1])
+                    raise ValueError
+                    # out = disc_child * pybamm.Vector([1])
                 else:
                     out = spatial_method.broadcast(
                         disc_child, symbol.domains, symbol.broadcast_type
