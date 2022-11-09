@@ -711,16 +711,8 @@ def _simplified_binary_broadcast_concatenation(left, right, operator):
             return left._concatenation_new_copy(
                 [operator(child, right) for child in left.orphans]
             )
-        elif (
-            isinstance(right, pybamm.Concatenation)
-            and not any(
-                isinstance(child, (pybamm.Variable, pybamm.StateVector))
-                for child in right.children
-            )
-            and (
-                all(child.is_constant() for child in left.children)
-                or all(child.is_constant() for child in right.children)
-            )
+        elif isinstance(right, pybamm.Concatenation) and not isinstance(
+            right, pybamm.ConcatenationVariable
         ):
             return left._concatenation_new_copy(
                 [
