@@ -51,7 +51,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     pybamm_dict = _bpx_to_param_dict(
         bpx.parameterisation.electrolyte, pybamm_dict, electrolyte
     )
-    print(pybamm_dict, bpx)
     pybamm_dict = _bpx_to_param_dict(
         bpx.parameterisation.separator, pybamm_dict, separator
     )
@@ -282,10 +281,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
         pybamm_dict[domain.pre_name + "conductivity [S.m-1]"] = copy_func(conductivity)
 
-    import pprint
-
-    pp = pprint.PrettyPrinter(indent=2)
-    pp.pprint(pybamm_dict)
     return pybamm_dict
 
 
