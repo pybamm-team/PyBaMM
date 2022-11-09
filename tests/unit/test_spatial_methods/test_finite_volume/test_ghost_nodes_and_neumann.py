@@ -30,8 +30,8 @@ class TestGhostNodes(unittest.TestCase):
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
         sym_ghost, _ = sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
-        y_test = np.linspace(0, 1, combined_submesh.npts)
+        submesh = mesh[whole_cell]
+        y_test = np.linspace(0, 1, submesh.npts)
         np.testing.assert_array_equal(
             sym_ghost.evaluate(y=y_test)[1:-1], discretised_symbol.evaluate(y=y_test)
         )
@@ -76,8 +76,8 @@ class TestGhostNodes(unittest.TestCase):
         }
 
         # Test
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
-        y_test = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        submesh = mesh[whole_cell]
+        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
 
         # both
         sp_meth = pybamm.FiniteVolume()
