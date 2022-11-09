@@ -47,7 +47,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Addititional options to pass to the solver, by default:
         {
             print_stats: False, # print statistics of the solver after every solve
-            use_jacobian: True, # pass pybamm jacobian to sundials
             jacobian: "sparse", # jacobian form, can be "none", "dense", "sparse",
                                 # "matrix-free"
             linear_solver: "SUNLinSol_KLU", # name of sundials linear solver to use
