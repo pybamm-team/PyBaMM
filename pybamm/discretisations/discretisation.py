@@ -754,12 +754,11 @@ class Discretisation(object):
         new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
-            if (
-                np.prod(eqn.shape_for_testing) == 1
-                and not isinstance(eqn_key, str)
-                and eqn_key.domain != []
-            ):
-                eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
+            if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
+                if eqn_key.domain == []:
+                    eqn = eqn * pybamm.Vector([1])
+                else:
+                    eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             processed_eqn = self.process_symbol(eqn)

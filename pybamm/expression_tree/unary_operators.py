@@ -1084,7 +1084,10 @@ def grad(symbol):
     """
     # Gradient of a broadcast is zero
     if isinstance(symbol, pybamm.PrimaryBroadcast):
-        new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
+        if symbol.child.domain == []:
+            new_child = pybamm.Scalar(0)
+        else:
+            new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
     elif isinstance(symbol, pybamm.FullBroadcast):
         return pybamm.FullBroadcastToEdges(0, broadcast_domains=symbol.domains)
@@ -1110,7 +1113,10 @@ def div(symbol):
     """
     # Divergence of a broadcast is zero
     if isinstance(symbol, pybamm.PrimaryBroadcastToEdges):
-        new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
+        if symbol.child.domain == []:
+            new_child = pybamm.Scalar(0)
+        else:
+            new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcast(new_child, symbol.domain)
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
@@ -1245,6 +1251,14 @@ def boundary_value(symbol, side):
 
 def sign(symbol):
     """Returns a :class:`Sign` object."""
+    if isinstance(symbol, pybamm.Broadcast):
+        # Move sign inside the broadcast
+        # Apply recursively
+        return symbol._unary_new_copy(sign(symbol.orphans[0]))
+    elif isinstance(symbol, pybamm.Concatenation) and not isinstance(
+        symbol, pybamm.ConcatenationVariable
+    ):
+        return pybamm.concatenation(*[sign(child) for child in symbol.orphans])
     return pybamm.simplify_if_constant(Sign(symbol))
 
 
