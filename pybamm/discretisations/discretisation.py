@@ -1007,11 +1007,15 @@ class Discretisation(object):
             return spatial_method.spatial_variable(symbol)
 
         elif isinstance(symbol, pybamm.ConcatenationVariable):
-            # call StateVector directly to bypass setting reference and scale
-            new_children = [
-                pybamm.StateVector(*self.y_slices[child], domains=child.domains)
-                for child in symbol.children
-            ]
+            # create new children without scale and reference
+            # the scale and reference will be applied to the concatenation instead
+            new_children = []
+            for child in symbol.children:
+                child = child.create_copy()
+                child._scale = 1
+                child._reference = 0
+                child.set_id()
+                new_children.append(self.process_symbol(child))
             new_symbol = spatial_method.concatenation(new_children)
             # apply scale to the whole concatenation
             return symbol.reference + symbol.scale * new_symbol
