@@ -618,9 +618,6 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
-        for v in processed_rhs.values():
-            v.render()
-
         # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs
@@ -793,15 +790,15 @@ class Discretisation(object):
 
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
+                discretised_symbol.mesh = self.mesh[symbol.domain]
             else:
                 discretised_symbol.mesh = None
 
             # Assign secondary mesh
             if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
-                    *symbol.domains["secondary"]
-                )
+                discretised_symbol.secondary_mesh = self.mesh[
+                    symbol.domains["secondary"]
+                ]
             else:
                 discretised_symbol.secondary_mesh = None
             return discretised_symbol
@@ -1000,11 +997,15 @@ class Discretisation(object):
             return spatial_method.spatial_variable(symbol)
 
         elif isinstance(symbol, pybamm.ConcatenationVariable):
-            # call StateVector directly to bypass setting reference and scale
-            new_children = [
-                pybamm.StateVector(*self.y_slices[child], domains=child.domains)
-                for child in symbol.children
-            ]
+            # create new children without scale and reference
+            # the scale and reference will be applied to the concatenation instead
+            new_children = []
+            for child in symbol.children:
+                child = child.create_copy()
+                child._scale = 1
+                child._reference = 0
+                child.set_id()
+                new_children.append(self.process_symbol(child))
             new_symbol = spatial_method.concatenation(new_children)
             # apply scale to the whole concatenation
             return symbol.reference + symbol.scale * new_symbol

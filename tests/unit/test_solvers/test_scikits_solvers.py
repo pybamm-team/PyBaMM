@@ -160,10 +160,8 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Add user-supplied Jacobian to model
         mesh = get_mesh_for_testing()
-        combined_submesh = mesh.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-        N = combined_submesh.npts
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        N = submesh.npts
 
         # Solve testing various linear solvers
         linsolvers = [
@@ -473,10 +471,8 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Add user-supplied Jacobian to model
         mesh = get_mesh_for_testing()
-        combined_submesh = mesh.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-        N = combined_submesh.npts
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        N = submesh.npts
 
         def jacobian(t, y):
             return np.block(

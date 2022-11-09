@@ -54,11 +54,11 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc.set_variable_slices([var])
 
             # Define exact solutions
-            combined_submesh = mesh.combine_submeshes(*whole_cell)
-            x = combined_submesh.nodes
+            submesh = mesh[whole_cell]
+            x = submesh.nodes
             y = np.sin(x) ** 2
             # var = sin(x)**2 --> dvardx = 2*sin(x)*cos(x)
-            x_edge = combined_submesh.edges
+            x_edge = submesh.edges
             grad_exact = 2 * np.sin(x_edge) * np.cos(x_edge)
 
             # Discretise and evaluate
@@ -90,8 +90,8 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             # create mesh and discretisation
             mesh = get_mesh_for_testing(n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
-            combined_submesh = mesh.combine_submeshes(*whole_cell)
-            x = combined_submesh.nodes
+            submesh = mesh[whole_cell]
+            x = submesh.nodes
             x_edge = pybamm.standard_spatial_vars.x_edge
 
             # Define flux and eqn

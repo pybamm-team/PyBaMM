@@ -61,6 +61,8 @@ class VariableBase(pybamm.Symbol):
         scale=1,
         reference=0,
     ):
+        self._scale = scale
+        self._reference = reference
         super().__init__(
             name,
             domain=domain,
@@ -80,8 +82,12 @@ class VariableBase(pybamm.Symbol):
                 )
         self.bounds = bounds
         self.print_name = print_name
-        self._scale = scale
-        self._reference = reference
+
+    def set_id(self):
+        self._id = hash(
+            (self.__class__, self.name, self.scale, self.reference)
+            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+        )
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

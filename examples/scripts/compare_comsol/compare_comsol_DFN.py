@@ -78,13 +78,13 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x"]
 
     # Make sure to use dimensional space
-    pybamm_x = mesh.combine_submeshes(*domain).nodes * L_x
+    pybamm_x = mesh[domain].nodes * L_x
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
     fun = pybamm.Interpolant(comsol_t, variable.T, pybamm.t)
 
     fun.domains = {"primary": domain}
-    fun.mesh = mesh.combine_submeshes(*domain)
+    fun.mesh = mesh[domain]
     fun.secondary_mesh = None
     return fun
 

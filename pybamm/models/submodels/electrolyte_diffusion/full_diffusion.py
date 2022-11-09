@@ -53,15 +53,15 @@ class Full(BaseElectrolyteDiffusion):
             c_e_k = eps_c_e_k / eps_k
             c_e_dict[domain] = c_e_k
 
+        variables[
+            "Electrolyte concentration concatenation [mol.m-3]"
+        ] = pybamm.concatenation(*c_e_dict.values())
         variables.update(self._get_standard_domain_concentration_variables(c_e_dict))
 
         c_e = (
             variables["Porosity times concentration [mol.m-3]"] / variables["Porosity"]
         )
         variables.update(self._get_standard_whole_cell_concentration_variables(c_e))
-        variables[
-            "Electrolyte concentration concatenation [mol.m-3]"
-        ] = pybamm.concatenation(*c_e_dict.values())
 
         # Whole domain
         tor = variables["Electrolyte transport efficiency"]

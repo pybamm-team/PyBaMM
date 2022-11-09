@@ -261,7 +261,7 @@ class DomainConcatenation(Concatenation):
         mesh_pts = 1
         for level, dom in auxiliary_domains.items():
             if level != "primary" and dom != []:
-                mesh_pts *= self.full_mesh.combine_submeshes(*dom).npts
+                mesh_pts *= self.full_mesh[dom].npts
         return mesh_pts
 
     @property

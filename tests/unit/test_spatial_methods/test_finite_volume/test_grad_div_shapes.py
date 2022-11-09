@@ -22,11 +22,11 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
 
         # Test gradient of constant is zero
         # grad(1) = 0
-        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
@@ -40,11 +40,11 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:, np.newaxis]),
+            np.zeros_like(submesh.edges[:, np.newaxis]),
         )
 
         # Test operations on linear x
-        linear_y = combined_submesh.nodes
+        linear_y = submesh.nodes
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -58,13 +58,13 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[:, np.newaxis]),
+            np.ones_like(submesh.edges[:, np.newaxis]),
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y),
-            np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
+            np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
     def test_cylindrical_grad_div_shapes_Dirichlet_bcs(self):
@@ -261,11 +261,11 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
 
         # Test gradient of constant is zero
         # grad(1) = 0
-        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
@@ -279,11 +279,11 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:, np.newaxis]),
+            np.zeros_like(submesh.edges[:, np.newaxis]),
         )
 
         # Test operations on linear x
-        linear_y = combined_submesh.nodes
+        linear_y = submesh.nodes
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -297,13 +297,13 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[:, np.newaxis]),
+            np.ones_like(submesh.edges[:, np.newaxis]),
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y),
-            np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
+            np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
     def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self):
@@ -316,10 +316,10 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
 
         # Test gradient and divergence of a constant
-        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         N = pybamm.grad(var)
@@ -336,17 +336,17 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:, np.newaxis]),
+            np.zeros_like(submesh.edges[:, np.newaxis]),
         )
         # div(grad(1)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
+            np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
         # Test gradient and divergence of linear x
-        linear_y = combined_submesh.nodes
+        linear_y = submesh.nodes
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
@@ -358,13 +358,13 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[:, np.newaxis]),
+            np.ones_like(submesh.edges[:, np.newaxis]),
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y),
-            np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
+            np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
     def test_cylindrical_grad_div_shapes_Neumann_bcs(self):
@@ -439,13 +439,13 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes("negative particle")
+        submesh = mesh["negative particle"]
 
         # Test gradient
         var = pybamm.Variable("var", domain="negative particle")
         grad_eqn = pybamm.grad(var)
         # grad(1) = 0
-        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
@@ -457,10 +457,10 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:, np.newaxis]),
+            np.zeros_like(submesh.edges[:, np.newaxis]),
         )
         # grad(r) == 1
-        linear_y = combined_submesh.nodes
+        linear_y = submesh.nodes
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
@@ -471,12 +471,12 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[:, np.newaxis]),
+            np.ones_like(submesh.edges[:, np.newaxis]),
         )
 
         # Test divergence of gradient
         # div(grad(r^2)) = 6 , N_left = 0, N_right = 2
-        quadratic_y = combined_submesh.nodes**2
+        quadratic_y = submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -489,7 +489,7 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, quadratic_y),
-            6 * np.ones((combined_submesh.npts, 1)),
+            6 * np.ones((submesh.npts, 1)),
         )
 
     def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
@@ -548,11 +548,11 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+        submesh = mesh[("negative electrode", "separator")]
 
         # Test gradient of constant
         # grad(1) = 0
-        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
@@ -566,17 +566,17 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:, np.newaxis]),
+            np.zeros_like(submesh.edges[:, np.newaxis]),
         )
 
         # Test operations on linear x
-        linear_y = combined_submesh.nodes
+        linear_y = submesh.nodes
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(combined_submesh.edges[-1]), "Dirichlet"),
+                "right": (pybamm.Scalar(submesh.edges[-1]), "Dirichlet"),
             }
         }
         disc.bcs = boundary_conditions
@@ -584,13 +584,13 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[:, np.newaxis]),
+            np.ones_like(submesh.edges[:, np.newaxis]),
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y),
-            np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
+            np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
     def test_grad_1plus1d(self):
@@ -627,13 +627,11 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(pybamm.grad(var))
 
         # Evaulate
-        combined_submesh = mesh.combine_submeshes(*var.domain)
-        linear_y = np.outer(np.linspace(0, 1, 15), combined_submesh.nodes).reshape(
+        submesh = mesh[var.domain]
+        linear_y = np.outer(np.linspace(0, 1, 15), submesh.nodes).reshape(-1, 1)
+        expected = np.outer(np.linspace(0, 1, 15), np.ones_like(submesh.edges)).reshape(
             -1, 1
         )
-        expected = np.outer(
-            np.linspace(0, 1, 15), np.ones_like(combined_submesh.edges)
-        ).reshape(-1, 1)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), expected
         )
