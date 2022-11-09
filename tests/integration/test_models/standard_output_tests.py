@@ -66,6 +66,14 @@ class BaseOutputTest(object):
         self.solution = solution
         self.operating_condition = operating_condition
 
+        # Get phase names
+        self.phase_name_n = (
+            "" if self.model.options.negative["particle phases"] == "1" else "primary "
+        )
+        self.phase_name_p = (
+            "" if self.model.options.positive["particle phases"] == "1" else "primary "
+        )
+
         # Use dimensional time and space
         self.t = solution.t * model.timescale_eval
         geo = pybamm.geometric_parameters
@@ -105,13 +113,19 @@ class VoltageTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.eta_r_n = solution["Negative electrode reaction overpotential [V]"]
-        self.eta_r_p = solution["Positive electrode reaction overpotential [V]"]
+        self.eta_r_n = solution[
+            f"Negative electrode {self.phase_name_n}reaction overpotential [V]"
+        ]
+        self.eta_r_p = solution[
+            f"Positive electrode {self.phase_name_p}reaction overpotential [V]"
+        ]
         self.eta_r_n_av = solution[
-            "X-averaged negative electrode reaction overpotential [V]"
+            f"X-averaged negative electrode {self.phase_name_n}"
+            "reaction overpotential [V]"
         ]
         self.eta_r_p_av = solution[
-            "X-averaged positive electrode reaction overpotential [V]"
+            f"X-averaged positive electrode {self.phase_name_p}"
+            "reaction overpotential [V]"
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
@@ -121,10 +135,12 @@ class VoltageTests(BaseOutputTest):
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
 
         self.ocp_n_av = solution[
-            "X-averaged negative electrode open circuit potential [V]"
+            f"X-averaged negative electrode {self.phase_name_n}"
+            "open circuit potential [V]"
         ]
         self.ocp_p_av = solution[
-            "X-averaged positive electrode open circuit potential [V]"
+            f"X-averaged positive electrode {self.phase_name_p}"
+            "open circuit potential [V]"
         ]
         self.ocv_av = solution["X-averaged open circuit voltage [V]"]
         self.voltage = solution["Terminal voltage [V]"]
@@ -254,20 +270,28 @@ class ParticleConcentrationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.c_s_n = solution["Negative particle concentration"]
-        self.c_s_p = solution["Positive particle concentration"]
+        self.c_s_n = solution[f"Negative {self.phase_name_n}particle concentration"]
+        self.c_s_p = solution[f"Positive {self.phase_name_p}particle concentration"]
 
-        self.c_s_n_rav = solution["R-averaged negative particle concentration"]
-        self.c_s_p_rav = solution["R-averaged positive particle concentration"]
+        self.c_s_n_rav = solution[
+            f"R-averaged negative {self.phase_name_n}particle concentration"
+        ]
+        self.c_s_p_rav = solution[
+            f"R-averaged positive {self.phase_name_p}particle concentration"
+        ]
 
-        self.c_s_n_surf = solution["Negative particle surface concentration"]
-        self.c_s_p_surf = solution["Positive particle surface concentration"]
+        self.c_s_n_surf = solution[
+            f"Negative {self.phase_name_n}particle surface concentration"
+        ]
+        self.c_s_p_surf = solution[
+            f"Positive {self.phase_name_p}particle surface concentration"
+        ]
 
         self.c_s_n_tot = solution["Total lithium in negative electrode [mol]"]
         self.c_s_p_tot = solution["Total lithium in positive electrode [mol]"]
 
-        self.N_s_n = solution["Negative particle flux"]
-        self.N_s_p = solution["Positive particle flux"]
+        self.N_s_n = solution[f"Negative {self.phase_name_n}particle flux"]
+        self.N_s_p = solution[f"Positive {self.phase_name_p}particle flux"]
 
         self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
         self.c_Li_tot = solution["Loss of lithium to lithium plating [mol]"]
@@ -601,10 +625,10 @@ class PotentialTests(BaseOutputTest):
         t = self.t
 
         np.testing.assert_array_almost_equal(
-            self.phi_s_n_av(t) - self.phi_e_n_av(t), self.delta_phi_n_av(t)
+            self.phi_s_n_av(t) - self.phi_e_n_av(t), self.delta_phi_n_av(t), decimal=4
         )
         np.testing.assert_array_almost_equal(
-            self.phi_s_p_av(t) - self.phi_e_p_av(t), self.delta_phi_p_av(t)
+            self.phi_s_p_av(t) - self.phi_e_p_av(t), self.delta_phi_p_av(t), decimal=4
         )
 
     def test_gradient_splitting(self):
@@ -632,30 +656,36 @@ class CurrentTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.j = solution["Interfacial current density"]
-        self.j0 = solution["Exchange current density"]
-
-        self.j_n = solution["Negative electrode interfacial current density"]
-        self.j_p = solution["Positive electrode interfacial current density"]
-        self.j_n_av = solution[
-            "X-averaged negative electrode interfacial current density"
+        self.a_j_n = solution[
+            "Negative electrode volumetric interfacial current density"
         ]
-        self.j_p_av = solution[
-            "X-averaged positive electrode interfacial current density"
+        self.a_j_p = solution[
+            "Positive electrode volumetric interfacial current density"
         ]
-        self.j_n_sei = solution["SEI interfacial current density"]
-        self.j_n_sei_av = solution["X-averaged SEI interfacial current density"]
-
-        self.j0_n = solution["Negative electrode exchange current density"]
-        self.j0_p = solution["Positive electrode exchange current density"]
+        self.a_j_n_av = solution[
+            "X-averaged negative electrode volumetric interfacial current density"
+        ]
+        self.a_j_p_av = solution[
+            "X-averaged positive electrode volumetric interfacial current density"
+        ]
+        self.a_j_n_sei = solution[
+            "Negative electrode SEI volumetric interfacial current density"
+        ]
+        self.a_j_n_sei_av = solution[
+            "X-averaged negative electrode SEI volumetric interfacial current density"
+        ]
+        self.a_j_n_pl = solution[
+            "Negative electrode lithium plating volumetric interfacial current density"
+        ]
+        self.a_j_n_pl_av = solution[
+            "X-averaged negative electrode lithium plating "
+            "volumetric interfacial current density"
+        ]
 
         self.i_s_n = solution["Negative electrode current density"]
         self.i_s_p = solution["Positive electrode current density"]
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
-
-        self.a_n = solution["Negative electrode surface area to volume ratio"]
-        self.a_p = solution["Positive electrode surface area to volume ratio"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)
@@ -664,18 +694,16 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(self.t, self.x_n)
-                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
+                self.a_j_n(self.t, self.x_n)
+                + self.a_j_n_sei(self.t, self.x_n)
+                + self.a_j_n_pl(self.t, self.x_n),
                 axis=0,
             ),
             self.i_cell / self.l_n,
             decimal=3,
         )
         np.testing.assert_array_almost_equal(
-            np.mean(
-                self.a_p(self.t, self.x_p) * self.j_p(self.t, self.x_p),
-                axis=0,
-            ),
+            np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.l_p,
             decimal=4,
         )

@@ -17,84 +17,62 @@ model.submodels["external circuit"] = pybamm.external_circuit.ExplicitCurrentCon
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
 model.submodels["porosity"] = pybamm.porosity.Constant(model.param, model.options)
-model.submodels["negative active material"] = pybamm.active_material.Constant(
-    model.param, "Negative", model.options
-)
-model.submodels["positive active material"] = pybamm.active_material.Constant(
-    model.param, "Positive", model.options
-)
-model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
-    model.param, "Negative"
-)
-model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
-    model.param, "Positive"
-)
-particle_n = pybamm.particle.PolynomialProfile(
-    model.param, "Negative", options={**model.options, "particle": "uniform profile"}
-)
-model.submodels["negative particle"] = particle_n
-particle_p = pybamm.particle.PolynomialProfile(
-    model.param, "Positive", options={**model.options, "particle": "uniform profile"}
-)
-model.submodels["positive particle"] = particle_p
-
-model.submodels[
-    "negative open circuit potential"
-] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-    model.param, "Negative", "lithium-ion main", options=model.options
-)
-model.submodels[
-    "positive open circuit potential"
-] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-    model.param, "Positive", "lithium-ion main", options=model.options
-)
-model.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
-    model.param, "Negative", "lithium-ion main", options=model.options
-)
-model.submodels["positive interface"] = pybamm.kinetics.InverseButlerVolmer(
-    model.param, "Positive", "lithium-ion main", options=model.options
-)
-model.submodels["negative interface utilisation"] = pybamm.interface_utilisation.Full(
-    model.param, "Negative", model.options
-)
-model.submodels["positive interface utilisation"] = pybamm.interface_utilisation.Full(
-    model.param, "Positive", model.options
-)
-model.submodels[
-    "negative interface current"
-] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-    model.param, "Negative", "lithium-ion main"
-)
-model.submodels[
-    "positive interface current"
-] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-    model.param, "Positive", "lithium-ion main"
-)
 model.submodels[
     "electrolyte diffusion"
 ] = pybamm.electrolyte_diffusion.ConstantConcentration(model.param)
 model.submodels[
     "electrolyte conductivity"
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
-model.submodels[
-    "negative surface potential difference"
-] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-    model.param, "Negative"
+
+model.submodels["sei"] = pybamm.sei.NoSEI(model.param, model.options)
+model.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+    model.param, model.options, cracks=True
 )
-model.submodels[
-    "positive surface potential difference"
-] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-    model.param, "Positive"
-)
-model.submodels[
-    "Negative particle mechanics"
-] = pybamm.particle_mechanics.NoMechanics(model.param, "Negative")
-model.submodels[
-    "Positive particle mechanics"
-] = pybamm.particle_mechanics.NoMechanics(model.param, "Positive")
-model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
-model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
 model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
+
+# Loop over negative and positive electrode domains for some submodels
+for domain in ["negative", "positive"]:
+    model.submodels[f"{domain} active material"] = pybamm.active_material.Constant(
+        model.param, domain, model.options
+    )
+    model.submodels[
+        f"{domain} electrode potential"
+    ] = pybamm.electrode.ohm.LeadingOrder(model.param, domain)
+    model.submodels[f"{domain} particle"] = pybamm.particle.XAveragedPolynomialProfile(
+        model.param,
+        domain,
+        options={**model.options, "particle": "uniform profile"},
+        phase="primary",
+    )
+
+    model.submodels[
+        f"{domain} open circuit potential"
+    ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+        model.param,
+        domain,
+        "lithium-ion main",
+        options=model.options,
+        phase="primary",
+    )
+    model.submodels[f"{domain} interface"] = pybamm.kinetics.InverseButlerVolmer(
+        model.param, domain, "lithium-ion main", options=model.options
+    )
+    model.submodels[
+        f"{domain} interface utilisation"
+    ] = pybamm.interface_utilisation.Full(model.param, domain, model.options)
+    model.submodels[
+        f"{domain} interface current"
+    ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
+        model.param, domain, "lithium-ion main"
+    )
+    model.submodels[
+        f"{domain} surface potential difference"
+    ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
+        model.param, domain, model.options
+    )
+    model.submodels[
+        f"{domain} particle mechanics"
+    ] = pybamm.particle_mechanics.NoMechanics(model.param, domain, model.options)
 
 # build model
 model.build_model()

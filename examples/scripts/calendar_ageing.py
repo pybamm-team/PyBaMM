@@ -7,10 +7,12 @@ models = [
     pb.lithium_ion.SPM({"SEI": "reaction limited"}),
     pb.lithium_ion.SPMe({"SEI": "reaction limited"}),
     pb.lithium_ion.SPM(
-        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPM"
+        {"SEI": "reaction limited", "surface form": "algebraic"},
+        name="Algebraic SPM",
     ),
     pb.lithium_ion.SPMe(
-        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPMe"
+        {"SEI": "reaction limited", "surface form": "algebraic"},
+        name="Algebraic SPMe",
     ),
     pb.lithium_ion.DFN({"SEI": "reaction limited"}),
 ]
@@ -47,7 +49,7 @@ pb.dynamic_plot(
         "X-averaged total SEI thickness [m]",
         "X-averaged total SEI thickness",
         "X-averaged SEI concentration [mol.m-3]",
-        "Sum of x-averaged negative electrode interfacial current densities",
+        "Sum of x-averaged negative electrode volumetric interfacial current densities",
         "Loss of lithium inventory [%]",
         ["Total lithium lost [mol]", "Loss of lithium to SEI [mol]"],
     ],

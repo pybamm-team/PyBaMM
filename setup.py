@@ -5,8 +5,6 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
-import site
-import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -188,10 +186,10 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.7,<3.10",
+    python_requires=">=3.8,<3.10",
     # List of dependencies
     install_requires=[
-        "numpy<=1.22",  # change back to numpy>=1.16 once scikit.odes is fixed
+        "numpy>=1.16",
         "scipy>=1.3",
         "pandas>=0.24",
         "anytree>=2.4.3",
@@ -203,7 +201,7 @@ setup(
         # julia programming language is not installed
         "julia>=0.5.6",
         "jupyter",  # For example notebooks
-        "pybtex",
+        "pybtex>=0.24.0",
         "sympy>=1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
@@ -225,12 +223,21 @@ setup(
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
             "pybamm_install_jax = pybamm.util:install_jax",
-        ]
+        ],
+        "pybamm_parameter_set": [
+            "Sulzer2019 = pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values",  # noqa: E501
+            "Ai2020 = pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values",  # noqa: E501
+            "Chen2020 = pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values",  # noqa: E501
+            "Chen2020_composite = pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values",  # noqa: E501
+            "Ecker2015 = pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values",  # noqa: E501
+            "Marquis2019 = pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values",  # noqa: E501
+            "Mohtat2020 = pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values",  # noqa: E501
+            "NCA_Kim2011 = pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values",  # noqa: E501
+            "OKane2022 = pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values",  # noqa: E501
+            "ORegan2022 = pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values",  # noqa: E501
+            "Prada2013 = pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values",  # noqa: E501
+            "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
+            "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
+        ],
     },
 )
-
-# pybtex adds a folder "tests" to the site packages, so we manually remove this
-path_to_sitepackages = site.getsitepackages()[0]
-path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
-if os.path.exists(path_to_tests_dir):
-    shutil.rmtree(path_to_tests_dir)

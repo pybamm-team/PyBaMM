@@ -21,15 +21,9 @@ class _BaseAverage(pybamm.Integral):
 
 class XAverage(_BaseAverage):
     def __init__(self, child):
-        if child.domain in [
-            ["negative particle"],
-            ["negative particle size"],
-        ]:
+        if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif child.domain in [
-            ["positive particle"],
-            ["positive particle size"],
-        ]:
+        elif all(n in child.domain[0] for n in ["positive", "particle"]):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
@@ -180,6 +174,9 @@ def x_average(symbol):
             else:
                 auxiliary_domains = {"secondary": child.domains["tertiary"]}
                 return pybamm.FullBroadcast(out, domain, auxiliary_domains)
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, x_average)
     # Otherwise, use Integral to calculate average value
     else:
         return XAverage(symbol)
@@ -216,6 +213,9 @@ def z_average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, z_average)
     # Otherwise, define a ZAverage
     else:
         return ZAverage(symbol)
@@ -249,6 +249,9 @@ def yz_average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, yz_average)
     # Otherwise, define a YZAverage
     else:
         return YZAverage(symbol)
@@ -272,12 +275,13 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith("particle")
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
+    elif not has_particle_domain:
         return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
@@ -288,10 +292,14 @@ def r_average(symbol):
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
     # If symbol is a Broadcast onto a particle domain, its average value is its child
-    elif isinstance(
-        symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)
-    ) and symbol.domain in [["positive particle"], ["negative particle"]]:
+    elif (
+        isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast))
+        and has_particle_domain
+    ):
         return symbol.reduce_one_dimension()
+    # Average of a sum is sum of averages
+    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+        return _sum_of_averages(symbol, r_average)
     else:
         return RAverage(symbol)
 
@@ -343,7 +351,14 @@ def size_average(symbol, f_a_dist=None):
                 "R", domains=symbol.domains, coord_sys="cartesian"
             )
             if ["negative particle size"] in symbol.domains.values():
-                f_a_dist = geo.n.f_a_dist(R)
+                f_a_dist = geo.n.prim.f_a_dist(R)
             elif ["positive particle size"] in symbol.domains.values():
-                f_a_dist = geo.p.f_a_dist(R)
+                f_a_dist = geo.p.prim.f_a_dist(R)
         return SizeAverage(symbol, f_a_dist)
+
+
+def _sum_of_averages(symbol, average_function):
+    if isinstance(symbol, pybamm.Addition):
+        return average_function(symbol.left) + average_function(symbol.right)
+    elif isinstance(symbol, pybamm.Subtraction):
+        return average_function(symbol.left) - average_function(symbol.right)

@@ -260,7 +260,7 @@ class TestDiscretise(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
-        c_true = combined_submesh.nodes ** 2
+        c_true = combined_submesh.nodes**2
         y = c_true
         np.testing.assert_array_equal(y[disc.y_slices[c][0]], c_true)
 
@@ -364,15 +364,7 @@ class TestDiscretise(unittest.TestCase):
         # binary operator
         binary = var + scal
         binary_disc = disc.process_symbol(binary)
-        self.assertIsInstance(binary_disc, pybamm.Addition)
-        self.assertIsInstance(binary_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(binary_disc.children[1], pybamm.Scalar)
-
-        bin2 = scal + var
-        bin2_disc = disc.process_symbol(bin2)
-        self.assertIsInstance(bin2_disc, pybamm.Addition)
-        self.assertIsInstance(bin2_disc.children[0], pybamm.Scalar)
-        self.assertIsInstance(bin2_disc.children[1], pybamm.StateVector)
+        self.assertEqual(binary_disc, 5 + pybamm.StateVector(slice(0, 53)))
 
         # non-spatial unary operator
         un1 = -var
@@ -429,34 +421,21 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        expression = (5 * (3 ** var2)) / ((var1 - 4) + var2)
+        expression = (5 * (3**var2)) / ((var1 - 4) + var2)
 
         # create discretisation
         disc = get_discretisation_for_testing()
 
         disc.y_slices = {var1: [slice(53)], var2: [slice(53, 106)]}
         exp_disc = disc.process_symbol(expression)
-        self.assertIsInstance(exp_disc, pybamm.Division)
-        # left side
-        self.assertIsInstance(exp_disc.left, pybamm.Multiplication)
-        self.assertIsInstance(exp_disc.left.left, pybamm.Scalar)
-        self.assertIsInstance(exp_disc.left.right, pybamm.Power)
-        self.assertIsInstance(exp_disc.left.right.left, pybamm.Scalar)
-        self.assertIsInstance(exp_disc.left.right.right, pybamm.StateVector)
         self.assertEqual(
-            exp_disc.left.right.right.y_slices[0],
-            disc.y_slices[var2][0],
+            exp_disc,
+            (5.0 * (3.0 ** pybamm.StateVector(slice(53, 106))))
+            / (
+                (-4.0 + pybamm.StateVector(slice(0, 53)))
+                + pybamm.StateVector(slice(53, 106))
+            ),
         )
-        # right side
-        self.assertIsInstance(exp_disc.right, pybamm.Addition)
-        self.assertIsInstance(exp_disc.right.left, pybamm.Subtraction)
-        self.assertIsInstance(exp_disc.right.left.left, pybamm.StateVector)
-        self.assertEqual(
-            exp_disc.right.left.left.y_slices[0],
-            disc.y_slices[var1][0],
-        )
-        self.assertIsInstance(exp_disc.right.left.right, pybamm.Scalar)
-        self.assertIsInstance(exp_disc.right.right, pybamm.StateVector)
 
     def test_discretise_spatial_operator(self):
         # create discretisation
@@ -475,7 +454,7 @@ class TestDiscretise(unittest.TestCase):
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
-            y = combined_submesh.nodes ** 2
+            y = combined_submesh.nodes**2
             var_disc = disc.process_symbol(var)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
@@ -491,7 +470,7 @@ class TestDiscretise(unittest.TestCase):
             self.assertIsInstance(eqn_disc.children[1], pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
 
-            y = combined_submesh.nodes ** 2
+            y = combined_submesh.nodes**2
             var_disc = disc.process_symbol(var)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
@@ -525,7 +504,7 @@ class TestDiscretise(unittest.TestCase):
         N = pybamm.grad(c)
         rhs = {c: pybamm.div(N)}
         initial_conditions = {c: pybamm.Scalar(3)}
-        variables = {"c_squared": c ** 2}
+        variables = {"c_squared": c**2}
         boundary_conditions = {c: {"left": (0, "Neumann"), "right": (0, "Neumann")}}
 
         # create discretisation
@@ -550,7 +529,7 @@ class TestDiscretise(unittest.TestCase):
         # vars
         processed_vars = disc.process_dict(variables)
         np.testing.assert_array_equal(
-            y ** 2, processed_vars["c_squared"].evaluate(None, y)
+            y**2, processed_vars["c_squared"].evaluate(None, y)
         )
 
         # two equations
@@ -560,7 +539,7 @@ class TestDiscretise(unittest.TestCase):
         initial_conditions = {c: pybamm.Scalar(3), T: pybamm.Scalar(5)}
         boundary_conditions = {}
         y = np.concatenate(
-            [combined_submesh.nodes ** 2, mesh["negative electrode"].nodes ** 4]
+            [combined_submesh.nodes**2, mesh["negative electrode"].nodes ** 4]
         )[:, np.newaxis]
 
         variables = list(rhs.keys())
@@ -691,11 +670,6 @@ class TestDiscretise(unittest.TestCase):
         # jacobian is identity
         jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
-
-        # test jacobian by eqn gives same as jacobian of concatenated rhs
-        model.jacobian, _, _ = disc.create_jacobian(model)
-        model_jacobian = model.jacobian.evaluate(0, y0)
-        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
 
         # test that discretising again gives an error
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot re-discretise a model"):
@@ -831,11 +805,6 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
 
-        # test jacobian by eqn gives same as jacobian of concatenated rhs & algebraic
-        model.jacobian, _, _ = disc.create_jacobian(model)
-        model_jacobian = model.jacobian.evaluate(0, y0)
-        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
-
         # check that any time derivatives of variables in algebraic raises an
         # error
         model = pybamm.BaseModel()
@@ -849,6 +818,56 @@ class TestDiscretise(unittest.TestCase):
 
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
+
+    def test_process_model_algebraic(self):
+        # TODO: implement this based on test_process_model_dae
+        # one rhs equation and one algebraic
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        Q = pybamm.Scalar(1)
+        model = pybamm.BaseModel()
+        model.algebraic = {c: pybamm.div(N) - Q}
+        model.initial_conditions = {c: pybamm.Scalar(0)}
+
+        model.boundary_conditions = {
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        disc.process_model(model)
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
+        y0 = model.concatenated_initial_conditions.evaluate()
+        np.testing.assert_array_equal(
+            y0,
+            np.zeros_like(combined_submesh.nodes)[:, np.newaxis],
+        )
+
+        # grad and div are identity operators here
+        np.testing.assert_array_equal(
+            model.concatenated_rhs.evaluate(None, y0), np.ones([0, 1])
+        )
+
+        np.testing.assert_array_equal(
+            model.concatenated_algebraic.evaluate(None, y0),
+            -np.ones_like(combined_submesh.nodes[:, np.newaxis]),
+        )
+
+        # mass matrix is identity upper left, zeros elsewhere
+        mass = np.zeros(
+            (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes))
+        )
+        np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+        # jacobian
+        y = pybamm.StateVector(slice(0, np.size(y0)))
+        jacobian = model.concatenated_algebraic.jac(y).evaluate(0, y0)
+        np.testing.assert_array_equal(np.eye(combined_submesh.npts), jacobian.toarray())
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
@@ -954,16 +973,16 @@ class TestDiscretise(unittest.TestCase):
 
         broad_disc = disc.process_symbol(broad)
         self.assertIsInstance(broad_disc, pybamm.Multiplication)
-        self.assertIsInstance(broad_disc.children[0], pybamm.InputParameter)
-        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Vector)
+        self.assertIsInstance(broad_disc.children[1], pybamm.InputParameter)
 
         # process Broadcast variable
         disc.y_slices = {var: [slice(1)]}
         broad1 = pybamm.FullBroadcast(var, ["negative electrode"], None)
         broad1_disc = disc.process_symbol(broad1)
         self.assertIsInstance(broad1_disc, pybamm.Multiplication)
-        self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad1_disc.children[0], pybamm.Vector)
+        self.assertIsInstance(broad1_disc.children[1], pybamm.StateVector)
 
         # broadcast to edges
         broad_to_edges = pybamm.FullBroadcastToEdges(a, ["negative electrode"], None)
@@ -1385,6 +1404,21 @@ class TestDiscretise(unittest.TestCase):
         model.length_scales = {"negative electrode": pybamm.Vector([1])}
         disc.process_model(model)
         self.assertEqual(model.length_scales["negative electrode"], pybamm.Scalar(1))
+
+    def test_independent_rhs(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        model = pybamm.BaseModel()
+        model.rhs = {a: b, b: c, c: -c}
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(1),
+            c: pybamm.Scalar(1),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        self.assertEqual(len(model.rhs), 2)
 
 
 if __name__ == "__main__":

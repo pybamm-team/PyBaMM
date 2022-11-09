@@ -109,12 +109,12 @@ def lognormal(x, x_av, sd):
     standard deviations used here are of X rather than the normal distribution log(X).
     """
 
-    mu_ln = pybamm.log(x_av ** 2 / pybamm.sqrt(x_av ** 2 + sd ** 2))
-    sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / x_av ** 2))
+    mu_ln = pybamm.log(x_av**2 / pybamm.sqrt(x_av**2 + sd**2))
+    sigma_ln = pybamm.sqrt(pybamm.log(1 + sd**2 / x_av**2))
 
     out = (
-        pybamm.exp(-((pybamm.log(x) - mu_ln) ** 2) / (2 * sigma_ln ** 2))
-        / pybamm.sqrt(2 * np.pi * sigma_ln ** 2)
+        pybamm.exp(-((pybamm.log(x) - mu_ln) ** 2) / (2 * sigma_ln**2))
+        / pybamm.sqrt(2 * np.pi * sigma_ln**2)
         / x
     )
     return out

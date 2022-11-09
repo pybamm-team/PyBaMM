@@ -51,7 +51,7 @@ class BasicDFNHalfCell(BaseModel):
         # `ParameterValues` class when the model is processed.
         param = self.param
 
-        R_w_typ = param.p.R_typ
+        R_w_typ = param.p.prim.R_typ
 
         # Set default length scales
         self._length_scales = {
@@ -124,16 +124,16 @@ class BasicDFNHalfCell(BaseModel):
         b_e_w = param.p.b_e
 
         # Interfacial reactions
-        j0_w = param.p.j0(c_e_w, c_s_surf_w, T) / param.p.C_r
-        U_w = param.p.U
-        ne_w = param.p.ne
+        j0_w = param.p.prim.j0(c_e_w, c_s_surf_w, T)
+        U_w = param.p.prim.U
+        ne_w = param.p.prim.ne
 
         # Particle diffusion parameters
-        D_w = param.p.D
-        C_w = param.p.cap_init
-        a_R_w = param.p.a_R
-        gamma_e = param.c_e_typ / param.p.c_max
-        c_w_init = param.p.c_init
+        D_w = param.p.prim.D
+        C_w = param.p.prim.cap_init
+        a_R_w = param.p.prim.a_R
+        gamma_e = param.c_e_typ / param.p.prim.c_max
+        c_w_init = param.p.prim.c_init
 
         # Electrode equation parameters
         eps_s_w = pybamm.Parameter("Positive electrode active material volume fraction")
@@ -141,7 +141,7 @@ class BasicDFNHalfCell(BaseModel):
         sigma_w = param.p.sigma
 
         # Other parameters (for outputs)
-        c_w_max = param.p.c_max
+        c_w_max = param.p.prim.c_max
         U_w_ref = param.p.U_ref
         U_Li_ref = param.n.U_ref
         L_w = param.p.L
@@ -151,7 +151,7 @@ class BasicDFNHalfCell(BaseModel):
         gamma_w = pybamm.Scalar(1)
 
         eps = pybamm.concatenation(eps_s, eps_w)
-        tor = pybamm.concatenation(eps_s ** b_e_s, eps_w ** b_e_w)
+        tor = pybamm.concatenation(eps_s**b_e_s, eps_w**b_e_w)
 
         j_w = (
             2 * j0_w * pybamm.sinh(ne_w / 2 * (phi_s_w - phi_e_w - U_w(c_s_surf_w, T)))
@@ -203,7 +203,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_w = sigma_w(T) * eps_s_w ** b_s_w
+        sigma_eff_w = sigma_w(T) * eps_s_w**b_s_w
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -216,7 +216,7 @@ class BasicDFNHalfCell(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
         # initial conditions
-        self.initial_conditions[phi_s_w] = param.p.U_init
+        self.initial_conditions[phi_s_w] = param.p.prim.U_init
 
         ######################
         # Electrolyte concentration
@@ -248,7 +248,7 @@ class BasicDFNHalfCell(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * gamma_e / param.C_e) * (
-            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chiT_over_c(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
@@ -295,7 +295,7 @@ class BasicDFNHalfCell(BaseModel):
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                voltage_dim - self.param.voltage_high_cut_dimensional,
+                self.param.voltage_high_cut_dimensional - voltage_dim,
                 pybamm.EventType.TERMINATION,
             )
         )

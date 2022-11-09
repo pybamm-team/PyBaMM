@@ -53,6 +53,15 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "reaction limited"}
         self.run_basic_processing_test(options)
 
+    def test_sei_asymmetric_reaction_limited(self):
+        options = {"SEI": "reaction limited (asymmetric)"}
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values.update(
+            {"SEI growth transfer coefficient": 0.2},
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_sei_solvent_diffusion_limited(self):
         options = {"SEI": "solvent-diffusion limited"}
         self.run_basic_processing_test(options)
@@ -68,6 +77,15 @@ class BaseIntegrationTestLithiumIonHalfCell:
     def test_sei_ec_reaction_limited(self):
         options = {"SEI": "ec reaction limited"}
         self.run_basic_processing_test(options)
+
+    def test_sei_asymmetric_ec_reaction_limited(self):
+        options = {"SEI": "ec reaction limited (asymmetric)"}
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values.update(
+            {"SEI growth transfer coefficient": 0.2},
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_constant_utilisation(self):
         options = {"interface utilisation": "constant"}

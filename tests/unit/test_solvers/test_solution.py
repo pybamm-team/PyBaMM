@@ -90,9 +90,13 @@ class TestSolution(unittest.TestCase):
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
         self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
 
-        # radd
-        sol4 = None + sol3
+        # add None
+        sol4 = sol3 + None
         self.assertEqual(sol3.all_ys, sol4.all_ys)
+
+        # radd
+        sol5 = None + sol3
+        self.assertEqual(sol3.all_ys, sol5.all_ys)
 
         # radd failure
         with self.assertRaisesRegex(

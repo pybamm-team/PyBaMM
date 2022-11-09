@@ -8,7 +8,7 @@ import unittest
 class TestParticlePolynomialProfile(unittest.TestCase):
     def test_errors(self):
         with self.assertRaisesRegex(ValueError, "Particle type must be"):
-            pybamm.particle.PolynomialProfile(None, "Negative", {})
+            pybamm.particle.PolynomialProfile(None, "negative", {})
 
 
 if __name__ == "__main__":

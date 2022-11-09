@@ -225,7 +225,7 @@ class TestSpectralVolume(unittest.TestCase):
         # Test divergence of gradient
         # div (grad r^2) = 6
         y_squared = np.tile(
-            submesh.nodes ** 2,
+            submesh.nodes**2,
             mesh["negative electrode"].npts * mesh["current collector"].npts,
         )
         N = pybamm.grad(var)
@@ -464,7 +464,7 @@ class TestSpectralVolume(unittest.TestCase):
 
         # Test divergence of gradient
         # div(grad(r^2)) = 6 , N_left = 0, N_right = 2
-        quadratic_y = combined_submesh.nodes ** 2
+        quadratic_y = combined_submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {

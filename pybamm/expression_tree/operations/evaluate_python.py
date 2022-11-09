@@ -38,7 +38,7 @@ class JaxCooMatrix:
     """
 
     def __init__(self, row, col, data, shape):
-        if not pybamm.have_jax():
+        if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
@@ -210,14 +210,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
                         children_vars[0], children_vars[1]
                     )
             elif scipy.sparse.issparse(dummy_eval_right):
-                if output_jax and is_scalar(dummy_eval_left):
-                    symbol_str = "{1}.scalar_multiply({0})".format(
-                        children_vars[0], children_vars[1]
-                    )
-                else:
-                    symbol_str = "{1}.multiply({0})".format(
-                        children_vars[0], children_vars[1]
-                    )
+                symbol_str = "{1}.multiply({0})".format(
+                    children_vars[0], children_vars[1]
+                )
             else:
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
@@ -413,7 +408,7 @@ def to_python(symbol, debug=False, output_jax=False):
 
     line_format = "{} = {}"
 
-    if debug:
+    if debug:  # pragma: no cover
         variable_lines = [
             "print('{}'); ".format(
                 line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
@@ -540,7 +535,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-        if not pybamm.have_jax():
+        if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
@@ -715,8 +710,7 @@ class EvaluatorJaxSensitivities:
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
         result = {
-            key: value.reshape(value.shape[0], -1)
-            for key, value in result.items()
+            key: value.reshape(value.shape[0], -1) for key, value in result.items()
         }
 
         return result

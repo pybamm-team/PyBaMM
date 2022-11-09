@@ -34,12 +34,14 @@ class Integrated(BaseElectrolyteConductivity):
         pybamm.citations.register("BrosaPlanella2021")
 
     def _higher_order_macinnes_function(self, x):
+        tol = pybamm.settings.tolerances["macinnes__c_e"]
+        x = pybamm.maximum(x, tol)
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
         c_e_av = variables["X-averaged electrolyte concentration"]
 
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
+        i_boundary_cc = variables["Current collector current density"]
         c_e_n = variables["Negative electrolyte concentration"]
         c_e_s = variables["Separator electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
@@ -51,7 +53,7 @@ class Integrated(BaseElectrolyteConductivity):
         phi_s_n_av = variables["X-averaged negative electrode potential"]
 
         tor_n = variables["Negative electrolyte transport efficiency"]
-        tor_s = variables["Separator transport efficiency"]
+        tor_s = variables["Separator electrolyte transport efficiency"]
         tor_p = variables["Positive electrolyte transport efficiency"]
 
         T_av = variables["X-averaged cell temperature"]
@@ -74,14 +76,14 @@ class Integrated(BaseElectrolyteConductivity):
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
 
         # electrolyte current
-        i_e_n = i_boundary_cc_0 * x_n / l_n
-        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
-        i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
+        i_e_n = i_boundary_cc * x_n / l_n
+        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
+        i_e_p = i_boundary_cc * (1 - x_p) / l_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
-        i_e_n_edge = i_boundary_cc_0 * x_n_edge / l_n
-        i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc_0, "separator")
-        i_e_p_edge = i_boundary_cc_0 * (1 - x_p_edge) / l_p
+        i_e_n_edge = i_boundary_cc * x_n_edge / l_n
+        i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
+        i_e_p_edge = i_boundary_cc * (1 - x_p_edge) / l_p
 
         # electrolyte potential
         indef_integral_n = (
@@ -164,9 +166,12 @@ class Integrated(BaseElectrolyteConductivity):
         # average electrolyte ohmic losses
         delta_phi_e_av = -(pybamm.x_average(integral_p) - pybamm.x_average(integral_n))
 
-        variables.update(
-            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-        )
+        phi_e_dict = {
+            "negative electrode": phi_e_n,
+            "separator": phi_e_s,
+            "positive electrode": phi_e_p,
+        }
+        variables.update(self._get_standard_potential_variables(phi_e_dict))
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 

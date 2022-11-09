@@ -414,10 +414,10 @@ class TestUnaryOperators(TestCase):
         self.assertEqual((-a).diff(-a).evaluate(), 1)
 
         # absolute value
-        self.assertEqual((a ** 3).diff(a).evaluate(y=y), 3 * 5 ** 2)
-        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=y), 3 * 5 ** 2)
-        self.assertEqual((a ** 3).diff(a).evaluate(y=-y), 3 * 5 ** 2)
-        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=-y), -3 * 5 ** 2)
+        self.assertEqual((a**3).diff(a).evaluate(y=y), 3 * 5**2)
+        self.assertEqual((abs(a**3)).diff(a).evaluate(y=y), 3 * 5**2)
+        self.assertEqual((a**3).diff(a).evaluate(y=-y), 3 * 5**2)
+        self.assertEqual((abs(a**3)).diff(a).evaluate(y=-y), -3 * 5**2)
 
         # sign
         self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)

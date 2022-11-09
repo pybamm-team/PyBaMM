@@ -3,20 +3,12 @@
 #
 import numpy as np
 import os
+import sys
 import pybamm
-import shutil
 import tempfile
 import unittest
-import importlib
-import subprocess
 from unittest.mock import patch
 from io import StringIO
-
-# Insert .../x/y/z/PyBaMM in sys.path when running this file individually
-import sys
-
-if os.getcwd() not in sys.path:
-    sys.path.insert(0, os.getcwd())
 
 
 class TestUtil(unittest.TestCase):
@@ -25,70 +17,25 @@ class TestUtil(unittest.TestCase):
     """
 
     def test_load_function(self):
-        # Test function load with absolute path
-        abs_test_path = os.path.join(
-            pybamm.root_dir(),
-            "pybamm",
-            "input",
-            "parameters",
-            "lithium_ion",
-            "negative_electrodes",
-            "graphite_Chen2020",
-            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
-        )
-        func = pybamm.load_function(abs_test_path)
-        self.assertEqual(
-            func,
-            pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
-        )
+        function = "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
 
         # Test function load with relative path
         rel_test_path = os.path.join(
-            "pybamm",
-            "input",
-            "parameters",
-            "lithium_ion",
-            "negative_electrodes",
-            "graphite_Chen2020",
-            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
+            "pybamm", "input", "parameters", "lithium_ion", "Chen2020"
         )
-        func = pybamm.load_function(rel_test_path)
+        func = pybamm.load_function(rel_test_path, function)
         self.assertEqual(
             func,
-            pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
+            pybamm.input.parameters.lithium_ion.Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
         )
 
-        # Test function load for parameters in a directory having "pybamm" in its name
-        # create a new lithium_ion folder in the root PyBaMM directory
-        subprocess.run(["pybamm_edit_parameter", "lithium_ion"])
-
-        # path for a function in the created directory ->
-        # x/y/z/PyBaMM/lithium_ion/negative_electrode/ ....
-        test_path = os.path.join(
-            os.getcwd(),
-            "lithium_ion",
-            "negative_electrodes",
-            "graphite_Chen2020",
-            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
-        )
-
-        # load the function
-        func = pybamm.load_function(test_path)
-
-        # cannot directly do - lithium_ion.negative_electrodes.graphite_Chen2020 as
-        # lithium_ion is not a python module
-        module_object = importlib.import_module(
-            "lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020"  # noqa
-        )
+        # Test function load with absolute path
+        abs_test_path = os.path.join(pybamm.root_dir(), rel_test_path)
+        func = pybamm.load_function(abs_test_path, function)
         self.assertEqual(
             func,
-            getattr(
-                module_object,
-                "graphite_LGM50_electrolyte_exchange_current_density_Chen2020",
-            ),
+            pybamm.input.parameters.lithium_ion.Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
         )
-
-        shutil.rmtree("lithium_ion")
 
     def test_rmse(self):
         self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
@@ -101,12 +48,13 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "same length"):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
-    def test_infinite_nested_dict(self):
-        d = pybamm.get_infinite_nested_dict()
-        d[1][2][3] = "x"
-        self.assertEqual(d[1][2][3], "x")
-        d[4][5] = "y"
-        self.assertEqual(d[4][5], "y")
+    def test_is_constant_and_can_evaluate(self):
+        symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
+        self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
+        symbol = pybamm.StateVector(slice(0, 1))
+        self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
+        symbol = pybamm.Scalar(0)
+        self.assertEqual(True, pybamm.is_constant_and_can_evaluate(symbol))
 
     def test_fuzzy_dict(self):
         d = pybamm.FuzzyDict(
@@ -120,16 +68,6 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
             d.__getitem__("test3")
-        with self.assertRaisesRegex(
-            KeyError, "'negative electrode SEI current' not found. All SEI parameters"
-        ):
-            d.__getitem__("negative electrode SEI current")
-        with self.assertRaisesRegex(
-            KeyError,
-            "'negative electrode lithium plating current' not found. "
-            "All lithium plating parameters",
-        ):
-            d.__getitem__("negative electrode lithium plating current")
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
@@ -148,6 +86,22 @@ class TestUtil(unittest.TestCase):
         if pybamm.have_jax():
             compatible = pybamm.is_jax_compatible()
             self.assertTrue(compatible)
+
+    def test_git_commit_info(self):
+        git_commit_info = pybamm.get_git_commit_info()
+        self.assertIsInstance(git_commit_info, str)
+        self.assertEqual(git_commit_info[:2], "v2")
+
+    @unittest.skipIf(not pybamm.have_julia(), "Julia not installed")
+    def test_have_julia(self):
+        # Remove julia from the path
+        with unittest.mock.patch.dict(
+            "os.environ", {"PATH": os.path.dirname(sys.executable)}
+        ):
+            self.assertFalse(pybamm.have_julia())
+
+        # Add it back
+        self.assertTrue(pybamm.have_julia())
 
 
 class TestSearch(unittest.TestCase):
@@ -180,7 +134,6 @@ class TestSearch(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import sys
 
     if "-v" in sys.argv:
         debug = True

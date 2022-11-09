@@ -24,8 +24,6 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
-        self.assertEqual(model.__class__, sim._model_class)
-
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
@@ -44,6 +42,15 @@ class TestSimulation(unittest.TestCase):
         for val in list(model.rhs.values()):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+
+        self.assertEqual(sim.submesh_types, model.default_submesh_types)
+        self.assertEqual(sim.var_pts, model.default_var_pts)
+        self.assertIsNone(sim.mesh)
+        for key in sim.spatial_methods.keys():
+            self.assertEqual(
+                sim.spatial_methods[key].__class__,
+                model.default_spatial_methods[key].__class__,
+            )
 
         sim.build()
         self.assertFalse(sim._mesh is None)
@@ -145,7 +152,7 @@ class TestSimulation(unittest.TestCase):
     def test_set_external_variable(self):
         model_options = {
             "thermal": "lumped",
-            "external submodels": ["thermal", "negative particle"],
+            "external submodels": ["thermal", "negative primary particle"],
         }
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
@@ -233,6 +240,10 @@ class TestSimulation(unittest.TestCase):
         param["Current function [A]"] = current_interpolant
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.build(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
     def test_solve_with_inputs(self):
@@ -375,14 +386,6 @@ class TestSimulation(unittest.TestCase):
 
         os.remove("plot.gif")
 
-    def test_drive_cycle_data(self):
-        model = pybamm.lithium_ion.SPM()
-        param = model.default_parameter_values
-        param["Current function [A]"] = "[current data]US06"
-
-        with self.assertRaisesRegex(NotImplementedError, "Drive cycle from data"):
-            pybamm.Simulation(model, parameter_values=param)
-
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
@@ -416,7 +419,7 @@ class TestSimulation(unittest.TestCase):
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
         with self.assertWarns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, 1, 100))
+            sim.solve(t_eval=np.linspace(0, 10, 3))
 
         # check warning raised if t_eval doesnt contain time_data , but has a finer
         # resolution (can still solve, but good for users to know they dont have

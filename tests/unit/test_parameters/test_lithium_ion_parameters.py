@@ -34,54 +34,53 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # a_n_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.n.a_typ), 0.18 * 10 ** (6), 2
+            values.evaluate(param.n.prim.a_typ), 0.18 * 10 ** (6), 2
         )
         # R_n dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.n.R_typ), 1 * 10 ** (-5), 2
+            values.evaluate(param.n.prim.R_typ), 1 * 10 ** (-5), 2
         )
 
         # a_R_n = a_n_typ * R_n_typ
-        np.testing.assert_almost_equal(values.evaluate(param.n.a_R), 1.8, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.n.prim.a_R), 1.8, 2)
 
         # a_p_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.p.a_typ), 0.15 * 10 ** (6), 2
+            values.evaluate(param.p.prim.a_typ), 0.15 * 10 ** (6), 2
         )
 
         # R_p dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.p.R_typ), 1 * 10 ** (-5), 2
+            values.evaluate(param.p.prim.R_typ), 1 * 10 ** (-5), 2
         )
 
         # a_p = a_p_typ * R_p_typ
-        np.testing.assert_almost_equal(values.evaluate(param.p.a_R), 1.5, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.p.prim.a_R), 1.5, 2)
 
         # j0_m
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.n.j0_dimensional(param.c_e_typ, param.n.c_max / 2, param.T_ref)
+                param.n.prim.j0_dimensional(
+                    param.c_e_typ, param.n.prim.c_max / 2, param.T_ref
+                )
             ),
-            values.evaluate(2 * 10 ** (-5) * param.c_e_typ ** 0.5 * param.n.c_max / 2),
+            values.evaluate(
+                2 * 10 ** (-5) * param.c_e_typ**0.5 * param.n.prim.c_max / 2
+            ),
             8,
-        )
-
-        np.testing.assert_almost_equal(
-            values.evaluate(param.n.gamma / param.n.C_r * c_rate), 26.6639, 3
         )
 
         # j0_p
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.p.j0_dimensional(param.c_e_typ, param.p.c_max / 2, param.T_ref)
+                param.p.prim.j0_dimensional(
+                    param.c_e_typ, param.p.prim.c_max / 2, param.T_ref
+                )
             ),
-            values.evaluate(6 * 10 ** (-7) * param.c_e_typ ** 0.5 * param.p.c_max / 2),
+            values.evaluate(
+                6 * 10 ** (-7) * param.c_e_typ**0.5 * param.p.prim.c_max / 2
+            ),
             8,
-        )
-
-        # gamma_p / C_r_p
-        np.testing.assert_almost_equal(
-            values.evaluate(param.p.gamma / param.p.C_r * c_rate), 1.366, 3
         )
 
         # particle dynamics
@@ -89,7 +88,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         np.testing.assert_almost_equal(
             values.evaluate(
                 pybamm.xyz_average(
-                    pybamm.r_average(param.n.D_dimensional(param.n.c_init, param.T_ref))
+                    pybamm.r_average(
+                        param.n.prim.D_dimensional(param.n.prim.c_init, param.T_ref)
+                    )
                 )
             ),
             3.9 * 10 ** (-14),
@@ -98,19 +99,21 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # neg diffusion timescale
         np.testing.assert_almost_equal(
-            values.evaluate(param.n.tau_diffusion), 2.5641 * 10 ** (3), 2
+            values.evaluate(param.n.prim.tau_diffusion), 2.5641 * 10 ** (3), 2
         )
 
         # tau_n / tau_d (1/gamma_n in Scott's transfer)
         np.testing.assert_almost_equal(
-            values.evaluate(param.n.C_diff / c_rate), 0.11346, 3
+            values.evaluate(param.n.prim.C_diff / c_rate), 0.11346, 3
         )
 
         # pos diffusion coefficient
         np.testing.assert_almost_equal(
             values.evaluate(
                 pybamm.xyz_average(
-                    pybamm.r_average(param.p.D_dimensional(param.p.c_init, param.T_ref))
+                    pybamm.r_average(
+                        param.p.prim.D_dimensional(param.p.prim.c_init, param.T_ref)
+                    )
                 )
             ),
             1 * 10 ** (-13),
@@ -119,12 +122,12 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # pos diffusion timescale
         np.testing.assert_almost_equal(
-            values.evaluate(param.p.tau_diffusion), 1 * 10 ** (3), 2
+            values.evaluate(param.p.prim.tau_diffusion), 1 * 10 ** (3), 2
         )
 
         # tau_p / tau_d (1/gamma_p in Scott's transfer)
         np.testing.assert_almost_equal(
-            values.evaluate(param.p.C_diff / c_rate), 0.044249, 3
+            values.evaluate(param.p.prim.C_diff / c_rate), 0.044249, 3
         )
 
         # electrolyte dynamics

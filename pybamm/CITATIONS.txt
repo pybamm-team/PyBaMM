@@ -10,6 +10,18 @@
   doi = {10.1149/2.0122001JES},
 }
 
+@article{Ai2022,
+  title = {A composite electrode model for lithium-ion batteries with silicon/graphite negative electrodes},
+  journal = {Journal of Power Sources},
+  volume = {527},
+  pages = {231142},
+  year = {2022},
+  issn = {0378-7753},
+  doi = {https://doi.org/10.1016/j.jpowsour.2022.231142},
+  url = {https://www.sciencedirect.com/science/article/pii/S0378775322001604},
+  author = {Weilong Ai and Niall Kirkaldy and Yang Jiang and Gregory Offer and Huizhi Wang and Billy Wu},
+}
+
 @article{Andersson2019,
   author = {Andersson, Joel A. E. and Gillis, Joris and Horn, Greg
             and Rawlings, James B. and Diehl, Moritz},
@@ -294,6 +306,17 @@
   publisher={IOP Publishing}
 }
 
+@article{Nyman2008,
+  title={Electrochemical characterisation and modelling of the mass transport phenomena in LiPF6--EC--EMC electrolyte},
+  author={Nyman, Andreas and Behm, M{\aa}rten and Lindbergh, G{\"o}ran},
+  journal={Electrochimica Acta},
+  volume={53},
+  number={22},
+  pages={6356--6365},
+  year={2008},
+  publisher={Elsevier}
+}
+
 @article{OKane2020,
   doi = {10.1149/1945-7111/ab90ac},
   url = {https://doi.org/10.1149/1945-7111/ab90ac},
@@ -459,6 +482,17 @@
   pages = {765--788},
   volume = {81},
   doi = {10.1137/20M1336898},
+}
+
+@article{Valoen2005,
+  title={Transport properties of LiPF6-based Li-ion battery electrolytes},
+  author={Val{\o}en, Lars Ole and Reimers, Jan N},
+  journal={Journal of The Electrochemical Society},
+  volume={152},
+  number={5},
+  pages={A882},
+  year={2005},
+  publisher={IOP Publishing}
 }
 
 @article{Virtanen2020,

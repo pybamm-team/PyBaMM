@@ -13,9 +13,9 @@ import pickle
 import subprocess
 import sys
 import timeit
-from collections import defaultdict
 from platform import system
 import difflib
+from julia.api import Julia, JuliaInfo, JuliaError
 
 import numpy as np
 import pkg_resources
@@ -32,6 +32,23 @@ def root_dir():
     return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 
+def get_git_commit_info():
+    """
+    Get the git commit info for the current PyBaMM version, e.g. v22.8-39-gb25ce8c41
+    (version 22.8, commit b25ce8c41)
+    """
+    try:
+        # Get the latest git commit hash
+        return str(
+            subprocess.check_output(["git", "describe", "--tags"], cwd=root_dir())
+            .strip()
+            .decode()
+        )
+    except subprocess.CalledProcessError:  # pragma: no cover
+        # Not a git repository so just return the version number
+        return f"v{pybamm.__version__}"
+
+
 class FuzzyDict(dict):
     def get_best_matches(self, key):
         """Get best matches from keys"""
@@ -41,17 +58,6 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
-            if "negative electrode sei" in key.lower():
-                raise KeyError(
-                    f"'{key}' not found. All SEI parameters have been "
-                    "renamed from '...negative electrode SEI...' to '...SEI...'"
-                )
-            if "negative electrode lithium plating" in key.lower():
-                raise KeyError(
-                    f"'{key}' not found. All lithium plating parameters have been "
-                    "renamed from '...negative electrode lithium plating...' "
-                    "to '...lithium plating...'"
-                )
             best_matches = self.get_best_matches(key)
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
@@ -87,6 +93,9 @@ class FuzzyDict(dict):
         else:
             # Just print keys
             print("\n".join("{}".format(k) for k in results.keys()))
+
+    def copy(self):
+        return FuzzyDict(super().copy())
 
 
 class Timer(object):
@@ -192,7 +201,7 @@ class TimerTime:
         return self.value == other.value
 
 
-def load_function(filename):
+def load_function(filename, funcname=None):
     """
     Load a python function from an absolute or relative path using `importlib`.
     Example - pybamm.load_function("pybamm/input/example.py")
@@ -201,6 +210,9 @@ def load_function(filename):
     ---------
     filename : str
         The path of the file containing the function.
+    funcname : str, optional
+        The name of the function in the file. If None, assumed to be the same as the
+        filename (ignoring the path)
 
     Returns
     -------
@@ -211,8 +223,9 @@ def load_function(filename):
     if filename.endswith(".py"):
         filename = filename.replace(".py", "")
 
-    # Assign path to _ and filename to tail
-    _, tail = os.path.split(filename)
+    if funcname is None:
+        # Read funcname by splitting the file (assumes funcname is the same as filename)
+        _, funcname = os.path.split(filename)
 
     # Store the current working directory
     orig_dir = os.getcwd()
@@ -221,7 +234,7 @@ def load_function(filename):
     if "pybamm/input/parameters" in filename or "pybamm\\input\\parameters" in filename:
         root_path = filename[filename.rfind("pybamm") :]
     # If the function is in the current working directory
-    elif os.getcwd() in filename:
+    elif os.getcwd() in filename:  # pragma: no cover
         root_path = filename.replace(os.getcwd(), "")
     # If the function is not in the current working directory and the path provided is
     # absolute
@@ -230,23 +243,23 @@ def load_function(filename):
         dir_path = os.path.split(filename)[0]
         os.chdir(dir_path)
         root_path = filename.replace(os.getcwd(), "")
-    else:
+    else:  # pragma: no cover
         root_path = filename
 
     # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
-    if root_path[0] == "\\" or root_path[0] == "/":
+    if root_path[0] == "\\" or root_path[0] == "/":  # pragma: no cover
         root_path = root_path[1:]
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
     pybamm.logger.debug(
-        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+        f"Importing function '{funcname}' from file '{filename}' via path '{path}'"
     )
     module_object = importlib.import_module(path)
 
     # Revert back current working directory if it was changed
     os.chdir(orig_dir)
-    return getattr(module_object, tail)
+    return getattr(module_object, funcname)
 
 
 def rmse(x, y):
@@ -257,28 +270,6 @@ def rmse(x, y):
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")
     return np.sqrt(np.nanmean((x - y) ** 2))
-
-
-def get_infinite_nested_dict():
-    """
-    Return a dictionary that allows infinite nesting without having to define level by
-    level.
-
-    See:
-    https://stackoverflow.com/questions/651794/whats-the-best-way-to-initialize-a-dict-of-dicts-in-python/652226#652226
-
-    Example
-    -------
-    >>> import pybamm
-    >>> d = pybamm.get_infinite_nested_dict()
-    >>> d["a"] = 1
-    >>> d["a"]
-    1
-    >>> d["b"]["c"]["d"] = 2
-    >>> d["b"]["c"] == {"d": 2}
-    True
-    """
-    return defaultdict(get_infinite_nested_dict)
 
 
 def load(filename):
@@ -301,12 +292,24 @@ def have_julia():
     """
     Checks whether the Julia programming language has been installed
     """
-    # Try reading the julia version quietly to see whether julia is installed
-    FNULL = open(os.devnull, "w")
+
+    # Try fetching info about julia
     try:
-        subprocess.call(["julia", "--version"], stdout=FNULL, stderr=subprocess.STDOUT)
+        info = JuliaInfo.load()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+    # Compatibility: Checks
+    if not info.is_pycall_built():  # pragma: no cover
+        return False
+    if not info.is_compatible_python():  # pragma: no cover
+        return False
+
+    # Confirm Julia() is callable
+    try:
+        Julia()
         return True
-    except subprocess.CalledProcessError:  # pragma: no cover
+    except JuliaError:  # pragma: no cover
         return False
 
 
@@ -325,6 +328,22 @@ def is_jax_compatible():
         pkg_resources.get_distribution("jax").version == JAX_VERSION
         and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
     )
+
+
+def is_constant_and_can_evaluate(symbol):
+    """
+    Returns True if symbol is constant and evaluation does not raise any errors.
+    Returns False otherwise.
+    An example of a constant symbol that cannot be "evaluated" is PrimaryBroadcast(0).
+    """
+    if symbol.is_constant():
+        try:
+            symbol.evaluate()
+            return True
+        except NotImplementedError:
+            return False
+    else:
+        return False
 
 
 def install_jax(arguments=None):  # pragma: no cover

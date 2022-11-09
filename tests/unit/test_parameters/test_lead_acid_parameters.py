@@ -28,26 +28,22 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = parameter_values.print_parameters(parameters)
-        param_eval = {k: v[0] for k, v in param_eval.items()}
 
         # Diffusional C-rate should be smaller than C-rate
         self.assertLess(param_eval["C_e"], param_eval["C_rate"])
 
         # Dimensionless electrode conductivities should be large
+        self.assertGreater(parameter_values.evaluate(parameters.n.sigma(0)), 10)
+        self.assertGreater(parameter_values.evaluate(parameters.p.sigma(0)), 10)
+
+        # Dimensionless oxygen exchange current density should be small
         self.assertGreater(
-            parameter_values.evaluate(parameters.n.sigma(parameters.T_ref)), 10
-        )
-        self.assertGreater(
-            parameter_values.evaluate(parameters.p.sigma(parameters.T_ref)), 10
+            1e-10, parameter_values.evaluate(parameters.p.prim.j0_Ox(1, 0))
         )
 
         # Rescaled dimensionless electrode conductivities should still be large
-        self.assertGreater(
-            parameter_values.evaluate(parameters.n.sigma_prime(parameters.T_ref)), 10
-        )
-        self.assertGreater(
-            parameter_values.evaluate(parameters.p.sigma_prime(parameters.T_ref)), 10
-        )
+        self.assertGreater(parameter_values.evaluate(parameters.n.sigma_prime(0)), 10)
+        self.assertGreater(parameter_values.evaluate(parameters.p.sigma_prime(0)), 10)
         # Dimensionless double-layer capacity should be small
         self.assertLess(param_eval["n.C_dl"], 1e-3)
         self.assertLess(param_eval["p.C_dl"], 1e-3)
@@ -135,15 +131,14 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "kappa_e_0": param.kappa_e(pybamm.Scalar(0), pybamm.Scalar(0)),
             "chi_1": param.chi(pybamm.Scalar(1), pybamm.Scalar(0)),
             "chi_0.5": param.chi(pybamm.Scalar(0.5), pybamm.Scalar(0)),
-            "U_n_1": param.n.U(pybamm.Scalar(1), pybamm.Scalar(0)),
-            "U_n_0.5": param.n.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
-            "U_p_1": param.p.U(pybamm.Scalar(1), pybamm.Scalar(0)),
-            "U_p_0.5": param.p.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_n_1": param.n.prim.U(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_n_0.5": param.n.prim.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_p_1": param.p.prim.U(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_p_0.5": param.p.prim.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
         }
         # Process
         parameter_values = pybamm.ParameterValues("Sulzer2019")
         param_eval = parameter_values.print_parameters(parameters)
-        param_eval = {k: v[0] for k, v in param_eval.items()}
 
         # Known values for dimensionless functions
         self.assertEqual(param_eval["D_e_1"], 1)
@@ -158,12 +153,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = parameter_values.print_parameters(parameters)
-        param_eval = {k: v[0] for k, v in param_eval.items()}
 
         # Update initial state of charge
         parameter_values.update({"Initial State of Charge": 0.2})
         param_eval_update = parameter_values.print_parameters(parameters)
-        param_eval_update = {k: v[0] for k, v in param_eval_update.items()}
 
         # Test that relevant parameters have changed as expected
         self.assertLess(param_eval_update["q_init"], param_eval["q_init"])

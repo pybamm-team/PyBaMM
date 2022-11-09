@@ -102,12 +102,8 @@ class Solution(object):
         self._y_event = y_event
         self._termination = termination
 
-        self.has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
-        )
-
         # Check no ys are too large
-        if check_solution and not self.has_symbolic_inputs:
+        if check_solution:
             self.check_ys_are_not_too_large()
 
         # Copy the timescale_eval and lengthscale_evals if they exist
@@ -475,56 +471,47 @@ class Solution(object):
             variables = [variables]
         # Process
         for key in variables:
+            cumtrapz_ic = None
             pybamm.logger.debug("Post-processing {}".format(key))
-            # If there are symbolic inputs then we need to make a
-            # ProcessedSymbolicVariable
-            if self.has_symbolic_inputs is True:
-                var = pybamm.ProcessedSymbolicVariable(
-                    self.all_models[0].variables_and_events[key], self
-                )
+            vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
-            # Otherwise a standard ProcessedVariable is ok
-            else:
-                vars_pybamm = [
-                    model.variables_and_events[key] for model in self.all_models
-                ]
-
-                # Iterate through all models, some may be in the list several times and
-                # therefore only get set up once
-                vars_casadi = []
-                for model, ys, inputs, var_pybamm in zip(
-                    self.all_models, self.all_ys, self.all_inputs, vars_pybamm
-                ):
-                    if key in model._variables_casadi:
-                        var_casadi = model._variables_casadi[key]
-                    else:
-                        t_MX = casadi.MX.sym("t")
-                        y_MX = casadi.MX.sym("y", ys.shape[0])
-                        symbolic_inputs_dict = {
-                            key: casadi.MX.sym("input", value.shape[0])
-                            for key, value in inputs.items()
-                        }
-                        symbolic_inputs = casadi.vertcat(
-                            *[p for p in symbolic_inputs_dict.values()]
-                        )
-
-                        # Convert variable to casadi
-                        # Make all inputs symbolic first for converting to casadi
-                        var_sym = var_pybamm.to_casadi(
-                            t_MX, y_MX, inputs=symbolic_inputs_dict
-                        )
-
-                        var_casadi = casadi.Function(
-                            "variable", [t_MX, y_MX, symbolic_inputs], [var_sym]
-                        )
-                        model._variables_casadi[key] = var_casadi
-                    vars_casadi.append(var_casadi)
-
-                var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self)
+            # Iterate through all models, some may be in the list several times and
+            # therefore only get set up once
+            vars_casadi = []
+            for (i, (model, ys, inputs, var_pybamm)) in enumerate(
+                zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+            ):
+                if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                    cumtrapz_ic = var_pybamm.initial_condition
+                    cumtrapz_ic = cumtrapz_ic.evaluate()
+                    var_pybamm = var_pybamm.child
+                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    model._variables_casadi[key] = var_casadi
+                    vars_pybamm[i] = var_pybamm
+                elif key in model._variables_casadi:
+                    var_casadi = model._variables_casadi[key]
+                else:
+                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    model._variables_casadi[key] = var_casadi
+                vars_casadi.append(var_casadi)
+            var = pybamm.ProcessedVariable(
+                vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
+            )
 
             # Save variable and data
             self._variables[key] = var
             self.data[key] = var.data
+
+    def process_casadi_var(self, var_pybamm, inputs, ys):
+        t_MX = casadi.MX.sym("t")
+        y_MX = casadi.MX.sym("y", ys.shape[0])
+        inputs_MX_dict = {
+            key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
+        }
+        inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
+        var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
+        var_casadi = casadi.Function("variable", [t_MX, y_MX, inputs_MX], [var_sym])
+        return var_casadi
 
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
@@ -696,7 +683,7 @@ class Solution(object):
 
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
-        if other is None:
+        if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
             raise pybamm.SolverError(
@@ -749,16 +736,7 @@ class Solution(object):
         return new_sol
 
     def __radd__(self, other):
-        """
-        Right-side adding with special handling for the case None + Solution (returns
-        Solution)
-        """
-        if other is None:
-            return self.copy()
-        else:
-            raise pybamm.SolverError(
-                "Only a Solution or None can be added to a Solution"
-            )
+        return self.__add__(other)
 
     def copy(self):
         new_sol = self.__class__(
@@ -779,6 +757,28 @@ class Solution(object):
         new_sol.set_up_time = self.set_up_time
 
         return new_sol
+
+
+class EmptySolution:
+    def __init__(self, termination=None, t=None):
+        self.termination = termination
+        if t is None:
+            t = np.array([0])
+        elif isinstance(t, numbers.Number):
+            t = np.array([t])
+
+        self.t = t
+
+    def __add__(self, other):
+        if isinstance(other, (EmptySolution, Solution)):
+            return other.copy()
+
+    def __radd__(self, other):
+        if other is None:
+            return self.copy()
+
+    def copy(self):
+        return EmptySolution(self.termination)
 
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
@@ -833,7 +833,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_solver)
+    cycle_summary_variables = _get_cycle_summary_variables(cycle_solution, esoh_solver)
 
     cycle_first_state = cycle_solution.first_state
 
@@ -845,7 +845,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
-def get_cycle_summary_variables(cycle_solution, esoh_solver):
+def _get_cycle_summary_variables(cycle_solution, esoh_solver):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
@@ -888,7 +888,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_solver):
     if (
         esoh_solver is not None
         and isinstance(model, pybamm.lithium_ion.BaseModel)
-        and model.half_cell is False
+        and model.options.electrode_types["negative"] == "porous"
     ):
         V_min = esoh_solver.parameter_values["Lower voltage cut-off [V]"]
         V_max = esoh_solver.parameter_values["Upper voltage cut-off [V]"]

@@ -134,12 +134,12 @@ class CasadiConverter(object):
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"
-                elif symbol.interpolator == "cubic spline":
+                elif symbol.interpolator == "cubic":
                     solver = "bspline"
                 elif symbol.interpolator == "pchip":
                     raise NotImplementedError(
                         "The interpolator 'pchip' is not supported by CasAdi. "
-                        "Use 'linear' or 'cubic spline' instead. "
+                        "Use 'linear' or 'cubic' instead. "
                         "Alternatively, set 'model.convert_to_format = 'python'' "
                         "and use a non-CasADi solver. "
                     )
@@ -152,7 +152,7 @@ class CasadiConverter(object):
                     return casadi.interpolant(
                         "LUT", solver, symbol.x, symbol.y.flatten()
                     )(*converted_children)
-                elif len(converted_children) == 2:
+                elif len(converted_children) in [2, 3]:
                     LUT = casadi.interpolant(
                         "LUT", solver, symbol.x, symbol.y.ravel(order="F")
                     )

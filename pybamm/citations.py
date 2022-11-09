@@ -5,24 +5,36 @@
 #
 import pybamm
 import os
+import warnings
 import pybtex
+from pybtex.database import parse_file, parse_string, Entry
+from pybtex.scanner import PybtexError
 
 
 class Citations:
 
     """Entry point to citations management.
     This object may be used to record Bibtex citation information and then register that
-    a particular citation is relevant for a particular simulation. For a list of all
-    possible citations, see `pybamm/CITATIONS.txt`
+    a particular citation is relevant for a particular simulation.
+
+    Citations listed in `pybamm/CITATIONS.txt` can be registered with their citation
+    key. For all other works provide a BibTex Citation to :meth:`register`.
 
     Examples
     --------
     >>> import pybamm
     >>> pybamm.citations.register("Sulzer2021")
+    >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
     >>> pybamm.print_citations("citations.txt")
     """
 
     def __init__(self):
+        # Set of citation keys that have been registered
+        self._papers_to_cite = set()
+
+        # Dict mapping citations keys to BibTex entries
+        self._all_citations: dict[str, str] = dict()
+
         self.read_citations()
         self._reset()
 
@@ -35,46 +47,71 @@ class Citations:
         self.register("Harris2020")
 
     def read_citations(self):
-        """Read the citations text file"""
-        self._all_citations = {}
-
+        """Reads the citations in `pybamm.CITATIONS.txt`. Other works can be cited
+        by passing a BibTex citation to :meth:`register`.
+        """
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
-        citation = ""
-        start = True
+        bib_data = parse_file(citations_file, bib_format="bibtex")
+        for key, entry in bib_data.entries.items():
+            self._add_citation(key, entry)
 
-        with open(citations_file) as f:
-            for line in f:
-                # if start is true, we need to find the key
-                if start is True:
-                    # match everything between { and , in the first line to get the key
-                    brace_idx = line.find("{")
-                    comma_idx = line.find(",")
-                    key = line[brace_idx + 1 : comma_idx]
-                    # turn off start as we now have the right key
-                    start = False
-                citation += line
-                # blank line means next block, add citation to dictionary and
-                # reset everything
-                if line == "\n":
-                    self._all_citations[key] = citation
-                    citation = ""
-                    start = True
+    def _add_citation(self, key, entry):
+        """Adds `entry` to `self._all_citations` under `key`, warning the user if a
+        previous entry is overwritten
+        """
 
-            # add the final citation
-            self._all_citations[key] = citation
+        # Check input types are correct
+        if not isinstance(key, str) or not isinstance(entry, Entry):
+            raise TypeError()
+
+        # Warn if overwriting an previous citation
+        new_citation = entry.to_string("bibtex")
+        if key in self._all_citations and new_citation != self._all_citations[key]:
+            warnings.warn(f"Replacing citation for {key}")
+
+        # Add to database
+        self._all_citations[key] = new_citation
+
+    @property
+    def _cited(self):
+        """Return a list of the BibTex entries that have been cited"""
+        return [self._all_citations[key] for key in self._papers_to_cite]
 
     def register(self, key):
         """Register a paper to be cited. The intended use is that :meth:`register`
         should be called only when the referenced functionality is actually being used.
 
+        .. warning::
+            Registering a BibTex citation, with the same key as an existing citation,
+            will overwrite the current citation.
+
         Parameters
         ----------
         key : str
-            The key for the paper to be cited
+            - The citation key for an entry in `pybamm/CITATIONS.txt` or
+            - One or more BibTex formatted citations
         """
-        if key not in self._all_citations:
-            raise KeyError("'{}' is not a known citation".format(key))
-        self._papers_to_cite.add(key)
+
+        # Check if citation is a known key
+        if key in self._all_citations:
+            self._papers_to_cite.add(key)
+            return
+
+        # Try to parse the citation using pybtex
+        try:
+            # Parse string as a bibtex citation, and check that a citation was found
+            bib_data = parse_string(key, bib_format="bibtex")
+            if not bib_data.entries:
+                raise PybtexError("no entries found")
+
+            # Add and register all citations
+            for key, entry in bib_data.entries.items():
+                self._add_citation(key, entry)
+                self.register(key)
+                return
+        except PybtexError:
+            # Unable to parse / unknown key
+            raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
     def print(self, filename=None, output_format="text"):
         """Print all citations that were used for running simulations.
@@ -85,18 +122,12 @@ class Citations:
             Filename to which to print citations. If None, citations are printed to the
             terminal.
         """
-        citations = ""
-        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
         if output_format == "text":
-            citations = pybtex.format_from_file(
-                citations_file,
-                "plain",
-                citations=self._papers_to_cite,
-                output_backend="plaintext",
+            citations = pybtex.format_from_strings(
+                self._cited, style="plain", output_backend="plaintext"
             )
         elif output_format == "bibtex":
-            for key in self._papers_to_cite:
-                citations += self._all_citations[key] + "\n"
+            citations = "\n".join(self._cited)
         else:
             raise pybamm.OptionError(
                 "Output format {} not recognised."

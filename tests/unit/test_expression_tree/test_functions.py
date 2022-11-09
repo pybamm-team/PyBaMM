@@ -19,7 +19,7 @@ def test_multi_var_function(arg1, arg2):
 
 
 def test_multi_var_function_cube(arg1, arg2):
-    return arg1 + arg2 ** 3
+    return arg1 + arg2**3
 
 
 class TestFunction(unittest.TestCase):
@@ -267,7 +267,7 @@ class TestSpecificFunctions(unittest.TestCase):
 
         # Base 10
         fun = pybamm.log10(a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
+        self.assertAlmostEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
         h = 0.0000001
         self.assertAlmostEqual(
             fun.diff(a).evaluate(inputs={"a": 3}),

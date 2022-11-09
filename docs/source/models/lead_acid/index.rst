@@ -6,5 +6,4 @@ Lead Acid Models
 
   base_lead_acid_model
   loqs
-  higher_order
   full

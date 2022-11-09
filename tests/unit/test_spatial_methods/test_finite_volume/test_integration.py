@@ -100,12 +100,12 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
 
         constant_y = np.ones_like(pts[:, np.newaxis])
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y), np.pi * (1 - r0 ** 2)
+            integral_eqn_disc.evaluate(None, constant_y), np.pi * (1 - r0**2)
         )
         linear_y = pts
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, linear_y),
-            2 * np.pi / 3 * (1 - r0 ** 3),
+            2 * np.pi / 3 * (1 - r0**3),
             decimal=4,
         )
         one_over_y = 1 / pts
@@ -530,12 +530,12 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         # constant case
         phi_exact = np.ones_like(combined_submesh.nodes)
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(x_end ** 2 / 2, phi_approx)
+        np.testing.assert_array_almost_equal(x_end**2 / 2, phi_approx)
 
         # linear case
         phi_exact = combined_submesh.nodes[:, np.newaxis]
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(x_end ** 3 / 6, phi_approx, decimal=4)
+        np.testing.assert_array_almost_equal(x_end**3 / 6, phi_approx, decimal=4)
 
     def test_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
@@ -558,7 +558,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         np.testing.assert_array_equal(int_phi_exact, int_phi_approx)
         # linear case
         phi_exact = combined_submesh.nodes
-        int_phi_exact = combined_submesh.edges ** 2 / 2
+        int_phi_exact = combined_submesh.edges**2 / 2
         int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
         np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx)
         # cos case
@@ -605,7 +605,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         np.testing.assert_array_almost_equal(back_int_phi_exact, back_int_phi_approx)
         # linear case
         phi_exact = combined_submesh.nodes
-        back_int_phi_exact = edges[-1] ** 2 / 2 - edges ** 2 / 2
+        back_int_phi_exact = edges[-1] ** 2 / 2 - edges**2 / 2
         back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
         np.testing.assert_array_almost_equal(back_int_phi_exact, back_int_phi_approx)
         # cos case

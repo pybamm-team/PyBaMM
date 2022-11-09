@@ -10,6 +10,9 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFN()
         model.check_well_posedness()
 
+        copy = model.new_copy()
+        copy.check_well_posedness()
+
     def test_spm_well_posed(self):
         model = pybamm.lithium_ion.BasicSPM()
         model.check_well_posedness()
@@ -19,12 +22,8 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
 
-        options = {"working electrode": "negative"}
-        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
-        model.check_well_posedness()
-
     def test_dfn_half_cell_simulation_with_experiment_error(self):
-        options = {"working electrode": "negative"}
+        options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         experiment = pybamm.Experiment(
             [("Discharge at C/10 for 10 hours or until 3.5 V")]
@@ -44,6 +43,10 @@ class TestBasicModels(unittest.TestCase):
         sim = pybamm.Simulation(model=model, parameter_values=param)
         sim.solve([0, 100])
         self.assertTrue(isinstance(sim.solution, pybamm.solvers.solution.Solution))
+
+    def test_dfn_composite_well_posed(self):
+        model = pybamm.lithium_ion.BasicDFNComposite()
+        model.check_well_posedness()
 
 
 if __name__ == "__main__":

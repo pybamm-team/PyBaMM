@@ -26,7 +26,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
         super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
-        if self.half_cell:
+        if "negative electrode" not in self.options.whole_cell_domains:
             phi_e_av = variables["Lithium metal interface electrolyte potential"]
         else:
             # delta_phi = phi_s - phi_e
@@ -44,23 +44,21 @@ class LeadingOrder(BaseElectrolyteConductivity):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        if self.half_cell:
-            phi_e_n = None
+        if "negative electrode" not in self.options.whole_cell_domains:
             i_e_n = None
         else:
-            phi_e_n = pybamm.PrimaryBroadcast(phi_e_av, ["negative electrode"])
             i_e_n = i_boundary_cc * x_n / l_n
 
-        phi_e_s = pybamm.PrimaryBroadcast(phi_e_av, ["separator"])
-        phi_e_p = pybamm.PrimaryBroadcast(phi_e_av, ["positive electrode"])
+        phi_e_dict = {
+            domain: pybamm.PrimaryBroadcast(phi_e_av, domain)
+            for domain in self.options.whole_cell_domains
+        }
 
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, ["separator"])
         i_e_p = i_boundary_cc * (1 - x_p) / l_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
-        variables.update(
-            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-        )
+        variables.update(self._get_standard_potential_variables(phi_e_dict))
         variables.update(self._get_standard_current_variables(i_e))
 
         # concentration overpotential

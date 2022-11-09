@@ -47,7 +47,7 @@ class TestCasadiConverter(unittest.TestCase):
 
         # function
         def square_plus_one(x):
-            return x ** 2 + 1
+            return x**2 + 1
 
         f = pybamm.Function(square_plus_one, b)
         self.assertEqual(f.to_casadi(), 2)
@@ -128,7 +128,7 @@ class TestCasadiConverter(unittest.TestCase):
             np.arccosh,
             np.arcsinh,
         ]:
-            self.assert_casadi_equal(
+            self.assert_casadi_almost_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
             )
 
@@ -137,9 +137,7 @@ class TestCasadiConverter(unittest.TestCase):
         #       pybamm.Function(np_fun, c).to_casadi()
         # ) - casadi.evalf(casadi.MX(np_fun(3)))
         # is not zero, but a small number of the order 10^-15 when np_func is np.cosh
-        for np_fun in [
-            np.cosh
-        ]:
+        for np_fun in [np.cosh]:
             self.assert_casadi_almost_equal(
                 pybamm.Function(np_fun, c).to_casadi(),
                 casadi.MX(np_fun(3)),
@@ -162,14 +160,14 @@ class TestCasadiConverter(unittest.TestCase):
         casadi_y = casadi.MX.sym("y", 2)
         # linear
         y_test = np.array([0.4, 0.6])
-        for interpolator in ["linear", "cubic spline"]:
+        for interpolator in ["linear", "cubic"]:
             interp = pybamm.Interpolant(x, 2 * x, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
         # square
         y = pybamm.StateVector(slice(0, 1))
-        interp = pybamm.Interpolant(x, x ** 2, y, interpolator="cubic spline")
+        interp = pybamm.Interpolant(x, x**2, y, interpolator="cubic")
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
         np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
@@ -179,7 +177,7 @@ class TestCasadiConverter(unittest.TestCase):
         casadi_y = casadi.MX.sym("y", 1)
         data = np.tile(2 * x, (10, 1)).T
         y_test = np.array([0.4])
-        for interpolator in ["linear", "cubic spline"]:
+        for interpolator in ["linear", "cubic"]:
             interp = pybamm.Interpolant(x, data, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
@@ -196,14 +194,17 @@ class TestCasadiConverter(unittest.TestCase):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
         # error for converted children count
-        y3 = (pybamm.StateVector(slice(0, 1)),
-              pybamm.StateVector(slice(0, 1)),
-              pybamm.StateVector(slice(0, 1)))
-        x3_ = [np.linspace(0, 1) for _ in range(3)]
-        x3 = np.column_stack(x3_)
-        data3 = 2 * x3  # np.tile(2 * x3, (10, 1)).T
+        y4 = (
+            pybamm.StateVector(slice(0, 1)),
+            pybamm.StateVector(slice(0, 1)),
+            pybamm.StateVector(slice(0, 1)),
+            pybamm.StateVector(slice(0, 1)),
+        )
+        x4_ = [np.linspace(0, 1) for _ in range(4)]
+        x4 = np.column_stack(x4_)
+        data4 = 2 * x4  # np.tile(2 * x3, (10, 1)).T
         with self.assertRaisesRegex(ValueError, "Invalid dimension of x"):
-            interp = pybamm.Interpolant(x3_, data3, y3, interpolator="linear")
+            interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
     def test_interpolation_2d(self):
@@ -218,18 +219,14 @@ class TestCasadiConverter(unittest.TestCase):
         y_test = np.array([0.4, 0.6])
         Y = (2 * x).sum(axis=1).reshape(*[len(el) for el in x_])
         for interpolator in ["linear"]:
-            interp = pybamm.Interpolant(x_,
-                                        Y,
-                                        y, interpolator=interpolator)
+            interp = pybamm.Interpolant(x_, Y, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
         # square
         y = (pybamm.StateVector(slice(0, 1)), pybamm.StateVector(slice(0, 1)))
-        Y = (x ** 2).sum(axis=1).reshape(*[len(el) for el in x_])
-        interp = pybamm.Interpolant(x_,
-                                    Y,
-                                    y, interpolator="linear")
+        Y = (x**2).sum(axis=1).reshape(*[len(el) for el in x_])
+        interp = pybamm.Interpolant(x_, Y, y, interpolator="linear")
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
         np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
@@ -249,6 +246,38 @@ class TestCasadiConverter(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "interpolator should be"):
             interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
             interp_casadi = interp.to_casadi(y=casadi_y)
+
+    def test_interpolation_3d(self):
+        def f(x, y, z):
+            return 2 * x**3 + 3 * y**2 - z
+
+        x = np.linspace(1, 4, 11)
+        y = np.linspace(4, 7, 22)
+        z = np.linspace(7, 9, 33)
+        xg, yg, zg = np.meshgrid(x, y, z, indexing="ij", sparse=True)
+        data = f(xg, yg, zg)
+
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        var3 = pybamm.StateVector(slice(2, 3))
+
+        x_in = (x, y, z)
+        interp = pybamm.Interpolant(
+            x_in, data, (var1, var2, var3), interpolator="linear"
+        )
+
+        casadi_y = casadi.MX.sym("y", 3)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        y_test = np.array([1, 5, 8])
+
+        casadi_sol = casadi_f(y_test)
+        true_value = f(1, 5, 8)
+
+        self.assertIsInstance(casadi_sol, casadi.DM)
+
+        np.testing.assert_equal(true_value, casadi_sol.__float__())
 
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
@@ -285,16 +314,20 @@ class TestCasadiConverter(unittest.TestCase):
         self.assert_casadi_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval)))
 
     def test_convert_differentiated_function(self):
-        a = pybamm.Scalar(0)
-        b = pybamm.Scalar(1)
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
 
         def myfunction(x, y):
-            return x + y ** 3
+            return x + y**3
 
         f = pybamm.Function(myfunction, a, b).diff(a)
-        self.assert_casadi_equal(f.to_casadi(), casadi.MX(1), evalf=True)
+        self.assert_casadi_equal(
+            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(1), evalf=True
+        )
         f = pybamm.Function(myfunction, a, b).diff(b)
-        self.assert_casadi_equal(f.to_casadi(), casadi.MX(3), evalf=True)
+        self.assert_casadi_equal(
+            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(12), evalf=True
+        )
 
     def test_convert_input_parameter(self):
         casadi_t = casadi.MX.sym("t")

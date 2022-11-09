@@ -13,15 +13,19 @@ class NoSEI(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    options : dict, optional
+    options : dict
         A dictionary of options to be passed to the model.
+    phase : str, optional
+        Phase of the particle (default is "primary")
+    cracks : bool, optional
+        Whether this is a submodel for standard SEI or SEI on cracks
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None, cracks=False):
-        super().__init__(param, options=options, cracks=cracks)
-        if self.half_cell:
+    def __init__(self, param, options, phase="primary", cracks=False):
+        super().__init__(param, options=options, phase=phase, cracks=cracks)
+        if self.options.electrode_types[self.domain] == "planar":
             self.reaction_loc = "interface"
         else:
             self.reaction_loc = "full electrode"

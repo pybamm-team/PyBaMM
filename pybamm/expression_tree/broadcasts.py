@@ -89,41 +89,36 @@ class PrimaryBroadcast(Broadcast):
         # Note e.g. current collector to particle *is* allowed
         if child.domain == []:
             pass
-        elif child.domain == ["current collector"] and broadcast_domain[0] not in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-            "negative particle size",
-            "positive particle size",
-            "negative particle",
-            "positive particle",
-        ]:
+        elif child.domain == ["current collector"] and not (
+            broadcast_domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            or "particle" in broadcast_domain[0]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle or particle size domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain[0] not in [
-            "negative particle",
-            "positive particle",
-            "negative particle size",
-            "positive particle size",
-        ]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and "particle" not in broadcast_domain[0]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 or particle size domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative particle size",
-                "positive particle size",
-            ]
-            and broadcast_domain[0] not in ["negative particle", "positive particle"]
-        ):
+        elif child.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
             raise pybamm.DomainError(
                 """Primary broadcast from particle size domain must be to particle
                 domain"""
@@ -241,15 +236,11 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from particle size domain must be to
                 electrode or separator or current collector domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and broadcast_domain != ["current collector"]
-        ):
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain != ["current collector"]:
             raise pybamm.DomainError(
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""
@@ -356,15 +347,11 @@ class TertiaryBroadcast(Broadcast):
                 """Tertiary broadcast from a symbol with particle size secondary
                 domain must be to electrode, separator or current collector"""
             )
-        if (
-            child.domains["secondary"][0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and broadcast_domain != ["current collector"]
-        ):
+        if child.domains["secondary"][0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain != ["current collector"]:
             raise pybamm.DomainError(
                 """Tertiary broadcast from a symbol with an electrode or
                 separator secondary domain must be to current collector"""

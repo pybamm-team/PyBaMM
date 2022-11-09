@@ -79,7 +79,7 @@ class TestAlgebraicSolver(unittest.TestCase):
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
-                return y ** 2 + 1
+                return y**2 + 1
 
         model = Model()
 
