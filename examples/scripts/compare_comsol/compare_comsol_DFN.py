@@ -88,7 +88,7 @@ def get_interp_fun(variable_name, domain):
     )
 
     fun.domains = {"primary": domain}
-    fun.mesh = mesh.[domain]
+    fun.mesh = mesh[domain]
     fun.secondary_mesh = None
     return fun
 
