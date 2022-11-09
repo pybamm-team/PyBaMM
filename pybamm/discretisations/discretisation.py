@@ -787,14 +787,14 @@ class Discretisation(object):
 
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
+                discretised_symbol.mesh = self.mesh[symbol.domain]
             else:
                 discretised_symbol.mesh = None
             # Assign secondary mesh
             if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
-                    *symbol.domains["secondary"]
-                )
+                discretised_symbol.secondary_mesh = self.mesh[
+                    symbol.domains["secondary"]
+                ]
             else:
                 discretised_symbol.secondary_mesh = None
             return discretised_symbol

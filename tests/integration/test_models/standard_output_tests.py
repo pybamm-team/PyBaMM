@@ -83,11 +83,11 @@ class BaseOutputTest(object):
         self.x_s = disc.mesh["separator"].nodes * L_x
         self.x_p = disc.mesh["positive electrode"].nodes * L_x
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        self.x = disc.mesh.combine_submeshes(*whole_cell).nodes * L_x
+        self.x = disc.mesh[whole_cell].nodes * L_x
         self.x_n_edge = disc.mesh["negative electrode"].edges * L_x
         self.x_s_edge = disc.mesh["separator"].edges * L_x
         self.x_p_edge = disc.mesh["positive electrode"].edges * L_x
-        self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
+        self.x_edge = disc.mesh[whole_cell].edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             R_n_typ = model.length_scales["negative particle"].evaluate()
