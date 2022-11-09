@@ -885,9 +885,7 @@ class TestDiscretise(unittest.TestCase):
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
-        submesh = mesh[(
-            "negative electrode", "separator", "positive electrode"
-        )]
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
 
         disc.process_model(model)
         y0 = model.concatenated_initial_conditions.evaluate()
