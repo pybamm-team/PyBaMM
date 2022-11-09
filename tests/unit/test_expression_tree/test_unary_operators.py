@@ -103,6 +103,18 @@ class TestUnaryOperators(TestCase):
             np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
         )
 
+        broad = pybamm.PrimaryBroadcast(-4, "test domain")
+        self.assertEqual(pybamm.sign(broad), pybamm.PrimaryBroadcast(-1, "test domain"))
+
+        conc = pybamm.Concatenation(broad, pybamm.PrimaryBroadcast(2, "another domain"))
+        self.assertEqual(
+            pybamm.sign(conc),
+            pybamm.Concatenation(
+                pybamm.PrimaryBroadcast(-1, "test domain"),
+                pybamm.PrimaryBroadcast(1, "another domain"),
+            ),
+        )
+
     def test_floor(self):
         a = pybamm.Symbol("a")
         floora = pybamm.Floor(a)
@@ -173,6 +185,16 @@ class TestUnaryOperators(TestCase):
         a = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("a"), "test domain")
         div = pybamm.div(a)
         self.assertEqual(div, pybamm.PrimaryBroadcast(0, "test domain"))
+        a = pybamm.PrimaryBroadcastToEdges(
+            pybamm.Variable("a", "some domain"), "test domain"
+        )
+        div = pybamm.div(a)
+        self.assertEqual(
+            div,
+            pybamm.PrimaryBroadcast(
+                pybamm.PrimaryBroadcast(0, "some domain"), "test domain"
+            ),
+        )
 
         # otherwise divergence should work
         a = pybamm.Symbol("a", domain="test domain")
