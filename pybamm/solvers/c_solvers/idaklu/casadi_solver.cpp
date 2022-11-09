@@ -68,7 +68,6 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   }
 
   // set initial value
-  realtype *ypval = N_VGetArrayPointer(yp);
   realtype *atval = N_VGetArrayPointer(avtol);
   for (int i = 0; i < number_of_states; i++)
   {

@@ -13,7 +13,7 @@ struct Options {
   int linsol_max_iterations;
   int precon_half_bandwidth;
   int precon_half_bandwidth_keep;
-  Options(py::dict options);
+  explicit Options(py::dict options);
 
 };
 
