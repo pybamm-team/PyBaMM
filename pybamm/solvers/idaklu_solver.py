@@ -45,25 +45,36 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance to assert whether extrapolation occurs or not (default is 0).
     options: dict, optional
         Addititional options to pass to the solver, by default:
-        {
-            print_stats: False, # print statistics of the solver after every solve
-            jacobian: "sparse", # jacobian form, can be "none", "dense", "sparse",
-                                # "matrix-free"
-            linear_solver: "SUNLinSol_KLU", # name of sundials linear solver to use
-                                  # options are: "SUNLinSol_KLU",
-                                  # "SUNLinSol_Dense", "SUNLinSol_LapackDense"
-                                  # "SUNLinSol_SPBCGS", "SUNLinSol_SPFGMR",
-                                  # "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
-            preconditioner: "BBDP", # preconditioner for iterative solvers,
-                                    # can be "none", "BBDP"
-            linsol_max_iterations: 5, # for iterative linear solvers, max number of
-                                      # iterations
-            precon_half_bandwidth: 5, # for iterative linear solver preconditioner,
-                                      # bandwidth of approximate jacobian
-            precon_half_bandwidth_keep: 5 #for iterative linear solver preconditioner,
-                                      # bandwidth of approximate jacobian that is kept
 
-        }
+        .. code-block:: python
+
+            options = {
+                # print statistics of the solver after every solve
+                "print_stats": False,
+
+                # jacobian form, can be "none", "dense", "sparse", "matrix-free"
+                "jacobian": "sparse",
+
+                # name of sundials linear solver to use options are: "SUNLinSol_KLU",
+                # "SUNLinSol_Dense", "SUNLinSol_LapackDense" "SUNLinSol_SPBCGS",
+                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
+                "linear_solver": "SUNLinSol_KLU",
+
+                # preconditioner for iterative solvers, can be "none", "BBDP"
+                "preconditioner": "BBDP",
+
+                # for iterative linear solvers, max number of iterations
+                "linsol_max_iterations": 5,
+
+                # for iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian
+                "precon_half_bandwidth": 5,
+
+                # for iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian that is kept
+                "precon_half_bandwidth_keep": 5
+            }
+
         Note: These options only have an effect if model.convert_to_format == 'casadi'
 
 
