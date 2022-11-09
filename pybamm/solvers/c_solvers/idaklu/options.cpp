@@ -5,7 +5,9 @@ Options::Options(py::dict options)
       jacobian(options["jacobian"].cast<std::string>()),
       preconditioner(options["preconditioner"].cast<std::string>()),
       linsol_max_iterations(options["linsol_max_iterations"].cast<int>()),
-      linear_solver(options["linear_solver"].cast<std::string>())
+      linear_solver(options["linear_solver"].cast<std::string>()),
+      precon_half_bandwidth(options["precon_half_bandwidth"].cast<int>()),
+      precon_half_bandwidth_keep(options["precon_half_bandwidth_keep"].cast<int>())
 {
 
   using_sparse_matrix = true;

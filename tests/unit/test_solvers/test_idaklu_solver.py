@@ -8,7 +8,6 @@ import unittest
 import numpy as np
 
 import pybamm
-from pybamm.models.submodels.interface.kinetics import linear
 from tests import get_discretisation_for_testing
 
 
@@ -479,21 +478,20 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         # test everything else
         for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
-                for linear_solver in [
-                        "SUNLinSol_SPBCGS", "SUNLinSol_Dense", "SUNLinSol_LapackDense",
-                        "SUNLinSol_KLU", "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR",
-                        "SUNLinSol_SPTFQMR", "garbage"
-                ]:
-                    for precon in ["none", "BBDP"]:
-                        options = {
-                            'jacobian': jacobian,
-                            'linear_solver': linear_solver,
-                            'preconditioner': precon,
-                        }
-                        solver = pybamm.IDAKLUSolver(options=options)
-                        soln = solver.solve(model, t_eval)
-                        np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
-
+            for linear_solver in [
+                "SUNLinSol_SPBCGS", "SUNLinSol_Dense", "SUNLinSol_LapackDense",
+                "SUNLinSol_KLU", "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR",
+                "SUNLinSol_SPTFQMR", "garbage"
+            ]:
+                for precon in ["none", "BBDP"]:
+                    options = {
+                        'jacobian': jacobian,
+                        'linear_solver': linear_solver,
+                        'preconditioner': precon,
+                    }
+                    solver = pybamm.IDAKLUSolver(options=options)
+                    soln = solver.solve(model, t_eval)
+                    np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
 
 
 if __name__ == "__main__":

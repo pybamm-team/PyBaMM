@@ -41,4 +41,20 @@ using np_array_int = py::array_t<int64_t>;
 #define DEBUG(x) do { std::cerr << __FILE__ << ':' << __LINE__ << ' ' << x << std::endl; } while (0)
 #endif
 
+#ifdef NDEBUG
+#define DEBUG_VECTOR(vector)
+#else
+#define DEBUG_VECTOR(vector) {\
+  std::cout << #vector << " = ["; \
+  auto array_ptr = N_VGetArrayPointer(vector); \
+  auto N = N_VGetLength(vector); \
+  for (int i = 0; i < N; i++) { \
+    std::cout << array_ptr[i]; \
+    if (i < N-1) { \
+      std::cout << ", "; \
+    } \
+  } \
+  std::cout << "]" << std::endl;  }
+#endif
+
 #endif // PYBAMM_IDAKLU_COMMON_HPP
