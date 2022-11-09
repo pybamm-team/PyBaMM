@@ -47,8 +47,6 @@ class BaseKinetics(BaseInterface):
             variables = {
                 f"Total {domain} electrode {phase_name}"
                 "interfacial current density variable [A.m-2]": j,
-                f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable [A.m-2]": j,
                 f"X-averaged total {domain} electrode {phase_name}"
                 "interfacial current density variable [A.m-2]": pybamm.x_average(j),
             }

@@ -78,7 +78,7 @@ class DiffusionLimited(BaseInterface):
                     "interfacial current density [A.m-2]"
                 ]
                 j = -self.param.p.L * j_p / self.param.n.L
-            elif self.order in ["composite", "full"]:
+            elif self.order == "full":
                 tor_s = variables["Separator electrolyte transport efficiency"]
                 c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
                 N_ox_neg_sep_interface = (
