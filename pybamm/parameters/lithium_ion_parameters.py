@@ -153,15 +153,6 @@ class LithiumIonParameters(BaseParameters):
             self.one_plus_dlnf_dlnc_dimensional(c_e, T)
         )
 
-    def chiRT_over_Fc_dimensional(self, c_e, T):
-        """
-        chi * (1 + Theta * T) / c,
-        as it appears in the electrolyte potential equation
-        """
-        tol = pybamm.settings.tolerances["chi__c_e"]
-        c_e = pybamm.maximum(c_e, tol)
-        return (self.R * T / self.F) * self.chi_dimensional(c_e, T) / c_e
-
     def t_plus_dimensional(self, c_e, T):
         """Cation transference number (dimensionless)"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
@@ -349,12 +340,6 @@ class LithiumIonParameters(BaseParameters):
         c_e_dimensional = c_e * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return self.t_plus_dimensional(c_e_dimensional, T_dim)
-
-    def one_plus_dlnf_dlnc(self, c_e, T):
-        """Thermodynamic factor (dimensionless)"""
-        c_e_dimensional = c_e * self.c_e_typ
-        T_dim = self.Delta_T * T + self.T_ref
-        return self.one_plus_dlnf_dlnc_dimensional(c_e_dimensional, T_dim)
 
     def D_e(self, c_e, T):
         """Dimensionless electrolyte diffusivity"""
