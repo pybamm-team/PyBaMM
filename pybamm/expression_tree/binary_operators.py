@@ -711,16 +711,8 @@ def _simplified_binary_broadcast_concatenation(left, right, operator):
             return left._concatenation_new_copy(
                 [operator(child, right) for child in left.orphans]
             )
-        elif (
-            isinstance(right, pybamm.Concatenation)
-            and not any(
-                isinstance(child, (pybamm.Variable, pybamm.StateVector))
-                for child in right.children
-            )
-            and (
-                all(child.is_constant() for child in left.children)
-                or all(child.is_constant() for child in right.children)
-            )
+        elif isinstance(right, pybamm.Concatenation) and not isinstance(
+            right, pybamm.ConcatenationVariable
         ):
             return left._concatenation_new_copy(
                 [
@@ -1056,6 +1048,15 @@ def simplified_multiplication(left, right):
                         return (left * r_left) + (left * r_right)
                     elif isinstance(right, Subtraction):
                         return (left * r_left) - (left * r_right)
+
+    # # Move constants in multiplications to the left
+    # if isinstance(left, Multiplication) and left.left.is_constant():
+    #     l_left, l_right = left.orphans
+    #     print(l_left, l_right, right)
+    #     return l_left * (l_right * right)
+    # elif isinstance(right, Multiplication) and right.left.is_constant():
+    #     r_left, r_right = right.orphans
+    #     return r_left * (left * r_right)
 
     # Cancelling out common terms
     if isinstance(left, Division):

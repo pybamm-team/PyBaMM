@@ -41,11 +41,13 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         # Override print_name
         c_e.print_name = "c_e"
 
-        variables = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "X-averaged electrolyte concentration [mol.m-3]": pybamm.x_average(c_e),
-        }
+        variables = self._get_standard_domain_concentration_variables(c_e_dict)
+        variables.update(self._get_standard_whole_cell_concentration_variables(c_e))
+        return variables
 
+    def _get_standard_domain_concentration_variables(self, c_e_dict):
+        c_e_typ = self.param.c_e_typ
+        variables = {}
         # Case where an electrode is not included (half-cell)
         if "negative electrode" not in self.options.whole_cell_domains:
             c_e_s = c_e_dict["separator"]
@@ -67,12 +69,21 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables_dim = variables.copy()
         for name, var in variables_dim.items():
             name = name.replace(" [mol.m-3]", "")
-            variables.update(
-                {
-                    name: var / self.param.c_e_typ,
-                    f"{name} [Molar]": var / 1000,
-                }
-            )
+            variables.update({name: var / c_e_typ, f"{name} [Molar]": var / 1000})
+
+        return variables
+
+    def _get_standard_whole_cell_concentration_variables(self, c_e):
+        c_e_typ = self.param.c_e_typ
+
+        variables = {
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "X-averaged electrolyte concentration [mol.m-3]": pybamm.x_average(c_e),
+        }
+        variables_nondim = variables.copy()
+        for name, var in variables_nondim.items():
+            name = name.replace(" [mol.m-3]", "")
+            variables.update({name: var / c_e_typ, f"{name} [Molar]": var / 1000})
 
         return variables
 

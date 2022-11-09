@@ -200,7 +200,12 @@ class Symbol:
     """
 
     def __init__(
-        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
+        self,
+        name,
+        children=None,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
     ):
         super(Symbol, self).__init__()
         self.name = name
@@ -403,6 +408,14 @@ class Symbol:
             + tuple([child.id for child in self.children])
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
+
+    @property
+    def scale(self):
+        return self._scale
+
+    @property
+    def reference(self):
+        return self._reference
 
     def __eq__(self, other):
         try:
@@ -615,7 +628,7 @@ class Symbol:
         elif isinstance(self, pybamm.Broadcast):
             # Move absolute value inside the broadcast
             # Apply recursively
-            abs_self_not_broad = pybamm.simplify_if_constant(abs(self.orphans[0]))
+            abs_self_not_broad = abs(self.orphans[0])
             return self._unary_new_copy(abs_self_not_broad)
         else:
             k = pybamm.settings.abs_smoothing

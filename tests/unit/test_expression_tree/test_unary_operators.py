@@ -103,6 +103,18 @@ class TestUnaryOperators(TestCase):
             np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
         )
 
+        broad = pybamm.PrimaryBroadcast(-4, "test domain")
+        self.assertEqual(pybamm.sign(broad), pybamm.PrimaryBroadcast(-1, "test domain"))
+
+        conc = pybamm.Concatenation(broad, pybamm.PrimaryBroadcast(2, "another domain"))
+        self.assertEqual(
+            pybamm.sign(conc),
+            pybamm.Concatenation(
+                pybamm.PrimaryBroadcast(-1, "test domain"),
+                pybamm.PrimaryBroadcast(1, "another domain"),
+            ),
+        )
+
     def test_floor(self):
         a = pybamm.Symbol("a")
         floora = pybamm.Floor(a)
@@ -147,10 +159,7 @@ class TestUnaryOperators(TestCase):
         # gradient of broadcast should return broadcasted zero
         a = pybamm.PrimaryBroadcast(pybamm.Variable("a"), "test domain")
         grad = pybamm.grad(a)
-        self.assertIsInstance(grad, pybamm.PrimaryBroadcastToEdges)
-        self.assertIsInstance(grad.child, pybamm.PrimaryBroadcast)
-        self.assertIsInstance(grad.child.child, pybamm.Scalar)
-        self.assertEqual(grad.child.child.value, 0)
+        self.assertEqual(grad, pybamm.PrimaryBroadcastToEdges(0, "test domain"))
 
         # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
@@ -175,10 +184,17 @@ class TestUnaryOperators(TestCase):
         # divergence of broadcast should return broadcasted zero
         a = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("a"), "test domain")
         div = pybamm.div(a)
-        self.assertIsInstance(div, pybamm.PrimaryBroadcast)
-        self.assertIsInstance(div.child, pybamm.PrimaryBroadcast)
-        self.assertIsInstance(div.child.child, pybamm.Scalar)
-        self.assertEqual(div.child.child.value, 0)
+        self.assertEqual(div, pybamm.PrimaryBroadcast(0, "test domain"))
+        a = pybamm.PrimaryBroadcastToEdges(
+            pybamm.Variable("a", "some domain"), "test domain"
+        )
+        div = pybamm.div(a)
+        self.assertEqual(
+            div,
+            pybamm.PrimaryBroadcast(
+                pybamm.PrimaryBroadcast(0, "some domain"), "test domain"
+            ),
+        )
 
         # otherwise divergence should work
         a = pybamm.Symbol("a", domain="test domain")
