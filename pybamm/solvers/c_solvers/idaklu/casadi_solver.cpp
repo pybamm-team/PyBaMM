@@ -290,10 +290,11 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   realtype *yval = N_VGetArrayPointer(yy);
   realtype *ypval = N_VGetArrayPointer(yp);
-  realtype *ySval;
-  if (number_of_parameters > 0)
-  {
-    ySval = N_VGetArrayPointer(yyS[0]);
+  std::vector<realtype *> ySval(number_of_parameters);
+  for (int is = 0 ; is < number_of_parameters; is++) {
+    ySval[is] = N_VGetArrayPointer(yyS[is]);
+    N_VConst(RCONST(0.0), yyS[is]);
+    N_VConst(RCONST(0.0), ypS[is]);
   }
 
   auto t = t_np.unchecked<1>();
@@ -351,7 +352,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     const int base_index = j * number_of_timesteps * number_of_states;
     for (int k = 0; k < number_of_states; k++)
     {
-      yS_return[base_index + k] = ySval[j * number_of_states + k];
+      yS_return[base_index + k] = ySval[j][k];
     }
   }
 
@@ -386,7 +387,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
             j * number_of_timesteps * number_of_states + t_i * number_of_states;
         for (int k = 0; k < number_of_states; k++)
         {
-          yS_return[base_index + k] = ySval[j * number_of_states + k];
+          yS_return[base_index + k] = ySval[j][k];
         }
       }
       t_i += 1;
@@ -406,7 +407,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
   np_array y_ret =
       np_array(t_i * number_of_states, &y_return[0], free_y_when_done);
   np_array yS_ret = np_array(
-      std::vector<ptrdiff_t>{number_of_parameters, t_i, number_of_states},
+      std::vector<ptrdiff_t>{number_of_parameters, number_of_timesteps, number_of_states},
       &yS_return[0], free_yS_when_done);
 
   Solution sol(retval, t_ret, y_ret, yS_ret);

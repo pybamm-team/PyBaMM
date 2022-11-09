@@ -285,7 +285,8 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   N_Vector yy, yp, avtol; // y, y', and absolute tolerance
   N_Vector *yyS, *ypS;      // y, y' for sensitivities
   N_Vector id;
-  realtype rtol, *yval, *ypval, *atval, *ySval;
+  realtype rtol, *yval, *ypval, *atval;
+  std::vector<realtype *> ySval(number_of_parameters);
   int retval;
   SUNMatrix J;
   SUNLinearSolver LS;
@@ -320,9 +321,6 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
 
   // set initial value
   yval = N_VGetArrayPointer(yy);
-  if (number_of_parameters > 0) {
-    ySval = N_VGetArrayPointer(yyS[0]);
-  }
   ypval = N_VGetArrayPointer(yp);
   atval = N_VGetArrayPointer(avtol);
   int i;
@@ -334,6 +332,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   for (int is = 0 ; is < number_of_parameters; is++) {
+    ySval[is] = N_VGetArrayPointer(yyS[is]);
     N_VConst(RCONST(0.0), yyS[is]);
     N_VConst(RCONST(0.0), ypS[is]);
   }
@@ -398,7 +397,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   for (int j = 0; j < number_of_parameters; j++) {
     const int base_index = j * number_of_timesteps * number_of_states;
     for (int k = 0; k < number_of_states; k++) {
-      yS_return[base_index + k] = ySval[j * number_of_states + k];
+      yS_return[base_index + k] = ySval[j][k];
     }
   }
 
@@ -437,7 +436,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
         const int base_index = j * number_of_timesteps * number_of_states 
                                + t_i * number_of_states;
         for (int k = 0; k < number_of_states; k++) {
-          yS_return[base_index + k] = ySval[j * number_of_states + k];
+          yS_return[base_index + k] = ySval[j][k];
         }
       }
       t_i += 1;
@@ -468,7 +467,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   np_array t_ret = np_array(t_i, &t_return[0]);
   np_array y_ret = np_array(t_i * number_of_states, &y_return[0]);
   np_array yS_ret = np_array(
-      std::vector<ptrdiff_t>{number_of_parameters, t_i, number_of_states},
+      std::vector<ptrdiff_t>{number_of_parameters, number_of_timesteps, number_of_states},
       &yS_return[0] 
       );
 

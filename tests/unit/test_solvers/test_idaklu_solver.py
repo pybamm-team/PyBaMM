@@ -254,7 +254,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
+        for form in ["casadi", "python", "jax"]:
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
