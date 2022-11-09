@@ -147,10 +147,7 @@ class TestUnaryOperators(TestCase):
         # gradient of broadcast should return broadcasted zero
         a = pybamm.PrimaryBroadcast(pybamm.Variable("a"), "test domain")
         grad = pybamm.grad(a)
-        self.assertIsInstance(grad, pybamm.PrimaryBroadcastToEdges)
-        self.assertIsInstance(grad.child, pybamm.PrimaryBroadcast)
-        self.assertIsInstance(grad.child.child, pybamm.Scalar)
-        self.assertEqual(grad.child.child.value, 0)
+        self.assertEqual(grad, pybamm.PrimaryBroadcastToEdges(0, "test domain"))
 
         # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
@@ -175,10 +172,7 @@ class TestUnaryOperators(TestCase):
         # divergence of broadcast should return broadcasted zero
         a = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("a"), "test domain")
         div = pybamm.div(a)
-        self.assertIsInstance(div, pybamm.PrimaryBroadcast)
-        self.assertIsInstance(div.child, pybamm.PrimaryBroadcast)
-        self.assertIsInstance(div.child.child, pybamm.Scalar)
-        self.assertEqual(div.child.child.value, 0)
+        self.assertEqual(div, pybamm.PrimaryBroadcast(0, "test domain"))
 
         # otherwise divergence should work
         a = pybamm.Symbol("a", domain="test domain")

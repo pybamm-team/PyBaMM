@@ -1049,6 +1049,15 @@ def simplified_multiplication(left, right):
                     elif isinstance(right, Subtraction):
                         return (left * r_left) - (left * r_right)
 
+    # # Move constants in multiplications to the left
+    # if isinstance(left, Multiplication) and left.left.is_constant():
+    #     l_left, l_right = left.orphans
+    #     print(l_left, l_right, right)
+    #     return l_left * (l_right * right)
+    # elif isinstance(right, Multiplication) and right.left.is_constant():
+    #     r_left, r_right = right.orphans
+    #     return r_left * (left * r_right)
+
     # Cancelling out common terms
     if isinstance(left, Division):
         # Simplify (a / b) * b to a
