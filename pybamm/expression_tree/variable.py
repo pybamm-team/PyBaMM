@@ -70,7 +70,10 @@ class VariableBase(pybamm.Symbol):
         if bounds is None:
             bounds = (-np.inf, np.inf)
         else:
-            if bounds[0] >= bounds[1]:
+            if (
+                all(isinstance(b, numbers.Number) for b in bounds)
+                and bounds[0] >= bounds[1]
+            ):
                 raise ValueError(
                     "Invalid bounds {}. ".format(bounds)
                     + "Lower bound should be strictly less than upper bound."

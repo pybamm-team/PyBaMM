@@ -44,14 +44,14 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             c_s_av = pybamm.Variable(
                 f"Average {domain} particle concentration [mol.m-3]",
                 domain="current collector",
-                bounds=(0, 1),
+                bounds=(0, self.phase_param.c_max),
             )
         else:
             c_s_av_distribution = pybamm.Variable(
                 f"Average {domain} particle concentration distribution [mol.m-3]",
                 domain=f"{domain} particle size",
                 auxiliary_domains={"secondary": "current collector"},
-                bounds=(0, 1),
+                bounds=(0, self.phase_param.c_max),
             )
             # Since concentration does not depend on "x", need a particle-size
             # spatial variable R with only "current collector" as secondary

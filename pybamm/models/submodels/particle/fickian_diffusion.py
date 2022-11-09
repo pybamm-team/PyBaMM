@@ -44,7 +44,7 @@ class FickianDiffusion(BaseParticle):
                         "secondary": f"{domain} electrode",
                         "tertiary": "current collector",
                     },
-                    # bounds=(0, 1),
+                    bounds=(0, self.phase_param.c_max),
                 )
                 c_s.print_name = f"c_s_{domain[0]}"
             else:
@@ -52,7 +52,7 @@ class FickianDiffusion(BaseParticle):
                     f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]",
                     f"{domain} {phase_name}particle",
                     auxiliary_domains={"secondary": "current collector"},
-                    # bounds=(0, 1),
+                    bounds=(0, self.phase_param.c_max),
                 )
                 c_s_xav.print_name = f"c_s_{domain[0]}_xav"
                 c_s = pybamm.SecondaryBroadcast(c_s_xav, f"{domain} electrode")
@@ -67,7 +67,7 @@ class FickianDiffusion(BaseParticle):
                         "tertiary": f"{domain} electrode",
                         "quaternary": "current collector",
                     },
-                    # bounds=(0, 1),
+                    bounds=(0, self.phase_param.c_max),
                 )
                 R = pybamm.SpatialVariable(
                     f"R_{domain[0]}",
@@ -91,7 +91,7 @@ class FickianDiffusion(BaseParticle):
                         "secondary": f"{domain} {phase_name}particle size",
                         "tertiary": "current collector",
                     },
-                    # bounds=(0, 1),
+                    bounds=(0, self.phase_param.c_max),
                 )
                 R = pybamm.SpatialVariable(
                     f"R_{domain[0]}",

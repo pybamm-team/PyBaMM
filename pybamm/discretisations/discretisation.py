@@ -1114,7 +1114,7 @@ class Discretisation(object):
             # Skip this check if there are input parameters in the initial conditions
             bounds = var.bounds
             if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
-                all(bounds[0] <= ic_eval) and all(ic_eval <= bounds[1])
+                all(bounds[0].value <= ic_eval) and all(ic_eval <= bounds[1].value)
             ):
                 raise pybamm.ModelError(
                     "initial condition is outside of variable bounds "

@@ -693,6 +693,7 @@ class ParameterValues:
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
             new_symbol._reference = self.process_symbol(symbol.reference)
+            new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
 
         else:
