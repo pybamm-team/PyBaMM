@@ -100,7 +100,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
     def get_coupled_variables(self, variables):
         domain = self.domain
-        phase_param = self.phase_param
         param = self.param
 
         c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
@@ -228,7 +227,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # method (see #1399)
         domain = self.domain
         param = self.param
-        phase_param = self.phase_param
 
         if self.size_distribution is False:
             c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]

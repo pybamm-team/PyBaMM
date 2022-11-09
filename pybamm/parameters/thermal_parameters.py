@@ -74,7 +74,6 @@ class ThermalParameters(BaseParameters):
         ) / self.geo.L
 
 
-
 class DomainThermalParameters(BaseParameters):
     def __init__(self, domain, main_param):
         self.domain = domain
