@@ -81,8 +81,7 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(
             mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
-        for domain in mesh:
-            domain = domain[0]
+        for domain in mesh.base_domains:
             if domain != "current collector":
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 

@@ -111,8 +111,10 @@ class Mesh(dict):
                         geometry[domain][spatial_variable][lim] = sym_eval
 
         # Create submeshes
+        self.base_domains = []
         for domain in geometry:
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
+            self.base_domains.append(domain)
 
         # add ghost meshes
         self.add_ghost_meshes()
