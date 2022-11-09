@@ -651,6 +651,14 @@ class TestUnaryOperators(TestCase):
             sympy.Integral("d", sympy.Symbol("xn")),
         )
 
+    def test_explicit_time_integral(self):
+        expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
+        self.assertEqual(expr.child, pybamm.Parameter("param"))
+        self.assertEqual(expr.initial_condition, pybamm.Scalar(1))
+        self.assertEqual(expr.name, "explicit time integral")
+        self.assertEqual(expr.new_copy(), expr)
+        self.assertFalse(expr.is_constant())
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

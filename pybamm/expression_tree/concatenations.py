@@ -451,8 +451,6 @@ def simplified_concatenation(*children):
 def concatenation(*children):
     """Helper function to create concatenations."""
     # TODO: add option to turn off simplifications
-    if len(children) == 3 and children[-1].domain == ["current collector"]:
-        print("here")
     return simplified_concatenation(*children)
 
 

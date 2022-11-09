@@ -111,8 +111,10 @@ class Mesh(dict):
                         geometry[domain][spatial_variable][lim] = sym_eval
 
         # Create submeshes
+        self.base_domains = []
         for domain in geometry:
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
+            self.base_domains.append(domain)
 
         # add ghost meshes
         self.add_ghost_meshes()
@@ -150,9 +152,6 @@ class Mesh(dict):
         """
         if submeshnames == ():
             raise ValueError("Submesh domains being combined cannot be empty")
-        # If there is just a single submesh, we can return it directly
-        if len(submeshnames) == 1:
-            return self[submeshnames[0]]
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):
