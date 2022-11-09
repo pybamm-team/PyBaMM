@@ -965,6 +965,9 @@ class ExplicitTimeIntegral(UnaryOperator):
     def _unary_new_copy(self, child):
         return self.__class__(child, self.initial_condition)
 
+    def is_constant(self):
+        return False
+
 
 class BoundaryGradient(BoundaryOperator):
     """

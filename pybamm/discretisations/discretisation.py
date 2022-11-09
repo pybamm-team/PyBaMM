@@ -900,13 +900,9 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
-                if symbol.domain == []:
-                    out = disc_child * pybamm.Vector([1])
-                else:
-                    out = spatial_method.broadcast(
-                        disc_child, symbol.domains, symbol.broadcast_type
-                    )
-                return out
+                return spatial_method.broadcast(
+                    disc_child, symbol.domains, symbol.broadcast_type
+                )
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
