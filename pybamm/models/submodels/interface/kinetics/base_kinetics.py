@@ -39,18 +39,18 @@ class BaseKinetics(BaseInterface):
         ):
             j = pybamm.Variable(
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable",
+                "interfacial current density variable [A.m-2]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
 
             variables = {
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable": j,
+                "interfacial current density variable [A.m-2]": j,
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable": j,
+                "interfacial current density variable [A.m-2]": j,
                 f"X-averaged total {domain} electrode {phase_name}"
-                "interfacial current density variable": pybamm.x_average(j),
+                "interfacial current density variable [A.m-2]": pybamm.x_average(j),
             }
             return variables
         else:
@@ -117,7 +117,7 @@ class BaseKinetics(BaseInterface):
                 L_sei = variables[f"Total {phase_name}SEI thickness [m]"]
                 j_tot = variables[
                     f"Total negative electrode {phase_name}"
-                    "interfacial current density variable"
+                    "interfacial current density variable [A.m-2]"
                 ]
 
                 # Override print_name
@@ -202,7 +202,7 @@ class BaseKinetics(BaseInterface):
         ):
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable"
+                "interfacial current density variable [A.m-2]"
             ]
 
             # Override print_name
@@ -230,11 +230,7 @@ class BaseKinetics(BaseInterface):
         ):
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable"
+                "interfacial current density variable [A.m-2]"
             ]
-            current_at_0 = pybamm.Scalar(1)  # dimensionless current initially
-            sgn = 1 if self.domain == "negative" else -1
-            # i / (a*l), assuming a=1 initially
-            j_tot_av_init = sgn * current_at_0 / self.domain_param.l
-
-            self.initial_conditions[j_tot_var] = j_tot_av_init
+            # Set initial guess to zero
+            self.initial_conditions[j_tot_var] = pybamm.Scalar(0)

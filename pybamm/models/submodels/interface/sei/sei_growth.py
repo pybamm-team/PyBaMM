@@ -139,7 +139,7 @@ class SEIGrowth(BaseModel):
             # Scott Marquis thesis (eq. 5.91)
             j_sei = -phase_param.D_sol * phase_param.c_sol * param.F / L_sei_outer
 
-        elif self.options["SEI"] == "ec reaction limited":
+        elif self.options["SEI"].startswith("ec reaction limited"):
             # we have a linear system for j and c
             #  c = c_0 + j * L * D / F          [1] (eq 11 in the Yang2017 paper)
             #  j = - F * k * c * exp()          [2] (eq 10 in the Yang2017 paper, factor

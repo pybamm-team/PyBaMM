@@ -96,7 +96,7 @@ class OneDimensionalX(BaseThermal):
         q = -lambda_ * pybamm.grad(T)
 
         # N.B only y-z surface cooling is implemented for this model
-        self.rhs = {T: (-pybamm.div(q) / self.param.delta**2 + Q) / rho_c_p}
+        self.rhs = {T: (-pybamm.div(q) + Q) / rho_c_p}
 
     def set_boundary_conditions(self, variables):
         T = variables["Cell temperature [K]"]

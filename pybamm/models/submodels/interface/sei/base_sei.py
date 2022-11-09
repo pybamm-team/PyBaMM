@@ -324,6 +324,8 @@ class BaseModel(BaseInterface):
         a_j_inner_av = pybamm.x_average(a_j_inner)
         a_j_outer = a * j_outer * roughness
         a_j_outer_av = pybamm.x_average(a_j_outer)
+        a_j = a_j_inner + a_j_outer
+        a_j_av = pybamm.x_average(a_j)
 
         variables.update(
             {
@@ -335,6 +337,8 @@ class BaseModel(BaseInterface):
                 "volumetric interfacial current density [A.m-3]": a_j_outer,
                 f"X-averaged outer {reaction_name}"
                 "volumetric interfacial current density [A.m-3]": a_j_outer_av,
+                f"X-averaged {reaction_name}"
+                "volumetric interfacial current density [A.m-3]": a_j_av,
             }
         )
 

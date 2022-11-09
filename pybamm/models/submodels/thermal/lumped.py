@@ -64,21 +64,18 @@ class Lumped(BaseThermal):
             cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
             yz_cell_surface_area = self.param.L_y * self.param.L_z
-            yz_surface_cooling_coefficient = (
-                -(self.param.n.h_cc + self.param.p.h_cc)
-                * yz_cell_surface_area
-                / cell_volume
-                / (self.param.delta**2)
-            )
+            yz_surface_cooling_coefficient = -(
+                self.param.n.h_cc + self.param.p.h_cc
+            ) * (yz_cell_surface_area / cell_volume)
 
             negative_tab_area = self.param.n.L_tab * self.param.n.L_cc
             negative_tab_cooling_coefficient = (
-                -self.param.n.h_tab * negative_tab_area / cell_volume / self.param.delta
+                -self.param.n.h_tab * negative_tab_area / cell_volume
             )
 
             positive_tab_area = self.param.p.L_tab * self.param.p.L_cc
             positive_tab_cooling_coefficient = (
-                -self.param.p.h_tab * positive_tab_area / cell_volume / self.param.delta
+                -self.param.p.h_tab * positive_tab_area / cell_volume
             )
 
             edge_area = (
@@ -87,9 +84,7 @@ class Lumped(BaseThermal):
                 - negative_tab_area
                 - positive_tab_area
             )
-            edge_cooling_coefficient = (
-                -self.param.h_edge * edge_area / cell_volume / self.param.delta
-            )
+            edge_cooling_coefficient = -self.param.h_edge * edge_area / cell_volume
 
             total_cooling_coefficient = (
                 yz_surface_cooling_coefficient
@@ -98,18 +93,15 @@ class Lumped(BaseThermal):
                 + edge_cooling_coefficient
             )
         elif self.options["cell geometry"] == "arbitrary":
-            cell_surface_area = self.param.a_cooling
-            cell_volume = self.param.v_cell
+            cell_surface_area = self.param.A_cooling
+            cell_volume = self.param.V_cell
             total_cooling_coefficient = (
-                -self.param.h_total
-                * cell_surface_area
-                / cell_volume
-                / (self.param.delta**2)
+                -self.param.h_total * cell_surface_area / cell_volume
             )
 
         self.rhs = {
             T_vol_av: (
-                self.lambda_eff(T_vol_av) * Q_vol_av
+                self.param.lambda_eff(T_vol_av) * Q_vol_av
                 + total_cooling_coefficient * (T_vol_av - T_amb)
             )
             / self.param.rho_c_p_eff(T_vol_av)

@@ -105,6 +105,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
         c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
         T_av = variables[f"X-averaged {domain} electrode temperature [K]"]
+        R = variables[f"X-averaged {domain} particle radius [m]"]
 
         if self.name != "uniform profile":
             D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
@@ -234,6 +235,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             j_xav = variables[
                 f"X-averaged {domain} electrode interfacial current density [A.m-2]"
             ]
+            R = variables[f"X-averaged {domain} particle radius [m]"]
         else:
             c_s_av = variables[
                 f"Average {domain} particle concentration distribution [mol.m-3]"
@@ -242,6 +244,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 f"X-averaged {domain} electrode interfacial "
                 "current density distribution [A.m-2]"
             ]
+            R = variables[f"X-averaged {domain} particle sizes [m]"]
 
         # eq 15 of Subramanian2005
         dcdt = -3 * j_xav / param.F / R
@@ -257,7 +260,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
             D_eff_xav = variables[
-                f"X-averaged {domain} particle effective diffusivity [mol.m-2.s-1]"
+                f"X-averaged {domain} particle effective diffusivity [m2.s-1]"
             ]
 
             # eq 30 of Subramanian2005

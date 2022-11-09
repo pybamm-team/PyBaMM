@@ -68,6 +68,10 @@ class LithiumIonParameters(BaseParameters):
         self.T_ref = self.therm.T_ref
         self.T_init = self.therm.T_init
         self.T_amb = self.therm.T_amb
+        self.h_edge = self.therm.h_edge
+        self.h_total = self.therm.h_total
+        self.rho_c_p_eff = self.therm.rho_c_p_eff
+        self.lambda_eff = self.therm.lambda_eff
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -244,6 +248,8 @@ class DomainLithiumIonParameters(BaseParameters):
         # Thermal
         self.rho_c_p = self.therm.rho_c_p
         self.lambda_ = self.therm.lambda_
+        self.h_cc = self.therm.h_cc
+        self.h_tab = self.therm.h_tab
 
         if domain == "separator":
             x = pybamm.standard_spatial_vars.x_s

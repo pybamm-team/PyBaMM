@@ -93,12 +93,13 @@ class BaseModel(pybamm.BaseSubModel):
             # Compute dimensional particle shape
             if self.options["particle shape"] == "spherical":
                 a = 3 * eps_solid / R
-                a_av = 3 * eps_solid_av / R_av
+                a_av = pybamm.x_average(a)
 
             variables.update(
                 {
                     f"{Domain} {phase_name}particle radius": R / self.phase_param.R_typ,
                     f"{Domain} {phase_name}particle radius [m]": R,
+                    f"X-averaged {domain} {phase_name}particle radius [m]": R_av,
                     f"{Domain} electrode {phase_name}"
                     "surface area to volume ratio [m-1]": a,
                     f"X-averaged {domain} electrode {phase_name}"

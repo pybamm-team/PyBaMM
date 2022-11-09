@@ -41,7 +41,12 @@ class BasePlating(BaseInterface):
         j_plating_av = variables[
             "X-averaged lithium plating interfacial current density [A.m-2]"
         ]
-        a = variables["Negative electrode surface area to volume ratio [m-1]"]
+        if self.options.negative["particle phases"] == "1":
+            a = variables["Negative electrode surface area to volume ratio [m-1]"]
+        else:
+            a = variables[
+                "Negative electrode primary surface area to volume ratio [m-1]"
+            ]
         a_j_plating = a * j_plating
         a_j_plating_av = pybamm.x_average(a_j_plating)
 

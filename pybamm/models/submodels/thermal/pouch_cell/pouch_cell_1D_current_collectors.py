@@ -67,19 +67,16 @@ class CurrentCollector1D(BaseThermal):
         # Account for surface area to volume ratio of pouch cell in cooling
         # coefficient. Note: the factor 1/delta^2 comes from the choice of
         # non-dimensionalisation
-        cell_volume = self.param.l * self.param.l_y * self.param.l_z
+        cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
-        yz_surface_area = self.param.l_y * self.param.l_z
+        yz_surface_area = self.param.L_y * self.param.L_z
         yz_surface_cooling_coefficient = (
-            -(self.param.n.h_cc + self.param.p.h_cc)
-            * yz_surface_area
-            / cell_volume
-            / (self.param.delta**2)
+            -(self.param.n.h_cc + self.param.p.h_cc) * yz_surface_area / cell_volume
         )
 
-        side_edge_area = 2 * self.param.l_z * self.param.l
+        side_edge_area = 2 * self.param.L_z * self.param.L
         side_edge_cooling_coefficient = (
-            -self.param.h_edge * side_edge_area / cell_volume / self.param.delta
+            -self.param.h_edge * side_edge_area / cell_volume
         )
 
         total_cooling_coefficient = (
@@ -92,7 +89,7 @@ class CurrentCollector1D(BaseThermal):
                 + Q_av
                 + total_cooling_coefficient * (T_av - T_amb)
             )
-            / self.param.rho_c_p(T_av)
+            / self.param.rho_c_p_eff(T_av)
         }
 
     def set_boundary_conditions(self, variables):
@@ -114,7 +111,7 @@ class CurrentCollector1D(BaseThermal):
         # calculate tab vs non-tab area on top and bottom
         neg_tab_area = param.n.L_tab * param.n.L_cc
         pos_tab_area = param.p.L_tab * param.p.L_cc
-        total_area = param.l * param.L_y
+        total_area = param.L * param.L_y
 
         non_tab_top_area = (
             total_area
@@ -129,23 +126,15 @@ class CurrentCollector1D(BaseThermal):
 
         # calculate effective cooling coefficients
         top_cooling_coefficient = (
-            (
-                param.n.h_tab * neg_tab_area * neg_tab_top_bool
-                + param.p.h_tab * pos_tab_area * pos_tab_top_bool
-                + param.h_edge * non_tab_top_area
-            )
-            / param.delta
-            / total_area
-        )
+            param.n.h_tab * neg_tab_area * neg_tab_top_bool
+            + param.p.h_tab * pos_tab_area * pos_tab_top_bool
+            + param.h_edge * non_tab_top_area
+        ) / total_area
         bottom_cooling_coefficient = (
-            (
-                param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
-                + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
-                + param.h_edge * non_tab_bottom_area
-            )
-            / param.delta
-            / total_area
-        )
+            param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
+            + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
+            + param.h_edge * non_tab_bottom_area
+        ) / total_area
 
         # just use left and right for clarity
         # left = bottom of cell (z=0)

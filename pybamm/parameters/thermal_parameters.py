@@ -73,18 +73,6 @@ class ThermalParameters(BaseParameters):
             + self.p.lambda_cc(T) * self.geo.p.L_cc
         ) / self.geo.L
 
-    def rho(self, T):
-        """
-        Dimensionless effective density, not to be confused with rho_eff_dim,
-        which is the dimensional effective volumetric heat capacity
-        """
-        return (
-            self.n.rho_cc(T) * self.geo.n.l_cc
-            + self.n.rho(T) * self.geo.n.l
-            + self.s.rho(T) * self.geo.s.l
-            + self.p.rho(T) * self.geo.p.l
-            + self.p.rho_cc(T) * self.geo.p.l_cc
-        ) / self.geo.l
 
 
 class DomainThermalParameters(BaseParameters):

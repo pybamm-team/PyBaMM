@@ -206,16 +206,16 @@ class BaseThermal(pybamm.BaseSubModel):
             # TODO: implement grad_squared in other spatial methods so that the
             # if statement can be removed
             if cc_dimension == 1:
-                Q_s_cn = self.param.n.sigma_cc_prime * pybamm.inner(
+                Q_s_cn = self.param.n.sigma_cc * pybamm.inner(
                     pybamm.grad(phi_s_cn), pybamm.grad(phi_s_cn)
                 )
-                Q_s_cp = self.param.p.sigma_cc_prime * pybamm.inner(
+                Q_s_cp = self.param.p.sigma_cc * pybamm.inner(
                     pybamm.grad(phi_s_cp), pybamm.grad(phi_s_cp)
                 )
             elif cc_dimension == 2:
                 # Inner not implemented in 2D -- have to call grad_squared directly
-                Q_s_cn = self.param.n.sigma_cc_prime * pybamm.grad_squared(phi_s_cn)
-                Q_s_cp = self.param.p.sigma_cc_prime * pybamm.grad_squared(phi_s_cp)
+                Q_s_cn = self.param.n.sigma_cc * pybamm.grad_squared(phi_s_cn)
+                Q_s_cp = self.param.p.sigma_cc * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _x_average(self, var, var_cn, var_cp):
