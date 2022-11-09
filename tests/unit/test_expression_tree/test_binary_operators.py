@@ -284,19 +284,22 @@ class TestBinaryOperators(unittest.TestCase):
             pybamm.source(v, w)
 
     def test_heaviside(self):
-        a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
-        heav = a < b
+        heav = 1 < b
         self.assertEqual(heav.evaluate(y=np.array([2])), 1)
         self.assertEqual(heav.evaluate(y=np.array([1])), 0)
         self.assertEqual(heav.evaluate(y=np.array([0])), 0)
         self.assertEqual(str(heav), "1.0 < y[0:1]")
 
-        heav = a >= b
+        heav = 1 >= b
         self.assertEqual(heav.evaluate(y=np.array([2])), 0)
         self.assertEqual(heav.evaluate(y=np.array([1])), 1)
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
+
+        # simplifications
+        self.assertEqual(1 < b + 2, -1 < b)
+        self.assertEqual(b + 1 > 2, b > 1)
 
     def test_equality(self):
         a = pybamm.Scalar(1)
@@ -314,13 +317,13 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 0)
-        self.assertEqual(str(sigm), "0.5 * (1.0 + tanh(10.0 * (-1.0 + y[0:1])))")
+        self.assertEqual(str(sigm), "0.5 + 0.5 * tanh(-10.0 + 10.0 * y[0:1])")
 
         sigm = pybamm.sigmoid(b, a, 10)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 0)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 1)
-        self.assertEqual(str(sigm), "0.5 * (1.0 + tanh(10.0 * (1.0 - y[0:1])))")
+        self.assertEqual(str(sigm), "0.5 + 0.5 * tanh(10.0 - (10.0 * y[0:1]))")
 
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -439,6 +442,9 @@ class TestBinaryOperators(unittest.TestCase):
         # addition with broadcasts
         self.assertEqual((c + broad2), pybamm.PrimaryBroadcast(c + 2, "domain"))
         self.assertEqual((broad2 + c), pybamm.PrimaryBroadcast(2 + c, "domain"))
+        # addition with negate
+        self.assertEqual(c + -d, c - d)
+        self.assertEqual(-c + d, d - c)
 
         # subtraction
         self.assertEqual(a - b, pybamm.Scalar(-1))
@@ -456,6 +462,8 @@ class TestBinaryOperators(unittest.TestCase):
         # subtraction from itself
         self.assertEqual((c - c), pybamm.Scalar(0))
         self.assertEqual((broad2 - broad2), broad0)
+        # subtraction with negate
+        self.assertEqual((c - (-d)), c + d)
 
         # addition and subtraction with matrix zero
         self.assertEqual(b + v, pybamm.Vector(np.ones((10, 1))))
@@ -562,9 +570,9 @@ class TestBinaryOperators(unittest.TestCase):
         # MatMul simplifications that often appear when discretising spatial operators
         A = pybamm.Matrix(np.random.rand(10, 10))
         B = pybamm.Matrix(np.random.rand(10, 10))
-        # C = pybamm.Matrix(np.random.rand(10, 10))
+        C = pybamm.Matrix(np.random.rand(10, 10))
         var = pybamm.StateVector(slice(0, 10))
-        # var2 = pybamm.StateVector(slice(10, 20))
+        var2 = pybamm.StateVector(slice(10, 20))
         vec = pybamm.Vector(np.random.rand(10))
 
         # Do A@B first if it is constant
@@ -584,10 +592,10 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr, (((A @ B) @ var) - (A @ vec)))
 
         # Distribute the @ operator to a sum if both symbols being summed are matmuls
-        # expr = A @ (B @ var + C @ var2)
-        # self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
-        # expr = A @ (B @ var - C @ var2)
-        # self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
+        expr = A @ (B @ var + C @ var2)
+        self.assertEqual(expr, ((A @ B) @ var + (A @ C) @ var2))
+        expr = A @ (B @ var - C @ var2)
+        self.assertEqual(expr, ((A @ B) @ var - (A @ C) @ var2))
 
         # Reduce (A@var + B@var) to ((A+B)@var)
         expr = A @ var + B @ var

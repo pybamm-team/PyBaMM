@@ -4,6 +4,16 @@
 
 - Added `Units` object as an attribute to all symbols; units must be consistent
 - Scalars that represent dimensional numbers must be provided with units
+- SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
+
+## Optimizations
+
+- Added more rules for simplifying expressions. Constants in binary operators are now moved to the left by default (e.g. `x*2` returns `2*x`) ([#2424](https://github.com/pybamm-team/PyBaMM/pull/2424))
+
+## Breaking changes
+
+- Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
+- Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))
 
 # [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
 

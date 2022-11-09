@@ -45,12 +45,3 @@ class NoReaction(BaseInterface):
             self._get_standard_volumetric_current_density_variables(variables)
         )
         return variables
-
-    def _get_dj_dc(self, variables):
-        return pybamm.Scalar(0)
-
-    def _get_dj_ddeltaphi(self, variables):
-        return pybamm.Scalar(0)
-
-    def _get_j_diffusion_limited_first_order(self, variables):
-        return pybamm.Scalar(0)

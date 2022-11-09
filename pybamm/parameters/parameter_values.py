@@ -94,10 +94,6 @@ class ParameterValues:
         self._processed_symbols = {}
         self.parameter_events = []
 
-        # Don't touch this parameter unless you know what you are doing
-        # This is for the conversion to Julia (ModelingToolkit)
-        self._replace_callable_function_parameters = True
-
         # save citations
         citations = []
         if hasattr(self, "citations"):
@@ -146,9 +142,6 @@ class ParameterValues:
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
         new_copy = ParameterValues(self._dict_items.copy())
-        new_copy._replace_callable_function_parameters = (
-            self._replace_callable_function_parameters
-        )
         return new_copy
 
     def search(self, key, print_values=True):
@@ -670,30 +663,6 @@ class ParameterValues:
                         "Original function had units {}, ".format(symbol.units)
                         + "but processed function has units {}".format(function.units)
                     )
-                if (
-                    self._replace_callable_function_parameters is False
-                    and not isinstance(
-                        self.process_symbol(function), (pybamm.Scalar, pybamm.Broadcast)
-                    )
-                    and symbol.print_name is not None
-                    and symbol.diff_variable is None
-                ):
-                    # Special trick for printing in Julia ModelingToolkit format
-                    out = pybamm.FunctionParameter(
-                        symbol.print_name, dict(zip(symbol.input_names, new_children))
-                    )
-
-                    out.arg_names = inspect.getfullargspec(function_name)[0]
-                    out.callable = self.process_symbol(
-                        function_name(
-                            *[
-                                pybamm.Variable(arg_name, domains=child.domains)
-                                for arg_name, child in zip(out.arg_names, new_children)
-                            ]
-                        )
-                    )
-
-                    return out
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)
             ) or (

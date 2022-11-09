@@ -23,47 +23,32 @@ class Composite(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(
-        self, param, domain=None, options=None, higher_order_terms="composite"
-    ):
+    def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
-        self.higher_order_terms = higher_order_terms
 
     def _higher_order_macinnes_function(self, x):
         "Function to differentiate between composite and first-order models"
-        if self.higher_order_terms == "composite":
-            tol = pybamm.settings.tolerances["macinnes__c_e"]
-            x = pybamm.maximum(x, tol)
-            return pybamm.log(x)
-        elif self.higher_order_terms == "first-order":
-            return x
+        tol = pybamm.settings.tolerances["macinnes__c_e"]
+        x = pybamm.maximum(x, tol)
+        return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
-        if self.higher_order_terms == "composite":
-            c_e_av = variables["X-averaged electrolyte concentration"]
-        elif self.higher_order_terms == "first-order":
-            c_e_av = variables["Leading-order x-averaged electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration"]
 
-        i_boundary_cc_0 = variables["Leading-order current collector current density"]
+        i_boundary_cc = variables["Current collector current density"]
         if self.options.electrode_types["negative"] == "porous":
             c_e_n = variables["Negative electrolyte concentration"]
             delta_phi_n_av = variables[
                 "X-averaged negative electrode surface potential difference"
             ]
             phi_s_n_av = variables["X-averaged negative electrode potential"]
-            tor_n_av = variables[
-                "Leading-order x-averaged negative electrolyte transport efficiency"
-            ]
+            tor_n_av = variables["X-averaged negative electrolyte transport efficiency"]
 
         c_e_s = variables["Separator electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
 
-        tor_s_av = variables[
-            "Leading-order x-averaged separator electrolyte transport efficiency"
-        ]
-        tor_p_av = variables[
-            "Leading-order x-averaged positive electrolyte transport efficiency"
-        ]
+        tor_s_av = variables["X-averaged separator electrolyte transport efficiency"]
+        tor_p_av = variables["X-averaged positive electrolyte transport efficiency"]
 
         T_av = variables["X-averaged cell temperature"]
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
@@ -91,9 +76,9 @@ class Composite(BaseElectrolyteConductivity):
             chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
             T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
             kappa_n_av = param.kappa_e(c_e_av, T_av) * tor_n_av
-            i_e_n = i_boundary_cc_0 * x_n / l_n
-        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
-        i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
+            i_e_n = i_boundary_cc * x_n / l_n
+        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
+        i_e_p = i_boundary_cc * (1 - x_p) / l_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
         phi_e_dict = {}
@@ -107,7 +92,7 @@ class Composite(BaseElectrolyteConductivity):
                 - chi_av
                 * (1 + param.Theta * T_av)
                 * self._higher_order_macinnes_function(c_e_n / c_e_av)
-                + (i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av) * l_n
+                + (i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av) * l_n
             )
         else:
             phi_e_const = (
@@ -121,7 +106,7 @@ class Composite(BaseElectrolyteConductivity):
                     )
                 )
                 - (
-                    (i_boundary_cc_0 * param.C_e * l_n / param.gamma_e)
+                    (i_boundary_cc * param.C_e * l_n / param.gamma_e)
                     * (1 / (3 * kappa_n_av) - 1 / kappa_s_av)
                 )
             )
@@ -133,10 +118,10 @@ class Composite(BaseElectrolyteConductivity):
                     * (1 + param.Theta * T_av_n)
                     * self._higher_order_macinnes_function(c_e_n / c_e_av)
                 )
-                - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av)
+                - (i_boundary_cc * (param.C_e / param.gamma_e) / kappa_n_av)
                 * (x_n**2 - l_n**2)
                 / (2 * l_n)
-                - i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av
+                - i_boundary_cc * l_n * (param.C_e / param.gamma_e) / kappa_s_av
             )
             phi_e_dict["negative electrode"] = phi_e_n
 
@@ -147,7 +132,7 @@ class Composite(BaseElectrolyteConductivity):
                 * (1 + param.Theta * T_av_s)
                 * self._higher_order_macinnes_function(c_e_s / c_e_av)
             )
-            - (i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av) * x_s
+            - (i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av) * x_s
         )
 
         phi_e_p = (
@@ -157,10 +142,10 @@ class Composite(BaseElectrolyteConductivity):
                 * (1 + param.Theta * T_av_p)
                 * self._higher_order_macinnes_function(c_e_p / c_e_av)
             )
-            - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av)
+            - (i_boundary_cc * (param.C_e / param.gamma_e) / kappa_p_av)
             * (x_p * (2 - x_p) + l_p**2 - 1)
             / (2 * l_p)
-            - i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av
+            - i_boundary_cc * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av
         )
 
         phi_e_dict["separator"] = phi_e_s
@@ -182,7 +167,7 @@ class Composite(BaseElectrolyteConductivity):
         eta_c_av = chi_av * (1 + param.Theta * T_av) * (macinnes_c_e_p - macinnes_c_e_n)
 
         # average electrolyte ohmic losses
-        delta_phi_e_av = -(param.C_e * i_boundary_cc_0 / param.gamma_e) * (
+        delta_phi_e_av = -(param.C_e * i_boundary_cc / param.gamma_e) * (
             ohmic_n + param.s.l / (kappa_s_av) + param.p.l / (3 * kappa_p_av)
         )
 
