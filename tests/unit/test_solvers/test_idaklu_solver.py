@@ -479,15 +479,20 @@ class TestIDAKLUSolver(unittest.TestCase):
         # test everything else
         for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
             for linear_solver in [
-                "SUNLinSol_SPBCGS", "SUNLinSol_Dense", "SUNLinSol_LapackDense",
-                "SUNLinSol_KLU", "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR",
-                "SUNLinSol_SPTFQMR", "garbage"
+                "SUNLinSol_SPBCGS",
+                "SUNLinSol_Dense",
+                "SUNLinSol_LapackDense",
+                "SUNLinSol_KLU",
+                "SUNLinSol_SPFGMR",
+                "SUNLinSol_SPGMR",
+                "SUNLinSol_SPTFQMR",
+                "garbage",
             ]:
                 for precon in ["none", "BBDP"]:
                     options = {
-                        'jacobian': jacobian,
-                        'linear_solver': linear_solver,
-                        'preconditioner': precon,
+                        "jacobian": jacobian,
+                        "linear_solver": linear_solver,
+                        "preconditioner": precon,
                     }
                     solver = pybamm.IDAKLUSolver(options=options)
                     soln = solver.solve(model, t_eval)
