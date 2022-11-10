@@ -696,6 +696,9 @@ class ParameterValues:
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
 
+        elif isinstance(symbol, numbers.Number):
+            return pybamm.Scalar(symbol)
+
         else:
             # Backup option: return the object
             return symbol

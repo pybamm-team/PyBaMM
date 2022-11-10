@@ -245,6 +245,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             R = variables[f"X-averaged {domain} particle sizes [m]"]
 
         # eq 15 of Subramanian2005
+        # equivalent to dcdt = -i_cc / (eps * F * L)
         dcdt = -3 * j_xav / param.F / R
 
         if self.size_distribution is False:

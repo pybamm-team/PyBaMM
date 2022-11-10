@@ -25,4 +25,10 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims)
+pybamm.dynamic_plot(
+    sims,
+    [
+        "Average negative particle concentration [mol.m-3]",
+        "Average positive particle concentration [mol.m-3]",
+    ],
+)
