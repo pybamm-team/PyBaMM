@@ -144,36 +144,22 @@ def x_average(symbol):
         else:  # pragma: no cover
             # It should be impossible to get here
             raise NotImplementedError
-    # If symbol is a concatenation of Broadcasts, its average value is the
-    # thickness-weighted average of the symbols being broadcasted
-    elif isinstance(symbol, pybamm.Concatenation) and all(
-        isinstance(child, pybamm.Broadcast) for child in symbol.children
+    # If symbol is a concatenation, its average value is the
+    # thickness-weighted average of the average of its children
+    elif isinstance(symbol, pybamm.Concatenation) and not isinstance(
+        symbol, pybamm.ConcatenationVariable
     ):
         geo = pybamm.geometric_parameters
-        l_n = geo.n.l
-        l_s = geo.s.l
-        l_p = geo.p.l
-        if symbol.domain == ["negative electrode", "separator", "positive electrode"]:
-            a, b, c = [orp.orphans[0] for orp in symbol.orphans]
-            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
-        elif symbol.domain == ["separator", "positive electrode"]:
-            b, c = [orp.orphans[0] for orp in symbol.orphans]
-            out = (l_s * b + l_p * c) / (l_s + l_p)
-        # To respect domains we may need to broadcast the child back out
-        child = symbol.children[0]
-        # If symbol being returned doesn't have empty domain, return it
-        if out.domain != []:
-            return out
-        # Otherwise we may need to broadcast it
-        elif child.domains["secondary"] == []:
-            return out
-        else:
-            domain = child.domains["secondary"]
-            if child.domains["tertiary"] == []:
-                return pybamm.PrimaryBroadcast(out, domain)
-            else:
-                auxiliary_domains = {"secondary": child.domains["tertiary"]}
-                return pybamm.FullBroadcast(out, domain, auxiliary_domains)
+        ls = {
+            ("negative electrode",): geo.n.l,
+            ("separator",): geo.s.l,
+            ("positive electrode",): geo.p.l,
+            ("separator", "positive electrode"): geo.s.l + geo.p.l,
+        }
+        out = sum(
+            ls[tuple(orp.domain)] * x_average(orp) for orp in symbol.orphans
+        ) / sum(ls[tuple(orp.domain)] for orp in symbol.orphans)
+        return out
     # Average of a sum is sum of averages
     elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
         return _sum_of_averages(symbol, x_average)

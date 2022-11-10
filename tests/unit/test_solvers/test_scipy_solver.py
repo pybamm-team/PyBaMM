@@ -123,10 +123,8 @@ class TestScipySolver(unittest.TestCase):
         disc.process_model(model)
 
         # Add user-supplied Jacobian to model
-        combined_submesh = mesh.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-        N = combined_submesh.npts
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        N = submesh.npts
 
         # construct jacobian in order of model.rhs
         J = []

@@ -557,7 +557,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((a + b), conc_broad(12, 14, 16))
         self.assertIsInstance((a + c), pybamm.Concatenation)
 
-        # No simplifications if are Variable or StateVector objects
+        # No simplifications if all are Variable or StateVector objects
         v = pybamm.concatenation(
             pybamm.Variable("x", "negative electrode"),
             pybamm.Variable("y", "separator"),

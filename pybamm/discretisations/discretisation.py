@@ -750,7 +750,10 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
             if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
-                eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
+                if eqn_key.domain == []:
+                    eqn = eqn * pybamm.Vector([1])
+                else:
+                    eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
 
@@ -784,14 +787,14 @@ class Discretisation(object):
 
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
+                discretised_symbol.mesh = self.mesh[symbol.domain]
             else:
                 discretised_symbol.mesh = None
             # Assign secondary mesh
             if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
-                    *symbol.domains["secondary"]
-                )
+                discretised_symbol.secondary_mesh = self.mesh[
+                    symbol.domains["secondary"]
+                ]
             else:
                 discretised_symbol.secondary_mesh = None
             return discretised_symbol
@@ -897,13 +900,9 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
-                if symbol.domain == []:
-                    out = disc_child * pybamm.Vector([1])
-                else:
-                    out = spatial_method.broadcast(
-                        disc_child, symbol.domains, symbol.broadcast_type
-                    )
-                return out
+                return spatial_method.broadcast(
+                    disc_child, symbol.domains, symbol.broadcast_type
+                )
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)

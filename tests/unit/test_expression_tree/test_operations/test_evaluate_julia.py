@@ -233,8 +233,8 @@ class TestEvaluate(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        combined_submesh = mesh.combine_submeshes(*c.domain)
-        nodes = combined_submesh.nodes
+        submesh = mesh[c.domain]
+        nodes = submesh.nodes
         y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
@@ -264,10 +264,8 @@ class TestEvaluate(unittest.TestCase):
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        combined_submesh = mesh.combine_submeshes(*c.domain)
-        nodes = np.linspace(
-            0, 1, combined_submesh.npts * mesh["current collector"].npts
-        )
+        submesh = mesh[c.domain]
+        nodes = np.linspace(0, 1, submesh.npts * mesh["current collector"].npts)
         y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
@@ -283,7 +281,7 @@ class TestEvaluate(unittest.TestCase):
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
 
         var = pybamm.Variable("var", domain=whole_cell)
         boundary_conditions = {
@@ -304,7 +302,7 @@ class TestEvaluate(unittest.TestCase):
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # test
-        nodes = combined_submesh.nodes
+        nodes = submesh.nodes
         y_tests = [nodes**2 + 1, np.cos(nodes)]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
