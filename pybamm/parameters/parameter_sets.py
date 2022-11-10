@@ -34,12 +34,10 @@ class ParameterSets(Mapping):
     """
 
     def __init__(self):
-        # Load Parameter Sets registered to `pybamm_parameter_set`
-        ps = dict()
+        # Dict of entry points for parameter sets, lazily load entry points as
+        self.__all_parameter_sets = dict()
         for entry_point in pkg_resources.iter_entry_points("pybamm_parameter_set"):
-            ps[entry_point.name] = entry_point.load()
-
-        self.__all_parameter_sets = ps
+            self.__all_parameter_sets[entry_point.name] = entry_point
 
     def __new__(cls):
         """Ensure only one instance of ParameterSets exists"""
@@ -48,7 +46,18 @@ class ParameterSets(Mapping):
         return cls.instance
 
     def __getitem__(self, key) -> dict:
-        return self.__all_parameter_sets[key]()
+        return self.__load_entry_point__(key)()
+
+    def __load_entry_point__(self, key) -> callable:
+        """Check that ``key`` is a registered ``pybamm_parameter_set``,
+        and return the entry point for the parameter set, loading it needed.
+        """
+        if key not in self.__all_parameter_sets:
+            raise KeyError(f"Unknown parameter set: {key}")
+        ps = self.__all_parameter_sets[key]
+        if isinstance(ps, pkg_resources.EntryPoint):
+            ps = self.__all_parameter_sets[key] = ps.load()
+        return ps
 
     def __iter__(self):
         return self.__all_parameter_sets.__iter__()
@@ -58,7 +67,7 @@ class ParameterSets(Mapping):
 
     def get_docstring(self, key):
         """Return the docstring for the ``key`` parameter set"""
-        return textwrap.dedent(self.__all_parameter_sets[key].__doc__)
+        return textwrap.dedent(self.__load_entry_point__(key).__doc__)
 
     def __getattribute__(self, name):
         try:
