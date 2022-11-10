@@ -2,11 +2,12 @@
 
 ## Features
 
+- Added `scale` and `reference` attributes to `Variable` objects, which can be use to make the ODE/DAE solver better conditioned ([#2440](https://github.com/pybamm-team/PyBaMM/pull/2440))
 - SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
 
 ## Optimizations
 
-- Added more rules for simplifying expressions, especially around Concatenations. Also, meshes constructed from multiple domains are now memoized ([#2443](https://github.com/pybamm-team/PyBaMM/pull/2443))
+- Added more rules for simplifying expressions, especially around Concatenations. Also, meshes constructed from multiple domains are now cached ([#2443](https://github.com/pybamm-team/PyBaMM/pull/2443))
 - Added more rules for simplifying expressions. Constants in binary operators are now moved to the left by default (e.g. `x*2` returns `2*x`) ([#2424](https://github.com/pybamm-team/PyBaMM/pull/2424))
 
 ## Breaking changes
