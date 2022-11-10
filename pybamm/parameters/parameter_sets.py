@@ -76,16 +76,14 @@ class ParameterSets(Mapping):
             # For backwards compatibility, parameter sets that used to be defined in
             # this file now return the name as a string, which will load the same
             # parameter set as before when passed to `ParameterValues`
-            if name in self.__all_parameter_sets:
-                out = name
-            else:
-                raise error
-            warnings.warn(
-                f"Parameter sets should be called directly by their name ({name}), "
-                f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name}).",
-                DeprecationWarning,
-            )
-            return out
+            if name in self:
+                msg = (
+                    "Parameter sets should be called directly by their name ({0}), "
+                    "instead of via pybamm.parameter_sets (pybamm.parameter_sets.{0})."
+                ).format(name)
+                warnings.warn(msg, DeprecationWarning)
+                return name
+            raise error
 
 
 #: Singleton Instance of :class:ParameterSets """
