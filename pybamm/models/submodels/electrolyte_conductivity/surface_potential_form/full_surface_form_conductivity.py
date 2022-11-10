@@ -55,7 +55,7 @@ class BaseModel(BaseElectrolyteConductivity):
             T = variables[f"{Domain} electrode temperature"]
 
             i_e = conductivity * (
-                param.chiT_over_c(c_e, T) * pybamm.grad(c_e)
+                param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e)
                 + pybamm.grad(delta_phi)
                 + i_boundary_cc / sigma_eff
             )
@@ -77,11 +77,11 @@ class BaseModel(BaseElectrolyteConductivity):
             tor_s = variables["Separator porosity"]
             T = variables["Separator temperature"]
 
-            chiT_over_c_e_s = param.chiT_over_c(c_e_s, T)
+            chiRT_over_Fc_e_s = param.chiRT_over_Fc(c_e_s, T)
             kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
 
             phi_e = phi_e_n_s + pybamm.IndefiniteIntegral(
-                chiT_over_c_e_s * pybamm.grad(c_e_s)
+                chiRT_over_Fc_e_s * pybamm.grad(c_e_s)
                 - param.C_e * i_boundary_cc / kappa_s_eff,
                 x_s,
             )
@@ -159,7 +159,7 @@ class BaseModel(BaseElectrolyteConductivity):
             flux_left = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             flux_right = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
-                - pybamm.BoundaryValue(param.chiT_over_c(c_e, T), "right") * c_e_flux
+                - pybamm.BoundaryValue(param.chiRT_over_Fc(c_e, T), "right") * c_e_flux
                 - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
             )
 
@@ -173,7 +173,7 @@ class BaseModel(BaseElectrolyteConductivity):
             c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
-                - pybamm.BoundaryValue(param.chiT_over_c(c_e, T), "left") * c_e_flux
+                - pybamm.BoundaryValue(param.chiRT_over_Fc(c_e, T), "left") * c_e_flux
                 - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             )
             flux_right = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
