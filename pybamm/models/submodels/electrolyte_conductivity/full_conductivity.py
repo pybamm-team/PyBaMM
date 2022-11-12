@@ -46,7 +46,7 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
 
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chiT_over_c(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
+            param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
 
         # Override print_name

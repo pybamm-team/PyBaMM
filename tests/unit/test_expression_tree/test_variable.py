@@ -17,6 +17,12 @@ class TestVariable(unittest.TestCase):
         a = pybamm.Variable("a", domain=["test"])
         self.assertEqual(a.domain[0], "test")
         self.assertRaises(TypeError, pybamm.Variable("a", domain="test"))
+        self.assertEqual(a.scale, 1)
+        self.assertEqual(a.reference, 0)
+
+        a = pybamm.Variable("a", scale=2, reference=-1)
+        self.assertEqual(a.scale, 2)
+        self.assertEqual(a.reference, -1)
 
     def test_variable_diff(self):
         a = pybamm.Variable("a")

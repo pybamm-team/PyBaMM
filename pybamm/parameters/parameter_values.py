@@ -388,7 +388,8 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (rhs)".format(variable)
             )
-            new_rhs[variable] = self.process_symbol(equation)
+            new_variable = self.process_symbol(variable)
+            new_rhs[new_variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
@@ -396,7 +397,8 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
-            new_algebraic[variable] = self.process_symbol(equation)
+            new_variable = self.process_symbol(variable)
+            new_algebraic[new_variable] = self.process_symbol(equation)
         model.algebraic = new_algebraic
 
         new_initial_conditions = {}
@@ -404,7 +406,8 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
-            new_initial_conditions[variable] = self.process_symbol(equation)
+            new_variable = self.process_symbol(variable)
+            new_initial_conditions[new_variable] = self.process_symbol(equation)
         model.initial_conditions = new_initial_conditions
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
@@ -723,6 +726,13 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._concatenation_new_copy(new_children)
+
+        # Variables: update scale
+        elif isinstance(symbol, pybamm.Variable):
+            new_symbol = symbol.create_copy()
+            new_symbol._scale = self.process_symbol(symbol.scale)
+            new_symbol._reference = self.process_symbol(symbol.reference)
+            return new_symbol
 
         else:
             # Backup option: return the object
