@@ -114,10 +114,6 @@ class TestFunction(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.Function(test_multi_var_function, a, b)
 
-        fun = pybamm.Function(np.cos, pybamm.t)
-        with self.assertRaisesRegex(NotImplementedError, "No julia name"):
-            fun.julia_name
-
     def test_function_unnamed(self):
         fun = pybamm.Function(np.cos, pybamm.t)
         self.assertEqual(fun.name, "function (cos)")
