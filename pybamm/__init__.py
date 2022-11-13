@@ -95,7 +95,6 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.replace_symbols import SymbolReplacer
 
 #
 # Model classes
