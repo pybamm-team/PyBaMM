@@ -49,7 +49,6 @@ from .util import (
     have_jax,
     install_jax,
     is_jax_compatible,
-    have_julia,
     get_git_commit_info,
 )
 from .logger import logger, set_logging_level
@@ -96,11 +95,6 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.evaluate_julia import (
-    get_julia_function,
-    get_julia_mtk_model,
-)
-
 #
 # Model classes
 #
