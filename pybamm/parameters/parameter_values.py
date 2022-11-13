@@ -65,49 +65,34 @@ class ParameterValues:
             self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
-            if isinstance(values, dict) and "chemistry" in values:
-                warnings.warn(
-                    "Creating a parameter set from a dictionary of components has "
-                    "been deprecated and will be removed in a future release. "
-                    "Define the parameter set in a python script instead.",
-                    DeprecationWarning,
-                )
-                self.update_from_chemistry(values)
-            else:
-                if isinstance(values, str):
-                    # Look for the values name in the standard pybamm parameter sets
-                    found_parameter_set = False
-                    parameter_sets_path = os.path.join(
-                        pybamm.ABSOLUTE_PATH, "pybamm", "input", "parameters"
+            if isinstance(values, dict):
+                if "chemistry" in values:
+                    warnings.warn(
+                        "Creating a parameter set from a dictionary of components has "
+                        "been deprecated and will be removed in a future release. "
+                        "Define the parameter set in a python script instead.",
+                        DeprecationWarning,
                     )
-                    for chemistry in ["lead_acid", "lithium_ion"]:
-                        path = os.path.join(parameter_sets_path, chemistry)
-                        filename = os.path.join(path, f"{values}.py")
-                        if os.path.exists(filename):
-                            # Use a function call to avoid issues with updating the
-                            # dictionary in place later
-                            func = pybamm.load_function(
-                                filename, "get_parameter_values"
-                            )
-                            values = func()
-                            found_parameter_set = True
-                    if not found_parameter_set:
-                        # In this case it might be a filename, load from that filename
-                        file_path = self.find_parameter(values)
-                        path = os.path.split(file_path)[0]
-                        values = self.read_parameters_csv(file_path)
+                    self.update_from_chemistry(values)
                 else:
-                    path = ""
-                # Don't check parameter already exists when first creating it
-                self.update(values, check_already_exists=False, path=path)
+                    self.update(values, check_already_exists=False)
+            else:
+                # Check if values is a named parameter set
+                if isinstance(values, str) and values in pybamm.parameter_sets:
+                    values = pybamm.parameter_sets[values]
+                    values.pop("chemistry")
+                    self.update(values, check_already_exists=False)
+
+                else:
+                    # In this case it might be a filename, load from that filename
+                    file_path = self.find_parameter(values)
+                    path = os.path.split(file_path)[0]
+                    values = self.read_parameters_csv(file_path)
+                    self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
         self.parameter_events = []
-
-        # Don't touch this parameter unless you know what you are doing
-        # This is for the conversion to Julia (ModelingToolkit)
-        self._replace_callable_function_parameters = True
 
         # save citations
         citations = []
@@ -157,9 +142,6 @@ class ParameterValues:
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
         new_copy = ParameterValues(self._dict_items.copy())
-        new_copy._replace_callable_function_parameters = (
-            self._replace_callable_function_parameters
-        )
         return new_copy
 
     def search(self, key, print_values=True):
@@ -404,7 +386,8 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (rhs)".format(variable)
             )
-            new_rhs[variable] = self.process_symbol(equation)
+            new_variable = self.process_symbol(variable)
+            new_rhs[new_variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
@@ -412,7 +395,8 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
-            new_algebraic[variable] = self.process_symbol(equation)
+            new_variable = self.process_symbol(variable)
+            new_algebraic[new_variable] = self.process_symbol(equation)
         model.algebraic = new_algebraic
 
         new_initial_conditions = {}
@@ -420,7 +404,8 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
-            new_initial_conditions[variable] = self.process_symbol(equation)
+            new_variable = self.process_symbol(variable)
+            new_initial_conditions[new_variable] = self.process_symbol(equation)
         model.initial_conditions = new_initial_conditions
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
@@ -667,30 +652,6 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
-                if (
-                    self._replace_callable_function_parameters is False
-                    and not isinstance(
-                        self.process_symbol(function), (pybamm.Scalar, pybamm.Broadcast)
-                    )
-                    and symbol.print_name is not None
-                    and symbol.diff_variable is None
-                ):
-                    # Special trick for printing in Julia ModelingToolkit format
-                    out = pybamm.FunctionParameter(
-                        symbol.print_name, dict(zip(symbol.input_names, new_children))
-                    )
-
-                    out.arg_names = inspect.getfullargspec(function_name)[0]
-                    out.callable = self.process_symbol(
-                        function_name(
-                            *[
-                                pybamm.Variable(arg_name, domains=child.domains)
-                                for arg_name, child in zip(out.arg_names, new_children)
-                            ]
-                        )
-                    )
-
-                    return out
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)
             ) or (
@@ -749,6 +710,13 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._concatenation_new_copy(new_children)
+
+        # Variables: update scale
+        elif isinstance(symbol, pybamm.Variable):
+            new_symbol = symbol.create_copy()
+            new_symbol._scale = self.process_symbol(symbol.scale)
+            new_symbol._reference = self.process_symbol(symbol.reference)
+            return new_symbol
 
         else:
             # Backup option: return the object
@@ -931,7 +899,11 @@ class ParameterValues:
             if os.path.isfile(trial_path):
                 pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
                 return trial_path
-        raise FileNotFoundError("Could not find parameter {}".format(path))
+        raise FileNotFoundError(
+            f"Could not find parameter {path}. If you have a developer install, try "
+            "re-installing pybamm (e.g. `pip install -e .`) to expose recently-added "
+            "parameter entry points."
+        )
 
     def export_python_script(
         self, name, old_parameters_path="", new_parameters_path=""

@@ -320,42 +320,47 @@ def get_parameter_values():
     """
     Parameters for a graphite/NMC532 pouch cell from the paper
 
-    > Mohtat, P., Lee, S., Sulzer, V., Siegel, J. B., & Stefanopoulou, A. G. (2020).
-    Differential expansion and voltage model for li-ion batteries at practical charging
-    rates.
-    [Journal of The Electrochemical Society](https://doi.org/10.1149/1945-7111/aba5d1),
-    167(11), 110561.
+        Peyman Mohtat, Suhak Lee, Valentin Sulzer, Jason B. Siegel, and Anna G.
+        Stefanopoulou. Differential Expansion and Voltage Model for Li-ion Batteries at
+        Practical Charging Rates. Journal of The Electrochemical Society,
+        167(11):110561, 2020. doi:10.1149/1945-7111/aba5d1.
 
     and references therein.
 
     Some example parameters for SEI growth from the papers:
 
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-    Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203.
-    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
-    A456-A462.
-    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
-    1950-1955.
-    > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
-    Electrochemical Society, 156(3),
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
-    aging. Journal of Power Sources, 360, 28-40.
+        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
+        Development of first principles capacity fade model for Li-ion cells. Journal of
+        the Electrochemical Society, 151(2), A196-A203.
+
+        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
+        151(3), A456-A462.
+
+        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+        continued growth of the solid-electrolyte interphase. ChemSusChem, 11(12),
+        1950-1955.
+
+        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
+        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
+        The Electrochemical Society, 156(3),
+
+        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+        plating induced aging of lithium-ion batteries: Transition from linear to
+        nonlinear aging. Journal of Power Sources, 360, 28-40.
 
     Note: this parameter set does not claim to be representative of the true parameter
     values. Instead these are parameter values that were used to fit SEI models to
     observed experimental data in the referenced papers.
-    # SEI parameters
+
+    SEI parameters
+    ^^^^^^^^^^^^^^
 
     Parameters for lithium plating are from the paper:
 
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
-    aging. Journal of Power Sources, 360, 28-40.
+        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+        plating induced aging of lithium-ion batteries: Transition from linear to
+        nonlinear aging. Journal of Power Sources, 360, 28-40.
 
     Note: this parameter set does not claim to be representative of the true parameter
     values. Instead these are parameter values that were used to fit SEI models to
@@ -363,6 +368,7 @@ def get_parameter_values():
     """
 
     return {
+        "chemistry": "lithium_ion",
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Exchange-current density for plating [A.m-2]": 0.001,

@@ -248,7 +248,7 @@ class TestExtrapolation(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        macro_submesh = mesh.combine_submeshes(*whole_cell)
+        macro_submesh = mesh[whole_cell]
         micro_submesh = mesh["negative particle"]
 
         # Macroscale
@@ -315,7 +315,7 @@ class TestExtrapolation(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        macro_submesh = mesh.combine_submeshes(*whole_cell)
+        macro_submesh = mesh[whole_cell]
         micro_submesh = mesh["negative particle"]
 
         # Macroscale

@@ -97,7 +97,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
         # Test
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
         y = np.concatenate(
             [
                 submesh.nodes**2,

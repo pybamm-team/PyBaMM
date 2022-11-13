@@ -2,7 +2,6 @@
 # Base model class
 #
 import numbers
-import warnings
 from collections import OrderedDict
 
 import copy
@@ -182,9 +181,6 @@ class BaseModel:
                 and var.name != name
                 # Exception if the variable is also there under its own name
                 and not (var.name in variables and variables[var.name] == var)
-                # Exception for the key "Leading-order"
-                and "leading-order" not in var.name.lower()
-                and "leading-order" not in name.lower()
             ):
                 raise ValueError(
                     f"Variable with name '{var.name}' is in variables dictionary with "
@@ -720,7 +716,6 @@ class BaseModel:
         self.check_well_determined(post_discretisation)
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
-        self.check_default_variables_dictionaries()
         self.check_no_repeated_keys()
         # Can't check variables after discretising, since Variable objects get replaced
         # by StateVector objects
@@ -855,24 +850,6 @@ class BaseModel:
                 raise pybamm.ModelError(
                     """no initial condition given for variable '{}'""".format(var)
                 )
-
-    def check_default_variables_dictionaries(self):
-        """Check that the right variables are provided."""
-        missing_vars = []
-        for output, expression in self._variables.items():
-            if expression is None:
-                missing_vars.append(output)
-        if len(missing_vars) > 0:
-            warnings.warn(
-                "the standard output variable(s) '{}' have not been supplied. "
-                "These may be required for testing or comparison with other "
-                "models.".format(missing_vars),
-                pybamm.ModelWarning,
-                stacklevel=2,
-            )
-            # Remove missing entries
-            for output in missing_vars:
-                del self._variables[output]
 
     def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables

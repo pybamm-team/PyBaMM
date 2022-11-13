@@ -1,8 +1,6 @@
 Utility functions
 =================
 
-.. autofunction:: pybamm.get_infinite_nested_dict
-
 .. autofunction:: pybamm.get_git_commit_info
 
 .. autofunction:: pybamm.rmse

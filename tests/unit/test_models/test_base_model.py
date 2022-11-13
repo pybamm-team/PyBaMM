@@ -445,19 +445,7 @@ class TestBaseModel(unittest.TestCase):
             c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
             d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
-        model._variables = {
-            "something": None,
-            "something else": c,
-            "another thing": None,
-        }
-
-        # Check warning raised
-        with self.assertWarns(pybamm.ModelWarning):
-            model.check_well_posedness()
-
-        # Check None entries have been removed from the variables dictionary
-        for key, item in model._variables.items():
-            self.assertIsNotNone(item)
+        model._variables = {"something else": c}
 
         # check error raised if undefined variable in list of Variables
         pybamm.settings.debug_mode = True
@@ -979,7 +967,7 @@ class TestBaseModel(unittest.TestCase):
         u = model.variables["u"]
         v = model.variables["v"]
         self.assertEqual(model.rhs[u].value, 2)
-        self.assertIsInstance(model.algebraic[v], pybamm.Subtraction)
+        self.assertEqual(model.algebraic[v], -1.0 + v)
 
 
 if __name__ == "__main__":

@@ -41,10 +41,8 @@ from .util import (
     root_dir,
     load_function,
     rmse,
-    get_infinite_nested_dict,
     load,
     is_constant_and_can_evaluate,
-    tree_search,
 )
 from .util import (
     get_parameters_filepath,

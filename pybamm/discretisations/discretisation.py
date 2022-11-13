@@ -60,7 +60,7 @@ class Discretisation(object):
                             )
                         )
 
-        self.bcs = {}
+        self._bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
         self.external_variables = {}
@@ -99,7 +99,7 @@ class Discretisation(object):
         model,
         inplace=True,
         check_model=True,
-        check_for_independent_variables=True,
+        remove_independent_variables_from_rhs=True,
     ):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
@@ -118,7 +118,7 @@ class Discretisation(object):
             option to False. When developing, testing or debugging it is recommended
             to leave this option as True as it may help to identify any errors.
             Default is True.
-        check_for_independent_variables : bool, optional
+        remove_independent_variables_from_rhs : bool, optional
             If True, model checks to see whether any variables from the RHS are used
             in any other equation. If a variable meets all of the following criteria
             (not used anywhere in the model, len(rhs)>1), then the variable
@@ -162,8 +162,8 @@ class Discretisation(object):
         # set variables (we require the full variable not just id)
 
         # Search Equations for Independence
-        if check_for_independent_variables:
-            model = self.check_for_independent_variables(model)
+        if remove_independent_variables_from_rhs:
+            model = self.remove_independent_variables_from_rhs(model)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
         if self.spatial_methods == {} and any(var.domain != [] for var in variables):
@@ -187,7 +187,7 @@ class Discretisation(object):
         pybamm.logger.verbose(
             "Discretise boundary conditions for {}".format(model.name)
         )
-        self.bcs = self.process_boundary_conditions(model)
+        self._bcs = self.process_boundary_conditions(model)
         pybamm.logger.verbose(
             "Set internal boundary conditions for {}".format(model.name)
         )
@@ -489,7 +489,9 @@ class Discretisation(object):
 
         """
         # Discretise initial conditions
-        processed_initial_conditions = self.process_dict(model.initial_conditions)
+        processed_initial_conditions = self.process_dict(
+            model.initial_conditions, ics=True
+        )
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
@@ -728,63 +730,7 @@ class Discretisation(object):
 
         return mass_matrix, mass_matrix_inv
 
-    def create_jacobian(self, model):
-        """Creates Jacobian of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
-
-        Note: At present, calculation of the Jacobian is deferred until after
-        simplification, since it is much faster to compute the Jacobian of the
-        simplified model. However, in some use cases (e.g. running the same
-        model multiple times but with different parameters) it may be more
-        efficient to compute the Jacobian once, before simplification, so that
-        parameters in the Jacobian can be updated (see PR #670).
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Discretised model. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-
-        Returns
-        -------
-        :class:`pybamm.Concatenation`
-            The expression trees corresponding to the Jacobian of the model
-        """
-        # create state vector to differentiate with respect to
-        y = pybamm.StateVector(slice(0, np.size(model.concatenated_initial_conditions)))
-        # set up Jacobian object, for re-use of dict
-        jacobian = pybamm.Jacobian()
-
-        # calculate Jacobian of rhs by equation
-        jac_rhs_eqn_dict = {}
-        for eqn_key, eqn in model.rhs.items():
-            pybamm.logger.debug(
-                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
-            )
-            jac_rhs_eqn_dict[eqn_key] = jacobian.jac(eqn, y)
-        jac_rhs = self._concatenate_in_order(jac_rhs_eqn_dict, sparse=True)
-
-        # calculate Jacobian of algebraic by equation
-        jac_algebraic_eqn_dict = {}
-        for eqn_key, eqn in model.algebraic.items():
-            pybamm.logger.debug(
-                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
-            )
-            jac_algebraic_eqn_dict[eqn_key] = jacobian.jac(eqn, y)
-        jac_algebraic = self._concatenate_in_order(jac_algebraic_eqn_dict, sparse=True)
-
-        # full Jacobian
-        if model.rhs.keys() and model.algebraic.keys():
-            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
-        elif not model.algebraic.keys():
-            jac = jac_rhs
-        else:
-            jac = jac_algebraic
-
-        return jac, jac_rhs, jac_algebraic
-
-    def process_dict(self, var_eqn_dict):
+    def process_dict(self, var_eqn_dict, ics=False):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.algebraic, model.initial_conditions or
         model.variables).
@@ -795,6 +741,9 @@ class Discretisation(object):
             Equations ({variable: equation} dict) to dicretise
             (can be model.rhs, model.algebraic, model.initial_conditions or
             model.variables)
+        ics : bool, optional
+            Whether the equations are initial conditions. If True, the equations are
+            scaled by the reference value of the variable, if given
 
         Returns
         -------
@@ -806,14 +755,25 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
             if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
-                eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
+                if eqn_key.domain == []:
+                    eqn = eqn * pybamm.Vector([1])
+                else:
+                    eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-
             processed_eqn = self.process_symbol(eqn)
 
-            new_var_eqn_dict[eqn_key] = processed_eqn
+            # Calculate scale if the key has a scale
+            scale = getattr(eqn_key, "scale", 1)
+            if ics:
+                reference = getattr(eqn_key, "reference", 0)
+            else:
+                reference = 0
 
+            if scale != 1 or reference != 0:
+                processed_eqn = (processed_eqn - reference) / scale
+
+            new_var_eqn_dict[eqn_key] = processed_eqn
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -840,14 +800,15 @@ class Discretisation(object):
 
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
+                discretised_symbol.mesh = self.mesh[symbol.domain]
             else:
                 discretised_symbol.mesh = None
+
             # Assign secondary mesh
             if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
-                    *symbol.domains["secondary"]
-                )
+                discretised_symbol.secondary_mesh = self.mesh[
+                    symbol.domains["secondary"]
+                ]
             else:
                 discretised_symbol.secondary_mesh = None
             return discretised_symbol
@@ -953,13 +914,9 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
-                if symbol.domain == []:
-                    out = disc_child * pybamm.Vector([1])
-                else:
-                    out = spatial_method.broadcast(
-                        disc_child, symbol.domains, symbol.broadcast_type
-                    )
-                return out
+                return spatial_method.broadcast(
+                    disc_child, symbol.domains, symbol.broadcast_type
+                )
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
@@ -991,7 +948,9 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.VariableDot):
-            return pybamm.StateVectorDot(
+            # Add symbol's reference and multiply by the symbol's scale
+            # so that the state vector is of order 1
+            return symbol.reference + symbol.scale * pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable()],
                 domains=symbol.domains,
             )
@@ -1038,10 +997,28 @@ class Discretisation(object):
                             symbol.name
                         )
                     )
-                return pybamm.StateVector(*y_slices, domains=symbol.domains)
+                # Add symbol's reference and multiply by the symbol's scale
+                # so that the state vector is of order 1
+                return symbol.reference + symbol.scale * pybamm.StateVector(
+                    *y_slices, domains=symbol.domains
+                )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)
+
+        elif isinstance(symbol, pybamm.ConcatenationVariable):
+            # create new children without scale and reference
+            # the scale and reference will be applied to the concatenation instead
+            new_children = []
+            for child in symbol.children:
+                child = child.create_copy()
+                child._scale = 1
+                child._reference = 0
+                child.set_id()
+                new_children.append(self.process_symbol(child))
+            new_symbol = spatial_method.concatenation(new_children)
+            # apply scale to the whole concatenation
+            return symbol.reference + symbol.scale * new_symbol
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
@@ -1214,43 +1191,42 @@ class Discretisation(object):
                         )
                     )
 
-    def search_for_independent_var(self, model, var):
+    def is_variable_independent(self, var, all_vars_in_eqns):
         pybamm.logger.verbose("Removing independent blocks.")
-        boundary_variables = list(model.boundary_conditions.keys())
-        boundary_variable_keys = []
-        for condition in boundary_variables:
-            keys_for_condition = list(model.boundary_conditions[condition].keys())
-            boundary_variable_keys.append(keys_for_condition)
-        rhs_variables = list(model.rhs.keys())
-        algebraic_variables = list(model.algebraic.keys())
-        this_var_list = []
         if not isinstance(var, pybamm.Variable):
-            return model, False
-        for tree in rhs_variables:
-            pybamm.tree_search(model.rhs[tree], var, this_var_list)
-        for tree in algebraic_variables:
-            pybamm.tree_search(model.algebraic[tree], var, this_var_list)
-        for (keys, tree) in zip(boundary_variable_keys, boundary_variables):
-            for key in keys:
-                pybamm.tree_search(
-                    model.boundary_conditions[tree][key][0], var, this_var_list
-                )
-        for name in model.variables.keys():
-            for rhs_child in model.variables[name].children:
-                pybamm.tree_search(rhs_child, var, this_var_list)
-        this_var_is_independent = not any(this_var_list)
+            return False
+
+        this_var_is_independent = not (var.name in all_vars_in_eqns)
         not_in_y_slices = not (var in list(self.y_slices.keys()))
         not_in_discretised = not (var in list(self._discretised_symbols.keys()))
         is_0D = len(var.domain) == 0
         this_var_is_independent = (
             this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D
         )
-        return model, this_var_is_independent
+        return this_var_is_independent
 
-    def check_for_independent_variables(self, model):
+    def remove_independent_variables_from_rhs(self, model):
         rhs_vars_to_search_over = list(model.rhs.keys())
+        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
+        eqns_to_check = (
+            list(model.rhs.values())
+            + list(model.algebraic.values())
+            + [
+                x[side][0]
+                for x in model.boundary_conditions.values()
+                for side in x.keys()
+            ]
+            # only check children of variables, this will skip the variable itself
+            # and catch any other cases
+            + [child for var in model.variables.values() for child in var.children]
+        )
+        all_vars_in_eqns = unpacker.unpack_list_of_symbols(eqns_to_check)
+        all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
+
         for var in rhs_vars_to_search_over:
-            model, this_var_is_independent = self.search_for_independent_var(model, var)
+            this_var_is_independent = self.is_variable_independent(
+                var, all_vars_in_eqns
+            )
             if this_var_is_independent:
                 if len(model.rhs) != 1:
                     pybamm.logger.info("removing variable {} from rhs".format(var))

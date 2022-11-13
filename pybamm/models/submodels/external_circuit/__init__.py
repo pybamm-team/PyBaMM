@@ -1,9 +1,8 @@
-from .base_external_circuit import BaseModel, LeadingOrderBaseModel
+from .base_external_circuit import BaseModel
 from .explicit_control_external_circuit import (
     ExplicitCurrentControl,
     ExplicitPowerControl,
     ExplicitResistanceControl,
-    LeadingOrderExplicitCurrentControl,
 )
 from .function_control_external_circuit import (
     FunctionControl,
@@ -11,7 +10,4 @@ from .function_control_external_circuit import (
     PowerFunctionControl,
     ResistanceFunctionControl,
     CCCVFunctionControl,
-    LeadingOrderFunctionControl,
-    LeadingOrderVoltageFunctionControl,
-    LeadingOrderPowerFunctionControl,
 )

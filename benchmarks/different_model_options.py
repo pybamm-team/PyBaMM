@@ -124,10 +124,12 @@ class TimeBuildModelSEI:
             "none",
             "constant",
             "reaction limited",
+            "reaction limited (asymmetric)",
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
+            "ec reaction limited (asymmetric)",
         ],
     )
 
@@ -143,10 +145,12 @@ class TimeSolveSEI:
             "none",
             "constant",
             "reaction limited",
+            "reaction limited (asymmetric)",
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
+            "ec reaction limited (asymmetric)",
         ],
     )
 
