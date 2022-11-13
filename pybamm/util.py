@@ -15,7 +15,6 @@ import sys
 import timeit
 from platform import system
 import difflib
-from julia.api import Julia, JuliaInfo, JuliaError
 
 import numpy as np
 import pkg_resources
