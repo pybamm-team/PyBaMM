@@ -491,8 +491,6 @@ class ParameterValues:
         """
 
         def process_and_check(sym):
-            if isinstance(sym, numbers.Number):
-                return pybamm.Scalar(sym)
             new_sym = self.process_symbol(sym)
             if not isinstance(new_sym, pybamm.Scalar):
                 raise ValueError(

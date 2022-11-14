@@ -258,12 +258,19 @@ class DomainLeadAcidParameters(BaseParameters):
         # thickness)
         self.L_cc = self.L
 
+        # Thermal
+        self.rho_c_p = self.therm.rho_c_p
+        self.lambda_ = self.therm.lambda_
+
         if self.domain == "separator":
             self.eps_max = pybamm.Parameter("Maximum porosity of separator")
             self.epsilon_init = self.eps_max
             self.b_e = self.geo.b_e
             self.epsilon_inactive = pybamm.Scalar(0)
             return
+        # for lead-acid the electrodes and current collector are the same
+        self.rho_c_p_cc = self.therm.rho_c_p
+        self.lambda_cc = self.therm.lambda_
 
         # Microstructure
         self.b_e = self.geo.b_e

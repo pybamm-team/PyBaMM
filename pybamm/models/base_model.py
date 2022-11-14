@@ -291,26 +291,27 @@ class BaseModel:
 
     @property
     def timescale(self):
-        """Timescale of model, to be used for non-dimensionalising time when solving"""
-        return self._timescale
+        raise NotImplementedError(
+            "timescale has been removed since models are now dimensional"
+        )
 
     @timescale.setter
     def timescale(self, value):
-        """Set the timescale"""
-        self._timescale = value
+        raise NotImplementedError(
+            "timescale has been removed since models are now dimensional"
+        )
 
     @property
     def length_scales(self):
-        "Length scales of model"
-        return self._length_scales
+        raise NotImplementedError(
+            "length_scales has been removed since models are now dimensional"
+        )
 
     @length_scales.setter
     def length_scales(self, values):
-        "Set the length scale, converting any numbers to pybamm.Scalar"
-        for domain, scale in values.items():
-            if isinstance(scale, numbers.Number):
-                values[domain] = pybamm.Scalar(scale)
-        self._length_scales = values
+        raise NotImplementedError(
+            "length_scales has been removed since models are now dimensional"
+        )
 
     @property
     def default_var_pts(self):

@@ -523,10 +523,13 @@ class ParticleLithiumIonParameters(BaseParameters):
         if main.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
-    def D(self, sto, T):
+    def D(self, c_s, T):
         """Dimensional diffusivity in particle. Note this is defined as a
         function of stochiometry"""
         Domain = self.domain.capitalize()
+        sto = c_s / self.c_max
+        tol = pybamm.settings.tolerances["D__c_s"]
+        sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
         inputs = {
             f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
             "Temperature [K]": T,

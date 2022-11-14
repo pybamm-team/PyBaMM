@@ -22,6 +22,8 @@ def get_mesh_for_testing(
             "Negative electrode thickness [m]": 0.3,
             "Separator thickness [m]": 0.3,
             "Positive electrode thickness [m]": 0.3,
+            "Negative particle radius [m]": 2,
+            "Positive particle radius [m]": 0.5,
         }
     )
 

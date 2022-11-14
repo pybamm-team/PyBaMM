@@ -1136,13 +1136,13 @@ class TestDiscretise(unittest.TestCase):
             "a",
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
-            bounds=(-5, -2),
+            bounds=(0, 1),
         )
         b = pybamm.Variable(
             "b",
             domain=["separator"],
             auxiliary_domains={"secondary": "current collector"},
-            bounds=(6, 10),
+            bounds=(0, 1),
         )
         c = pybamm.Variable(
             "c",
@@ -1163,8 +1163,6 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(
             disc.y_slices[c], [slice(65, 100), slice(165, 200), slice(265, 300)]
         )
-        np.testing.assert_array_equal(disc.bounds[0], 6)
-        np.testing.assert_array_equal(disc.bounds[1], -2)
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.StateVector)
 

@@ -90,7 +90,7 @@ def battery_geometry(
             geometry["current collector"] = {"z": {"position": 1}}
         elif current_collector_dimension == 1:
             geometry["current collector"] = {
-                "z": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": geo.L_z},
                 "tabs": {
                     "negative": {"z_centre": geo.n.centre_z_tab},
                     "positive": {"z_centre": geo.p.centre_z_tab},

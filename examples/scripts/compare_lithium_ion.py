@@ -9,16 +9,17 @@ models = [
     pybamm.lithium_ion.SPM(),
     pybamm.lithium_ion.SPMe(),
     pybamm.lithium_ion.DFN(),
-    pybamm.lithium_ion.NewmanTobias(),
+    # pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations
 sims = []
+# parameter_values = pybamm.ParameterValues("Ecker2015")
 for model in models:
     sim = pybamm.Simulation(
         model,
-        # parameter_values=pybamm.ParameterValues("Ecker2015"),
-        solver=pybamm.CasadiSolver(dt_max=600),  # , root_method="lm"),
+        parameter_values=pybamm.ParameterValues("Ecker2015"),
+        solver=pybamm.CasadiSolver("fast"),  # dt_max=600),  # , root_method="lm"),
     )
     sim.solve([0, 3600])
     sims.append(sim)

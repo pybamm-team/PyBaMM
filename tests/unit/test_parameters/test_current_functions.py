@@ -19,14 +19,14 @@ class TestCurrentFunctions(unittest.TestCase):
     def test_get_current_data(self):
         # test process parameters
         param = pybamm.electrical_parameters
-        dimensional_current = param.dimensional_current_with_time
+        current = param.current_with_time
         parameter_values = pybamm.ParameterValues(
             {"Current function [A]": "[current data]car_current"}
         )
-        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
+        current_eval = parameter_values.process_symbol(current)
 
         def current(t):
-            return dimensional_current_eval.evaluate(t=t)
+            return current_eval.evaluate(t=t)
 
         standard_tests = StandardCurrentFunctionTests([current], always_array=True)
         standard_tests.test_all()
@@ -38,7 +38,7 @@ class TestCurrentFunctions(unittest.TestCase):
 
         # choose amplitude and frequency
         param = pybamm.electrical_parameters
-        A = param.I_typ
+        A = 5
         omega = pybamm.Parameter("omega")
 
         def current(t):
@@ -51,11 +51,11 @@ class TestCurrentFunctions(unittest.TestCase):
                 "Current function [A]": current,
             }
         )
-        dimensional_current = param.dimensional_current_with_time
-        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
+        current = param.current_with_time
+        current_eval = parameter_values.process_symbol(current)
 
         def user_current(t):
-            return dimensional_current_eval.evaluate(t=t)
+            return current_eval.evaluate(t=t)
 
         # check output types
         standard_tests = StandardCurrentFunctionTests([user_current])
@@ -64,7 +64,7 @@ class TestCurrentFunctions(unittest.TestCase):
         # check output correct value
         time = np.linspace(0, 3600, 600)
         np.testing.assert_array_almost_equal(
-            user_current(time), 2 * np.sin(2 * np.pi * 3 * time)
+            user_current(time), 5 * np.sin(2 * np.pi * 3 * time)
         )
 
 

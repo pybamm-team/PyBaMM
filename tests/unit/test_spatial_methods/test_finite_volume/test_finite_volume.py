@@ -262,7 +262,7 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_equal(
             jacobian.toarray()[0, 0], grad_matrix.toarray()[0][0] * -2
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             jacobian.toarray()[-1, -1], grad_matrix.toarray()[-1][-1] * -2
         )
 

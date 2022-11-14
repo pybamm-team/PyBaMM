@@ -80,7 +80,14 @@ class VariableBase(pybamm.Symbol):
                     "Invalid bounds {}. ".format(bounds)
                     + "Lower bound should be strictly less than upper bound."
                 )
+
+        bounds = list(bounds)
+        for idx, bound in enumerate(bounds):
+            if isinstance(bound, numbers.Number):
+                bounds[idx] = pybamm.Scalar(bound)
+        bounds = tuple(bounds)
         self.bounds = bounds
+
         self.print_name = print_name
 
     def set_id(self):

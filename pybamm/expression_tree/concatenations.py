@@ -380,10 +380,13 @@ class ConcatenationVariable(Concatenation):
                 self._reference = children[0].reference
             else:
                 raise ValueError("Cannot concatenate symbols with different references")
-
+            if all(
+                child.bounds[0] == children[0].bounds[0] for child in children
+            ) and all(child.bounds[1] == children[0].bounds[1] for child in children):
+                self.bounds = children[0].bounds
+            else:
+                raise ValueError("Cannot concatenate symbols with different bounds")
         super().__init__(*children, name=name)
-        # assume all children have the same bounds
-        self.bounds = children[0].bounds
 
         if not any(c._raw_print_name is None for c in children):
             print_name = intersect(
