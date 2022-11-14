@@ -197,9 +197,6 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "imageio>=2.9.0",
-        # Julia pip packaged can be installed even if
-        # julia programming language is not installed
-        "julia>=0.5.6",
         "jupyter",  # For example notebooks
         "pybtex>=0.24.0",
         "sympy>=1.8",
