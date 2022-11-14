@@ -226,7 +226,6 @@ class PolynomialProfile(BaseParticle):
 
     def set_rhs(self, variables):
         domain, Domain = self.domain_Domain
-        phase_param = self.phase_param
 
         if self.size_distribution is False:
             c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
@@ -264,7 +263,6 @@ class PolynomialProfile(BaseParticle):
             return
 
         domain, Domain = self.domain_Domain
-        phase_param = self.phase_param
 
         c_s_surf = variables[f"{Domain} particle surface concentration [mol.m-3]"]
         c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]

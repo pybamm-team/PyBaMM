@@ -33,7 +33,7 @@ def battery_geometry(
 
     """
     options = pybamm.BatteryModelOptions(options or {})
-    geo = pybamm.geometric_parameters
+    geo = pybamm.GeometricParameters(options)
     L_n = geo.n.L
     L_s = geo.s.L
     L_n_L_s = L_n + L_s
@@ -48,22 +48,27 @@ def battery_geometry(
     }
     # Add particle domains
     if include_particles is True:
-        geometry.update(
-            {
-                "negative particle": {"r_n": {"min": 0, "max": geo.n.prim.R_typ}},
-                "positive particle": {"r_p": {"min": 0, "max": geo.p.prim.R_typ}},
-            }
-        )
         for domain in ["negative", "positive"]:
+            if options.electrode_types[domain] == "planar":
+                continue
+            geo_domain = geo.domain_params[domain]
+            d = domain[0]
+            geometry.update(
+                {
+                    f"{domain} particle": {
+                        f"r_{d}": {"min": 0, "max": geo_domain.prim.R_typ}
+                    },
+                }
+            )
             phases = int(getattr(options, domain)["particle phases"])
             if phases >= 2:
                 geometry.update(
                     {
                         f"{domain} primary particle": {
-                            "r_n_prim": {"min": 0, "max": geo.n.prim.R_typ}
+                            f"r_{d}_prim": {"min": 0, "max": geo_domain.prim.R_typ}
                         },
                         f"{domain} secondary particle": {
-                            "r_n_sec": {"min": 0, "max": geo.n.sec.R_typ}
+                            f"r_{d}_sec": {"min": 0, "max": geo_domain.sec.R_typ}
                         },
                     }
                 )

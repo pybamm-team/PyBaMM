@@ -260,6 +260,7 @@ class DomainLithiumIonParameters(BaseParameters):
             return
 
         self.rho_c_p_cc = self.therm.rho_c_p_cc
+        self.lambda_cc = self.therm.lambda_cc
 
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
@@ -540,7 +541,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
         tol = pybamm.settings.tolerances["j0__c_s"]
-        c_s_surf = pybamm.maximum(pybamm.minimum(c_s_surf, 1 - tol), tol)
+        c_s_surf = pybamm.maximum(
+            pybamm.minimum(c_s_surf, (1 - tol) * self.c_max), tol * self.c_max
+        )
         domain, Domain = self.domain_Domain
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,

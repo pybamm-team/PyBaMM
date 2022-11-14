@@ -43,21 +43,21 @@ class TestButlerVolmer(unittest.TestCase):
         self.variables = {
             "Negative electrode surface potential difference [V]": self.delta_phi_s_n,
             "Positive electrode surface potential difference [V]": self.delta_phi_s_p,
-            "Negative electrolyte concentration": self.c_e_n,
-            "Positive electrolyte concentration": self.c_e_p,
-            "Negative particle surface concentration": self.c_s_n_surf,
-            "Positive particle surface concentration": self.c_s_p_surf,
-            "Current collector current density": pybamm.Scalar(1),
-            "Negative electrode temperature": 0,
-            "Positive electrode temperature": 0,
+            "Negative electrolyte concentration [mol.m-3]": self.c_e_n,
+            "Positive electrolyte concentration [mol.m-3]": self.c_e_p,
+            "Negative particle surface concentration [mol.m-3]": self.c_s_n_surf,
+            "Positive particle surface concentration [mol.m-3]": self.c_s_p_surf,
+            "Current collector current density [A.m-2]": pybamm.Scalar(1),
+            "Negative electrode temperature [K]": 300,
+            "Positive electrode temperature [K]": 300,
             "Negative electrode surface area to volume ratio [m-1]": 1 + 0 * self.c_e_n,
             "Positive electrode surface area to volume ratio [m-1]": 1 + 0 * self.c_e_p,
             "X-averaged negative electrode surface area to volume ratio [m-1]": 1,
             "X-averaged positive electrode surface area to volume ratio [m-1]": 1,
             "Negative electrode interface utilisation": 1,
             "Positive electrode interface utilisation": 1,
-            "Negative electrode open circuit potential": pybamm.Scalar(0),
-            "Positive electrode open circuit potential": pybamm.Scalar(0),
+            "Negative electrode open circuit potential [V]": pybamm.Scalar(0),
+            "Positive electrode open circuit potential [V]": pybamm.Scalar(0),
             "Sum of electrolyte reaction source terms [A.m-3]": pybamm.Scalar(1),
             "Sum of interfacial current densities [A.m-3]": pybamm.Scalar(1),
             "Sum of negative electrode volumetric"
@@ -95,7 +95,7 @@ class TestButlerVolmer(unittest.TestCase):
             "primary",
         )
         j_n = model_n.get_coupled_variables(self.variables)[
-            "Negative electrode interfacial current density"
+            "Negative electrode interfacial current density [A.m-2]"
         ]
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
@@ -109,7 +109,7 @@ class TestButlerVolmer(unittest.TestCase):
             "primary",
         )
         j_p = model_p.get_coupled_variables(self.variables)[
-            "Positive electrode interfacial current density"
+            "Positive electrode interfacial current density [A.m-2]"
         ]
 
         # negative electrode Butler-Volmer is Multiplication
@@ -134,7 +134,7 @@ class TestButlerVolmer(unittest.TestCase):
             "primary",
         )
         j_n = model_n.get_coupled_variables(self.variables)[
-            "Negative electrode interfacial current density"
+            "Negative electrode interfacial current density [A.m-2]"
         ]
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
@@ -148,7 +148,7 @@ class TestButlerVolmer(unittest.TestCase):
             "primary",
         )
         j_p = model_p.get_coupled_variables(self.variables)[
-            "Positive electrode interfacial current density"
+            "Positive electrode interfacial current density [A.m-2]"
         ]
 
         # Process parameters
@@ -176,7 +176,7 @@ class TestButlerVolmer(unittest.TestCase):
             "primary",
         )
         j_n = model_n.get_coupled_variables(self.variables)[
-            "Negative electrode interfacial current density"
+            "Negative electrode interfacial current density [A.m-2]"
         ]
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
@@ -190,7 +190,7 @@ class TestButlerVolmer(unittest.TestCase):
             "primary",
         )
         j_p = model_p.get_coupled_variables(self.variables)[
-            "Positive electrode interfacial current density"
+            "Positive electrode interfacial current density [A.m-2]"
         ]
         j = pybamm.concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
 
@@ -263,7 +263,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "Negative electrolyte concentration": c_e,
             }
             return model_n.get_coupled_variables(variables)[
-                "Negative electrode interfacial current density"
+                "Negative electrode interfacial current density [A.m-2]"
             ].orphans[0]
 
         def j_p(c_e):
@@ -273,7 +273,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "Positive electrolyte concentration": c_e,
             }
             return model_p.get_coupled_variables(variables)[
-                "Positive electrode interfacial current density"
+                "Positive electrode interfacial current density [A.m-2]"
             ].orphans[0]
 
         c_e = pybamm.InputParameter("c_e")
@@ -334,7 +334,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "Negative electrolyte concentration": 1,
             }
             return model_n.get_coupled_variables(variables)[
-                "Negative electrode interfacial current density"
+                "Negative electrode interfacial current density [A.m-2]"
             ].orphans[0]
 
         def j_p(delta_phi):
@@ -344,7 +344,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "Positive electrolyte concentration": 1,
             }
             return model_p.get_coupled_variables(variables)[
-                "Positive electrode interfacial current density"
+                "Positive electrode interfacial current density [A.m-2]"
             ].orphans[0]
 
         delta_phi = pybamm.InputParameter("delta_phi")

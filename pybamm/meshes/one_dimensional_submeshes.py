@@ -374,28 +374,18 @@ class SpectralVolume1DSubMesh(SubMesh1D):
 
         coord_sys = spatial_var.coord_sys
 
+        array = np.array(
+            [
+                ((order + 1) - 1 - 2 * i) / (2 * (order + 1) - 2)
+                for i in range(order + 1)
+            ]
+        )
         cv_edges = np.array(
             [edges[0]]
             + [
                 x
                 for (a, b) in zip(edges[:-1], edges[1:])
-                for x in np.flip(
-                    a
-                    + 0.5
-                    * (b - a)
-                    * (
-                        1
-                        + np.sin(
-                            np.pi
-                            * np.array(
-                                [
-                                    ((order + 1) - 1 - 2 * i) / (2 * (order + 1) - 2)
-                                    for i in range(order + 1)
-                                ]
-                            )
-                        )
-                    )
-                )[1:]
+                for x in np.flip(a + 0.5 * (b - a) * (1 + np.sin(np.pi * array)))[1:]
             ]
         )
 

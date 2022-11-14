@@ -28,7 +28,7 @@ class BasicDFNComposite(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, name="Doyle-Fuller-Newman model"):
+    def __init__(self, name="Composite graphite/silicon Doyle-Fuller-Newman model"):
         options = {"particle phases": ("2", "1")}
         super().__init__(options, name)
         pybamm.citations.register("Ai2022")
@@ -44,13 +44,19 @@ class BasicDFNComposite(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
-            "Negative electrolyte concentration [mol.m-3]", domain="negative electrode"
+            "Negative electrolyte concentration [mol.m-3]",
+            domain="negative electrode",
+            scale=param.c_e_typ,
         )
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration [mol.m-3]", domain="separator"
+            "Separator electrolyte concentration [mol.m-3]",
+            domain="separator",
+            scale=param.c_e_typ,
         )
         c_e_p = pybamm.Variable(
-            "Positive electrolyte concentration [mol.m-3]", domain="positive electrode"
+            "Positive electrolyte concentration [mol.m-3]",
+            domain="positive electrode",
+            scale=param.c_e_typ,
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -58,13 +64,19 @@ class BasicDFNComposite(BaseModel):
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential [V]", domain="negative electrode"
+            "Negative electrolyte potential [V]",
+            domain="negative electrode",
+            reference=-param.n.prim.U_init,
         )
         phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential [V]", domain="separator"
+            "Separator electrolyte potential [V]",
+            domain="separator",
+            reference=-param.n.prim.U_init,
         )
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential [V]", domain="positive electrode"
+            "Positive electrolyte potential [V]",
+            domain="positive electrode",
+            reference=-param.n.prim.U_init,
         )
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -73,7 +85,9 @@ class BasicDFNComposite(BaseModel):
             "Negative electrode potential [V]", domain="negative electrode"
         )
         phi_s_p = pybamm.Variable(
-            "Positive electrode potential [V]", domain="positive electrode"
+            "Positive electrode potential [V]",
+            domain="positive electrode",
+            reference=param.ocv_init,
         )
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
@@ -82,16 +96,19 @@ class BasicDFNComposite(BaseModel):
             "Negative primary particle concentration [mol.m-3]",
             domain="negative primary particle",
             auxiliary_domains={"secondary": "negative electrode"},
+            scale=param.n.prim.c_max,
         )
         c_s_n_p2 = pybamm.Variable(
             "Negative secondary particle concentration [mol.m-3]",
             domain="negative secondary particle",
             auxiliary_domains={"secondary": "negative electrode"},
+            scale=param.n.sec.c_max,
         )
         c_s_p = pybamm.Variable(
             "Positive particle concentration [mol.m-3]",
             domain="positive particle",
             auxiliary_domains={"secondary": "positive electrode"},
+            scale=param.p.prim.c_max,
         )
 
         # Constant temperature

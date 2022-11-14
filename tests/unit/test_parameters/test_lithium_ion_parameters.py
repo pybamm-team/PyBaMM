@@ -99,19 +99,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             values.evaluate(param.n.sigma(param.T_ref)), 100, 3
         )
 
-        # neg rescaled
-        np.testing.assert_almost_equal(
-            values.evaluate(param.n.sigma_prime(param.T_ref)), 0.7814, 1
-        )
-
         # pos
         np.testing.assert_almost_equal(
             values.evaluate(param.p.sigma(param.T_ref)), 10, 3
-        )
-
-        # pos rescaled
-        np.testing.assert_almost_equal(
-            values.evaluate(param.p.sigma_prime(param.T_ref)), 0.07814, 1
         )
 
     def test_thermal_parameters(self):
@@ -120,22 +110,18 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         T = param.T_ref
 
         # Density
-        np.testing.assert_almost_equal(
-            values.evaluate(param.n.rho_c_p_cc(T)), 1.9019, 2
-        )
-        np.testing.assert_almost_equal(values.evaluate(param.n.rho_c_p(T)), 0.6403, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.s.rho_c_p(T)), 0.1535, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.p.rho_c_p(T)), 1.2605, 2)
-        np.testing.assert_almost_equal(
-            values.evaluate(param.p.rho_c_p_cc(T)), 1.3403, 2
-        )
+        np.testing.assert_equal(values.evaluate(param.n.rho_c_p_cc(T)), 8954 * 385)
+        np.testing.assert_equal(values.evaluate(param.n.rho_c_p(T)), 1657 * 700)
+        np.testing.assert_equal(values.evaluate(param.s.rho_c_p(T)), 397 * 700)
+        np.testing.assert_equal(values.evaluate(param.p.rho_c_p(T)), 3262 * 700)
+        np.testing.assert_equal(values.evaluate(param.p.rho_c_p_cc(T)), 2707 * 897)
 
         # Thermal conductivity
-        np.testing.assert_almost_equal(values.evaluate(param.n.lambda_cc(T)), 6.7513, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.n.lambda_(T)), 0.0296, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.s.lambda_(T)), 0.0027, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.p.lambda_(T)), 0.0354, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.p.lambda_cc(T)), 3.9901, 2)
+        np.testing.assert_equal(values.evaluate(param.n.lambda_cc(T)), 401)
+        np.testing.assert_equal(values.evaluate(param.n.lambda_(T)), 1.7)
+        np.testing.assert_equal(values.evaluate(param.s.lambda_(T)), 0.16)
+        np.testing.assert_equal(values.evaluate(param.p.lambda_(T)), 2.1)
+        np.testing.assert_equal(values.evaluate(param.p.lambda_cc(T)), 237)
 
         # other thermal parameters
         np.testing.assert_equal(values.evaluate(param.T_init), 298.15)

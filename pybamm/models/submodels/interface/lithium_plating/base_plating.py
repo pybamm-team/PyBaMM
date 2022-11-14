@@ -34,32 +34,38 @@ class BasePlating(BaseInterface):
 
     def get_coupled_variables(self, variables):
         # Update some common variables
+
+        if self.options.electrode_types["negative"] == "porous":
+            j_plating = variables["Lithium plating interfacial current density [A.m-2]"]
+            j_plating_av = variables[
+                "X-averaged lithium plating interfacial current density [A.m-2]"
+            ]
+            if self.options.negative["particle phases"] == "1":
+                a = variables["Negative electrode surface area to volume ratio [m-1]"]
+            else:
+                a = variables[
+                    "Negative electrode primary surface area to volume ratio [m-1]"
+                ]
+            a_j_plating = a * j_plating
+            a_j_plating_av = pybamm.x_average(a_j_plating)
+
+            variables.update(
+                {
+                    "Negative electrode lithium plating interfacial current "
+                    "density [A.m-2]": j_plating,
+                    "X-averaged negative electrode lithium plating "
+                    "interfacial current density [A.m-2]": j_plating_av,
+                    "Lithium plating volumetric "
+                    "interfacial current density [A.m-3]": a_j_plating,
+                    "X-averaged lithium plating volumetric "
+                    "interfacial current density [A.m-3]": a_j_plating_av,
+                }
+            )
+
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
         zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-
-        j_plating = variables["Lithium plating interfacial current density [A.m-2]"]
-        j_plating_av = variables[
-            "X-averaged lithium plating interfacial current density [A.m-2]"
-        ]
-        if self.options.negative["particle phases"] == "1":
-            a = variables["Negative electrode surface area to volume ratio [m-1]"]
-        else:
-            a = variables[
-                "Negative electrode primary surface area to volume ratio [m-1]"
-            ]
-        a_j_plating = a * j_plating
-        a_j_plating_av = pybamm.x_average(a_j_plating)
-
         variables.update(
             {
-                "Negative electrode lithium plating interfacial current "
-                "density [A.m-2]": j_plating,
-                "X-averaged negative electrode lithium plating "
-                "interfacial current density [A.m-2]": j_plating_av,
-                "Lithium plating volumetric "
-                "interfacial current density [A.m-3]": a_j_plating,
-                "X-averaged lithium plating volumetric "
-                "interfacial current density [A.m-3]": a_j_plating_av,
                 "X-averaged positive electrode lithium plating "
                 "interfacial current density [A.m-2]": zero_av,
                 "X-averaged positive electrode lithium plating volumetric "

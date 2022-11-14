@@ -46,10 +46,15 @@ class SEIGrowth(BaseModel):
         Ls = []
         for pos in ["inner", "outer"]:
             Pos = pos.capitalize()
+            if pos == "inner":
+                scale = self.phase_param.L_inner_0
+            else:
+                scale = self.phase_param.L_outer_0
             if self.reaction_loc == "x-average":
                 L_av = pybamm.Variable(
                     f"X-averaged {pos} {self.reaction_name}thickness [m]",
                     domain="current collector",
+                    scale=scale,
                 )
                 L_av.print_name = f"L_{pos}_av"
                 L = pybamm.PrimaryBroadcast(L_av, "negative electrode")
@@ -58,11 +63,13 @@ class SEIGrowth(BaseModel):
                     f"{Pos} {self.reaction_name}thickness [m]",
                     domain="negative electrode",
                     auxiliary_domains={"secondary": "current collector"},
+                    scale=scale,
                 )
             elif self.reaction_loc == "interface":
                 L = pybamm.Variable(
                     f"{Pos} {self.reaction_name}thickness [m]",
                     domain="current collector",
+                    scale=scale,
                 )
             L.print_name = f"L_{pos}"
             Ls.append(L)

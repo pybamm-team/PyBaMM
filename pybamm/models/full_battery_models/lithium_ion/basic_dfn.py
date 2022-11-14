@@ -42,13 +42,19 @@ class BasicDFN(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
-            "Negative electrolyte concentration [mol.m-3]", domain="negative electrode"
+            "Negative electrolyte concentration [mol.m-3]",
+            domain="negative electrode",
+            scale=param.c_e_typ,
         )
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration [mol.m-3]", domain="separator"
+            "Separator electrolyte concentration [mol.m-3]",
+            domain="separator",
+            scale=param.c_e_typ,
         )
         c_e_p = pybamm.Variable(
-            "Positive electrolyte concentration [mol.m-3]", domain="positive electrode"
+            "Positive electrolyte concentration [mol.m-3]",
+            domain="positive electrode",
+            scale=param.c_e_typ,
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -56,13 +62,19 @@ class BasicDFN(BaseModel):
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential [V]", domain="negative electrode"
+            "Negative electrolyte potential [V]",
+            domain="negative electrode",
+            reference=-param.n.prim.U_init,
         )
         phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential [V]", domain="separator"
+            "Separator electrolyte potential [V]",
+            domain="separator",
+            reference=-param.n.prim.U_init,
         )
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential [V]", domain="positive electrode"
+            "Positive electrolyte potential [V]",
+            domain="positive electrode",
+            reference=-param.n.prim.U_init,
         )
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -71,7 +83,9 @@ class BasicDFN(BaseModel):
             "Negative electrode potential [V]", domain="negative electrode"
         )
         phi_s_p = pybamm.Variable(
-            "Positive electrode potential [V]", domain="positive electrode"
+            "Positive electrode potential [V]",
+            domain="positive electrode",
+            reference=param.ocv_init,
         )
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
@@ -80,11 +94,13 @@ class BasicDFN(BaseModel):
             "Negative particle concentration [mol.m-3]",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
+            scale=param.n.prim.c_max,
         )
         c_s_p = pybamm.Variable(
             "Positive particle concentration [mol.m-3]",
             domain="positive particle",
             auxiliary_domains={"secondary": "positive electrode"},
+            scale=param.p.prim.c_max,
         )
 
         # Constant temperature
@@ -129,16 +145,14 @@ class BasicDFN(BaseModel):
         c_s_surf_n = pybamm.surf(c_s_n)
         sto_surf_n = c_s_surf_n / param.n.prim.c_max
         j0_n = param.n.prim.j0(c_e_n, c_s_surf_n, T)
-        eta_n = (
-            phi_s_n - phi_e_n - (param.n.prim.U(sto_surf_n, T) - param.n.prim.U_init)
-        )
+        eta_n = phi_s_n - phi_e_n - param.n.prim.U(sto_surf_n, T)
         Feta_RT_n = param.F * eta_n / (param.R * T)
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
 
         c_s_surf_p = pybamm.surf(c_s_p)
         sto_surf_p = c_s_surf_p / param.p.prim.c_max
         j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
-        eta_p = phi_s_p - phi_e_p - (param.p.prim.U(sto_surf_p, T) - param.ocv_init)
+        eta_p = phi_s_p - phi_e_p - param.p.prim.U(sto_surf_p, T)
         Feta_RT_p = param.F * eta_p / (param.R * T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
@@ -207,7 +221,7 @@ class BasicDFN(BaseModel):
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = pybamm.Scalar(0)  # param.ocv_init
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Current in the electrolyte
@@ -220,7 +234,7 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = pybamm.Scalar(0)  # -param.n.prim.U_init
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # Electrolyte concentration

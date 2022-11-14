@@ -41,8 +41,13 @@ class TotalMainKinetics(pybamm.BaseSubModel):
             ]
             for phase in phases
         )
-        variables[
-            f"{Domain} electrode volumetric interfacial current density [A.m-3]"
-        ] = sumvar
+        variables.update(
+            {
+                f"{Domain} electrode volumetric "
+                "interfacial current density [A.m-3]": sumvar,
+                f"X-averaged {domain} electrode volumetric "
+                "interfacial current density [A.m-3]": pybamm.x_average(sumvar),
+            }
+        )
 
         return variables

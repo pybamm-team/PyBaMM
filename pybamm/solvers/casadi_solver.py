@@ -209,7 +209,7 @@ class CasadiSolver(pybamm.BaseSolver):
             if dt_max < dt_eval_max:
                 pybamm.logger.debug(
                     "Setting dt_max to be as big as the largest step in "
-                    "t_eval ({})".format(dt_max, dt_eval_max)
+                    f"t_eval ({dt_eval_max})"
                 )
                 dt_max = dt_eval_max
             termination_due_to_small_dt = False

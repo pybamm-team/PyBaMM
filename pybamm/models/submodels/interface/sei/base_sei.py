@@ -32,23 +32,23 @@ class BaseModel(BaseInterface):
 
     def get_coupled_variables(self, variables):
         # Update some common variables
-        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
-        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-
-        j_sei_av = variables[
-            f"X-averaged {self.reaction_name}interfacial current density [A.m-2]"
-        ]
-        j_sei = variables[f"{self.reaction_name}interfacial current density [A.m-2]"]
-        if self.options.negative["particle phases"] == "1":
-            a = variables["Negative electrode surface area to volume ratio [m-1]"]
-        else:
-            a = variables[
-                "Negative electrode primary surface area to volume ratio [m-1]"
-            ]
-        a_j_sei = a * j_sei
-        a_j_sei_av = pybamm.x_average(a_j_sei)
 
         if self.reaction_loc != "interface":
+            j_sei_av = variables[
+                f"X-averaged {self.reaction_name}interfacial current density [A.m-2]"
+            ]
+            j_sei = variables[
+                f"{self.reaction_name}interfacial current density [A.m-2]"
+            ]
+            if self.options.negative["particle phases"] == "1":
+                a = variables["Negative electrode surface area to volume ratio [m-1]"]
+            else:
+                a = variables[
+                    "Negative electrode primary surface area to volume ratio [m-1]"
+                ]
+            a_j_sei = a * j_sei
+            a_j_sei_av = pybamm.x_average(a_j_sei)
+
             variables.update(
                 {
                     f"X-averaged negative electrode {self.reaction_name}interfacial "
@@ -65,6 +65,8 @@ class BaseModel(BaseInterface):
                 self._get_standard_volumetric_current_density_variables(variables)
             )
 
+        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
+        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         variables.update(
             {
                 f"Positive electrode {self.reaction} "
@@ -318,6 +320,9 @@ class BaseModel(BaseInterface):
         return variables
 
     def _get_standard_volumetric_reaction_variables(self, variables):
+        if self.options.electrode_types["negative"] == "planar":
+            return variables
+
         Domain = self.domain.capitalize()
         phase_name = self.phase_name
         reaction_name = self.reaction_name
