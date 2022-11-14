@@ -193,7 +193,7 @@ Mohtat2020 = {
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
-    "lithium plating": "yang2017_Li_plating",
+    "lithium plating": "mohtat2020_Li_plating",
     "citation": "Mohtat2020",
 }
 

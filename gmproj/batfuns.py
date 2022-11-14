@@ -356,6 +356,20 @@ def plotc(all_sumvars_dict,esoh_data):
     fig.tight_layout()
     return fig
 
+def plotd(esoh_data):
+    esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
+    fig, axes = plt.subplots(3,2,figsize=(7,7))
+    for k, name in enumerate(esoh_vars):
+        ax = axes.flat[k]
+        ax.plot(esoh_data["N"],esoh_data[name],"kx")
+        ax.set_title(split_long_string(name))
+        if k ==2 or k==3:
+            ax.set_ylim([3,6.2])
+        if k>3:
+            ax.set_xlabel("Cycle number")
+    fig.tight_layout()
+    return fig
+
 def plotc2(all_sumvars_dict1,all_sumvars_dict2,esoh_data):
     esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
     fig, axes = plt.subplots(3,2,figsize=(7,7))
@@ -370,7 +384,7 @@ def plotc2(all_sumvars_dict1,all_sumvars_dict2,esoh_data):
         if k>3:
             ax.set_xlabel("Cycle number")
     fig.legend(["sim1", "sim2" , "Data"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
+           loc="lower center",bbox_to_anchor=[0.5,-0.05], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
 
