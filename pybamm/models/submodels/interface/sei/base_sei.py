@@ -35,18 +35,30 @@ class BaseModel(BaseInterface):
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
         zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
+        j_sei_av = variables[
+            f"X-averaged {self.reaction_name}interfacial current density [A.m-2]"
+        ]
+        j_sei = variables[f"{self.reaction_name}interfacial current density [A.m-2]"]
+        if self.options.negative["particle phases"] == "1":
+            a = variables["Negative electrode surface area to volume ratio [m-1]"]
+        else:
+            a = variables[
+                "Negative electrode primary surface area to volume ratio [m-1]"
+            ]
+        a_j_sei = a * j_sei
+        a_j_sei_av = pybamm.x_average(a_j_sei)
+
         if self.reaction_loc != "interface":
             variables.update(
                 {
                     f"X-averaged negative electrode {self.reaction_name}interfacial "
-                    "current density [A.m-2]": variables[
-                        f"X-averaged {self.reaction_name}"
-                        "interfacial current density [A.m-2]"
-                    ],
+                    "current density [A.m-2]": j_sei_av,
                     f"Negative electrode {self.reaction_name}interfacial current "
-                    "density [A.m-2]": variables[
-                        f"{self.reaction_name}interfacial current density [A.m-2]"
-                    ],
+                    "density [A.m-2]": j_sei,
+                    f"X-averaged {self.reaction_name}volumetric "
+                    "interfacial current density [A.m-3]": a_j_sei_av,
+                    f"{self.reaction_name}volumetric "
+                    "interfacial current density [A.m-3]": a_j_sei,
                 }
             )
             variables.update(

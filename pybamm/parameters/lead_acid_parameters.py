@@ -37,7 +37,11 @@ class LeadAcidParameters(BaseParameters):
         # Physical constants
         self.R = pybamm.constants.R
         self.F = pybamm.constants.F
+
+        # Thermal parameters
         self.T_ref = self.therm.T_ref
+        self.T_init = self.therm.T_init
+        self.T_amb = self.therm.T_amb
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -52,6 +56,8 @@ class LeadAcidParameters(BaseParameters):
         self.delta = self.L_x / self.H
 
         # Electrical
+        self.current_with_time = self.elec.current_with_time
+        self.current_density_with_time = self.elec.current_density_with_time
         self.Q = self.elec.Q
         self.n_electrodes_parallel = self.elec.n_electrodes_parallel
         self.n_cells = self.elec.n_cells
@@ -60,6 +66,7 @@ class LeadAcidParameters(BaseParameters):
 
         # Electrolyte properties
         self.c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+        self.c_e_init = self.c_e_typ
         self.V_w = pybamm.Parameter("Partial molar volume of water [m3.mol-1]")
         self.V_plus = pybamm.Parameter("Partial molar volume of cations [m3.mol-1]")
         self.V_minus = pybamm.Parameter("Partial molar volume of anions [m3.mol-1]")
@@ -139,25 +146,11 @@ class LeadAcidParameters(BaseParameters):
         self.Q_e_max = self.Q_e_max * self.c_e_typ * self.F
         self.capacity = self.Q_e_max * self.n_electrodes_parallel * self.A_cc * self.L_x
 
+        # Initial conditions
+        self.q_init = pybamm.Parameter("Initial State of Charge")
+        self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
+
         # Concatenations
-        self.s_plus_S = pybamm.concatenation(
-            pybamm.FullBroadcast(
-                self.n.prim.s_plus_S, ["negative electrode"], "current collector"
-            ),
-            pybamm.FullBroadcast(0, ["separator"], "current collector"),
-            pybamm.FullBroadcast(
-                self.p.prim.s_plus_S, ["positive electrode"], "current collector"
-            ),
-        )
-        self.beta = pybamm.concatenation(
-            pybamm.FullBroadcast(
-                self.n.beta, "negative electrode", "current collector"
-            ),
-            pybamm.FullBroadcast(0, "separator", "current collector"),
-            pybamm.FullBroadcast(
-                self.p.beta, "positive electrode", "current collector"
-            ),
-        )
         self.epsilon_init = pybamm.concatenation(
             pybamm.FullBroadcast(
                 self.n.epsilon_init, ["negative electrode"], "current collector"
@@ -227,7 +220,7 @@ class LeadAcidParameters(BaseParameters):
         chi * RT/F / c,
         as it appears in the electrolyte potential equation
         """
-        return self.chi(c_e, T) * self.param.R * T / c_e / self.param.F
+        return self.chi(c_e, T) * self.R * T / c_e / self.F
 
     def chi(self, c_e, T, c_ox=0, c_hy=0):
         """Thermodynamic factor"""
@@ -259,46 +252,53 @@ class DomainLeadAcidParameters(BaseParameters):
         Domain = self.domain.capitalize()
         main = self.main_param
 
+        # Macroscale geometry
+        self.L = self.geo.L
+        # In lead-acid the current collector and electrodes are the same (same
+        # thickness)
+        self.L_cc = self.L
+
         if self.domain == "separator":
             self.eps_max = pybamm.Parameter("Maximum porosity of separator")
-            self.L = self.geo.L
+            self.epsilon_init = self.eps_max
             self.b_e = self.geo.b_e
             self.epsilon_inactive = pybamm.Scalar(0)
             return
-
-        for phase in self.phase_params.values():
-            phase._set_parameters()
-
-        # Macroscale geometry
-        self.L = self.geo.L
 
         # Microstructure
         self.b_e = self.geo.b_e
         self.b_s = self.geo.b_s
         self.xi = pybamm.Parameter(f"{Domain} electrode morphological parameter")
+        self.d = pybamm.Parameter(f"{Domain} electrode pore size [m]")
+        self.eps_max = pybamm.Parameter("Maximum porosity of negative electrode")
+        self.epsilon_init = self.eps_max
         # no binder
         self.epsilon_inactive = pybamm.Scalar(0)
 
+        for phase in self.phase_params.values():
+            phase._set_parameters()
+
         # Electrode properties
         if self.domain == "negative":
-            self.DeltaVsurf = (
+            DeltaVsurf = (
                 main.V_Pb - main.V_PbSO4
             )  # Net Molar Volume consumed in neg electrode [m3.mol-1]
-            self.DeltaVliq = (
+            DeltaVliq = (
                 main.V_minus - main.V_plus
             )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
         elif self.domain == "positive":
-            self.DeltaVsurf = (
+            DeltaVsurf = (
                 main.V_PbSO4 - main.V_PbO2
             )  # Net Molar Volume consumed in pos electrode [m3.mol-1]
-            self.DeltaVliq = (
+            DeltaVliq = (
                 2 * main.V_w - main.V_minus - 3 * main.V_plus
             )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
 
-        self.d = pybamm.Parameter(f"{Domain} electrode pore size [m]")
-        self.eps_max = pybamm.Parameter("Maximum porosity of negative electrode")
-        self.Q_max = pybamm.Parameter(f"{Domain} electrode volumetric capacity [C.m-3]")
+        self.DeltaVsurf = DeltaVsurf / self.prim.ne_S
+        self.DeltaVliq = DeltaVliq / self.prim.ne_S
+        self.DeltaV = self.DeltaVsurf + self.DeltaVliq
 
+        self.Q_max = pybamm.Parameter(f"{Domain} electrode volumetric capacity [C.m-3]")
         self.C_dl = pybamm.Parameter(
             f"{Domain} electrode double-layer capacity [F.m-2]"
         )
@@ -329,6 +329,7 @@ class PhaseLeadAcidParameters(BaseParameters):
         self.geo = domain_param.geo.prim
 
     def _set_parameters(self):
+        main = self.main_param
         domain, Domain = self.domain_Domain  # Microstructure
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
@@ -341,16 +342,23 @@ class PhaseLeadAcidParameters(BaseParameters):
             {"Through-cell distance (x) [m]": x},
         )
 
+        # Microstructure
+        self.epsilon_s = 1 - self.domain_param.eps_max
+
         # Electrochemical reactions
         # Main
         self.s_plus_S = pybamm.Parameter(
             f"{Domain} electrode cation signed stoichiometry"
         )
         self.ne_S = pybamm.Parameter(f"{Domain} electrode electrons in reaction")
+        self.ne = self.ne_S
         self.s_plus_S = self.s_plus_S / self.ne_S
         self.alpha_bv = pybamm.Parameter(
             f"{Domain} electrode Butler-Volmer transfer coefficient"
         )
+
+        # Initial conditions
+        self.U_init = self.U(main.c_e_init, main.T_init)
 
     def U(self, c_e, T):
         """Dimensional open-circuit voltage [V]"""

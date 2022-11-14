@@ -54,8 +54,10 @@ class PolynomialProfile(BaseParticle):
                 f"R-averaged {domain} particle concentration [mol.m-3]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
-                bounds=(0, 1),
+                bounds=(0, self.phase_param.c_max),
+                scale=self.phase_param.c_max,
             )
+            R = self.phase_param.R
         else:
             c_s_rav_distribution = pybamm.Variable(
                 f"R-averaged {domain} particle concentration distribution [mol.m-3]",
@@ -64,7 +66,8 @@ class PolynomialProfile(BaseParticle):
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                bounds=(0, 1),
+                bounds=(0, self.phase_param.c_max),
+                scale=self.phase_param.c_max,
             )
             R = pybamm.SpatialVariable(
                 f"R_{domain[0]}",
@@ -103,7 +106,8 @@ class PolynomialProfile(BaseParticle):
                 f"{Domain} particle surface concentration [mol.m-3]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
-                bounds=(0, 1),
+                bounds=(0, self.phase_param.c_max),
+                scale=self.phase_param.c_max,
             )
         if self.name == "quartic profile":
             # For the fourth order polynomial approximation we also solve an
@@ -115,6 +119,7 @@ class PolynomialProfile(BaseParticle):
                 f"R-averaged {domain} particle concentration gradient [mol.m-4]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
+                scale=self.phase_param.c_max / self.phase_param.R_typ,
             )
             variables.update(
                 {
@@ -184,6 +189,7 @@ class PolynomialProfile(BaseParticle):
                 },
                 coord_sys="spherical polar",
             )
+            R = self.phase_param.R
             variables.update(self._get_standard_diffusivity_variables(D_eff))
         else:
             # only uniform concentration implemented, no need to calculate D_eff
@@ -235,7 +241,7 @@ class PolynomialProfile(BaseParticle):
             ]
             R = variables[f"{Domain} particle sizes [m]"]
 
-        self.rhs = {c_s_rav: -3 * j / param.F / R}
+        self.rhs = {c_s_rav: -3 * j / self.param.F / R}
 
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle flux
@@ -248,7 +254,7 @@ class PolynomialProfile(BaseParticle):
             self.rhs.update(
                 {
                     q_s_rav: -30 * pybamm.r_average(D_eff) * q_s_rav / R**2
-                    - 45 / 2 * j / param.F / R**2
+                    - 45 / 2 * j / self.param.F / R**2
                 }
             )
 
@@ -270,7 +276,7 @@ class PolynomialProfile(BaseParticle):
             # We solve an algebraic equation for the surface concentration
             self.algebraic = {
                 c_s_surf: pybamm.surf(D_eff) * (c_s_surf - c_s_rav)
-                + j * R / param.F / 5
+                + j * R / self.param.F / 5
             }
 
         elif self.name == "quartic profile":
@@ -281,7 +287,7 @@ class PolynomialProfile(BaseParticle):
             ]
             self.algebraic = {
                 c_s_surf: pybamm.surf(D_eff) * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
-                + j * R / param.F
+                + j * R / self.param.F
             }
 
     def set_initial_conditions(self, variables):

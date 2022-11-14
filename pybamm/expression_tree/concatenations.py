@@ -382,11 +382,8 @@ class ConcatenationVariable(Concatenation):
                 raise ValueError("Cannot concatenate symbols with different references")
 
         super().__init__(*children, name=name)
-        # Overly tight bounds, can edit later if required
-        self.bounds = (
-            np.max([child.bounds[0] for child in children]),
-            np.min([child.bounds[1] for child in children]),
-        )
+        # assume all children have the same bounds
+        self.bounds = children[0].bounds
 
         if not any(c._raw_print_name is None for c in children):
             print_name = intersect(

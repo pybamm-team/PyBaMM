@@ -79,7 +79,7 @@ class CasadiSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         max_step_decrease_count=5,
-        dt_max=None,
+        dt_max=600,
         extrap_tol=0,
         extra_options_setup=None,
         extra_options_call=None,
@@ -204,10 +204,14 @@ class CasadiSolver(pybamm.BaseSolver):
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
             # by some tolerance, here 1.01) to avoid an empty integration window below
-            if self.dt_max is None:
-                dt_max = 600
+            dt_max = self.dt_max
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
-            dt_max = np.max([dt_max, dt_eval_max])
+            if dt_max < dt_eval_max:
+                pybamm.logger.debug(
+                    "Setting dt_max to be as big as the largest step in "
+                    "t_eval ({})".format(dt_max, dt_eval_max)
+                )
+                dt_max = dt_eval_max
             termination_due_to_small_dt = False
             first_ts_solved = False
             while t < t_f:
@@ -233,6 +237,10 @@ class CasadiSolver(pybamm.BaseSolver):
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
+                        pybamm.logger.debug(
+                            "Running integrator for "
+                            f"{t_window[0]:.2f} < t < {t_window[-1]:.2f}"
+                        )
                         current_step_sol = self._run_integrator(
                             model,
                             y0,
@@ -245,6 +253,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         first_ts_solved = True
                         solved = True
                     except pybamm.SolverError as error:
+                        pybamm.logger.debug("Failed, halving step size")
                         dt /= 2
                         # also reduce maximum step size for future global steps,
                         # but skip them in the beginning

@@ -86,8 +86,7 @@ class DiffusionLimited(BaseInterface):
                     * param.D_ox
                     * pybamm.BoundaryGradient(c_ox_s, "left")
                 )
-                N_ox_neg_sep_interface.domains = {"primary": "current collector"}
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.L
+                j = -N_ox_neg_sep_interface / -param.s_ox_Ox / param.n.L
 
         return j

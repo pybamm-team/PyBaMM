@@ -24,7 +24,7 @@ class LeadingOrder(BaseModel):
 
     def get_fundamental_variables(self):
         c_ox_av = pybamm.Variable(
-            "X-averaged oxygen concentration", domain="current collector"
+            "X-averaged oxygen concentration [mol.m-3]", domain="current collector"
         )
         c_ox_n = pybamm.PrimaryBroadcast(c_ox_av, "negative electrode")
         c_ox_s = pybamm.PrimaryBroadcast(c_ox_av, "separator")

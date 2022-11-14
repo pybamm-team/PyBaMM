@@ -183,7 +183,7 @@ class LithiumIonParameters(BaseParameters):
 
     def kappa_e(self, c_e, T):
         """Dimensional electrolyte conductivity"""
-        tol = pybamm.settings.tolerances["D_e__c_e"]
+        tol = pybamm.settings.tolerances["kappa_e__c_e"]
         c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
@@ -258,6 +258,8 @@ class DomainLithiumIonParameters(BaseParameters):
             )
             self.epsilon_inactive = 1 - self.epsilon_init
             return
+
+        self.rho_c_p_cc = self.therm.rho_c_p_cc
 
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
@@ -535,6 +537,10 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def j0(self, c_e, c_s_surf, T):
         """Dimensional exchange-current density [A.m-2]"""
+        tol = pybamm.settings.tolerances["j0__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
+        tol = pybamm.settings.tolerances["j0__c_s"]
+        c_s_surf = pybamm.maximum(pybamm.minimum(c_s_surf, 1 - tol), tol)
         domain, Domain = self.domain_Domain
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,

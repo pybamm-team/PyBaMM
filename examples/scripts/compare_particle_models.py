@@ -5,16 +5,16 @@ import pybamm
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM(
+    pybamm.lithium_ion.DFN(
         options={"particle": "Fickian diffusion"}, name="Fickian diffusion"
     ),
-    pybamm.lithium_ion.SPM(
+    pybamm.lithium_ion.DFN(
         options={"particle": "uniform profile"}, name="uniform profile"
     ),
-    pybamm.lithium_ion.SPM(
+    pybamm.lithium_ion.DFN(
         options={"particle": "quadratic profile"}, name="quadratic profile"
     ),
-    pybamm.lithium_ion.SPM(
+    pybamm.lithium_ion.DFN(
         options={"particle": "quartic profile"}, name="quartic profile"
     ),
 ]

@@ -33,6 +33,7 @@ class Full(BaseElectrolyteDiffusion):
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, np.inf),
+                scale=self.param.c_e_typ,
             )
             eps_c_e_k.print_name = f"eps_c_e_{domain[0]}"
             eps_c_e_dict[domain] = eps_c_e_k

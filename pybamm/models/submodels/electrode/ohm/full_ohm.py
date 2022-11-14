@@ -25,20 +25,19 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
-        phi_s_var = pybamm.Variable(
-            f"{Domain} electrode potential variable [V]",
-            domain=f"{domain} electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        variables = {f"{Domain} electrode potential variable [V]": phi_s_var}
-
         # potential is scaled with reference potential
         if domain == "negative":
-            phi_s = phi_s_var
+            reference = 0
         else:
-            phi_s = self.param.ocv_init + phi_s_var
+            reference = self.param.ocv_init
 
-        variables.update(self._get_standard_potential_variables(phi_s))
+        phi_s = pybamm.Variable(
+            f"{Domain} electrode potential [V]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+            reference=reference,
+        )
+        variables = self._get_standard_potential_variables(phi_s)
 
         return variables
 
@@ -66,7 +65,7 @@ class Full(BaseModel):
     def set_algebraic(self, variables):
         domain, Domain = self.domain_Domain
 
-        phi_s = variables[f"{Domain} electrode potential variable [V]"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
         i_s = variables[f"{Domain} electrode current density [A.m-2]"]
 
         # Variable summing all of the interfacial current densities
@@ -103,6 +102,11 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
         Domain = self.domain.capitalize()
 
-        phi_s = variables[f"{Domain} electrode potential variable [V]"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
 
-        self.initial_conditions[phi_s] = pybamm.Scalar(0)
+        if self.domain == "negative":
+            phi_s_init = pybamm.Scalar(0)
+        else:
+            phi_s_init = self.param.ocv_init
+
+        self.initial_conditions[phi_s] = phi_s_init
