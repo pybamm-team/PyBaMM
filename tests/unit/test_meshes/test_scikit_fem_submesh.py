@@ -19,7 +19,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
                 "Positive tab centre y-coordinate [m]": 0.3,
                 "Positive tab centre z-coordinate [m]": 0.5,
                 "Negative electrode thickness [m]": 0.3,
-                "Separator thickness [m]": 0.3,
+                "Separator thickness [m]": 0.4,
                 "Positive electrode thickness [m]": 0.3,
             }
         )

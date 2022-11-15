@@ -475,14 +475,14 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         )
 
         # Test divergence of gradient
-        # div(grad(r^2)) = 6 , N_left = 0, N_right = 2
+        # div(grad(r^2)) = 6 , N_left = 2*0 = 0, N_right = 2*0.5=1
         quadratic_y = submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(2), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions

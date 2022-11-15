@@ -206,7 +206,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
             if sol.success:
                 # update solution array
-                y_alg[:, idx] = y0_alg
+                y_alg[:, idx] = sol.x
             else:
                 raise pybamm.SolverError(
                     "Could not find acceptable solution: {}".format(sol.message)

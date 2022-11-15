@@ -412,8 +412,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol * self.get_spatial_scale("y", "current collector")
-        self.second_dim_pts = z_sol * self.get_spatial_scale("z", "current collector")
+        self.first_dim_pts = y_sol
+        self.second_dim_pts = z_sol
 
         # set up interpolation
         if len(self.t_pts) == 1:

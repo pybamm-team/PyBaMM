@@ -256,11 +256,11 @@ class Simulation:
                 new_parameter_values.update(
                     experiment_parameter_values, check_already_exists=False
                 )
-                # Set the "current function" to be the variable defined in the
+                # Set the "current function" to be the variable defined in the submodel
                 if submodel is not None:
                     new_parameter_values["Current function [A]"] = submodel.variables[
-                        "Current density variable"
-                    ] * abs(model.param.I_typ)
+                        "Current [A]"
+                    ]
                 parameterised_model = new_parameter_values.process_model(
                     new_model, inplace=False
                 )

@@ -62,7 +62,7 @@ def get_mesh_for_testing(
             "Positive tab centre y-coordinate [m]": 0.3,
             "Positive tab centre z-coordinate [m]": 0.5,
             "Negative electrode thickness [m]": 0.3,
-            "Separator thickness [m]": 0.3,
+            "Separator thickness [m]": 0.4,
             "Positive electrode thickness [m]": 0.3,
             "Negative particle radius [m]": 0.5,
             "Positive particle radius [m]": 0.5,

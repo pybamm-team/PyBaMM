@@ -843,11 +843,11 @@ class TestParameterValues(unittest.TestCase):
         param = model.default_parameter_values
         new_model = param.process_model(model, inplace=False)
 
-        for val in list(model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
+        V = model.variables["Terminal voltage [V]"]
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
 
-        for val in list(new_model.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
+        V = new_model.variables["Terminal voltage [V]"]
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()

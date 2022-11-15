@@ -72,11 +72,6 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver._integrate(model, np.array([0]), {})
-        solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
-        ):
-            solver._integrate(model, np.array([0]), {})
 
         # Model returns Nan
         class NaNModel:

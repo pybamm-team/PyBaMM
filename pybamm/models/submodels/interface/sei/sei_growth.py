@@ -186,9 +186,6 @@ class SEIGrowth(BaseModel):
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
-        # add volumetric variables
-        variables.update(self._get_standard_volumetric_reaction_variables(variables))
-
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
 
@@ -201,24 +198,23 @@ class SEIGrowth(BaseModel):
         if self.reaction_loc == "x-average":
             L_inner = variables[f"X-averaged inner {self.reaction_name}thickness [m]"]
             L_outer = variables[f"X-averaged outer {self.reaction_name}thickness [m]"]
-            a_j_inner = variables[
-                f"X-averaged inner {self.reaction_name}volumetric "
-                "interfacial current density [A.m-3]"
+            j_inner = variables[
+                f"X-averaged inner {self.reaction_name}"
+                "interfacial current density [A.m-2]"
             ]
-            a_j_outer = variables[
-                f"X-averaged outer {self.reaction_name}volumetric "
-                "interfacial current density [A.m-3]"
+            j_outer = variables[
+                f"X-averaged outer {self.reaction_name}"
+                "interfacial current density [A.m-2]"
             ]
+
         else:
             L_inner = variables[f"Inner {self.reaction_name}thickness [m]"]
             L_outer = variables[f"Outer {self.reaction_name}thickness [m]"]
-            a_j_inner = variables[
-                f"Inner {self.reaction_name}volumetric "
-                "interfacial current density [A.m-3]"
+            j_inner = variables[
+                f"Inner {self.reaction_name}interfacial current density [A.m-2]"
             ]
-            a_j_outer = variables[
-                f"Outer {self.reaction_name}volumetric "
-                "interfacial current density [A.m-3]"
+            j_outer = variables[
+                f"Outer {self.reaction_name}interfacial current density [A.m-2]"
             ]
 
         # The spreading term acts to spread out SEI along the cracks as they grow.
@@ -244,11 +240,11 @@ class SEIGrowth(BaseModel):
         v_bar = phase_param.V_bar_outer / phase_param.V_bar_inner
 
         if self.options["SEI"].startswith("ec reaction limited"):
-            self.rhs = {L_outer: -Gamma_SEI * a_j_outer + spreading_outer}
+            self.rhs = {L_outer: -Gamma_SEI * j_outer + spreading_outer}
         else:
             self.rhs = {
-                L_inner: -Gamma_SEI * a_j_inner + spreading_inner,
-                L_outer: -v_bar * Gamma_SEI * a_j_outer + spreading_outer,
+                L_inner: -Gamma_SEI * j_inner + spreading_inner,
+                L_outer: -v_bar * Gamma_SEI * j_outer + spreading_outer,
             }
 
     def set_initial_conditions(self, variables):

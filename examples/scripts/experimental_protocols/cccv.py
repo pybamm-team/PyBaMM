@@ -17,7 +17,7 @@ experiment = pybamm.Experiment(
     ]
     * 3
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM()
 
 sim = pybamm.Simulation(
     model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")

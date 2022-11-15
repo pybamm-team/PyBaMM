@@ -40,29 +40,13 @@ class BaseModel(BaseInterface):
             j_sei = variables[
                 f"{self.reaction_name}interfacial current density [A.m-2]"
             ]
-            if self.options.negative["particle phases"] == "1":
-                a = variables["Negative electrode surface area to volume ratio [m-1]"]
-            else:
-                a = variables[
-                    "Negative electrode primary surface area to volume ratio [m-1]"
-                ]
-            a_j_sei = a * j_sei
-            a_j_sei_av = pybamm.x_average(a_j_sei)
-
             variables.update(
                 {
                     f"X-averaged negative electrode {self.reaction_name}interfacial "
                     "current density [A.m-2]": j_sei_av,
                     f"Negative electrode {self.reaction_name}interfacial current "
                     "density [A.m-2]": j_sei,
-                    f"X-averaged {self.reaction_name}volumetric "
-                    "interfacial current density [A.m-3]": a_j_sei_av,
-                    f"{self.reaction_name}volumetric "
-                    "interfacial current density [A.m-3]": a_j_sei,
                 }
-            )
-            variables.update(
-                self._get_standard_volumetric_current_density_variables(variables)
             )
 
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
@@ -158,6 +142,7 @@ class BaseModel(BaseInterface):
         if isinstance(self, pybamm.sei.NoSEI):
             L_to_n_inner = 0
             L_to_n_outer = 0
+            a_typ_0 = 0
             L_inner_0 = 0
             L_outer_0 = 0
             L_inner_crack_0 = 0
@@ -168,10 +153,15 @@ class BaseModel(BaseInterface):
                 # m * (mol/m3) = mol/m2 (n is an interfacial quantity)
                 L_to_n_inner = 1 / phase_param.V_bar_inner
                 L_to_n_outer = 1 / phase_param.V_bar_outer
+                a_typ_0 = 1
             else:
                 # m * (mol/m4) = mol/m3 (n is a bulk quantity)
-                L_to_n_inner = phase_param.a_typ / phase_param.V_bar_inner
-                L_to_n_outer = phase_param.a_typ / phase_param.V_bar_outer
+                a_typ = variables[
+                    "Negative electrode surface area to volume ratio [m-1]"
+                ]
+                L_to_n_inner = a_typ / phase_param.V_bar_inner
+                L_to_n_outer = a_typ / phase_param.V_bar_outer
+                a_typ_0 = phase_param.a_typ
             z_sei = phase_param.z_sei
             # Set scales for the "EC Reaction Limited" models (both symmetric and
             # asymmetric)
@@ -203,7 +193,10 @@ class BaseModel(BaseInterface):
             n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
-            n_SEI_0 = L_inner_0 * L_to_n_inner + L_outer_0 * L_to_n_outer
+            n_SEI_0 = (
+                L_inner_0 * a_typ_0 / phase_param.V_bar_inner
+                + L_outer_0 * a_typ_0 / phase_param.V_bar_outer
+            )
             delta_n_SEI = n_SEI_av - n_SEI_0
 
             # Q_sei in mol
@@ -304,6 +297,7 @@ class BaseModel(BaseInterface):
         """
         j_inner_av = pybamm.x_average(j_inner)
         j_outer_av = pybamm.x_average(j_outer)
+        j_sei = j_inner + j_outer
 
         variables = {
             f"Inner {self.reaction_name}interfacial current density [A.m-2]": j_inner,
@@ -312,58 +306,6 @@ class BaseModel(BaseInterface):
             f"Outer {self.reaction_name}interfacial current density [A.m-2]": j_outer,
             f"X-averaged outer {self.reaction_name}"
             "interfacial current density [A.m-2]": j_outer_av,
-        }
-
-        j_sei = j_inner + j_outer
-        variables.update(self._get_standard_total_reaction_variables(j_sei))
-
-        return variables
-
-    def _get_standard_volumetric_reaction_variables(self, variables):
-        if self.options.electrode_types["negative"] == "planar":
-            return variables
-
-        Domain = self.domain.capitalize()
-        phase_name = self.phase_name
-        reaction_name = self.reaction_name
-        a = variables[
-            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-        ]
-        j_inner = variables[f"Inner {reaction_name}interfacial current density [A.m-2]"]
-        j_outer = variables[f"Outer {reaction_name}interfacial current density [A.m-2]"]
-
-        if reaction_name == "SEI on cracks ":
-            roughness = variables["Negative electrode roughness ratio"] - 1
-        else:
-            roughness = 1
-
-        a_j_inner = a * j_inner * roughness
-        a_j_inner_av = pybamm.x_average(a_j_inner)
-        a_j_outer = a * j_outer * roughness
-        a_j_outer_av = pybamm.x_average(a_j_outer)
-        a_j = a_j_inner + a_j_outer
-        a_j_av = pybamm.x_average(a_j)
-
-        variables.update(
-            {
-                f"Inner {reaction_name}"
-                "volumetric interfacial current density [A.m-3]": a_j_inner,
-                f"X-averaged inner {reaction_name}"
-                "volumetric interfacial current density [A.m-3]": a_j_inner_av,
-                f"Outer {reaction_name}"
-                "volumetric interfacial current density [A.m-3]": a_j_outer,
-                f"X-averaged outer {reaction_name}"
-                "volumetric interfacial current density [A.m-3]": a_j_outer_av,
-                f"X-averaged {reaction_name}"
-                "volumetric interfacial current density [A.m-3]": a_j_av,
-            }
-        )
-
-        return variables
-
-    def _get_standard_total_reaction_variables(self, j_sei):
-        """Update variables related to total SEI interfacial current density."""
-        variables = {
             f"{self.reaction_name}interfacial current density [A.m-2]": j_sei,
         }
 
