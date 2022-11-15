@@ -15,7 +15,6 @@ import sys
 import timeit
 from platform import system
 import difflib
-from julia.api import Julia, JuliaInfo, JuliaError
 
 import numpy as np
 import pkg_resources
@@ -286,31 +285,6 @@ def get_parameters_filepath(path):
         return path
     else:
         return os.path.join(pybamm.__path__[0], path)
-
-
-def have_julia():
-    """
-    Checks whether the Julia programming language has been installed
-    """
-
-    # Try fetching info about julia
-    try:
-        info = JuliaInfo.load()
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return False
-
-    # Compatibility: Checks
-    if not info.is_pycall_built():  # pragma: no cover
-        return False
-    if not info.is_compatible_python():  # pragma: no cover
-        return False
-
-    # Confirm Julia() is callable
-    try:
-        Julia()
-        return True
-    except JuliaError:  # pragma: no cover
-        return False
 
 
 def have_jax():

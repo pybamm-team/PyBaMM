@@ -205,13 +205,6 @@ class Function(pybamm.Symbol):
         """Apply appropriate SymPy operators."""
         return child
 
-    @property
-    def julia_name(self):
-        "Return the name of the equivalent Julia function, for generating Julia code"
-        raise NotImplementedError(
-            "No julia name defined for function {}".format(self.function)
-        )
-
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
@@ -271,14 +264,6 @@ class SpecificFunction(Function):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return pybamm.simplify_if_constant(self.__class__(*children))
 
-    @property
-    def julia_name(self):
-        """See :meth:`pybamm.Function.julia_name`"""
-        # By default, the julia name for a specific function is the class name
-        # in lowercase
-        # Some functions may overwrite this
-        return self.__class__.__name__.lower()
-
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
         class_name = self.__class__.__name__.lower()
@@ -295,11 +280,6 @@ class Arcsinh(SpecificFunction):
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return 1 / sqrt(children[0] ** 2 + 1)
-
-    @property
-    def julia_name(self):
-        """See :meth:`pybamm.Function.julia_name`"""
-        return "asinh"
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
@@ -320,11 +300,6 @@ class Arctan(SpecificFunction):
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
-
-    @property
-    def julia_name(self):
-        """See :meth:`pybamm.Function.julia_name`"""
-        return "atan"
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
@@ -441,11 +416,6 @@ class Max(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.max, child)
 
-    @property
-    def julia_name(self):
-        """See :meth:`pybamm.Function.julia_name`"""
-        return "maximum"
-
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         # Max will always return a scalar
@@ -465,11 +435,6 @@ class Min(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.min, child)
-
-    @property
-    def julia_name(self):
-        """See :meth:`pybamm.Function.julia_name`"""
-        return "minimum"
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""

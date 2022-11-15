@@ -586,42 +586,6 @@ class TestBaseModel(unittest.TestCase):
         os.remove("test.c")
         os.remove("test.so")
 
-    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
-    def test_generate_julia_diffeq(self):
-        # ODE model with no input parameters
-        model = pybamm.BaseModel(name="ode test model")
-        a = pybamm.Variable("a")
-        b = pybamm.Variable("b")
-        model.rhs = {a: -a, b: a - b}
-        model.initial_conditions = {a: 1, b: 2}
-
-        # Generate rhs and ics for the Julia model
-        rhs_str, ics_str = model.generate_julia_diffeq()
-        self.assertIsInstance(rhs_str, str)
-        self.assertIn("ode_test_model", rhs_str)
-        self.assertIsInstance(ics_str, str)
-        self.assertIn("ode_test_model_u0", ics_str)
-        self.assertIn("(u0, p)", ics_str)
-
-        # ODE model with input parameters
-        model = pybamm.BaseModel(name="ode test model 2")
-        a = pybamm.Variable("a")
-        b = pybamm.Variable("b")
-        p = pybamm.InputParameter("p")
-        q = pybamm.InputParameter("q")
-        model.rhs = {a: -a * p, b: a - b}
-        model.initial_conditions = {a: q, b: 2}
-
-        # Generate rhs and ics for the Julia model
-        rhs_str, ics_str = model.generate_julia_diffeq(input_parameter_order=["p", "q"])
-        self.assertIsInstance(rhs_str, str)
-        self.assertIn("ode_test_model_2", rhs_str)
-        self.assertIn("p, q = p", rhs_str)
-
-        self.assertIsInstance(ics_str, str)
-        self.assertIn("ode_test_model_2_u0", ics_str)
-        self.assertIn("p, q = p", ics_str)
-
     def test_set_initial_conditions(self):
         # Set up model
         model = pybamm.BaseModel()
