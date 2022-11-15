@@ -15,7 +15,7 @@ class BaseEffectiveResistance(pybamm.BaseModel):
         param = self.param
         if self.options["dimensionality"] == 1:
             geometry["current collector"] = {
-                "z": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": param.L_z},
                 "tabs": {
                     "negative": {"z_centre": param.n.centre_z_tab},
                     "positive": {"z_centre": param.p.centre_z_tab},
@@ -286,8 +286,8 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         param = self.param
         L_cn = param.n.L_cc
         L_cp = param.p.L_cc
-        l_tab_p = param.p.l_tab
-        A_tab_p = L_cp * l_tab_p
+        L_tab_p = param.p.L_tab
+        A_tab_p = L_cp * L_tab_p
         sigma_cn = param.n.sigma_cc
         sigma_cp = param.p.sigma_cc
 

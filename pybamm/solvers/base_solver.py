@@ -701,7 +701,7 @@ class BaseSolver(object):
         # If t_eval is provided as [t0, tf] return the solution at 100 points
         elif isinstance(t_eval, list):
             if len(t_eval) == 1 and self.algebraic_solver is True:
-                pass
+                t_eval = np.array(t_eval)
             elif len(t_eval) != 2:
                 raise pybamm.SolverError(
                     "'t_eval' can be provided as an array of times at which to "

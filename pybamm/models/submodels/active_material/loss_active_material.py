@@ -98,11 +98,13 @@ class LossActiveMaterial(BaseModel):
             if self.domain == "negative":
                 if self.x_average is True:
                     a_j_sei = variables[
-                        "X-averaged SEI volumetric interfacial current density [A.m-3]"
+                        "X-averaged negative electrode SEI "
+                        "volumetric interfacial current density [A.m-3]"
                     ]
                 else:
                     a_j_sei = variables[
-                        "SEI volumetric interfacial current density [A.m-3]"
+                        "Negative electrode SEI volumetric "
+                        "interfacial current density [A.m-3]"
                     ]
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM

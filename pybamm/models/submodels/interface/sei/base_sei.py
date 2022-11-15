@@ -62,6 +62,10 @@ class BaseModel(BaseInterface):
             }
         )
 
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
+
         return variables
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
@@ -142,26 +146,26 @@ class BaseModel(BaseInterface):
         if isinstance(self, pybamm.sei.NoSEI):
             L_to_n_inner = 0
             L_to_n_outer = 0
-            a_typ_0 = 0
-            L_inner_0 = 0
-            L_outer_0 = 0
-            L_inner_crack_0 = 0
-            L_outer_crack_0 = 0
+            n_SEI_0 = 0
+            n_crack_0 = 0
             z_sei = 1
         else:
             if self.reaction_loc == "interface":
                 # m * (mol/m3) = mol/m2 (n is an interfacial quantity)
                 L_to_n_inner = 1 / phase_param.V_bar_inner
                 L_to_n_outer = 1 / phase_param.V_bar_outer
-                a_typ_0 = 1
+                L_to_n_inner_0 = L_to_n_inner
+                L_to_n_outer_0 = L_to_n_outer
             else:
                 # m * (mol/m4) = mol/m3 (n is a bulk quantity)
-                a_typ = variables[
-                    "Negative electrode surface area to volume ratio [m-1]"
+                a = variables[
+                    f"Negative electrode {self.phase_name}"
+                    "surface area to volume ratio [m-1]"
                 ]
-                L_to_n_inner = a_typ / phase_param.V_bar_inner
-                L_to_n_outer = a_typ / phase_param.V_bar_outer
-                a_typ_0 = phase_param.a_typ
+                L_to_n_inner = a / phase_param.V_bar_inner
+                L_to_n_outer = a / phase_param.V_bar_outer
+                L_to_n_inner_0 = phase_param.a_typ / phase_param.V_bar_inner
+                L_to_n_outer_0 = phase_param.a_typ / phase_param.V_bar_outer
             z_sei = phase_param.z_sei
             # Set scales for the "EC Reaction Limited" models (both symmetric and
             # asymmetric)
@@ -177,6 +181,10 @@ class BaseModel(BaseInterface):
                 L_outer_0 = phase_param.L_outer_0
                 L_inner_crack_0 = phase_param.L_inner_crack_0
                 L_outer_crack_0 = phase_param.L_outer_crack_0
+            n_SEI_0 = L_inner_0 * L_to_n_inner_0 + L_outer_0 * L_to_n_outer_0
+            n_crack_0 = (
+                L_inner_crack_0 * L_to_n_inner_0 + L_outer_crack_0 * L_to_n_outer_0
+            )
 
         if self.reaction == "SEI":
             L_inner = variables[f"Inner {reaction_name}thickness [m]"]
@@ -193,10 +201,6 @@ class BaseModel(BaseInterface):
             n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
-            n_SEI_0 = (
-                L_inner_0 * a_typ_0 / phase_param.V_bar_inner
-                + L_outer_0 * a_typ_0 / phase_param.V_bar_outer
-            )
             delta_n_SEI = n_SEI_av - n_SEI_0
 
             # Q_sei in mol
@@ -244,9 +248,7 @@ class BaseModel(BaseInterface):
             roughness_av = pybamm.yz_average(pybamm.x_average(roughness))
             # choose an initial condition that is as close to zero to get the
             # physics right, but doesn't cause a division by zero error
-            n_SEI_cr_init = (
-                L_inner_crack_0 * L_to_n_inner + L_outer_crack_0 * L_to_n_outer
-            ) * (roughness_av - 1)
+            n_SEI_cr_init = n_crack_0 * (roughness_av - 1)
             delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
             # Q_sei_cr in mol

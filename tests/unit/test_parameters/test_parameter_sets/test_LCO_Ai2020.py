@@ -15,7 +15,7 @@ class TestAi2020(unittest.TestCase):
         c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
         fun_test = {
             # Positive electrode
-            "Positive electrode cracking rate": ([T], 3.9e-20),
+            "Positive electrode cracking rate [m.s-1]": ([T], 3.9e-20),
             "Positive electrode diffusivity [m2.s-1]": ([sto, T], 5.387e-15),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_p_max, T],
@@ -27,7 +27,7 @@ class TestAi2020(unittest.TestCase):
             ),
             "Positive electrode volume change": ([sto, c_p_max], -1.8179e-2),
             # Negative electrode
-            "Negative electrode cracking rate": ([T], 3.9e-20),
+            "Negative electrode cracking rate [m.s-1]": ([T], 3.9e-20),
             "Negative electrode diffusivity [m2.s-1]": ([sto, T], 3.9e-14),
             "Negative electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_n_max, T],

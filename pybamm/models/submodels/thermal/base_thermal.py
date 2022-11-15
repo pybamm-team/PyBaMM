@@ -127,11 +127,7 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_rxn_n = a_j_n * eta_r_n
         Q_rxn_p = a_j_p * eta_r_p
         Q_rxn = pybamm.concatenation(
-            *[
-                Q_rxn_n,
-                pybamm.FullBroadcast(0, ["separator"], "current collector"),
-                Q_rxn_p,
-            ]
+            Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
         )
 
         # Reversible electrochemical heating
@@ -147,11 +143,7 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_rev_n = a_j_n * T_n * dUdT_n
         Q_rev_p = a_j_p * T_p * dUdT_p
         Q_rev = pybamm.concatenation(
-            *[
-                Q_rev_n,
-                pybamm.FullBroadcast(0, ["separator"], "current collector"),
-                Q_rev_p,
-            ]
+            Q_rev_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rev_p
         )
 
         # Total heating

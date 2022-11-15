@@ -6,24 +6,27 @@ import unittest
 import numpy as np
 
 
+def get_param():
+    return pybamm.ParameterValues(
+        {
+            "Electrode width [m]": 0.4,
+            "Electrode height [m]": 0.5,
+            "Negative tab width [m]": 0.1,
+            "Negative tab centre y-coordinate [m]": 0.1,
+            "Negative tab centre z-coordinate [m]": 0.5,
+            "Positive tab width [m]": 0.1,
+            "Positive tab centre y-coordinate [m]": 0.3,
+            "Positive tab centre z-coordinate [m]": 0.5,
+            "Negative electrode thickness [m]": 0.3,
+            "Separator thickness [m]": 0.4,
+            "Positive electrode thickness [m]": 0.3,
+        }
+    )
+
+
 class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
-        param = pybamm.ParameterValues(
-            values={
-                "Electrode width [m]": 0.4,
-                "Electrode height [m]": 0.5,
-                "Negative tab width [m]": 0.1,
-                "Negative tab centre y-coordinate [m]": 0.1,
-                "Negative tab centre z-coordinate [m]": 0.5,
-                "Positive tab width [m]": 0.1,
-                "Positive tab centre y-coordinate [m]": 0.3,
-                "Positive tab centre z-coordinate [m]": 0.5,
-                "Negative electrode thickness [m]": 0.3,
-                "Separator thickness [m]": 0.4,
-                "Positive electrode thickness [m]": 0.3,
-            }
-        )
-
+        param = get_param()
         geometry = pybamm.battery_geometry(
             include_particles=False, current_collector_dimension=2
         )
@@ -152,23 +155,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
 
-        # set base parameters
-        param = pybamm.ParameterValues(
-            values={
-                "Electrode width [m]": 0.4,
-                "Electrode height [m]": 0.5,
-                "Negative tab width [m]": 0.1,
-                "Negative tab centre y-coordinate [m]": 0.0,
-                "Negative tab centre z-coordinate [m]": 0.25,
-                "Positive tab centre y-coordinate [m]": 0.4,
-                "Positive tab centre z-coordinate [m]": 0.25,
-                "Positive tab width [m]": 0.1,
-                "Negative electrode thickness [m]": 0.3,
-                "Separator thickness [m]": 0.3,
-                "Positive electrode thickness [m]": 0.3,
-            }
-        )
-
+        param = get_param()
         # check mesh can be built
         geometry = pybamm.battery_geometry(
             include_particles=False, current_collector_dimension=2
@@ -179,21 +166,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
 class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
-        param = pybamm.ParameterValues(
-            values={
-                "Electrode width [m]": 0.4,
-                "Electrode height [m]": 0.5,
-                "Negative tab width [m]": 0.1,
-                "Negative tab centre y-coordinate [m]": 0.1,
-                "Negative tab centre z-coordinate [m]": 0.5,
-                "Positive tab width [m]": 0.1,
-                "Positive tab centre y-coordinate [m]": 0.3,
-                "Positive tab centre z-coordinate [m]": 0.5,
-                "Negative electrode thickness [m]": 0.3,
-                "Separator thickness [m]": 0.3,
-                "Positive electrode thickness [m]": 0.3,
-            }
-        )
+        param = get_param()
 
         geometry = pybamm.battery_geometry(
             include_particles=False, current_collector_dimension=2
@@ -257,21 +230,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
 
 class TestScikitExponential2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
-        param = pybamm.ParameterValues(
-            values={
-                "Electrode width [m]": 0.4,
-                "Electrode height [m]": 0.5,
-                "Negative tab width [m]": 0.1,
-                "Negative tab centre y-coordinate [m]": 0.1,
-                "Negative tab centre z-coordinate [m]": 0.5,
-                "Positive tab width [m]": 0.1,
-                "Positive tab centre y-coordinate [m]": 0.3,
-                "Positive tab centre z-coordinate [m]": 0.5,
-                "Negative electrode thickness [m]": 0.3,
-                "Separator thickness [m]": 0.3,
-                "Positive electrode thickness [m]": 0.3,
-            }
-        )
+        param = get_param()
 
         geometry = pybamm.battery_geometry(
             include_particles=False, current_collector_dimension=2
@@ -341,21 +300,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
 
 class TestScikitUser2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
-        param = pybamm.ParameterValues(
-            values={
-                "Electrode width [m]": 0.4,
-                "Electrode height [m]": 0.5,
-                "Negative tab width [m]": 0.1,
-                "Negative tab centre y-coordinate [m]": 0.1,
-                "Negative tab centre z-coordinate [m]": 0.5,
-                "Positive tab width [m]": 0.1,
-                "Positive tab centre y-coordinate [m]": 0.3,
-                "Positive tab centre z-coordinate [m]": 0.5,
-                "Negative electrode thickness [m]": 0.3,
-                "Separator thickness [m]": 0.3,
-                "Positive electrode thickness [m]": 0.3,
-            }
-        )
+        param = get_param()
 
         geometry = pybamm.battery_geometry(
             include_particles=False, current_collector_dimension=2
@@ -364,8 +309,8 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
 
         var_pts = {"x_n": 10, "x_s": 7, "x_p": 12, "y": 16, "z": 24}
 
-        y_edges = np.linspace(0, 0.8, 16)
-        z_edges = np.linspace(0, 1, 24)
+        y_edges = np.linspace(0, 0.4, 16)
+        z_edges = np.linspace(0, 0.5, 24)
 
         submesh_params = {"y_edges": y_edges, "z_edges": z_edges}
         submesh_types = {
