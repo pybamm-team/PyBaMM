@@ -109,7 +109,12 @@ class StateVectorBase(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, tuple(self.evaluation_array))
+            (
+                self.__class__,
+                self.name,
+                self.units.units_str,
+                tuple(self.evaluation_array),
+            )
             + tuple(self.domain)
         )
 

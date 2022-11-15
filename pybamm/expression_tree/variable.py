@@ -82,7 +82,13 @@ class VariableBase(pybamm.Symbol):
 
     def set_id(self):
         self._id = hash(
-            (self.__class__, self.name, self.scale, self.reference)
+            (
+                self.__class__,
+                self.name,
+                self.units.units_str,
+                self.scale,
+                self.reference,
+            )
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
 

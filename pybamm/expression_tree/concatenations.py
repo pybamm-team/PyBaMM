@@ -45,8 +45,8 @@ class Concatenation(pybamm.Symbol):
         # Set units
         if len(children) > 0:
             if not all(child.units == children[0].units for child in children):
-                raise pybamm.UnitsError(
-                    "Cannot concatenate children with different units: {}".format(
+                pybamm.units_error(
+                    "Cannot concatenate children with different units: {}.".format(
                         [child.units for child in children]
                     )
                 )

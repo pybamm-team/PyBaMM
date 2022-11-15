@@ -662,9 +662,9 @@ class ParameterValues:
                 # Check that the units of the evaluated function are the same as the
                 # units of the original symbol
                 if function.units != symbol.units:
-                    raise pybamm.UnitsError(
+                    pybamm.units_error(
                         "Original function had units {}, ".format(symbol.units)
-                        + "but processed function has units {}".format(function.units)
+                        + "but processed function has units {}.".format(function.units)
                     )
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)

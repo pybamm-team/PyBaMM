@@ -21,6 +21,7 @@ class Settings(object):
         "j0__c_s": 1e-8,  # dimensionless
         "macinnes__c_e": 1e-15,  # dimensionless
     }
+    check_units = True
 
     @property
     def debug_mode(self):

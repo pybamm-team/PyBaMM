@@ -249,15 +249,15 @@ class SpecificFunction(Function):
     def __init__(self, function, child):
         super().__init__(function, child)
         if self.children[0].units.units_dict != {}:
-            raise pybamm.UnitsError(
+            pybamm.units_error(
                 "'{}' can only act on dimensionless objects, ".format(
                     self.__class__.__name__
                 )
-                + "but operand '{}' with units '{!s}' was passed.\n".format(
+                + "but operand '{}' with units '{!s}' was passed.".format(
                     child, child.units
                 )
                 + "Try non-dimensionalising the operand by dividing it by "
-                "'pybamm.Units({!s})'".format(child.units)
+                "'pybamm.Units({!s})'.".format(child.units)
             )
 
     def _function_new_copy(self, children):

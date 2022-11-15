@@ -28,8 +28,8 @@ class Scalar(pybamm.Symbol):
         # value can be given as a string with units (e.g. "1.5 [A]")
         if isinstance(value, str) and "[" in value and "]" in value:
             if units is not None:
-                raise pybamm.UnitsError(
-                    "Cannot provide units as both a string and a separate argument"
+                pybamm.units_error(
+                    "Cannot provide units as both a string and a separate argument."
                 )
             value, units = value.split(" [")
             value = float(value)
@@ -63,7 +63,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.set_id()`."""
         # We must include the value in the hash, since different scalars can be
         # indistinguishable by class and name alone
-        self._id = hash((self.__class__, str(self.value)))
+        self._id = hash((self.__class__, str(self.value), self.units.units_str))
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""

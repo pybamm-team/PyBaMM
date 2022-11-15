@@ -313,7 +313,7 @@ class LithiumIonParameters(BaseParameters):
         self.ocv_init = (self.ocv_init_dim - self.ocv_ref) / self.potential_scale
 
         # Dimensionless mechanical parameters
-        self.t0_cr = 3600 / (self.C_rate * self.timescale)
+        self.t0_cr = 3600 / (self.C_rate * self.timescale) * pybamm.Units("s.h-1")
 
     def chi(self, c_e, T):
         """
@@ -631,7 +631,9 @@ class DomainLithiumIonParameters(BaseParameters):
         """
         Domain = self.domain.capitalize()
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        delta_k_cr = self.E**self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
+        E = self.E / pybamm.Units("Pa")
+        l_cr_0 = self.l_cr_0 / pybamm.Units("m")
+        delta_k_cr = E**self.m_cr * l_cr_0 ** (self.m_cr / 2 - 1)
         return (
             pybamm.FunctionParameter(
                 f"{Domain} electrode cracking rate", {"Temperature [K]": T_dim}

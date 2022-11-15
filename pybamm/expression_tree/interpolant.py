@@ -221,7 +221,7 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name, self.entries_string)
+            (self.__class__, self.name, self.units.units_str, self.entries_string)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
         )

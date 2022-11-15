@@ -59,7 +59,7 @@ from .citations import Citations, citations, print_citations
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.units import Units
+from .expression_tree.units import Units, units_error
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *

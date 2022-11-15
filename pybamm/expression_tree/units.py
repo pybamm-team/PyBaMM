@@ -53,8 +53,8 @@ class Units:
         # Check all units are recognized
         for name in self.units_dict.keys():
             if name not in KNOWN_UNITS:
-                raise pybamm.UnitsError(
-                    "Unit '{}' not recognized".format(name)
+                pybamm.units_error(
+                    "Unit '{}' not recognized.".format(name)
                     + "\nKNOWN_UNITS: {}".format(KNOWN_UNITS)
                 )
 
@@ -75,8 +75,8 @@ class Units:
             if unit.isdigit():
                 # There can't be a digit in the first entry
                 if i == 0:
-                    raise pybamm.UnitsError(
-                        "Units cannot start with a digit but found '{}'".format(
+                    pybamm.units_error(
+                        "Units cannot start with a digit but found '{}'.".format(
                             units_str
                         )
                     )
@@ -122,7 +122,7 @@ class Units:
 
         for name, amount in sorted(units_dict.items()):
             if amount == 0:
-                raise pybamm.UnitsError("Zero units should not be in dictionary")
+                pybamm.units_error("Zero units should not be in dictionary.")
             elif amount == 1:
                 # Don't record the amount if there's only 1, e.g. 'm.s-1' instead of
                 # 'm1.s-1'
@@ -145,7 +145,8 @@ class Units:
         if "J" in units_dict:
             num_J = units_dict.pop("J")
             units_dict["V"] += num_J
-            units_dict["C"] += num_J
+            units_dict["A"] += num_J
+            units_dict["s"] += num_J
         if "C" in units_dict:
             num_C = units_dict.pop("C")
             units_dict["A"] += num_C
@@ -164,17 +165,18 @@ class Units:
             units_dict["A"] -= num_Ohm
         if "Pa" in units_dict:
             num_Pa = units_dict.pop("Pa")
-            units_dict["kg"] += num_Pa
-            units_dict["m"] -= num_Pa
-            units_dict["s"] -= 2 * num_Pa
+            units_dict["V"] += num_Pa
+            units_dict["A"] += num_Pa
+            units_dict["s"] += num_Pa
+            units_dict["m"] -= 3 * num_Pa
         return units_dict
 
     def __add__(self, other):
         if self.units_dict == other.units_dict:
             return Units(self.units_dict)
         else:
-            raise pybamm.UnitsError(
-                "Cannot add different units {!s} and {!s}".format(self, other)
+            pybamm.units_error(
+                "Cannot add different units {!s} and {!s}.".format(self, other)
             )
 
     def __sub__(self, other):
@@ -232,3 +234,11 @@ class Units:
     def __eq__(self, other):
         "Two units objects are defined to be equal if their unit_dicts are equal"
         return self.units_dict == other.units_dict
+
+
+def units_error(message):
+    if pybamm.settings.check_units:
+        raise pybamm.UnitsError(
+            message
+            + " Set `pybamm.settings.check_units=False` to turn off unit checking."
+        )

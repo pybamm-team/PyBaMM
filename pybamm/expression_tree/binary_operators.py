@@ -169,7 +169,9 @@ class Power(BinaryOperator):
             units = None
         else:
             if not isinstance(right, pybamm.Scalar):
-                raise TypeError("If base has units, exponent must be a scalar")
+                raise pybamm.units_error(
+                    "If base has units, exponent must be a scalar."
+                )
             units = _units(left) ** right.value
         super().__init__("**", left, right, units=units)
 
@@ -522,9 +524,9 @@ class _Heaviside(BinaryOperator):
         # Heaviside removes units
         if left not in [0, pybamm.Scalar(0)] and right not in [0, pybamm.Scalar(0)]:
             if _units(left) != _units(right):
-                raise pybamm.UnitsError(
+                pybamm.units_error(
                     "Heaviside step function arguments must have the same units, unless"
-                    " one of them is zero"
+                    " one of them is zero."
                 )
         units = pybamm.Units(None)
         super().__init__(name, left, right, units=units)
@@ -782,20 +784,20 @@ def simplified_power(left, right):
     if isinstance(left, Multiplication):
         # Simplify (a * b) ** c to (a ** c) * (b ** c)
         # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() or left.right.is_constant():
+        if left.left.is_constant() and _units(left.left).units_str == "-":
             l_left, l_right = left.orphans
             new_left = l_left**right
             new_right = l_right**right
-            if new_left.is_constant() or new_right.is_constant():
+            if new_left.is_constant():
                 return new_left * new_right
     elif isinstance(left, Division):
         # Simplify (a / b) ** c to (a ** c) / (b ** c)
         # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() or left.right.is_constant():
+        if left.left.is_constant() and _units(left.left).units_str == "-":
             l_left, l_right = left.orphans
             new_left = l_left**right
             new_right = l_right**right
-            if new_left.is_constant() or new_right.is_constant():
+            if new_left.is_constant():
                 return new_left / new_right
 
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
@@ -826,7 +828,7 @@ def simplified_addition(left, right):
     # Check matrices after checking scalars
     if pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
-            return right * pybamm.ones_like(left)
+            return right * pybamm.ones_like(left, units=pybamm.Units(None))
         # If left object is zero and has size smaller than or equal to right object in
         # all dimensions, we can safely return the right object. For example, adding a
         # zero vector a matrix, we can just return the matrix.
@@ -879,12 +881,12 @@ def simplified_addition(left, right):
         if right == left.right:
             # Simplify (a - b) + b to a
             # Make sure shape is preserved
-            return left.left * pybamm.ones_like(left.right)
+            return left.left * pybamm.ones_like(left.right, units=pybamm.Units(None))
     if isinstance(right, Subtraction):
         if left == right.right:
             # Simplify a + (b - a) to b
             # Make sure shape is preserved
-            return right.left * pybamm.ones_like(right.right)
+            return right.left * pybamm.ones_like(right.right, units=pybamm.Units(None))
 
     return pybamm.simplify_if_constant(Addition(left, right))
 
@@ -917,7 +919,7 @@ def simplified_subtraction(left, right):
     # Check matrices after checking scalars
     if pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
-            return -right * pybamm.ones_like(left)
+            return -right * pybamm.ones_like(left, units=pybamm.Units(None))
         # See comments in simplified_addition
         elif all(
             left_dim_size <= right_dim_size

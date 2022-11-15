@@ -112,7 +112,9 @@ class TestMPMExternalCircuits(unittest.TestCase):
         def external_circuit_function(variables):
             I = variables["Current [A]"]
             V = variables["Terminal voltage [V]"]
-            return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
+            return V * I - pybamm.FunctionParameter(
+                "Function [W]", {"Time [s]": pybamm.t}
+            )
 
         options = {"operating mode": external_circuit_function}
         model = pybamm.lithium_ion.MPM(options)

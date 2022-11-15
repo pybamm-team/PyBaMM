@@ -217,8 +217,8 @@ class Symbol:
         # Read units
         if " [" in name and "]" in name:
             if units is not None:
-                raise pybamm.UnitsError(
-                    "Cannot specify units in name and as argument at the same time"
+                pybamm.units_error(
+                    "Cannot specify units in name and as argument at the same time."
                 )
             units = pybamm.Units(name[name.index(" [") + 2 : name.index("]")])
         self.units = units
@@ -417,7 +417,7 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name)
+            (self.__class__, self.name, self.units.units_str)
             + tuple([child.id for child in self.children])
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )

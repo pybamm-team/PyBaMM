@@ -550,7 +550,7 @@ def full_like(symbols, fill_value, units=None):
         return array_type(entries, domains=product_symbol.domains)
 
     except NotImplementedError:
-        if sum_symbol.shape_for_testing == (1, 1):
+        if product_symbol.shape_for_testing == (1, 1):
             return pybamm.Scalar(fill_value)
         if product_symbol.evaluates_on_edges("primary"):
             return FullBroadcastToEdges(

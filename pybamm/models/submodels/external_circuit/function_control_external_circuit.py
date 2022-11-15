@@ -163,10 +163,13 @@ class CCCVFunctionControl(FunctionControl):
     def cccv(self, variables):
         # Multiply by the time scale so that the votage overshoot only lasts a few
         # seconds
-        K_aw = 1 * self.param.timescale  # anti-windup
-        K_V = 1 * self.param.timescale
+        K_aw = 1 * self.param.timescale / pybamm.Units("s")  # anti-windup
         i_var = variables["Current density variable"]
         i_cell = variables["Total current density"]
+        Deltai = i_var - i_cell
+
+        K_V = 1 * self.param.timescale / pybamm.Units("s")
         V = variables["Terminal voltage [V]"]
         V_CCCV = pybamm.Parameter("Voltage function [V]")
-        return -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)
+        DeltaV = (V - V_CCCV) / pybamm.Units("V")
+        return -K_aw * Deltai + K_V * DeltaV

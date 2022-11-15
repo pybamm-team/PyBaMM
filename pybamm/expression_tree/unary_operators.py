@@ -313,6 +313,7 @@ class Index(UnaryOperator):
             (
                 self.__class__,
                 self.name,
+                self.units.units_str,
                 self.slice.start,
                 self.slice.stop,
                 self.children[0].id,
@@ -594,7 +595,7 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name)
+            (self.__class__, self.name, self.units.units_str)
             + tuple(
                 [
                     integration_variable.id
@@ -749,7 +750,7 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type)
+            (self.__class__, self.name, self.units.units_str, self.vector_type)
             + (self.children[0].id,)
             + tuple(self.domain)
         )
@@ -805,7 +806,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
+            (self.__class__, self.name, self.units.units_str) + (self.children[0].id,) + tuple(self.domain)
         )
 
     def _unary_new_copy(self, child):
@@ -848,7 +849,7 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
+            (self.__class__, self.name, self.units.units_str, self.side, self.children[0].id)
             + tuple([(k, tuple(v)) for k, v in self.domains.items()])
         )
 
