@@ -806,7 +806,9 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.units.units_str) + (self.children[0].id,) + tuple(self.domain)
+            (self.__class__, self.name, self.units.units_str)
+            + (self.children[0].id,)
+            + tuple(self.domain)
         )
 
     def _unary_new_copy(self, child):
@@ -849,7 +851,13 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.units.units_str, self.side, self.children[0].id)
+            (
+                self.__class__,
+                self.name,
+                self.units.units_str,
+                self.side,
+                self.children[0].id,
+            )
             + tuple([(k, tuple(v)) for k, v in self.domains.items()])
         )
 
