@@ -312,7 +312,7 @@ class Solution(object):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
                         f"of `{pybamm.settings.max_y_value}. This could be due to "
-                        "incorrect nondimensionalisation, model formulation, or "
+                        "incorrect scaling, model formulation, or "
                         "parameter values. The maximum allowed value is set by "
                         "'pybammm.settings.max_y_value'."
                     )

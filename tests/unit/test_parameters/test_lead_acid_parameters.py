@@ -106,7 +106,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues("Sulzer2019")
         param_eval = parameter_values.print_parameters(parameters)
 
-        # Known monotonicity for dimensionless functions
+        # Known monotonicity for functions
         self.assertGreater(param_eval["chi_1"], param_eval["chi_0.5"])
         self.assertLess(param_eval["U_n_1"], param_eval["U_n_0.5"])
         self.assertGreater(param_eval["U_p_1"], param_eval["U_p_0.5"])

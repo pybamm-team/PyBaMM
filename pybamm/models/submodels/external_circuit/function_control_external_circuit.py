@@ -31,20 +31,20 @@ class FunctionControl(BaseModel):
     def get_fundamental_variables(self):
         param = self.param
         # Current is a variable
-        i_var = pybamm.Variable("Current density variable [A.m-2]")
+        i_var = pybamm.Variable("Current variable [A]", scale=param.Q)
         if self.control in ["algebraic", "differential without max"]:
-            i_cell = i_var
+            I = i_var
         elif self.control == "differential with max":
             i_input = pybamm.FunctionParameter(
                 "CCCV current function [A]", {"Time [s]": pybamm.t}
             ) / (param.n_electrodes_parallel * param.A_cc)
-            i_cell = pybamm.maximum(i_var, i_input)
+            I = pybamm.maximum(i_var, i_input)
 
         # Update derived variables
-        I = i_cell * (param.n_electrodes_parallel * param.A_cc)
+        i_cell = I / (param.n_electrodes_parallel * param.A_cc)
 
         variables = {
-            "Current density variable [A.m-2]": i_var,
+            "Current variable [A]": i_var,
             "Total current density [A.m-2]": i_cell,
             "Current [A]": I,
             "C-rate": I / param.Q,
@@ -58,8 +58,8 @@ class FunctionControl(BaseModel):
     def set_initial_conditions(self, variables):
         super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
-        i_cell = variables["Current density variable [A.m-2]"]
-        self.initial_conditions[i_cell] = pybamm.Scalar(1)
+        i_cell = variables["Current variable [A]"]
+        self.initial_conditions[i_cell] = self.param.Q
 
     def set_rhs(self, variables):
         super().set_rhs(variables)
@@ -67,7 +67,7 @@ class FunctionControl(BaseModel):
         # The external circuit function should provide an update law for the current
         # based on current/voltage/power/etc.
         if "differential" in self.control:
-            i_cell = variables["Current density variable [A.m-2]"]
+            i_cell = variables["Current variable [A]"]
             self.rhs[i_cell] = self.external_circuit_function(variables)
 
     def set_algebraic(self, variables):
@@ -75,7 +75,7 @@ class FunctionControl(BaseModel):
         # The external circuit function should fix either the current, or the voltage,
         # or a combination (e.g. I*V for power control)
         if self.control == "algebraic":
-            i_cell = variables["Current density variable [A.m-2]"]
+            i_cell = variables["Current variable [A]"]
             self.algebraic[i_cell] = self.external_circuit_function(variables)
 
 
@@ -157,9 +157,12 @@ class CCCVFunctionControl(FunctionControl):
         # Multiply by the time scale so that the votage overshoot only lasts a few
         # seconds
         K_aw = 1  # anti-windup
+        Q = self.param.Q
+        I_var = variables["Current variable [A]"]
+        I = variables["Current [A]"]
+
         K_V = 1
-        i_var = variables["Current density variable [A.m-2]"]
-        i_cell = variables["Total current density [A.m-2]"]
         V = variables["Terminal voltage [V]"]
         V_CCCV = pybamm.Parameter("Voltage function [V]")
-        return -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)
+
+        return -K_aw / Q * (I_var - I) + K_V * (V - V_CCCV)

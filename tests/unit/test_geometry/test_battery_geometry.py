@@ -31,7 +31,7 @@ class TestBatteryGeometry(unittest.TestCase):
             self.assertIn("negative particle", geometry)
             self.assertIn("negative particle size", geometry)
             self.assertEqual(geometry["negative electrode"]["x_n"]["min"], 0)
-            self.assertEqual(geometry["negative electrode"]["x_n"]["max"], geo.n.l)
+            self.assertEqual(geometry["negative electrode"]["x_n"]["max"], geo.n.L)
             if cc_dimension == 1:
                 self.assertIn("tabs", geometry["current collector"])
 
@@ -50,15 +50,25 @@ class TestBatteryGeometry(unittest.TestCase):
         self.assertEqual(geometry["current collector"]["r_macro"]["min"], geo.r_inner)
         self.assertEqual(geometry["current collector"]["r_macro"]["max"], 1)
 
-        geometry = pybamm.battery_geometry(options={"particle phases": "2"})
+        options = {"particle phases": "2"}
+        geometry = pybamm.battery_geometry(options=options)
+        geo = pybamm.GeometricParameters(options=options)
         self.assertEqual(geometry["negative primary particle"]["r_n_prim"]["min"], 0)
-        self.assertEqual(geometry["negative primary particle"]["r_n_prim"]["max"], 1)
+        self.assertEqual(
+            geometry["negative primary particle"]["r_n_prim"]["max"], geo.n.prim.R_typ
+        )
         self.assertEqual(geometry["negative secondary particle"]["r_n_sec"]["min"], 0)
-        self.assertEqual(geometry["negative secondary particle"]["r_n_sec"]["max"], 1)
-        self.assertEqual(geometry["positive primary particle"]["r_n_prim"]["min"], 0)
-        self.assertEqual(geometry["positive primary particle"]["r_n_prim"]["max"], 1)
-        self.assertEqual(geometry["positive secondary particle"]["r_n_sec"]["min"], 0)
-        self.assertEqual(geometry["positive secondary particle"]["r_n_sec"]["max"], 1)
+        self.assertEqual(
+            geometry["negative secondary particle"]["r_n_sec"]["max"], geo.n.sec.R_typ
+        )
+        self.assertEqual(geometry["positive primary particle"]["r_p_prim"]["min"], 0)
+        self.assertEqual(
+            geometry["positive primary particle"]["r_p_prim"]["max"], geo.p.prim.R_typ
+        )
+        self.assertEqual(geometry["positive secondary particle"]["r_p_sec"]["min"], 0)
+        self.assertEqual(
+            geometry["positive secondary particle"]["r_p_sec"]["max"], geo.p.sec.R_typ
+        )
 
     def test_geometry_error(self):
         with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):

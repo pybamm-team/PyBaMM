@@ -1,5 +1,5 @@
 #
-# Dimensional and dimensionless parameter values, and scales
+# Parameter values for a simulation
 #
 import numpy as np
 import pybamm
@@ -744,9 +744,6 @@ class ParameterValues:
         """
         Return dictionary of evaluated parameters, and optionally print these evaluated
         parameters to an output file.
-        For dimensionless parameters that depend on the C-rate, the value is given as a
-        function of the C-rate (either x * Crate or x / Crate depending on the
-        dependence)
 
         Parameters
         ----------

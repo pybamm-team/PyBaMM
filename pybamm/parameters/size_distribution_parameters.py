@@ -37,11 +37,11 @@ def get_size_distribution_parameters(
         The area-weighted mean particle radius (dimensional) of the positive electrode.
         Default is the value "Positive particle radius [m]" from param.
     sd_n : float (optional)
-        The area-weighted standard deviation, scaled by the mean radius R_n_av,
-        hence dimensionless. Default is 0.3.
+        The area-weighted standard deviation, scaled by the mean radius R_n_av.
+        Default is 0.3 * R_n_av.
     sd_p : float (optional)
-        The area-weighted standard deviation, scaled by the mean radius R_p_av,
-        hence dimensionless. Default is 0.3.
+        The area-weighted standard deviation, scaled by the mean radius R_p_av.
+        Default is 0.3 * R_p_av.
     R_min_n : float (optional)
         Minimum radius in negative electrode, scaled by the mean radius R_n_av.
         Default is 0 or 5 standard deviations below the mean (if positive).

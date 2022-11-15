@@ -53,11 +53,13 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_soc_variables(self):
         """Set variables relating to the state of charge."""
-        # State of Charge defined as function of dimensionless electrolyte concentration
+        # State of Charge defined as function of electrolyte concentration
         z = pybamm.standard_spatial_vars.z
         soc = (
             pybamm.Integral(
-                self.variables["X-averaged electrolyte concentration [mol.m-3]"], z
+                self.variables["X-averaged electrolyte concentration [mol.m-3]"]
+                / self.param.c_e_typ,
+                z,
             )
             * 100
         )

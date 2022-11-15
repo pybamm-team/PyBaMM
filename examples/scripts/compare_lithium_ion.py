@@ -6,23 +6,18 @@ import pybamm
 pybamm.set_logging_level("INFO")
 # load models
 models = [
-    pybamm.lithium_ion.SPM({"SEI": "constant"}),
-    # pybamm.lithium_ion.SPMe(),
-    # pybamm.lithium_ion.DFN({"thermal": "lumped"}),
-    # pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.SPM(),
+    pybamm.lithium_ion.SPMe(),
+    pybamm.lithium_ion.DFN(),
+    pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations
 sims = []
-# parameter_values = pybamm.ParameterValues("Ecker2015")
 for model in models:
-    sim = pybamm.Simulation(
-        model,
-        # parameter_values=pybamm.ParameterValues("Ecker2015"),
-        solver=pybamm.CasadiSolver(dt_max=600, root_method="lm"),
-    )
+    sim = pybamm.Simulation(model)
     sim.solve([0, 3600])
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims, ["Volume-averaged cell temperature [K]"])
+pybamm.dynamic_plot(sims)

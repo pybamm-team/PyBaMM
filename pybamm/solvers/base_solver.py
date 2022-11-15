@@ -990,11 +990,13 @@ class BaseSolver(object):
             dindex = np.searchsorted(t_eval, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
-            if dtime - eps < t_eval[dindex] < dtime + eps:
+            if dtime * (1 - eps) < t_eval[dindex] < dtime * (1 + eps):
                 t_eval[dindex] += eps
-                t_eval = np.insert(t_eval, dindex, dtime - eps)
+                t_eval = np.insert(t_eval, dindex, dtime * (1 - eps))
             else:
-                t_eval = np.insert(t_eval, dindex, [dtime - eps, dtime + eps])
+                t_eval = np.insert(
+                    t_eval, dindex, [dtime * (1 - eps), dtime * (1 + eps)]
+                )
         end_indices.append(len(t_eval))
 
         return start_indices, end_indices, t_eval

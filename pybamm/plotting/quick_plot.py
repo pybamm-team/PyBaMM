@@ -350,7 +350,7 @@ class QuickPlot(object):
     def get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
 
-        # Extract name and dimensionless value
+        # Extract name and value
         # Special case for current collector, which is 2D but in a weird way (both
         # first and second variables are in the same domain, not auxiliary domain)
         if dimension == "first":

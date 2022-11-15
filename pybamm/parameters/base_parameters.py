@@ -100,9 +100,3 @@ class NullParameters:
 
     def _set_parameters(self):
         pass
-
-    def _set_scales(self):
-        pass
-
-    def _set_dimensionless_parameters(self):
-        pass

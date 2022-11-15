@@ -164,7 +164,7 @@ class LeadAcidParameters(BaseParameters):
         )
 
     def t_plus(self, c_e, T):
-        """Dimensionless transference number (i.e. c_e is dimensionless)"""
+        """Rransference number"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 

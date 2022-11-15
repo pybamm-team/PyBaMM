@@ -302,7 +302,7 @@ class TestQuickPlot(unittest.TestCase):
         for model in [
             pybamm.lithium_ion.SPMe(),
             pybamm.lead_acid.LOQS(),
-            pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+            pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
         ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
@@ -320,8 +320,7 @@ class TestQuickPlot(unittest.TestCase):
             t = solution["Time [s]"].entries
             c_e_var = solution["Electrolyte concentration [mol.m-3]"]
             # 1D variables should be evaluated on edges
-            L_x = param.evaluate(model.param.L_x)
-            c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges * L_x)
+            c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges)
 
             for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                 quick_plot = pybamm.QuickPlot(
@@ -345,7 +344,10 @@ class TestQuickPlot(unittest.TestCase):
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
 
             # test quick plot of particle for spme
-            if model.name == "Single Particle Model with electrolyte":
+            if (
+                model.name == "Single Particle Model with electrolyte"
+                and model.options["working electrode"] != "positive"
+            ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",
                     "X-averaged positive particle concentration [mol.m-3]",

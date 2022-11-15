@@ -20,7 +20,7 @@ def get_mesh_for_testing(
             "Positive tab centre y-coordinate [m]": 0.3,
             "Positive tab centre z-coordinate [m]": 0.5,
             "Negative electrode thickness [m]": 0.3,
-            "Separator thickness [m]": 0.3,
+            "Separator thickness [m]": 0.4,
             "Positive electrode thickness [m]": 0.3,
             "Negative particle radius [m]": 2,
             "Positive particle radius [m]": 0.5,
@@ -212,10 +212,11 @@ class TestSpectralVolume(unittest.TestCase):
             submesh.nodes,
             mesh["negative electrode"].npts * mesh["current collector"].npts,
         )
+        # bcs: r = 0, r = 2
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Dirichlet"),
             }
         }
         disc.bcs = boundary_conditions
@@ -465,14 +466,14 @@ class TestSpectralVolume(unittest.TestCase):
         )
 
         # Test divergence of gradient
-        # div(grad(r^2)) = 6 , N_left = 0, N_right = 2
+        # div(grad(r^2)) = 6 , N_left = 2*0 = 0, N_right = 2 * 2 = 4
         quadratic_y = submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(2), "Neumann"),
+                "right": (pybamm.Scalar(4), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions
@@ -517,14 +518,14 @@ class TestSpectralVolume(unittest.TestCase):
         np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
 
         # Test divergence of gradient
-        # div(grad r^2) = 6, N_left = 0, N_right = 2
+        # div(grad r^2) = 6, N_left = 2 * 0 = 0, N_right = 2 * 2 = 4
         y_squared = np.tile(mesh["negative particle"].nodes ** 2, sec_pts)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(2), "Neumann"),
+                "right": (pybamm.Scalar(4), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions

@@ -37,6 +37,7 @@ class Full(BaseModel):
             auxiliary_domains={"secondary": "current collector"},
             reference=reference,
         )
+        phi_s.print_name = f"phi_s_{domain[0]}"
         variables = self._get_standard_potential_variables(phi_s)
 
         return variables

@@ -15,7 +15,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         parameter_values.print_parameters(parameters, output_file)
 
     def test_lithium_ion(self):
-        """This test checks that all the dimensionless parameters are being calculated
+        """This test checks that all the parameters are being calculated
         correctly for the specific set of parameters for LCO from dualfoil. The values
         are those converted from those in Scott's transfer which previous versions of
         the DFN work with. A 1C rate corresponds to a 24A/m^2 current density"""

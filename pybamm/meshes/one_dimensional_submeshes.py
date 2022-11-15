@@ -51,10 +51,8 @@ class SubMesh1D(SubMesh):
                     self.tabs[tab + " tab"] = "right"
                 else:
                     raise pybamm.GeometryError(
-                        """{} tab located at {}, but must be at either 0 or {}
-                        (in dimensionless coordinates).""".format(
-                            tab, tab_location, l_z
-                        )
+                        f"{tab} tab located at {tab_location}, "
+                        f"but must be at either 0 or {l_z}"
                     )
 
     def read_lims(self, lims):

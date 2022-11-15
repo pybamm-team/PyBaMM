@@ -78,31 +78,28 @@ class BaseOutputTest(object):
         self.t = solution.t
         geo = pybamm.geometric_parameters
 
-        L_x = param.evaluate(geo.L_x)
-        self.x_n = disc.mesh["negative electrode"].nodes * L_x
-        self.x_s = disc.mesh["separator"].nodes * L_x
-        self.x_p = disc.mesh["positive electrode"].nodes * L_x
+        self.x_n = disc.mesh["negative electrode"].nodes
+        self.x_s = disc.mesh["separator"].nodes
+        self.x_p = disc.mesh["positive electrode"].nodes
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        self.x = disc.mesh[whole_cell].nodes * L_x
-        self.x_n_edge = disc.mesh["negative electrode"].edges * L_x
-        self.x_s_edge = disc.mesh["separator"].edges * L_x
-        self.x_p_edge = disc.mesh["positive electrode"].edges * L_x
-        self.x_edge = disc.mesh[whole_cell].edges * L_x
+        self.x = disc.mesh[whole_cell].nodes
+        self.x_n_edge = disc.mesh["negative electrode"].edges
+        self.x_s_edge = disc.mesh["separator"].edges
+        self.x_p_edge = disc.mesh["positive electrode"].edges
+        self.x_edge = disc.mesh[whole_cell].edges
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n_typ = model.length_scales["negative particle"].evaluate()
-            R_p_typ = model.length_scales["positive particle"].evaluate()
-            self.r_n = disc.mesh["negative particle"].nodes * R_n_typ
-            self.r_p = disc.mesh["positive particle"].nodes * R_p_typ
-            self.r_n_edge = disc.mesh["negative particle"].edges * R_n_typ
-            self.r_p_edge = disc.mesh["positive particle"].edges * R_p_typ
+            self.r_n = disc.mesh["negative particle"].nodes
+            self.r_p = disc.mesh["positive particle"].nodes
+            self.r_n_edge = disc.mesh["negative particle"].edges
+            self.r_p_edge = disc.mesh["positive particle"].edges
             if self.model.options["particle size"] == "distribution":
-                self.R_n = disc.mesh["negative particle size"].nodes * R_n_typ
-                self.R_p = disc.mesh["positive particle size"].nodes * R_p_typ
+                self.R_n = disc.mesh["negative particle size"].nodes
+                self.R_p = disc.mesh["positive particle size"].nodes
 
         # Useful parameters
-        self.l_n = param.evaluate(geo.n.l)
-        self.l_p = param.evaluate(geo.p.l)
+        self.L_n = param.evaluate(geo.n.L)
+        self.L_p = param.evaluate(geo.p.L)
 
         current_param = self.model.param.current_with_time
 
@@ -603,10 +600,16 @@ class PotentialTests(BaseOutputTest):
             "X-averaged positive electrode surface potential difference [V]"
         ]
 
-        self.grad_phi_e = solution["Gradient of electrolyte potential [V]"]
-        self.grad_phi_e_n = solution["Gradient of negative electrolyte potential [V]"]
-        self.grad_phi_e_s = solution["Gradient of separator electrolyte potential [V]"]
-        self.grad_phi_e_p = solution["Gradient of positive electrolyte potential [V]"]
+        self.grad_phi_e = solution["Gradient of electrolyte potential [V.m-1]"]
+        self.grad_phi_e_n = solution[
+            "Gradient of negative electrolyte potential [V.m-1]"
+        ]
+        self.grad_phi_e_s = solution[
+            "Gradient of separator electrolyte potential [V.m-1]"
+        ]
+        self.grad_phi_e_p = solution[
+            "Gradient of positive electrolyte potential [V.m-1]"
+        ]
 
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
@@ -717,12 +720,12 @@ class CurrentTests(BaseOutputTest):
                 + self.a_j_n_pl(self.t, self.x_n),
                 axis=0,
             ),
-            self.i_cell / self.l_n,
+            self.i_cell / self.L_n,
             decimal=3,
         )
         np.testing.assert_array_almost_equal(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
-            -self.i_cell / self.l_p,
+            -self.i_cell / self.L_p,
             decimal=4,
         )
 

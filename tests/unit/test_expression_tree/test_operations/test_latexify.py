@@ -40,7 +40,7 @@ class TestLatexify(unittest.TestCase):
         self.assertIn("frac{d}{d t}", func_spme)
 
         # Test rhs geometry ranges
-        self.assertIn("quad 0 < r < 1", func_spme)
+        self.assertIn("quad 0 < r < ", func_spme)
 
         # Test initial conditions
         self.assertIn("; t=0", func_spme)

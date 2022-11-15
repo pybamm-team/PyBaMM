@@ -165,12 +165,12 @@ class LithiumIonParameters(BaseParameters):
         return (self.R * T / self.F) * self.chi(c_e, T) / c_e
 
     def t_plus(self, c_e, T):
-        """Cation transference number (dimensionless)"""
+        """Cation transference number"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
     def one_plus_dlnf_dlnc(self, c_e, T):
-        """Thermodynamic factor (dimensionless)"""
+        """Thermodynamic factor"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
 

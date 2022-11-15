@@ -612,7 +612,6 @@ class BaseModel:
                     final_state_eval = final_state[:, :, -1].flatten(order="F")
                 else:
                     raise NotImplementedError("Variable must be 0D, 1D, or 2D")
-                initial_conditions[var] = pybamm.Vector(final_state_eval)
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
@@ -634,12 +633,16 @@ class BaseModel:
                             "Variable in concatenation must be 1D"
                         )
                     children.append(final_state_eval)
-                initial_conditions[var] = pybamm.Vector(np.concatenate(children))
-
+                final_state_eval = np.concatenate(children)
             else:
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"
                 )
+
+            scale, reference = var.scale.evaluate(), var.reference.evaluate()
+            initial_conditions[var] = pybamm.Vector(
+                (final_state_eval - reference) / scale
+            )
 
         # Also update the concatenated initial conditions if the model is already
         # discretised

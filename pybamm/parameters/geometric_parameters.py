@@ -30,8 +30,6 @@ class GeometricParameters(BaseParameters):
 
         # Set parameters and scales
         self._set_parameters()
-        # self._set_scales()
-        # self._set_dimensionless_parameters()
 
     def _set_parameters(self):
         """Defines the dimensional parameters."""

@@ -87,7 +87,7 @@ class TestSimulationExperiment(unittest.TestCase):
             y_right = sol.cycles[0].steps[i + 1].all_ys[0][:len_rhs, 0]
             if isinstance(y_right, casadi.DM):
                 y_right = y_right.full()
-            np.testing.assert_array_equal(y_left.flatten(), y_right.flatten())
+            np.testing.assert_array_almost_equal(y_left.flatten(), y_right.flatten())
 
         # Solve again starting from solution
         sol2 = sim.solve(starting_solution=sol)

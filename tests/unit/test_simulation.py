@@ -27,21 +27,21 @@ class TestSimulation(unittest.TestCase):
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        for val in list(sim.model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        V = sim.model.variables["Terminal voltage [V]"]
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
 
         sim.set_parameters()
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        for val in list(sim.model_with_set_params.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        V = sim.model_with_set_params.variables["Terminal voltage [V]"]
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
         # Make sure model is unchanged
         self.assertNotEqual(sim.model, model)
-        for val in list(model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        V = model.variables["Terminal voltage [V]"]
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
 
         self.assertEqual(sim.submesh_types, model.default_submesh_types)
         self.assertEqual(sim.var_pts, model.default_var_pts)
@@ -55,11 +55,9 @@ class TestSimulation(unittest.TestCase):
         sim.build()
         self.assertFalse(sim._mesh is None)
         self.assertFalse(sim._disc is None)
-        for val in list(sim.built_model.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            # skip test for scalar variables (e.g. discharge capacity)
-            if val.size > 1:
-                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+        V = sim.built_model.variables["Terminal voltage [V]"]
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Matrix))
 
     def test_solve(self):
 
