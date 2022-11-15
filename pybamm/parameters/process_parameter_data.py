@@ -58,3 +58,103 @@ def process_2D_data(name, path=None):
     data[0] = [np.array(el) for el in data[0]]
     data[1] = np.array(data[1])
     return (name, tuple(data))
+
+
+def process_2D_data_csv(name, path=None):
+    """
+    Process 2D data from a csv file. Assumes
+    data is in the form of a three columns
+    and that all data points lie on a regular
+    grid.
+
+    Parameters
+    ----------
+    name : str
+        The name to be given to the function
+    path : str
+        The path to the file where the three
+        dimensional data is stored.
+
+    Returns
+    -------
+    formatted_data: tuple
+        A tuple containing the name of the function
+        and the data formatted correctly for use
+        within three-dimensional interpolants.
+    """
+
+    # TODO: just adapted from similar personal code,
+    # need to actually test this
+
+    df = pd.read_csv(path)
+
+    x1 = np.array(list(set(df.iloc[:, 0])))
+    x2 = np.array(list(set(df.iloc[:, 1])))
+
+    value = df.iloc[:, 4].to_numpy()
+
+    x1.sort()
+    x2.sort()
+
+    x = (x1, x2)
+
+    value_data = np.reshape(
+        value,
+        (len(x1), len(x2)),
+        order="C",
+    )
+
+    formatted_data = (name, (x, value_data))
+
+    return formatted_data
+
+
+def process_3D_data_csv(name, path=None):
+    """
+    Process 3D data from a csv file. Assumes
+    data is in the form of four columns and
+    that all data points lie on a
+    regular grid.
+
+    Parameters
+    ----------
+    name : str
+        The name to be given to the function
+    path : str
+        The path to the file where the three
+        dimensional data is stored.
+
+    Returns
+    -------
+    formatted_data: tuple
+        A tuple containing the name of the function
+        and the data formatted correctly for use
+        within two-dimensional interpolants.
+    """
+
+    # TODO: just adapted from similar personal code,
+    # need to actually test this
+
+    df = pd.read_csv(path)
+
+    x1 = np.array(list(set(df.iloc[:, 0])))
+    x2 = np.array(list(set(df.iloc[:, 1])))
+    x3 = np.array(list(set(df.iloc[:, 2])))
+
+    value = df.iloc[:, 4].to_numpy()
+
+    x1.sort()
+    x2.sort()
+    x3.sort()
+
+    x = (x1, x2, x3)
+
+    value_data = np.reshape(
+        value,
+        (len(x1), len(x2), len(x3)),
+        order="C",
+    )
+
+    formatted_data = (name, (x, value_data))
+
+    return formatted_data
