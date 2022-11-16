@@ -58,7 +58,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
     def test_model_events(self):
-        for form in ["casadi", "python", "casadi", "jax"]:
+        for form in ["python", "casadi", "jax"]:
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
