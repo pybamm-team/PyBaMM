@@ -666,7 +666,8 @@ class BaseSolver(object):
         ----------
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
+            initial_conditions. All calls to solve must pass in the same model or
+            an error is raised
         t_eval : numeric type
             The times (in seconds) at which to compute the solution
         external_variables : dict
@@ -698,6 +699,8 @@ class BaseSolver(object):
         :class:`pybamm.ModelError`
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}` and
             `model.variables = {}`)
+        :class:`pybamm.ValueError`
+            If multiple calls to `solve` pass in different models
 
         """
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
@@ -783,6 +786,12 @@ class BaseSolver(object):
         # Set up (if not done already)
         timer = pybamm.Timer()
         if model not in self.models_set_up:
+            if len(self.models_set_up) > 0:
+                existing_model = next(iter(self.models_set_up))
+                raise RuntimeError(
+                    f'This solver has already been used for model ${existing_model.name} has already been setup, ' 
+                    'please create a separate solver for this model'
+                )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
             # not depend on input parameters. Thefore only `ext_and_inputs[0]`
