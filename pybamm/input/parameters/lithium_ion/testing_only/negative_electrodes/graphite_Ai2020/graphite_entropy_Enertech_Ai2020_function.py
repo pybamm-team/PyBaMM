@@ -48,4 +48,4 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
         )
     )
 
-    return du_dT
+    return du_dT * pybamm.Units("V.K-1")

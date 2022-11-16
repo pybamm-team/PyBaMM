@@ -26,7 +26,7 @@ def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte conductivity
     """
-    c = c_e / 1000  # mol.m-3 -> mol.l
+    c = c_e / pybamm.Scalar(1000, "mol.m-3")
     p1, p2, p3, p4, p5, p6 = coeffs
     A = p1 * (1 + (T - p2))
     B = 1 + p3 * sqrt(c) + p4 * (1 + p5 * exp(1000 / T)) * c
@@ -61,7 +61,7 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte diffusivity
     """
-    c = c_e / 1000  # mol.m-3 -> mol.l
+    c = c_e / pybamm.Scalar(1000, "mol.m-3")
     p1, p2, p3, p4 = coeffs
     A = p1 * exp(p2 * c)
     B = exp(p3 / T)
@@ -96,7 +96,7 @@ def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte thermodynamic factor
     """
-    c = c_e / 1000  # mol.m-3 -> mol.l
+    c = c_e / pybamm.Scalar(1000, "mol.m-3")
     p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
     tdf = (
         p1
@@ -138,7 +138,7 @@ def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte transference number
     """
-    c = c_e / 1000  # mol.m-3 -> mol.l
+    c = c_e / pybamm.Scalar(1000, "mol.m-3")
     p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
     tplus = (
         p1

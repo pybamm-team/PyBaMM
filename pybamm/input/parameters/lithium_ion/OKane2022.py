@@ -119,13 +119,13 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
 
     D_ref = 3.3e-14
-    E_D_s = 3.03e4
+    E_D_s = 3.03e4 * pybamm.Units("J.mol-1")
     # E_D_s not given by Chen et al (2020), so taken from Ecker et al. (2015) instead
     arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
-    return D_ref * arrhenius
+    return D_ref * arrhenius * pybamm.Units("m2.s-1")
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -159,10 +159,10 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
         Exchange-current density [A.m-2]
     """
 
-    m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-    E_r = 35000
+    m_ref = 6.48e-7 * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
+    E_r = 35000 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
     return (
@@ -245,8 +245,10 @@ def graphite_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    Eac_cr = 0  # to be implemented
-    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    Eac_cr = 0 * pybamm.Units("J.mol-1")  # to be implemented
+    arrhenius = pybamm.exp(
+        Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / pybamm.Scalar(298.15, "K"))
+    )
     return k_cr * arrhenius
 
 
@@ -276,12 +278,14 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
     """
 
     D_ref = 4e-15
-    E_D_s = 25000  # O'Kane et al. (2022), after Cabanero et al. (2018)
+    E_D_s = 25000 * pybamm.Units(
+        "J.mol-1"
+    )  # O'Kane et al. (2022), after Cabanero et al. (2018)
     arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
-    return D_ref * arrhenius
+    return D_ref * arrhenius * pybamm.Units("m2.s-1")
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
@@ -315,7 +319,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
         + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.3120))
     )
 
-    return u_eq
+    return u_eq * pybamm.Units("V")
 
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
@@ -344,10 +348,10 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-    E_r = 17800
+    m_ref = 3.42e-6 * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
+    E_r = 17800 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
     return (
@@ -361,11 +365,11 @@ def volume_change_Ai2020(sto, c_s_max):
 
     References
     ----------
-     .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
      Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
      Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
       DOI: 10.1149/2.0122001JES.
-     .. [2] > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
+     .. [2] Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
      A new method to model the thickness change of a commercial pouch cell
      during discharge. Journal of The Electrochemical Society, 163(8), A1566-A1575.
 
@@ -390,11 +394,11 @@ def cracking_rate_Ai2020(T_dim):
 
     References
     ----------
-     .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
      Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
      Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
       DOI: 10.1149/2.0122001JES.
-     .. [2] > Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+     .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
      Battery cycle life prediction with coupled chemical degradation and fatigue
      mechanics. Journal of the Electrochemical Society, 159(10), A1730.
 
@@ -410,8 +414,10 @@ def cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    Eac_cr = 0  # to be implemented
-    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    Eac_cr = 0 * pybamm.Units("J.mol-1")  # to be implemented
+    arrhenius = pybamm.exp(
+        Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / pybamm.Scalar(298.15, "K"))
+    )
     return k_cr * arrhenius
 
 
@@ -441,18 +447,18 @@ def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-
-    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
+    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
+    D_c_e = 8.794e-11 * c_e**2 - 3.972e-10 * c_e + 4.862e-10
 
     # Nyman et al. (2008) does not provide temperature dependence
     # So use temperature dependence from Ecker et al. (2015) instead
 
-    E_D_c_e = 17000
+    E_D_c_e = 17000 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_D_c_e / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_D_c_e / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
-    return D_c_e * arrhenius
+    return D_c_e * arrhenius * pybamm.Units("m2.s-1")
 
 
 def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
@@ -481,20 +487,18 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-
-    sigma_e = (
-        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
-    )
+    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
+    sigma_e = 0.1297 * c_e**3 - 2.51 * c_e**1.5 + 3.329 * c_e
 
     # Nyman et al. (2008) does not provide temperature dependence
     # So use temperature dependence from Ecker et al. (2015) instead
 
-    E_sigma_e = 17000
+    E_sigma_e = 17000 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_sigma_e / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_sigma_e / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
-    return sigma_e * arrhenius
+    return sigma_e * arrhenius * pybamm.Units("S.m-1")
 
 
 # Load data in the appropriate format

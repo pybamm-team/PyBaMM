@@ -240,5 +240,5 @@ def units_error(message):
     if pybamm.settings.check_units:
         raise pybamm.UnitsError(
             message
-            + " Set `pybamm.settings.check_units=False` to turn off unit checking."
+            + " Set `pybamm.settings.check_units=False` to disable unit checking."
         )

@@ -46,4 +46,4 @@ def graphite_ocp_Enertech_Ai2020_function(sto):
         + p10
     )
 
-    return u_eq
+    return u_eq * pybamm.Units("V")

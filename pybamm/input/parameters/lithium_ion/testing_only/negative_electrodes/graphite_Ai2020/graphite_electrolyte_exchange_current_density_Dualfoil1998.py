@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, scalar
 
 
 def graphite_electrolyte_exchange_current_density_Dualfoil1998(
@@ -29,10 +29,12 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
         Exchange-current density [A.m-2]
     """
     m_ref = (
-        1 * 10 ** (-11) * constants.F
-    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-    E_r = 5000  # activation energy for Temperature Dependent Reaction Constant [J/mol]
-    arrhenius = exp(E_r / constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T))
+        (1 * 10 ** (-11) * constants.F)
+        * pybamm.Units("A.m-2")
+        * pybamm.Units("m3.mol-1") ** 1.5
+    )
+    E_r = 5000 * pybamm.Units("J.mol-1")
+    arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "K") - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5

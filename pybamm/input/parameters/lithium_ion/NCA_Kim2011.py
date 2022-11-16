@@ -27,12 +27,12 @@ def graphite_diffusivity_Kim2011(sto, T):
     """
 
     D_ref = 9 * 10 ** (-14)
-    E_D_s = 4e3
+    E_D_s = 4e3 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
-    return D_ref * arrhenius
+    return D_ref * arrhenius * pybamm.Units("m2.s-1")
 
 
 def graphite_ocp_Kim2011(sto):
@@ -60,7 +60,7 @@ def graphite_ocp_Kim2011(sto):
         + 0.0155 * pybamm.tanh((sto - 0.105) / 0.029)
     )
 
-    return u_eq
+    return u_eq * pybamm.Units("V")
 
 
 def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
@@ -93,7 +93,9 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
         Exchange-current density [A.m-2]
     """
 
-    i0_ref = 36  # reference exchange current density at 100% SOC
+    i0_ref = 36 * pybamm.Units(
+        "A.m-2"
+    )  # reference exchange current density at 100% SOC
     sto = 0.36  # stochiometry at 100% SOC
     c_s_n_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
@@ -103,9 +105,9 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
         c_e_ref**alpha * (c_s_max - c_s_n_ref) ** alpha * c_s_n_ref**alpha
     )
 
-    E_r = 3e4
+    E_r = 3e4 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
     return (
@@ -141,12 +143,12 @@ def nca_diffusivity_Kim2011(sto, T):
         Solid diffusivity
     """
     D_ref = 3 * 10 ** (-15)
-    E_D_s = 2e4
+    E_D_s = 2e4 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
-    return D_ref * arrhenius
+    return D_ref * arrhenius * pybamm.Units("m2.s-1")
 
 
 def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
@@ -177,7 +179,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    i0_ref = 4  # reference exchange current density at 100% SOC
+    i0_ref = 4 * pybamm.Units("A.m-2")  # reference exchange current density at 100% SOC
     sto = 0.41  # stochiometry at 100% SOC
     c_s_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
@@ -186,9 +188,9 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     m_ref = i0_ref / (
         c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha
     )
-    E_r = 3e4
+    E_r = 3e4 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar("298.15 [K]") - 1 / T)
+        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
     )
 
     return (
@@ -224,14 +226,15 @@ def electrolyte_diffusivity_Kim2011(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-
+    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
+    T = T / pybamm.Units("K")
     D_c_e = (
-        5.84 * 10 ** (-7) * pybamm.exp(-2870 / T) * (c_e / 1000) ** 2
-        - 33.9 * 10 ** (-7) * pybamm.exp(-2920 / T) * (c_e / 1000)
+        5.84 * 10 ** (-7) * pybamm.exp(-2870 / T) * c_e**2
+        - 33.9 * 10 ** (-7) * pybamm.exp(-2920 / T) * c_e
         + 129 * 10 ** (-7) * pybamm.exp(-3200 / T)
     )
 
-    return D_c_e
+    return D_c_e * pybamm.Units("m2.s-1")
 
 
 def electrolyte_conductivity_Kim2011(c_e, T):
@@ -258,14 +261,16 @@ def electrolyte_conductivity_Kim2011(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
+    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
+    T = T / pybamm.Units("K")
 
     sigma_e = (
-        3.45 * pybamm.exp(-798 / T) * (c_e / 1000) ** 3
-        - 48.5 * pybamm.exp(-1080 / T) * (c_e / 1000) ** 2
-        + 244 * pybamm.exp(-1440 / T) * (c_e / 1000)
+        3.45 * pybamm.exp(-798 / T) * c_e**3
+        - 48.5 * pybamm.exp(-1080 / T) * c_e**2
+        + 244 * pybamm.exp(-1440 / T) * c_e
     )
 
-    return sigma_e
+    return sigma_e * pybamm.Units("S.m-1")
 
 
 # Load data in the appropriate format

@@ -25,7 +25,7 @@ def electrolyte_conductivity_Ai2020(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-
+    # c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
     sigma_e = (
         1e-4
         * c_e
@@ -37,4 +37,4 @@ def electrolyte_conductivity_Ai2020(c_e, T):
         ** 2
     )
 
-    return sigma_e
+    return sigma_e * pybamm.Units("S.m-1")

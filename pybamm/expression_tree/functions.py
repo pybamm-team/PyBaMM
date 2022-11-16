@@ -253,7 +253,7 @@ class SpecificFunction(Function):
                 "'{}' can only act on dimensionless objects, ".format(
                     self.__class__.__name__
                 )
-                + "but operand '{}' with units '{!s}' was passed.".format(
+                + "but operand '{}' with units '{!s}' was passed. ".format(
                     child, child.units
                 )
                 + "Try non-dimensionalising the operand by dividing it by "

@@ -469,7 +469,7 @@ class DomainLithiumIonParameters(BaseParameters):
             # Use primary phase to set the reference potential
             self.U_ref = self.prim.U_dimensional(self.prim.c_init_av, main.T_ref)
         else:
-            self.U_ref = pybamm.Scalar(0)
+            self.U_ref = pybamm.Scalar(0, "V")
 
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phase_params.values())
 

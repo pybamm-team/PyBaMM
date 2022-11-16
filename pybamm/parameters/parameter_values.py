@@ -310,9 +310,7 @@ class ParameterValues:
                     self._dict_items[name] = pybamm.parameters.process_2D_data(filename)
 
                 elif value == "[input]":
-                    self._dict_items[name] = pybamm.InputParameter(
-                        name, units=symbol.units
-                    )
+                    self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)
@@ -553,6 +551,8 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
+        if getattr(symbol, "name", None) == "Positive electrode OCP [V]":
+            print("here")
         try:
             return self._processed_symbols[symbol]
         except KeyError:
@@ -615,28 +615,40 @@ class ParameterValues:
                         name=name,
                         units=symbol.units,
                     )
-                    # Define event to catch extrapolation. In these events the sign is
-                    # important: it should be positive inside of the range and negative
-                    # outside of it
-                    for data_index in range(len(data[0])):
-                        self.parameter_events.append(
-                            pybamm.Event(
-                                "Interpolant {} lower bound".format(name),
-                                pybamm.min(
-                                    new_children[data_index] - min(data[0][data_index])
-                                ),
-                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    if function.is_constant():
+                        if np.prod(function.shape) == 1:
+                            return pybamm.Scalar(
+                                function.evaluate(),
+                                name=name,
+                                units=symbol.units,
                             )
-                        )
-                        self.parameter_events.append(
-                            pybamm.Event(
-                                "Interpolant {} upper bound".format(name),
-                                pybamm.min(
-                                    max(data[0][data_index]) - new_children[data_index]
-                                ),
-                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                        else:
+                            function = pybamm.simplify_if_constant(function)
+                    else:
+                        # Define event to catch extrapolation. In these events the sign
+                        # is important: it should be positive inside of the range and
+                        # negative outside of it
+                        for data_index in range(len(data[0])):
+                            self.parameter_events.append(
+                                pybamm.Event(
+                                    "Interpolant {} lower bound".format(name),
+                                    pybamm.min(
+                                        new_children[data_index]
+                                        - min(data[0][data_index])
+                                    ),
+                                    pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                                )
                             )
-                        )
+                            self.parameter_events.append(
+                                pybamm.Event(
+                                    "Interpolant {} upper bound".format(name),
+                                    pybamm.min(
+                                        max(data[0][data_index])
+                                        - new_children[data_index]
+                                    ),
+                                    pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                                )
+                            )
 
                 else:  # pragma: no cover
                     raise ValueError(

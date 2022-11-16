@@ -26,9 +26,8 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     """
     T_ref = Parameter("Reference temperature [K]")
     t_plus = Parameter("Cation transference number")
+    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
     dlnf_dlnc = (
-        0.601
-        - 0.24 * (c_e / 1000) ** 0.5
-        + 0.982 * (1 - 0.0052 * (T - T_ref)) * (c_e / 1000) ** 1.5
+        0.601 - 0.24 * c_e**0.5 + 0.982 * (1 - 0.0052 * (T - T_ref)) * c_e**1.5
     ) / (1 - t_plus)
     return dlnf_dlnc

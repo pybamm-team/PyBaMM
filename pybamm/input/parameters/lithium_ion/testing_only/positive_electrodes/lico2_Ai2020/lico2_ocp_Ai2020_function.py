@@ -44,4 +44,4 @@ def lico2_ocp_Ai2020_function(sto):
         + p9 * sto
         + p10
     )
-    return u_eq
+    return u_eq * pybamm.Units("V")
