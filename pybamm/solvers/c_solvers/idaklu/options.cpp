@@ -1,4 +1,8 @@
 #include "options.hpp"
+#include <stdexcept>
+
+ 
+using namespace std::string_literals;
 
 Options::Options(py::dict options)
     : print_stats(options["print_stats"].cast<bool>()),
@@ -23,8 +27,10 @@ Options::Options(py::dict options)
   }
   else
   {
-    py::print("Unknown jacobian type, using sparse by default");
-    jacobian = "sparse";
+    throw std::domain_error(
+      "Unknown jacobian type \""s + jacobian + 
+      "\". Should be one of \"sparse\", \"dense\", \"matrix-free\" or \"none\"."s
+    );
   }
 
   using_iterative_solver = false;
@@ -47,30 +53,37 @@ Options::Options(py::dict options)
   }
   else if (jacobian == "sparse")
   {
-    py::print("Unknown linear solver or incompatible options using "
-              "SUNLinSol_KLU by default");
-    linear_solver = "SUNLinSol_KLU";
+    throw std::domain_error(
+      "Unknown linear solver or incompatible options. For a sparse jacobian "
+      "please use the SUNLinSol_KLU linear solver"
+    );
   }
   else if (jacobian == "matrix-free")
   {
-    py::print("Unknown linear solver or incompatible options using "
-              "SUNLinSol_SPBCGS by default");
-    linear_solver = "SUNLinSol_SPBCGS";
-    using_iterative_solver = true;
+    throw std::domain_error(
+        "Unknown linear solver or incompatible options. For a matrix-free jacobian "
+        "please use one of the iterative linear solvers: \"SUNLinSol_SPBCGS\", "
+        "\"SUNLinSol_SPFGMR\", \"SUNLinSol_SPGMR\", or \"SUNLinSol_SPTFQMR\"."
+      );
   }
   else
   {
-    py::print("Unknown linear solver or incompatible options using "
-              "SUNLinSol_Dense by default");
-    linear_solver = "SUNLinSol_Dense";
+    throw std::domain_error(
+      "Unknown linear solver \""s + linear_solver + 
+      "\", use one of \"SUNLinSol_KLU\", \"SUNLinSol_Dense\", "
+      "\"SUNLinSol_LapackDense\", \"SUNLinSol_SPBCGS\", \"SUNLinSol_SPFGMR\", "
+      "\"SUNLinSol_SPGMR\", or \"SUNLinSol_SPTFQMR\""
+    );
   }
 
   if (using_iterative_solver)
   {
     if (preconditioner != "none" && preconditioner != "BBDP")
     {
-      py::print("Unknown preconditioner using BBDP by default");
-      preconditioner = "BBDP";
+      throw std::domain_error(
+        "Unknown preconditioner \""s + preconditioner + 
+        "\", use one of \"BBDP\" or \"none\""s
+      );
     }
   }
   else
