@@ -1,3 +1,6 @@
+import pybamm
+
+
 def electrolyte_diffusivity_Ai2020(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration.

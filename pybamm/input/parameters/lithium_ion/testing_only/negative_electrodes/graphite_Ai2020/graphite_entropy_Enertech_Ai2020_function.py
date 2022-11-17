@@ -1,3 +1,6 @@
+import pybamm
+
+
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at

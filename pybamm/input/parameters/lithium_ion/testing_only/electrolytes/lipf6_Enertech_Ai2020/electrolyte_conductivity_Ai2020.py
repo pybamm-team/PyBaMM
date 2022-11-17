@@ -1,3 +1,6 @@
+import pybamm
+
+
 def electrolyte_conductivity_Ai2020(c_e, T):
     """
     Conductivity of LiPF6 in EC:DMC as a function of ion concentration.
