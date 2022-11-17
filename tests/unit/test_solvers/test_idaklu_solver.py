@@ -495,8 +495,37 @@ class TestIDAKLUSolver(unittest.TestCase):
                         "preconditioner": precon,
                     }
                     solver = pybamm.IDAKLUSolver(options=options)
-                    soln = solver.solve(model, t_eval)
-                    np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
+                    if (
+                        jacobian == "none" and (
+                            linear_solver == "SUNLinSol_Dense" or
+                            linear_solver == "SUNLinSol_LapackDense"
+                        ) or
+                        jacobian == "dense" and (
+                            linear_solver == "SUNLinSol_Dense" or
+                            linear_solver == "SUNLinSol_LapackDense"
+                        ) or
+                        jacobian == "sparse" and (
+                            linear_solver != "SUNLinSol_Dense" and
+                            linear_solver != "SUNLinSol_LapackDense" and
+                            linear_solver != "garbage"
+                        ) or
+                        jacobian == "matrix-free" and (
+                            linear_solver != "SUNLinSol_KLU" and
+                            linear_solver != "SUNLinSol_Dense" and
+                            linear_solver != "SUNLinSol_LapackDense" and
+                            linear_solver != "garbage"
+                        )
+                    ):
+                        works = True
+                    else:
+                        works = False
+
+                    if works:
+                        soln = solver.solve(model, t_eval)
+                        np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
+                    else:
+                        with self.assertRaises(ValueError):
+                            soln = solver.solve(model, t_eval)
 
 
 if __name__ == "__main__":

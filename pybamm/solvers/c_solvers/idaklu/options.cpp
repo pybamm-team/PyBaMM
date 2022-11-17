@@ -34,10 +34,10 @@ Options::Options(py::dict options)
   }
 
   using_iterative_solver = false;
-  if (linear_solver == "SUNLinSol_Dense" && jacobian == "dense")
+  if (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none"))
   {
   }
-  else if (linear_solver == "SUNLinSol_LapackDense" && jacobian == "dense")
+  else if (linear_solver == "SUNLinSol_LapackDense" && (jacobian == "dense" || jacobian == "none"))
   {
   }
   else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
@@ -54,25 +54,35 @@ Options::Options(py::dict options)
   else if (jacobian == "sparse")
   {
     throw std::domain_error(
-      "Unknown linear solver or incompatible options. For a sparse jacobian "
+      "Unknown linear solver or incompatible options: "
+      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver +
+      "\". For a sparse jacobian "
       "please use the SUNLinSol_KLU linear solver"
     );
   }
   else if (jacobian == "matrix-free")
   {
     throw std::domain_error(
-        "Unknown linear solver or incompatible options. For a matrix-free jacobian "
-        "please use one of the iterative linear solvers: \"SUNLinSol_SPBCGS\", "
-        "\"SUNLinSol_SPFGMR\", \"SUNLinSol_SPGMR\", or \"SUNLinSol_SPTFQMR\"."
-      );
+      "Unknown linear solver or incompatible options. "
+      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver +
+      "\". For a matrix-free jacobian "
+      "please use one of the iterative linear solvers: \"SUNLinSol_SPBCGS\", "
+      "\"SUNLinSol_SPFGMR\", \"SUNLinSol_SPGMR\", or \"SUNLinSol_SPTFQMR\"."
+    );
+  }
+  else if (jacobian == "none")
+  {
+    throw std::domain_error(
+      "Unknown linear solver or incompatible options: "
+      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver +
+      "\". For no jacobian please use the SUNLinSol_Dense solver"
+    );
   }
   else
   {
     throw std::domain_error(
-      "Unknown linear solver \""s + linear_solver + 
-      "\", use one of \"SUNLinSol_KLU\", \"SUNLinSol_Dense\", "
-      "\"SUNLinSol_LapackDense\", \"SUNLinSol_SPBCGS\", \"SUNLinSol_SPFGMR\", "
-      "\"SUNLinSol_SPGMR\", or \"SUNLinSol_SPTFQMR\""
+      "Unknown linear solver or incompatible options. "
+      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver + "\"" 
     );
   }
 
