@@ -551,8 +551,6 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
-        if getattr(symbol, "name", None) == "Positive electrode OCP [V]":
-            print("here")
         try:
             return self._processed_symbols[symbol]
         except KeyError:
@@ -617,10 +615,8 @@ class ParameterValues:
                     )
                     if function.is_constant():
                         if np.prod(function.shape) == 1:
-                            return pybamm.Scalar(
-                                function.evaluate(),
-                                name=name,
-                                units=symbol.units,
+                            function = pybamm.Scalar(
+                                function.evaluate(), units=symbol.units
                             )
                         else:
                             function = pybamm.simplify_if_constant(function)
@@ -675,8 +671,8 @@ class ParameterValues:
                 # units of the original symbol
                 if function.units != symbol.units:
                     pybamm.units_error(
-                        "Original function had units {}, ".format(symbol.units)
-                        + "but processed function has units {}.".format(function.units)
+                        f"Original function '{symbol.name}' had units {symbol.units}, "
+                        f"but processed function has units {function.units}."
                     )
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)

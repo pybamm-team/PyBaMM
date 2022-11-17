@@ -27,7 +27,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 3.5e-8 * pybamm.constants.F  # (A/m2)(mol/m3) - includes ref concentrations
+    m_ref = 3.5e-8 * pybamm.Units("m.s-1") * pybamm.constants.F
 
     return m_ref * c_Li**0.7 * c_e**0.3
 
@@ -60,7 +60,7 @@ def nmc_ocp_Xu2019(sto):
         + 3.5146 * (sto**4)
         - 2.2166 * (sto**5)
         - 0.5623e-4 * pybamm.exp(109.451 * sto - 100.006)
-    ) * pybamm.Units("V")
+    )
 
     # # only valid in range ~(0.25,0.95)
     # u_eq = (
@@ -109,10 +109,8 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
         Exchange-current density [A.m-2]
     """
     # assuming implicit correction of incorrect units from the paper
-    m_ref = (
-        (5.76e-11 * pybamm.constants.F)
-        * pybamm.Units("A.m-2")
-        * pybamm.Units("m3.mol-1") ** 1.5
+    m_ref = (5.76e-11 * pybamm.Units("m.s-1") * pybamm.constants.F) * (
+        pybamm.Units("m3.mol-1") ** 0.5
     )
 
     return m_ref * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5

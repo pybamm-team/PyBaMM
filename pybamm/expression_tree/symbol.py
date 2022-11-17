@@ -216,11 +216,16 @@ class Symbol:
 
         # Read units
         if " [" in name and "]" in name:
-            if units is not None:
-                pybamm.units_error(
-                    "Cannot specify units in name and as argument at the same time."
-                )
-            units = pybamm.Units(name[name.index(" [") + 2 : name.index("]")])
+            units_from_name = pybamm.Units(name[name.index(" [") + 2 : name.index("]")])
+            if units is None:
+                units = units_from_name
+            else:
+                if units != units_from_name:
+                    pybamm.units_error(
+                        f"Units in name are '{units_from_name}' "
+                        f"but explicit units are '{units}'."
+                    )
+
         self.units = units
 
         if children is None:

@@ -12,10 +12,6 @@ class TestUnits(unittest.TestCase):
         self.assertEqual(speed_str.units_dict, {"m": 1, "s": -1})
         self.assertEqual(speed_dict.units_str, "m.s-1")
 
-        # non-float units string
-        diff_str = pybamm.Units("m2.0.s-1.0")
-        self.assertEqual(diff_str.units_dict, {"m": 2, "s": -1})
-
         # empty units
         no_units = pybamm.Units(None)
         self.assertEqual(no_units.units_dict, {})
@@ -60,8 +56,8 @@ class TestUnits(unittest.TestCase):
         joules = pybamm.Units("J3")
         self.assertEqual(joules.units_dict, {"A": 3, "s": 3, "V": 3})
 
-        joules = pybamm.Units("C")
-        self.assertEqual(joules.units_dict, {"A": 1, "s": 1})
+        coulombs = pybamm.Units("C2")
+        self.assertEqual(coulombs.units_dict, {"A": 2, "s": 2})
 
         watts = pybamm.Units("W-2")
         self.assertEqual(watts.units_dict, {"A": -2, "V": -2})
@@ -103,6 +99,11 @@ class TestUnits(unittest.TestCase):
         # test that simplification retains units
         s = pybamm.Scalar(1, units="m")
         self.assertEqual(str((s * 2).units), "m")
+
+    def test_rounding(self):
+        unit = pybamm.Units("m.s-1") ** 0.5
+        self.assertIsInstance((unit**2).units_dict["m"], int)
+        self.assertIsInstance((unit**2).units_dict["s"], int)
 
 
 if __name__ == "__main__":

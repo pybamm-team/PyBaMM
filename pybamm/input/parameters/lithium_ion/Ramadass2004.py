@@ -86,7 +86,7 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 4.854 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
+    m_ref = 4.854 * 10 ** (-6) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
     E_r = 37480 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
         E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
@@ -113,6 +113,7 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
         Stochiometry of material (li-fraction)
 
     """
+    c_s_max = c_s_max / pybamm.Units("mol.m-3")
     du_dT = (
         -1.5 * (120.0 / c_s_max) * pybamm.exp(-120 * sto)
         + (0.0351 / (0.083 * c_s_max)) * ((pybamm.cosh((sto - 0.286) / 0.083)) ** (-2))
@@ -228,7 +229,7 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 2.252 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
+    m_ref = 2.252 * 10 ** (-6) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
     E_r = 39570 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(
         E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
@@ -258,6 +259,7 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     # should this too? If not, the "bumps" in the OCV don't line up.
     stretch = 1.062
     sto = stretch * sto
+    c_s_max = c_s_max / pybamm.Units("mol.m-3")
 
     du_dT = (
         0.07645
@@ -332,10 +334,13 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    # mol.m-3 to mol.dm-3, original function is likely in mS/cm
     # The function is not in Arora 2000 as reported in Ramadass 2004
 
-    cm = 1e-6 * c_e  # here it should be only 1e-3
+    # Ramadass 2004 claims that cm is in mol.dm-3
+    # which would mean dividing by 1000
+    # but we have to divide by 1e6 to get sensible results
+    # suggesting that cm should be in mol.cm-3
+    cm = c_e / pybamm.Scalar(1e6, "mol.m-3")
 
     sigma_e = (
         4.1253 * (10 ** (-4))
@@ -343,7 +348,8 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
         - 4.7212 * (10**3) * (cm**2)
         + 1.5094 * (10**6) * (cm**3)
         - 1.6018 * (10**8) * (cm**4)
-    ) * 1e3  # and here there should not be an exponent
+    ) * 1e3  # have to multiply by 1e3 to get sensible scale (O(1) S/m)
+    # function was maybe given in mS/m in the paper?
 
     E_k_e = 34700 * pybamm.Units("J.mol-1")
     arrhenius = pybamm.exp(

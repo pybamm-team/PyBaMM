@@ -84,7 +84,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
         + p7 * sto
         + p8
     )
-    return U_lithiation
+    return U_lithiation * pybamm.Units("V")
 
 
 def silicon_ocp_delithiation_Mark2016(sto):
@@ -128,7 +128,7 @@ def silicon_ocp_delithiation_Mark2016(sto):
         + p7 * sto
         + p8
     )
-    return U_delithiation
+    return U_delithiation * pybamm.Units("V")
 
 
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(

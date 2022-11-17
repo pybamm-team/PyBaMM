@@ -5,8 +5,10 @@ import re
 import pybamm
 from collections import defaultdict
 import numbers
+from functools import cached_property
+import numpy as np
 
-KNOWN_UNITS = [
+_KNOWN_BASE_UNITS = [
     "m",
     "kg",
     "s",
@@ -27,6 +29,48 @@ KNOWN_UNITS = [
 ]
 
 
+class _UnitsDict(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__({}, **kwargs)
+        self.update(*args)
+
+    def update(self, items):
+        processed_items = {}
+        for k, v in items.items():
+            if isinstance(v, float) and abs(np.round(v) - v) < 1e-12:
+                v = int(np.round(v))
+            if v != 0:
+                processed_items[k] = v
+        super().update(processed_items)
+
+    def __setitem__(self, k, v):
+        super().update({k: v})
+
+    def __missing__(self, key):
+        return 0
+
+
+_KNOWN_COMPOSED_UNITS = {
+    **{k: _UnitsDict({k: 1}) for k in _KNOWN_BASE_UNITS},
+    # override composed units
+    "J": _UnitsDict({"V": 1, "A": 1, "s": 1}),
+    "W": _UnitsDict({"V": 1, "A": 1}),
+    "S": _UnitsDict({"V": -1, "A": 1}),
+    "Ohm": _UnitsDict({"V": 1, "A": -1}),
+    "Pa": _UnitsDict({"V": 1, "A": 1, "s": 1, "m": -3}),
+    # other standard composed units
+    "m.s-1": _UnitsDict({"m": 1, "s": -1}),
+    "m2.s-1": _UnitsDict({"m": 2, "s": -1}),
+    "m.s-2": _UnitsDict({"m": 1, "s": -2}),
+    "mol.m-3": _UnitsDict({"mol": 1, "m": -3}),
+    "m3.mol-1": _UnitsDict({"m": 3, "mol": -1}),
+    "A.m-2": _UnitsDict({"A": 1, "m": -2}),
+    "S.m-1": _UnitsDict({"V": -1, "A": 1, "m": -1}),
+    "V.K-1": _UnitsDict({"V": 1, "K": -1}),
+    "J.mol-1": _UnitsDict({"V": 1, "A": 1, "s": 1, "mol": -1}),
+}
+
+
 class Units:
     """A node containing information about units. This is usually an attribute of a node
     in the expression tree, and is automatically created by the expression tree
@@ -35,61 +79,66 @@ class Units:
     ----------
     units : str
         units of the node
+    check_units : bool, optional
+        Whether to check that the units are valid. Default is True. If the units are
+        one of a known number of standard cases, then they are not checked.
     """
 
-    def __init__(self, units):
+    def __init__(self, units, check_units=True):
+        # timer = pybamm.Timer()
         # encode empty units
         if units is None or units == {}:
             self.units_str = "-"
-            self.units_dict = defaultdict(int)
+            self.units_dict = _UnitsDict({})
+            check_units = False
         elif isinstance(units, str):
             self.units_str = units
-            self.units_dict = self.str_to_dict(units)
+            try:
+                self.units_dict = _KNOWN_COMPOSED_UNITS[units]
+                check_units = False
+            except KeyError:
+                self.units_dict = self._str_to_dict(units)
         else:
-            units = defaultdict(int, units)
-            self.units_str = self.dict_to_str(units)
-            self.units_dict = units
+            self.units_dict = _UnitsDict(units)
+            # _dict_to_str will be called when the units_str attribute is accessed
 
         # Check all units are recognized
-        for name in self.units_dict.keys():
-            if name not in KNOWN_UNITS:
-                pybamm.units_error(
-                    "Unit '{}' not recognized.".format(name)
-                    + "\nKNOWN_UNITS: {}".format(KNOWN_UNITS)
-                )
+        if check_units:
+            for name in self.units_dict.keys():
+                if name not in _KNOWN_BASE_UNITS:
+                    pybamm.units_error(
+                        f"Unit '{name}' not recognized.\n"
+                        f"KNOWN_BASE_UNITS: {_KNOWN_BASE_UNITS}"
+                    )
+
+        # print(timer.time())
+        # print(units)
+        # timer.reset()
+        # print(self.units_str)
+        # print(timer.time())
 
     def __str__(self):
         return self.units_str
 
+    @cached_property
+    def units_str(self):
+        return self._dict_to_str(self.units_dict)
+
     def __repr__(self):
         return "Units({!s})".format(self)
 
-    def str_to_dict(self, units_str):
+    def _str_to_dict(self, units_str):
         "Convert string representation of units to a dictionary"
         # Find all the units and add to the dictionary
         units = units_str.split(".")
-        units_dict = defaultdict(int)
+        units_dict = {}
         amount = None
         for i, unit in enumerate(units):
-            # Account for cases like [m1.5.s-1] by looking for points after the decimal
-            if unit.isdigit():
-                # There can't be a digit in the first entry
-                if i == 0:
-                    pybamm.units_error(
-                        "Units cannot start with a digit but found '{}'.".format(
-                            units_str
-                        )
-                    )
-                else:
-                    # Add the digit to the previous entry
-                    # Don't change the name, just add to the amount
-                    amount += "." + unit
             # Look for negative
-            elif "-" in unit:
+            if "-" in unit:
                 # Split by the location of the negative
-                name = unit[: unit.index("-")]
-                amount = unit[unit.index("-") :]
-                # amount automatically includes the negative by the way it is extracted
+                name, amount = unit.split("-")
+                amount = "-" + amount
             else:
                 # Split by character and number
                 match = re.match(r"([a-z]+)([0-9]+)", unit, re.I)
@@ -100,25 +149,27 @@ class Units:
                     name = unit
                     amount = 1
             # Add the unit to the dictionary
-            float_amount = float(amount)
-            if abs(round(float_amount) - float_amount) < 1e-12:
-                units_dict[name] = int(float_amount)
-            else:
-                units_dict[name] = float_amount
+            try:
+                units_dict[name] = int(amount)
+            except ValueError:
+                raise pybamm.units_error(
+                    f"Units must be integers, not {amount}. Non-integer units can be "
+                    "constructed by power, e.g. 'pybamm.Units('m')**0.5'"
+                )
 
         # Update units dictionary for special parameters
-        units_dict = self.reformat_dict(units_dict)
+        units_dict = self._reformat_dict(units_dict)
 
         return units_dict
 
-    def dict_to_str(self, units_dict):
+    def _dict_to_str(self, units_dict):
         "Convert a dictionary of units to a string representation"
         # O(n2) but the dictionary is small so it doesn't matter
         # First loop through the positives
         units_str = ""
 
         # Update units dictionary for special parameters
-        units_dict = self.reformat_dict(units_dict)
+        units_dict = self._reformat_dict(units_dict)
 
         for name, amount in sorted(units_dict.items()):
             if amount == 0:
@@ -140,8 +191,13 @@ class Units:
 
         return units_str
 
-    def reformat_dict(self, units_dict):
+    def _reformat_dict(self, units_dict):
         "Reformat units dictionary"
+        if any(x in units_dict for x in ["J", "C", "W", "S", "Ohm", "Pa"]):
+            units_dict = _UnitsDict(units_dict)
+        else:
+            return units_dict
+
         if "J" in units_dict:
             num_J = units_dict.pop("J")
             units_dict["V"] += num_J
@@ -173,7 +229,7 @@ class Units:
 
     def __add__(self, other):
         if self.units_dict == other.units_dict:
-            return Units(self.units_dict)
+            return self
         else:
             pybamm.units_error(
                 "Cannot add different units {!s} and {!s}.".format(self, other)
@@ -184,14 +240,15 @@ class Units:
         return self + other
 
     def __mul__(self, other):
-        # Add common elements and keep distinct elements
-        # remove from units dict if equal to zero
-        mul_units = {
-            k: self.units_dict.get(k, 0) + other.units_dict.get(k, 0)
-            for k in set(self.units_dict) | set(other.units_dict)
-            if self.units_dict.get(k, 0) + other.units_dict.get(k, 0) != 0
-        }
-        return Units(mul_units)
+        mul_units = {}
+        for k in set(self.units_dict) | set(other.units_dict):
+            # Add common elements and keep distinct elements
+            sum_units_k = self.units_dict.get(k, 0) + other.units_dict.get(k, 0)
+            # only add if not equal to zero
+            if sum_units_k != 0:
+                mul_units[k] = sum_units_k
+
+        return Units(mul_units, check_units=False)
 
     def __rmul__(self, other):
         """
@@ -206,14 +263,14 @@ class Units:
             raise TypeError()
 
     def __truediv__(self, other):
-        # Subtract common elements and keep distinct elements
-        # remove from units dict if equal to zero
-        div_units = {
-            k: self.units_dict.get(k, 0) - other.units_dict.get(k, 0)
-            for k in set(self.units_dict) | set(other.units_dict)
-            if self.units_dict.get(k, 0) - other.units_dict.get(k, 0) != 0
-        }
-        return Units(div_units)
+        div_units = {}
+        for k in set(self.units_dict) | set(other.units_dict):
+            # Substract common elements and keep distinct elements
+            diff_units_k = self.units_dict.get(k, 0) - other.units_dict.get(k, 0)
+            # only add if not equal to zero
+            if diff_units_k != 0:
+                div_units[k] = diff_units_k
+        return Units(div_units, check_units=False)
 
     def __rtruediv__(self, other):
         """
@@ -226,10 +283,8 @@ class Units:
 
     def __pow__(self, power):
         # Multiply units by the power
-        # This is different from the other operations in that "power" has to be an
-        # integer
         pow_units = {k: power * v for k, v in self.units_dict.items()}
-        return Units(pow_units)
+        return Units(pow_units, check_units=False)
 
     def __eq__(self, other):
         "Two units objects are defined to be equal if their unit_dicts are equal"
