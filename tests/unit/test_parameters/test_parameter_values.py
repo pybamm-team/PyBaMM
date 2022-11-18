@@ -343,7 +343,10 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 369)
 
         # process constant function
-        const = pybamm.FunctionParameter("const", {"a": a})
+        # this should work even if the parameter in the function is not provided
+        const = pybamm.FunctionParameter(
+            "const", {"a": pybamm.Parameter("not provided")}
+        )
         processed_const = parameter_values.process_symbol(const)
         self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
