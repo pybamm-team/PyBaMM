@@ -17,7 +17,7 @@ Adding Parameter Sets
 *********************
 
 Parameter sets can be added to PyBaMM by creating a python package, and
-registering a `entry point`_ to ``pybamm_parameter_set``. At a minimum, the
+registering a `entry point`_ to ``pybamm_parameter_sets``. At a minimum, the
 package (``cell_parameters``) should consist of the following::
 
     cell_parameters
@@ -46,32 +46,17 @@ For an example, see the `Marquis2019`_ parameter sets.
             ...
         }
 
-Then register ``get_parameter_values`` to ``pybamm_parameter_set`` in ``pyproject.toml``:
+Then register ``get_parameter_values`` to ``pybamm_parameter_sets`` in ``pyproject.toml``:
 
 .. code-block:: toml
 
-    [project.entry-points.pybamm_parameter_set]
+    [project.entry-points.pybamm_parameter_sets]
     cell_alpha = "cell_parameters.cell_alpha:get_parameter_values"
 
 If you are using ``setup.py`` or ``setup.cfg`` to setup your package, please
 see SetupTools' documentation for registering `entry points`_.
 
 .. _entry points: https://setuptools.pypa.io/en/latest/userguide/entry_point.html#entry-points-for-plugins
-
-Finally install you package (``python -m pip install .``), to complete the process.
-You will need to reinstall your package every time you add a new parameter set.
-If you're actively editing the parameter set it may be helpful to install in
-editing mode (``python -m pip install -e .``) instead.
-
-Once successfully registered, your parameter set will appear within the contents
-of ``pybamm.parameter_sets``, along with any other bundled or installed
-third-party parameter sets.
-
-.. doctest::
-
-        >>> import pybamm
-        >>> list(pybamm.parameter_sets)
-        ['Ai2020', 'Chen2020', ...]
 
 If you're willing to open-source your parameter set,
 `let us know`_, and we can add an entry to
@@ -85,7 +70,7 @@ If you're willing to open-source your parameter set,
 Third-Party Parameter Sets
 **************************
 
-Registered a new parameter set to ``pybamm_parameter_set``?
+Registered a new parameter set to ``pybamm_parameter_sets``?
 `Let us know`_, and we'll update our list.
 
 .. _bundled-parameter-sets:
