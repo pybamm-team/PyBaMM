@@ -160,7 +160,7 @@ class Simulation:
                     Crate = op_conds.pop("C-rate input [-]")
                     op_conds["type"] = "current"
                     op_conds["Current input [A]"] = Crate * capacity
-                elif op_type == "current":
+                elif op_type in ["current", "CCCV"]:
                     Crate = op_conds["Current input [A]"] / capacity
 
             # Update events
@@ -285,9 +285,13 @@ class Simulation:
                         -new_model.variables["Current [A]"]
                         - abs(pybamm.InputParameter("Current cut-off [A]"))
                         + 1e4
+                        * pybamm.Units("A")
                         * (
                             new_model.variables["Battery voltage [V]"]
-                            < (pybamm.InputParameter("Voltage input [V]") - 1e-4)
+                            < (
+                                pybamm.InputParameter("Voltage input [V]")
+                                - 1e-4 * pybamm.Units("V")
+                            )
                         ),
                     )
                 )

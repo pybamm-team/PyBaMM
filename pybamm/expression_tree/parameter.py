@@ -154,13 +154,9 @@ class FunctionParameter(pybamm.Symbol):
 
         self._input_names = inp
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id`"""
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str, self.diff_variable)
-            + tuple([child.id for child in self.children])
-            + tuple(self.domain)
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.diff_variable,)
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""

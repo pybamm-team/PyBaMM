@@ -421,8 +421,17 @@ class Symbol:
         Hashing can be slow, so we set the id when we create the node, and hence only
         need to hash once.
         """
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str)
+        self._id = hash(self.hash_tuple())
+
+    def hash_tuple(self):
+        "Tuple to be hashed for id, overriden by specific node types"
+        return self.base_hash_tuple()
+
+    def base_hash_tuple(self):
+        "Base tuple to be hashed for id, parts common to all node types"
+        return (
+            (self.__class__, self.name)
+            + self.units.units_tuple
             + tuple([child.id for child in self.children])
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )

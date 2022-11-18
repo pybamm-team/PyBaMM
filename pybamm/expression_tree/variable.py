@@ -80,17 +80,9 @@ class VariableBase(pybamm.Symbol):
         self.bounds = bounds
         self.print_name = print_name
 
-    def set_id(self):
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.units.units_str,
-                self.scale,
-                self.reference,
-            )
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.scale, self.reference)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

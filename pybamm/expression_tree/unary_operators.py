@@ -307,19 +307,9 @@ class Index(UnaryOperator):
         else:
             return Index(child_jac, self.index)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.units.units_str,
-                self.slice.start,
-                self.slice.stop,
-                self.children[0].id,
-            )
-            + tuple(self.domain)
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.slice.start, self.slice.stop)
 
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
@@ -592,18 +582,13 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str)
-            + tuple(
-                [
-                    integration_variable.id
-                    for integration_variable in self.integration_variable
-                ]
-            )
-            + (self.children[0].id,)
-            + tuple(self.domain)
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + tuple(
+            [
+                integration_variable.id
+                for integration_variable in self.integration_variable
+            ]
         )
 
     def _unary_new_copy(self, child):
@@ -747,13 +732,9 @@ class DefiniteIntegralVector(SpatialOperator):
         # integrating removes the domain
         self.clear_domains()
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str, self.vector_type)
-            + (self.children[0].id,)
-            + tuple(self.domain)
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.vector_type,)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -803,14 +784,6 @@ class BoundaryIntegral(SpatialOperator):
         self.region = region
         super().__init__(name, child, domains)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str)
-            + (self.children[0].id,)
-            + tuple(self.domain)
-        )
-
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
 
@@ -848,18 +821,9 @@ class DeltaFunction(SpatialOperator):
             domains["secondary"] = child.domain
         super().__init__("delta_function", child, domains)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.units.units_str,
-                self.side,
-                self.children[0].id,
-            )
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.side,)
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -915,12 +879,9 @@ class BoundaryOperator(SpatialOperator):
         }
         super().__init__(name, child, domains)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.side,)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""

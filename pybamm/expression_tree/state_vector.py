@@ -106,17 +106,9 @@ class StateVectorBase(pybamm.Symbol):
                 array[y_slice] = True
             self._evaluation_array = [bool(x) for x in array]
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.units.units_str,
-                tuple(self.evaluation_array),
-            )
-            + tuple(self.domain)
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (tuple(self.evaluation_array),)
 
     def _jac_diff_vector(self, variable):
         """

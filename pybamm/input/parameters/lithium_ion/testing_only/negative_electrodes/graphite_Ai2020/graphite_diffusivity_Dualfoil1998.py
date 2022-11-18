@@ -29,6 +29,6 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     """
     D_ref = 3.9 * 10 ** (-14)
     E_D_s = 5000
-    T_ref = Parameter("Reference temperature [K]")
+    T_ref = 298.15
     arrhenius = exp(E_D_s / constants.R.value * (1 / T_ref - 1 / T))
     return D_ref * arrhenius

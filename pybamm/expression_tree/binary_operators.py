@@ -784,7 +784,7 @@ def simplified_power(left, right):
     if isinstance(left, Multiplication):
         # Simplify (a * b) ** c to (a ** c) * (b ** c)
         # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() and _units(left.left).units_str == "-":
+        if left.left.is_constant() and _units(left.left).units_dict == {}:
             l_left, l_right = left.orphans
             new_left = l_left**right
             new_right = l_right**right
@@ -793,7 +793,7 @@ def simplified_power(left, right):
     elif isinstance(left, Division):
         # Simplify (a / b) ** c to (a ** c) / (b ** c)
         # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() and _units(left.left).units_str == "-":
+        if left.left.is_constant() and _units(left.left).units_dict == {}:
             l_left, l_right = left.orphans
             new_left = l_left**right
             new_right = l_right**right
@@ -999,11 +999,11 @@ def simplified_multiplication(left, right):
 
     # anything multiplied by a scalar one returns itself
     # unless it changes the units
-    if pybamm.is_scalar_one(left) and _units(left).units_str == "-":
+    if pybamm.is_scalar_one(left) and _units(left).units_dict == {}:
         return right
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_minus_one(left) and _units(left).units_str == "-":
+    if pybamm.is_scalar_minus_one(left) and _units(left).units_dict == {}:
         return -right
 
     # Return constant if both sides are constant

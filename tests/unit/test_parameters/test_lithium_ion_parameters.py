@@ -172,12 +172,12 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values
         # in paper so check again, it is close enough though for now)
         np.testing.assert_almost_equal(
-            values.evaluate(param.n.sigma(param.T_ref) * c_rate), 475.7, 1
+            values.evaluate(param.n.sigma(0) * c_rate), 475.7, 1
         )
 
         # neg dimensionless rescaled
         np.testing.assert_almost_equal(
-            values.evaluate(param.n.sigma_prime(param.T_ref) * c_rate), 0.7814, 1
+            values.evaluate(param.n.sigma_prime(0) * c_rate), 0.7814, 1
         )
 
         # pos dimensional
@@ -188,12 +188,12 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # pos dimensionless (old sigma_n / old_Lambda ) (this is different to values in
         # paper so check again, it is close enough for now though)
         np.testing.assert_almost_equal(
-            values.evaluate(param.p.sigma(param.T_ref) * c_rate), 47.57, 1
+            values.evaluate(param.p.sigma(0) * c_rate), 47.57, 1
         )
 
         # pos dimensionless rescaled
         np.testing.assert_almost_equal(
-            values.evaluate(param.p.sigma_prime(param.T_ref) * c_rate), 0.07814, 1
+            values.evaluate(param.p.sigma_prime(0) * c_rate), 0.07814, 1
         )
 
     def test_thermal_parameters(self):

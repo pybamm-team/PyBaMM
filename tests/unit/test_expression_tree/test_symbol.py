@@ -349,29 +349,29 @@ class TestSymbol(unittest.TestCase):
             a.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", a, children\=\[\], domains\=\{\}\)"
-            + r", units=\[-\]",
+            + r", a, children\=\[\], domains\=\{\}"
+            + r", units=-\)",
         )
         self.assertRegex(
             b.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", b, children\=\[\], domains\=\{\}\)"
-            + r", units=\[-\]",
+            + r", b, children\=\[\], domains\=\{\}"
+            + r", units=-\)",
         )
         self.assertRegex(
             c.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", c, children\=\[\], domains\=\{'primary': \['test'\]\}\)"
-            + r", units=\[-\]",
+            + r", c, children\=\[\], domains\=\{'primary': \['test'\]\}"
+            + r", units=-\)",
         )
         self.assertRegex(
             d.__repr__(),
             r"Symbol\("
             + hex_regex
             + r", d, children\=\[\], domains\=\{'primary': \['test'\], "
-            + r"'secondary': \['other test'\]\}\), units=\[-\]",
+            + r"'secondary': \['other test'\]\}, units=-\)",
         )
         self.assertRegex(
             (a + b).__repr__(),
@@ -382,14 +382,14 @@ class TestSymbol(unittest.TestCase):
             r"Multiplication\("
             + hex_regex
             + r", \*, children\=\['a', 'd'\], domains\=\{'primary': \['test'\], "
-            + r"'secondary': \['other test'\]\}\), units=\[-\]",
+            + r"'secondary': \['other test'\]\}, units=-\)",
         )
         self.assertRegex(
             pybamm.grad(c).__repr__(),
             r"Gradient\("
             + hex_regex
             + r", grad, children\=\['c'\], domains\=\{'primary': \['test'\]}"
-            + r", units=\[-\]",
+            + r", units=-\)",
         )
 
     def test_symbol_visualise(self):

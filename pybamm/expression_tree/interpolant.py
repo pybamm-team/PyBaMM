@@ -218,13 +218,9 @@ class Interpolant(pybamm.Function):
                 self._entries_string += "x" + str(i) + "_" + str(x.tobytes())
             self._entries_string += "y_" + str(self.y.tobytes())
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str, self.entries_string)
-            + tuple([child.id for child in self.children])
-            + tuple(self.domain)
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.entries_string,)
 
     def _function_new_copy(self, children):
         """See :meth:`Function._function_new_copy()`"""

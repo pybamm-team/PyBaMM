@@ -96,13 +96,9 @@ class Array(pybamm.Symbol):
             else:
                 self._entries_string = (entries.tobytes(),)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        self._id = hash(
-            (self.__class__, self.name, self.units.units_str)
-            + self.entries_string
-            + tuple(self.domain)
-        )
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
+        return self.base_hash_tuple() + (self.entries_string,)
 
     def _jac(self, variable):
         """See :meth:`pybamm.Symbol._jac()`."""

@@ -84,14 +84,13 @@ class Units:
     """
 
     def __init__(self, units, check_units=True):
-        # timer = pybamm.Timer()
         # encode empty units
         if units is None or units == {}:
-            self.units_str = "-"
+            self._units_str = "-"
             self.units_dict = _UnitsDict({})
             check_units = False
         elif isinstance(units, str):
-            self.units_str = units
+            self._units_str = units
             try:
                 self.units_dict = _KNOWN_COMPOSED_UNITS[units]
                 check_units = False
@@ -110,22 +109,23 @@ class Units:
                         f"KNOWN_BASE_UNITS: {_KNOWN_BASE_UNITS}"
                     )
 
-        # print(timer.time())
-        # print(units)
-        # timer.reset()
-        # print(self.units_str)
-        # print(timer.time())
-
     def __str__(self):
         return self.units_str
 
     @cached_property
     def units_str(self):
-        return self._dict_to_str(self.units_dict)
+        try:
+            return self._units_str
+        except AttributeError:
+            return self._dict_to_str(self.units_dict)
 
     @cached_property
     def is_dimensionless(self):
         return self.units_dict == {}
+
+    @cached_property
+    def units_tuple(self):
+        return tuple(self.units_dict.items())
 
     def __repr__(self):
         return "Units({!s})".format(self)

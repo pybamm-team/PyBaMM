@@ -27,7 +27,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = Parameter("Reference temperature [K]")
+    T_ref = 298.15
     Eac_cr = Parameter(
         "Negative electrode activation energy for cracking rate [J.mol-1]"
     ) / Units("J.mol-1")

@@ -54,11 +54,11 @@ class Scalar(pybamm.Symbol):
     def value(self, value):
         self._value = np.float64(value)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
+    def hash_tuple(self):
+        """See :meth:`pybamm.Symbol.hash_tuple()`."""
         # We must include the value in the hash, since different scalars can be
         # indistinguishable by class and name alone
-        self._id = hash((self.__class__, str(self.value), self.units.units_str))
+        return self.base_hash_tuple() + (str(self.value),)
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
