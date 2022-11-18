@@ -1,4 +1,4 @@
-from pybamm import exp, constants, Parameter
+from pybamm import exp, constants
 
 
 def lico2_diffusivity_Dualfoil1998(sto, T):
