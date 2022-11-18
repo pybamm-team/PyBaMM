@@ -36,7 +36,7 @@ class ParameterSets(Mapping):
     def __init__(self):
         # Dict of entry points for parameter sets, lazily load entry points as
         self.__all_parameter_sets = dict()
-        for entry_point in pkg_resources.iter_entry_points("pybamm_parameter_set"):
+        for entry_point in pkg_resources.iter_entry_points("pybamm_parameter_sets"):
             self.__all_parameter_sets[entry_point.name] = entry_point
 
     def __new__(cls):
@@ -49,7 +49,7 @@ class ParameterSets(Mapping):
         return self.__load_entry_point__(key)()
 
     def __load_entry_point__(self, key) -> callable:
-        """Check that ``key`` is a registered ``pybamm_parameter_set``,
+        """Check that ``key`` is a registered ``pybamm_parameter_sets``,
         and return the entry point for the parameter set, loading it needed.
         """
         if key not in self.__all_parameter_sets:
