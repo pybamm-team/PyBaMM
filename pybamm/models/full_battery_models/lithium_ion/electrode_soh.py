@@ -164,7 +164,6 @@ class ElectrodeSOHx0(pybamm.BaseModel):
         T_ref = param.T_ref
 
         n_Li = pybamm.InputParameter("n_Li", units="mol")
-        V_max = pybamm.InputParameter("V_max", units="V")
         V_min = pybamm.InputParameter("V_min", units="V")
         Cn = pybamm.InputParameter("C_n", units="A.h")
         Cp = pybamm.InputParameter("C_p", units="A.h")
