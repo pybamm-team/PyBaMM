@@ -429,14 +429,13 @@ class TestSimulation(unittest.TestCase):
 
     def test_discontinuous_current(self):
         def car_current(t):
+            t = t / pybamm.Units("s")
             # convert units
             current = (
-                1 * (t >= pybamm.Scalar(0, "[s]")) * (t <= pybamm.Scalar(1000, "[s]"))
-                - 0.5
-                * (pybamm.Scalar(1000, "[s]") < t)
-                * (t <= pybamm.Scalar(2000, "[s]"))
-                + 0.5 * (pybamm.Scalar(2000, "[s]") < t)
-            ) * pybamm.Scalar(1, "[A]")
+                1 * (t >= 0) * (t <= 1000)
+                - 0.5 * (1000 < t) * (t <= 2000)
+                + 0.5 * (2000 < t)
+            ) * pybamm.Scalar(1, "A")
             return current
 
         model = pybamm.lithium_ion.DFN()

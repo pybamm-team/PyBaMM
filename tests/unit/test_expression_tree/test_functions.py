@@ -147,7 +147,7 @@ class TestFunction(unittest.TestCase):
 
 class TestSpecificFunctions(unittest.TestCase):
     def test_units(self):
-        a = pybamm.InputParameter("a", units="[m]")
+        a = pybamm.InputParameter("a", units="m")
         with self.assertRaisesRegex(
             pybamm.UnitsError, "can only act on dimensionless objects"
         ):
