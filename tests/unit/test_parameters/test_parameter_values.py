@@ -148,10 +148,10 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_a, pybamm.Scalar)
         self.assertEqual(processed_a.value, 4)
 
-        # parameter with units
+        # parameter with units - processing removes units
         d = pybamm.Parameter("d [m]")
         processed_d = parameter_values.process_symbol(d)
-        self.assertEqual(str(processed_d.units), "[m]")
+        self.assertEqual(str(processed_d.units), "-")
 
         # process binary operation
         var = pybamm.Variable("var")
@@ -320,10 +320,10 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_a, pybamm.InputParameter)
         self.assertEqual(processed_a.evaluate(inputs={"a": 5}), 5)
 
-        # process input parameter with units
+        # process input parameter with units - processing removes units
         c = pybamm.Parameter("c [A]")
         processed_c = parameter_values.process_symbol(c)
-        self.assertEqual(str(processed_c.units), "[A]")
+        self.assertEqual(str(processed_c.units), "-")
 
         # process binary operation
         b = pybamm.Parameter("b")
@@ -562,9 +562,11 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_against_function(self):
-        parameter_values = pybamm.ParameterValues({"function": lico2_ocp_Dualfoil1998})
+        parameter_values = pybamm.ParameterValues(
+            {"function [V]": lico2_ocp_Dualfoil1998}
+        )
         parameter_values.update(
-            {"interpolation": "[data]lico2_data_example"},
+            {"interpolation [V]": "[data]lico2_data_example"},
             path=os.path.join(
                 pybamm.root_dir(),
                 "pybamm",

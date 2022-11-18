@@ -1,6 +1,3 @@
-import pybamm
-
-
 def electrolyte_diffusivity_Ai2020(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration.
@@ -28,4 +25,4 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
 
     D_c_e = 10 ** (-8.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
 
-    return D_c_e * pybamm.Units("m2.s-1")
+    return D_c_e

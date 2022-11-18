@@ -29,10 +29,10 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
         Solid diffusivity [m2.s-1]
     """
     D_ref = 3.9 * 10 ** (-14)
-    E_D_s = 5000 * pybamm.Units("J.mol-1")
-    T_ref = pybamm.Scalar(298.15, "K")
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    E_D_s = 5000
+    T_ref = 298.15
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R.value * (1 / T_ref - 1 / T))
+    return D_ref * arrhenius
 
 
 def graphite_electrolyte_exchange_current_density_Dualfoil1998(
@@ -63,16 +63,10 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
         Exchange-current density [A.m-2]
     """
     m_ref = (
-        1
-        * 10 ** (-11)
-        * pybamm.Units("m.s-1")
-        * pybamm.constants.F
-        * pybamm.Units("m3.mol-1") ** 0.5
-    )
-    E_r = 5000 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+        1 * 10 ** (-11) * pybamm.constants.F
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 5000  # activation energy for Temperature Dependent Reaction Constant [J/mol]
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -129,7 +123,7 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
         )
     )
 
-    return du_dT * pybamm.Units("V.K-1")
+    return du_dT
 
 
 def graphite_volume_change_Ai2020(sto, c_s_max):
@@ -210,11 +204,11 @@ def graphite_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = pybamm.Scalar(298.15, "K")
+    T_ref = 298.15
     Eac_cr = pybamm.Parameter(
         "Negative electrode activation energy for cracking rate [J.mol-1]"
-    )
-    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / T_ref))
+    ) / pybamm.Units("J.mol-1")
+    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R.value * (1 / T_ref - 1 / T_dim))
     return k_cr * arrhenius
 
 
@@ -240,10 +234,10 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
         Solid diffusivity [m2.s-1]
     """
     D_ref = 5.387 * 10 ** (-15)
-    E_D_s = 5000 * pybamm.Units("J.mol-1")
-    T_ref = pybamm.Scalar(298.15, "K")
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / T_ref - 1 / T))
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    E_D_s = 5000
+    T_ref = 298.15
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R.value * (1 / T_ref - 1 / T))
+    return D_ref * arrhenius
 
 
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_max, T):
@@ -271,17 +265,10 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = (
-        1
-        * 10 ** (-11)
-        * pybamm.Units("m.s-1")
-        * pybamm.constants.F
-        * pybamm.Units("m3.mol-1") ** 0.5
-    )
-    E_r = 5000 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 1 * 10 ** (-11) * pybamm.constants.F  # need to match the unit from m/s
+    # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 5000
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -335,7 +322,7 @@ def lico2_entropic_change_Ai2020_function(sto, c_s_max):
         + p8
     )
 
-    return du_dT * pybamm.Units("V.K-1")
+    return du_dT
 
 
 def lico2_volume_change_Ai2020(sto, c_s_max):
@@ -396,11 +383,11 @@ def lico2_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = pybamm.Scalar(298.15, "K")
+    T_ref = 298.15
     Eac_cr = pybamm.Parameter(
         "Positive electrode activation energy for cracking rate [J.mol-1]"
-    )
-    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / T_ref))
+    ) / pybamm.Units("J.mol-1")
+    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R.value * (1 / T_ref - 1 / T_dim))
     return k_cr * arrhenius
 
 
@@ -427,12 +414,12 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     :class:`pybamm.Symbol`
         1 + dlnf/dlnc
     """
-    T = T / pybamm.Units("K")
     T_ref = 298.15
     t_plus = pybamm.Parameter("Cation transference number")
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
     dlnf_dlnc = (
-        0.601 - 0.24 * c_e**0.5 + 0.982 * (1 - 0.0052 * (T - T_ref)) * c_e**1.5
+        0.601
+        - 0.24 * (c_e / 1000) ** 0.5
+        + 0.982 * (1 - 0.0052 * (T - T_ref)) * (c_e / 1000) ** 1.5
     ) / (1 - t_plus)
     return dlnf_dlnc
 
@@ -461,12 +448,10 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
 
-    D_c_e = 10 ** (-8.43 - 54 / (T - 229 - 5 * c_e) - 0.22 * c_e)
+    D_c_e = 10 ** (-8.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
 
-    return D_c_e * pybamm.Units("m2.s-1")
+    return D_c_e
 
 
 def electrolyte_conductivity_Ai2020(c_e, T):
@@ -496,20 +481,19 @@ def electrolyte_conductivity_Ai2020(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
+
     sigma_e = (
-        1e-1
+        1e-4
         * c_e
         * (
-            (-10.5 + 0.668 * c_e + 0.494 * c_e**2)
-            + (0.074 - 1.78 * 1e-2 * c_e - 8.86 * 1e-4 * c_e**2) * T
-            + (-6.96 * 1e-5 + 2.8 * 1e-5 * c_e) * T**2
+            (-10.5 + 0.668 * 1e-3 * c_e + 0.494 * 1e-6 * c_e**2)
+            + (0.074 - 1.78 * 1e-5 * c_e - 8.86 * 1e-10 * c_e**2) * T
+            + (-6.96 * 1e-5 + 2.8 * 1e-8 * c_e) * T**2
         )
         ** 2
     )
 
-    return sigma_e * pybamm.Units("S.m-1")
+    return sigma_e
 
 
 # Load data in the appropriate format

@@ -101,12 +101,17 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     c_ox = 0
     c_hy = 0
     param = pybamm.LeadAcidParameters()
-    c_w_dim = (1 - c_e * param.V_e - c_ox * param.V_ox - c_hy * param.V_hy) / param.V_w
-    c_w_ref = (1 - param.c_e_typ * param.V_e) / param.V_w
+    V_e = param.V_e / pybamm.Units("m3.mol-1")
+    V_ox = param.V_ox / pybamm.Units("m3.mol-1")
+    V_hy = param.V_hy / pybamm.Units("m3.mol-1")
+    V_w = param.V_w / pybamm.Units("m3.mol-1")
+    c_e_typ = param.c_e_typ / pybamm.Units("mol.m-3")
+    c_w_dim = (1 - c_e * V_e - c_ox * V_ox - c_hy * V_hy) / V_w
+    c_w_ref = (1 - c_e_typ * V_e) / V_w
     c_w = c_w_dim / c_w_ref
 
     j0_ref = 0.004  # srinivasan2003mathematical
-    j0 = j0_ref * (c_e / param.c_e_typ) ** 2 * c_w
+    j0 = j0_ref * (c_e / c_e_typ) ** 2 * c_w
 
     return j0
 

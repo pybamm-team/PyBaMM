@@ -1,4 +1,4 @@
-from pybamm import exp, constants, Scalar, Units
+from pybamm import exp, constants
 
 
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_max, T):
@@ -26,9 +26,10 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 1 * 10 ** (-11) * Units("m.s-1") * constants.F * Units("m3.mol-1") ** 0.5
-    E_r = 5000 * Units("J.mol-1")
-    arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "K") - 1 / T))
+    m_ref = 1 * 10 ** (-11) * constants.F  # need to match the unit from m/s
+    # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 5000
+    arrhenius = exp(E_r / constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5

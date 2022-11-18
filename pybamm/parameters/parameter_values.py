@@ -555,6 +555,8 @@ class ParameterValues:
             return self._processed_symbols[symbol]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
+            if not processed_symbol.units.is_dimensionless:
+                processed_symbol /= processed_symbol.units
             self._processed_symbols[symbol] = processed_symbol
 
             return processed_symbol
@@ -569,7 +571,7 @@ class ParameterValues:
                 if np.isnan(value):
                     raise ValueError(f"Parameter '{symbol.name}' not found")
                 # Scalar inherits name (for updating parameters) and units
-                return pybamm.Scalar(value, name=symbol.name, units=symbol.units)
+                return pybamm.Scalar(value, name=symbol.name)
             elif isinstance(value, pybamm.Symbol):
                 new_value = self.process_symbol(value)
                 new_value.copy_domains(symbol)
@@ -611,15 +613,9 @@ class ParameterValues:
                         new_children,
                         interpolator="cubic",
                         name=name,
-                        units=symbol.units,
                     )
                     if function.is_constant():
-                        if np.prod(function.shape) == 1:
-                            function = pybamm.Scalar(
-                                function.evaluate(), units=symbol.units
-                            )
-                        else:
-                            function = pybamm.simplify_if_constant(function)
+                        function = pybamm.simplify_if_constant(function)
                     else:
                         # Define event to catch extrapolation. In these events the sign
                         # is important: it should be positive inside of the range and
@@ -659,21 +655,12 @@ class ParameterValues:
                     )
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
-                function = pybamm.Scalar(
-                    function_name, name=symbol.name, units=symbol.units
-                )
+                function = pybamm.Scalar(function_name, name=symbol.name)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
                 if isinstance(function, numbers.Number):
-                    function = pybamm.Scalar(function, units=symbol.units)
-                # Check that the units of the evaluated function are the same as the
-                # units of the original symbol
-                if function.units != symbol.units:
-                    pybamm.units_error(
-                        f"Original function '{symbol.name}' had units {symbol.units}, "
-                        f"but processed function has units {function.units}."
-                    )
+                    function = pybamm.Scalar(function)
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)
             ) or (
@@ -740,7 +727,11 @@ class ParameterValues:
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
             new_symbol._reference = self.process_symbol(symbol.reference)
+            new_symbol.units = pybamm.Units(None)
             return new_symbol
+
+        elif isinstance(symbol, numbers.Number):
+            return pybamm.Scalar(symbol)
 
         else:
             # Backup option: return the object

@@ -32,7 +32,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
         - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -65,11 +65,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 6.48e-7 * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
-    E_r = 35000 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 35000
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -94,9 +92,9 @@ def LFP_ocp_ashfar2017(sto):
 
     c1 = -150 * sto
     c2 = -30 * (1 - sto)
-    u_eq = 3.4077 - 0.020269 * sto + 0.5 * pybamm.exp(c1) - 0.9 * pybamm.exp(c2)
+    k = 3.4077 - 0.020269 * sto + 0.5 * pybamm.exp(c1) - 0.9 * pybamm.exp(c2)
 
-    return u_eq * pybamm.Units("V")
+    return k
 
 
 def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_max, T):
@@ -127,11 +125,9 @@ def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_ma
         Exchange-current density [A.m-2]
     """
 
-    m_ref = 6 * 10 ** (-7) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
-    E_r = 39570 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 6 * 10 ** (-7)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 39570
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -161,12 +157,12 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    D_c_e = 8.794e-11 * c_e**2 - 3.972e-10 * c_e + 4.862e-10
+
+    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
 
     # Nyman et al. (2008) does not provide temperature dependence
 
-    return D_c_e * pybamm.Units("m2.s-1")
+    return D_c_e
 
 
 def electrolyte_conductivity_Nyman2008(c_e, T):
@@ -192,12 +188,14 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    sigma_e = 0.1297 * c_e**3 - 2.51 * c_e**1.5 + 3.329 * c_e
+
+    sigma_e = (
+        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
+    )
 
     # Nyman et al. (2008) does not provide temperature dependence
 
-    return sigma_e * pybamm.Units("S.m-1")
+    return sigma_e
 
 
 # Call dict via a function to avoid errors when editing in place

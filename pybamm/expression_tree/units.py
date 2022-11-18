@@ -123,6 +123,10 @@ class Units:
     def units_str(self):
         return self._dict_to_str(self.units_dict)
 
+    @cached_property
+    def is_dimensionless(self):
+        return self.units_dict == {}
+
     def __repr__(self):
         return "Units({!s})".format(self)
 

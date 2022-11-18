@@ -1,4 +1,4 @@
-from pybamm import exp, constants, Parameter, Units
+from pybamm import exp, constants, Parameter
 
 
 def graphite_diffusivity_Dualfoil1998(sto, T):
@@ -28,7 +28,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
         Solid diffusivity [m2.s-1]
     """
     D_ref = 3.9 * 10 ** (-14)
-    E_D_s = 5000 * Units("J.mol-1")
+    E_D_s = 5000
     T_ref = Parameter("Reference temperature [K]")
-    arrhenius = exp(E_D_s / constants.R * (1 / T_ref - 1 / T))
-    return D_ref * arrhenius * Units("m2.s-1")
+    arrhenius = exp(E_D_s / constants.R.value * (1 / T_ref - 1 / T))
+    return D_ref * arrhenius

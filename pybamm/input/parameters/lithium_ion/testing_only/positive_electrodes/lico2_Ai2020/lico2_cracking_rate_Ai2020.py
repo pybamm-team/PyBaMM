@@ -1,4 +1,4 @@
-from pybamm import Parameter, constants, exp
+from pybamm import Parameter, constants, exp, Units
 
 
 def lico2_cracking_rate_Ai2020(T_dim):
@@ -30,6 +30,6 @@ def lico2_cracking_rate_Ai2020(T_dim):
     T_ref = Parameter("Reference temperature [K]")
     Eac_cr = Parameter(
         "Positive electrode activation energy for cracking rate [J.mol-1]"
-    )
-    arrhenius = exp(Eac_cr / constants.R * (1 / T_dim - 1 / T_ref))
+    ) / Units("J.mol-1")
+    arrhenius = exp(Eac_cr / constants.R.value * (1 / T_ref - 1 / T_dim))
     return k_cr * arrhenius

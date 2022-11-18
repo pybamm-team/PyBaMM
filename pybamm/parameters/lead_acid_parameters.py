@@ -251,10 +251,6 @@ class LeadAcidParameters(BaseParameters):
         # Viscosity
         self.mu_typ = self.mu_dimensional(self.c_e_typ)
 
-        # Reference OCP
-        self.U_n_ref = self.U_n_dimensional(self.c_e_typ, self.T_ref)
-        self.U_p_ref = self.U_p_dimensional(self.c_e_typ, self.T_ref)
-
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
 

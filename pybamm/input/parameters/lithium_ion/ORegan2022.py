@@ -27,15 +27,14 @@ def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte conductivity
     """
-    c = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
+    c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4, p5, p6 = coeffs
     A = p1 * (1 + (T - p2))
     B = 1 + p3 * pybamm.sqrt(c) + p4 * (1 + p5 * pybamm.exp(1000 / T)) * c
     C = 1 + c**4 * (p6 * pybamm.exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
 
-    return sigma_e / 10 * pybamm.Units("S.m-1")
+    return sigma_e / 10
 
 
 def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
@@ -63,15 +62,14 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte diffusivity
     """
-    c = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
+    c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4 = coeffs
     A = p1 * pybamm.exp(p2 * c)
     B = pybamm.exp(p3 / T)
     C = pybamm.exp(p4 * c / T)
     D_e = A * B * C * 1e-10  # m2/s
 
-    return D_e * pybamm.Units("m2.s-1")
+    return D_e
 
 
 def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
@@ -99,8 +97,7 @@ def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte thermodynamic factor
     """
-    c = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
+    c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
     tdf = (
         p1
@@ -142,8 +139,7 @@ def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
     :class:`pybamm.Symbol`
         Electrolyte transference number
     """
-    c = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
+    c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
     tplus = (
         p1
@@ -179,7 +175,7 @@ def copper_heat_capacity_CRC(T):
     :class:`pybamm.Symbol`
        Specific heat capacity
     """
-    T = T / pybamm.Units("K")
+
     cp = 1.445e-6 * T**3 - 1.946e-3 * T**2 + 0.9633 * T + 236
 
     return cp
@@ -204,7 +200,7 @@ def aluminium_heat_capacity_CRC(T):
     :class:`pybamm.Symbol`
        Specific heat capacity
     """
-    T = T / pybamm.Units("K")
+
     cp = 4.503e-6 * T**3 - 6.256e-3 * T**2 + 3.281 * T + 355.7
 
     return cp
@@ -230,7 +226,6 @@ def copper_thermal_conductivity_CRC(T):
        Thermal conductivity
     """
 
-    T = T / pybamm.Units("K")
     lambda_th = -5.409e-7 * T**3 + 7.054e-4 * T**2 - 0.3727 * T + 463.6
 
     return lambda_th
@@ -289,12 +284,10 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
         * 3.0321  # correcting factor (see O'Regan et al 2021)
     )
 
-    E_D_s = d * pybamm.constants.R * pybamm.Units("K")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_s_over_R = d
+    arrhenius = pybamm.exp(E_D_s_over_R * (1 / 298.15 - 1 / T))
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def graphite_LGM50_ocp_Chen2020(sto):
@@ -328,7 +321,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
         - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
     )
 
-    return U * pybamm.Units("V")
+    return U
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
@@ -361,12 +354,10 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
         Exchange-current density [A.m-2]
     """
 
-    i_ref = 2.668 * pybamm.Units("A.m-2")
+    i_ref = 2.668  # (A/m2)
     alpha = 0.792
-    E_r = 4e4 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_r = 4e4
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 
@@ -403,7 +394,6 @@ def graphite_LGM50_heat_capacity_ORegan2022(T):
 
     # value for the dry porous electrode (i.e. electrode + air, and we neglect the air
     # contribution to density)
-    T = T / pybamm.Units("K")
     cp_dry = 4.932e-4 * T**3 - 0.491 * T**2 + 169.4 * T - 1.897e4
     rho_dry = 1740
     theta_dry = rho_dry * cp_dry
@@ -444,7 +434,6 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
        Thermal conductivity
     """
 
-    T = T / pybamm.Units("K")
     lambda_wet = -2.61e-4 * T**2 + 0.1726 * T - 24.49
 
     return lambda_wet
@@ -490,7 +479,7 @@ def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
         * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
     ) / 1000  # fit in mV / K
 
-    return dUdT * pybamm.Units("V.K-1")
+    return dUdT
 
 
 def nmc_LGM50_electronic_conductivity_ORegan2022(T):
@@ -515,14 +504,12 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
        Thermal conductivity
     """
 
-    E_r = 3.5e3 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_r = 3.5e3
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     sigma = 0.8473 * arrhenius
 
-    return sigma * pybamm.Units("S.m-1")
+    return sigma
 
 
 def nmc_LGM50_diffusivity_ORegan2022(sto, T):
@@ -572,12 +559,10 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
         * 2.7  # correcting factor (see O'Regan et al 2021)
     )
 
-    E_D_s = d * pybamm.constants.R * pybamm.Units("K")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_s_over_R = d
+    arrhenius = pybamm.exp(E_D_s_over_R * (1 / 298.15 - 1 / T))
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
@@ -611,7 +596,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
         + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.312))
     )
 
-    return U * pybamm.Units("V")
+    return U
 
 
 def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
@@ -643,12 +628,10 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    i_ref = 5.028 * pybamm.Units("A.m-2")
+    i_ref = 5.028  # (A/m2)
     alpha = 0.43
-    E_r = 2.401e4 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_r = 2.401e4
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 
@@ -685,7 +668,6 @@ def nmc_LGM50_heat_capacity_ORegan2022(T):
 
     # value for the dry porous electrode (i.e. electrode + air, and we neglect the air
     # contribution to density)
-    T = T / pybamm.Units("K")
     cp_dry = -8.414e-4 * T**3 + 0.7892 * T**2 - 241.3 * T + 2.508e4
     rho_dry = 3270
     theta_dry = rho_dry * cp_dry
@@ -726,7 +708,6 @@ def nmc_LGM50_thermal_conductivity_ORegan2022(T):
        Thermal conductivity
     """
 
-    T = T / pybamm.Units("K")
     lambda_wet = 2.063e-5 * T**2 - 0.01127 * T + 2.331
 
     return lambda_wet
@@ -766,7 +747,7 @@ def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     ) / 1000
     # fit in mV / K
 
-    return dUdT * pybamm.Units("V.K-1")
+    return dUdT
 
 
 def separator_LGM50_heat_capacity_ORegan2022(T):
@@ -792,7 +773,6 @@ def separator_LGM50_heat_capacity_ORegan2022(T):
 
     # value for the dry porous separator (i.e. separator + air, and we neglect the air
     # contribution to density)
-    T = T / pybamm.Units("K")
     cp_dry = 1.494e-3 * T**3 - 1.444 * T**2 + 475.5 * T - 5.13e4
     rho_dry = 946
     theta_dry = rho_dry * cp_dry

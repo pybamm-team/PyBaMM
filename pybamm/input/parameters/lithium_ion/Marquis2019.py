@@ -24,12 +24,10 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
     """
 
     D_ref = 3.9 * 10 ** (-14)
-    E_D_s = 42770 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_s = 42770
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def graphite_mcmb2528_ocp_Dualfoil1998(sto):
@@ -57,7 +55,7 @@ def graphite_mcmb2528_ocp_Dualfoil1998(sto):
         + 0.0155 * pybamm.tanh((sto - 0.105) / 0.029)
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def graphite_electrolyte_exchange_current_density_Dualfoil1998(
@@ -87,11 +85,9 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 2 * 10 ** (-5) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
-    E_r = 37480 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 2 * 10 ** (-5)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 37480
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -114,7 +110,6 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
         Stochiometry of material (li-fraction)
 
     """
-    c_s_max = c_s_max / pybamm.Units("mol.m-3")
     du_dT = (
         -1.5 * (120.0 / c_s_max) * pybamm.exp(-120 * sto)
         + (0.0351 / (0.083 * c_s_max)) * ((pybamm.cosh((sto - 0.286) / 0.083)) ** (-2))
@@ -127,7 +122,7 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
         + (0.0155 / (0.029 * c_s_max)) * ((pybamm.cosh((sto - 0.105) / 0.029)) ** (-2))
     )
 
-    return du_dT * pybamm.Units("V.K-1")
+    return du_dT
 
 
 def lico2_diffusivity_Dualfoil1998(sto, T):
@@ -152,12 +147,10 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
         Solid diffusivity
     """
     D_ref = 1 * 10 ** (-13)
-    E_D_s = 18550 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_s = 18550
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def lico2_ocp_Dualfoil1998(sto):
@@ -195,7 +188,7 @@ def lico2_ocp_Dualfoil1998(sto):
         - 0.02167 * pybamm.tanh((sto - 0.525) / 0.006)
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_max, T):
@@ -223,11 +216,9 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 6 * 10 ** (-7) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
-    E_r = 39570 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 6 * 10 ** (-7)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 39570
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -254,7 +245,6 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     stretch = 1.062
     sto = stretch * sto
 
-    c_s_max = c_s_max / pybamm.Units("mol.m-3")
     du_dT = (
         0.07645
         * (-54.4806 / c_s_max)
@@ -269,7 +259,7 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
         - (0.02167 / 0.006 / c_s_max) * ((pybamm.cosh((sto - 0.525) / 0.006)) ** (-2))
     )
 
-    return du_dT * pybamm.Units("V.K-1")
+    return du_dT
 
 
 def electrolyte_diffusivity_Capiglia1999(c_e, T):
@@ -297,14 +287,12 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    D_c_e = 5.34e-10 * pybamm.exp(-0.65 * c_e)
-    E_D_e = 37040 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_e / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
 
-    return D_c_e * arrhenius * pybamm.Units("m2.s-1")
+    D_c_e = 5.34e-10 * pybamm.exp(-0.65 * c_e / 1000)
+    E_D_e = 37040
+    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
+
+    return D_c_e * arrhenius
 
 
 def electrolyte_conductivity_Capiglia1999(c_e, T):
@@ -326,20 +314,24 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
+
     Returns
     -------
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    sigma_e = 0.0911 + 1.9101 * c_e - 1.052 * c_e**2 + 0.1554 * c_e**3
 
-    E_k_e = 34700 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_k_e / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
+    sigma_e = (
+        0.0911
+        + 1.9101 * (c_e / 1000)
+        - 1.052 * (c_e / 1000) ** 2
+        + 0.1554 * (c_e / 1000) ** 3
     )
 
-    return sigma_e * arrhenius * pybamm.Units("S.m-1")
+    E_k_e = 34700
+    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
+
+    return sigma_e * arrhenius
 
 
 # Call dict via a function to avoid errors when editing in place

@@ -1,6 +1,3 @@
-import pybamm
-
-
 def graphite_ocp_Enertech_Ai2020_function(sto):
     """
     Graphite  Open Circuit Potential (OCP) as a a function of the
@@ -49,4 +46,4 @@ def graphite_ocp_Enertech_Ai2020_function(sto):
         + p10
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq

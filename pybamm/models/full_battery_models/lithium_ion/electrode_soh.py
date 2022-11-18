@@ -40,14 +40,15 @@ class ElectrodeSOH(pybamm.BaseModel):
         Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
-        n_Li = pybamm.InputParameter("n_Li")
-        V_max = pybamm.InputParameter("V_max")
-        V_min = pybamm.InputParameter("V_min")
-        Cn = pybamm.InputParameter("C_n")
-        Cp = pybamm.InputParameter("C_p")
+        n_Li = pybamm.InputParameter("n_Li", units="mol")
+        V_max = pybamm.InputParameter("V_max", units="V")
+        V_min = pybamm.InputParameter("V_min", units="V")
+        Cn = pybamm.InputParameter("C_n", units="A.h")
+        Cp = pybamm.InputParameter("C_p", units="A.h")
+        s_to_h = pybamm.Scalar(3600, units="s.h-1")
 
         x_100 = pybamm.Variable("x_100")
-        y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
+        y_100 = (n_Li * param.F / s_to_h - x_100 * Cn) / Cp
 
         x_0 = pybamm.Variable("x_0")
         C = Cn * (x_100 - x_0)
@@ -113,13 +114,14 @@ class ElectrodeSOHx100(pybamm.BaseModel):
         Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
-        n_Li = pybamm.InputParameter("n_Li")
-        V_max = pybamm.InputParameter("V_max")
-        Cn = pybamm.InputParameter("C_n")
-        Cp = pybamm.InputParameter("C_p")
+        n_Li = pybamm.InputParameter("n_Li", units="mol")
+        V_max = pybamm.InputParameter("V_max", units="V")
+        Cn = pybamm.InputParameter("C_n", units="A.h")
+        Cp = pybamm.InputParameter("C_p", units="A.h")
+        s_to_h = pybamm.Scalar(3600, units="s.h-1")
 
         x_100 = pybamm.Variable("x_100")
-        y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
+        y_100 = (n_Li * param.F / s_to_h - x_100 * Cn) / Cp
 
         Un_100 = Un(x_100, T_ref)
         Up_100 = Up(y_100, T_ref)
@@ -161,10 +163,11 @@ class ElectrodeSOHx0(pybamm.BaseModel):
         Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
-        n_Li = pybamm.InputParameter("n_Li")
-        V_min = pybamm.InputParameter("V_min")
-        Cn = pybamm.InputParameter("C_n")
-        Cp = pybamm.InputParameter("C_p")
+        n_Li = pybamm.InputParameter("n_Li", units="mol")
+        V_max = pybamm.InputParameter("V_max", units="V")
+        V_min = pybamm.InputParameter("V_min", units="V")
+        Cn = pybamm.InputParameter("C_n", units="A.h")
+        Cp = pybamm.InputParameter("C_p", units="A.h")
         x_100 = pybamm.InputParameter("x_100")
         y_100 = pybamm.InputParameter("y_100")
 
@@ -238,7 +241,7 @@ class ElectrodeSOHSolver:
         self.lims_ocp = (x0_min, x100_max, y100_min, y0_max)
 
         # Parameterize the OCP functions
-        T = parameter_values["Reference temperature [K]"]
+        T = self.param.T_ref
         x = pybamm.InputParameter("x")
         y = pybamm.InputParameter("y")
         self.OCV_function = parameter_values.process_symbol(

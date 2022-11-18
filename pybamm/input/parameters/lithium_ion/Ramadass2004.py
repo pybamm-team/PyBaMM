@@ -24,12 +24,10 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
     """
 
     D_ref = 3.9 * 10 ** (-14)
-    E_D_s = 42770 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_s = 42770
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def graphite_ocp_Ramadass2004(sto):
@@ -54,7 +52,7 @@ def graphite_ocp_Ramadass2004(sto):
         - 0.7984 * pybamm.exp(0.4465 * sto - 0.4108)
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def graphite_electrolyte_exchange_current_density_Ramadass2004(
@@ -86,11 +84,9 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 4.854 * 10 ** (-6) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
-    E_r = 37480 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 4.854 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
+    E_r = 37480
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -113,7 +109,6 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
         Stochiometry of material (li-fraction)
 
     """
-    c_s_max = c_s_max / pybamm.Units("mol.m-3")
     du_dT = (
         -1.5 * (120.0 / c_s_max) * pybamm.exp(-120 * sto)
         + (0.0351 / (0.083 * c_s_max)) * ((pybamm.cosh((sto - 0.286) / 0.083)) ** (-2))
@@ -126,7 +121,7 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
         + (0.0155 / (0.029 * c_s_max)) * ((pybamm.cosh((sto - 0.105) / 0.029)) ** (-2))
     )
 
-    return du_dT * pybamm.Units("V.K-1")
+    return du_dT
 
 
 def lico2_diffusivity_Ramadass2004(sto, T):
@@ -153,12 +148,10 @@ def lico2_diffusivity_Ramadass2004(sto, T):
         Solid diffusivity
     """
     D_ref = 1 * 10 ** (-14)
-    E_D_s = 18550 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_s = 18550
+    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def lico2_ocp_Ramadass2004(sto):
@@ -199,7 +192,7 @@ def lico2_ocp_Ramadass2004(sto):
         + 95.96 * (sto**10)
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_max, T):
@@ -229,11 +222,9 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 2.252 * 10 ** (-6) * pybamm.Units("A.m-2") * pybamm.Units("m3.mol-1") ** 1.5
-    E_r = 39570 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    m_ref = 2.252 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
+    E_r = 39570
+    arrhenius = pybamm.exp(E_r / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -259,7 +250,6 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     # should this too? If not, the "bumps" in the OCV don't line up.
     stretch = 1.062
     sto = stretch * sto
-    c_s_max = c_s_max / pybamm.Units("mol.m-3")
 
     du_dT = (
         0.07645
@@ -275,7 +265,7 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
         - (0.02167 / 0.006 / c_s_max) * ((pybamm.cosh((sto - 0.525) / 0.006)) ** (-2))
     )
 
-    return du_dT * pybamm.Units("V.K-1")
+    return du_dT
 
 
 def electrolyte_diffusivity_Ramadass2004(c_e, T):
@@ -303,12 +293,10 @@ def electrolyte_diffusivity_Ramadass2004(c_e, T):
     """
 
     D_c_e = 7.5e-10
-    E_D_e = 37040 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_e / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_D_e = 37040
+    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
-    return D_c_e * arrhenius * pybamm.Units("m2.s-1")
+    return D_c_e * arrhenius
 
 
 def electrolyte_conductivity_Ramadass2004(c_e, T):
@@ -334,13 +322,10 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
+    # mol.m-3 to mol.dm-3, original function is likely in mS/cm
     # The function is not in Arora 2000 as reported in Ramadass 2004
 
-    # Ramadass 2004 claims that cm is in mol.dm-3
-    # which would mean dividing by 1000
-    # but we have to divide by 1e6 to get sensible results
-    # suggesting that cm should be in mol.cm-3
-    cm = c_e / pybamm.Scalar(1e6, "mol.m-3")
+    cm = 1e-6 * c_e  # here it should be only 1e-3
 
     sigma_e = (
         4.1253 * (10 ** (-4))
@@ -348,15 +333,12 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
         - 4.7212 * (10**3) * (cm**2)
         + 1.5094 * (10**6) * (cm**3)
         - 1.6018 * (10**8) * (cm**4)
-    ) * 1e3  # have to multiply by 1e3 to get sensible scale (O(1) S/m)
-    # function was maybe given in mS/m in the paper?
+    ) * 1e3  # and here there should not be an exponent
 
-    E_k_e = 34700 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_k_e / pybamm.constants.R * (1 / pybamm.Scalar(298.15, "K") - 1 / T)
-    )
+    E_k_e = 34700
+    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R.value * (1 / 298.15 - 1 / T))
 
-    return sigma_e * arrhenius * pybamm.Units("S.m-1")
+    return sigma_e * arrhenius
 
 
 # Call dict via a function to avoid errors when editing in place

@@ -27,7 +27,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 3.5e-8 * pybamm.Units("m.s-1") * pybamm.constants.F
+    m_ref = 3.5e-8 * pybamm.constants.F  # (A/m2)(mol/m3) - includes ref concentrations
 
     return m_ref * c_Li**0.7 * c_e**0.3
 
@@ -77,7 +77,7 @@ def nmc_ocp_Xu2019(sto):
     #     - 0.0003 * pybamm.exp(7.657 * sto ** 115)
     # )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
@@ -109,9 +109,9 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
         Exchange-current density [A.m-2]
     """
     # assuming implicit correction of incorrect units from the paper
-    m_ref = (5.76e-11 * pybamm.Units("m.s-1") * pybamm.constants.F) * (
-        pybamm.Units("m3.mol-1") ** 0.5
-    )
+    m_ref = (
+        5.76e-11 * pybamm.constants.F
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
     return m_ref * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
@@ -139,15 +139,15 @@ def electrolyte_diffusivity_Valoen2005(c_e, T):
         Dimensional electrolyte diffusivity [m2.s-1]
     """
     # mol/m3 to molar
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
+    c_e = c_e / 1000
 
     T_g = 229 + 5 * c_e
-    D_0 = -4.43 - 54 / (T / pybamm.Units("K") - T_g)
+    D_0 = -4.43 - 54 / (T - T_g)
     D_1 = -0.22
 
     # cm2/s to m2/s
     # note, in the Valoen paper, ln means log10, so its inverse is 10^x
-    return (10 ** (D_0 + D_1 * c_e)) * 1e-4 * pybamm.Units("m2.s-1")
+    return (10 ** (D_0 + D_1 * c_e)) * 1e-4
 
 
 def electrolyte_conductivity_Valoen2005(c_e, T):
@@ -174,21 +174,16 @@ def electrolyte_conductivity_Valoen2005(c_e, T):
         Dimensional electrolyte conductivity [S.m-1]
     """
     # mol/m3 to molar
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
-    T = T / pybamm.Units("K")
+    c_e = c_e / 1000
     # mS/cm to S/m
-    return (
-        (1e-3 / 1e-2)
+    return (1e-3 / 1e-2) * (
+        c_e
         * (
-            c_e
-            * (
-                (-10.5 + 0.0740 * T - 6.96e-5 * T**2)
-                + c_e * (0.668 - 0.0178 * T + 2.80e-5 * T**2)
-                + c_e**2 * (0.494 - 8.86e-4 * T)
-            )
-            ** 2
+            (-10.5 + 0.0740 * T - 6.96e-5 * T**2)
+            + c_e * (0.668 - 0.0178 * T + 2.80e-5 * T**2)
+            + c_e**2 * (0.494 - 8.86e-4 * T)
         )
-        * pybamm.Units("S.m-1")
+        ** 2
     )
 
 

@@ -32,12 +32,12 @@ def graphite_diffusivity_Ecker2015(sto, T):
     """
 
     D_ref = 8.4e-13 * pybamm.exp(-11.3 * sto) + 8.2e-15
-    E_D_s = 3.03e4 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(296, "K") - 1 / T)
+    E_D_s = 3.03e4
+    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R.value * T)) * pybamm.exp(
+        E_D_s / (pybamm.constants.R.value * 296)
     )
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def graphite_ocp_Ecker2015_function(sto):
@@ -98,7 +98,7 @@ def graphite_ocp_Ecker2015_function(sto):
         + q
     )
 
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T):
@@ -135,14 +135,16 @@ def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_m
         Exchange-current density [A.m-2]
     """
 
-    k_ref = 1.11 * 1e-10 * pybamm.Units("m.s-1")
+    k_ref = 1.11 * 1e-10
 
     # multiply by Faraday's constant to get correct units
-    m_ref = (pybamm.constants.F * k_ref) * pybamm.Units("m3.mol-1") ** 0.5
-    E_r = 53400 * pybamm.Units("J.mol-1")
+    m_ref = (
+        pybamm.constants.F * k_ref
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = 53400
 
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(296.15, "K") - 1 / T)
+    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R.value * T)) * pybamm.exp(
+        E_r / (pybamm.constants.R.value * 296.15)
     )
 
     return (
@@ -180,12 +182,12 @@ def nco_diffusivity_Ecker2015(sto, T):
     """
 
     D_ref = 3.7e-13 - 3.4e-13 * pybamm.exp(-12 * (sto - 0.62) * (sto - 0.62))
-    E_D_s = 8.06e4 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_D_s / pybamm.constants.R * (1 / pybamm.Scalar(296.15, "K") - 1 / T)
+    E_D_s = 8.06e4
+    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R.value * T)) * pybamm.exp(
+        E_D_s / (pybamm.constants.R.value * 296.15)
     )
 
-    return D_ref * arrhenius * pybamm.Units("m2.s-1")
+    return D_ref * arrhenius
 
 
 def nco_ocp_Ecker2015_function(sto):
@@ -241,7 +243,7 @@ def nco_ocp_Ecker2015_function(sto):
         - n * pybamm.tanh(o * (sto - p))
         + q
     )
-    return u_eq * pybamm.Units("V")
+    return u_eq
 
 
 def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T):
@@ -278,14 +280,16 @@ def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T
         Exchange-current density [A.m-2]
     """
 
-    k_ref = 3.01e-11 * pybamm.Units("m.s-1")
+    k_ref = 3.01e-11
 
     # multiply by Faraday's constant to get correct units
-    m_ref = (pybamm.constants.F * k_ref) * pybamm.Units("m3.mol-1") ** 0.5
+    m_ref = (
+        pybamm.constants.F * k_ref
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
-    E_r = 4.36e4 * pybamm.Units("J.mol-1")
-    arrhenius = pybamm.exp(
-        E_r / pybamm.constants.R * (1 / pybamm.Scalar(296.15, "K") - 1 / T)
+    E_r = 4.36e4
+    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R.value * T)) * pybamm.exp(
+        E_r / (pybamm.constants.R.value * 296.15)
     )
 
     return (
@@ -327,10 +331,7 @@ def electrolyte_diffusivity_Ecker2015(c_e, T):
     sigma_e = pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
     D_c_e = (
-        (
-            pybamm.constants.k_b
-            / (pybamm.constants.F * pybamm.constants.q_e * pybamm.Units("eV.V-1"))
-        )
+        (pybamm.constants.k_b / (pybamm.constants.F * pybamm.constants.q_e))
         * sigma_e
         * T
         / c_e
@@ -369,18 +370,17 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
     """
 
     # mol/m^3 to mol/l
-    c_e = c_e / pybamm.Scalar(1000, "mol.m-3")
+    cm = 1e-3 * c_e
 
     # value at T = 296K
-    sigma_e_296 = 0.2667 * c_e**3 - 1.2983 * c_e**2 + 1.7919 * c_e + 0.1726
+    sigma_e_296 = 0.2667 * cm**3 - 1.2983 * cm**2 + 1.7919 * cm + 0.1726
 
     # add temperature dependence
-    E_k_e = 1.71e4 * pybamm.Units("J.mol-1")
-    T_ref = pybamm.Scalar(296, "K")
-    C = T_ref * pybamm.exp(E_k_e / (pybamm.constants.R * T_ref))
-    sigma_e = C * sigma_e_296 * pybamm.exp(-E_k_e / (pybamm.constants.R * T)) / T
+    E_k_e = 1.71e4
+    C = 296 * pybamm.exp(E_k_e / (pybamm.constants.R.value * 296))
+    sigma_e = C * sigma_e_296 * pybamm.exp(-E_k_e / (pybamm.constants.R.value * T)) / T
 
-    return sigma_e * pybamm.Units("S.m-1")
+    return sigma_e
 
 
 # Load data in the appropriate format

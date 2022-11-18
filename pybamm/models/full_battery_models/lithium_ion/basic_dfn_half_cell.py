@@ -302,7 +302,7 @@ class BasicDFNHalfCell(BaseModel):
 
         # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
         # mode)
-        tol = 0.1
+        tol = pybamm.Scalar(0.1, "V")
         self.events.append(
             pybamm.Event(
                 "Minimum voltage switch",

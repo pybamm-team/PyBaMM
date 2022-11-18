@@ -36,8 +36,8 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         param = pybamm.LithiumIonParameters({"working electrode": working_electrode})
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))
-        C = pybamm.Variable("C", bounds=(0, np.inf))
-        Cw = pybamm.InputParameter("C_w")
+        C = pybamm.Variable("C [A.h]", bounds=(0, np.inf))
+        Cw = pybamm.InputParameter("C_w", units="A.h")
         T_ref = param.T_ref
         if working_electrode == "negative":  # pragma: no cover
             raise NotImplementedError
@@ -45,8 +45,8 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             Uw = param.p.prim.U_dimensional
             x_0 = x_100 + C / Cw
 
-        V_max = pybamm.InputParameter("V_max")
-        V_min = pybamm.InputParameter("V_min")
+        V_max = pybamm.InputParameter("V_max", units="V")
+        V_min = pybamm.InputParameter("V_min", units="V")
 
         self.algebraic = {
             x_100: Uw(x_100, T_ref) - V_max,
@@ -63,6 +63,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
         self.variables = {
             "x_100": x_100,
+            "C [A.h]": C,
             "C": C,
             "x_0": x_0,
             "Uw(x_100)": Uw(x_100, T_ref),
