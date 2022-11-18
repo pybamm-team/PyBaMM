@@ -70,7 +70,7 @@ Note that the examples on the default `develop` branch are tested on the latest 
 
 ## Versioning
 
-PyBaMM uses [CalVar](https://calver.org/), which means that we make new releases every month with the version number `YY.MM`. There is no difference between releases that increment the year and releases that increment the month; in particular, releases that increment the month may introduce breaking changes. Breaking changes for each release are communicated via the [CHANGELOG](CHANGELOG.md), and come with deprecation warnings or errors that are kept for at least one year (12 releases). If you find a breaking change that is not documented, or think it should be undone, please open an issue on [GitHub](https://github.com/pybamm-team/pybamm).
+PyBaMM uses [CalVer](https://calver.org/), which means that we make new releases every month with the version number `YY.MM`. There is no difference between releases that increment the year and releases that increment the month; in particular, releases that increment the month may introduce breaking changes. Breaking changes for each release are communicated via the [CHANGELOG](CHANGELOG.md), and come with deprecation warnings or errors that are kept for at least one year (12 releases). If you find a breaking change that is not documented, or think it should be undone, please open an issue on [GitHub](https://github.com/pybamm-team/pybamm).
 
 ## 🚀 Installing PyBaMM
 
