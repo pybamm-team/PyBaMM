@@ -171,10 +171,9 @@ class Units:
         # First loop through the positives
         units_str = ""
 
-        # Update units dictionary for special parameters
-        units_dict = self._reformat_dict(units_dict)
+        sorted_items = sorted(units_dict.items())
 
-        for name, amount in sorted(units_dict.items()):
+        for name, amount in sorted_items:
             if amount == 0:
                 pybamm.units_error("Zero units should not be in dictionary.")
             elif amount == 1:
@@ -183,8 +182,8 @@ class Units:
                 units_str += name + "."
             elif amount > 0:
                 units_str += name + str(amount) + "."
-        # Then loop through the negatives
-        for name, amount in sorted(units_dict.items()):
+        # Then loop through the negatives so that they are at the end of the dict
+        for name, amount in sorted_items:
             if amount < 0:
                 # The '-' is already in the amount
                 units_str += name + str(amount) + "."
