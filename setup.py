@@ -224,7 +224,7 @@ setup(
             "pybamm_install_odes = pybamm.install_odes:main",
             "pybamm_install_jax = pybamm.util:install_jax",
         ],
-        "pybamm_parameter_set": [
+        "pybamm_parameter_sets": [
             "Sulzer2019 = pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values",  # noqa: E501
             "Ai2020 = pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values",  # noqa: E501
             "Chen2020 = pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values",  # noqa: E501
