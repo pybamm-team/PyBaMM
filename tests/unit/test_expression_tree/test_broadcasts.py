@@ -53,6 +53,10 @@ class TestBroadcasts(TestCase):
 
         a = pybamm.Symbol("a", domain="current collector")
         with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot Broadcast an object into empty domain"
+        ):
+            pybamm.PrimaryBroadcast(a, [])
+        with self.assertRaisesRegex(
             pybamm.DomainError, "Primary broadcast from current collector"
         ):
             pybamm.PrimaryBroadcast(a, "bad domain")
@@ -208,6 +212,11 @@ class TestBroadcasts(TestCase):
                 },
             ),
         )
+
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot do full broadcast to an empty primary domain"
+        ):
+            pybamm.FullBroadcast(a, [])
 
     def test_full_broadcast_number(self):
         broad_a = pybamm.FullBroadcast(1, ["negative electrode"], None)

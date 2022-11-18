@@ -114,10 +114,6 @@ class TestFunction(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.Function(test_multi_var_function, a, b)
 
-        fun = pybamm.Function(np.cos, pybamm.t)
-        with self.assertRaisesRegex(NotImplementedError, "No julia name"):
-            fun.julia_name
-
     def test_function_unnamed(self):
         fun = pybamm.Function(np.cos, pybamm.t)
         self.assertEqual(fun.name, "function (cos)")
@@ -267,7 +263,7 @@ class TestSpecificFunctions(unittest.TestCase):
 
         # Base 10
         fun = pybamm.log10(a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
+        self.assertAlmostEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
         h = 0.0000001
         self.assertAlmostEqual(
             fun.diff(a).evaluate(inputs={"a": 3}),

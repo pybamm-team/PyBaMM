@@ -32,7 +32,7 @@ class TestParameterSets(unittest.TestCase):
     def test_get_docstring(self):
         """Test that :meth:`pybamm.parameter_sets.get_doctstring` works"""
         docstring = pybamm.parameter_sets.get_docstring("Marquis2019")
-        self.assertRegexpMatches(docstring, "Parameters for a Kokam SLPB78205130H cell")
+        self.assertRegex(docstring, "Parameters for a Kokam SLPB78205130H cell")
 
     def test_iter(self):
         """Test that iterating `pybamm.parameter_sets` iterates over keys"""

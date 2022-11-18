@@ -47,15 +47,6 @@ class DFN(BaseModel):
 
         pybamm.citations.register("Doyle1993")
 
-    def set_convection_submodel(self):
-
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
-
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:
             electrode_type = self.options.electrode_types[domain]

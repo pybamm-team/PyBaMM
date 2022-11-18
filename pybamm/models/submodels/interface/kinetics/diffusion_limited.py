@@ -67,22 +67,6 @@ class DiffusionLimited(BaseInterface):
         eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
 
-        if self.order == "composite":
-            # For the composite model, adds the first-order x-averaged interfacial
-            # current density to the dictionary of variables.
-            j_0 = variables[
-                f"Leading-order {domain} electrode {self.reaction_name}"
-                "interfacial current density"
-            ]
-            j_1_bar = (pybamm.x_average(j) - pybamm.x_average(j_0)) / self.param.C_e
-
-            variables.update(
-                {
-                    f"First-order x-averaged {domain} electrode"
-                    f" {self.reaction_name}interfacial current density": j_1_bar
-                }
-            )
-
         return variables
 
     def _get_diffusion_limited_current_density(self, variables):
@@ -107,32 +91,3 @@ class DiffusionLimited(BaseInterface):
                 j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
 
         return j
-
-    def _get_dj_dc(self, variables):
-        return pybamm.Scalar(0)
-
-    def _get_dj_ddeltaphi(self, variables):
-        return pybamm.Scalar(0)
-
-    def _get_j_diffusion_limited_first_order(self, variables):
-        """
-        First-order correction to the interfacial current density due to
-        diffusion-limited effects. For a general model the correction term is zero,
-        since the reaction is not diffusion-limited
-        """
-        domain = self.domain
-        if self.order == "leading":
-            j_leading_order = variables[
-                f"Leading-order x-averaged {domain} electrode "
-                f"{self.reaction_name}interfacial current density"
-            ]
-            param = self.param
-            if self.domain == "negative":
-                N_ox_s_p = variables["Oxygen flux"].orphans[1]
-                N_ox_neg_sep_interface = pybamm.Index(N_ox_s_p, slice(0, 1))
-
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
-
-            return (j - j_leading_order) / param.C_e
-        else:
-            return pybamm.Scalar(0)
