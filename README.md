@@ -68,7 +68,9 @@ Additional supporting material can be found
 
 Note that the examples on the default `develop` branch are tested on the latest `develop` commit. This may sometimes cause errors when running the examples on the pybamm pip package, which is synced to the `main` branch. You can switch to the `main` branch on github to see the version of the examples that is compatible with the latest pip release.
 
-<!-- For further examples, see the list of repositories that use PyBaMM [here](https://github.com/pybamm-team/pybamm-example-results). -->
+## Versioning
+
+PyBaMM uses [CalVar](https://calver.org/), which means that we make new releases every month with the version number `YY.MM`. There is no difference between releases that increment the year and releases that increment the month; in particular, releases that increment the month may introduce breaking changes. Breaking changes for each release are communicated via the [CHANGELOG](CHANGELOG.md), and come with deprecation warnings or errors that are kept for at least one year (12 releases). If you find a breaking change that is not documented, or think it should be undone, please open an issue on [GitHub](https://github.com/pybamm-team/pybamm).
 
 ## 🚀 Installing PyBaMM
 
