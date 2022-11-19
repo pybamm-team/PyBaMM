@@ -36,7 +36,7 @@ class OcvElement(pybamm.BaseSubModel):
         soc = variables["SoC"]
         current = variables["Current [A]"]
         cell_capacity = self.param.cell_capacity
-        self.rhs = {soc: current / cell_capacity / 3600}
+        self.rhs = {soc: -current / cell_capacity / 3600}
 
     def set_initial_conditions(self, variables):
         soc = variables["SoC"]

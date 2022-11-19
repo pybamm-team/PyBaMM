@@ -57,7 +57,7 @@ def get_parameter_values():
         "Cell capacity [A.h]": cell_capacity,
         "Nominal cell capacity [A.h]": cell_capacity,
         "Ambient temperature [degC]": 25,
-        "Current function [A]": -100,
+        "Current function [A]": 100,
         "Upper voltage cut-off [V]": 4.2,
         "Lower voltage cut-off [V]": 3.2,
         "Cell thermal mass [J/K]": 1000,

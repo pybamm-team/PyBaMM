@@ -17,7 +17,7 @@ class ResistorElement(pybamm.BaseSubModel):
             f"R{self.element_number} [Ohm]", T_cell, current, soc
         )
 
-        overpotential = current * r
+        overpotential = -current * r
         Q_irr = current**2 * r
 
         variables.update(

@@ -26,7 +26,7 @@ class RcElement(pybamm.BaseSubModel):
 
         vrc = variables[f"Element-{self.element_number} overpotential [V]"]
 
-        Q_irr = vrc * current
+        Q_irr = -current * vrc
 
         variables.update(
             {
@@ -48,7 +48,7 @@ class RcElement(pybamm.BaseSubModel):
         tau = variables[f"tau{self.element_number} [s]"]
 
         self.rhs = {
-            vrc: -vrc / (tau) + current * r / tau,
+            vrc: -vrc / (tau) - current * r / tau,
         }
 
     def set_initial_conditions(self, variables):

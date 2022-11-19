@@ -19,7 +19,7 @@ class EcmParameters:
         self._set_compatibility_parameters()
 
     def _set_current_parameters(self):
-        self.dimensional_current_with_time = -pybamm.FunctionParameter(
+        self.dimensional_current_with_time = pybamm.FunctionParameter(
             "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
         )
 

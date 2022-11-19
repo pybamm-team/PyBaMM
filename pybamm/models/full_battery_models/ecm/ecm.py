@@ -177,10 +177,15 @@ class EquivalentCircuitModel(pybamm.BaseModel):
             "Current [A]",
             ["Terminal voltage [V]", "Open circuit voltage [V]"],
             "SoC",
+            "Power [W]",
             [
                 "Cell temperature [degC]",
                 "Jig temperature [degC]",
                 "Ambient temperature [degC]",
             ],
-            "Power [W]",
+            [
+                "Total heat generation [W]",
+                "Reversible heat generation [W]",
+                "Irreversible heat generation [W]",
+            ],
         ]
