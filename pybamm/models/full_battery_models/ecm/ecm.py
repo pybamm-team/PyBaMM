@@ -1,20 +1,12 @@
 import pybamm
 
-from pybamm import EcmParameters
-from pybamm import OcvElement
-from pybamm import ResistorElement
-from pybamm import RcElement
-from pybamm import ThermalSubModel
-from pybamm import AnodeVoltageEstimator
-from pybamm import VoltageModel
-
 
 class EquivalentCircuitModel(pybamm.BaseModel):
     def __init__(self, name="Equivalent Circuit Model", options=None, build=True):
         super().__init__(name)
 
         self.set_options(options)
-        self.param = EcmParameters()
+        self.param = pybamm.EcmParameters()
         self.element_counter = 0
 
         self.set_submodels(build)
@@ -35,7 +27,7 @@ class EquivalentCircuitModel(pybamm.BaseModel):
                 "CCCV",
             ],
             "include resistor": ["true", "false"],
-            "number of rc elements": [2, 1, 3, 4],
+            "number of rc elements": [1, 2, 3, 4],
             "external submodels": [[]],
         }
 
@@ -118,9 +110,9 @@ class EquivalentCircuitModel(pybamm.BaseModel):
         self.submodels["external circuit"] = model
 
     def set_ocv_submodel(self):
-        self.submodels["Open circuit voltage"] = OcvElement(
-            self.param, self.ecm_options
-        )
+        self.submodels[
+            "Open circuit voltage"
+        ] = pybamm.equivalent_circuit_elements.OcvElement(self.param, self.ecm_options)
 
     def set_resistor_submodel(self):
 
@@ -129,7 +121,7 @@ class EquivalentCircuitModel(pybamm.BaseModel):
         if include_resistor == "true":
 
             name = f"Element-{self.element_counter} (Resistor)"
-            self.submodels[name] = ResistorElement(
+            self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
                 self.param, self.element_counter, self.ecm_options
             )
             self.element_counter += 1
@@ -139,21 +131,20 @@ class EquivalentCircuitModel(pybamm.BaseModel):
 
         for _ in range(number_of_rc_elements):
             name = f"Element-{self.element_counter} (RC)"
-            self.submodels[name] = RcElement(
+            self.submodels[name] = pybamm.equivalent_circuit_elements.RcElement(
                 self.param, self.element_counter, self.ecm_options
             )
             self.element_counter += 1
 
     def set_thermal_submodel(self):
-        self.submodels["Thermal"] = ThermalSubModel(self.param, self.ecm_options)
-
-    def set_anode_voltage_submodel(self):
-        self.submodels["Anode voltage"] = AnodeVoltageEstimator(
+        self.submodels["Thermal"] = pybamm.equivalent_circuit_elements.ThermalSubModel(
             self.param, self.ecm_options
         )
 
     def set_voltage_submodel(self):
-        self.submodels["Voltage"] = VoltageModel(self.param, self.ecm_options)
+        self.submodels["Voltage"] = pybamm.equivalent_circuit_elements.VoltageModel(
+            self.param, self.ecm_options
+        )
 
     def set_submodels(self, build):
         self.set_external_circuit_submodel()
@@ -161,7 +152,6 @@ class EquivalentCircuitModel(pybamm.BaseModel):
         self.set_resistor_submodel()
         self.set_rc_submodels()
         self.set_thermal_submodel()
-        self.set_anode_voltage_submodel()
         self.set_voltage_submodel()
 
         self.summary_variables = []
@@ -176,3 +166,7 @@ class EquivalentCircuitModel(pybamm.BaseModel):
 
         self._built = True
         pybamm.logger.info("Finished building {}".format(self.name))
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues("ECM_Example")

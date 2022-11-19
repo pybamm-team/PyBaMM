@@ -86,12 +86,14 @@ def process_2D_data_csv(name, path=None):
     # TODO: just adapted from similar personal code,
     # need to actually test this
 
-    df = pd.read_csv(path)
+    filename, name = _process_name(name, path, ".csv")
+
+    df = pd.read_csv(filename)
 
     x1 = np.array(list(set(df.iloc[:, 0])))
     x2 = np.array(list(set(df.iloc[:, 1])))
 
-    value = df.iloc[:, 4].to_numpy()
+    value = df.iloc[:, 2].to_numpy()
 
     x1.sort()
     x2.sort()
@@ -100,7 +102,7 @@ def process_2D_data_csv(name, path=None):
 
     value_data = np.reshape(
         value,
-        (len(x1), len(x2)),
+        (len(x2), len(x1)),
         order="C",
     )
 
@@ -135,13 +137,15 @@ def process_3D_data_csv(name, path=None):
     # TODO: just adapted from similar personal code,
     # need to actually test this
 
-    df = pd.read_csv(path)
+    filename, name = _process_name(name, path, ".csv")
+
+    df = pd.read_csv(filename)
 
     x1 = np.array(list(set(df.iloc[:, 0])))
     x2 = np.array(list(set(df.iloc[:, 1])))
     x3 = np.array(list(set(df.iloc[:, 2])))
 
-    value = df.iloc[:, 4].to_numpy()
+    value = df.iloc[:, 3].to_numpy()
 
     x1.sort()
     x2.sort()

@@ -57,12 +57,6 @@ class EcmParameters:
     def ocv(self, soc):
         return pybamm.FunctionParameter("Open circuit voltage [V]", {"SoC": soc})
 
-    def anode_ocv(self, soc):
-        return pybamm.FunctionParameter("Anode open circuit voltage [V]", {"SoC": soc})
-
-    def anode_overpotential_fraction(self, soc):
-        return pybamm.FunctionParameter("Anode overpotential fraction", {"SoC": soc})
-
     def rcr_element(self, name, T_cell, current, soc):
 
         current = pybamm.minimum(pybamm.Parameter("RCR lookup limit [A]"), current)

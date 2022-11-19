@@ -111,6 +111,7 @@ from .models.full_battery_models.base_battery_model import (
 )
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
+from .models.full_battery_models import ecm
 
 #
 # Submodel classes

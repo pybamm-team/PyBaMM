@@ -17,10 +17,6 @@ class ResistorElement(pybamm.BaseSubModel):
             f"R{self.element_number} [Ohm]", T_cell, current, soc
         )
 
-        r_offset = pybamm.Parameter("Rs offset [Ohm]")
-
-        r = r - r_offset
-
         overpotential = current * r
         Q_irr = current**2 * r
 
