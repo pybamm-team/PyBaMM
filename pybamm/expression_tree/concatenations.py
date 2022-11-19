@@ -46,7 +46,7 @@ class Concatenation(pybamm.Symbol):
         if len(children) > 0:
             if not all(child.units == children[0].units for child in children):
                 pybamm.units_error(
-                    "Cannot concatenate children with different units: {}.".format(
+                    "Cannot concatenate symbols with different units: {}.".format(
                         [child.units for child in children]
                     )
                 )

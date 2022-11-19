@@ -165,14 +165,7 @@ class Power(BinaryOperator):
 
     def __init__(self, left, right):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
-        if str(_units(left)) == "-":
-            units = None
-        else:
-            if not isinstance(right, pybamm.Scalar):
-                raise pybamm.units_error(
-                    "If base has units, exponent must be a scalar."
-                )
-            units = _units(left) ** right.value
+        units = _units(left) ** right
         super().__init__("**", left, right, units=units)
 
     def _diff(self, variable):

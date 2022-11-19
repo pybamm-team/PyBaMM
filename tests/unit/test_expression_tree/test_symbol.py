@@ -111,6 +111,13 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "auxiliary_domains"):
             a.auxiliary_domains
 
+    def test_symbol_units(self):
+        a = pybamm.Symbol("a", units="m")
+        self.assertEqual(a.units, "m")
+
+        with self.assertRaisesRegex(pybamm.UnitsError, "Units in name are"):
+            a = pybamm.Symbol("a [m]", units="s")
+
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

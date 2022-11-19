@@ -125,6 +125,22 @@ class TestConcatenations(TestCase):
         conc = pybamm.concatenation(a, b)
         self.assertEqual(conc.reference, 3)
 
+    def test_concatenation_units(self):
+        a = pybamm.Variable("a", domain="test a")
+        b = pybamm.Variable("b", domain="test b")
+        conc = pybamm.concatenation(a, b)
+        self.assertEqual(conc.units.units_dict, {})
+
+        a._units = pybamm.Units("A")
+        with self.assertRaisesRegex(
+            pybamm.UnitsError, "Cannot concatenate symbols with different units"
+        ):
+            pybamm.concatenation(a, b)
+
+        b._units = pybamm.Units("A")
+        conc = pybamm.concatenation(a, b)
+        self.assertEqual(conc.units, "A")
+
     def test_concatenation_simplify(self):
         # Primary broadcast
         var = pybamm.Variable("var", "current collector")

@@ -11,6 +11,7 @@ class TestUnits(unittest.TestCase):
         speed_dict = pybamm.Units({"m": 1, "s": -1})
         self.assertEqual(speed_str.units_dict, {"m": 1, "s": -1})
         self.assertEqual(speed_dict.units_str, "m.s-1")
+        self.assertEqual(speed_dict.__repr__(), "Units('m.s-1')")
 
         # empty units
         no_units = pybamm.Units(None)
@@ -32,12 +33,12 @@ class TestUnits(unittest.TestCase):
         speed_sum = speed + speed
         self.assertEqual(speed_sum.units_str, "m.s-1")
         with self.assertRaisesRegex(pybamm.UnitsError, "Cannot add"):
-            speed + conc
+            speed.__add__(conc)
 
         speed_diff = speed - speed
         self.assertEqual(speed_diff.units_str, "m.s-1")
         with self.assertRaisesRegex(pybamm.UnitsError, "Cannot add"):
-            speed - conc
+            speed.__sub__(conc)
 
         speed_times_conc = speed * conc
         self.assertEqual(speed_times_conc.units_dict, {"m": -2, "mol": 1, "s": -1})
@@ -48,8 +49,14 @@ class TestUnits(unittest.TestCase):
         conc_over_speed = conc / speed
         self.assertEqual(conc_over_speed.units_dict, {"m": -4, "mol": 1, "s": 1})
 
-        speed_cubed = speed**3.5
+        speed_cubed = speed ** pybamm.Scalar(3.5)
         self.assertEqual(speed_cubed.units_dict, {"m": 3.5, "s": -3.5})
+
+        with self.assertRaisesRegex(
+            pybamm.UnitsError,
+            "power must be a pybamm.Scalar or number if object has units",
+        ):
+            speed.__pow__(pybamm.Parameter("a"))
 
     def test_reformat_units(self):
         # Test that some special units get recast in terms of other units
@@ -67,6 +74,8 @@ class TestUnits(unittest.TestCase):
 
         ohms = pybamm.Units("Ohm2")
         self.assertEqual(ohms.units_dict, {"A": -2, "V": 2})
+        ohms = pybamm.Units("Pa2")
+        self.assertEqual(ohms.units_dict, {"V": 2, "A": 2, "s": 2, "m": -6})
 
         # test combined
         combined = pybamm.Units("J.C.s.m-1")
@@ -74,6 +83,8 @@ class TestUnits(unittest.TestCase):
 
     def test_rmul_unit_setting(self):
         self.assertEqual(2 * pybamm.Units("m"), pybamm.Scalar(2, "m"))
+        self.assertEqual(pybamm.Scalar(2, "m") / pybamm.Units("m"), pybamm.Scalar(2))
+        self.assertEqual(2 / pybamm.Units("m"), pybamm.Scalar(2, "m-1"))
 
     def test_symbol_units(self):
         a = pybamm.Parameter("a")

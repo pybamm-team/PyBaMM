@@ -10,7 +10,7 @@ class TestFunctionControl(unittest.TestCase):
     def test_constant_current(self):
         def constant_current(variables):
             I = variables["Current [A]"]
-            return I + 1
+            return I + pybamm.Scalar(1, "A")
 
         # load models
         models = [
@@ -55,7 +55,7 @@ class TestFunctionControl(unittest.TestCase):
     def test_constant_voltage(self):
         def constant_voltage(variables):
             V = variables["Terminal voltage [V]"]
-            return V - 4.08
+            return V - pybamm.Scalar(4.08, "V")
 
         # load models
         models = [
@@ -98,7 +98,7 @@ class TestFunctionControl(unittest.TestCase):
         def constant_power(variables):
             I = variables["Current [A]"]
             V = variables["Terminal voltage [V]"]
-            return I * V - 4
+            return I * V - pybamm.Scalar(4, "W")
 
         # load models
         # use DFN since only DFN allows "explicit power"
@@ -135,7 +135,7 @@ class TestFunctionControl(unittest.TestCase):
         def constant_resistance(variables):
             I = variables["Current [A]"]
             V = variables["Terminal voltage [V]"]
-            return V / I - 2
+            return V / I - pybamm.Scalar(2, "Ohm")
 
         # load models
         # use DFN since only DFN allows "explicit resistance"

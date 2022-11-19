@@ -21,7 +21,7 @@ class TestUtil(unittest.TestCase):
 
         # Test function load with relative path
         rel_test_path = os.path.join(
-            "pybamm", "input", "parameters", "lithium_ion", "Chen2020"
+            "pybamm", "input", "parameters", "lithium_ion", "Chen2020.py"
         )
         func = pybamm.load_function(rel_test_path, function)
         self.assertEqual(

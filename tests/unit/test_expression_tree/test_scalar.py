@@ -12,6 +12,13 @@ class TestScalar(unittest.TestCase):
         self.assertEqual(a.value, 5)
         self.assertEqual(a.evaluate(), 5)
 
+    def test_scalar_units(self):
+        a = pybamm.Scalar(5, "m")
+        self.assertEqual(a.units, "m")
+
+        with self.assertRaisesRegex(pybamm.UnitsError, "Cannot provide units"):
+            pybamm.Scalar("5 [m]", "m")
+
     def test_scalar_operations(self):
         a = pybamm.Scalar(5)
         b = pybamm.Scalar(6)

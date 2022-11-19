@@ -128,7 +128,7 @@ class Units:
         return tuple(self.units_dict.items())
 
     def __repr__(self):
-        return "Units({!s})".format(self)
+        return "Units('{!s}')".format(self)
 
     def _str_to_dict(self, units_str):
         "Convert string representation of units to a dictionary"
@@ -136,7 +136,7 @@ class Units:
         units = units_str.split(".")
         units_dict = {}
         amount = None
-        for i, unit in enumerate(units):
+        for unit in units:
             # Look for negative
             if "-" in unit:
                 # Split by the location of the negative
@@ -152,13 +152,7 @@ class Units:
                     name = unit
                     amount = 1
             # Add the unit to the dictionary
-            try:
-                units_dict[name] = int(amount)
-            except ValueError:
-                raise pybamm.units_error(
-                    f"Units must be integers, not {amount}. Non-integer units can be "
-                    "constructed by power, e.g. 'pybamm.Units('m')**0.5'"
-                )
+            units_dict[name] = int(amount)
 
         # Update units dictionary for special parameters
         units_dict = self._reformat_dict(units_dict)
@@ -174,9 +168,7 @@ class Units:
         sorted_items = sorted(units_dict.items())
 
         for name, amount in sorted_items:
-            if amount == 0:
-                pybamm.units_error("Zero units should not be in dictionary.")
-            elif amount == 1:
+            if amount == 1:
                 # Don't record the amount if there's only 1, e.g. 'm.s-1' instead of
                 # 'm1.s-1'
                 units_str += name + "."
@@ -257,12 +249,7 @@ class Units:
         Allows setting units via multiplication, e.g. 2 * Units("m") returns
         Scalar(2, "m")
         """
-        if isinstance(other, numbers.Number):
-            return pybamm.Scalar(other, units=self)
-        elif isinstance(other, pybamm.Symbol):
-            return other * pybamm.Scalar(1, units=self)
-        else:
-            raise TypeError()
+        return other * pybamm.Scalar(1, units=self)
 
     def __truediv__(self, other):
         div_units = {}
@@ -278,19 +265,28 @@ class Units:
         """
         Allows setting units via division
         """
-        if isinstance(other, pybamm.Symbol):
-            return other / pybamm.Scalar(1, units=self)
-        else:
-            raise TypeError()
+        return other / pybamm.Scalar(1, units=self)
 
     def __pow__(self, power):
-        # Multiply units by the power
-        pow_units = {k: power * v for k, v in self.units_dict.items()}
+        try:
+            # Multiply units by the power
+            pow_units = {k: power.value * v for k, v in self.units_dict.items()}
+        except AttributeError:
+            try:
+                power = pybamm.Scalar(power)
+            except TypeError:
+                raise units_error(
+                    "power must be a pybamm.Scalar or number if object has units."
+                )
+            return self**power
         return Units(pow_units, check_units=False)
 
     def __eq__(self, other):
         "Two units objects are defined to be equal if their unit_dicts are equal"
-        return self.units_dict == other.units_dict
+        try:
+            return self.units_dict == other.units_dict
+        except AttributeError:
+            return self.units_dict == Units(other).units_dict
 
 
 def units_error(message):
