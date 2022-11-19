@@ -629,7 +629,7 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues({"func": 2})
         func_proc = param.process_symbol(func)
 
-        self.assertEqual(func_proc, pybamm.Scalar(2, name="func"))
+        self.assertEqual(func_proc, pybamm.Scalar(2))
 
         # test with auxiliary domains
 
@@ -646,7 +646,7 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertEqual(
             func_proc,
-            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "current collector"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2), "current collector"),
         )
 
         # secondary and tertiary
@@ -666,7 +666,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(
             func_proc,
             pybamm.FullBroadcast(
-                pybamm.Scalar(2, name="func"), "negative particle", "current collector"
+                pybamm.Scalar(2), "negative particle", "current collector"
             ),
         )
 
@@ -688,7 +688,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(
             func_proc,
             pybamm.FullBroadcast(
-                pybamm.Scalar(2, name="func"),
+                pybamm.Scalar(2),
                 "negative particle",
                 {
                     "secondary": "negative particle size",

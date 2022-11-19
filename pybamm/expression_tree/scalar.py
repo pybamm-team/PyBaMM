@@ -58,7 +58,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.hash_tuple()`."""
         # We must include the value in the hash, since different scalars can be
         # indistinguishable by class and name alone
-        return self.base_hash_tuple() + (str(self.value),)
+        return (self.__class__, str(self.value)) + self.units.units_tuple
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
