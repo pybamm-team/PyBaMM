@@ -170,3 +170,17 @@ class EquivalentCircuitModel(pybamm.BaseModel):
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues("ECM_Example")
+
+    @property
+    def default_quick_plot_variables(self):
+        return [
+            "Current [A]",
+            ["Terminal voltage [V]", "Open circuit voltage [V]"],
+            "SoC",
+            [
+                "Cell temperature [degC]",
+                "Jig temperature [degC]",
+                "Ambient temperature [degC]",
+            ],
+            "Power [W]",
+        ]
