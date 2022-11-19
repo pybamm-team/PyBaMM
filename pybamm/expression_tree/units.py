@@ -3,7 +3,6 @@
 #
 import re
 import pybamm
-import numbers
 from functools import cached_property
 import numpy as np
 
