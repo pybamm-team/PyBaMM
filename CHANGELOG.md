@@ -1,10 +1,32 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added `scale` and `reference` attributes to `Variable` objects, which can be use to make the ODE/DAE solver better conditioned ([#2440](https://github.com/pybamm-team/PyBaMM/pull/2440))
+- SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
+
+## Optimizations
+
+- Added more rules for simplifying expressions, especially around Concatenations. Also, meshes constructed from multiple domains are now cached ([#2443](https://github.com/pybamm-team/PyBaMM/pull/2443))
+- Added more rules for simplifying expressions. Constants in binary operators are now moved to the left by default (e.g. `x*2` returns `2*x`) ([#2424](https://github.com/pybamm-team/PyBaMM/pull/2424))
+
+## Breaking changes
+
+- Renamed entry point for parameter sets to `pybamm_parameter_sets` ([#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
+- Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
+- Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))
+
+# [v22.10.post1](https://github.com/pybamm-team/PyBaMM/tree/v22.10.post1) - 2022-10-31
+
+## Breaking changes
+
+- Removed all julia generation code ([#2453](https://github.com/pybamm-team/PyBaMM/pull/2453)). Julia code will be hosted at [PyBaMM.jl](https://github.com/tinosulzer/PyBaMM.jl) from now on.
+
 # [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
 
 ## Features
 
-- Third-party parameter sets can be added by registering entry points to `pybamm_parameter_set` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396))
+- Third-party parameter sets can be added by registering entry points to ~~`pybamm_parameter_set`~~`pybamm_parameter_sets` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396), changed in [#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
 - Added three-dimensional interpolation ([#2380](https://github.com/pybamm-team/PyBaMM/pull/2380))
 
 ## Bug fixes

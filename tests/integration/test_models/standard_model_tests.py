@@ -123,14 +123,10 @@ class StandardModelTest(object):
         output_sens = self.solution[output_name].sensitivities[param_name]
 
         # check via finite differencing
-        h = 1e-6 * param_value
+        h = 1e-4 * param_value
         inputs_plus = {param_name: (param_value + 0.5 * h)}
         inputs_neg = {param_name: (param_value - 0.5 * h)}
-        sol_plus = self.solver.solve(
-            self.model,
-            t_eval,
-            inputs=inputs_plus,
-        )
+        sol_plus = self.solver.solve(self.model, t_eval, inputs=inputs_plus)
         output_plus = sol_plus[output_name](t=t_eval)
         sol_neg = self.solver.solve(self.model, t_eval, inputs=inputs_neg)
         output_neg = sol_neg[output_name](t=t_eval)

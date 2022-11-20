@@ -9,6 +9,7 @@ import pickle
 import pybamm
 import pandas as pd
 from scipy.io import savemat
+from functools import cached_property
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -80,8 +81,10 @@ class Solution(object):
         # This is the fastest way of accessing, and we will be accessing index-by-index
         # anyway when we create variable objects
         if not isinstance(all_ts, list):
+            self._all_ts_input = all_ts
             all_ts = np.split(all_ts, len_t)
         if not isinstance(all_ys, list):
+            self._all_ys_input = all_ys
             all_ys = np.split(all_ys, len_t, axis=1)
 
         if not isinstance(all_models, list):
@@ -222,14 +225,11 @@ class Solution(object):
             )
         self.sensitivities = sensitivities
 
-    @property
+    @cached_property
     def t(self):
         """Times at which the solution is evaluated"""
-        try:
-            return self._t
-        except AttributeError:
-            self.set_t()
-            return self._t
+        self.set_t()
+        return self._t
 
     def set_t(self):
         self._t = np.concatenate(self.all_ts)
@@ -239,6 +239,8 @@ class Solution(object):
     @property
     def y(self):
         """Values of the solution"""
+        if not isinstance(self._all_ys_input, list):
+            return self._all_ys_input
         raise NotImplementedError(
             "Solution.y is not implemented as it is slow to build, and not needed to "
             "evaluate individual variables (Solution.all_ys, which is a list of the "

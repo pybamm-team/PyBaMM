@@ -97,6 +97,34 @@ class TestConcatenations(TestCase):
         ):
             pybamm.concatenation(a, b, c)
 
+    def test_concatenations_scale(self):
+        a = pybamm.Variable("a", domain="test a")
+        b = pybamm.Variable("b", domain="test b")
+
+        conc = pybamm.concatenation(a, b)
+        self.assertEqual(conc.scale, 1)
+        self.assertEqual(conc.reference, 0)
+
+        a._scale = 2
+        with self.assertRaisesRegex(
+            ValueError, "Cannot concatenate symbols with different scales"
+        ):
+            pybamm.concatenation(a, b)
+
+        b._scale = 2
+        conc = pybamm.concatenation(a, b)
+        self.assertEqual(conc.scale, 2)
+
+        a._reference = 3
+        with self.assertRaisesRegex(
+            ValueError, "Cannot concatenate symbols with different references"
+        ):
+            pybamm.concatenation(a, b)
+
+        b._reference = 3
+        conc = pybamm.concatenation(a, b)
+        self.assertEqual(conc.reference, 3)
+
     def test_concatenation_simplify(self):
         # Primary broadcast
         var = pybamm.Variable("var", "current collector")
