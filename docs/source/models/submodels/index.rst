@@ -19,3 +19,4 @@ Submodels
     porosity/index
     thermal/index
     transport_efficiency/index
+    equivalent_circuit_elements/index
