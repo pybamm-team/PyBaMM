@@ -19,5 +19,5 @@ experiment = pybamm.Experiment(
 )
 
 sim = pybamm.Simulation(model, experiment=experiment)
-sim.solve(calc_esoh=False)
+sim.solve()
 sim.plot()

@@ -43,5 +43,5 @@ parameter_values.update({
 
 solver = pybamm.CasadiSolver(mode="safe")
 sim = pybamm.Simulation(model, experiment=experiment, parameter_values=parameter_values, solver=solver)
-sim.solve(calc_esoh=False)
+sim.solve()
 sim.plot()
