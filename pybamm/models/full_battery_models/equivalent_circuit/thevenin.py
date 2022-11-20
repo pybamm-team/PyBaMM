@@ -1,7 +1,7 @@
 import pybamm
 
 
-class EquivalentCircuitModel(pybamm.BaseModel):
+class Thevenin(pybamm.BaseModel):
     def __init__(self, name="Equivalent Circuit Model", options=None, build=True):
         super().__init__(name)
 
@@ -26,8 +26,7 @@ class EquivalentCircuitModel(pybamm.BaseModel):
                 "explicit resistance",
                 "CCCV",
             ],
-            "include resistor": ["true", "false"],
-            "number of rc elements": [1, 2, 3, 4],
+            "number of rc elements": [1, 2, 3, 4, 0],
             "external submodels": [[]],
         }
 
@@ -116,15 +115,11 @@ class EquivalentCircuitModel(pybamm.BaseModel):
 
     def set_resistor_submodel(self):
 
-        include_resistor = self.ecm_options["include resistor"]
-
-        if include_resistor == "true":
-
-            name = f"Element-{self.element_counter} (Resistor)"
-            self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
-                self.param, self.element_counter, self.ecm_options
-            )
-            self.element_counter += 1
+        name = f"Element-{self.element_counter} (Resistor)"
+        self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
+            self.param, self.element_counter, self.ecm_options
+        )
+        self.element_counter += 1
 
     def set_rc_submodels(self):
         number_of_rc_elements = self.ecm_options["number of rc elements"]

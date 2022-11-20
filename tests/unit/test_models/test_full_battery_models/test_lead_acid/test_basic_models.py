@@ -1,5 +1,5 @@
 #
-# Tests for the basic lithium-ion models
+# Tests for the basic lead acid models
 #
 import pybamm
 import unittest

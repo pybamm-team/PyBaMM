@@ -32,10 +32,7 @@ class ThermalSubModel(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
 
         number_of_rc_elements = self.model_options["number of rc elements"]
-        if self.model_options["include resistor"] == "true":
-            number_of_elements = number_of_rc_elements + 1
-        else:
-            number_of_elements = number_of_rc_elements
+        number_of_elements = number_of_rc_elements + 1
 
         Q_irr = pybamm.Scalar(0)
         for i in range(number_of_elements):

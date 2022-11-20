@@ -1,9 +1,21 @@
 import pybamm
-import matplotlib.pyplot as plt
 
 pybamm.set_logging_level("INFO")
 
-model = pybamm.ecm.EquivalentCircuitModel()
+# TODO: check reversible heat generation
+
+options = {"number of rc elements": 2}
+model = pybamm.equivalent_circuit.Thevenin(options=options)
+
+parameter_values = model.default_parameter_values
+parameter_values.update(
+    {
+        "R2 [Ohm]": 0.3e-3,
+        "C2 [F]": 1000 / 0.3e-3,
+        "Element-2 initial overpotential [V]": 0,
+    },
+    check_already_exists=False,
+)
 
 experiment = pybamm.Experiment(
     [
@@ -15,9 +27,8 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 1
 )
 
-sim = pybamm.Simulation(model, experiment=experiment)
+sim = pybamm.Simulation(model, experiment=experiment, parameter_values=parameter_values)
 sim.solve()
 sim.plot()
