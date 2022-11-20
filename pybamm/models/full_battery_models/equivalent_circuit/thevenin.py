@@ -3,23 +3,23 @@ import pybamm
 
 class Thevenin(pybamm.BaseModel):
     """
-    The classical Thevenin Equivalent Circuit Model of a battery as 
+    The classical Thevenin Equivalent Circuit Model of a battery as
     described in, for example, [1]_.
 
-    This equivalent circuit model consists of an OCV element, a resistor 
-    element, and a number of RC elements (by default 1). The model is 
-    coupled to two lumped thermal models, one for the cell and 
+    This equivalent circuit model consists of an OCV element, a resistor
+    element, and a number of RC elements (by default 1). The model is
+    coupled to two lumped thermal models, one for the cell and
     one for the surrounding jig. Heat generation terms for each element
     follow equation (1) of [2]_.
 
     Parameters
     ----------
     name : str, optional
-        The name of the model. The default is 
+        The name of the model. The default is
         "Thevenin Equivalent Circuit Model".
     options : dict, optional
         A dictionary of options to be passed to the model. The default is None.
-        Possible options are: 
+        Possible options are:
 
             * "number of rc elements" : str
                 The number of RC elements to be added to the model. The default is 1.
@@ -65,10 +65,10 @@ class Thevenin(pybamm.BaseModel):
 
     References
     ----------
-    .. [1] G Barletta, D Piera, and D Papurello. "Thévenin’s Battery Model 
+    .. [1] G Barletta, D Piera, and D Papurello. "Thévenin’s Battery Model
            Parameter Estimation Based on Simulink." Energies 15.17 (2022): 6207.
-    .. [2] N Nieto, L Díaz, J Gastelurrutia, I Alava, F Blanco, JC Ramos, and 
-           A Rivas "Thermal modeling of large format lithium-ion cells." 
+    .. [2] N Nieto, L Díaz, J Gastelurrutia, I Alava, F Blanco, JC Ramos, and
+           A Rivas "Thermal modeling of large format lithium-ion cells."
            Journal of The Electrochemical Society, 160(2), (2012) A212.
     """
 
@@ -187,7 +187,7 @@ class Thevenin(pybamm.BaseModel):
 
     def set_resistor_submodel(self):
 
-        name = f"Element-0 (Resistor)"
+        name = "Element-0 (Resistor)"
         self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
             self.param, self.ecm_options
         )

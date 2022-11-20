@@ -23,7 +23,7 @@ class ResistorElement(pybamm.BaseSubModel):
         current = variables["Current [A]"]
         soc = variables["SoC"]
 
-        r = self.param.rcr_element(f"R0 [Ohm]", T_cell, current, soc)
+        r = self.param.rcr_element("R0 [Ohm]", T_cell, current, soc)
 
         overpotential = -current * r
         Q_irr = current**2 * r

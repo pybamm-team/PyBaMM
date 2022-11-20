@@ -8,8 +8,8 @@ path, _ = os.path.split(os.path.abspath(__file__))
 ocv = pybamm.parameters.process_1D_data("ecm_example_ocv.csv", path=path)
 
 r0 = pybamm.parameters.process_3D_data_csv("ecm_example_r0.csv", path=path)
-r1 = pybamm.parameters.process_3D_data_csv(f"ecm_example_r1.csv", path=path)
-c1 = pybamm.parameters.process_3D_data_csv(f"ecm_example_c1.csv", path=path)
+r1 = pybamm.parameters.process_3D_data_csv("ecm_example_r1.csv", path=path)
+c1 = pybamm.parameters.process_3D_data_csv("ecm_example_c1.csv", path=path)
 
 dUdT = pybamm.parameters.process_2D_data_csv("ecm_example_dUdT.csv", path=path)
 
