@@ -61,6 +61,10 @@ class VariableBase(pybamm.Symbol):
         scale=1,
         reference=0,
     ):
+        if isinstance(scale, numbers.Number):
+            scale = pybamm.Scalar(scale)
+        if isinstance(reference, numbers.Number):
+            reference = pybamm.Scalar(reference)
         self._scale = scale
         self._reference = reference
         super().__init__(

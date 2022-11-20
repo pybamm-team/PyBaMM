@@ -183,22 +183,24 @@ class BaseParticle(pybamm.BaseSubModel):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        R_typ = self.phase_param.R_typ
+        R_typ = self.phase_param.R_typ  # [m]
         # Particle-size distribution (area-weighted)
-        f_a_dist = self.phase_param.f_a_dist(R)
+        f_a_dist = self.phase_param.f_a_dist(R)  # [m-1]
 
         # Ensure the distribution is normalised, irrespective of discretisation
         # or user input
-        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)  # [m-1]
 
         # Volume-weighted particle-size distribution
-        f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)
+        f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)  # [m-1]
 
         # Number-based particle-size distribution
-        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(f_a_dist / R**2, R)
+        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(
+            f_a_dist / R**2, R
+        )  # [m-1]
 
         # True mean radii and standard deviations, calculated from the f_a_dist that
-        # was given
+        # was given, all have units [m]
         R_num_mean = pybamm.Integral(R * f_num_dist, R)
         R_a_mean = pybamm.Integral(R * f_a_dist, R)
         R_v_mean = pybamm.Integral(R * f_v_dist, R)
@@ -233,50 +235,30 @@ class BaseParticle(pybamm.BaseSubModel):
             )
 
         variables = {
-            f"{Domain} {phase_name}particle sizes": R,
-            f"{Domain} {phase_name}particle sizes [m]": R * R_typ,
-            f"{Domain} area-weighted {phase_name}particle-size distribution": f_a_dist,
+            f"{Domain} {phase_name}particle sizes": R / R_typ,
+            f"{Domain} {phase_name}particle sizes [m]": R,
             f"{Domain} area-weighted {phase_name}particle-size"
-            " distribution [m-1]": f_a_dist / R_typ,
+            " distribution [m-1]": f_a_dist,
             f"{Domain} volume-weighted {phase_name}particle-size"
-            " distribution": f_v_dist,
-            f"{Domain} volume-weighted {phase_name}particle-size"
-            " distribution [m-1]": f_v_dist / R_typ,
+            " distribution [m-1]": f_v_dist,
             f"{Domain} number-based {phase_name}particle-size"
-            " distribution": f_num_dist,
-            f"{Domain} number-based {phase_name}particle-size"
-            " distribution [m-1]": f_num_dist / R_typ,
-            f"{Domain} area-weighted mean particle radius": R_a_mean,
-            f"{Domain} area-weighted mean particle radius [m]": R_a_mean * R_typ,
-            f"{Domain} volume-weighted mean particle radius": R_v_mean,
-            f"{Domain} volume-weighted mean particle radius [m]": R_v_mean * R_typ,
-            f"{Domain} number-based mean particle radius": R_num_mean,
-            f"{Domain} number-based mean particle radius [m]": R_num_mean * R_typ,
+            " distribution [m-1]": f_num_dist,
+            f"{Domain} area-weighted mean particle radius [m]": R_a_mean,
+            f"{Domain} volume-weighted mean particle radius [m]": R_v_mean,
+            f"{Domain} number-based mean particle radius [m]": R_num_mean,
             f"{Domain} area-weighted {phase_name}particle-size"
-            " standard deviation": sd_a,
-            f"{Domain} area-weighted {phase_name}particle-size"
-            " standard deviation [m]": sd_a * R_typ,
+            " standard deviation [m]": sd_a,
             f"{Domain} volume-weighted {phase_name}particle-size"
-            " standard deviation": sd_v,
-            f"{Domain} volume-weighted {phase_name}particle-size"
-            " standard deviation [m]": sd_v * R_typ,
+            " standard deviation [m]": sd_v,
             f"{Domain} number-based {phase_name}particle-size"
-            " standard deviation": sd_num,
-            f"{Domain} number-based {phase_name}particle-size"
-            " standard deviation [m]": sd_num * R_typ,
+            " standard deviation [m]": sd_num,
             # X-averaged distributions
             f"X-averaged {domain} area-weighted {phase_name}particle-size "
-            "distribution": f_a_dist_xav,
-            f"X-averaged {domain} area-weighted {phase_name}particle-size "
-            "distribution [m-1]": f_a_dist_xav / R_typ,
+            "distribution [m-1]": f_a_dist_xav,
             f"X-averaged {domain} volume-weighted {phase_name}particle-size "
-            "distribution": f_v_dist_xav,
-            f"X-averaged {domain} volume-weighted {phase_name}particle-size "
-            "distribution [m-1]": f_v_dist_xav / R_typ,
+            "distribution [m-1]": f_v_dist_xav,
             f"X-averaged {domain} number-based {phase_name}particle-size "
-            "distribution": f_num_dist_xav,
-            f"X-averaged {domain} number-based {phase_name}particle-size "
-            "distribution [m-1]": f_num_dist_xav / R_typ,
+            "distribution [m-1]": f_num_dist_xav,
         }
 
         return variables
@@ -364,27 +346,27 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables = {
             f"Average {domain} {phase_name}particle concentration "
-            "distribution": c_s_av_distribution,
+            "distribution": c_s_av_distribution / c_scale,
             f"{Domain} {phase_name}particle concentration "
-            "distribution": c_s_distribution,
+            "distribution": c_s_distribution / c_scale,
             f"{Domain} {phase_name}particle concentration distribution "
-            "[mol.m-3]": c_scale * c_s_distribution,
+            "[mol.m-3]": c_s_distribution,
             f"R-averaged {domain} {phase_name}particle concentration "
-            "distribution": c_s_rav_distribution,
+            "distribution": c_s_rav_distribution / c_scale,
             f"R-averaged {domain} {phase_name}particle concentration distribution "
-            "[mol.m-3]": c_scale * c_s_rav_distribution,
+            "[mol.m-3]": c_s_rav_distribution,
             f"X-averaged {domain} {phase_name}particle concentration "
-            "distribution": c_s_xav_distribution,
+            "distribution": c_s_xav_distribution / c_scale,
             f"X-averaged {domain} {phase_name}particle concentration distribution "
-            "[mol.m-3]": c_scale * c_s_xav_distribution,
+            "[mol.m-3]": c_s_xav_distribution,
             f"X-averaged {domain} {phase_name}particle surface concentration"
-            " distribution": c_s_surf_xav_distribution,
+            " distribution": c_s_surf_xav_distribution / c_scale,
             f"X-averaged {domain} {phase_name}particle surface concentration "
-            "distribution [mol.m-3]": c_scale * c_s_surf_xav_distribution,
+            "distribution [mol.m-3]": c_s_surf_xav_distribution,
             f"{Domain} {phase_name}particle surface concentration"
-            " distribution": c_s_surf_distribution,
+            " distribution": c_s_surf_distribution / c_scale,
             f"{Domain} {phase_name}particle surface concentration"
-            " distribution [mol.m-3]": c_scale * c_s_surf_distribution,
+            " distribution [mol.m-3]": c_s_surf_distribution,
         }
         return variables
 
@@ -416,8 +398,9 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables = {
             f"X-averaged {domain} {phase_name}particle flux "
-            "distribution": N_s_xav_distribution,
-            f"{Domain} {phase_name}particle flux distribution": N_s_distribution,
+            "distribution [mol.m-2.s-1]": N_s_xav_distribution,
+            f"{Domain} {phase_name}particle flux "
+            "distribution [mol.m-2.s-1]": N_s_distribution,
         }
 
         return variables

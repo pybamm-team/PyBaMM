@@ -118,14 +118,16 @@ class BasicFull(BaseModel):
         j0_p = param.p.prim.j0(c_e_p, T)
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * (Feta_RT_p))
 
-        a_j_n = param.n.a * j_n
-        a_j_p = param.p.a * j_p
+        a_n = pybamm.Parameter("Negative electrode surface area to volume ratio [m-1]")
+        a_p = pybamm.Parameter("Positive electrode surface area to volume ratio [m-1]")
+        a_j_n = a_n * j_n
+        a_j_p = a_p * j_p
         a_j = pybamm.concatenation(a_j_n, j_s, a_j_p)
 
         ######################
         # State of Charge
         ######################
-        I = param.dimensional_current_with_time
+        I = param.current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
         self.rhs[Q] = I / 3600
@@ -137,19 +139,19 @@ class BasicFull(BaseModel):
         ######################
         v_n = -pybamm.grad(pressure_n)
         v_p = -pybamm.grad(pressure_p)
-        l_s = param.s.l
-        l_n = param.n.l
+        L_s = param.s.L
+        L_n = param.n.L
         x_s = pybamm.SpatialVariable("x_s", domain="separator")
 
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
-        v_n_right = param.n.beta * i_cell
-        v_p_left = param.p.beta * i_cell
-        d_v_s__dx = (v_p_left - v_n_right) / l_s
+        v_n_right = param.n.DeltaV * i_cell
+        v_p_left = param.p.DeltaV * i_cell
+        d_v_s__dx = (v_p_left - v_n_right) / L_s
 
         # Simple formula for velocity in the separator
         div_V_s = -d_v_s__dx
-        v_s = d_v_s__dx * (x_s - l_n) + v_n_right
+        v_s = d_v_s__dx * (x_s - L_n) + v_n_right
 
         # v is the velocity in the x-direction
         # div_V is the divergence of the velocity in the yz-directions
@@ -160,8 +162,8 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(0, "positive electrode"),
         )
         # Simple formula for velocity in the separator
-        self.algebraic[pressure_n] = pybamm.div(v_n) - param.n.beta * a_j_n
-        self.algebraic[pressure_p] = pybamm.div(v_p) - param.p.beta * a_j_p
+        self.algebraic[pressure_n] = pybamm.div(v_n) - param.n.DeltaV * a_j_n
+        self.algebraic[pressure_p] = pybamm.div(v_p) - param.p.DeltaV * a_j_p
         self.boundary_conditions[pressure_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Dirichlet"),
@@ -213,12 +215,12 @@ class BasicFull(BaseModel):
         ######################
         # Porosity
         ######################
-        Delta_V = pybamm.concatenation(
-            pybamm.PrimaryBroadcast(param.n.Delta_V, "negative electrode"),
+        DeltaVsurf = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(param.n.DeltaVsurf, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
-            pybamm.PrimaryBroadcast(param.p.Delta_V, "positive electrode"),
+            pybamm.PrimaryBroadcast(param.p.DeltaVsurf, "positive electrode"),
         )
-        deps_dt = -Delta_V * a_j / param.F
+        deps_dt = -DeltaVsurf * a_j / param.F
         self.rhs[eps] = deps_dt
         self.initial_conditions[eps] = param.epsilon_init
         self.events.extend(

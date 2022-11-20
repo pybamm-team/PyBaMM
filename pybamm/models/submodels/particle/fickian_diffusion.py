@@ -83,7 +83,8 @@ class FickianDiffusion(BaseParticle):
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
-                    f"{Domain} volume-weighted particle-size distribution [m]"
+                    f"{Domain} volume-weighted {phase_name}"
+                    "particle-size distribution [m-1]"
                 ]
             else:
                 c_s_distribution = pybamm.Variable(
@@ -105,8 +106,8 @@ class FickianDiffusion(BaseParticle):
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
-                    f"X-averaged {domain} volume-weighted "
-                    "particle-size distribution [m]"
+                    f"X-averaged {domain} volume-weighted {phase_name}"
+                    "particle-size distribution [m-1]"
                 ]
 
             # Standard concentration distribution variables (size-dependent)
