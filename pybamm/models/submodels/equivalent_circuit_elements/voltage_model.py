@@ -2,6 +2,20 @@ import pybamm
 
 
 class VoltageModel(pybamm.BaseSubModel):
+    """
+    Voltage model for use with equivalent 
+    circuits. This model is used to calculate 
+    the voltage and total overpotentials 
+    from the other elements in the circuit.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    """
+
     def __init__(self, param, options=None):
         super().__init__(param)
         self.model_options = options

@@ -2,7 +2,79 @@ import pybamm
 
 
 class Thevenin(pybamm.BaseModel):
-    def __init__(self, name="Equivalent Circuit Model", options=None, build=True):
+    """
+    The classical Thevenin Equivalent Circuit Model of a battery as 
+    described in, for example, [1]_.
+
+    This equivalent circuit model consists of an OCV element, a resistor 
+    element, and a number of RC elements (by default 1). The model is 
+    coupled to two lumped thermal models, one for the cell and 
+    one for the surrounding jig. Heat generation terms for each element
+    follow equation (1) of [2]_.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the model. The default is 
+        "Thevenin Equivalent Circuit Model".
+    options : dict, optional
+        A dictionary of options to be passed to the model. The default is None.
+        Possible options are: 
+
+            * "number of rc elements" : str
+                The number of RC elements to be added to the model. The default is 1.
+            * "calculate discharge energy": str
+                Whether to calculate the discharge energy, throughput energy and
+                throughput capacity in addition to discharge capacity. Must be one of
+                "true" or "false". "false" is the default, since calculating discharge
+                energy can be computationally expensive for simple models like SPM.
+            * "operating mode" : str
+                Sets the operating mode for the model. This determines how the current
+                is set. Can be:
+
+                - "current" (default) : the current is explicity supplied
+                - "voltage"/"power"/"resistance" : solve an algebraic equation for \
+                    current such that voltage/power/resistance is correct
+                - "differential power"/"differential resistance" : solve a \
+                    differential equation for the power or resistance
+                - "explicit power"/"explicit resistance" : current is defined in terms \
+                    of the voltage such that power/resistance is correct
+                - "CCCV": a special implementation of the common constant-current \
+                    constant-voltage charging protocol, via an ODE for the current
+                - callable : if a callable is given as this option, the function \
+                    defines the residual of an algebraic equation. The applied current \
+                    will be solved for such that the algebraic constraint is satisfied.
+            * "external submodels" : list
+                A list of the submodels that you would like to supply an external
+                variable for instead of solving in PyBaMM. The entries of the lists
+                are strings that correspond to the submodel names in the keys
+                of `self.submodels`.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.equivalent_circuit.Thevenin()
+    >>> model.name
+    'Thevenin Equivalent Circuit Model'
+
+
+    References
+    ----------
+    .. [1] G Barletta, D Piera, and D Papurello. "Thévenin’s Battery Model 
+           Parameter Estimation Based on Simulink." Energies 15.17 (2022): 6207.
+    .. [2] N Nieto, L Díaz, J Gastelurrutia, I Alava, F Blanco, JC Ramos, and 
+           A Rivas "Thermal modeling of large format lithium-ion cells." 
+           Journal of The Electrochemical Society, 160(2), (2012) A212.
+    """
+
+    def __init__(
+        self, name="Thevenin Equivalent Circuit Model", options=None, build=True
+    ):
         super().__init__(name)
 
         self.set_options(options)
@@ -26,7 +98,7 @@ class Thevenin(pybamm.BaseModel):
                 "explicit resistance",
                 "CCCV",
             ],
-            "number of rc elements": [1, 2, 3, 4, 0],
+            "number of rc elements": [1, 2, 3, 4, 5, 0],
             "external submodels": [[]],
         }
 
@@ -115,9 +187,9 @@ class Thevenin(pybamm.BaseModel):
 
     def set_resistor_submodel(self):
 
-        name = f"Element-{self.element_counter} (Resistor)"
+        name = f"Element-0 (Resistor)"
         self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
-            self.param, self.element_counter, self.ecm_options
+            self.param, self.ecm_options
         )
         self.element_counter += 1
 

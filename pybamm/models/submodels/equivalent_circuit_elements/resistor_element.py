@@ -2,9 +2,19 @@ import pybamm
 
 
 class ResistorElement(pybamm.BaseSubModel):
-    def __init__(self, param, element_number, options=None):
+    """
+    Resistor element for equivalent circuits.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    """
+
+    def __init__(self, param, options=None):
         super().__init__(param)
-        self.element_number = element_number
         self.model_options = options
 
     def get_coupled_variables(self, variables):
@@ -14,7 +24,7 @@ class ResistorElement(pybamm.BaseSubModel):
         soc = variables["SoC"]
 
         r = self.param.rcr_element(
-            f"R{self.element_number} [Ohm]", T_cell, current, soc
+            f"R0 [Ohm]", T_cell, current, soc
         )
 
         overpotential = -current * r
@@ -22,9 +32,9 @@ class ResistorElement(pybamm.BaseSubModel):
 
         variables.update(
             {
-                f"R{self.element_number} [Ohm]": r,
-                f"Element-{self.element_number} overpotential [V]": overpotential,
-                f"Element-{self.element_number} "
+                "R0 [Ohm]": r,
+                "Element-0 overpotential [V]": overpotential,
+                "Element-0 "
                 + "irreversible heat generation [W]": Q_irr,
             }
         )

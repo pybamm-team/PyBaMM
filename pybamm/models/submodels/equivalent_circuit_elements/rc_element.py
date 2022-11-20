@@ -2,6 +2,20 @@ import pybamm
 
 
 class RcElement(pybamm.BaseSubModel):
+    """
+    Parallel Resistor-Capacitor (RC) element for 
+    equivalent circuits.  
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    element_number: int
+        The number of the element (i.e. whether it 
+        is the first, second, third, etc. element)
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    """
     def __init__(self, param, element_number, options=None):
         super().__init__(param)
         self.element_number = element_number
