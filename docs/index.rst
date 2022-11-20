@@ -101,7 +101,6 @@ There are many ways to contribute to PyBaMM:
 .. toctree::
     :maxdepth: 1
 
-    tutorials/add-parameter-values
     tutorials/add-model
     tutorials/add-spatial-method
     tutorials/add-solver

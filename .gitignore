@@ -112,9 +112,6 @@ test.json
 # tox
 .tox/
 
-# julia
-Manifest.toml
-
 # vcpkg
 vcpkg_installed/
 

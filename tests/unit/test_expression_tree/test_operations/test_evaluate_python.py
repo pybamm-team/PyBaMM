@@ -76,7 +76,7 @@ class TestEvaluate(unittest.TestCase):
         # test unary op
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        expr = a + (-b)
+        expr = pybamm.maximum(a, -(b))
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
         self.assertEqual(len(constant_symbols), 0)
 
@@ -92,7 +92,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.values())[2], "-{}".format(var_b))
         var_child = pybamm.id_to_python_variable(expr.children[1].id)
         self.assertEqual(
-            list(variable_symbols.values())[3], "{} + {}".format(var_a, var_child)
+            list(variable_symbols.values())[3], f"np.maximum({var_a},{var_child})"
         )
 
         # test function

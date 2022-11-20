@@ -22,8 +22,6 @@ Utility functions
 
 .. autofunction:: pybamm.get_parameters_filepath
 
-.. autofunction:: pybamm.have_julia
-
 .. autofunction:: pybamm.have_jax
 
 .. autofunction:: pybamm.is_jax_compatible

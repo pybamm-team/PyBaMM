@@ -2,7 +2,7 @@
 # External circuit with an arbitrary function
 #
 import pybamm
-from .base_external_circuit import BaseModel, LeadingOrderBaseModel
+from .base_external_circuit import BaseModel
 
 
 class FunctionControl(BaseModel):
@@ -72,7 +72,7 @@ class FunctionControl(BaseModel):
         super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current density variable"]
-        self.initial_conditions[i_cell] = self.param.I_typ / self.param.A_cc
+        self.initial_conditions[i_cell] = pybamm.Scalar(1)
 
     def set_rhs(self, variables):
         super().set_rhs(variables)
@@ -191,43 +191,3 @@ class CCCVFunctionControl(FunctionControl):
         V = variables["Terminal voltage [V]"] * self.param.n_cells
         V_CCCV = pybamm.Parameter("Voltage function [V]")
         return -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)
-
-
-class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
-    """External circuit with an arbitrary function, at leading order."""
-
-    def __init__(self, param, external_circuit_function, options, control="algebraic"):
-        super().__init__(param, external_circuit_function, options, control=control)
-
-    def _get_current_variable(self):
-        return pybamm.Variable("Leading-order total current density")
-
-
-class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
-    """
-    External circuit with voltage control, implemented as an extra algebraic equation,
-    at leading order.
-    """
-
-    def __init__(self, param, options):
-        super().__init__(param, self.constant_voltage, options, control="algebraic")
-
-    def constant_voltage(self, variables):
-        V = variables["Terminal voltage [V]"] * self.param.n_cells
-        return V - pybamm.FunctionParameter(
-            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
-        )
-
-
-class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
-    """External circuit with power control, at leading order."""
-
-    def __init__(self, param, options):
-        super().__init__(param, self.constant_power, options, control="algebraic")
-
-    def constant_power(self, variables):
-        I = variables["Current [A]"]
-        V = variables["Terminal voltage [V]"] * self.param.n_cells
-        return I * V - pybamm.FunctionParameter(
-            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
-        )

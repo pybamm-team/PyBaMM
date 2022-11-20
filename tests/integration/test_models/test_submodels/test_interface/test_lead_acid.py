@@ -83,7 +83,7 @@ class TestMainReaction(unittest.TestCase):
 
         # Test
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
         y = submesh.nodes**2
         # should evaluate to vectors with the right shape
         self.assertEqual(j0_n.evaluate(y=y).shape, (mesh["negative electrode"].npts, 1))

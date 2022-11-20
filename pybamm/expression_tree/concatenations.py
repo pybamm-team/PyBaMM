@@ -42,6 +42,7 @@ class Concatenation(pybamm.Symbol):
         else:
             domains = {"primary": []}
         self.concatenation_function = concat_fun
+
         super().__init__(name, children, domains=domains)
 
     def __str__(self):
@@ -260,7 +261,7 @@ class DomainConcatenation(Concatenation):
         mesh_pts = 1
         for level, dom in auxiliary_domains.items():
             if level != "primary" and dom != []:
-                mesh_pts *= self.full_mesh.combine_submeshes(*dom).npts
+                mesh_pts *= self.full_mesh[dom].npts
         return mesh_pts
 
     @property
@@ -364,9 +365,22 @@ class ConcatenationVariable(Concatenation):
         name = intersect(children[0].name, children[1].name)
         for child in children[2:]:
             name = intersect(name, child.name)
-        name = name.capitalize()
-        if name == "":
+        if len(name) == 0:
             name = None
+        # name is unchanged if its length is 1
+        elif len(name) > 1:
+            name = name[0].capitalize() + name[1:]
+
+        if len(children) > 0:
+            if all(child.scale == children[0].scale for child in children):
+                self._scale = children[0].scale
+            else:
+                raise ValueError("Cannot concatenate symbols with different scales")
+            if all(child.reference == children[0].reference for child in children):
+                self._reference = children[0].reference
+            else:
+                raise ValueError("Cannot concatenate symbols with different references")
+
         super().__init__(*children, name=name)
         # Overly tight bounds, can edit later if required
         self.bounds = (

@@ -450,11 +450,11 @@ class BaseSolver(object):
                         expr = symbol.right
                         found_t = True
                     # Dimensional
-                    elif symbol.right == (pybamm.t * model.timescale_eval):
-                        expr = symbol.left / symbol.right.right
+                    elif symbol.right == (model.timescale_eval * pybamm.t):
+                        expr = symbol.left / symbol.right.left
                         found_t = True
-                    elif symbol.left == (pybamm.t * model.timescale_eval):
-                        expr = symbol.right / symbol.left.right
+                    elif symbol.left == (model.timescale_eval * pybamm.t):
+                        expr = symbol.right / symbol.left.left
                         found_t = True
 
                     # Update the events if the heaviside function depended on t

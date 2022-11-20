@@ -3,6 +3,7 @@
 #
 import numpy as np
 import os
+import sys
 import pybamm
 import tempfile
 import unittest
@@ -122,7 +123,6 @@ class TestSearch(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import sys
 
     if "-v" in sys.argv:
         debug = True

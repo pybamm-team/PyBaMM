@@ -2,7 +2,25 @@
 # Tests the citations class.
 #
 import pybamm
+import os
+import io
 import unittest
+import contextlib
+import warnings
+from pybtex.database import Entry
+from tempfile import NamedTemporaryFile
+
+
+@contextlib.contextmanager
+def temporary_filename():
+    """Create a temporary-file and return yield it's filename"""
+
+    f = NamedTemporaryFile(delete=False)
+    try:
+        f.close()
+        yield f.name
+    finally:
+        os.remove(f.name)
 
 
 class TestCitations(unittest.TestCase):
@@ -22,12 +40,61 @@ class TestCitations(unittest.TestCase):
 
     def test_print_citations(self):
         pybamm.citations._reset()
-        pybamm.print_citations("test_citations.txt", "text")
-        pybamm.print_citations("test_citations.txt", "bibtex")
-        pybamm.citations._papers_to_cite = set()
-        pybamm.print_citations()
+
+        # Text Style
+        with temporary_filename() as filename:
+            pybamm.print_citations(filename, "text")
+            with open(filename, "r") as f:
+                self.assertTrue(len(f.readlines()) > 0)
+
+        # Bibtext Style
+        with temporary_filename() as filename:
+            pybamm.print_citations(filename, "bibtex")
+            with open(filename, "r") as f:
+                self.assertTrue(len(f.readlines()) > 0)
+
+        # Write to stdout
+        f = io.StringIO()
+        with contextlib.redirect_stdout(f):
+            pybamm.print_citations()
+        self.assertTrue(
+            "Python Battery Mathematical Modelling (PyBaMM)." in f.getvalue()
+        )
+
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
+
+    def test_overwrite_citation(self):
+        # Unknown citation
+        fake_citation = r"@article{NotACitation, title = {This Doesn't Exist}}"
+        with warnings.catch_warnings():
+            pybamm.citations.register(fake_citation)
+        self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
+
+        # Same NotACitation
+        with warnings.catch_warnings():
+            pybamm.citations.register(fake_citation)
+        self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
+
+        # Overwrite NotACitation
+        old_citation = pybamm.citations._all_citations["NotACitation"]
+        with self.assertWarns(Warning):
+            pybamm.citations.register(r"@article{NotACitation, title = {A New Title}}")
+        self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
+        self.assertNotEqual(
+            pybamm.citations._all_citations["NotACitation"], old_citation
+        )
+
+    def test_input_validation(self):
+        """Test type validation of ``_add_citation``"""
+        with self.assertRaises(TypeError):
+            pybamm.citations.register(1)
+
+        with self.assertRaises(TypeError):
+            pybamm.citations._add_citation("NotACitation", "NotAEntry")
+
+        with self.assertRaises(TypeError):
+            pybamm.citations._add_citation(1001, Entry("misc"))
 
     def test_andersson_2019(self):
         citations = pybamm.citations
@@ -63,14 +130,6 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("Sulzer2019asymptotic", citations._papers_to_cite)
         pybamm.lead_acid.LOQS(build=False)
-        self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
-
-        citations._reset()
-        pybamm.lead_acid.FOQS(build=False)
-        self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
-
-        citations._reset()
-        pybamm.lead_acid.Composite(build=False)
         self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
 
         citations._reset()

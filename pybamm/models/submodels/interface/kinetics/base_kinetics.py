@@ -222,53 +222,13 @@ class BaseKinetics(BaseInterface):
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
-            param = self.param
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
                 "interfacial current density variable"
             ]
-            current_at_0 = (
-                pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})
-                / param.I_typ
-                * pybamm.sign(param.I_typ)
-            )
+            current_at_0 = pybamm.Scalar(1)  # dimensionless current initially
             sgn = 1 if self.domain == "negative" else -1
             # i / (a*l), assuming a=1 initially
             j_tot_av_init = sgn * current_at_0 / self.domain_param.l
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
-
-    def _get_interface_variables_for_first_order(self, variables):
-        # This is a bit of a hack, but we need to wrap electrolyte concentration with
-        # the NotConstant class
-        # to differentiate it from the electrolyte concentration inside the
-        # surface potential difference when taking j.diff(c_e) later on
-        domain, Domain = self.domain_Domain
-
-        c_e_0 = pybamm.NotConstant(
-            variables["Leading-order x-averaged electrolyte concentration"]
-        )
-        c_e = pybamm.PrimaryBroadcast(c_e_0, f"{domain} electrode")
-        hacked_variables = {**variables, f"{Domain} electrolyte concentration": c_e}
-        delta_phi = variables[
-            f"Leading-order x-averaged {domain} electrode surface potential difference"
-        ]
-        j0 = self._get_exchange_current_density(hacked_variables)
-        ne = self._get_number_of_electrons_in_reaction()
-        if self.reaction == "lead-acid main":
-            ocp = self.phase_param.U(c_e_0, self.param.T_init)
-        elif self.reaction == "lead-acid oxygen":
-            ocp = self.phase_param.U_Ox
-
-        T = variables["X-averaged cell temperature"]
-        u = variables[f"X-averaged {domain} electrode interface utilisation"]
-
-        return c_e_0, delta_phi, j0, ne, ocp, T, u
-
-    def _get_j_diffusion_limited_first_order(self, variables):
-        """
-        First-order correction to the interfacial current density due to
-        diffusion-limited effects. For a general model the correction term is zero,
-        since the reaction is not diffusion-limited
-        """
-        return pybamm.Scalar(0)
