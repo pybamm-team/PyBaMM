@@ -109,8 +109,6 @@ def process_2D_data_csv(name, path=None):
         order="C",  # use the C convention
     )
 
-    value_data = value_data.T
-
     formatted_data = (name, (x, value_data))
 
     return formatted_data

@@ -53,9 +53,6 @@ class EcmParameters:
         return pybamm.FunctionParameter("Open circuit voltage [V]", {"SoC": soc})
 
     def rcr_element(self, name, T_cell, current, soc):
-
-        current = pybamm.minimum(pybamm.Parameter("RCR lookup limit [A]"), current)
-        T_cell = pybamm.minimum(pybamm.Scalar(40), T_cell)
         inputs = {"Cell temperature [degC]": T_cell, "Current [A]": current, "SoC": soc}
 
         return pybamm.FunctionParameter(name, inputs)
@@ -64,6 +61,5 @@ class EcmParameters:
         return pybamm.Parameter(f"Element-{element_number} initial overpotential [V]")
 
     def dUdT(self, ocv, T_cell):
-        T_cell = pybamm.minimum(pybamm.Scalar(40), T_cell)
         inputs = {"Open circuit voltage [V]": ocv, "Cell temperature [degC]": T_cell}
         return pybamm.FunctionParameter("Entropic change [V/K]", inputs)

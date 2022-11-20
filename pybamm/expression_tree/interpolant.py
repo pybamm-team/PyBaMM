@@ -68,12 +68,12 @@ class Interpolant(pybamm.Function):
             x1, x2 = x
             if y.ndim != 2:
                 raise ValueError("y should be two-dimensional if len(x)=2")
-            if x1.shape[0] != y.shape[1]:
+            if x1.shape[0] != y.shape[0]:
                 raise ValueError(
                     "len(x1) should equal y=shape[1], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
-            if x2 is not None and x2.shape[0] != y.shape[0]:
+            if x2 is not None and x2.shape[0] != y.shape[1]:
                 raise ValueError(
                     "len(x2) should equal y=shape[0], "
                     f"but x2.shape={x2.shape} and y.shape={y.shape}"
@@ -153,9 +153,21 @@ class Interpolant(pybamm.Function):
                     "interpolator should be 'linear' or 'cubic' if x is two-dimensional"
                 )
             else:
-                interpolating_function = interpolate.interp2d(
-                    x1, x2, y, kind=interpolator
+                # interpolating_function = interpolate.interp2d(
+                #     x1, x2, y, kind=interpolator
+                # )
+                if extrapolate:
+                    fill_value = None
+                else:
+                    fill_value = np.nan
+                interpolating_function = interpolate.RegularGridInterpolator(
+                    (x1, x2),
+                    y,
+                    method=interpolator,
+                    bounds_error=False,
+                    fill_value=fill_value,
                 )
+
         elif len(x) == 3:
             self.dimension = 3
 
@@ -241,13 +253,13 @@ class Interpolant(pybamm.Function):
                 children_eval_flat.append(child)
         if self.dimension == 1:
             return self.function(*children_eval_flat).flatten()[:, np.newaxis]
-        elif self.dimension == 2:
-            res = self.function(*children_eval_flat)
-            if res.ndim > 1:
-                return np.diagonal(res)[:, np.newaxis]
-            else:
-                return res[:, np.newaxis]
-        elif self.dimension == 3:
+        # elif self.dimension == 2:
+        #     res = self.function(*children_eval_flat)
+        #     if res.ndim > 1:
+        #         return np.diagonal(res)[:, np.newaxis]
+        #     else:
+                # return res[:, np.newaxis]
+        elif self.dimension in [2, 3]:
 
             # If the children are scalars, we need to add a dimension
             shapes = []

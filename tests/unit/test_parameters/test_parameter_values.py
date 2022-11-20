@@ -18,6 +18,7 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
     lico2_diffusivity_Dualfoil1998,
 )
+import casadi
 
 
 class TestParameterValues(unittest.TestCase):
@@ -611,9 +612,9 @@ class TestParameterValues(unittest.TestCase):
         processed = pybamm.parameters.process_3D_data_csv(name, path)
         parameter_values = pybamm.ParameterValues({"interpolation": processed})
 
-        x1 = pybamm.ExternalVariable("x1", 1)
-        x2 = pybamm.ExternalVariable("x2", 1)
-        x3 = pybamm.ExternalVariable("x3", 1)
+        x1 = pybamm.StateVector(slice(0, 1))
+        x2 = pybamm.StateVector(slice(1, 2))
+        x3 = pybamm.StateVector(slice(2, 3))
         interpolation = pybamm.FunctionParameter(
             "interpolation", {"x1": x1, "x2": x2, "x3": x3}
         )
@@ -625,19 +626,28 @@ class TestParameterValues(unittest.TestCase):
         )
         raw_df = pd.read_csv(filename)
 
+        # It's also helpful to check the casadi conversion here aswell
+        # We check elsewhere but this helps catch additional bugs
+        casadi_y = casadi.MX.sym("y", 3)
+        interp_casadi = processed_interpolation.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
+
         # check that passing the input columns give the correct output
         for values in raw_df.values:
 
-            x1 = values[0]
-            x2 = values[1]
-            x3 = values[2]
-            y = values[3]
+            y = np.array([values[0], values[1], values[2]])
+            f = values[3]
+            casadi_sol = casadi_f(y)
 
             np.testing.assert_almost_equal(
-                processed_interpolation.evaluate(inputs={"x1": x1, "x2": x2, "x3": x3})[
-                    0
-                ][0],
-                y,
+                processed_interpolation.evaluate(y=y)[0][0],
+                f,
+                decimal=10,
+            )
+
+            np.testing.assert_almost_equal(
+                f,
+                casadi_sol.__float__(),
                 decimal=10,
             )
 
@@ -648,13 +658,16 @@ class TestParameterValues(unittest.TestCase):
         processed = pybamm.parameters.process_2D_data_csv(name, path)
         parameter_values = pybamm.ParameterValues({"interpolation": processed})
 
-        x1 = pybamm.ExternalVariable("x1", 1)
-        x2 = pybamm.ExternalVariable("x2", 1)
-        interpolation = pybamm.FunctionParameter(
-            "interpolation", {"x1": x1, "x2": x2}
-        )
-
+        x1 = pybamm.StateVector(slice(0, 1))
+        x2 = pybamm.StateVector(slice(1, 2))
+        interpolation = pybamm.FunctionParameter("interpolation", {"x1": x1, "x2": x2})
         processed_interpolation = parameter_values.process_symbol(interpolation)
+
+        # It's also helpful to check the casadi conversion here aswell
+        # We check elsewhere but this helps catch additional bugs
+        casadi_y = casadi.MX.sym("y", 2)
+        interp_casadi = processed_interpolation.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
 
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
@@ -664,18 +677,22 @@ class TestParameterValues(unittest.TestCase):
         # check that passing the input columns give the correct output
         for values in raw_df.values:
 
-            x1 = values[0]
-            x2 = values[1]
-            y = values[2]
+            y = np.array([values[0], values[1]])
+            f = values[2]
+
+            casadi_sol = casadi_f(y)
 
             np.testing.assert_almost_equal(
-                processed_interpolation.evaluate(inputs={"x1": x1, "x2": x2})[
-                    0
-                ][0],
-                y,
+                processed_interpolation.evaluate(y=y)[0][0],
+                f,
                 decimal=10,
             )
 
+            np.testing.assert_almost_equal(
+                f,
+                casadi_sol.__float__(),
+                decimal=10,
+            )
 
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast gets processed correctly

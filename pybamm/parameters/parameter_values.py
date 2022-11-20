@@ -609,7 +609,7 @@ class ParameterValues:
                         input_data[0],
                         input_data[-1],
                         new_children,
-                        interpolator="linear",
+                        interpolator="cubic",
                         name=name,
                     )
                     # Define event to catch extrapolation. In these events the sign is
