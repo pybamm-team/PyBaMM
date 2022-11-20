@@ -15,7 +15,7 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 3
+    * 1
 )
 
 sim = pybamm.Simulation(model, experiment=experiment)

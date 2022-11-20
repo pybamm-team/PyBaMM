@@ -8,10 +8,6 @@ class EcmParameters:
 
         self.cell_capacity = pybamm.Parameter("Cell capacity [A.h]")
 
-        self.current_collector_resistance = pybamm.Parameter(
-            "Current collector resistance [Ohm]"
-        )
-
         self._set_current_parameters()
         self._set_voltage_parameters()
         self._set_thermal_parameters()
@@ -40,14 +36,13 @@ class EcmParameters:
         self.Q = self.cell_capacity
         self.current_with_time = self.dimensional_current_with_time
         self.dimensional_current_density_with_time = self.dimensional_current_with_time
-        self.I_typ = 1
-        self.n_electrodes_parallel = 1
-        self.A_cc = 1
-        self.n_cells = 1
+        self.I_typ = pybamm.Scalar(1)
+        self.n_electrodes_parallel = pybamm.Scalar(1)
+        self.A_cc = pybamm.Scalar(1)
+        self.n_cells = pybamm.Scalar(1)
 
     def _set_initial_condition_parameters(self):
         self.initial_soc = pybamm.Parameter("Initial SoC")
-        self.initial_vrc2 = pybamm.Parameter("Initial RC2 voltage [V]")
         self.initial_T_cell = pybamm.Parameter("Initial cell temperature [degC]")
         self.initial_T_jig = pybamm.Parameter("Initial jig temperature [degC]")
 
