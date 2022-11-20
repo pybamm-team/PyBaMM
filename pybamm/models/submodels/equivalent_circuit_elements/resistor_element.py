@@ -23,9 +23,7 @@ class ResistorElement(pybamm.BaseSubModel):
         current = variables["Current [A]"]
         soc = variables["SoC"]
 
-        r = self.param.rcr_element(
-            f"R0 [Ohm]", T_cell, current, soc
-        )
+        r = self.param.rcr_element(f"R0 [Ohm]", T_cell, current, soc)
 
         overpotential = -current * r
         Q_irr = current**2 * r
@@ -34,8 +32,7 @@ class ResistorElement(pybamm.BaseSubModel):
             {
                 "R0 [Ohm]": r,
                 "Element-0 overpotential [V]": overpotential,
-                "Element-0 "
-                + "irreversible heat generation [W]": Q_irr,
+                "Element-0 " + "irreversible heat generation [W]": Q_irr,
             }
         )
 

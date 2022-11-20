@@ -81,7 +81,7 @@ class TestEcmParameters(unittest.TestCase):
             (param.rcr_element("R1 [Ohm]", sym, sym, sym), "R1 [Ohm]"),
             (param.rcr_element("C1 [F]", sym, sym, sym), "C1 [F]"),
             (param.initial_rc_overpotential(1), "Element-1 initial overpotential [V]"),
-            (param.dUdT(sym, sym), "Entropic change [V/K]")
+            (param.dUdT(sym, sym), "Entropic change [V/K]"),
         ]
 
         for symbol, key in mapped_functions:

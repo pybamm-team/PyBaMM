@@ -28,9 +28,7 @@ experiment = pybamm.Experiment(
     ]
 )
 
-sim = pybamm.Simulation(
-    model, experiment=experiment, parameter_values=parameter_values
-)
+sim = pybamm.Simulation(model, experiment=experiment, parameter_values=parameter_values)
 sim.solve()
 sim.plot(
     output_variables=[

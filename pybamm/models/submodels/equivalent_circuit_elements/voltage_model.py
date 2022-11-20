@@ -3,9 +3,9 @@ import pybamm
 
 class VoltageModel(pybamm.BaseSubModel):
     """
-    Voltage model for use with equivalent 
-    circuits. This model is used to calculate 
-    the voltage and total overpotentials 
+    Voltage model for use with equivalent
+    circuits. This model is used to calculate
+    the voltage and total overpotentials
     from the other elements in the circuit.
 
     Parameters
