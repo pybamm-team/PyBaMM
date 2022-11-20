@@ -153,9 +153,6 @@ class Interpolant(pybamm.Function):
                     "interpolator should be 'linear' or 'cubic' if x is two-dimensional"
                 )
             else:
-                # interpolating_function = interpolate.interp2d(
-                #     x1, x2, y, kind=interpolator
-                # )
                 if extrapolate:
                     fill_value = None
                 else:
@@ -253,12 +250,6 @@ class Interpolant(pybamm.Function):
                 children_eval_flat.append(child)
         if self.dimension == 1:
             return self.function(*children_eval_flat).flatten()[:, np.newaxis]
-        # elif self.dimension == 2:
-        #     res = self.function(*children_eval_flat)
-        #     if res.ndim > 1:
-        #         return np.diagonal(res)[:, np.newaxis]
-        #     else:
-                # return res[:, np.newaxis]
         elif self.dimension in [2, 3]:
 
             # If the children are scalars, we need to add a dimension
