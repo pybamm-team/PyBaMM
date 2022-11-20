@@ -604,6 +604,79 @@ class TestParameterValues(unittest.TestCase):
             processed_func.evaluate(), processed_interp.evaluate(), decimal=4
         )
 
+    def test_process_interpolant_3D_from_csv(self):
+        name = "data_for_testing_3D"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+
+        processed = pybamm.parameters.process_3D_data_csv(name, path)
+        parameter_values = pybamm.ParameterValues({"interpolation": processed})
+
+        x1 = pybamm.ExternalVariable("x1", 1)
+        x2 = pybamm.ExternalVariable("x2", 1)
+        x3 = pybamm.ExternalVariable("x3", 1)
+        interpolation = pybamm.FunctionParameter(
+            "interpolation", {"x1": x1, "x2": x2, "x3": x3}
+        )
+
+        processed_interpolation = parameter_values.process_symbol(interpolation)
+
+        filename, name = pybamm.parameters.process_parameter_data._process_name(
+            name, path, ".csv"
+        )
+        raw_df = pd.read_csv(filename)
+
+        # check that passing the input columns give the correct output
+        for values in raw_df.values:
+
+            x1 = values[0]
+            x2 = values[1]
+            x3 = values[2]
+            y = values[3]
+
+            np.testing.assert_almost_equal(
+                processed_interpolation.evaluate(inputs={"x1": x1, "x2": x2, "x3": x3})[
+                    0
+                ][0],
+                y,
+                decimal=10,
+            )
+
+    def test_process_interpolant_2D_from_csv(self):
+        name = "data_for_testing_2D"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+
+        processed = pybamm.parameters.process_2D_data_csv(name, path)
+        parameter_values = pybamm.ParameterValues({"interpolation": processed})
+
+        x1 = pybamm.ExternalVariable("x1", 1)
+        x2 = pybamm.ExternalVariable("x2", 1)
+        interpolation = pybamm.FunctionParameter(
+            "interpolation", {"x1": x1, "x2": x2}
+        )
+
+        processed_interpolation = parameter_values.process_symbol(interpolation)
+
+        filename, name = pybamm.parameters.process_parameter_data._process_name(
+            name, path, ".csv"
+        )
+        raw_df = pd.read_csv(filename)
+
+        # check that passing the input columns give the correct output
+        for values in raw_df.values:
+
+            x1 = values[0]
+            x2 = values[1]
+            y = values[2]
+
+            np.testing.assert_almost_equal(
+                processed_interpolation.evaluate(inputs={"x1": x1, "x2": x2})[
+                    0
+                ][0],
+                y,
+                decimal=10,
+            )
+
+
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast gets processed correctly
         var = pybamm.Variable("var", domain="negative electrode")

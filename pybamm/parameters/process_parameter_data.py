@@ -65,7 +65,13 @@ def process_2D_data_csv(name, path=None):
     Process 2D data from a csv file. Assumes
     data is in the form of a three columns
     and that all data points lie on a regular
-    grid.
+    grid. The first column is assumed to 
+    be the 'slowest' changing variable and 
+    the second column the 'fastest' changing 
+    variable, which is the C convention for 
+    indexing multidimensional arrays (as opposed 
+    to the Fortran convention where the 'fastest' 
+    changing variable comes first).
 
     Parameters
     ----------
@@ -83,9 +89,6 @@ def process_2D_data_csv(name, path=None):
         within three-dimensional interpolants.
     """
 
-    # TODO: just adapted from similar personal code,
-    # need to actually test this
-
     filename, name = _process_name(name, path, ".csv")
 
     df = pd.read_csv(filename)
@@ -102,9 +105,11 @@ def process_2D_data_csv(name, path=None):
 
     value_data = np.reshape(
         value,
-        (len(x2), len(x1)),
-        order="C",
+        (len(x1), len(x2)),
+        order="C",  # use the C convention
     )
+
+    value_data = value_data.T
 
     formatted_data = (name, (x, value_data))
 
@@ -116,7 +121,13 @@ def process_3D_data_csv(name, path=None):
     Process 3D data from a csv file. Assumes
     data is in the form of four columns and
     that all data points lie on a
-    regular grid.
+    regular grid. The first column is assumed to 
+    be the 'slowest' changing variable and 
+    the third column the 'fastest' changing 
+    variable, which is the C convention for 
+    indexing multidimensional arrays (as opposed 
+    to the Fortran convention where the 'fastest' 
+    changing variable comes first).
 
     Parameters
     ----------
@@ -131,11 +142,8 @@ def process_3D_data_csv(name, path=None):
     formatted_data: tuple
         A tuple containing the name of the function
         and the data formatted correctly for use
-        within two-dimensional interpolants.
+        within three-dimensional interpolants.
     """
-
-    # TODO: just adapted from similar personal code,
-    # need to actually test this
 
     filename, name = _process_name(name, path, ".csv")
 
