@@ -21,7 +21,7 @@ class OcvElement(pybamm.BaseSubModel):
         dUdT = self.param.dUdT(ocv, T_cell)
 
         T_cell_kelvin = variables["Cell temperature [K]"]
-        Q_rev = current * T_cell_kelvin * dUdT
+        Q_rev = -current * T_cell_kelvin * dUdT
 
         variables.update(
             {
