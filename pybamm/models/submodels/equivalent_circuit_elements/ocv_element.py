@@ -3,8 +3,8 @@ import pybamm
 
 class OcvElement(pybamm.BaseSubModel):
     """
-    Open Circuit Voltage (OCV) element for 
-    equivalent circuits.  
+    Open Circuit Voltage (OCV) element for
+    equivalent circuits.
 
     Parameters
     ----------
@@ -13,6 +13,7 @@ class OcvElement(pybamm.BaseSubModel):
     options : dict, optional
         A dictionary of options to be passed to the model.
     """
+
     def __init__(self, param, options=None):
         super().__init__(param)
         self.model_options = options

@@ -65,12 +65,12 @@ def process_2D_data_csv(name, path=None):
     Process 2D data from a csv file. Assumes
     data is in the form of a three columns
     and that all data points lie on a regular
-    grid. The first column is assumed to 
-    be the 'slowest' changing variable and 
-    the second column the 'fastest' changing 
-    variable, which is the C convention for 
-    indexing multidimensional arrays (as opposed 
-    to the Fortran convention where the 'fastest' 
+    grid. The first column is assumed to
+    be the 'slowest' changing variable and
+    the second column the 'fastest' changing
+    variable, which is the C convention for
+    indexing multidimensional arrays (as opposed
+    to the Fortran convention where the 'fastest'
     changing variable comes first).
 
     Parameters
@@ -119,12 +119,12 @@ def process_3D_data_csv(name, path=None):
     Process 3D data from a csv file. Assumes
     data is in the form of four columns and
     that all data points lie on a
-    regular grid. The first column is assumed to 
-    be the 'slowest' changing variable and 
-    the third column the 'fastest' changing 
-    variable, which is the C convention for 
-    indexing multidimensional arrays (as opposed 
-    to the Fortran convention where the 'fastest' 
+    regular grid. The first column is assumed to
+    be the 'slowest' changing variable and
+    the third column the 'fastest' changing
+    variable, which is the C convention for
+    indexing multidimensional arrays (as opposed
+    to the Fortran convention where the 'fastest'
     changing variable comes first).
 
     Parameters

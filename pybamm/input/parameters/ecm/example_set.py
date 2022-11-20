@@ -47,7 +47,7 @@ def get_parameter_values():
 
     """
 
-    # N.B. actual cell capacity and nominal cell capcity 
+    # N.B. actual cell capacity and nominal cell capcity
     # can be different hence the two parameters
     cell_capacity = 100
 
