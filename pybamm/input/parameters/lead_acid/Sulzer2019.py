@@ -117,11 +117,10 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
 
     References
     ----------
-    .. [1] V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe,
-    “Faster lead-acid battery simulations from porous-electrode theory: Part I. Physical
-    model.”
-    [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
-    166(12), 2363 (2019).
+    .. [1] Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles
+        W. Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory:
+        Part I. Physical Model. Journal of The Electrochemical Society,
+        166(12):A2363-A2371, 2019. doi:10.1149/2.0301910jes.
 
     Parameters
     ----------
@@ -225,15 +224,16 @@ def get_parameter_values():
     """
     Parameters for BBOXX lead-acid cells, from the paper
 
-    > V. Sulzer, S. J. Chapman, C. P. Please, D. A. Howey, and C. W. Monroe, “Faster
-    lead-acid battery simulations from porous-electrode theory: Part I. Physical model.”
-     [Journal of the Electrochemical Society](https://doi.org/10.1149/2.0301910jes),
-    166(12), 2363 (2019).
+        Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles W.
+        Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part
+        I. Physical Model. Journal of The Electrochemical Society, 166(12):A2363-A2371,
+        2019. doi:10.1149/2.0301910jes.
 
     and references therein.
     """
 
     return {
+        "chemistry": "lead_acid",
         # cell
         "Negative current collector thickness [m]": 0.0,
         "Negative electrode thickness [m]": 0.0009,

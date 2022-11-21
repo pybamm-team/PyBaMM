@@ -45,43 +45,122 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions[:-3],
             [
-                {"electric": (1, "C"), "time": 1800.0, "period": 20.0, "dc_data": None},
                 {
-                    "electric": (0.05, "C"),
+                    "C-rate input [-]": 1,
+                    "type": "C-rate",
                     "time": 1800.0,
                     "period": 20.0,
                     "dc_data": None,
+                    "string": "Discharge at 1C for 0.5 hours",
+                    "events": None,
                 },
                 {
-                    "electric": (-0.5, "C"),
+                    "C-rate input [-]": 0.05,
+                    "type": "C-rate",
+                    "time": 1800.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Discharge at C/20 for 0.5 hours",
+                    "events": None,
+                },
+                {
+                    "C-rate input [-]": -0.5,
+                    "type": "C-rate",
                     "time": 2700.0,
                     "period": 20.0,
                     "dc_data": None,
+                    "string": "Charge at 0.5 C for 45 minutes",
+                    "events": None,
                 },
-                {"electric": (1, "A"), "time": 1800.0, "period": 20.0, "dc_data": None},
                 {
-                    "electric": (-0.2, "A"),
+                    "Current input [A]": 1,
+                    "type": "current",
+                    "time": 1800.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Discharge at 1 A for 0.5 hours",
+                    "events": None,
+                },
+                {
+                    "Current input [A]": -0.2,
+                    "type": "current",
                     "time": 2700.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at 200 mA for 45 minutes",
+                    "events": None,
                 },
-                {"electric": (1, "W"), "time": 1800.0, "period": 20.0, "dc_data": None},
                 {
-                    "electric": (-0.2, "W"),
+                    "Power input [W]": 1,
+                    "type": "power",
+                    "time": 1800.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Discharge at 1W for 0.5 hours",
+                    "events": None,
+                },
+                {
+                    "Power input [W]": -0.2,
+                    "type": "power",
                     "time": 2700.0,
                     "period": 20.0,
                     "dc_data": None,
+                    "string": "Charge at 200mW for 45 minutes",
+                    "events": None,
                 },
-                {"electric": (0, "A"), "time": 600.0, "period": 300.0, "dc_data": None},
-                {"electric": (1, "V"), "time": 20.0, "period": 20.0, "dc_data": None},
-                {"electric": (-1, "C"), "time": None, "period": 20.0, "dc_data": None},
-                {"electric": (4.1, "V"), "time": None, "period": 20.0, "dc_data": None},
-                {"electric": (3, "V"), "time": None, "period": 20.0, "dc_data": None},
                 {
-                    "electric": (1 / 3, "C"),
+                    "Current input [A]": 0,
+                    "type": "current",
+                    "time": 600.0,
+                    "period": 300.0,
+                    "dc_data": None,
+                    "string": "Rest for 10 minutes",
+                    "events": None,
+                },
+                {
+                    "Voltage input [V]": 1,
+                    "type": "voltage",
+                    "time": 20.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Hold at 1V for 20 seconds",
+                    "events": None,
+                },
+                {
+                    "C-rate input [-]": -1,
+                    "type": "C-rate",
+                    "time": None,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Charge at 1 C until 4.1V",
+                    "events": {"Voltage input [V]": 4.1, "type": "voltage"},
+                },
+                {
+                    "Voltage input [V]": 4.1,
+                    "type": "voltage",
+                    "time": None,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Hold at 4.1 V until 50mA",
+                    "events": {"Current input [A]": 0.05, "type": "current"},
+                },
+                {
+                    "Voltage input [V]": 3,
+                    "type": "voltage",
+                    "time": None,
+                    "period": 20.0,
+                    "dc_data": None,
+                    "string": "Hold at 3V until C/50",
+                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                },
+                {
+                    "C-rate input [-]": 1 / 3,
+                    "type": "C-rate",
                     "time": 7200.0,
                     "period": 20.0,
                     "dc_data": None,
+                    "string": "Discharge at C/3 for 2 hours or until 2.5 V",
+                    "events": {"Voltage input [V]": 2.5, "type": "voltage"},
                 },
             ],
         )
@@ -98,42 +177,21 @@ class TestExperiment(unittest.TestCase):
         np.testing.assert_array_equal(
             experiment.operating_conditions[-3]["dc_data"], drive_cycle
         )
-        self.assertEqual(experiment.operating_conditions[-3]["electric"][1], "A")
+        self.assertEqual(experiment.operating_conditions[-3]["type"], "current")
         self.assertEqual(experiment.operating_conditions[-3]["time"], time_0)
         self.assertEqual(experiment.operating_conditions[-3]["period"], period_0)
         np.testing.assert_array_equal(
             experiment.operating_conditions[-2]["dc_data"], drive_cycle_1
         )
-        self.assertEqual(experiment.operating_conditions[-2]["electric"][1], "V")
+        self.assertEqual(experiment.operating_conditions[-2]["type"], "voltage")
         self.assertEqual(experiment.operating_conditions[-2]["time"], time_1)
         self.assertEqual(experiment.operating_conditions[-2]["period"], period_1)
         np.testing.assert_array_equal(
             experiment.operating_conditions[-1]["dc_data"], drive_cycle_2
         )
-        self.assertEqual(experiment.operating_conditions[-1]["electric"][1], "W")
+        self.assertEqual(experiment.operating_conditions[-1]["type"], "power")
         self.assertEqual(experiment.operating_conditions[-1]["time"], time_2)
         self.assertEqual(experiment.operating_conditions[-1]["period"], period_2)
-        self.assertEqual(
-            experiment.events,
-            [
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                (4.1, "V"),
-                (0.05, "A"),
-                (0.02, "C"),
-                (2.5, "V"),
-                None,
-                None,
-                None,
-            ],
-        )
         self.assertEqual(experiment.period, 20)
 
     def test_read_strings_cccv_combined(self):
@@ -152,26 +210,35 @@ class TestExperiment(unittest.TestCase):
             experiment.operating_conditions,
             [
                 {
-                    "electric": (0.05, "C"),
+                    "C-rate input [-]": 0.05,
+                    "type": "C-rate",
                     "time": 1800.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Discharge at C/20 for 0.5 hours",
+                    "events": None,
                 },
                 {
-                    "electric": (-0.5, "C", 1, "V"),
+                    "type": "CCCV",
+                    "C-rate input [-]": -0.5,
+                    "Voltage input [V]": 1,
                     "time": None,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at 0.5 C until 1V then hold at 1V until C/50",
+                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
                 },
                 {
-                    "electric": (0.05, "C"),
+                    "C-rate input [-]": 0.05,
+                    "type": "C-rate",
                     "time": 1800.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Discharge at C/20 for 0.5 hours",
+                    "events": None,
                 },
             ],
         )
-        self.assertEqual(experiment.events, [None, (0.02, "C"), None])
 
         # Cases that don't quite match shouldn't do CCCV setup
         experiment = pybamm.Experiment(
@@ -185,12 +252,23 @@ class TestExperiment(unittest.TestCase):
             experiment.operating_conditions,
             [
                 {
-                    "electric": (-0.5, "C"),
+                    "C-rate input [-]": -0.5,
+                    "type": "C-rate",
                     "time": None,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at 0.5 C until 2V",
+                    "events": {"Voltage input [V]": 2, "type": "voltage"},
                 },
-                {"electric": (1, "V"), "time": None, "period": 60.0, "dc_data": None},
+                {
+                    "Voltage input [V]": 1,
+                    "type": "voltage",
+                    "time": None,
+                    "period": 60.0,
+                    "dc_data": None,
+                    "string": "Hold at 1V until C/50",
+                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                },
             ],
         )
         experiment = pybamm.Experiment(
@@ -204,46 +282,25 @@ class TestExperiment(unittest.TestCase):
             experiment.operating_conditions,
             [
                 {
-                    "electric": (-0.5, "C"),
+                    "C-rate input [-]": -0.5,
+                    "type": "C-rate",
                     "time": 120.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at 0.5 C for 2 minutes",
+                    "events": None,
                 },
-                {"electric": (1, "V"), "time": None, "period": 60.0, "dc_data": None},
+                {
+                    "Voltage input [V]": 1,
+                    "type": "voltage",
+                    "time": None,
+                    "period": 60.0,
+                    "dc_data": None,
+                    "string": "Hold at 1V until C/50",
+                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                },
             ],
         )
-
-    def test_read_strings_repeat(self):
-        experiment = pybamm.Experiment(
-            ["Discharge at 10 mA for 0.5 hours"]
-            + ["Charge at 0.5 C for 45 minutes", "Hold at 1 V for 20 seconds"] * 2
-        )
-        self.assertEqual(
-            experiment.operating_conditions,
-            [
-                {
-                    "electric": (0.01, "A"),
-                    "time": 1800.0,
-                    "period": 60,
-                    "dc_data": None,
-                },
-                {
-                    "electric": (-0.5, "C"),
-                    "time": 2700.0,
-                    "period": 60,
-                    "dc_data": None,
-                },
-                {"electric": (1, "V"), "time": 20.0, "period": 60, "dc_data": None},
-                {
-                    "electric": (-0.5, "C"),
-                    "time": 2700.0,
-                    "period": 60,
-                    "dc_data": None,
-                },
-                {"electric": (1, "V"), "time": 20.0, "period": 60, "dc_data": None},
-            ],
-        )
-        self.assertEqual(experiment.period, 60)
 
     def test_cycle_unpacking(self):
         experiment = pybamm.Experiment(
@@ -257,28 +314,40 @@ class TestExperiment(unittest.TestCase):
             experiment.operating_conditions,
             [
                 {
-                    "electric": (0.05, "C"),
+                    "C-rate input [-]": 0.05,
+                    "type": "C-rate",
                     "time": 1800.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Discharge at C/20 for 0.5 hours",
+                    "events": None,
                 },
                 {
-                    "electric": (-0.2, "C"),
+                    "C-rate input [-]": -0.2,
+                    "type": "C-rate",
                     "time": 2700.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at C/5 for 45 minutes",
+                    "events": None,
                 },
                 {
-                    "electric": (0.05, "C"),
+                    "C-rate input [-]": 0.05,
+                    "type": "C-rate",
                     "time": 1800.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Discharge at C/20 for 0.5 hours",
+                    "events": None,
                 },
                 {
-                    "electric": (-0.2, "C"),
+                    "C-rate input [-]": -0.2,
+                    "type": "C-rate",
                     "time": 2700.0,
                     "period": 60.0,
                     "dc_data": None,
+                    "string": "Charge at C/5 for 45 minutes",
+                    "events": None,
                 },
             ],
         )
@@ -287,11 +356,15 @@ class TestExperiment(unittest.TestCase):
     def test_str_repr(self):
         conds = ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"]
         experiment = pybamm.Experiment(conds)
-        self.assertEqual(str(experiment), str(conds))
+        self.assertEqual(
+            str(experiment),
+            "[('Discharge at 1 C for 20 seconds',)"
+            + ", ('Charge at 0.5 W for 10 minutes',)]",
+        )
         self.assertEqual(
             repr(experiment),
-            "pybamm.Experiment(['Discharge at 1 C for 20 seconds'"
-            + ", 'Charge at 0.5 W for 10 minutes'])",
+            "pybamm.Experiment([('Discharge at 1 C for 20 seconds',)"
+            + ", ('Charge at 0.5 W for 10 minutes',)])",
         )
 
     def test_bad_strings(self):

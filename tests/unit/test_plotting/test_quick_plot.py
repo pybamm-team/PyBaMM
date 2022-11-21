@@ -322,7 +322,7 @@ class TestQuickPlot(unittest.TestCase):
             c_e_var = solution["Electrolyte concentration [mol.m-3]"]
             # 1D variables should be evaluated on edges
             L_x = param.evaluate(model.param.L_x)
-            c_e = c_e_var(t=t, x=mesh.combine_submeshes(*c_e_var.domain).edges * L_x)
+            c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges * L_x)
 
             for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                 quick_plot = pybamm.QuickPlot(

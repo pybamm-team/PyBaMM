@@ -152,7 +152,7 @@ class CasadiConverter(object):
                     return casadi.interpolant(
                         "LUT", solver, symbol.x, symbol.y.flatten()
                     )(*converted_children)
-                elif len(converted_children) == 2:
+                elif len(converted_children) in [2, 3]:
                     LUT = casadi.interpolant(
                         "LUT", solver, symbol.x, symbol.y.ravel(order="F")
                     )

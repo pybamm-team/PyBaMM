@@ -147,8 +147,22 @@ class BaseUnitTestLithiumIon:
         options = {"SEI": "reaction limited"}
         self.check_well_posedness(options)
 
+    def test_well_posed_asymmetric_sei_reaction_limited(self):
+        options = {"SEI": "reaction limited (asymmetric)"}
+        self.check_well_posedness(options)
+
     def test_well_posed_sei_reaction_limited_average_film_resistance(self):
-        options = {"SEI": "reaction limited", "SEI film resistance": "average"}
+        options = {
+            "SEI": "reaction limited",
+            "SEI film resistance": "average",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_asymmetric_sei_reaction_limited_average_film_resistance(self):
+        options = {
+            "SEI": "reaction limited (asymmetric)",
+            "SEI film resistance": "average",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_solvent_diffusion_limited(self):
@@ -164,7 +178,17 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_sei_ec_reaction_limited(self):
-        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_asymmetric_ec_reaction_limited(self):
+        options = {
+            "SEI": "ec reaction limited (asymmetric)",
+            "SEI porosity change": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_mechanics_negative_cracking(self):

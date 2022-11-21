@@ -111,11 +111,29 @@ class Mesh(dict):
                         geometry[domain][spatial_variable][lim] = sym_eval
 
         # Create submeshes
+        self.base_domains = []
         for domain in geometry:
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
+            self.base_domains.append(domain)
 
         # add ghost meshes
         self.add_ghost_meshes()
+
+    def __getitem__(self, domains):
+        if isinstance(domains, str):
+            domains = (domains,)
+        domains = tuple(domains)
+        try:
+            return super().__getitem__(domains)
+        except KeyError:
+            value = self.combine_submeshes(*domains)
+            self[domains] = value
+            return value
+
+    def __setitem__(self, domains, value):
+        if isinstance(domains, str):
+            domains = (domains,)
+        super().__setitem__(domains, value)
 
     def combine_submeshes(self, *submeshnames):
         """Combine submeshes into a new submesh, using self.submeshclass
@@ -134,9 +152,6 @@ class Mesh(dict):
         """
         if submeshnames == ():
             raise ValueError("Submesh domains being combined cannot be empty")
-        # If there is just a single submesh, we can return it directly
-        if len(submeshnames) == 1:
-            return self[submeshnames[0]]
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):
@@ -159,7 +174,6 @@ class Mesh(dict):
         submesh.internal_boundaries = [
             self[submeshname].edges[0] for submeshname in submeshnames[1:]
         ]
-
         return submesh
 
     def add_ghost_meshes(self):
@@ -172,22 +186,24 @@ class Mesh(dict):
         submeshes = [
             (domain, submesh)
             for domain, submesh in self.items()
-            if not isinstance(submesh, (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D))
+            if (
+                len(domain) == 1
+                and not isinstance(submesh, (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D))
+            )
         ]
         for domain, submesh in submeshes:
-
             edges = submesh.edges
 
             # left ghost cell: two edges, one node, to the left of existing submesh
             lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            self[domain + "_left ghost cell"] = pybamm.SubMesh1D(
+            self[domain[0] + "_left ghost cell"] = pybamm.SubMesh1D(
                 lgs_edges, submesh.coord_sys
             )
 
             # right ghost cell: two edges, one node, to the right of
             # existing submesh
             rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            self[domain + "_right ghost cell"] = pybamm.SubMesh1D(
+            self[domain[0] + "_right ghost cell"] = pybamm.SubMesh1D(
                 rgs_edges, submesh.coord_sys
             )
 

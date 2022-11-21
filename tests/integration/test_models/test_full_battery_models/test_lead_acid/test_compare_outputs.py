@@ -13,11 +13,7 @@ class TestCompareOutputs(unittest.TestCase):
         Check that the average value of certain variables is constant across submodels
         """
         # load models
-        models = [
-            pybamm.lead_acid.LOQS(),
-            pybamm.lead_acid.Composite(),
-            pybamm.lead_acid.Full(),
-        ]
+        models = [pybamm.lead_acid.LOQS(), pybamm.lead_acid.Full()]
 
         # load parameter values (same for all models)
         param = models[0].default_parameter_values
@@ -57,7 +53,6 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
-            ([pybamm.lead_acid.Composite(opt) for opt in options]),
             ([pybamm.lead_acid.Full(opt) for opt in options]),
         ]
 

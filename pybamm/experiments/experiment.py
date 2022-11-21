@@ -67,6 +67,14 @@ class Experiment:
         if cccv_handling not in ["two-step", "ode"]:
             raise ValueError("cccv_handling should be either 'two-step' or 'ode'")
         self.cccv_handling = cccv_handling
+        # Save arguments for copying
+        self.args = (
+            operating_conditions,
+            period,
+            termination,
+            drive_cycles,
+            cccv_handling,
+        )
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -89,7 +97,9 @@ class Experiment:
                             next_step = None
                             finished = True
                         if self.is_cccv(step, next_step):
-                            processed_cycle.append(step + " then " + next_step)
+                            processed_cycle.append(
+                                f"{step} then {next_step[0].lower()}{next_step[1:]}"
+                            )
                             idx += 2
                         else:
                             processed_cycle.append(step)
@@ -108,13 +118,8 @@ class Experiment:
                     badly_typed_conditions = []
                 badly_typed_conditions = badly_typed_conditions or [cycle]
                 raise TypeError(
-                    """Operating conditions should be strings or tuples of strings, not
-                    {}. For example: {}
-                    """.format(
-                        type(badly_typed_conditions[0]), examples
-                    ).replace(
-                        "\n                    ", " "
-                    )
+                    "Operating conditions should be strings or tuples of strings, not "
+                    f"{type(badly_typed_conditions[0])}. For example: {examples}"
                 )
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
         operating_conditions = [
@@ -122,43 +127,21 @@ class Experiment:
         ]
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
-        self.operating_conditions, self.events = self.read_operating_conditions(
-            operating_conditions, drive_cycles
-        )
+        self.operating_conditions = [
+            self.read_string(cond, drive_cycles) for cond in operating_conditions
+        ]
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
     def __str__(self):
-        return str(self.operating_conditions_strings)
+        return str(self.operating_conditions_cycles)
+
+    def copy(self):
+        return Experiment(*self.args)
 
     def __repr__(self):
         return "pybamm.Experiment({!s})".format(self)
-
-    def read_operating_conditions(self, operating_conditions, drive_cycles):
-        """
-        Convert operating conditions to the appropriate format
-
-        Parameters
-        ----------
-        operating_conditions : list
-            List of operating conditions
-        drive_cycles : dictionary
-            Dictionary of Drive Cycles
-
-        Returns
-        -------
-        operating_conditions : list
-            Operating conditions in the tuple format
-        """
-        converted_operating_conditions = []
-        events = []
-        for cond in operating_conditions:
-            next_op, next_event = self.read_string(cond, drive_cycles)
-            converted_operating_conditions.append(next_op)
-            events.append(next_event)
-
-        return converted_operating_conditions, events
 
     def read_string(self, cond, drive_cycles):
         """
@@ -178,20 +161,26 @@ class Experiment:
             # If the string contains " then ", then this is a two-step CCCV experiment
             # and we need to split it into two strings
             cond_CC, cond_CV = cond.split(" then ")
-            op_CC, _ = self.read_string(cond_CC, drive_cycles)
-            op_CV, event_CV = self.read_string(cond_CV, drive_cycles)
-            return (
-                {
-                    "electric": op_CC["electric"] + op_CV["electric"],
-                    "time": op_CV["time"],
-                    "period": op_CV["period"],
-                    "dc_data": None,
-                },
-                event_CV,
-            )
+            op_CC = self.read_string(cond_CC, drive_cycles)
+            op_CV = self.read_string(cond_CV, drive_cycles)
+            outputs = {
+                "type": "CCCV",
+                "Voltage input [V]": op_CV["Voltage input [V]"],
+                "time": op_CV["time"],
+                "period": op_CV["period"],
+                "dc_data": None,
+                "string": cond,
+                "events": op_CV["events"],
+            }
+            if "Current input [A]" in op_CC:
+                outputs["Current input [A]"] = op_CC["Current input [A]"]
+            else:
+                outputs["C-rate input [-]"] = op_CC["C-rate input [-]"]
+            return outputs
+
         # Read period
         if " period)" in cond:
-            cond, time_period = cond.split("(")
+            cond, time_period = cond.split(" (")
             time, _ = time_period.split(" period)")
             period = self.convert_time_to_seconds(time.split())
         else:
@@ -207,36 +196,24 @@ class Experiment:
                     "Type of drive cycle must be specified using '(A)', '(V)' or '(W)'."
                     f" For example: {examples}"
                 )
-            # Check for Events
-            elif "for" in cond:
-                # e.g. for 3 hours
-                idx = cond_list.index("for")
-                end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
-                ext_drive_cycle = self.extend_drive_cycle(
-                    drive_cycles[cond_list[1]], end_time
-                )
-                # Drive cycle as numpy array
-                dc_name = cond_list[1] + "_ext_{}".format(end_time)
-                dc_data = ext_drive_cycle
-                # Find the type of drive cycle ("A", "V", or "W")
-                typ = cond_list[2][1]
-                electric = (dc_name, typ)
-                time = ext_drive_cycle[:, 0][-1]
-                period = np.min(np.diff(ext_drive_cycle[:, 0]))
-                events = None
             else:
-                # e.g. Run US06
-                # Drive cycle as numpy array
-                dc_name = cond_list[1]
                 dc_data = drive_cycles[cond_list[1]]
-                # Find the type of drive cycle ("A", "V", or "W")
-                typ = cond_list[2][1]
-                electric = (dc_name, typ)
-                # Set time and period to 1 second for first step and
-                # then calculate the difference in consecutive time steps
-                time = drive_cycles[cond_list[1]][:, 0][-1]
-                period = np.min(np.diff(drive_cycles[cond_list[1]][:, 0]))
-                events = None
+                # Check for Events
+                if "for" in cond:
+                    # e.g. for 3 hours
+                    idx = cond_list.index("for")
+                    end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
+                    ext_drive_cycle = self.extend_drive_cycle(dc_data, end_time)
+                    # Drive cycle as numpy array
+                    dc_data = ext_drive_cycle
+            # Set time and period to 1 second for first step and
+            # then calculate the difference in consecutive time steps
+            time = dc_data[:, 0][-1]
+            period = np.min(np.diff(dc_data[:, 0]))
+            # Find the unit of drive cycle ("A", "V", or "W")
+            unit = cond_list[2][1]
+            electric = {"dc_data": dc_data, "unit": unit}
+            events = None
         else:
             dc_data = None
             if "for" in cond and "or until" in cond:
@@ -263,19 +240,34 @@ class Experiment:
                 events = self.convert_electric(cond_list[idx + 1 :])
             else:
                 raise ValueError(
-                    """Operating conditions must contain keyword 'for' or 'until' or
-                    'Run'. For example: {}
-                    """.format(
-                        examples
-                    ).replace(
-                        "\n                    ", " "
-                    )
+                    "Operating conditions must contain keyword 'for' or 'until' or "
+                    f"'Run'. For example: {examples}"
                 )
 
-        return (
-            {"electric": electric, "time": time, "period": period, "dc_data": dc_data},
-            events,
-        )
+        self.unit_to_type(electric)
+        self.unit_to_type(events)
+
+        return {
+            **electric,
+            "time": time,
+            "period": period,
+            "dc_data": dc_data,
+            "string": cond,
+            "events": events,
+        }
+
+    def unit_to_type(self, electric):
+        if electric is not None:
+            unit = electric.pop("unit")
+            if unit == "C":
+                electric["type"] = "C-rate"
+            elif unit == "A":
+                electric["type"] = "current"
+            elif unit == "V":
+                electric["type"] = "voltage"
+            elif unit == "W":
+                electric["type"] = "power"
+            return electric
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
@@ -304,29 +296,16 @@ class Experiment:
         """Convert electrical instructions to consistent output"""
         # Rest == zero current
         if electric[0].lower() == "rest":
-            return (0, "A")
+            return {"Current input [A]": 0, "unit": "A"}
         else:
             if len(electric) in [3, 4]:
                 if len(electric) == 4:
                     # e.g. Charge at 4 A, Hold at 3 V
                     instruction, _, value, unit = electric
+                    value_unit = value + unit
                 elif len(electric) == 3:
                     # e.g. Discharge at C/2, Charge at 1A
                     instruction, _, value_unit = electric
-                    if value_unit[0] == "C":
-                        # e.g. C/2
-                        unit = value_unit[0]
-                        value = 1 / float(value_unit[2:])
-                    else:
-                        # e.g. 1A
-                        if "m" in value_unit:
-                            # e.g. 1mA
-                            unit = value_unit[-2:]
-                            value = float(value_unit[:-2])
-                        else:
-                            # e.g. 1A
-                            unit = value_unit[-1]
-                            value = float(value_unit[:-1])
                 # Read instruction
                 if instruction.lower() in ["discharge", "hold"]:
                     sign = 1
@@ -334,33 +313,17 @@ class Experiment:
                     sign = -1
                 else:
                     raise ValueError(
-                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or
-                        'Run'. For example: {}""".format(
-                            examples
-                        ).replace(
-                            "\n                        ", " "
-                        )
+                        "Instruction must be 'discharge', 'charge', 'rest', 'hold' or "
+                        f"'Run'. For example: {examples}"
                     )
             elif len(electric) == 2:
                 # e.g. 3 A, 4.1 V
                 value, unit = electric
+                value_unit = value + unit
                 sign = 1
             elif len(electric) == 1:
                 # e.g. C/2, 1A
                 value_unit = electric[0]
-                if value_unit[0] == "C":
-                    # e.g. C/2
-                    unit = value_unit[0]
-                    value = 1 / float(value_unit[2:])
-                else:
-                    if "m" in value_unit:
-                        # e.g. 1mA
-                        unit = value_unit[-2:]
-                        value = float(value_unit[:-2])
-                    else:
-                        # e.g. 1A
-                        unit = value_unit[-1]
-                        value = float(value_unit[:-1])
                 sign = 1
             else:
                 raise ValueError(
@@ -369,19 +332,28 @@ class Experiment:
                         " ".join(electric), examples
                     )
                 )
+            # e.g. C/2, 1A
+            if value_unit[0] == "C":
+                # e.g. C/2
+                unit = value_unit[0]
+                value = 1 / float(value_unit[2:])
+            else:
+                unit = value_unit[-1:]
+                if "m" in value_unit:
+                    # e.g. 1mA
+                    value = float(value_unit[:-2]) / 1000
+                else:
+                    # e.g. 1A
+                    value = float(value_unit[:-1])
             # Read value and units
             if unit == "C":
-                return (sign * float(value), "C")
+                return {"C-rate input [-]": sign * float(value), "unit": unit}
             elif unit == "A":
-                return (sign * float(value), "A")
-            elif unit == "mA":
-                return (sign * float(value) / 1000, "A")
+                return {"Current input [A]": sign * float(value), "unit": unit}
             elif unit == "V":
-                return (float(value), "V")
+                return {"Voltage input [V]": float(value), "unit": unit}
             elif unit == "W":
-                return (sign * float(value), "W")
-            elif unit == "mW":
-                return (sign * float(value) / 1000, "W")
+                return {"Power input [W]": sign * float(value), "unit": unit}
             else:
                 raise ValueError(
                     """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW', not '{}'.
@@ -462,9 +434,9 @@ class Experiment:
             and "Hold at " in next_step
             and "V until" in next_step
         ):
-            _, events = self.read_string(step, None)
-            next_op, _ = self.read_string(next_step, None)
+            op = self.read_string(step, None)
+            next_op = self.read_string(next_step, None)
             # Check that the event conditions are the same as the hold conditions
-            if events == next_op["electric"]:
+            if op["events"] == {k: v for k, v in next_op.items() if k in op["events"]}:
                 return True
         return False

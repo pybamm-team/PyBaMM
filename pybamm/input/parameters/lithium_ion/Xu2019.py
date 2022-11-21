@@ -190,43 +190,46 @@ def electrolyte_conductivity_Valoen2005(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for a Kokam SLPB78205130H half-cell, from the paper.
-    Anode is graphite MCMB 2528.
-    Separator is Celgard 2325.
-    Cathode is lithium Cobalt Oxide.
-    Electrolyte is LiPF6.
+    Parameters for a Kokam SLPB78205130H half-cell, from the paper. Anode is graphite
+    MCMB 2528. Separator is Celgard 2325. Cathode is lithium Cobalt Oxide. Electrolyte
+    is LiPF6.
 
-    > Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
-    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-     Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
-    Electrochemical Society 166.14 (2019): A3456-A3463.
+        Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
+        Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal
+        Batteries: Experimentally Validated Model of the Apparent Capacity Loss."
+        Journal of The Electrochemical Society 166.14 (2019): A3456-A3463.
 
     and references therein.
 
     Parameters for a LiPF6 electrolyte are from the paper
 
-    > Valøen, Lars Ole, and Jan N. Reimers. "Transport properties of LiPF6-based Li-ion
-    battery electrolytes." Journal of The Electrochemical Society 152.5 (2005):
-    A882-A891. [doi: 10.1149/1.1872737](http://dx.doi.org/10.1149/1.1872737)
-    # 1C discharge from full
+        Lars Ole Valøen and Jan N Reimers. Transport properties of lipf6-based li-ion
+        battery electrolytes. Journal of The Electrochemical Society, 152(5):A882, 2005.
+
+    1C discharge from full
+    ^^^^^^^^^^^^^^^^^^^^^^
 
     SEI parameters are example parameters for SEI growth from the papers:
 
-    > Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-    Development of first principles capacity fade model for Li-ion cells. Journal of the
-     Electrochemical Society, 151(2), A196-A203.
-    > Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-    aging of lithium-ion battery cells. Journal of The Electrochemical Society, 151(3),
-    A456-A462.
-    > Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-    continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
-    1950-1955.
-    > Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal Physics-
-    Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of The
-    Electrochemical Society, 156(3),
-    > Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
-    aging. Journal of Power Sources, 360, 28-40.
+        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
+        Development of first principles capacity fade model for Li-ion cells. Journal of
+        the Electrochemical Society, 151(2), A196-A203.
+
+        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
+        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
+        151(3), A456-A462.
+
+        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
+        continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
+        1950-1955.
+
+        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
+        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
+        The Electrochemical Society, 156(3),
+
+        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
+        plating induced aging of lithium-ion batteries: Transition from linear to
+        nonlinear aging. Journal of Power Sources, 360, 28-40.
 
     Note: this parameter set does not claim to be representative of the true parameter
     values. Instead these are parameter values that were used to fit SEI models to
@@ -234,6 +237,7 @@ def get_parameter_values():
     """
 
     return {
+        "chemistry": "lithium_ion",
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
         "Inner SEI reaction proportion": 0.5,

@@ -200,7 +200,12 @@ class Symbol:
     """
 
     def __init__(
-        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
+        self,
+        name,
+        children=None,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
     ):
         super(Symbol, self).__init__()
         self.name = name
@@ -404,6 +409,14 @@ class Symbol:
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
 
+    @property
+    def scale(self):
+        return self._scale
+
+    @property
+    def reference(self):
+        return self._reference
+
     def __eq__(self, other):
         try:
             return self._id == other._id
@@ -574,47 +587,19 @@ class Symbol:
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.NotEqualHeaviside(self, other)
-        else:
-            out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.EqualHeaviside(self, other)
-        else:
-            out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(self, other, True)
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.NotEqualHeaviside(other, self)
-        else:
-            out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(other, self, False)
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
-        k = pybamm.settings.heaviside_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or (is_constant(self) and is_constant(other)):
-            out = pybamm.EqualHeaviside(other, self)
-        else:
-            out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out)
+        return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
     def __neg__(self):
         """return a :class:`Negate` object."""
@@ -625,6 +610,9 @@ class Symbol:
             # Move negation inside the broadcast
             # Apply recursively
             return self._unary_new_copy(-self.orphans[0])
+        elif isinstance(self, pybamm.Subtraction):
+            # negation flips the subtraction
+            return self.right - self.left
         elif isinstance(self, pybamm.Concatenation) and all(
             child.is_constant() for child in self.children
         ):
@@ -640,7 +628,7 @@ class Symbol:
         elif isinstance(self, pybamm.Broadcast):
             # Move absolute value inside the broadcast
             # Apply recursively
-            abs_self_not_broad = pybamm.simplify_if_constant(abs(self.orphans[0]))
+            abs_self_not_broad = abs(self.orphans[0])
             return self._unary_new_copy(abs_self_not_broad)
         else:
             k = pybamm.settings.abs_smoothing

@@ -64,9 +64,7 @@ class TestFiniteVolume(unittest.TestCase):
         edges = [pybamm.Vector(mesh[dom].edges, domain=dom) for dom in whole_cell]
         # Concatenation of edges should get averaged to nodes first, using edge_to_node
         v_disc = fin_vol.concatenation(edges)
-        np.testing.assert_array_equal(
-            v_disc.evaluate()[:, 0], mesh.combine_submeshes(*whole_cell).nodes
-        )
+        np.testing.assert_array_equal(v_disc.evaluate()[:, 0], mesh[whole_cell].nodes)
 
         # test for bad shape
         edges = [
@@ -81,12 +79,12 @@ class TestFiniteVolume(unittest.TestCase):
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
 
         # Discretise some equations where averaging is needed
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        y_test = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
         for eqn in [
             var * pybamm.grad(var),
             var**2 * pybamm.grad(var),
@@ -165,9 +163,7 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertIsInstance(x2_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             x2_disc.evaluate(),
-            disc.mesh.combine_submeshes("negative electrode", "separator").nodes[
-                :, np.newaxis
-            ],
+            disc.mesh[("negative electrode", "separator")].nodes[:, np.newaxis],
         )
         # microscale
         r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
@@ -194,11 +190,11 @@ class TestFiniteVolume(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
         disc.process_model(model)
 
         # Mass matrix
-        mass = np.eye(combined_submesh.npts)
+        mass = np.eye(submesh.npts)
         np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
 
     def test_p2d_mass_matrix_shape(self):
@@ -238,15 +234,15 @@ class TestFiniteVolume(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        submesh = mesh[whole_cell]
         spatial_method = pybamm.FiniteVolume()
         spatial_method.build(mesh)
 
         # Setup variable
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        y = pybamm.StateVector(slice(0, combined_submesh.npts))
-        y_test = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        y = pybamm.StateVector(slice(0, submesh.npts))
+        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
 
         # grad
         eqn = pybamm.grad(var)
@@ -422,6 +418,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Remove boundary conditions and check error is raised
         disc.bcs = {}
+        disc._discretised_symbols = {}
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
             disc.process_symbol(upwind)
 

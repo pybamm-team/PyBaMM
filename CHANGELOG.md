@@ -1,11 +1,44 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added `scale` and `reference` attributes to `Variable` objects, which can be use to make the ODE/DAE solver better conditioned ([#2440](https://github.com/pybamm-team/PyBaMM/pull/2440))
+- SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
+- New Idaklu solver options for jacobian type and linear solver, support Sundials v6 ([#2444](https://github.com/pybamm-team/PyBaMM/pull/2444))
+
+## Optimizations
+
+- `ParameterValues` now avoids trying to process children if a function parameter is an object that doesn't depend on its children ([#2477](https://github.com/pybamm-team/PyBaMM/pull/2477))
+- Added more rules for simplifying expressions, especially around Concatenations. Also, meshes constructed from multiple domains are now cached ([#2443](https://github.com/pybamm-team/PyBaMM/pull/2443))
+- Added more rules for simplifying expressions. Constants in binary operators are now moved to the left by default (e.g. `x*2` returns `2*x`) ([#2424](https://github.com/pybamm-team/PyBaMM/pull/2424))
+
+## Breaking changes
+
+- Renamed entry point for parameter sets to `pybamm_parameter_sets` ([#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
+- Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
+- Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))
+
+# [v22.10.post1](https://github.com/pybamm-team/PyBaMM/tree/v22.10.post1) - 2022-10-31
+
+## Breaking changes
+
+- Removed all julia generation code ([#2453](https://github.com/pybamm-team/PyBaMM/pull/2453)). Julia code will be hosted at [PyBaMM.jl](https://github.com/tinosulzer/PyBaMM.jl) from now on.
+
+# [v22.10](https://github.com/pybamm-team/PyBaMM/tree/v22.10) - 2022-10-31
+
+## Features
+
+- Third-party parameter sets can be added by registering entry points to ~~`pybamm_parameter_set`~~`pybamm_parameter_sets` ([#2396](https://github.com/pybamm-team/PyBaMM/pull/2396), changed in [#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
+- Added three-dimensional interpolation ([#2380](https://github.com/pybamm-team/PyBaMM/pull/2380))
+
 ## Bug fixes
 
+- `pybamm.have_julia()` now checks that julia is properly configured ([#2402](https://github.com/pybamm-team/PyBaMM/pull/2402))
 - For simulations with events that cause the simulation to stop early, the sensitivities could be evaluated incorrectly to zero ([#2337](https://github.com/pybamm-team/PyBaMM/pull/2337))
 
 ## Optimizations
 
+- Reformatted how simulations with experiments are built ([#2395](https://github.com/pybamm-team/PyBaMM/pull/2395))
 - Added small perturbation to initial conditions for casadi solver. This seems to help the solver converge better in some cases ([#2356](https://github.com/pybamm-team/PyBaMM/pull/2356))
 - Added `ExplicitTimeIntegral` functionality to move variables which do not appear anywhere on the rhs to a new location, and to integrate those variables explicitly when `get` is called by the solution object. ([#2348](https://github.com/pybamm-team/PyBaMM/pull/2348))
 - Added more rules for simplifying expressions ([#2211](https://github.com/pybamm-team/PyBaMM/pull/2211))
@@ -13,6 +46,7 @@
 
 ## Breaking change
 
+- Removed `pybamm.SymbolReplacer` as it is no longer needed to set up simulations with experiments, which is the only place where it was being used ([#2395](https://github.com/pybamm-team/PyBaMM/pull/2395))
 - Removed `get_infinite_nested_dict`, `BaseModel.check_default_variables_dictionaries`, and `Discretisation.create_jacobian` methods, which were not used by any other functionality in the repository ([#2384](https://github.com/pybamm-team/PyBaMM/pull/2384))
 - Dropped support for Python 3.7 after the release of Numpy v1.22.0 ([#2379](https://github.com/pybamm-team/PyBaMM/pull/2379))
 - Removed parameter cli tools (add/edit/remove parameters). Parameter sets can now more easily be added via python scripts. ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
