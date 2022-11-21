@@ -107,9 +107,9 @@ class BaseSolver(object):
         if len(self.models_set_up) > 0:
             existing_model = next(iter(self.models_set_up))
             raise RuntimeError(
-                'This solver has already been initialised for model '
+                "This solver has already been initialised for model "
                 f'"{existing_model.name}". Please create a separate '
-                'solver for this model'
+                "solver for this model"
             )
 
         if ics_only:

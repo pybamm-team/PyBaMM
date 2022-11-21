@@ -463,7 +463,7 @@ class Simulation:
             self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
             # Process all the different models
             self.op_conds_to_built_models = {}
-            self.op_conds_to_built_solvers= {}
+            self.op_conds_to_built_solvers = {}
             for op_cond, model_with_set_params in self.op_string_to_model.items():
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
