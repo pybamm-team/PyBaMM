@@ -1,7 +1,7 @@
 #ifndef PYBAMM_IDAKLU_HPP
 #define PYBAMM_IDAKLU_HPP
 
-#include "idaklu_python.hpp"
+#include "common.hpp"
 #include "solution.hpp"
 #include <functional>
 

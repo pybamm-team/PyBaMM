@@ -1,7 +1,7 @@
-#ifndef PYBAMM_SOLUTION_HPP
-#define PYBAMM_SOLUTION_HPP
+#ifndef PYBAMM_IDAKLU_SOLUTION_HPP
+#define PYBAMM_IDAKLU_SOLUTION_HPP
 
-#include "idaklu_python.hpp"
+#include "common.hpp"
 
 class Solution
 {
@@ -17,4 +17,4 @@ public:
   np_array yS;
 };
 
-#endif // PYBAMM_SOLUTION_HPP
+#endif // PYBAMM_IDAKLU_COMMON_HPP
