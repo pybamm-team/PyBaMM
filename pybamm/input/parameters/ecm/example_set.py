@@ -11,7 +11,7 @@ r0 = pybamm.parameters.process_3D_data_csv("ecm_example_r0.csv", path=path)
 r1 = pybamm.parameters.process_3D_data_csv("ecm_example_r1.csv", path=path)
 c1 = pybamm.parameters.process_3D_data_csv("ecm_example_c1.csv", path=path)
 
-dUdT = pybamm.parameters.process_2D_data_csv("ecm_example_dUdT.csv", path=path)
+dUdT = pybamm.parameters.process_2D_data_csv("ecm_example_dudt.csv", path=path)
 
 
 def get_parameter_values():
