@@ -699,7 +699,7 @@ class BaseSolver(object):
         :class:`pybamm.ModelError`
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}` and
             `model.variables = {}`)
-        :class:`pybamm.ValueError`
+        :class:`RuntimeError`
             If multiple calls to `solve` pass in different models
 
         """
@@ -787,8 +787,8 @@ class BaseSolver(object):
             if len(self.models_set_up) > 0:
                 existing_model = next(iter(self.models_set_up))
                 raise RuntimeError(
-                    f'This solver has already been used for model ${existing_model.name} has already been setup, ' 
-                    'please create a separate solver for this model'
+                    f'This solver has already been initialised for model "{existing_model.name}". ' 
+                    'Please create a separate solver for this model'
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
