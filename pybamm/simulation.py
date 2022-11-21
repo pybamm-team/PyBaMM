@@ -114,6 +114,7 @@ class Simulation:
         self._built_model = None
         self._built_initial_soc = None
         self.op_conds_to_built_models = None
+        self.op_conds_to_built_solvers = None
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -383,6 +384,7 @@ class Simulation:
             self._model_with_set_params = None
             self._built_model = None
             self.op_conds_to_built_models = None
+            self.op_conds_to_built_solvers = None
 
         c_n_init = self.parameter_values[
             "Initial concentration in negative electrode [mol.m-3]"
@@ -443,7 +445,7 @@ class Simulation:
     def build_for_experiment(self, check_model=True, initial_soc=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
-        experiment, where there may be several models to build
+        experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
             self.set_initial_soc(initial_soc)
@@ -461,12 +463,15 @@ class Simulation:
             self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
             # Process all the different models
             self.op_conds_to_built_models = {}
+            self.op_conds_to_built_solvers= {}
             for op_cond, model_with_set_params in self.op_string_to_model.items():
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
                     model_with_set_params, inplace=True, check_model=check_model
                 )
+                solver = self.solver.copy()
+                self.op_conds_to_built_solvers[op_cond] = solver
                 self.op_conds_to_built_models[op_cond] = built_model
 
     def solve(
@@ -707,6 +712,7 @@ class Simulation:
                     dt = op_conds["time"]
                     op_conds_str = op_conds["string"]
                     model = self.op_conds_to_built_models[op_conds_str]
+                    solver = self.op_conds_to_built_solvers[op_conds_str]
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = op_conds_str

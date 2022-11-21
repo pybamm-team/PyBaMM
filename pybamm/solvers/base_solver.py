@@ -104,6 +104,14 @@ class BaseSolver(object):
         """
         inputs = inputs or {}
 
+        if len(self.models_set_up) > 0:
+            existing_model = next(iter(self.models_set_up))
+            raise RuntimeError(
+                'This solver has already been initialised for model '
+                f'"{existing_model.name}". Please create a separate '
+                'solver for this model'
+            )
+
         if ics_only:
             pybamm.logger.info("Start solver set-up, initial_conditions only")
         else:
@@ -784,12 +792,6 @@ class BaseSolver(object):
         # Set up (if not done already)
         timer = pybamm.Timer()
         if model not in self.models_set_up:
-            if len(self.models_set_up) > 0:
-                existing_model = next(iter(self.models_set_up))
-                raise RuntimeError(
-                    f'This solver has already been initialised for model "{existing_model.name}". ' 
-                    'Please create a separate solver for this model'
-                )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
             # not depend on input parameters. Thefore only `ext_and_inputs[0]`
