@@ -484,7 +484,7 @@ class TestParameterValues(unittest.TestCase):
 
         x_ = [np.linspace(0, 10), np.linspace(0, 20)]
 
-        X = list(np.meshgrid(*x_))
+        X = list(np.meshgrid(*x_, indexing="ij"))
 
         x = np.column_stack([el.reshape(-1, 1) for el in X])
 
