@@ -1,7 +1,7 @@
 import pybamm
 
 
-class OcvElement(pybamm.BaseSubModel):
+class OCVElement(pybamm.BaseSubModel):
     """
     Open Circuit Voltage (OCV) element for
     equivalent circuits.

@@ -85,6 +85,21 @@ class Thevenin(pybamm.BaseModel):
 
     def set_options(self, extra_options=None):
 
+        class NaturalNumberOption():
+            def __init__(self, defualt_value):
+                self.value = defualt_value
+
+            def __contains__(self, value):
+                is_an_integer = isinstance(value, int)
+                is_non_negative = value >= 0 
+                return is_an_integer and is_non_negative
+
+            def __getitem__(self, value):
+                return self.value
+            
+            def __repr__(self):
+                return "natural numbers (e.g. 0, 1, 2, 3, ...)"
+
         possible_options = {
             "calculate discharge energy": ["false", "true"],
             "operating mode": [
@@ -98,7 +113,7 @@ class Thevenin(pybamm.BaseModel):
                 "explicit resistance",
                 "CCCV",
             ],
-            "number of rc elements": [1, 2, 3, 4, 5, 0],
+            "number of rc elements": NaturalNumberOption(1),
             "external submodels": [[]],
         }
 
@@ -116,6 +131,14 @@ class Thevenin(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "Option '{}' not recognised. Best matches are {}".format(
                         name, options.get_best_matches(name)
+                    )
+                )
+
+        for opt, value in options.items(): 
+            if value not in possible_options[opt]:
+                raise pybamm.OptionError(
+                    "Option '{}' must be one of {}. Got '{}' instead.".format(
+                        opt, possible_options[opt], value
                     )
                 )
 
@@ -183,7 +206,7 @@ class Thevenin(pybamm.BaseModel):
     def set_ocv_submodel(self):
         self.submodels[
             "Open circuit voltage"
-        ] = pybamm.equivalent_circuit_elements.OcvElement(self.param, self.ecm_options)
+        ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.ecm_options)
 
     def set_resistor_submodel(self):
 
@@ -198,7 +221,7 @@ class Thevenin(pybamm.BaseModel):
 
         for _ in range(number_of_rc_elements):
             name = f"Element-{self.element_counter} (RC)"
-            self.submodels[name] = pybamm.equivalent_circuit_elements.RcElement(
+            self.submodels[name] = pybamm.equivalent_circuit_elements.RCElement(
                 self.param, self.element_counter, self.ecm_options
             )
             self.element_counter += 1

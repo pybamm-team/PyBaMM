@@ -1,7 +1,7 @@
 import pybamm
 
 
-class RcElement(pybamm.BaseSubModel):
+class RCElement(pybamm.BaseSubModel):
     """
     Parallel Resistor-Capacitor (RC) element for
     equivalent circuits.
