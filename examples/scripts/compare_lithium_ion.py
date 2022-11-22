@@ -2,8 +2,9 @@
 # Compare lithium-ion battery models
 #
 import pybamm
+import numpy as np
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
@@ -17,7 +18,7 @@ models = [
 sims = []
 for model in models:
     sim = pybamm.Simulation(model)
-    sim.solve([0, 3600])
+    sim.solve(np.linspace(0, 3600, 10000))
     sims.append(sim)
 
 # plot

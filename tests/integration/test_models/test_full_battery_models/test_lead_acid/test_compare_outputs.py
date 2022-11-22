@@ -109,7 +109,10 @@ class TestCompareOutputs(unittest.TestCase):
             # sol.t should be different (different internal scalings for the solver)
             np.testing.assert_array_equal(sol1.t, 2 * sol2.t)
             # sol.y should be identical (within solver tolerance)
-            np.testing.assert_array_almost_equal(sol1.y, sol2.y)
+            np.testing.assert_array_almost_equal(
+                sol1["Electrolyte concentration"].data,
+                sol2["Electrolyte concentration"].data,
+            )
 
 
 if __name__ == "__main__":

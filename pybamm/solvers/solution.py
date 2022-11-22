@@ -81,10 +81,10 @@ class Solution(object):
         # This is the fastest way of accessing, and we will be accessing index-by-index
         # anyway when we create variable objects
         if not isinstance(all_ts, list):
-            self._all_ts_input = all_ts
+            self._t = all_ts
             all_ts = np.split(all_ts, len_t)
         if not isinstance(all_ys, list):
-            self._all_ys_input = all_ys
+            self._y = all_ys
             all_ys = np.split(all_ys, len_t, axis=1)
 
         if not isinstance(all_models, list):
@@ -225,11 +225,14 @@ class Solution(object):
             )
         self.sensitivities = sensitivities
 
-    @cached_property
+    @property
     def t(self):
         """Times at which the solution is evaluated"""
-        self.set_t()
-        return self._t
+        try:
+            return self._t
+        except AttributeError:
+            self.set_t()
+            return self._t
 
     def set_t(self):
         self._t = np.concatenate(self.all_ts)
@@ -239,14 +242,16 @@ class Solution(object):
     @property
     def y(self):
         """Values of the solution"""
-        if not isinstance(self._all_ys_input, list):
-            return self._all_ys_input
-        raise NotImplementedError(
-            "Solution.y is not implemented as it is slow to build, and not needed to "
-            "evaluate individual variables (Solution.all_ys, which is a list of the "
-            "Solution states at each time, is used instead). "
-            "Use Solution.all_ys to construct Solution.y if needed."
-        )
+        try:
+            return self._y
+        except AttributeError:
+            raise NotImplementedError(
+                "Solution.y is not implemented as it is slow to build, and not needed "
+                "to evaluate individual variables (Solution.all_ys, which is a list of "
+                "the Solution states at each time, is used instead). "
+                "Use Solution.all_ys to construct Solution.y if needed, or add the"
+                "relevant variable to `model.variables`."
+            )
 
     @property
     def sensitivities(self):

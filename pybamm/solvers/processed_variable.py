@@ -115,6 +115,7 @@ class ProcessedVariable(object):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_pts))
         last_t = 0
+        # timer = pybamm.Timer()
         # Evaluate the base_variable index-by-index
         for idx, (t, y, inputs, base_var_casadi) in enumerate(
             zip(
@@ -134,6 +135,14 @@ class ProcessedVariable(object):
             else:
                 entries[idx] = eval_casadi
             last_t = t
+        # print(timer.time())
+        # F = self.base_variables_casadi[0].map(len(self.t_pts))
+
+        # y = casadi.horzcat(*self.all_ys)
+        # timer = pybamm.Timer()
+        # entries = F(self.all_ts, y, [])
+        # print(timer.time())
+        # entries = entries.full().flatten()
 
         # set up interpolation
         if len(self.t_pts) == 1:

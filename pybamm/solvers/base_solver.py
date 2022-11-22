@@ -513,7 +513,7 @@ class BaseSolver(object):
                     # We only need to do this if the model is a DAE model
                     # see #1082
                     k = 20
-                    init_sign = float(
+                    init_sign = pybamm.Vector(
                         np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
                     )
                     # We create a sigmoid for each event which will multiply the

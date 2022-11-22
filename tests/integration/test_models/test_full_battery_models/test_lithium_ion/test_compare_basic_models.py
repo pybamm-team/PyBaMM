@@ -48,9 +48,6 @@ class TestCompareBasicModels(unittest.TestCase):
         sim.solve(t_eval)
         sol = sim.solution
 
-        # Compare solution data
-        np.testing.assert_array_almost_equal(basic_sol.y, sol.y)
-        np.testing.assert_array_almost_equal(basic_sol.t, sol.t)
         # Compare variables
         for name in basic_spm.variables:
             np.testing.assert_array_almost_equal(

@@ -462,13 +462,14 @@ class CasadiSolver(pybamm.BaseSolver):
         if y_event is None:  # pragma: no cover
             # This is extremely rare, it's difficult to find a test that triggers this
             # hence no coverage check
-            t_event = coarse_solution.all_ts[event_idx_lower + 1]
+            t_event = coarse_solution.all_ts[event_idx_lower + 1][0]
             y_event = coarse_solution.all_ys[event_idx_lower + 1].full().flatten()
 
         # Return solution truncated at the first coarse event time
         # Also assign t_event
         t_sol = coarse_solution.all_ts[: event_idx_lower + 1]
         y_sol = coarse_solution.all_ys[: event_idx_lower + 1]
+        print(t_event)
         solution = pybamm.Solution(
             t_sol,
             y_sol,
@@ -508,7 +509,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                 event.expression.evaluate(
                                     solution.t[-1],
                                     solution.all_ys[-1].full(),
-                                    inputs=inputss,
+                                    inputs=inputs,
                                 )
                                 < self.extrap_tol
                             ).any()
@@ -614,10 +615,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         "alg": algebraic(t_scaled, y_full, p),
                     }
                 )
-            pybamm.logger.error("int1")
             integrator = casadi.integrator("F", method, problem, options)
-            pybamm.logger.error("int1 done")
-            integrator.print_options()
             self.integrator_specs[model] = method, problem, options
             if use_grid is False:
                 self.integrators[model] = {"no grid": integrator}
@@ -721,10 +719,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 z_sols = casadi.horzsplit(casadi_sol["zf"])
         else:
             # Repeated calls to the integrator
-            x = y0_diff
-            x_sols = [x]
-            z = y0_alg
-            z_sols = [z]
+            x0 = y0_diff
+            x_sols = [x0]
+            z0 = y0_alg
+            z_sols = [z0]
             for i in range(len(t_eval) - 1):
                 t_min = t_eval[i]
                 t_max = t_eval[i + 1]
@@ -732,16 +730,18 @@ class CasadiSolver(pybamm.BaseSolver):
                 timer = pybamm.Timer()
                 try:
                     casadi_sol = integrator(
-                        x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
+                        x0=x0, z0=z0, p=inputs_with_tlims, **self.extra_options_call
                     )
                 except RuntimeError as error:
                     # If it doesn't work raise error
                     pybamm.logger.debug(f"Casadi integrator failed with error {error}")
                     raise pybamm.SolverError(error.args[0])
                 integration_time = timer.time()
-                x_sols.append(casadi_sol["xf"])
+                x0 = casadi_sol["xf"]
+                x_sols.append(x0)
                 if len_alg > 0:
-                    z_sols.append(casadi_sol["zf"])
+                    z0 = casadi_sol["zf"]
+                    z_sols.append(z0)
         if len_alg == 0:
             y_sols = x_sols
         else:
