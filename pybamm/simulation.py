@@ -7,6 +7,7 @@ import numpy as np
 import copy
 import warnings
 import sys
+from functools import lru_cache
 
 
 def is_notebook():
@@ -889,6 +890,7 @@ class Simulation:
 
         return self.solution
 
+    @lru_cache
     def get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
@@ -897,13 +899,9 @@ class Simulation:
         ):
             return None
 
-        try:
-            return self._esoh_solver
-        except AttributeError:
-            self._esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-                self.parameter_values, self.model.param
-            )
-            return self._esoh_solver
+        return pybamm.lithium_ion.ElectrodeSOHSolver(
+            self.parameter_values, self.model.param
+        )
 
     def plot(self, output_variables=None, **kwargs):
         """
