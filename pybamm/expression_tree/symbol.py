@@ -8,7 +8,7 @@ import numpy as np
 import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
-from functools import cache, cached_property
+from functools import lru_cache, cached_property
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
@@ -828,7 +828,7 @@ class Symbol:
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()
 
-    @cache
+    @lru_cache
     def evaluates_on_edges(self, dimension):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient

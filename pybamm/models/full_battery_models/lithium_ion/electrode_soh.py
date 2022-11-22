@@ -3,7 +3,7 @@
 #
 import pybamm
 import numpy as np
-from functools import cache
+from functools import lru_cache
 
 
 class ElectrodeSOH(pybamm.BaseModel):
@@ -247,22 +247,18 @@ class ElectrodeSOHSolver:
             - self.param.n.prim.U_dimensional(x, T)
         )
 
-    @cache
+    @lru_cache
     def _get_electrode_soh_sims_full(self):
         full_model = ElectrodeSOH(param=self.param)
-        self._full_sim = pybamm.Simulation(
-            full_model, parameter_values=self.parameter_values
-        )
-        return self._full_sim
+        return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
-    @cache
+    @lru_cache
     def _get_electrode_soh_sims_split(self):
         x100_model = ElectrodeSOHx100(param=self.param)
         x100_sim = pybamm.Simulation(x100_model, parameter_values=self.parameter_values)
         x0_model = ElectrodeSOHx0(param=self.param)
         x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
-        self._split_sims = [x100_sim, x0_sim]
-        return self._split_sims
+        return [x100_sim, x0_sim]
 
     def solve(self, inputs):
         ics = self._set_up_solve(inputs)
