@@ -34,9 +34,15 @@ class Domain:
 
 
 cell = Domain(name="cell", pre_name="", short_pre_name="")
-anode = Domain(name="anode", pre_name="Negative electrode ", short_pre_name="Negative ")
-cathode = Domain(
-    name="cathode", pre_name="Positive electrode ", short_pre_name="Positive "
+negative_electrode = Domain(
+    name="negative electrode",
+    pre_name="Negative electrode ",
+    short_pre_name="Negative ",
+)
+positive_electrode = Domain(
+    name="positive electrode",
+    pre_name="Positive electrode ",
+    short_pre_name="Positive ",
 )
 electrolyte = Domain(name="electrolyte", pre_name="Electrolyte ", short_pre_name="")
 separator = Domain(name="separator", pre_name="Separator ", short_pre_name="")
@@ -46,8 +52,12 @@ experiment = Domain(name="experiment", pre_name="", short_pre_name="")
 def bpx_to_param_dict(bpx: BPX) -> dict:
     pybamm_dict = {}
     pybamm_dict = _bpx_to_param_dict(bpx.parameterisation.cell, pybamm_dict, cell)
-    pybamm_dict = _bpx_to_param_dict(bpx.parameterisation.anode, pybamm_dict, anode)
-    pybamm_dict = _bpx_to_param_dict(bpx.parameterisation.cathode, pybamm_dict, cathode)
+    pybamm_dict = _bpx_to_param_dict(
+        bpx.parameterisation.negative_electrode, pybamm_dict, negative_electrode
+    )
+    pybamm_dict = _bpx_to_param_dict(
+        bpx.parameterisation.positive_electrode, pybamm_dict, positive_electrode
+    )
     pybamm_dict = _bpx_to_param_dict(
         bpx.parameterisation.electrolyte, pybamm_dict, electrolyte
     )
@@ -58,48 +68,43 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         bpx.parameterisation.separator, pybamm_dict, experiment
     )
 
-    # set a default current function and typical current
+    # set a default current function and typical current based on the nominal capacity
+    # i.e. a default C-rate of 1
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
     pybamm_dict["Typical current [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
 
-    # Ambient temp
-    pybamm_dict["Ambient temperature [K]"] = pybamm_dict["Initial temperature [K]"]
-
-    for domain in [anode, cathode]:
+    # number of electrons in reaction (1 for li-ion)
+    for domain in [negative_electrode, positive_electrode]:
         pybamm_dict[domain.pre_name + "electrons in reaction"] = 1.0
+
+    # activity
+    pybamm_dict["1 + dlnf/dlnc"] = 1.0
 
     # typical electrolyte concentration
     pybamm_dict["Typical electrolyte concentration [mol.m-3]"] = pybamm_dict[
         "Initial concentration in electrolyte [mol.m-3]"
     ]
 
-    for domain in [anode, cathode]:
-        pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = 0.0
-
-    for domain in [anode, separator, cathode]:
+    # assume Bruggeman relation
+    for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrode)"] = 1.5
 
+    # BPX is for single-cell in series, user can chnage this later
     pybamm_dict["Number of cells connected in series to make a battery"] = 1
+    pybamm_dict[
+        "Number of electrodes connected in parallel to make a cell"
+    ] = pybamm_dict["Number of electrode pairs connected in parallel to make a cell"]
 
     # electrode area
     equal_len_width = math.sqrt(pybamm_dict["Electrode area [m2]"])
     pybamm_dict["Electrode width [m]"] = equal_len_width
     pybamm_dict["Electrode height [m]"] = equal_len_width
 
-    # cell geometry
-    pybamm_dict["Cell volume [m3]"] = (
-        pybamm_dict["Cell width [m]"]
-        * pybamm_dict["Cell height [m]"]
-        * pybamm_dict["Cell thickness [m]"]
-    )
-    pybamm_dict["Cell cooling surface area [m2]"] = (
-        2 * pybamm_dict["Cell width [m]"] * pybamm_dict["Cell thickness [m]"]
-        + 2 * pybamm_dict["Cell width [m]"] * pybamm_dict["Cell height [m]"]
-        + 2 * pybamm_dict["Cell thickness [m]"] * pybamm_dict["Cell height [m]"]
-    )
-
-    pybamm_dict["1 + dlnf/dlnc"] = 1.0
+    # surface area
+    pybamm_dict["Cell cooling surface area [m2]"] = pybamm_dict[
+        "Cell external surface area [m2]"
+    ]
 
     # lumped parameters
     for name in [
@@ -107,23 +112,29 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         "Density [kg.m-3]",
         "Thermal conductivity [W.m-1.K-1]",
     ]:
-        for domain in [anode, cathode, separator]:
+        for domain in [negative_electrode, positive_electrode, separator]:
             pybamm_name = domain.pre_name + name[:1].lower() + name[1:]
             if name in pybamm_dict:
                 pybamm_dict[pybamm_name] = pybamm_dict[name]
 
     # BET surface area
-    for domain in [anode, cathode]:
+    for domain in [negative_electrode, positive_electrode]:
         pybamm_dict[domain.pre_name + "active material volume fraction"] = (
-            pybamm_dict[domain.pre_name + "surface area per unit volume"]
+            pybamm_dict[domain.pre_name + "surface area per unit volume [m-1]"]
             * pybamm_dict[domain.short_pre_name + "particle radius [m]"]
         ) / 3.0
 
     # transport efficiency
-    for domain in [anode, separator, cathode]:
+    for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "porosity"] = pybamm_dict[
             domain.pre_name + "transport efficiency"
         ] ** (1.0 / 1.5)
+
+    # entropic change
+    for domain in [negative_electrode, positive_electrode]:
+        pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = pybamm_dict[
+            domain.pre_name + "entropic change coefficient [V.K-1]"
+        ]
 
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
@@ -134,17 +145,19 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     T_ref = pybamm_dict["Reference temperature [K]"]
     F = 96485
 
-    # anode
+    # negative electrode
     c_n_max = pybamm_dict[
-        "Maximum concentration in " + anode.pre_name.lower() + "[mol.m-3]"
+        "Maximum concentration in " + negative_electrode.pre_name.lower() + "[mol.m-3]"
     ]
-    k_n_norm = pybamm_dict[anode.pre_name + "reaction rate [mol.m-2.s-1]"]
+    k_n_norm = pybamm_dict[
+        negative_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
+    ]
     E_a_n = pybamm_dict.get(
-        anode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
+        negative_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
     k_n = k_n_norm * F / (c_n_max * c_e**0.5)
 
-    def anode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
+    def negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_n  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
         arrhenius = exp(E_a_n / constants.R * (1 / T_ref - 1 / T))
@@ -156,21 +169,23 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             * (c_s_max - c_s_surf) ** 0.5
         )
 
-    pybamm_dict[anode.pre_name + "exchange-current density [A.m-2]"] = copy_func(
-        anode_exchange_current_density
-    )
+    pybamm_dict[
+        negative_electrode.pre_name + "exchange-current density [A.m-2]"
+    ] = copy_func(negative_electrode_exchange_current_density)
 
-    # cathode
+    # positive electrode
     c_p_max = pybamm_dict[
-        "Maximum concentration in " + cathode.pre_name.lower() + "[mol.m-3]"
+        "Maximum concentration in " + positive_electrode.pre_name.lower() + "[mol.m-3]"
     ]
-    k_p_norm = pybamm_dict[cathode.pre_name + "reaction rate [mol.m-2.s-1]"]
+    k_p_norm = pybamm_dict[
+        positive_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
+    ]
     E_a_p = pybamm_dict.get(
-        cathode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
+        positive_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
     k_p = k_p_norm * F / (c_p_max * c_e**0.5)
 
-    def cathode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
+    def positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_p  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
         arrhenius = exp(E_a_p / constants.R * (1 / T_ref - 1 / T))
@@ -183,7 +198,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         )
 
     pybamm_dict[domain.pre_name + "exchange-current density [A.m-2]"] = copy_func(
-        cathode_exchange_current_density
+        positive_electrode_exchange_current_density
     )
 
     # diffusivity
@@ -191,46 +206,48 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     # TODO: allow setting function parameters in a loop over domains
     T_ref = pybamm_dict["Reference temperature [K]"]
 
-    # anode
+    # negative electrode
     E_a = pybamm_dict.get(
-        anode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+        negative_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
-    D_n_ref = pybamm_dict[anode.pre_name + "diffusivity [m2.s-1]"]
+    D_n_ref = pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_n_ref):
 
-        def anode_diffusivity(sto, T):
+        def negative_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_n_ref(sto)
 
     else:
 
-        def anode_diffusivity(sto, T):
+        def negative_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_n_ref
 
-    pybamm_dict[anode.pre_name + "diffusivity [m2.s-1]"] = copy_func(anode_diffusivity)
-
-    # cathode
-    E_a = pybamm_dict.get(
-        cathode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"] = copy_func(
+        negative_electrode_diffusivity
     )
-    D_p_ref = pybamm_dict[cathode.pre_name + "diffusivity [m2.s-1]"]
+
+    # positive electrode
+    E_a = pybamm_dict.get(
+        positive_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    )
+    D_p_ref = pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_p_ref):
 
-        def cathode_diffusivity(sto, T):
+        def positive_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_p_ref(sto)
 
     else:
 
-        def cathode_diffusivity(sto, T):
+        def positive_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_p_ref
 
-    pybamm_dict[cathode.pre_name + "diffusivity [m2.s-1]"] = copy_func(
-        cathode_diffusivity
+    pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"] = copy_func(
+        positive_electrode_diffusivity
     )
 
     # electrolyte

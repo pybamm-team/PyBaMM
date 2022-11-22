@@ -8,13 +8,12 @@ import shutil
 import unittest
 import inspect
 import importlib
+import json
 
 import numpy as np
 import pandas as pd
 
 import pybamm
-import tests
-print(tests.__file__)
 import tests.shared as shared
 from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
@@ -1032,13 +1031,13 @@ class TestParameterValues(unittest.TestCase):
                 "BPX": 1.0,
                 "Title": "Parametrisation example",
                 "Description": "NMC Pouch",
-                "Model": "Newman",
+                "Model": "DFN",
             },
             "Parameterisation": {
                 "Cell": {
+                    "Ambient temperature [K]": 298.15,
                     "Initial temperature [K]": 298.15,
                     "Reference temperature [K]": 298.15,
-                    "Nominal cell capacity [A.h]": 5.0,
                     "Lower voltage cut-off [V]": 2.8,
                     "Upper voltage cut-off [V]": 4.2,
                     "Nominal cell capacity [A.h]": 12.5,
@@ -1046,9 +1045,10 @@ class TestParameterValues(unittest.TestCase):
                     "Thermal conductivity [W.m-1.K-1]": 2,
                     "Density [kg.m-3]": 1847,
                     "Electrode area [m2]": 0.016808,
-                    "Number of electrodes connected in parallel to make a cell": 34,
-                    "Cell height [m]": 191e-03,
-                    "Cell width [m]": 88e-03,
+                    "Number of electrode pairs connected "
+                    "in parallel to make a cell": 34,
+                    "Cell external surface area [m2]": 3.79e-2,
+                    "Cell volume [m3]": 1.28e-4,
                     "Cell thickness [m]": 7.6e-03,
                 },
                 "Electrolyte": {
@@ -1059,12 +1059,13 @@ class TestParameterValues(unittest.TestCase):
                         "- 2.51 * (x / 1000) ** 1.5 + 3.329 * (x / 1000)"
                     ),
                     "Diffusivity [m2.s-1]": (
-                        "8.794e-11 * (x / 1000) ** 2 " "- 3.972e-10 * (x / 1000) + 4.862e-10"
+                        "8.794e-11 * (x / 1000) ** 2 "
+                        "- 3.972e-10 * (x / 1000) + 4.862e-10"
                     ),
                     "Conductivity activation energy [J.mol-1]": 34200,
                     "Diffusivity activation energy [J.mol-1]": 34200,
                 },
-                "Anode": {
+                "Negative electrode": {
                     "Particle radius [m]": 4.12e-06,
                     "Thickness [m]": 5.62e-05,
                     "Diffusivity [m2.s-1]": "8.6e-13 * exp(-13.5 * x) + 9.5e-15",
@@ -1075,17 +1076,18 @@ class TestParameterValues(unittest.TestCase):
                         "9.41099327e02 * tanh(-6.91080049e-01 * (x + 2.49433043e00)) + "
                         "3.40646063e02 * tanh(7.27243978e-01 * (x + 1.64297574e00))"
                     ),
+                    "Entropic change coefficient [V.K-1]": 0,
                     "Conductivity [S.m-1]": 0.39,
-                    "Surface area per unit volume": 487864,
+                    "Surface area per unit volume [m-1]": 487864,
                     "Porosity": 0.33,
                     "Transport efficiency": 0.19,
-                    "Reaction rate [mol.m-2.s-1]": 5.75e-06,
+                    "Reaction rate constant [mol.m-2.s-1]": 5.75e-06,
                     "Initial concentration [mol.m-3]": 23370,
                     "Maximum concentration [mol.m-3]": 28500,
                     "Diffusivity activation energy [J.mol-1]": 108000,
                     "Reaction rate activation energy [J.mol-1]": 53400,
                 },
-                "Cathode": {
+                "Positive electrode": {
                     "Particle radius [m]": 4.6e-06,
                     "Thickness [m]": 5.23e-05,
                     "Diffusivity [m2.s-1]": (
@@ -1098,11 +1100,12 @@ class TestParameterValues(unittest.TestCase):
                         "1.63480454 * tanh(82.26606342 * (x - 1.00945121)) - "
                         "10.70641562 * tanh(9.43939843 * (x - 0.79469384))"
                     ),
+                    "Entropic change coefficient [V.K-1]": 0,
                     "Conductivity [S.m-1]": 1.464,
-                    "Surface area per unit volume": 404348,
+                    "Surface area per unit volume [m-1]": 404348,
                     "Porosity": 0.385,
                     "Transport efficiency": 0.2389,
-                    "Reaction rate [mol.m-2.s-1]": 2.5e-05,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.5e-05,
                     "Initial concentration [mol.m-3]": 26290,
                     "Maximum concentration [mol.m-3]": 56500,
                     "Diffusivity activation energy [J.mol-1]": 62400,
@@ -1116,11 +1119,9 @@ class TestParameterValues(unittest.TestCase):
             },
         }
 
-        import json
-        import tempfile
-        filename = 'tmp.json'
+        filename = "tmp.json"
         with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode='w'
+            suffix=filename, delete=False, mode="w"
         ) as tmp:
             # write to a tempory file so we can
             # get the source later on using inspect.getsource
@@ -1131,9 +1132,11 @@ class TestParameterValues(unittest.TestCase):
             pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
 
             model = pybamm.lithium_ion.DFN()
-            experiment = pybamm.Experiment([
-                "Discharge at C/5 for 1 hour",
-            ])
+            experiment = pybamm.Experiment(
+                [
+                    "Discharge at C/5 for 1 hour",
+                ]
+            )
             sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
             sim.solve()
 
