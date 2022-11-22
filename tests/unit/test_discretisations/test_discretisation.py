@@ -67,6 +67,7 @@ class TestDiscretise(unittest.TestCase):
         for child in c_e.children:
             self.assertTrue(child in disc.bcs.keys())
 
+    @unittest.skip("External variables will be removed")
     def test_adding_0D_external_variable(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -83,6 +84,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(model.variables["b"], pybamm.ExternalVariable)
         self.assertEqual(model.variables["b"].evaluate(inputs={"b": np.array([1])}), 1)
 
+    @unittest.skip("External variables will be removed")
     def test_adding_0D_external_variable_fail(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -96,6 +98,7 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Variable b must be in the model"):
             disc.process_model(model)
 
+    @unittest.skip("External variables will be removed")
     def test_adding_1D_external_variable(self):
         model = pybamm.BaseModel()
 
@@ -146,6 +149,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["grad b"].shape_for_testing, (11, 1))
         self.assertEqual(model.variables["div grad b"].shape_for_testing, (10, 1))
 
+    @unittest.skip("External variables will be removed")
     def test_concatenation_external_variables(self):
         model = pybamm.BaseModel()
 
@@ -215,6 +219,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["b1"].shape_for_testing, (10, 1))
         self.assertEqual(model.variables["b2"].shape_for_testing, (5, 1))
 
+    @unittest.skip("External variables will be removed")
     def test_adding_2D_external_variable_fail(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable(

@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 
 
+@unittest.skip("External variables will be removed")
 class TestExternalThermalModels(unittest.TestCase):
     def test_external_lumped_temperature(self):
         model_options = {"thermal": "lumped", "external submodels": ["thermal"]}

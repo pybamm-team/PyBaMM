@@ -7,6 +7,7 @@ import os
 import unittest
 
 
+@unittest.skip("External variables will be removed")
 class TestExternalVariables(unittest.TestCase):
     def test_on_dfn(self):
         e_height = 0.25
