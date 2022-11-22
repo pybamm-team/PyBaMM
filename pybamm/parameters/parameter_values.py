@@ -543,7 +543,7 @@ class ParameterValues:
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(value):
                     raise ValueError(f"Parameter '{symbol.name}' not found")
-                # Scalar inherits name (for updating parameters)
+                # Scalar inherits name
                 return pybamm.Scalar(value, name=symbol.name)
             elif isinstance(value, pybamm.Symbol):
                 new_value = self.process_symbol(value)
@@ -553,18 +553,29 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = []
-            for child in symbol.children:
-                if symbol.diff_variable is not None and any(
-                    x == symbol.diff_variable for x in child.pre_order()
-                ):
-                    # Wrap with NotConstant to avoid simplification,
-                    # which would stop symbolic diff from working properly
-                    new_child = pybamm.NotConstant(child)
-                    new_children.append(self.process_symbol(new_child))
-                else:
-                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
+            if isinstance(
+                function_name,
+                (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
+            ) or (
+                isinstance(function_name, pybamm.Symbol)
+                and function_name.size_for_testing == 1
+            ):
+                # no need to process children, they will only be used for shape
+                new_children = symbol.children
+            else:
+                # process children
+                new_children = []
+                for child in symbol.children:
+                    if symbol.diff_variable is not None and any(
+                        x == symbol.diff_variable for x in child.pre_order()
+                    ):
+                        # Wrap with NotConstant to avoid simplification,
+                        # which would stop symbolic diff from working properly
+                        new_child = pybamm.NotConstant(child)
+                        new_children.append(self.process_symbol(new_child))
+                    else:
+                        new_children.append(self.process_symbol(child))
 
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
