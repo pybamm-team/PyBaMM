@@ -40,7 +40,10 @@ class TestInterpolant(unittest.TestCase):
 
         with self.assertWarnsRegex(Warning, "cubic spline"):
             pybamm.Interpolant(
-                np.linspace(0, 1, 10), np.ones(10), pybamm.Symbol("a"), interpolator="cubic spline"
+                np.linspace(0, 1, 10),
+                np.ones(10),
+                pybamm.Symbol("a"),
+                interpolator="cubic spline",
             )
 
     def test_interpolation(self):

@@ -84,19 +84,18 @@ class Thevenin(pybamm.BaseModel):
         self.set_submodels(build)
 
     def set_options(self, extra_options=None):
-
-        class NaturalNumberOption():
+        class NaturalNumberOption:
             def __init__(self, defualt_value):
                 self.value = defualt_value
 
             def __contains__(self, value):
                 is_an_integer = isinstance(value, int)
-                is_non_negative = value >= 0 
+                is_non_negative = value >= 0
                 return is_an_integer and is_non_negative
 
             def __getitem__(self, value):
                 return self.value
-            
+
             def __repr__(self):
                 return "natural numbers (e.g. 0, 1, 2, 3, ...)"
 
@@ -134,7 +133,7 @@ class Thevenin(pybamm.BaseModel):
                     )
                 )
 
-        for opt, value in options.items(): 
+        for opt, value in options.items():
             if value not in possible_options[opt]:
                 raise pybamm.OptionError(
                     "Option '{}' must be one of {}. Got '{}' instead.".format(
