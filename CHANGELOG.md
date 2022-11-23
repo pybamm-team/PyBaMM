@@ -17,6 +17,7 @@
 - Renamed entry point for parameter sets to `pybamm_parameter_sets` ([#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
 - Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
 - Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))
+- Trying to use a solver to solve multiple models results in a RuntimeError exception ([#2481](https://github.com/pybamm-team/PyBaMM/pull/2481))
 
 # [v22.10.post1](https://github.com/pybamm-team/PyBaMM/tree/v22.10.post1) - 2022-10-31
 
