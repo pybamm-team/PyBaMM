@@ -1150,7 +1150,9 @@ class BaseSolver(object):
 
         t = old_solution.t[-1]
 
+        first_step_this_model = False
         if model not in self.models_set_up:
+            first_step_this_model = True 
             if len(self.models_set_up) > 0:
                 existing_model = next(iter(self.models_set_up))
                 raise RuntimeError(
@@ -1172,10 +1174,9 @@ class BaseSolver(object):
             )
 
         if isinstance(old_solution, pybamm.EmptySolution):
-            # reset y0 to original initial conditions
-            model.y0 = self.models_set_up[model]["initial conditions"].evaluate(
-                0, inputs=ext_and_inputs
-            )
+            if not first_step_this_model:
+                # reset y0 to original initial conditions
+                self.set_up(model, ext_and_inputs, ics_only=True)
         else:
             if old_solution.all_models[-1] == model:
                 # initialize with old solution

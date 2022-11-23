@@ -150,6 +150,9 @@ class TestCasadiSolver(unittest.TestCase):
             solution = solver.solve(model_disc, t_eval)
         self.assertLess(solution.t[-1], 20)
         # Solve with failure at t=0
+        solver = pybamm.CasadiSolver(
+            dt_max=1e-3, return_solution_if_failed_early=True, max_step_decrease_count=2
+        )
         model.initial_conditions = {var: 0, var2: 1}
         model_disc = disc.process_model(model, inplace=False)
         t_eval = np.linspace(0, 20, 100)
