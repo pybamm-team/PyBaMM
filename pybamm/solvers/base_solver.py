@@ -1152,7 +1152,7 @@ class BaseSolver(object):
 
         first_step_this_model = False
         if model not in self.models_set_up:
-            first_step_this_model = True 
+            first_step_this_model = True
             if len(self.models_set_up) > 0:
                 existing_model = next(iter(self.models_set_up))
                 raise RuntimeError(
