@@ -104,14 +104,6 @@ class BaseSolver(object):
         """
         inputs = inputs or {}
 
-        if len(self.models_set_up) > 0:
-            existing_model = next(iter(self.models_set_up))
-            raise RuntimeError(
-                'This solver has already been initialised for model '
-                f'"{existing_model.name}". Please create a separate '
-                'solver for this model'
-            )
-
         if ics_only:
             pybamm.logger.info("Start solver set-up, initial_conditions only")
         else:
@@ -792,6 +784,13 @@ class BaseSolver(object):
         # Set up (if not done already)
         timer = pybamm.Timer()
         if model not in self.models_set_up:
+            if len(self.models_set_up) > 0:
+                existing_model = next(iter(self.models_set_up))
+                raise RuntimeError(
+                    'This solver has already been initialised for model '
+                    f'"{existing_model.name}". Please create a separate '
+                    'solver for this model'
+                )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
             # not depend on input parameters. Thefore only `ext_and_inputs[0]`
@@ -1149,29 +1148,35 @@ class BaseSolver(object):
         # Set up external variables and inputs
         ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
 
+        t = old_solution.t[-1]
+
+        if model not in self.models_set_up:
+            if len(self.models_set_up) > 0:
+                existing_model = next(iter(self.models_set_up))
+                raise RuntimeError(
+                    'This solver has already been initialised for model '
+                    f'"{existing_model.name}". Please create a separate '
+                    'solver for this model'
+                )
+            self.set_up(model, ext_and_inputs)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+
         if (
             isinstance(old_solution, pybamm.EmptySolution)
             and old_solution.termination is None
         ):
-            # Run set up on first step
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
 
-            self.set_up(model, ext_and_inputs)
-            self.models_set_up.update(
-                {model: {"initial conditions": model.concatenated_initial_conditions}}
+        if isinstance(old_solution, pybamm.EmptySolution):
+            # reset y0 to original initial conditions
+            model.y0 = self.models_set_up[model]["initial conditions"].evaluate(
+                0, inputs=ext_and_inputs
             )
-        elif model not in self.models_set_up:
-            # Run set up if the model has changed
-
-            self.set_up(model, ext_and_inputs)
-            self.models_set_up.update(
-                {model: {"initial conditions": model.concatenated_initial_conditions}}
-            )
-        t = old_solution.t[-1]
-
-        if not isinstance(old_solution, pybamm.EmptySolution):
+        else:
             if old_solution.all_models[-1] == model:
                 # initialize with old solution
                 model.y0 = old_solution.all_ys[-1][:, -1]
@@ -1182,6 +1187,7 @@ class BaseSolver(object):
                 model.y0 = concatenated_initial_conditions.evaluate(
                     0, inputs=ext_and_inputs
                 )
+
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
