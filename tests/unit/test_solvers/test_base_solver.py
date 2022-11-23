@@ -345,7 +345,7 @@ class TestBaseSolver(unittest.TestCase):
 
         solver = pybamm.ScipySolver()
         solver.solve(model, t_eval=[0, 1])
-        with self.assertRaisesRegex(RuntimeError, 'already been initialised'):
+        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
             solver.solve(model2, t_eval=[0, 1])
 
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")

@@ -181,7 +181,8 @@ class TestSimulationExperiment(unittest.TestCase):
                     "Hold at 4.1 V until C/2",
                     "Discharge at 2 W for 1 hour",
                 ),
-            ] * 2,
+            ]
+            * 2,
         )
 
         solutions = []
