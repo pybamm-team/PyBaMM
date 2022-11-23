@@ -787,9 +787,9 @@ class BaseSolver(object):
             if len(self.models_set_up) > 0:
                 existing_model = next(iter(self.models_set_up))
                 raise RuntimeError(
-                    'This solver has already been initialised for model '
+                    "This solver has already been initialised for model "
                     f'"{existing_model.name}". Please create a separate '
-                    'solver for this model'
+                    "solver for this model"
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
@@ -1154,9 +1154,9 @@ class BaseSolver(object):
             if len(self.models_set_up) > 0:
                 existing_model = next(iter(self.models_set_up))
                 raise RuntimeError(
-                    'This solver has already been initialised for model '
+                    "This solver has already been initialised for model "
                     f'"{existing_model.name}". Please create a separate '
-                    'solver for this model'
+                    "solver for this model"
                 )
             self.set_up(model, ext_and_inputs)
             self.models_set_up.update(
