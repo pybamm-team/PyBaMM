@@ -1,5 +1,7 @@
 import pybamm
 
+from .ecm_model_options import NaturalNumberOption, OperatingModes
+
 
 class Thevenin(pybamm.BaseModel):
     """
@@ -85,34 +87,9 @@ class Thevenin(pybamm.BaseModel):
 
     def set_options(self, extra_options=None):
 
-        class NaturalNumberOption():
-            def __init__(self, defualt_value):
-                self.value = defualt_value
-
-            def __contains__(self, value):
-                is_an_integer = isinstance(value, int)
-                is_non_negative = value >= 0 
-                return is_an_integer and is_non_negative
-
-            def __getitem__(self, value):
-                return self.value
-            
-            def __repr__(self):
-                return "natural numbers (e.g. 0, 1, 2, 3, ...)"
-
         possible_options = {
             "calculate discharge energy": ["false", "true"],
-            "operating mode": [
-                "current",
-                "voltage",
-                "power",
-                "differential power",
-                "explicit power",
-                "resistance",
-                "differential resistance",
-                "explicit resistance",
-                "CCCV",
-            ],
+            "operating mode": OperatingModes("current"),
             "number of rc elements": NaturalNumberOption(1),
             "external submodels": [[]],
         }
@@ -134,7 +111,7 @@ class Thevenin(pybamm.BaseModel):
                     )
                 )
 
-        for opt, value in options.items(): 
+        for opt, value in options.items():
             if value not in possible_options[opt]:
                 raise pybamm.OptionError(
                     "Option '{}' must be one of {}. Got '{}' instead.".format(
