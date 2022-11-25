@@ -36,6 +36,13 @@ class TestInterpolant(unittest.TestCase):
                 (np.ones(12), np.ones(10)), np.ones((10, 12)), pybamm.Symbol("a")
             )
 
+        with self.assertRaisesRegex(
+            ValueError, "len\\(x\\) should equal len\\(children\\)"
+        ):
+            pybamm.Interpolant(
+                (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
+            )
+
     def test_warnings(self):
 
         with self.assertWarnsRegex(Warning, "cubic spline"):
