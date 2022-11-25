@@ -103,8 +103,14 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     # surface area
     pybamm_dict["Cell cooling surface area [m2]"] = pybamm_dict[
-        "Cell external surface area [m2]"
+        "External surface area [m2]"
     ]
+
+    # volume
+    pybamm_dict["Cell volume [m3]"] = pybamm_dict["Volume [m3]"]
+
+    # reference temperature
+    T_ref = pybamm_dict["Reference temperature [K]"]
 
     # lumped parameters
     for name in [
@@ -139,10 +145,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
-
     # TODO: allow setting function parameters in a loop over domains
     c_e = pybamm_dict["Typical electrolyte concentration [mol.m-3]"]
-    T_ref = pybamm_dict["Reference temperature [K]"]
     F = 96485
 
     # negative electrode
@@ -202,9 +206,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # diffusivity
-
     # TODO: allow setting function parameters in a loop over domains
-    T_ref = pybamm_dict["Reference temperature [K]"]
 
     # negative electrode
     E_a = pybamm_dict.get(
@@ -274,7 +276,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     # conductivity
     for domain in [electrolyte]:
-        T_ref = pybamm_dict["Reference temperature [K]"]
         E_a = pybamm_dict.get(
             domain.pre_name + "conductivity activation energy [J.mol-1]", 0.0
         )
