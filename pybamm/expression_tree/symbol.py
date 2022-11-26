@@ -8,6 +8,7 @@ import numpy as np
 import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
+from functools import lru_cache, cached_property
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
@@ -827,6 +828,7 @@ class Symbol:
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()
 
+    @lru_cache
     def evaluates_on_edges(self, dimension):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
@@ -845,12 +847,9 @@ class Symbol:
             Whether the symbol evaluates on edges (in the finite volume discretisation
             sense)
         """
-        try:
-            return self._saved_evaluates_on_edges[dimension]
-        except KeyError:
-            eval_on_edges = self._evaluates_on_edges(dimension)
-            self._saved_evaluates_on_edges[dimension] = eval_on_edges
-            return eval_on_edges
+        eval_on_edges = self._evaluates_on_edges(dimension)
+        self._saved_evaluates_on_edges[dimension] = eval_on_edges
+        return eval_on_edges
 
     def _evaluates_on_edges(self, dimension):
         # Default behaviour: return False
@@ -894,48 +893,39 @@ class Symbol:
         obj._print_name = self.print_name
         return obj
 
-    @property
+    @cached_property
     def size(self):
         """
         Size of an object, found by evaluating it with appropriate t and y
         """
-        try:
-            return self._saved_size
-        except AttributeError:
-            self._saved_size = np.prod(self.shape)
-            return self._saved_size
+        return np.prod(self.shape)
 
-    @property
+    @cached_property
     def shape(self):
         """
         Shape of an object, found by evaluating it with appropriate t and y.
         """
+        # Default behaviour is to try to evaluate the object directly
+        # Try with some large y, to avoid having to unpack (slow)
         try:
-            return self._saved_shape
-        except AttributeError:
-            # Default behaviour is to try to evaluate the object directly
-            # Try with some large y, to avoid having to unpack (slow)
-            try:
-                y = np.nan * np.ones((1000, 1))
-                evaluated_self = self.evaluate(0, y, y, inputs="shape test")
-            # If that fails, fall back to calculating how big y should really be
-            except ValueError:
-                unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
-                state_vectors_in_node = unpacker.unpack_symbol(self)
-                min_y_size = max(
-                    max(len(x._evaluation_array) for x in state_vectors_in_node), 1
-                )
-                # Pick a y that won't cause RuntimeWarnings
-                y = np.nan * np.ones((min_y_size, 1))
-                evaluated_self = self.evaluate(0, y, y, inputs="shape test")
+            y = np.nan * np.ones((1000, 1))
+            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
+        # If that fails, fall back to calculating how big y should really be
+        except ValueError:
+            unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
+            state_vectors_in_node = unpacker.unpack_symbol(self)
+            min_y_size = max(
+                max(len(x._evaluation_array) for x in state_vectors_in_node), 1
+            )
+            # Pick a y that won't cause RuntimeWarnings
+            y = np.nan * np.ones((min_y_size, 1))
+            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
-            # Return shape of evaluated object
-            if isinstance(evaluated_self, numbers.Number):
-                self._saved_shape = ()
-            else:
-                self._saved_shape = evaluated_self.shape
-
-        return self._saved_shape
+        # Return shape of evaluated object
+        if isinstance(evaluated_self, numbers.Number):
+            return ()
+        else:
+            return evaluated_self.shape
 
     @property
     def size_for_testing(self):
