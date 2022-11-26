@@ -1106,6 +1106,13 @@ class BaseModel:
         # Set y slices
         if disc.y_slices == {}:
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
+            for variable in variables:
+                variable.bounds = tuple(
+                    [
+                        parameter_values.process_symbol(bound)
+                        for bound in variable.bounds
+                    ]
+                )
             disc.set_variable_slices(variables)
 
         # Set boundary conditions (also requires setting parameter values)

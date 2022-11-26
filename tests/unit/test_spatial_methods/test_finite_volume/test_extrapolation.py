@@ -268,7 +268,9 @@ class TestExtrapolation(unittest.TestCase):
 
         # check linear variable extrapolates correctly
         linear_y = macro_submesh.nodes
-        self.assertEqual(extrap_left_disc.evaluate(None, linear_y), 0)
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
         np.testing.assert_array_almost_equal(
             extrap_right_disc.evaluate(None, linear_y), 3
         )
@@ -280,12 +282,12 @@ class TestExtrapolation(unittest.TestCase):
         extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
 
         # check constant extrapolates to constant
-        self.assertEqual(extrap_flux_left_disc.evaluate(None, constant_y), 0)
-        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+        np.testing.assert_allclose(extrap_flux_left_disc.evaluate(y=constant_y), 0)
+        np.testing.assert_allclose(extrap_flux_right_disc.evaluate(y=constant_y), 0)
 
         # check linear variable extrapolates correctly
-        self.assertEqual(extrap_flux_left_disc.evaluate(None, linear_y), 2)
-        self.assertEqual(extrap_flux_right_disc.evaluate(None, linear_y), -1)
+        np.testing.assert_allclose(extrap_flux_left_disc.evaluate(y=linear_y), 2)
+        np.testing.assert_allclose(extrap_flux_right_disc.evaluate(y=linear_y), -1)
 
         # Microscale
         # create variable

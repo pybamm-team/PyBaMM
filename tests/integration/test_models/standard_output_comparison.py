@@ -98,10 +98,12 @@ class AveragesComparison(BaseOutputComparison):
         self.compare("X-averaged open circuit voltage [V]")
         # Currents
         self.compare(
-            "X-averaged negative electrode volumetric interfacial current density [A.m-3]"
+            "X-averaged negative electrode volumetric "
+            "interfacial current density [A.m-3]"
         )
         self.compare(
-            "X-averaged positive electrode volumetric interfacial current density [A.m-3]"
+            "X-averaged positive electrode volumetric "
+            "interfacial current density [A.m-3]"
         )
         # Concentration
         self.compare("X-averaged electrolyte concentration [mol.m-3]")
