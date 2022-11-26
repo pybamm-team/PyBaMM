@@ -61,6 +61,7 @@ class BaseSolver(object):
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
+        self._on_extrapolation = "warn"
 
     @property
     def root_method(self):
@@ -645,6 +646,7 @@ class BaseSolver(object):
             )
         pybamm.logger.debug("Found consistent states")
 
+        self.check_extrapolation(root_sol, model.events)
         y0 = root_sol.all_ys[0]
         return y0
 
@@ -1195,14 +1197,7 @@ class BaseSolver(object):
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
-        extrapolation = self.check_extrapolation(solution, model.events)
-        if extrapolation:
-            warnings.warn(
-                "While solving {} extrapolation occurred for {}".format(
-                    model.name, extrapolation
-                ),
-                pybamm.SolverWarning,
-            )
+        self.check_extrapolation(solution, model.events)
 
         # Identify the event that caused termination and update the solution to
         # include the event time and state
@@ -1320,31 +1315,41 @@ class BaseSolver(object):
         events : dict
             Dictionary of events
         """
-        extrap_events = {}
+        extrap_events = []
 
-        for event in events:
-            if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                # First set to False, then loop through and change to True if any
-                # events extrapolate
-                extrap_events[event.name] = False
-                # This might be a little bit slow but is ok for now
-                for ts, ys, inputs in zip(
-                    solution.all_ts, solution.all_ys, solution.all_inputs
-                ):
-                    for inner_idx, t in enumerate(ts):
-                        y = ys[:, inner_idx]
-                        if isinstance(y, casadi.DM):
-                            y = y.full()
-                        if (
-                            event.expression.evaluate(t, y, inputs=inputs)
-                            < self.extrap_tol
-                        ):
-                            extrap_events[event.name] = True
+        if any(
+            event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+            for event in events
+        ):
+            last_state = solution.last_state
+            t = last_state.all_ts[0][0]
+            y = last_state.all_ys[0][:, 0]
+            inputs = last_state.all_inputs[0]
 
-        # Add the event dictionaryto the solution object
-        solution.extrap_events = extrap_events
+            if isinstance(y, casadi.DM):
+                y = y.full()
+            for event in events:
+                if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                    if event.expression.evaluate(t, y, inputs=inputs) < self.extrap_tol:
+                        extrap_events.append(event.name)
 
-        return [k for k, v in extrap_events.items() if v]
+            if any(extrap_events):
+                if self._on_extrapolation == "warn":
+                    name = solution.all_models[-1].name
+                    warnings.warn(
+                        f"While solving {name} extrapolation occurred "
+                        f"for {extrap_events}",
+                        pybamm.SolverWarning,
+                    )
+                    # Add the event dictionaryto the solution object
+                    solution.extrap_events = extrap_events
+                elif self._on_extrapolation == "error":
+                    raise pybamm.SolverError(
+                        "Solver failed because the following "
+                        f"interpolation bounds were exceeded: {extrap_events}. "
+                        "You may need to provide additional interpolation points "
+                        "outside these bounds."
+                    )
 
     def _set_up_ext_and_inputs(self, model, external_variables, inputs):
         """Set up external variables and input parameters"""

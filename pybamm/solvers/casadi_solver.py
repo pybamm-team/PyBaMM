@@ -111,6 +111,8 @@ class CasadiSolver(pybamm.BaseSolver):
         self.extrap_tol = extrap_tol
         self.return_solution_if_failed_early = return_solution_if_failed_early
 
+        self._on_extrapolation = "error"
+
         # Decide whether to perturb algebraic initial conditions, True by default for
         # "safe" mode, False by default for other modes
         if perturb_algebraic_initial_conditions is None:
@@ -419,7 +421,6 @@ class CasadiSolver(pybamm.BaseSolver):
         # Return the existing solution if no events have been triggered
         if event_idx_lower is None:
             # Flag "final time" for termination
-            self.check_interpolant_extrapolation(model, coarse_solution)
             coarse_solution.termination = "final time"
             return coarse_solution
 
@@ -479,45 +480,10 @@ class CasadiSolver(pybamm.BaseSolver):
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
         )
-        self.check_interpolant_extrapolation(model, solution)
 
         solution.closest_event_idx = closest_event_idx
 
         return solution
-
-    def check_interpolant_extrapolation(self, model, solution):
-        # Check for interpolant extrapolations
-        if model.interpolant_extrapolation_events_eval:
-            inputs = casadi.vertcat(*[x for x in solution.all_inputs[-1].values()])
-            extrap_event = [
-                event(solution.t[-1], solution.y[:, -1], inputs)
-                for event in model.interpolant_extrapolation_events_eval
-            ]
-
-            if extrap_event:
-                if (np.concatenate(extrap_event) < self.extrap_tol).any():
-                    extrap_event_names = []
-                    for event in model.events:
-                        if (
-                            event.event_type
-                            == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-                            and (
-                                event.expression.evaluate(
-                                    solution.t[-1],
-                                    solution.y[:, -1].full(),
-                                    inputs=inputs,
-                                )
-                                < self.extrap_tol
-                            ).any()
-                        ):
-                            extrap_event_names.append(event.name[12:])
-
-                    raise pybamm.SolverError(
-                        "CasADi solver failed because the following "
-                        "interpolation bounds were exceeded: {}. You may need "
-                        "to provide additional interpolation points outside "
-                        "these bounds.".format(extrap_event_names)
-                    )
 
     def create_integrator(self, model, inputs, t_eval=None, use_event_switch=False):
         """
