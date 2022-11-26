@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 
-class ElectrodeSOHHalfCell(pybamm.BaseModel):
+class _ElectrodeSOHHalfCell(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH for a half-cell, adapted from [2]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.

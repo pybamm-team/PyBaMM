@@ -6,7 +6,7 @@ import numpy as np
 from functools import lru_cache
 
 
-class ElectrodeSOH(pybamm.BaseModel):
+class _ElectrodeSOH(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
@@ -31,178 +31,93 @@ class ElectrodeSOH(pybamm.BaseModel):
     **Extends:** :class:`pybamm.BaseModel`
     """
 
-    def __init__(self, name="ElectrodeSOH model", param=None):
+    def __init__(self, param=None, solve_for=None, known_value="n_Li"):
         pybamm.citations.register("Mohtat2019")
+        name = "ElectrodeSOH model"
         super().__init__(name)
 
         param = param or pybamm.LithiumIonParameters()
+        solve_for = solve_for or ["x_0", "x_100"]
 
+        # Define parameters and input parameters
         Un = param.n.prim.U_dimensional
         Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
-        n_Li = pybamm.InputParameter("n_Li")
         V_max = pybamm.InputParameter("V_max")
         V_min = pybamm.InputParameter("V_min")
         Cn = pybamm.InputParameter("C_n")
         Cp = pybamm.InputParameter("C_p")
 
-        x_100 = pybamm.Variable("x_100")
-        y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
+        if known_value == "n_Li":
+            n_Li = pybamm.InputParameter("n_Li")
+        elif known_values == "C":
+            C = pybamm.InputParameter("C")
 
-        x_0 = pybamm.Variable("x_0")
-        C = Cn * (x_100 - x_0)
-        y_0 = y_100 + C / Cp
-
-        Un_0 = Un(x_0, T_ref)
-        Up_0 = Up(y_0, T_ref)
+        # Define variables for 100% state of charge
+        if "x_100" in solve_for:
+            x_100 = pybamm.Variable("x_100")
+            if known_value == "n_Li":
+                y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
+            elif known_value == "C":
+                y_100 = pybamm.Variable("y_100")
+        else:
+            x_100 = pybamm.InputParameter("x_100")
+            y_100 = pybamm.InputParameter("y_100")
         Un_100 = Un(x_100, T_ref)
         Up_100 = Up(y_100, T_ref)
 
-        self.algebraic = {x_100: Up_100 - Un_100 - V_max, x_0: Up_0 - Un_0 - V_min}
+        # Define equations for 100% state of charge
+        if "x_100" in solve_for:
+            self.algebraic[x_100] = Up_100 - Un_100 - V_max
+            self.initial_conditions[x_100] = pybamm.Scalar(0.9)
 
-        self.initial_conditions = {x_0: pybamm.Scalar(0.1), x_100: pybamm.Scalar(0.9)}
-
+        # These variables are defined in all cases
         self.variables = {
-            "C": C,
-            "Capacity [A.h]": C,
             "x_100": x_100,
             "y_100": y_100,
-            "x_0": x_0,
-            "y_0": y_0,
             "Un(x_100)": Un_100,
             "Up(y_100)": Up_100,
-            "Un(x_0)": Un_0,
-            "Up(y_0)": Up_0,
-            "Up(y_0) - Un(x_0)": Up_0 - Un_0,
             "Up(y_100) - Un(x_100)": Up_100 - Un_100,
             "n_Li_100": 3600 / param.F * (y_100 * Cp + x_100 * Cn),
-            "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
             "n_Li": n_Li,
             "C_n": Cn,
             "C_p": Cp,
-            "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
-            "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
         }
 
-    @property
-    def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
+        # Define variables and equations for 0% state of charge
+        if "x_0" in solve_for:
+            if known_value == "n_Li":
+                x_0 = pybamm.Variable("x_0")
+                C = Cn * (x_100 - x_0)
+            elif known_value == "C":
+                x_0 = x_100 - C / Cn
+                n_Li = 3600 / param.F * (y_100 * Cp + x_0 * Cn)
+            y_0 = y_100 + C / Cp
+            Un_0 = Un(x_0, T_ref)
+            Up_0 = Up(y_0, T_ref)
+            if known_value == "n_Li":
+                self.algebraic[x_0] = Up_0 - Un_0 - V_min
+                self.initial_conditions[x_0] = pybamm.Scalar(0.1)
+            elif known_value == "C":
+                self.algebraic[C] = Up_0 - Un_0 - V_min
+                self.initial_conditions[C] = param.Q
 
-
-class ElectrodeSOHx100(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH for x_100 and y_100, from [1]_.
-    This model is mainly for internal use, to calculate summary variables in a
-    simulation.
-
-    .. math::
-        n_{Li} = \\frac{3600}{F}(y_{100}C_p + x_{100}C_n),
-    .. math::
-        V_{max} = U_p(y_{100}) - U_n(x_{100}),
-
-    **Extends:** :class:`pybamm.BaseModel`
-    """
-
-    def __init__(self, name="ElectrodeSOHx100 model", param=None):
-        pybamm.citations.register("Mohtat2019")
-        super().__init__(name)
-
-        param = param or pybamm.LithiumIonParameters()
-
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
-        T_ref = param.T_ref
-
-        n_Li = pybamm.InputParameter("n_Li")
-        V_max = pybamm.InputParameter("V_max")
-        Cn = pybamm.InputParameter("C_n")
-        Cp = pybamm.InputParameter("C_p")
-
-        x_100 = pybamm.Variable("x_100")
-        y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
-
-        Un_100 = Un(x_100, T_ref)
-        Up_100 = Up(y_100, T_ref)
-
-        self.algebraic = {x_100: Up_100 - Un_100 - V_max}
-
-        self.initial_conditions = {x_100: pybamm.Scalar(0.9)}
-
-        self.variables = {"x_100": x_100, "y_100": y_100}
-
-    @property
-    def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
-
-
-class ElectrodeSOHx0(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH for x_0 and y_0, from [1]_.
-    This model is mainly for internal use, to calculate summary variables in a
-    simulation.
-
-    .. math::
-        V_{min} = U_p(y_{0}) - U_n(x_{0}),
-    .. math::
-        x_0 = x_{100} - \\frac{C}{C_n},
-    .. math::
-        y_0 = y_{100} + \\frac{C}{C_p}.
-
-    **Extends:** :class:`pybamm.BaseModel`
-    """
-
-    def __init__(self, name="ElectrodeSOHx0 model", param=None):
-        pybamm.citations.register("Mohtat2019")
-        super().__init__(name)
-
-        param = param or pybamm.LithiumIonParameters()
-
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
-        T_ref = param.T_ref
-
-        n_Li = pybamm.InputParameter("n_Li")
-        V_min = pybamm.InputParameter("V_min")
-        Cn = pybamm.InputParameter("C_n")
-        Cp = pybamm.InputParameter("C_p")
-        x_100 = pybamm.InputParameter("x_100")
-        y_100 = pybamm.InputParameter("y_100")
-
-        x_0 = pybamm.Variable("x_0")
-        C = Cn * (x_100 - x_0)
-        y_0 = y_100 + C / Cp
-
-        Un_0 = Un(x_0, T_ref)
-        Up_0 = Up(y_0, T_ref)
-        Un_100 = Un(x_100, T_ref)
-        Up_100 = Up(y_100, T_ref)
-
-        self.algebraic = {x_0: Up_0 - Un_0 - V_min}
-
-        self.initial_conditions = {x_0: pybamm.Scalar(0.1)}
-
-        self.variables = {
-            "C": C,
-            "Capacity [A.h]": C,
-            "x_0": x_0,
-            "y_0": y_0,
-            "Un(x_100)": Un_100,
-            "Up(y_100)": Up_100,
-            "Un(x_0)": Un_0,
-            "Up(y_0)": Up_0,
-            "Up(y_0) - Un(x_0)": Up_0 - Un_0,
-            "Up(y_100) - Un(x_100)": Up_100 - Un_100,
-            "n_Li_100": 3600 / param.F * (y_100 * Cp + x_100 * Cn),
-            "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
-            "n_Li": n_Li,
-            "x_100": x_100,
-            "y_100": y_100,
-            "C_n": Cn,
-            "C_p": Cp,
-            "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
-            "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
-        }
+            # These variables are only defined if x_0 is solved for
+            self.variables.update(
+                {
+                    "C": C,
+                    "Capacity [A.h]": C,
+                    "x_0": x_0,
+                    "y_0": y_0,
+                    "Un(x_0)": Un_0,
+                    "Up(y_0)": Up_0,
+                    "Up(y_0) - Un(x_0)": Up_0 - Un_0,
+                    "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
+                    "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
+                    "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
+                }
+            )
 
     @property
     def default_solver(self):
@@ -211,9 +126,27 @@ class ElectrodeSOHx0(pybamm.BaseModel):
 
 
 class ElectrodeSOHSolver:
-    def __init__(self, parameter_values, param=None):
+    """
+    Class used to check if the electrode SOH model is feasible, and solve it if it is.
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues.Parameters`
+        The parameters of the simulation
+    param : :class:`pybamm.LithiumIonParameters`, optional
+        Specific instance of the symbolic lithium-ion parameter class. If not provided,
+        the default set of symbolic lithium-ion parameters will be used.
+    known_value : str, optional
+        The known value needed to complete the electrode SOH model.
+        Can be "n_Li" (total lithium is known, e.g. from initial concentrations) or
+        "C" (capacity is known, e.g. from nominal capacity). Default is "n_Li".
+
+    """
+
+    def __init__(self, parameter_values, param=None, known_value="n_Li"):
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters()
+        self.known_value = known_value
 
         # Check whether each electrode OCP is a function (False) or data (True)
         OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
@@ -249,14 +182,18 @@ class ElectrodeSOHSolver:
 
     @lru_cache
     def _get_electrode_soh_sims_full(self):
-        full_model = ElectrodeSOH(param=self.param)
+        full_model = _ElectrodeSOH(param=self.param, known_value=self.known_value)
         return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
     @lru_cache
     def _get_electrode_soh_sims_split(self):
-        x100_model = ElectrodeSOHx100(param=self.param)
+        x100_model = _ElectrodeSOH(
+            param=self.param, solve_for=["x_100"], known_value=self.known_value
+        )
         x100_sim = pybamm.Simulation(x100_model, parameter_values=self.parameter_values)
-        x0_model = ElectrodeSOHx0(param=self.param)
+        x0_model = _ElectrodeSOH(
+            param=self.param, solve_for=["x_0"], known_value=self.known_value
+        )
         x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
         return [x100_sim, x0_sim]
 
