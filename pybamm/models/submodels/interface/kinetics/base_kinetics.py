@@ -83,7 +83,8 @@ class BaseKinetics(BaseInterface):
         # Get open-circuit potential variables and reaction overpotential
         if self.options["particle size"] == "distribution":
             ocp = variables[
-                f"{Domain} electrode {reaction_name}open circuit potential distribution"
+                f"{Domain} electrode {reaction_name}"
+                "open circuit potential distribution [V]"
             ]
         else:
             ocp = variables[

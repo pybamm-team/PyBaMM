@@ -466,14 +466,14 @@ class TestSpectralVolume(unittest.TestCase):
         )
 
         # Test divergence of gradient
-        # div(grad(r^2)) = 6 , N_left = 2*0 = 0, N_right = 2 * 2 = 4
+        # div(grad(r^2)) = 6 , N_left = 2*r[0], N_right = 2 * r[-1]
         quadratic_y = submesh.nodes**2
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(4), "Neumann"),
+                "right": (pybamm.Scalar(2 * submesh.edges[-1]), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions
@@ -518,14 +518,15 @@ class TestSpectralVolume(unittest.TestCase):
         np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
 
         # Test divergence of gradient
-        # div(grad r^2) = 6, N_left = 2 * 0 = 0, N_right = 2 * 2 = 4
-        y_squared = np.tile(mesh["negative particle"].nodes ** 2, sec_pts)
+        # div(grad r^2) = 6, N_left = 2 * r[0], N_right = 2 * r[-1]
+        submesh = mesh["negative particle"]
+        y_squared = np.tile(submesh.nodes**2, sec_pts)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(4), "Neumann"),
+                "right": (pybamm.Scalar(2 * submesh.edges[-1]), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions

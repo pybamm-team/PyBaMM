@@ -6,10 +6,13 @@ import pybamm
 pybamm.set_logging_level("INFO")
 # load models
 models = [
-    pybamm.lithium_ion.SPM(),
-    pybamm.lithium_ion.SPMe(),
+    # pybamm.lithium_ion.SPM(),
+    # pybamm.lithium_ion.SPMe(),
     pybamm.lithium_ion.DFN(),
-    pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.DFN({"particle": "uniform profile"}),
+    pybamm.lithium_ion.DFN({"particle": "quadratic profile"}, name="2"),
+    # pybamm.lithium_ion.DFN({"particle": "quartic profile"}, name="4"),
+    # pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations

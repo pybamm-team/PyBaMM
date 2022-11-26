@@ -78,7 +78,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # quantities. Necessary for output variables "Total lithium in
             # negative electrode [mol]", etc, to be calculated correctly
             f_v_dist = variables[
-                f"X-averaged {domain} volume-weighted particle-size distribution"
+                f"X-averaged {domain} volume-weighted particle-size distribution [m-1]"
             ]
             c_s_av = pybamm.Integral(f_v_dist * c_s_av_distribution, R)
 

@@ -252,7 +252,8 @@ class BaseParticle(pybamm.BaseSubModel):
             " standard deviation [m]": sd_v,
             f"{Domain} number-based {phase_name}particle-size"
             " standard deviation [m]": sd_num,
-            # X-averaged distributions
+            # X-averaged sizes and distributions
+            f"X-averaged {domain} {phase_name}particle sizes [m]": pybamm.x_average(R),
             f"X-averaged {domain} area-weighted {phase_name}particle-size "
             "distribution [m-1]": f_a_dist_xav,
             f"X-averaged {domain} volume-weighted {phase_name}particle-size "
@@ -347,6 +348,8 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             f"Average {domain} {phase_name}particle concentration "
             "distribution": c_s_av_distribution / c_scale,
+            f"Average {domain} {phase_name}particle concentration "
+            "distribution [mol.m-3]": c_s_av_distribution,
             f"{Domain} {phase_name}particle concentration "
             "distribution": c_s_distribution / c_scale,
             f"{Domain} {phase_name}particle concentration distribution "
@@ -364,6 +367,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"X-averaged {domain} {phase_name}particle surface concentration "
             "distribution [mol.m-3]": c_s_surf_xav_distribution,
             f"{Domain} {phase_name}particle surface concentration"
+            " distribution": c_s_surf_distribution / c_scale,
+            f"{Domain} {phase_name}particle surface stoichiometry"
             " distribution": c_s_surf_distribution / c_scale,
             f"{Domain} {phase_name}particle surface concentration"
             " distribution [mol.m-3]": c_s_surf_distribution,

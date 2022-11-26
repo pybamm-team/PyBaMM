@@ -92,7 +92,9 @@ class PolynomialProfile(BaseParticle):
             # the volume-weighted distribution since they are volume-based
             # quantities. Necessary for output variables "Total lithium in
             # negative electrode [mol]", etc, to be calculated correctly
-            f_v_dist = variables[f"{Domain} volume-weighted particle-size distribution"]
+            f_v_dist = variables[
+                f"{Domain} volume-weighted particle-size distribution [m-1]"
+            ]
             c_s_rav = pybamm.Integral(f_v_dist * c_s_rav_distribution, R)
 
         if self.name == "uniform profile":
@@ -189,7 +191,7 @@ class PolynomialProfile(BaseParticle):
                 },
                 coord_sys="spherical polar",
             )
-            R = self.phase_param.R
+            R = variables[f"{Domain} particle radius [m]"]
             variables.update(self._get_standard_diffusivity_variables(D_eff))
         else:
             # only uniform concentration implemented, no need to calculate D_eff
@@ -250,6 +252,7 @@ class PolynomialProfile(BaseParticle):
             c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
             D_eff = variables[f"{Domain} particle effective diffusivity [m2.s-1]"]
 
+            # eq 30 of Subramanian2005
             self.rhs.update(
                 {
                     q_s_rav: -30 * pybamm.r_average(D_eff) * q_s_rav / R**2
@@ -283,9 +286,11 @@ class PolynomialProfile(BaseParticle):
             q_s_rav = variables[
                 f"R-averaged {domain} particle concentration gradient [mol.m-4]"
             ]
+            # eq 31 of Subramanian2005
             self.algebraic = {
-                c_s_surf: pybamm.surf(D_eff) * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
-                + j * R / self.param.F
+                c_s_surf: pybamm.surf(D_eff)
+                * (35 / R * (c_s_surf - c_s_rav) - 8 * q_s_rav)
+                + j / self.param.F
             }
 
     def set_initial_conditions(self, variables):
