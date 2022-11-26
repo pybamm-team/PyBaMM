@@ -100,10 +100,7 @@ class Lumped(BaseThermal):
             )
 
         self.rhs = {
-            T_vol_av: (
-                self.param.lambda_eff(T_vol_av) * Q_vol_av
-                + total_cooling_coefficient * (T_vol_av - T_amb)
-            )
+            T_vol_av: (Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb))
             / self.param.rho_c_p_eff(T_vol_av)
         }
 

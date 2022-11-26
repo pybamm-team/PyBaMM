@@ -76,14 +76,14 @@ class BaseOutputComparison(object):
         # Calculate tolerance based on the value of var0
         maxvar0 = np.max(abs(var0(self.t, **spatial_pts)))
         if maxvar0 < 1e-14:
-            decimal = -int(np.log10(tol))
+            rtol = tol
         else:
-            decimal = -int(np.log10(tol * maxvar0))
+            rtol = tol * maxvar0
         # Check outputs are close to each other
         for model_var in model_variables[1:]:
             np.testing.assert_equal(var0.dimensions, model_var.dimensions)
-            np.testing.assert_array_almost_equal(
-                model_var(self.t, **spatial_pts), var0(self.t, **spatial_pts), decimal
+            np.testing.assert_allclose(
+                model_var(self.t, **spatial_pts), var0(self.t, **spatial_pts), rtol=rtol
             )
 
 
@@ -95,12 +95,16 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        self.compare("X-averaged open circuit voltage")
+        self.compare("X-averaged open circuit voltage [V]")
         # Currents
-        self.compare("X-averaged negative electrode interfacial current density")
-        self.compare("X-averaged positive electrode interfacial current density")
+        self.compare(
+            "X-averaged negative electrode volumetric interfacial current density [A.m-3]"
+        )
+        self.compare(
+            "X-averaged positive electrode volumetric interfacial current density [A.m-3]"
+        )
         # Concentration
-        self.compare("X-averaged electrolyte concentration")
+        self.compare("X-averaged electrolyte concentration [mol.m-3]")
         # Porosity
         self.compare("X-averaged negative electrode porosity")
         self.compare("X-averaged separator porosity")
@@ -115,25 +119,25 @@ class VariablesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Concentrations
-        self.compare("Electrolyte concentration")
+        self.compare("Electrolyte concentration [mol.m-3]")
         # self.compare("Reduced cation flux")
         # Potentials
         # Some of these are 'average' but aren't expected to be the same across all
         # models
-        self.compare("X-averaged reaction overpotential")
-        self.compare("X-averaged negative electrode open circuit potential")
-        self.compare("X-averaged positive electrode open circuit potential")
-        self.compare("Terminal voltage")
-        self.compare("X-averaged solid phase ohmic losses")
-        self.compare("Negative electrode reaction overpotential")
-        self.compare("Positive electrode reaction overpotential")
-        self.compare("Negative electrode potential")
-        self.compare("Positive electrode potential")
-        self.compare("Electrolyte potential")
+        self.compare("X-averaged reaction overpotential [V]")
+        self.compare("X-averaged negative electrode open circuit potential [V]")
+        self.compare("X-averaged positive electrode open circuit potential [V]")
+        self.compare("Terminal voltage [V]")
+        self.compare("X-averaged solid phase ohmic losses [V]")
+        self.compare("Negative electrode reaction overpotential [V]")
+        self.compare("Positive electrode reaction overpotential [V]")
+        self.compare("Negative electrode potential [V]")
+        self.compare("Positive electrode potential [V]")
+        self.compare("Electrolyte potential [V]")
         # Currents
-        self.compare("Exchange current density")
-        self.compare("Negative electrode current density")
-        self.compare("Positive electrode current density")
+        self.compare("Exchange current density [A.m-2]")
+        self.compare("Negative electrode current density [A.m-2]")
+        self.compare("Positive electrode current density [A.m-2]")
 
 
 class ParticleConcentrationComparison(BaseOutputComparison):
@@ -141,8 +145,8 @@ class ParticleConcentrationComparison(BaseOutputComparison):
         super().__init__(time, solutions)
 
     def test_all(self):
-        self.compare("Negative particle concentration")
-        self.compare("Positive particle concentration")
+        self.compare("Negative particle concentration [mol.m-3]")
+        self.compare("Positive particle concentration [mol.m-3]")
         self.compare("Negative particle flux")
         self.compare("Positive particle flux")
 

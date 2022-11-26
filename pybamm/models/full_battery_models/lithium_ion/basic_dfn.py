@@ -44,17 +44,14 @@ class BasicDFN(BaseModel):
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
             domain="negative electrode",
-            scale=param.c_e_typ,
         )
         c_e_s = pybamm.Variable(
             "Separator electrolyte concentration [mol.m-3]",
             domain="separator",
-            scale=param.c_e_typ,
         )
         c_e_p = pybamm.Variable(
             "Positive electrolyte concentration [mol.m-3]",
             domain="positive electrode",
-            scale=param.c_e_typ,
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -64,17 +61,14 @@ class BasicDFN(BaseModel):
         phi_e_n = pybamm.Variable(
             "Negative electrolyte potential [V]",
             domain="negative electrode",
-            reference=-param.n.prim.U_init,
         )
         phi_e_s = pybamm.Variable(
             "Separator electrolyte potential [V]",
             domain="separator",
-            reference=-param.n.prim.U_init,
         )
         phi_e_p = pybamm.Variable(
             "Positive electrolyte potential [V]",
             domain="positive electrode",
-            reference=-param.n.prim.U_init,
         )
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -85,7 +79,6 @@ class BasicDFN(BaseModel):
         phi_s_p = pybamm.Variable(
             "Positive electrode potential [V]",
             domain="positive electrode",
-            reference=param.ocv_init,
         )
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
@@ -94,13 +87,11 @@ class BasicDFN(BaseModel):
             "Negative particle concentration [mol.m-3]",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
-            scale=param.n.prim.c_max,
         )
         c_s_p = pybamm.Variable(
             "Positive particle concentration [mol.m-3]",
             domain="positive particle",
             auxiliary_domains={"secondary": "positive electrode"},
-            scale=param.p.prim.c_max,
         )
 
         # Constant temperature

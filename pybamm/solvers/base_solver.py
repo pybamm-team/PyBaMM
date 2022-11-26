@@ -1064,9 +1064,6 @@ class BaseSolver(object):
         save : bool
             Turn on to store the solution of all previous timesteps
 
-
-
-
         Raises
         ------
         :class:`pybamm.ModelError`
