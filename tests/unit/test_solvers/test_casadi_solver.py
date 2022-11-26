@@ -88,10 +88,10 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
-            solution.y.full()[0], np.exp(0.1 * t_eval), decimal=5
+            solution.y[0], np.exp(0.1 * t_eval), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            solution.y.full()[1], np.ones_like(t_eval), decimal=5
+            solution.y[1], np.ones_like(t_eval), decimal=5
         )
 
         # DAE model, errors

@@ -70,7 +70,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         t_eval = np.linspace(0, 1, 100)
         solver.set_up(model)
-        solver._set_initial_conditions(model, {}, True)
+        solver._set_initial_conditions(model, 0, {}, True)
         # check y0
         np.testing.assert_array_equal(model.y0.full().flatten(), [0, 0])
         # check dae solutions
