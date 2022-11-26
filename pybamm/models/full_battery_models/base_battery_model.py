@@ -3,6 +3,7 @@
 #
 
 import pybamm
+from functools import cached_property
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -588,19 +589,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 self._phases[domain] = phases
             return self._phases
 
-    @property
+    @cached_property
     def whole_cell_domains(self):
-        try:
-            return self._whole_cell_domains
-        except AttributeError:
-            if self["working electrode"] == "positive":
-                wcd = ["separator", "positive electrode"]
-            elif self["working electrode"] == "negative":
-                wcd = ["negative electrode", "separator"]
-            elif self["working electrode"] == "both":
-                wcd = ["negative electrode", "separator", "positive electrode"]
-            self._whole_cell_domains = wcd
-            return wcd
+        if self["working electrode"] == "positive":
+            return ["separator", "positive electrode"]
+        elif self["working electrode"] == "negative":
+            return ["negative electrode", "separator"]
+        elif self["working electrode"] == "both":
+            return ["negative electrode", "separator", "positive electrode"]
 
     @property
     def electrode_types(self):
