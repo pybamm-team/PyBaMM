@@ -51,8 +51,9 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # Calculate temperatures in Celsius
         variables_Kelvin = variables.copy()
-        for name, var in variables_Kelvin.items():
-            variables.update({f"{name} [C]": var - 273.15})
+        for name_K, var in variables_Kelvin.items():
+            name_C = name_K.replace("[K]", "[C]")
+            variables.update({name_C: var - 273.15})
 
         return variables
 
