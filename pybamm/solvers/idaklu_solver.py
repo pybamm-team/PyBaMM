@@ -86,7 +86,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
         options=None,
     ):
 

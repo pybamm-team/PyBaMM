@@ -81,7 +81,7 @@ class CasadiSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,
-        extrap_tol=0,
+        extrap_tol=None,
         extra_options_setup=None,
         extra_options_call=None,
         return_solution_if_failed_early=False,
@@ -108,7 +108,6 @@ class CasadiSolver(pybamm.BaseSolver):
 
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
-        self.extrap_tol = extrap_tol
         self.return_solution_if_failed_early = return_solution_if_failed_early
 
         self._on_extrapolation = "error"
