@@ -880,14 +880,7 @@ class BaseSolver(object):
 
         for i, solution in enumerate(solutions):
             # Check if extrapolation occurred
-            extrapolation = self.check_extrapolation(solution, model.events)
-            if extrapolation:
-                warnings.warn(
-                    "While solving {} extrapolation occurred for {}".format(
-                        model.name, extrapolation
-                    ),
-                    pybamm.SolverWarning,
-                )
+            self.check_extrapolation(solution, model.events)
             # Identify the event that caused termination and update the solution to
             # include the event time and state
             solutions[i], termination = self.get_termination_reason(
