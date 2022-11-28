@@ -465,20 +465,15 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_func, pybamm.Interpolant)
         self.assertEqual(processed_func.evaluate(inputs={"a": 3.01}), 6.02)
 
-        # process differentiated function parameter
-        diff_func = func.diff(a)
-        processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3.01}), 2)
-
         # interpolant defined up front
-        interp2 = pybamm.Interpolant(data[:, 0], data[:, 1], a)
-        processed_interp2 = parameter_values.process_symbol(interp2)
-        self.assertEqual(processed_interp2.evaluate(inputs={"a": 3.01}), 6.02)
+        interp = pybamm.Interpolant(data[:, 0], data[:, 1], a, interpolator="cubic")
+        processed_interp = parameter_values.process_symbol(interp)
+        self.assertEqual(processed_interp.evaluate(inputs={"a": 3.01}), 6.02)
 
-        data3 = np.hstack([x, 3 * x])
-        interp3 = pybamm.Interpolant(data3[:, 0], data3[:, 1], a)
-        processed_interp3 = parameter_values.process_symbol(interp3)
-        self.assertEqual(processed_interp3.evaluate(inputs={"a": 3.01}), 9.03)
+        # process differentiated function parameter
+        diff_interp = interp.diff(a)
+        processed_diff_interp = parameter_values.process_symbol(diff_interp)
+        self.assertEqual(processed_diff_interp.evaluate(inputs={"a": 3.01}), 2)
 
     def test_process_interpolant_2d(self):
 
@@ -573,15 +568,6 @@ class TestParameterValues(unittest.TestCase):
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
             processed_func.evaluate(), processed_interp.evaluate(), decimal=3
-        )
-
-        # process differentiated function parameter
-        diff_func = func.diff(a)
-        diff_interp = interp.diff(a)
-        processed_diff_func = parameter_values.process_symbol(diff_func)
-        processed_diff_interp = parameter_values.process_symbol(diff_interp)
-        np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
         )
 
     def test_interpolant_2d_from_json(self):

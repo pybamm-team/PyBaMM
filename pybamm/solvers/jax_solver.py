@@ -55,7 +55,7 @@ class JaxSolver(pybamm.BaseSolver):
         root_method=None,
         rtol=1e-6,
         atol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
         extra_options=None,
     ):
         if not pybamm.have_jax():
