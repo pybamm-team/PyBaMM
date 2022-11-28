@@ -2,11 +2,10 @@
 
 ## Features
 
-- Equivalent circuit models ([#2478](https://github.com/pybamm-team/PyBaMM/pull/2478)) 
+- Equivalent circuit models ([#2478](https://github.com/pybamm-team/PyBaMM/pull/2478))
 - Added `scale` and `reference` attributes to `Variable` objects, which can be use to make the ODE/DAE solver better conditioned ([#2440](https://github.com/pybamm-team/PyBaMM/pull/2440))
 - SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
 - New Idaklu solver options for jacobian type and linear solver, support Sundials v6 ([#2444](https://github.com/pybamm-team/PyBaMM/pull/2444))
-
 
 ## Bug fixes
 
