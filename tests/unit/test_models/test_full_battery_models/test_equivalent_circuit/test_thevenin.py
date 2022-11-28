@@ -98,6 +98,16 @@ class TestThevenin(unittest.TestCase):
         ):
             pybamm.equivalent_circuit.Thevenin(options=options)
 
+    def test_get_default_parameters(self):
+        model = pybamm.equivalent_circuit.Thevenin()
+        values = model.default_parameter_values
+        self.assertIn("Initial SoC", list(values.keys()))
+
+    def test_get_default_quick_plot_variables(self):
+        model = pybamm.equivalent_circuit.Thevenin()
+        variables = model.default_quick_plot_variables
+        self.assertIn("Current [A]", variables)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
