@@ -84,6 +84,20 @@ class TestThevenin(unittest.TestCase):
         model = pybamm.equivalent_circuit.Thevenin(options=options)
         model.check_well_posedness()
 
+    def test_raise_option_error(self):
+        options = {"not an option": "something"}
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "Option 'not an option' not recognised"
+        ):
+            pybamm.equivalent_circuit.Thevenin(options=options)
+
+    def test_not_a_valid_option(self):
+        options = {"operating mode": "not a valid option"}
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "Option 'operating mode' must be one of"
+        ):
+            pybamm.equivalent_circuit.Thevenin(options=options)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -39,8 +39,6 @@ class Thevenin(pybamm.BaseModel):
                     current such that voltage/power/resistance is correct
                 - "differential power"/"differential resistance" : solve a \
                     differential equation for the power or resistance
-                - "explicit power"/"explicit resistance" : current is defined in terms \
-                    of the voltage such that power/resistance is correct
                 - "CCCV": a special implementation of the common constant-current \
                     constant-voltage charging protocol, via an ODE for the current
                 - callable : if a callable is given as this option, the function \
@@ -151,10 +149,6 @@ class Thevenin(pybamm.BaseModel):
             model = pybamm.external_circuit.PowerFunctionControl(
                 self.param, self.options, "differential without max"
             )
-        elif self.options["operating mode"] == "explicit power":
-            model = pybamm.external_circuit.ExplicitPowerControl(
-                self.param, self.options
-            )
         elif self.options["operating mode"] == "resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
                 self.param, self.options, "algebraic"
@@ -162,10 +156,6 @@ class Thevenin(pybamm.BaseModel):
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
                 self.param, self.options, "differential without max"
-            )
-        elif self.options["operating mode"] == "explicit resistance":
-            model = pybamm.external_circuit.ExplicitResistanceControl(
-                self.param, self.options
             )
         elif self.options["operating mode"] == "CCCV":
             model = pybamm.external_circuit.CCCVFunctionControl(
