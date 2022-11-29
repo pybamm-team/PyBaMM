@@ -835,10 +835,7 @@ class BaseModel:
 
         vars_in_keys = set()
 
-        model_keys = (
-            list(self.rhs.keys())
-            + list(self.algebraic.keys())
-        )
+        model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
 
         for var in model_keys:
             if isinstance(var, pybamm.Variable):

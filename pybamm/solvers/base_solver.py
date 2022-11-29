@@ -750,8 +750,7 @@ class BaseSolver(object):
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
         model_inputs_list = [
-            self._set_up_model_inputs(model, inputs)
-            for inputs in inputs_list
+            self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
         # Cannot use multiprocessing with model in "jax" format
