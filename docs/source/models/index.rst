@@ -14,4 +14,5 @@ to see how these models can be solved, and compared, using PyBaMM.
   base_models/index
   lithium_ion/index
   lead_acid/index
+  equivalent_circuit/index
   submodels/index
