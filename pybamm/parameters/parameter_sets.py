@@ -1,5 +1,5 @@
 import warnings
-import pkg_resources
+import entrypoints
 import textwrap
 from collections.abc import Mapping
 
@@ -36,7 +36,7 @@ class ParameterSets(Mapping):
     def __init__(self):
         # Dict of entry points for parameter sets, lazily load entry points as
         self.__all_parameter_sets = dict()
-        for entry_point in pkg_resources.iter_entry_points("pybamm_parameter_sets"):
+        for entry_point in entrypoints.get_group_all("pybamm_parameter_sets"):
             self.__all_parameter_sets[entry_point.name] = entry_point
 
     def __new__(cls):
@@ -55,7 +55,7 @@ class ParameterSets(Mapping):
         if key not in self.__all_parameter_sets:
             raise KeyError(f"Unknown parameter set: {key}")
         ps = self.__all_parameter_sets[key]
-        if isinstance(ps, pkg_resources.EntryPoint):
+        if isinstance(ps, entrypoints.EntryPoint):
             ps = self.__all_parameter_sets[key] = ps.load()
         return ps
 
