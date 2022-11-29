@@ -80,4 +80,4 @@ class Full(BaseElectrolyteConductivity):
 
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential [V]"]
-        self.initial_conditions = {phi_e: 0}
+        self.initial_conditions = {phi_e: -self.param.n.prim.U_init}
