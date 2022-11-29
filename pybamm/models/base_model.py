@@ -851,7 +851,6 @@ class BaseModel:
                     No key set for variable '{}'. Make sure it is included in either
                     model.rhs or model.algebraic, in an unmodified form
                     (e.g. not Broadcasted)
-                    
                     """.format(
                         var
                     )
