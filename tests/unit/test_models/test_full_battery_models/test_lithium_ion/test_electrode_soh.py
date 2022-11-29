@@ -17,17 +17,17 @@ class TestElectrodeSOH(unittest.TestCase):
         Vmax = 4.2
         Cn = parameter_values.evaluate(param.n.cap_init)
         Cp = parameter_values.evaluate(param.p.cap_init)
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+        C_Li = parameter_values.evaluate(param.C_Li_particles_init)
 
-        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
+        inputs = {"V_max": Vmax, "V_min": Vmin, "C_Li": C_Li, "C_n": Cn, "C_p": Cp}
 
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
 
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
-        self.assertAlmostEqual(sol["n_Li_100"].data[0], n_Li, places=5)
-        self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li, places=5)
+        self.assertAlmostEqual(sol["C_Li_100"].data[0], C_Li, places=5)
+        self.assertAlmostEqual(sol["C_Li_0"].data[0], C_Li, places=5)
 
         # Solve with split esoh and check outputs
         ics = esoh_solver._set_up_solve(inputs)
@@ -46,12 +46,13 @@ class TestElectrodeSOH(unittest.TestCase):
         Vmax = 4.2
         Cn = parameter_values.evaluate(param.n.cap_init)
         Cp = parameter_values.evaluate(param.p.cap_init)
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init) * 10
+        C_Li = Cn + Cp - 0.01
 
-        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
+        inputs = {"V_max": Vmax, "V_min": Vmin, "C_Li": C_Li, "C_n": Cn, "C_p": Cp}
 
         # Solve the model and check outputs
-        with self.assertRaisesRegex(ValueError, "should be between 0 and 1"):
+        esoh_solver.solve(inputs)
+        with self.assertRaisesRegex(ValueError, "0 < x0_min < x100_max < 1"):
             esoh_solver.solve(inputs)
 
 
@@ -83,11 +84,11 @@ class TestSetInitialSOC(unittest.TestCase):
         V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
         C_n = parameter_values.evaluate(param.n.cap_init)
         C_p = parameter_values.evaluate(param.p.cap_init)
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+        C_Li = parameter_values.evaluate(param.C_Li_particles_init)
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values)
 
-        inputs = {"V_min": V_min, "V_max": V_max, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        inputs = {"V_min": V_min, "V_max": V_max, "C_n": C_n, "C_p": C_p, "C_Li": C_Li}
 
         # Solve the model and check outputs
         esoh_sol = esoh_solver.solve(inputs)
@@ -111,12 +112,12 @@ class TestSetInitialSOC(unittest.TestCase):
 
         C_n = parameter_values.evaluate(param.n.cap_init)
         C_p = parameter_values.evaluate(param.p.cap_init)
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+        C_Li = parameter_values.evaluate(param.C_Li_particles_init)
 
-        inputs = {"V_min": 0, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        inputs = {"V_min": 0, "V_max": 6, "C_n": C_n, "C_p": C_p, "C_Li": C_Li}
         with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
             esoh_solver._check_esoh_feasible(inputs)
-        inputs = {"V_min": 3, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        inputs = {"V_min": 3, "V_max": 6, "C_n": C_n, "C_p": C_p, "C_Li": C_Li}
         with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
             esoh_solver._check_esoh_feasible(inputs)
 

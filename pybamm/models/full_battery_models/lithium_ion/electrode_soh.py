@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 from functools import lru_cache
+import warnings
 
 
 class _ElectrodeSOH(pybamm.BaseModel):
@@ -12,7 +13,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
     simulation.
 
     .. math::
-        n_{Li} = \\frac{3600}{F}(y_{100}C_p + x_{100}C_n),
+        C_{Li} = y_{100}C_p + x_{100}C_n,
     .. math::
         V_{max} = U_p(y_{100}) - U_n(x_{100}),
     .. math::
@@ -31,7 +32,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
     **Extends:** :class:`pybamm.BaseModel`
     """
 
-    def __init__(self, param=None, solve_for=None, known_value="n_Li"):
+    def __init__(self, param=None, solve_for=None, known_value="C_Li"):
         pybamm.citations.register("Mohtat2019")
         name = "ElectrodeSOH model"
         super().__init__(name)
@@ -49,18 +50,19 @@ class _ElectrodeSOH(pybamm.BaseModel):
         Cn = pybamm.InputParameter("C_n")
         Cp = pybamm.InputParameter("C_p")
 
-        if known_value == "n_Li":
-            n_Li = pybamm.InputParameter("n_Li")
-        elif known_values == "C":
+        if known_value == "C_Li":
+            C_Li = pybamm.InputParameter("C_Li")
+        elif known_value == "C":
             C = pybamm.InputParameter("C")
 
         # Define variables for 100% state of charge
         if "x_100" in solve_for:
             x_100 = pybamm.Variable("x_100")
-            if known_value == "n_Li":
-                y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
+            if known_value == "C_Li":
+                y_100 = (C_Li - x_100 * Cn) / Cp
             elif known_value == "C":
                 y_100 = pybamm.Variable("y_100")
+                C_Li = y_100 * Cp + x_100 * Cn
         else:
             x_100 = pybamm.InputParameter("x_100")
             y_100 = pybamm.InputParameter("y_100")
@@ -79,29 +81,33 @@ class _ElectrodeSOH(pybamm.BaseModel):
             "Un(x_100)": Un_100,
             "Up(y_100)": Up_100,
             "Up(y_100) - Un(x_100)": Up_100 - Un_100,
-            "n_Li_100": 3600 / param.F * (y_100 * Cp + x_100 * Cn),
-            "n_Li": n_Li,
+            "C_Li": C_Li,
+            "n_Li": C_Li * 3600 / param.F,
             "C_n": Cn,
             "C_p": Cp,
         }
 
         # Define variables and equations for 0% state of charge
         if "x_0" in solve_for:
-            if known_value == "n_Li":
+            if known_value == "C_Li":
                 x_0 = pybamm.Variable("x_0")
                 C = Cn * (x_100 - x_0)
             elif known_value == "C":
                 x_0 = x_100 - C / Cn
-                n_Li = 3600 / param.F * (y_100 * Cp + x_0 * Cn)
+                C_Li = y_100 * Cp + x_0 * Cn
             y_0 = y_100 + C / Cp
             Un_0 = Un(x_0, T_ref)
             Up_0 = Up(y_0, T_ref)
-            if known_value == "n_Li":
-                self.algebraic[x_0] = Up_0 - Un_0 - V_min
-                self.initial_conditions[x_0] = pybamm.Scalar(0.1)
+            if known_value == "C_Li":
+                # the variable we are solving for is x0, since y_100 is calculated
+                # based on C_Li
+                var = x_0
             elif known_value == "C":
-                self.algebraic[C] = Up_0 - Un_0 - V_min
-                self.initial_conditions[C] = param.Q
+                # the variable we are solving for is y_100, since x_0 is calculated
+                # based on C
+                var = y_100
+            self.algebraic[var] = Up_0 - Un_0 - V_min
+            self.initial_conditions[var] = pybamm.Scalar(0.1)
 
             # These variables are only defined if x_0 is solved for
             self.variables.update(
@@ -113,9 +119,12 @@ class _ElectrodeSOH(pybamm.BaseModel):
                     "Un(x_0)": Un_0,
                     "Up(y_0)": Up_0,
                     "Up(y_0) - Un(x_0)": Up_0 - Un_0,
-                    "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
+                    "x_100 - x_0": x_100 - x_0,
+                    "y_0 - y_100": y_0 - y_100,
                     "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
-                    "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
+                    "C_p * (y_0 - y_100)": Cp * (y_0 - y_100),
+                    "Negative electrode excess capacity ratio": Cn / C,
+                    "Positive electrode excess capacity ratio": Cp / C,
                 }
             )
 
@@ -138,12 +147,12 @@ class ElectrodeSOHSolver:
         the default set of symbolic lithium-ion parameters will be used.
     known_value : str, optional
         The known value needed to complete the electrode SOH model.
-        Can be "n_Li" (total lithium is known, e.g. from initial concentrations) or
-        "C" (capacity is known, e.g. from nominal capacity). Default is "n_Li".
+        Can be "C_Li" (total lithium is known, e.g. from initial concentrations) or
+        "C" (capacity is known, e.g. from nominal capacity). Default is "C_Li".
 
     """
 
-    def __init__(self, parameter_values, param=None, known_value="n_Li"):
+    def __init__(self, parameter_values, param=None, known_value="C_Li"):
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters()
         self.known_value = known_value
@@ -170,15 +179,7 @@ class ElectrodeSOHSolver:
             x100_max = 1 - 1e-6
 
         self.lims_ocp = (x0_min, x100_max, y100_min, y0_max)
-
-        # Parameterize the OCP functions
-        T = parameter_values["Reference temperature [K]"]
-        x = pybamm.InputParameter("x")
-        y = pybamm.InputParameter("y")
-        self.OCV_function = parameter_values.process_symbol(
-            self.param.p.prim.U_dimensional(y, T)
-            - self.param.n.prim.U_dimensional(x, T)
-        )
+        self.OCV_function = None
 
     @lru_cache
     def _get_electrode_soh_sims_full(self):
@@ -198,6 +199,15 @@ class ElectrodeSOHSolver:
         return [x100_sim, x0_sim]
 
     def solve(self, inputs):
+        if "n_Li" in inputs:
+            warnings.warn(
+                "Input 'n_Li' has been replaced by 'C_Li', which is 'n_Li * F / 3600'. "
+                "This will be automatically calculated for now."
+                "C_Li can be calculated from parameters as 'param.C_Li_particles_init'",
+                DeprecationWarning,
+            )
+            n_Li = inputs.pop("n_Li")
+            inputs["C_Li"] = n_Li * self.param.F.value / 3600
         ics = self._set_up_solve(inputs)
         try:
             sol = self._solve_full(inputs, ics)
@@ -215,19 +225,18 @@ class ElectrodeSOHSolver:
 
     def _set_up_solve(self, inputs):
         sim = self._get_electrode_soh_sims_full()
-        x0_min, x100_max, _, _ = self._get_lims(inputs)
-
-        x100_init = x100_max
-        x0_init = x0_min
         if sim.solution is not None:
-            # Update the initial conditions if they are valid
-            x100_init_sol = sim.solution["x_100"].data[0]
-            if x0_min < x100_init_sol < x100_max:
-                x100_init = x100_init_sol
-            x0_init_sol = sim.solution["x_0"].data[0]
-            if x0_min < x0_init_sol < x100_max:
-                x0_init = x0_init_sol
-        return {"x_100": np.array(x100_init), "x_0": np.array(x0_init)}
+            return {
+                var: sim.solution[var].data for var in ["x_100", "x_0", "y_100", "y_0"]
+            }
+        else:
+            x0_init, x100_init, y100_init, y0_init = self._get_lims(inputs)
+            return {
+                "x_100": np.array(x100_init),
+                "x_0": np.array(x0_init),
+                "y_100": np.array(y100_init),
+                "y_0": np.array(y0_init),
+            }
 
     def _solve_full(self, inputs, ics):
         sim = self._get_electrode_soh_sims_full()
@@ -252,26 +261,54 @@ class ElectrodeSOHSolver:
 
     def _get_lims(self, inputs):
         """
-        Get stoichiometry limits based on n_Li, C_n, and C_p
+        Get stoichiometry limits based on C_Li, C_n, and C_p
         """
         Cp = inputs["C_p"]
         Cn = inputs["C_n"]
-        n_Li = inputs["n_Li"]
 
         x0_min, x100_max, y100_min, y0_max = self.lims_ocp
 
-        # Update (tighten) stoich limits based on total lithium content and electrode
-        # capacities
-        F = pybamm.constants.F.value
-        x100_max_from_y100_min = (n_Li * F / 3600 - y100_min * Cp) / Cn
-        x0_min_from_y0_max = (n_Li * F / 3600 - y0_max * Cp) / Cn
-        y100_min_from_x100_max = (n_Li * F / 3600 - x100_max * Cn) / Cp
-        y0_max_from_x0_min = (n_Li * F / 3600 - x0_min * Cn) / Cp
+        if self.known_value == "C_Li":
+            C_Li = inputs["C_Li"]
+            C_Li_min = Cn * x0_min + Cp * y100_min
+            C_Li_max = Cn * x100_max + Cp * y0_max
+            if not C_Li_min <= C_Li <= C_Li_max:
+                raise ValueError(
+                    f"C_Li={C_Li:.4f} Ah is outside the range of possible values. "
+                    f"C_Li_min = {C_Li_min:.4f} Ah, C_Li_max = {C_Li_max:.4f} Ah."
+                )
+            if C_Li > Cp:
+                warnings.warn(f"C_Li={C_Li:.4f} Ah is greater than C_p={Cp:.4f} Ah.")
 
-        x100_max = min(x100_max_from_y100_min, x100_max)
-        x0_min = max(x0_min_from_y0_max, x0_min)
-        y100_min = max(y100_min_from_x100_max, y100_min)
-        y0_max = min(y0_max_from_x0_min, y0_max)
+            # Update (tighten) stoich limits based on total lithium content and electrode
+            # capacities
+            x100_max_from_y100_min = (C_Li - y100_min * Cp) / Cn
+            x0_min_from_y0_max = (C_Li - y0_max * Cp) / Cn
+            y100_min_from_x100_max = (C_Li - x100_max * Cn) / Cp
+            y0_max_from_x0_min = (C_Li - x0_min * Cn) / Cp
+
+            x100_max = min(x100_max_from_y100_min, x100_max)
+            x0_min = max(x0_min_from_y0_max, x0_min)
+            y100_min = max(y100_min_from_x100_max, y100_min)
+            y0_max = min(y0_max_from_x0_min, y0_max)
+        elif self.known_value == "C":
+            C = inputs["C"]
+            C_max = min(Cn * (x100_max - x0_min), Cp * (y0_max - y100_min))
+            if C > C_max:
+                raise ValueError(
+                    f"C={C:.4f} Ah is larger than the maximum possible capacity "
+                    f"C_max={C_max:.4f} Ah."
+                )
+
+        # Check stoich limits are between 0 and 1
+        if not (0 < x0_min < x100_max < 1 and 0 < y100_min < y0_max < 1):
+            raise ValueError(
+                "'0 < x0_min < x100_max < 1' is False for "
+                f"x0_min={x0_min:.4f} and x100_max={x100_max:.4f} "
+                "or '0 < y100_min < y0_max < 1' is False for "
+                f"y100_min={y100_min:.4f} and y0_max={y0_max:.4f}"
+            )
+
         return (x0_min, x100_max, y100_min, y0_max)
 
     def _check_esoh_feasible(self, inputs):
@@ -282,11 +319,15 @@ class ElectrodeSOHSolver:
         Vmax = inputs["V_max"]
         Vmin = inputs["V_min"]
 
-        # Check stoich limits are between 0 and 1
-        for x in ["x0_min", "x100_max", "y100_min", "y0_max"]:
-            xval = eval(x)
-            if not 0 < xval < 1:  # pragma: no cover
-                raise ValueError(f"'{x}' should be between 0 and 1, but is {xval:.4f}")
+        # Parameterize the OCP functions
+        if self.OCV_function is None:
+            T = self.parameter_values["Reference temperature [K]"]
+            x = pybamm.InputParameter("x")
+            y = pybamm.InputParameter("y")
+            self.OCV_function = self.parameter_values.process_symbol(
+                self.param.p.prim.U_dimensional(y, T)
+                - self.param.n.prim.U_dimensional(x, T)
+            )
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
@@ -316,7 +357,7 @@ class ElectrodeSOHSolver:
             )
 
 
-def get_initial_stoichiometries(initial_soc, parameter_values):
+def get_initial_stoichiometries(initial_soc, parameter_values, param=None):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
     state of charge, given voltage limits, open-circuit potentials, etc defined by
@@ -329,26 +370,29 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation. Required for
         calculating appropriate initial stoichiometries.
+    param : :class:`pybamm.LithiumIonParameters`, optional
+        The symbolic parameter set to use for the simulation.
+        If not provided, the default parameter set will be used.
 
     Returns
     -------
     x, y
         The initial stoichiometries that give the desired initial state of charge
     """
-    if initial_soc < 0 or initial_soc > 1:
+    if not 0 <= initial_soc <= 1:
         raise ValueError("Initial SOC should be between 0 and 1")
 
-    param = pybamm.LithiumIonParameters()
+    param = param or pybamm.LithiumIonParameters()
 
     V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
     V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
     C_n = parameter_values.evaluate(param.n.cap_init)
     C_p = parameter_values.evaluate(param.p.cap_init)
-    n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+    C_Li = parameter_values.evaluate(param.C_Li_particles_init)
 
     esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
 
-    inputs = {"V_min": V_min, "V_max": V_max, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+    inputs = {"V_min": V_min, "V_max": V_max, "C_n": C_n, "C_p": C_p, "C_Li": C_Li}
 
     # Solve the model and check outputs
     sol = esoh_solver.solve(inputs)

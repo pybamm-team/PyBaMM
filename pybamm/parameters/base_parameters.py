@@ -93,7 +93,14 @@ class BaseParameters:
 class NullParameters:
     def __getattribute__(self, name):
         "Returns 0 for some parameters that aren't found by __getattribute__"
-        if name in ["epsilon_s", "cap_init", "n_Li_init", "R_typ", "j_scale"]:
+        if name in [
+            "epsilon_s",
+            "cap_init",
+            "n_Li_init",
+            "C_Li_init",
+            "R_typ",
+            "j_scale",
+        ]:
             return pybamm.Scalar(0)
         else:
             return super().__getattribute__(name)
