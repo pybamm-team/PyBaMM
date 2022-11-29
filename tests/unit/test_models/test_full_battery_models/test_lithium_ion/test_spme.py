@@ -11,6 +11,7 @@ class TestSPMe(BaseUnitTestLithiumIon, unittest.TestCase):
         self.model = pybamm.lithium_ion.SPMe
 
     def test_external_variables(self):
+        # To Do: replace external variable with input
         # a concatenation
         model_options = {"external submodels": ["electrolyte diffusion"]}
         model = pybamm.lithium_ion.SPMe(model_options)

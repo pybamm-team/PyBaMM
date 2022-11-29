@@ -654,7 +654,6 @@ class BaseSolver(object):
         self,
         model,
         t_eval=None,
-        external_variables=None,
         inputs=None,
         initial_conditions=None,
         nproc=None,
@@ -671,9 +670,6 @@ class BaseSolver(object):
             initial_conditions
         t_eval : numeric type
             The times (in seconds) at which to compute the solution
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
@@ -753,8 +749,8 @@ class BaseSolver(object):
         # with variable "input_list", which is a list of dictionaries.
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
-        ext_and_inputs_list = [
-            self._set_up_ext_and_inputs(model, external_variables, inputs)
+        model_inputs_list = [
+            self._set_up_model_inputs(model, inputs)
             for inputs in inputs_list
         ]
 
@@ -788,7 +784,7 @@ class BaseSolver(object):
             # not depend on input parameters. Thefore only `ext_and_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
-            self.set_up(model, ext_and_inputs_list[0], t_eval)
+            self.set_up(model, model_inputs_list[0], t_eval)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -804,7 +800,7 @@ class BaseSolver(object):
                 else:
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
-                    self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)
+                    self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
@@ -820,7 +816,7 @@ class BaseSolver(object):
         if len(inputs_list) > 1:
             all_inputs_names = set(
                 itertools.chain.from_iterable(
-                    [ext_and_inputs.keys() for ext_and_inputs in ext_and_inputs_list]
+                    [model_inputs.keys() for model_inputs in model_inputs_list]
                 )
             )
             initial_conditions_node_names = set(
@@ -836,12 +832,12 @@ class BaseSolver(object):
         t_eval_dimensionless = t_eval / model.timescale_eval
 
         self._set_initial_conditions(
-            model, t_eval_dimensionless[0], ext_and_inputs_list[0], update_rhs=True
+            model, t_eval_dimensionless[0], model_inputs_list[0], update_rhs=True
         )
 
         # Check initial conditions don't violate events
         self._check_events_with_initial_conditions(
-            t_eval_dimensionless, model, ext_and_inputs_list[0]
+            t_eval_dimensionless, model, model_inputs_list[0]
         )
 
         # Process discontinuities
@@ -865,12 +861,12 @@ class BaseSolver(object):
                     t_eval_dimensionless[end_index - 1] * model.timescale_eval,
                 )
             )
-            ninputs = len(ext_and_inputs_list)
+            ninputs = len(model_inputs_list)
             if ninputs == 1:
                 new_solution = self._integrate(
                     model,
                     t_eval_dimensionless[start_index:end_index],
-                    ext_and_inputs_list[0],
+                    model_inputs_list[0],
                 )
                 new_solutions = [new_solution]
             else:
@@ -880,7 +876,7 @@ class BaseSolver(object):
                         zip(
                             [model] * ninputs,
                             [t_eval_dimensionless[start_index:end_index]] * ninputs,
-                            ext_and_inputs_list,
+                            model_inputs_list,
                         ),
                     )
                     p.close()
@@ -907,7 +903,7 @@ class BaseSolver(object):
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
+                        model, t_eval_dimensionless[end_index], model_inputs_list[0]
                     )
         solve_time = timer.time()
 
@@ -1067,7 +1063,6 @@ class BaseSolver(object):
         model,
         dt,
         npts=2,
-        external_variables=None,
         inputs=None,
         save=True,
     ):
@@ -1088,9 +1083,6 @@ class BaseSolver(object):
         npts : int, optional
             The number of points at which the solution will be returned during
             the step dt. default is 2 (returns the solution at t0 and t0 + dt).
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
@@ -1133,7 +1125,7 @@ class BaseSolver(object):
         timer = pybamm.Timer()
 
         # Set up external variables and inputs
-        ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
+        model_inputs = self._set_up_model_inputs(model, inputs)
 
         if (
             isinstance(old_solution, pybamm.EmptySolution)
@@ -1144,14 +1136,14 @@ class BaseSolver(object):
                 "Start stepping {} with {}".format(model.name, self.name)
             )
 
-            self.set_up(model, ext_and_inputs)
+            self.set_up(model, model_inputs)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         elif model not in self.models_set_up:
             # Run set up if the model has changed
 
-            self.set_up(model, ext_and_inputs)
+            self.set_up(model, model_inputs)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -1166,19 +1158,19 @@ class BaseSolver(object):
                     old_solution, return_type="ics"
                 )
                 model.y0 = concatenated_initial_conditions.evaluate(
-                    0, inputs=ext_and_inputs
+                    0, inputs=model_inputs
                 )
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(model, t, ext_and_inputs, update_rhs=False)
+        self._set_initial_conditions(model, t, model_inputs, update_rhs=False)
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, ext_and_inputs)
+        self._check_events_with_initial_conditions(t_eval, model, model_inputs)
 
         # Step
         pybamm.logger.verbose(
@@ -1188,7 +1180,7 @@ class BaseSolver(object):
             )
         )
         timer.reset()
-        solution = self._integrate(model, t_eval, ext_and_inputs)
+        solution = self._integrate(model, t_eval, model_inputs)
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
@@ -1346,7 +1338,7 @@ class BaseSolver(object):
                         "outside these bounds."
                     )
 
-    def _set_up_ext_and_inputs(self, model, external_variables, inputs):
+    def _set_up_model_inputs(self, model, inputs):
         """Set up external variables and input parameters"""
         inputs = inputs or {}
 
@@ -1362,14 +1354,11 @@ class BaseSolver(object):
                 raise pybamm.SolverError(f"No value provided for input '{name}'")
         inputs = inputs_in_model
 
-        external_variables = external_variables or {}
-
         ordered_inputs_names = list(inputs.keys())
         ordered_inputs_names.sort()
         ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
 
-        ext_and_inputs = {**external_variables, **ordered_inputs}
-        return ext_and_inputs
+        return ordered_inputs
 
 
 def process(symbol, name, vars_for_processing, use_jacobian=None):

@@ -8,6 +8,7 @@ import numpy as np
 
 class TestExternalCC(unittest.TestCase):
     def test_2p1d(self):
+        # To Do: replace external variable with input
         model_options = {
             "current collector": "potential pair",
             "dimensionality": 2,

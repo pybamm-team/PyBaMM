@@ -904,18 +904,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         for sub in self.options["external submodels"]:
             self.submodels[sub].external = True
 
-        # Set any external variables
-        self.external_variables = []
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting external variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            external_variables = submodel.get_external_variables()
-
-            self.external_variables += external_variables
-
         self._built_fundamental_and_external = True
 
     def build_coupled_variables(self):

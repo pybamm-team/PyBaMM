@@ -7,6 +7,7 @@ import numpy as np
 
 
 class TestExternalThermalModels(unittest.TestCase):
+    # To Do: replace external variable with input
     def test_external_lumped_temperature(self):
         model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
