@@ -87,35 +87,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         alg = model.casadi_algebraic(t_sym, y_sym, inputs)
 
-        # Check interpolant extrapolation
-        if model.interpolant_extrapolation_events_eval:
-            extrap_event = [
-                event(0, y0, inputs)
-                for event in model.interpolant_extrapolation_events_eval
-            ]
-            if extrap_event:
-                if (np.concatenate(extrap_event) < self.extrap_tol).any():
-                    extrap_event_names = []
-                    for event in model.events:
-                        if (
-                            event.event_type
-                            == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-                            and (
-                                event.expression.evaluate(
-                                    0, y0.full(), inputs=inputs_dict
-                                )
-                                < self.extrap_tol
-                            )
-                        ):
-                            extrap_event_names.append(event.name[12:])
-
-                    raise pybamm.SolverError(
-                        "CasADi solver failed because the following interpolation "
-                        "bounds were exceeded at the initial conditions: {}. "
-                        "You may need to provide additional interpolation points "
-                        "outside these bounds.".format(extrap_event_names)
-                    )
-
         # Set constraints vector in the casadi format
         # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
         # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.

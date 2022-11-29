@@ -290,9 +290,11 @@ class ElectrodeSOHSolver:
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
-        V_lower_bound = self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
-        V_upper_bound = self.OCV_function.evaluate(
-            inputs={"x": x100_max, "y": y100_min}
+        V_lower_bound = float(
+            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+        )
+        V_upper_bound = float(
+            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
         )
         if V_lower_bound > Vmin:
             raise (
