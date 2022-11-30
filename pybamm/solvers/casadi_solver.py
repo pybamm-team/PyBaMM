@@ -76,7 +76,7 @@ class CasadiSolver(pybamm.BaseSolver):
         mode="safe",
         rtol=1e-6,
         atol=1e-6,
-        root_method="lm",
+        root_method="casadi",
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,

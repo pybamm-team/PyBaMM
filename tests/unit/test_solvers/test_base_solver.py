@@ -203,7 +203,6 @@ class TestBaseSolver(unittest.TestCase):
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
-                self.events = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -217,6 +216,11 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(
             pybamm.SolverError,
             "Could not find acceptable solution: The iteration is not making",
+        ):
+            solver.calculate_consistent_state(Model())
+        solver = pybamm.BaseSolver(root_method="lm")
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):
             solver.calculate_consistent_state(Model())
         # with casadi

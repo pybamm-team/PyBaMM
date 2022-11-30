@@ -75,7 +75,7 @@ class Full(BaseModel):
             "interfacial current densities [A.m-3]"
         ]
 
-        self.algebraic[phi_s] = pybamm.div(i_s) + sum_a_j
+        self.algebraic[phi_s] = self.param.L_x**2 * (pybamm.div(i_s) + sum_a_j)
 
     def set_boundary_conditions(self, variables):
         Domain = self.domain.capitalize()
