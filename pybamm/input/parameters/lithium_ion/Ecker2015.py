@@ -1,5 +1,4 @@
 import pybamm
-import os
 
 
 def graphite_diffusivity_Ecker2015(sto, T):
