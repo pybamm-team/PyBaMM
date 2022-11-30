@@ -269,7 +269,7 @@ nca_ocp_Kim2011_data = pybamm.parameters.process_1D_data(
 
 def nca_ocp_Kim2011(sto):
     name, (x, y) = nca_ocp_Kim2011_data
-    return pybamm.Interpolant(x, y, sto, name=name, interpolator="cubic")
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
 
 
 # Call dict via a function to avoid errors when editing in place
