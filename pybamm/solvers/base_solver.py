@@ -988,7 +988,7 @@ class BaseSolver(object):
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
             if dtime * (1 - eps) < t_eval[dindex] < dtime * (1 + eps):
-                t_eval[dindex] += eps
+                t_eval[dindex] *= 1 + eps
                 t_eval = np.insert(t_eval, dindex, dtime * (1 - eps))
             else:
                 t_eval = np.insert(

@@ -72,6 +72,11 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver._integrate(model, np.array([0]), {})
+        solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
+        ):
+            solver._integrate(model, np.array([0]), {})
 
         # Model returns Nan
         class NaNModel:
@@ -198,6 +203,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var", domain="negative electrode")
         model = pybamm.BaseModel()
+        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
         model.algebraic = {var: (var - p)}
@@ -237,6 +243,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input_1D_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
+        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         param = pybamm.InputParameter("param")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
@@ -262,6 +269,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input_1D_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
+        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         param = pybamm.InputParameter("param", "negative electrode")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
@@ -320,6 +328,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var", domain="negative electrode")
         model = pybamm.BaseModel()
+        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
         model.algebraic = {var: (var - p)}

@@ -39,7 +39,6 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         i_boundary_cc = pybamm.Variable(
             "Current collector current density [A.m-2]",
             domain="current collector",
-            scale=param.Q / (param.A_cc * param.n_electrodes_parallel),
         )
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))

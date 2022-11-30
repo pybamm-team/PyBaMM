@@ -86,6 +86,12 @@ class TestAlgebraicSolver(unittest.TestCase):
         ):
             solver._integrate(model, np.array([0]))
 
+        solver = pybamm.AlgebraicSolver()
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
+        ):
+            solver._integrate(model, np.array([0]))
+
     def test_with_jacobian(self):
         A = np.array([[4, 3], [1, -1]])
         b = np.array([0, 7])

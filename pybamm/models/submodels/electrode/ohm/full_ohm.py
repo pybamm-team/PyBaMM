@@ -75,6 +75,7 @@ class Full(BaseModel):
             "interfacial current densities [A.m-3]"
         ]
 
+        # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_s] = self.param.L_x**2 * (pybamm.div(i_s) + sum_a_j)
 
     def set_boundary_conditions(self, variables):

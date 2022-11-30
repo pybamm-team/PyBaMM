@@ -76,6 +76,7 @@ class Full(BaseElectrolyteConductivity):
         # Override print_name
         sum_a_j.print_name = "aj"
 
+        # multiply by Lx**2 to improve conditioning
         self.algebraic = {phi_e: self.param.L_x**2 * (pybamm.div(i_e) - sum_a_j)}
 
     def set_initial_conditions(self, variables):
