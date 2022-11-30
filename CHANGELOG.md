@@ -9,6 +9,7 @@
 
 ## Bug fixes
 
+- Switched from `pkg_resources` to `importlib_metadata` for handling entry points ([#2500](https://github.com/pybamm-team/PyBaMM/pull/2500))
 - Fixed some bugs related to processing `FunctionParameter` to `Interpolant` ([#2494](https://github.com/pybamm-team/PyBaMM/pull/2494))
 
 ## Optimizations
