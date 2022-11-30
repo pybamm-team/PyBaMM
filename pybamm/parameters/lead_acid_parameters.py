@@ -163,6 +163,11 @@ class LeadAcidParameters(BaseParameters):
             ),
         )
 
+        # Some scales
+        self.thermal_voltage = self.R * self.T_ref / self.F
+        self.I_typ = self.Q / (self.A_cc * self.n_electrodes_parallel)
+        self.a_j_scale = self.I_typ / self.L_x
+
     def t_plus(self, c_e, T):
         """Rransference number"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e}
