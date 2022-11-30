@@ -2,9 +2,14 @@
 
 ## Features
 
+- Equivalent circuit models ([#2478](https://github.com/pybamm-team/PyBaMM/pull/2478))
 - Added `scale` and `reference` attributes to `Variable` objects, which can be use to make the ODE/DAE solver better conditioned ([#2440](https://github.com/pybamm-team/PyBaMM/pull/2440))
 - SEI reactions can now be asymmetric ([#2425](https://github.com/pybamm-team/PyBaMM/pull/2425))
 - New Idaklu solver options for jacobian type and linear solver, support Sundials v6 ([#2444](https://github.com/pybamm-team/PyBaMM/pull/2444))
+
+## Bug fixes
+
+- Fixed some bugs related to processing `FunctionParameter` to `Interpolant` ([#2494](https://github.com/pybamm-team/PyBaMM/pull/2494))
 
 ## Optimizations
 
@@ -15,6 +20,7 @@
 
 ## Breaking changes
 
+- Interpolants created from parameter data are now "linear" by default (was "cubic") ([#2494](https://github.com/pybamm-team/PyBaMM/pull/2494))
 - Renamed entry point for parameter sets to `pybamm_parameter_sets` ([#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
 - Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
 - Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))

@@ -36,6 +36,29 @@ class TestProcessParameterData(unittest.TestCase):
         self.assertIsInstance(processed[1][0][1], np.ndarray)
         self.assertIsInstance(processed[1][1], np.ndarray)
 
+    def test_process_2D_data_csv(self):
+        name = "data_for_testing_2D"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+        processed = pybamm.parameters.process_2D_data_csv(name, path)
+
+        self.assertEqual(processed[0], name)
+        self.assertIsInstance(processed[1], tuple)
+        self.assertIsInstance(processed[1][0][0], np.ndarray)
+        self.assertIsInstance(processed[1][0][1], np.ndarray)
+        self.assertIsInstance(processed[1][1], np.ndarray)
+
+    def test_process_3D_data_csv(self):
+        name = "data_for_testing_3D"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+        processed = pybamm.parameters.process_3D_data_csv(name, path)
+
+        self.assertEqual(processed[0], name)
+        self.assertIsInstance(processed[1], tuple)
+        self.assertIsInstance(processed[1][0][0], np.ndarray)
+        self.assertIsInstance(processed[1][0][1], np.ndarray)
+        self.assertIsInstance(processed[1][0][2], np.ndarray)
+        self.assertIsInstance(processed[1][1], np.ndarray)
+
     def test_error(self):
         with self.assertRaisesRegex(FileNotFoundError, "Could not find file"):
             pybamm.parameters.process_1D_data("not_a_real_file", "not_a_real_path")
