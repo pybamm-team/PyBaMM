@@ -141,6 +141,8 @@ class LithiumIonParameters(BaseParameters):
 
         # Reference OCP based on initial concentration
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
+        # Thermal voltage
+        self.thermal_voltage = self.R * self.T_ref / self.F
 
         # Dimensionless mechanical parameters
         # time per cycle defaults to 1h
