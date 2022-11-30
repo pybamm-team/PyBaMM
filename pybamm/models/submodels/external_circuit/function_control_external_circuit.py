@@ -37,7 +37,7 @@ class FunctionControl(BaseModel):
         elif self.control == "differential with max":
             i_input = pybamm.FunctionParameter(
                 "CCCV current function [A]", {"Time [s]": pybamm.t}
-            ) / (param.n_electrodes_parallel * param.A_cc)
+            )
             I = pybamm.maximum(i_var, i_input)
 
         # Update derived variables

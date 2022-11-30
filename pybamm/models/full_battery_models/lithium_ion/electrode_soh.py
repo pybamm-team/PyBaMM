@@ -277,19 +277,22 @@ class ElectrodeSOHSolver:
 
     def _set_up_solve(self, inputs):
         sim = self._get_electrode_soh_sims_full()
-        x0_min, x100_max, _, _ = self._get_lims(inputs)
-
-        x100_init = x100_max
-        x0_init = x0_min
         if sim.solution is not None:
-            # Update the initial conditions if they are valid
-            x100_init_sol = sim.solution["x_100"].data[0]
-            if x0_min < x100_init_sol < x100_max:
-                x100_init = x100_init_sol
-            x0_init_sol = sim.solution["x_0"].data[0]
-            if x0_min < x0_init_sol < x100_max:
-                x0_init = x0_init_sol
-        return {"x_100": np.array(x100_init), "x_0": np.array(x0_init)}
+            x100_init = sim.solution["x_100"].data
+            x0_init = sim.solution["x_0"].data
+        else:
+            x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
+            # Check stoich limits are between 0 and 1
+            for x in ["x0_min", "x100_max", "y100_min", "y0_max"]:
+                xval = eval(x)
+                if not 0 < xval < 1:
+                    raise ValueError(
+                        f"'{x}' should be between 0 and 1, but is {xval:.4f}"
+                    )
+            x0_init = np.array(x0_min)
+            x100_init = np.array(x100_max)
+
+        return {"x_100": x100_init, "x_0": x0_init}
 
     def _solve_full(self, inputs, ics):
         sim = self._get_electrode_soh_sims_full()
@@ -343,12 +346,6 @@ class ElectrodeSOHSolver:
         x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
         Vmax = inputs["V_max"]
         Vmin = inputs["V_min"]
-
-        # Check stoich limits are between 0 and 1
-        for x in ["x0_min", "x100_max", "y100_min", "y0_max"]:
-            xval = eval(x)
-            if not 0 < xval < 1:  # pragma: no cover
-                raise ValueError(f"'{x}' should be between 0 and 1, but is {xval:.4f}")
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range

@@ -39,13 +39,13 @@ class TestSolution(unittest.TestCase):
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             if t == solution.t[1]:
                 # Create voltage variable
-                step_solution.update("Terminal voltage")
+                step_solution.update("Terminal voltage [V]")
             old_t = t
 
         # Check both give the same answer
         np.testing.assert_array_almost_equal(
-            solution["Terminal voltage"](solution.t[:-1]),
-            step_solution["Terminal voltage"](solution.t[:-1]),
+            solution["Terminal voltage [V]"](solution.t[:-1]),
+            step_solution["Terminal voltage [V]"](solution.t[:-1]),
             decimal=4,
         )
 

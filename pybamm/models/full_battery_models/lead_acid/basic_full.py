@@ -43,13 +43,19 @@ class BasicFull(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
-            "Negative electrolyte concentration [mol.m-3]", domain="negative electrode"
+            "Negative electrolyte concentration [mol.m-3]",
+            domain="negative electrode",
+            scale=param.c_e_init,
         )
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration [mol.m-3]", domain="separator"
+            "Separator electrolyte concentration [mol.m-3]",
+            domain="separator",
+            scale=param.c_e_init,
         )
         c_e_p = pybamm.Variable(
-            "Positive electrolyte concentration [mol.m-3]", domain="positive electrode"
+            "Positive electrolyte concentration [mol.m-3]",
+            domain="positive electrode",
+            scale=param.c_e_init,
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -57,13 +63,19 @@ class BasicFull(BaseModel):
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential [V]", domain="negative electrode"
+            "Negative electrolyte potential [V]",
+            domain="negative electrode",
+            reference=-param.n.prim.U_init,
         )
         phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential [V]", domain="separator"
+            "Separator electrolyte potential [V]",
+            domain="separator",
+            reference=-param.n.prim.U_init,
         )
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential [V]", domain="positive electrode"
+            "Positive electrolyte potential [V]",
+            domain="positive electrode",
+            reference=-param.n.prim.U_init,
         )
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
@@ -72,7 +84,9 @@ class BasicFull(BaseModel):
             "Negative electrode potential [V]", domain="negative electrode"
         )
         phi_s_p = pybamm.Variable(
-            "Positive electrode potential [V]", domain="positive electrode"
+            "Positive electrode potential [V]",
+            domain="positive electrode",
+            reference=param.ocv_init,
         )
 
         # Porosity
@@ -86,11 +100,16 @@ class BasicFull(BaseModel):
         eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Pressure (for convection)
+        pressure_scale = param.Q / (param.c_e_typ * param.F * param.L_x)
         pressure_n = pybamm.Variable(
-            "Negative electrolyte pressure [Pa]", domain="negative electrode"
+            "Negative electrolyte pressure [Pa]",
+            domain="negative electrode",
+            scale=pressure_scale,
         )
         pressure_p = pybamm.Variable(
-            "Positive electrolyte pressure [Pa]", domain="positive electrode"
+            "Positive electrolyte pressure [Pa]",
+            domain="positive electrode",
+            scale=pressure_scale,
         )
 
         # Constant temperature

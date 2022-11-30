@@ -57,6 +57,15 @@ class PolynomialProfile(BaseParticle):
                 bounds=(0, self.phase_param.c_max),
                 scale=self.phase_param.c_max,
             )
+            r = pybamm.SpatialVariable(
+                f"r_{domain[0]}",
+                domain=[f"{domain} particle"],
+                auxiliary_domains={
+                    "secondary": f"{domain} electrode",
+                    "tertiary": "current collector",
+                },
+                coord_sys="spherical polar",
+            )
             R = self.phase_param.R
         else:
             c_s_rav_distribution = pybamm.Variable(
@@ -68,6 +77,16 @@ class PolynomialProfile(BaseParticle):
                 },
                 bounds=(0, self.phase_param.c_max),
                 scale=self.phase_param.c_max,
+            )
+            r = pybamm.SpatialVariable(
+                f"r_{domain[0]}",
+                domain=[f"{domain} particle"],
+                auxiliary_domains={
+                    "secondary": f"{domain} particle size",
+                    "tertiary": f"{domain} electrode",
+                    "quaternary": "current collector",
+                },
+                coord_sys="spherical polar",
             )
             R = pybamm.SpatialVariable(
                 f"R_{domain[0]}",
@@ -148,19 +167,14 @@ class PolynomialProfile(BaseParticle):
             A = 39 / 4 * c_s_surf - 3 * q_s_rav * R - 35 / 4 * c_s_rav
             B = -35 * c_s_surf + 10 * q_s_rav + 35 * c_s_rav
             C = 105 / 4 * c_s_surf - 7 * q_s_rav * R - 105 / 4 * c_s_rav
+        if self.size_distribution is True:
+            A = pybamm.PrimaryBroadcast(A, [f"{domain} particle size"])
+            B = pybamm.PrimaryBroadcast(B, [f"{domain} particle size"])
+            C = pybamm.PrimaryBroadcast(C, [f"{domain} particle size"])
         A = pybamm.PrimaryBroadcast(A, [f"{domain} particle"])
         B = pybamm.PrimaryBroadcast(B, [f"{domain} particle"])
         C = pybamm.PrimaryBroadcast(C, [f"{domain} particle"])
 
-        r = pybamm.SpatialVariable(
-            f"r_{domain[0]}",
-            domain=[f"{domain} particle"],
-            auxiliary_domains={
-                "secondary": f"{domain} electrode",
-                "tertiary": "current collector",
-            },
-            coord_sys="spherical polar",
-        )
         c_s = A + B * r**2 / R**2 + C * r**4 / R**4
 
         variables.update(

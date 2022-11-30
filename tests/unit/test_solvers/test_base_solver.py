@@ -219,11 +219,6 @@ class TestBaseSolver(unittest.TestCase):
             "Could not find acceptable solution: The iteration is not making",
         ):
             solver.calculate_consistent_state(Model())
-        solver = pybamm.BaseSolver(root_method="lm")
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
-        ):
-            solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(

@@ -54,8 +54,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
             )
 
             # Post-process variables
-            voltage_loqs = solution_loqs["Terminal voltage"]
-            voltage_full = solution_full["Terminal voltage"]
+            voltage_loqs = solution_loqs["Terminal voltage [V]"]
+            voltage_full = solution_full["Terminal voltage [V]"]
 
             # Compare
             t_loqs = solution_loqs.t

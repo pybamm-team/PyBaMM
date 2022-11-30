@@ -838,7 +838,7 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertIsInstance(var_av_proc, pybamm.SizeAverage)
         R = pybamm.SpatialVariable("R", "negative particle size")
-        self.assertEqual(var_av_proc.f_a_dist, ((R * 2) ** 2 * 2))
+        self.assertEqual(var_av_proc.f_a_dist, R**2)
 
     def test_process_not_constant(self):
         param = pybamm.ParameterValues({"a": 4})

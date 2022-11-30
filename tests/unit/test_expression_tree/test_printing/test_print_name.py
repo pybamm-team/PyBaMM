@@ -13,17 +13,12 @@ class TestPrintName(unittest.TestCase):
         param2 = pybamm.LeadAcidParameters()
 
         # Test PRINT_NAME_OVERRIDES
-        self.assertEqual(param.timescale.print_name, r"\tau")
+        self.assertEqual(param.current_with_time.print_name, "I")
 
         # Test superscripts
-        self.assertEqual(param.n.U_ref.print_name, r"U_{n}^{ref}")
-        self.assertEqual(param.D_e_typ.print_name, r"D_{e}^{typ}")
+        self.assertEqual(param.n.prim.U_init.print_name, r"U_{n}^{init}")
 
         # Test subscripts
-        self.assertEqual(param.p.prim.a_R.print_name, r"a_{R\,p}")
-
-        # Test dim and dimensional
-        self.assertEqual(param.n.prim.j0_ref.print_name, r"j0_{n}^{ref}")
         self.assertEqual(param.n.C_dl.print_name, r"C_{dl\,n}")
 
         # Test bar

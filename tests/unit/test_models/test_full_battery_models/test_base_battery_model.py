@@ -59,10 +59,9 @@ class TestBaseBatteryModel(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         # Process expression
-        c = pybamm.Parameter("Negative electrode thickness [m]") * pybamm.Variable(
-            "X-averaged negative particle concentration",
-            domain="negative particle",
-            auxiliary_domains={"secondary": "current collector"},
+        c = (
+            pybamm.Parameter("Negative electrode thickness [m]")
+            * model.variables["X-averaged negative particle concentration [mol.m-3]"]
         )
         processed_c = model.process_parameters_and_discretise(c, parameter_values, disc)
         self.assertIsInstance(processed_c, pybamm.Multiplication)
@@ -79,7 +78,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         N = -D * pybamm.grad(c_n)
 
         flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
-        flux_2 = model.variables["X-averaged negative particle flux"]
+        flux_2 = model.variables["X-averaged negative particle flux [mol.m-2.s-1]"]
         param_flux_2 = parameter_values.process_symbol(flux_2)
         disc_flux_2 = disc.process_symbol(param_flux_2)
         self.assertEqual(flux_1, disc_flux_2)
