@@ -87,8 +87,10 @@ class Full(BaseThroughCellModel):
 
         # Problems in the x-direction for p_n and p_p
         self.algebraic = {
-            p_n: pybamm.div(v_box_n) - self.param.n.DeltaV * j_n,
-            p_p: pybamm.div(v_box_p) - self.param.p.DeltaV * j_p,
+            p_n: self.param.L_x**2
+            * (pybamm.div(v_box_n) - self.param.n.DeltaV * j_n),
+            p_p: self.param.L_x**2
+            * (pybamm.div(v_box_p) - self.param.p.DeltaV * j_p),
         }
 
     def set_boundary_conditions(self, variables):

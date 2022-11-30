@@ -195,7 +195,7 @@ class BasicDFNHalfCell(BaseModel):
                 "Neumann",
             ),
         }
-        self.algebraic[phi_s_w] = pybamm.div(i_s_w) + a_j_w
+        self.algebraic[phi_s_w] = param.L_x**2 * (pybamm.div(i_s_w) + a_j_w)
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
         # initial conditions
@@ -230,7 +230,7 @@ class BasicDFNHalfCell(BaseModel):
         i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
-        self.algebraic[phi_e] = pybamm.div(i_e) - a_j
+        self.algebraic[phi_e] = param.L_x**2 * (pybamm.div(i_e) - a_j)
 
         # reference potential
         L_Li = param.p.L

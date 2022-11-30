@@ -287,11 +287,17 @@ class PolynomialProfile(BaseParticle):
         j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
         R = variables[f"{Domain} particle radius [m]"]
 
+        c_max = self.phase_param.c_max
+        T_ref = self.param.T_ref
+        D_c_max_scale = self.phase_param.D(c_max, T_ref) * c_max
+
         if self.name == "quadratic profile":
             # We solve an algebraic equation for the surface concentration
             self.algebraic = {
-                c_s_surf: pybamm.surf(D_eff) * (c_s_surf - c_s_rav)
-                + j * R / self.param.F / 5
+                c_s_surf: (
+                    pybamm.surf(D_eff) * (c_s_surf - c_s_rav) + j * R / self.param.F / 5
+                )
+                / D_c_max_scale
             }
 
         elif self.name == "quartic profile":
@@ -301,10 +307,13 @@ class PolynomialProfile(BaseParticle):
                 f"R-averaged {domain} particle concentration gradient [mol.m-4]"
             ]
             # eq 31 of Subramanian2005
+            D_c_max_over_R_scale = D_c_max_scale / self.phase_param.R_typ
             self.algebraic = {
-                c_s_surf: pybamm.surf(D_eff)
-                * (35 / R * (c_s_surf - c_s_rav) - 8 * q_s_rav)
-                + j / self.param.F
+                c_s_surf: (
+                    pybamm.surf(D_eff) * (35 / R * (c_s_surf - c_s_rav) - 8 * q_s_rav)
+                    + j / self.param.F
+                )
+                / D_c_max_over_R_scale
             }
 
     def set_initial_conditions(self, variables):

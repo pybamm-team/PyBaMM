@@ -240,7 +240,7 @@ class FullAlgebraic(BaseModel):
             "interfacial current densities [A.m-3]"
         ]
 
-        self.algebraic[delta_phi] = pybamm.div(i_e) - sum_a_j
+        self.algebraic[delta_phi] = (pybamm.div(i_e) - sum_a_j) / self.param.a_j_scale
 
 
 class FullDifferential(BaseModel):

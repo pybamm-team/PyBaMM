@@ -155,4 +155,4 @@ class CompositeAlgebraic(BaseModel):
             f"X-averaged {domain} electrode surface potential difference [V]"
         ]
 
-        self.algebraic[delta_phi] = sum_a_j_av - sum_a_j
+        self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) / self.param.a_j_scale

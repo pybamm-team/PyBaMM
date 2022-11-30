@@ -3,12 +3,13 @@
 #
 import pybamm
 
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 # load models
+options = {"particle": "quartic profile"}
 models = [
-    # pybamm.lithium_ion.SPM(),
-    # pybamm.lithium_ion.SPMe(),
-    pybamm.lithium_ion.BasicDFN(),
+    pybamm.lithium_ion.SPM(options),
+    pybamm.lithium_ion.SPMe(options),
+    pybamm.lithium_ion.DFN(options),
     # pybamm.lithium_ion.DFN(
     #     {"particle": "uniform profile"}
     # ),
@@ -20,7 +21,7 @@ models = [
 # create and run simulations
 sims = []
 for model in models:
-    sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver("fast"))
+    sim = pybamm.Simulation(model)
     sim.solve([0, 4000])
     sims.append(sim)
 

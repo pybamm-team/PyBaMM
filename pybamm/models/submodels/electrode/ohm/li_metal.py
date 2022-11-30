@@ -103,7 +103,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
                 "Lithium metal interface surface potential difference [V]"
             ]
 
-            self.algebraic[delta_phi] = i_cc - sum_j
+            self.algebraic[delta_phi] = (i_cc - sum_j) / self.param.I_typ
 
 
 class LithiumMetalExplicit(LithiumMetalBaseModel):
