@@ -95,9 +95,9 @@ class NullParameters:
         "Returns 0 for some parameters that aren't found by __getattribute__"
         if name in [
             "epsilon_s",
-            "cap_init",
+            "Q_init",
             "n_Li_init",
-            "C_Li_init",
+            "Q_Li_init",
             "R_typ",
             "j_scale",
         ]:

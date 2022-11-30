@@ -134,9 +134,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
             # LAM
-            C_k = self.variables[f"{Domain} capacity [A.h]"]
+            Q_k = self.variables[f"{Domain} capacity [A.h]"]
             domain_param = getattr(self.param, domain[0])  # param.n or param.p
-            LAM_k = (1 - C_k / domain_param.cap_init) * 100
+            LAM_k = (1 - Q_k / domain_param.Q_init) * 100
             self.variables.update(
                 {
                     f"LAM_{domain[0]}e [%]": LAM_k,

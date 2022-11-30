@@ -879,16 +879,16 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
     ):
         V_min = esoh_solver.parameter_values["Lower voltage cut-off [V]"]
         V_max = esoh_solver.parameter_values["Upper voltage cut-off [V]"]
-        C_n = last_state["Negative electrode capacity [A.h]"].data[0]
-        C_p = last_state["Positive electrode capacity [A.h]"].data[0]
-        C_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
+        Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
+        Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
+        Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
 
         inputs = {
             "V_min": V_min,
             "V_max": V_max,
-            "C_n": C_n,
-            "C_p": C_p,
-            "C_Li": C_Li,
+            "Q_n": Q_n,
+            "Q_p": Q_p,
+            "Q_Li": Q_Li,
         }
 
         try:
