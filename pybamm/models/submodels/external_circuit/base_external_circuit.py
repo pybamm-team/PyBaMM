@@ -11,13 +11,15 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-        Q_Ah = pybamm.standard_variables.Q_Ah
+        Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
 
         variables = {"Discharge capacity [A.h]": Q_Ah}
         if self.options["calculate discharge energy"] == "true":
-            Q_Wh = pybamm.standard_variables.Q_Wh
-            Qt_Wh = pybamm.standard_variables.Qt_Wh
-            Qt_Ah = pybamm.standard_variables.Qt_Ah
+            Q_Wh = pybamm.Variable("Discharge energy [W.h]")
+
+            # Throughput capacity and energy (cumulative)
+            Qt_Ah = pybamm.Variable("Throughput capacity [A.h]")
+            Qt_Wh = pybamm.Variable("Throughput energy [W.h]")
             variables.update(
                 {
                     "Discharge energy [W.h]": Q_Wh,

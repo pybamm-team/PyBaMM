@@ -341,7 +341,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc.process_model(model)
         solver = pybamm.IDAKLUSolver()
 
-        variable_tols = {"Porosity times concentration [mol.m-3]": 1e-3}
+        variable_tols = {"Negative electrode potential [V]": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
 
         model = pybamm.BaseModel()

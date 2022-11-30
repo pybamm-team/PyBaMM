@@ -237,7 +237,9 @@ class TestBinaryOperators(unittest.TestCase):
     def test_inner(self):
         model = pybamm.lithium_ion.BaseModel()
 
-        phi_s = pybamm.standard_variables.phi_s_n
+        phi_s = pybamm.Variable(
+            "Negative electrode potential [V]", domain="negative electrode"
+        )
         i = pybamm.grad(phi_s)
 
         model.rhs = {phi_s: pybamm.inner(i, i)}

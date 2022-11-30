@@ -6,9 +6,9 @@ import pybamm
 pybamm.set_logging_level("INFO")
 # load models
 models = [
-    pybamm.lithium_ion.SPM(),
-    pybamm.lithium_ion.SPMe(),
-    pybamm.lithium_ion.DFN(),
+    # pybamm.lithium_ion.SPM(),
+    # pybamm.lithium_ion.SPMe(),
+    pybamm.lithium_ion.DFN({"dimensionality": 1}),
     # pybamm.lithium_ion.DFN(
     #     {"particle": "uniform profile"}
     # ),

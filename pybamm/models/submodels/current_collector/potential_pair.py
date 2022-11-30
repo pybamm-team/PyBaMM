@@ -32,14 +32,20 @@ class BasePotentialPair(BaseModel):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-
-        phi_s_cn = pybamm.standard_variables.phi_s_cn
+        param = self.param
+        phi_s_cn = pybamm.Variable(
+            "Negative current collector potential [V]", domain="current collector"
+        )
 
         variables = self._get_standard_negative_potential_variables(phi_s_cn)
 
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
-        i_boundary_cc = pybamm.standard_variables.i_boundary_cc
+        i_boundary_cc = pybamm.Variable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+            scale=param.Q / (param.A_cc * param.n_electrodes_parallel),
+        )
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
 

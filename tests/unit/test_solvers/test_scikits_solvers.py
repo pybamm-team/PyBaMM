@@ -886,8 +886,12 @@ class TestScikitsSolvers(unittest.TestCase):
                 dindex = np.searchsorted(solution.t, discontinuity)
                 value_before = solution.t[dindex - 1]
                 value_after = solution.t[dindex]
-                self.assertEqual(value_before + sys.float_info.epsilon, discontinuity)
-                self.assertEqual(value_after - sys.float_info.epsilon, discontinuity)
+                self.assertEqual(
+                    value_before / (1 - sys.float_info.epsilon), discontinuity
+                )
+                self.assertEqual(
+                    value_after / (1 + sys.float_info.epsilon), discontinuity
+                )
 
             # both solution time vectors should have same number of points
             self.assertEqual(len(solution1.t), len(solution2.t))
