@@ -44,6 +44,7 @@ class CrackPropagation(BaseMechanics):
             l_cr_av = pybamm.Variable(
                 f"X-averaged {domain} particle crack length [m]",
                 domain="current collector",
+                scale=self.domain_param.l_cr_0,
             )
             l_cr = pybamm.PrimaryBroadcast(l_cr_av, f"{domain} electrode")
         else:
@@ -51,6 +52,7 @@ class CrackPropagation(BaseMechanics):
                 f"{Domain} particle crack length [m]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
+                scale=self.domain_param.l_cr_0,
             )
 
         variables = self._get_standard_variables(l_cr)

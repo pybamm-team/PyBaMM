@@ -101,7 +101,7 @@ class BaseOutputTest(object):
         self.L_n = param.evaluate(geo.n.L)
         self.L_p = param.evaluate(geo.p.L)
 
-        current_param = self.model.param.current_with_time
+        current_param = self.model.param.current_density_with_time
 
         self.i_cell = param.process_symbol(current_param).evaluate(solution.t)
 
@@ -382,8 +382,10 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(-self.c_s_n(t, x_n, r_n), 0)
         np.testing.assert_array_less(-self.c_s_p(t, x_p, r_p), 0)
 
-        np.testing.assert_array_less(self.c_s_n(t, x_n, r_n), 1)
-        np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
+        c_n_max = self.param.evaluate(self.model.param.n.prim.c_max)
+        c_p_max = self.param.evaluate(self.model.param.p.prim.c_max)
+        np.testing.assert_array_less(self.c_s_n(t, x_n, r_n), c_n_max)
+        np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), c_p_max)
         if self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
             # Cannot have 3D processed variables, so test concs that depend on
@@ -393,15 +395,15 @@ class ParticleConcentrationTests(BaseOutputTest):
             np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
 
-            np.testing.assert_array_less(self.c_s_n_dist(t, r=r_n, R=R_n), 1)
-            np.testing.assert_array_less(self.c_s_p_dist(t, r=r_p, R=R_p), 1)
+            np.testing.assert_array_less(self.c_s_n_dist(t, r=r_n, R=R_n), c_n_max)
+            np.testing.assert_array_less(self.c_s_p_dist(t, r=r_p, R=R_p), c_p_max)
 
             # x-R (surface concentrations)
             np.testing.assert_array_less(-self.c_s_n_surf_dist(t, x=x_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_surf_dist(t, x=x_p, R=R_p), 0)
 
-            np.testing.assert_array_less(self.c_s_n_surf_dist(t, x=x_n, R=R_n), 1)
-            np.testing.assert_array_less(self.c_s_p_surf_dist(t, x=x_p, R=R_p), 1)
+            np.testing.assert_array_less(self.c_s_n_surf_dist(t, x=x_n, R=R_n), c_n_max)
+            np.testing.assert_array_less(self.c_s_p_surf_dist(t, x=x_p, R=R_p), c_p_max)
 
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is
@@ -420,7 +422,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         else:
-            np.testing.assert_array_almost_equal(diff, 0, decimal=15)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
@@ -713,7 +715,7 @@ class CurrentTests(BaseOutputTest):
         multiplied by the interfacial current density is equal to the true
         value."""
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             np.mean(
                 self.a_j_n(self.t, self.x_n)
                 + self.a_j_n_sei(self.t, self.x_n)
@@ -721,12 +723,12 @@ class CurrentTests(BaseOutputTest):
                 axis=0,
             ),
             self.i_cell / self.L_n,
-            decimal=3,
+            rtol=1e-3,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.L_p,
-            decimal=4,
+            rtol=1e-4,
         )
 
     def test_conservation(self):
@@ -734,25 +736,21 @@ class CurrentTests(BaseOutputTest):
         current density"""
         t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
-        current_param = self.model.param.current_with_time
+        current_param = self.model.param.current_density_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
-            np.testing.assert_array_almost_equal(
-                self.i_s(t, x) + self.i_e(t, x), i_cell, decimal=2
+            np.testing.assert_allclose(
+                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=1e-2
             )
-        np.testing.assert_array_almost_equal(
-            self.i_s(t, x_n), self.i_s_n(t, x_n), decimal=3
-        )
-        np.testing.assert_array_almost_equal(
-            self.i_s(t, x_p), self.i_s_p(t, x_p), decimal=3
-        )
+        np.testing.assert_allclose(self.i_s(t, x_n), self.i_s_n(t, x_n), rtol=1e-3)
+        np.testing.assert_allclose(self.i_s(t, x_p), self.i_s_p(t, x_p), rtol=1e-3)
 
     def test_current_density_boundaries(self):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
-        current_param = self.model.param.current_with_time
+        current_param = self.model.param.current_density_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=2)

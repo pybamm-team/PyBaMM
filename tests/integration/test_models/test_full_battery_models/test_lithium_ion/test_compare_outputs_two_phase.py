@@ -69,7 +69,7 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             # Compare two phase model to standard model
             for variable in [
                 "X-averaged negative electrode active material volume fraction",
-                "X-averaged negative electrode volumetric interfacial current density",
+                "X-averaged negative electrode volumetric interfacial current density [A.m-3]",
                 "Terminal voltage [V]",
             ]:
                 np.testing.assert_array_almost_equal(
@@ -88,11 +88,11 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             )
             np.testing.assert_array_almost_equal(
                 sol_two_phase[
-                    "Negative electrode primary interfacial current density"
+                    "Negative electrode primary volumetric interfacial current density [A.m-3]"
                 ].entries
                 / x,
                 sol_two_phase[
-                    "Negative electrode secondary interfacial current density"
+                    "Negative electrode secondary volumetric interfacial current density [A.m-3]"
                 ].entries
                 / (1 - x),
                 decimal=6,
