@@ -37,9 +37,6 @@ Options::Options(py::dict options)
   if (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none"))
   {
   }
-  else if (linear_solver == "SUNLinSol_LapackDense" && (jacobian == "dense" || jacobian == "none"))
-  {
-  }
   else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
   {
   }
