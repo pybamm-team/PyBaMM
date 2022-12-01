@@ -496,13 +496,9 @@ class TestIDAKLUSolver(unittest.TestCase):
                     solver = pybamm.IDAKLUSolver(options=options)
                     if (
                         jacobian == "none"
-                        and (
-                            linear_solver == "SUNLinSol_Dense"
-                        )
+                        and (linear_solver == "SUNLinSol_Dense")
                         or jacobian == "dense"
-                        and (
-                            linear_solver == "SUNLinSol_Dense"
-                        )
+                        and (linear_solver == "SUNLinSol_Dense")
                         or jacobian == "sparse"
                         and (
                             linear_solver != "SUNLinSol_Dense"
