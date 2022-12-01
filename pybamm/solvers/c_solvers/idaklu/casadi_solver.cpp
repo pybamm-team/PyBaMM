@@ -147,11 +147,11 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   //else if (options.linear_solver == "SUNLinSol_LapackDense")
   //{
   //  DEBUG("\tsetting SUNLinSol_LapackDense linear solver");
-#i//f SUNDIALS_VERSION_MAJOR >= 6
+  //#if SUNDIALS_VERSION_MAJOR >= 6
   //  LS = SUNLinSol_LapackDense(yy, J, sunctx);
-#e//lse
+  //#else
   //  LS = SUNLinSol_LapackDense(yy, J);
-#e//ndif
+  //#endif
   //}
   else if (options.linear_solver == "SUNLinSol_KLU")
   {
