@@ -900,10 +900,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_fundamental_variables())
 
-        # Set the submodels that are external
-        for sub in self.options["external submodels"]:
-            self.submodels[sub].external = True
-
         self._built_fundamental_and_external = True
 
     def build_coupled_variables(self):
@@ -953,38 +949,37 @@ class BaseBatteryModel(pybamm.BaseModel):
     def build_model_equations(self):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
-            if submodel.external is False:
-                pybamm.logger.verbose(
-                    "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
-                )
+            pybamm.logger.verbose(
+                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+            )
 
-                submodel.set_rhs(self.variables)
-                pybamm.logger.verbose(
-                    "Setting algebraic for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
+            submodel.set_rhs(self.variables)
+            pybamm.logger.verbose(
+                "Setting algebraic for {} submodel ({})".format(
+                    submodel_name, self.name
                 )
+            )
 
-                submodel.set_algebraic(self.variables)
-                pybamm.logger.verbose(
-                    "Setting boundary conditions for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
+            submodel.set_algebraic(self.variables)
+            pybamm.logger.verbose(
+                "Setting boundary conditions for {} submodel ({})".format(
+                    submodel_name, self.name
                 )
+            )
 
-                submodel.set_boundary_conditions(self.variables)
-                pybamm.logger.verbose(
-                    "Setting initial conditions for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
+            submodel.set_boundary_conditions(self.variables)
+            pybamm.logger.verbose(
+                "Setting initial conditions for {} submodel ({})".format(
+                    submodel_name, self.name
                 )
-                submodel.set_initial_conditions(self.variables)
-                submodel.set_events(self.variables)
-                pybamm.logger.verbose(
-                    "Updating {} submodel ({})".format(submodel_name, self.name)
-                )
-                self.update(submodel)
-                self.check_no_repeated_keys()
+            )
+            submodel.set_initial_conditions(self.variables)
+            submodel.set_events(self.variables)
+            pybamm.logger.verbose(
+                "Updating {} submodel ({})".format(submodel_name, self.name)
+            )
+            self.update(submodel)
+            self.check_no_repeated_keys()
 
     def build_model(self):
 
