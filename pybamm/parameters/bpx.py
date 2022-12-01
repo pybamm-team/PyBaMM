@@ -136,16 +136,49 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             domain.pre_name + "transport efficiency"
         ] ** (1.0 / 1.5)
 
+    # TODO: allow setting function parameters in a loop over domains
+
     # entropic change
-    for domain in [negative_electrode, positive_electrode]:
-        pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = pybamm_dict[
-            domain.pre_name + "entropic change coefficient [V.K-1]"
-        ]
+
+    # negative electrode
+    U_n = pybamm_dict[
+        negative_electrode.pre_name + "entropic change coefficient [V.K-1]"
+    ]
+    if callable(U_n):
+
+        def negative_electrode_entropic_change(sto, c_s_max):
+            return U_n(sto)
+
+    else:
+
+        def negative_electrode_entropic_change(sto, c_s_max):
+            return U_n
+
+    pybamm_dict[
+        negative_electrode.pre_name + "OCP entropic change [V.K-1]"
+    ] = negative_electrode_entropic_change
+
+    # positive electrode
+    U_p = pybamm_dict[
+        positive_electrode.pre_name + "entropic change coefficient [V.K-1]"
+    ]
+    if callable(U_p):
+
+        def positive_electrode_entropic_change(sto, c_s_max):
+            return U_p(sto)
+
+    else:
+
+        def positive_electrode_entropic_change(sto, c_s_max):
+            return U_p
+
+    pybamm_dict[
+        positive_electrode.pre_name + "OCP entropic change [V.K-1]"
+    ] = positive_electrode_entropic_change
 
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
-    # TODO: allow setting function parameters in a loop over domains
     c_e = pybamm_dict["Typical electrolyte concentration [mol.m-3]"]
     F = 96485
 
@@ -206,7 +239,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # diffusivity
-    # TODO: allow setting function parameters in a loop over domains
 
     # negative electrode
     E_a = pybamm_dict.get(
@@ -275,29 +307,28 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # conductivity
-    for domain in [electrolyte]:
-        E_a = pybamm_dict.get(
-            domain.pre_name + "conductivity activation energy [J.mol-1]", 0.0
-        )
-        C_ref_value = pybamm_dict[domain.pre_name + "conductivity [S.m-1]"]
+    E_a = pybamm_dict.get(
+        electrolyte.pre_name + "conductivity activation energy [J.mol-1]", 0.0
+    )
+    C_ref_value = pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"]
 
-        if callable(C_ref_value):
-            C_ref_fun = copy.copy(C_ref_value)
+    if callable(C_ref_value):
+        C_ref_fun = copy.copy(C_ref_value)
 
-            def conductivity(c_e, T):
-                C_ref = C_ref_fun(c_e)
-                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-                return arrhenius * C_ref
+        def conductivity(c_e, T):
+            C_ref = C_ref_fun(c_e)
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * C_ref
 
-        else:
-            C_ref_number = C_ref_value
+    else:
+        C_ref_number = C_ref_value
 
-            def conductivity(c_e, T):
-                C_ref = C_ref_number
-                arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-                return arrhenius * C_ref
+        def conductivity(c_e, T):
+            C_ref = C_ref_number
+            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * C_ref
 
-        pybamm_dict[domain.pre_name + "conductivity [S.m-1]"] = copy_func(conductivity)
+    pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = copy_func(conductivity)
 
     return pybamm_dict
 
