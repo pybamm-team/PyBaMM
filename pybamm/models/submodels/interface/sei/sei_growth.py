@@ -64,6 +64,7 @@ class SEIGrowth(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
+        param = self.param
         phase_param = self.phase_param
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
@@ -164,7 +165,11 @@ class SEIGrowth(BaseModel):
 
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
-
+        phi_ref = param.n.U_ref / param.potential_scale
+        # U_sei = param.U_sei_dim
+        U_sei = pybamm.Parameter(f"SEI open-circuit potential [V]") / param.potential_scale
+        eta_SEI_total = eta_SEI+phi_ref-U_sei
+        variables.update(self._get_standard_overpotential_variables(eta_SEI_total))
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
 
