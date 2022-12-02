@@ -144,15 +144,6 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_Dense(yy, J);
 #endif
   }
-  else if (options.linear_solver == "SUNLinSol_LapackDense")
-  {
-    DEBUG("\tsetting SUNLinSol_LapackDense linear solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
-    LS = SUNLinSol_LapackDense(yy, J, sunctx);
-#else
-    LS = SUNLinSol_LapackDense(yy, J);
-#endif
-  }
   else if (options.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
