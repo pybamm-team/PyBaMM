@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
+
 ## Features
 
 - Equivalent circuit models ([#2478](https://github.com/pybamm-team/PyBaMM/pull/2478))
