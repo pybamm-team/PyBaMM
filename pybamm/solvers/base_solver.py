@@ -836,9 +836,9 @@ class BaseSolver(object):
         t_eval_dimensionless = t_eval / model.timescale_eval
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(
-            t_eval_dimensionless, model, ext_and_inputs_list[0]
-        )
+        # self._check_events_with_initial_conditions(
+        #    t_eval_dimensionless, model, ext_and_inputs_list[0]
+        # )
 
         # Process discontinuities
         (
