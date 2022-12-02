@@ -1181,7 +1181,7 @@ class BaseSolver(object):
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, ext_and_inputs)
+        # self._check_events_with_initial_conditions(t_eval, model, ext_and_inputs)
 
         # Step
         pybamm.logger.verbose(
