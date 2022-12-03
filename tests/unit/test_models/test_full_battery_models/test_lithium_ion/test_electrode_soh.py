@@ -33,6 +33,14 @@ class TestElectrodeSOH(unittest.TestCase):
         for key in sol.all_models[0].variables:
             self.assertAlmostEqual(sol[key].data[0], sol_split[key].data[0], places=5)
 
+        # should still work with old inputs
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Q_n, "C_p": Q_p}
+
+        # Solve the model and check outputs
+        sol = esoh_solver.solve(inputs)
+        self.assertAlmostEqual(sol["Q_Li"].data[0], Q_Li, places=5)
+
     def test_known_solution_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")

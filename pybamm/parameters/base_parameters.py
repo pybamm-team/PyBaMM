@@ -2,6 +2,7 @@
 # Base parameters class
 #
 import pybamm
+import warnings
 
 
 class BaseParameters:
@@ -17,6 +18,9 @@ class BaseParameters:
         try:
             return super().__getattribute__(name)
         except AttributeError as e:
+            if name == "cap_init":
+                warnings.warn("Parameter 'cap_init' has been renamed to 'Q_init'")
+                return self.Q_init
             for domain in ["n", "s", "p"]:
                 if f"_{domain}_" in name or name.endswith(f"_{domain}"):
                     name_without_domain = name.replace(f"_{domain}_", "_").replace(

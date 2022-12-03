@@ -214,6 +214,12 @@ class ElectrodeSOHSolver:
             )
             n_Li = inputs.pop("n_Li")
             inputs["Q_Li"] = n_Li * self.param.F.value / 3600
+        if "C_n" in inputs:
+            warnings.warn("Input 'C_n' has been renamed to 'Q_n'", DeprecationWarning)
+            inputs["Q_n"] = inputs.pop("C_n")
+        if "C_p" in inputs:
+            warnings.warn("Input 'C_p' has been renamed to 'Q_p'", DeprecationWarning)
+            inputs["Q_p"] = inputs.pop("C_p")
         ics = self._set_up_solve(inputs)
         try:
             sol = self._solve_full(inputs, ics)
@@ -255,11 +261,24 @@ class ElectrodeSOHSolver:
                 }
 
         # Fall back to initial conditions calculated from limits
-        x0_min, x100_max, y100_min, _ = self._get_lims(inputs)
-        x100_init = np.array(min(x100_max, 0.8))
-        x0_init = np.array(max(x0_min, 0.2))
-        y100_init = np.array(max(y100_min, 0.2))
-        return {"x_100": x100_init, "x_0": x0_init, "y_100": y100_init}
+        x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
+        if self.known_value == "cyclable lithium capacity":
+            # trial and error suggests theses are good values
+            x100_init = np.array(min(x100_max, 0.8))
+            x0_init = np.array(max(x0_min, 0.2))
+            y100_init = np.array(max(y100_min, 0.2))
+            y0_init = np.array(min(y0_max, 0.8))
+        elif self.known_value == "cell capacity":
+            # Use stoich limits based on cell capacity and
+            # electrode capacities
+            Q = inputs["Q"]
+            Q_n = inputs["Q_n"]
+            Q_p = inputs["Q_p"]
+            x100_init = x0_min + Q / Q_n
+            x0_init = x100_max - Q / Q_n
+            y100_init = y0_max - Q / Q_p
+            y0_init = y100_min + Q / Q_p
+        return {"x_100": x100_init, "x_0": x0_init, "y_100": y100_init, "y_0": y0_init}
 
     def _solve_full(self, inputs, ics):
         sim = self._get_electrode_soh_sims_full()
@@ -303,6 +322,17 @@ class ElectrodeSOHSolver:
             if Q_Li > Q_p:
                 warnings.warn(f"Q_Li={Q_Li:.4f} Ah is greater than Q_p={Q_p:.4f} Ah.")
 
+            # Update (tighten) stoich limits based on total lithium content and
+            # electrode capacities
+            x100_max_from_y100_min = (Q_Li - y100_min * Q_p) / Q_n
+            x0_min_from_y0_max = (Q_Li - y0_max * Q_p) / Q_n
+            y100_min_from_x100_max = (Q_Li - x100_max * Q_n) / Q_p
+            y0_max_from_x0_min = (Q_Li - x0_min * Q_n) / Q_p
+
+            x100_max = min(x100_max_from_y100_min, x100_max)
+            x0_min = max(x0_min_from_y0_max, x0_min)
+            y100_min = max(y100_min_from_x100_max, y100_min)
+            y0_max = min(y0_max_from_x0_min, y0_max)
         elif self.known_value == "cell capacity":
             Q = inputs["Q"]
             Q_max = min(Q_n * (x100_max - x0_min), Q_p * (y0_max - y100_min))
@@ -311,19 +341,6 @@ class ElectrodeSOHSolver:
                     f"Q={Q:.4f} Ah is larger than the maximum possible capacity "
                     f"Q_max={Q_max:.4f} Ah."
                 )
-            Q_Li = 0.9 * Q_p
-
-        # Update (tighten) stoich limits based on total lithium content and electrode
-        # capacities
-        x100_max_from_y100_min = (Q_Li - y100_min * Q_p) / Q_n
-        x0_min_from_y0_max = (Q_Li - y0_max * Q_p) / Q_n
-        y100_min_from_x100_max = (Q_Li - x100_max * Q_n) / Q_p
-        y0_max_from_x0_min = (Q_Li - x0_min * Q_n) / Q_p
-
-        x100_max = min(x100_max_from_y100_min, x100_max)
-        x0_min = max(x0_min_from_y0_max, x0_min)
-        y100_min = max(y100_min_from_x100_max, y100_min)
-        y0_max = min(y0_max_from_x0_min, y0_max)
 
         # Check stoich limits are between 0 and 1
         if not (0 < x0_min < x100_max < 1 and 0 < y100_min < y0_max < 1):
