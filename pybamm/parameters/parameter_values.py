@@ -644,7 +644,10 @@ class ParameterValues:
                     # For parameters provided as data we use a cubic interpolant
                     # Note: the cubic interpolant can be differentiated
                     function = pybamm.Interpolant(
-                        input_data[0], input_data[-1], new_children, name=name
+                        input_data[0],
+                        input_data[-1],
+                        new_children,
+                        name=name,
                     )
 
                 else:  # pragma: no cover

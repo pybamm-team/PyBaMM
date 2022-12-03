@@ -83,7 +83,7 @@ class CMakeBuild(build_ext):
         else:
             use_python_casadi = True
 
-        build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "Release")
+        build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "RELEASE")
         cmake_args = [
             "-DCMAKE_BUILD_TYPE={}".format(build_type),
             "-DPYTHON_EXECUTABLE={}".format(sys.executable),

@@ -221,28 +221,45 @@ class ElectrodeSOHSolver:
             # just in case solving one by one works better
             try:
                 sol = self._solve_split(inputs, ics)
-            except pybamm.SolverError as original_error:
+            except pybamm.SolverError as split_error:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs)
                 # if that didn't raise an error, raise the original error instead
-                raise original_error  # pragma: no cover (don't know how to get here)
+                raise split_error
 
         return sol
 
     def _set_up_solve(self, inputs):
+        # Try with full sim
         sim = self._get_electrode_soh_sims_full()
         if sim.solution is not None:
-            return {
-                var: sim.solution[var].data for var in ["x_100", "x_0", "y_100", "y_0"]
-            }
-        else:
-            x0_init, x100_init, y100_init, y0_init = self._get_lims(inputs)
-            return {
-                "x_100": np.array(min(x100_init, 0.99)),
-                "x_0": np.array(max(x0_init, 0.01)),
-                "y_100": np.array(max(y100_init, 0.01)),
-                "y_0": np.array(min(y0_init, 0.99)),
-            }
+            x100_sol = sim.solution["x_100"].data
+            x0_sol = sim.solution["x_0"].data
+            y100_sol = sim.solution["y_100"].data
+            y0_sol = sim.solution["y_0"].data
+            return {"x_100": x100_sol, "x_0": x0_sol, "y_100": y100_sol, "y_0": y0_sol}
+
+        # Try with split sims
+        if self.known_value == "cyclable lithium capacity":
+            x100_sim, x0_sim = self._get_electrode_soh_sims_split()
+            if x100_sim.solution is not None and x0_sim.solution is not None:
+                x100_sol = x100_sim.solution["x_100"].data
+                x0_sol = x0_sim.solution["x_0"].data
+                y100_sol = x100_sim.solution["y_100"].data
+                y0_sol = x0_sim.solution["y_0"].data
+                return {
+                    "x_100": x100_sol,
+                    "x_0": x0_sol,
+                    "y_100": y100_sol,
+                    "y_0": y0_sol,
+                }
+
+        # Fall back to initial conditions calculated from limits
+        x0_min, x100_max, y100_min, _ = self._get_lims(inputs)
+        x100_init = np.array(min(x100_max, 0.8))
+        x0_init = np.array(max(x0_min, 0.2))
+        y100_init = np.array(max(y100_min, 0.2))
+        return {"x_100": x100_init, "x_0": x0_init, "y_100": y100_init}
 
     def _solve_full(self, inputs, ics):
         sim = self._get_electrode_soh_sims_full()

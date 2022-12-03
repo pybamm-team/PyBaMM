@@ -7,6 +7,7 @@ from .electrode_soh import (
     get_initial_stoichiometries,
     get_min_max_stoichiometries,
 )
+from .electrode_soh_half_cell import ElectrodeSOHHalfCell
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
