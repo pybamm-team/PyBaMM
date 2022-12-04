@@ -141,6 +141,7 @@ class Simulation:
         # Update experiment using parameters such as timescale and capacity
         timescale = self._parameter_values.evaluate(model.timescale)
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
+
         for op_conds in experiment.operating_conditions:
             op_type = op_conds["type"]
             if op_conds["dc_data"] is not None:
@@ -209,7 +210,7 @@ class Simulation:
         """
         self.op_type_to_model = {}
         self.op_string_to_model = {}
-        for op in self.experiment.operating_conditions:
+        for op_number, op in enumerate(self.experiment.operating_conditions):
             # Create model for this operating condition type (current/voltage/power)
             # if it has not already been seen before
             if op["type"] not in self.op_type_to_model:
@@ -256,7 +257,12 @@ class Simulation:
                 self.update_new_model_events(new_model, op)
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
-                experiment_parameter_values = self.get_experiment_parameter_values(op)
+                self._original_temperature = new_parameter_values[
+                    "Ambient temperature [K]"
+                ]
+                experiment_parameter_values = self.get_experiment_parameter_values(
+                    op, op_number
+                )
                 new_parameter_values.update(
                     experiment_parameter_values, check_already_exists=False
                 )
@@ -340,7 +346,7 @@ class Simulation:
                     event.name, event.expression + 1, event.event_type
                 )
 
-    def get_experiment_parameter_values(self, op):
+    def get_experiment_parameter_values(self, op, op_number):
         experiment_parameter_values = {}
         if op["type"] == "current":
             experiment_parameter_values.update(
@@ -358,6 +364,21 @@ class Simulation:
             experiment_parameter_values.update(
                 {"Power function [W]": op["Power input [W]"]}
             )
+
+        if op["temperature"] is not None:
+            ambient_temperature = op["temperature"] + 273.15
+            experiment_parameter_values.update(
+                {"Ambient temperature [K]": ambient_temperature}
+            )
+            if op_number == 0: 
+                experiment_parameter_values.update({
+                    "Initial temperature [K]": ambient_temperature,
+                })
+        else:
+            experiment_parameter_values.update(
+                {"Ambient temperature [K]": self._original_temperature}
+            )
+
         return experiment_parameter_values
 
     def set_parameters(self):

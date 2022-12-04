@@ -21,149 +21,165 @@ class TestExperiment(unittest.TestCase):
 
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1C for 0.5 hours",
-                "Discharge at C/20 for 0.5 hours",
-                "Charge at 0.5 C for 45 minutes",
-                "Discharge at 1 A for 0.5 hours",
-                "Charge at 200 mA for 45 minutes (1 minute period)",
-                "Discharge at 1W for 0.5 hours",
+                "Discharge at 1C for 0.5 hours at 27degC",
+                "Discharge at C/20 for 0.5 hours at 29oC",
+                "Charge at 0.5 C for 45 minutes at -5oC",
+                "Discharge at 1 A for 0.5 hours at -5.1oC",
+                "Charge at 200 mA for 45 minutes at 10.2degC (1 minute period)",
+                "Discharge at 1W for 0.5 hours at -10.4oC",
                 "Charge at 200mW for 45 minutes",
                 "Rest for 10 minutes (5 minute period)",
                 "Hold at 1V for 20 seconds",
                 "Charge at 1 C until 4.1V",
                 "Hold at 4.1 V until 50mA",
                 "Hold at 3V until C/50",
-                "Discharge at C/3 for 2 hours or until 2.5 V",
-                "Run US06 (A)",
+                "Discharge at C/3 for 2 hours or until 2.5 V at 26degC",
+                "Run US06 (A) at -5degC",
                 "Run US06 (V) for 5 minutes",
                 "Run US06 (W) for 0.5 hours",
             ],
+            temperature=43,
             drive_cycles={"US06": drive_cycle},
             period="20 seconds",
         )
+        expected_result = [
+            {
+                "C-rate input [-]": 1.0,
+                "type": "C-rate",
+                "time": 1800.0,
+                "period": 20.0,
+                "temperature": 27.0,
+                "dc_data": None,
+                "string": "Discharge at 1C for 0.5 hours at 27degC",
+                "events": None,
+            },
+            {
+                "C-rate input [-]": 0.05,
+                "type": "C-rate",
+                "time": 1800.0,
+                "period": 20.0,
+                "temperature": 29.0,
+                "dc_data": None,
+                "string": "Discharge at C/20 for 0.5 hours at 29oC",
+                "events": None,
+            },
+            {
+                "C-rate input [-]": -0.5,
+                "type": "C-rate",
+                "time": 2700.0,
+                "period": 20.0,
+                "temperature": -5.0,
+                "dc_data": None,
+                "string": "Charge at 0.5 C for 45 minutes at -5oC",
+                "events": None,
+            },
+            {
+                "Current input [A]": 1.0,
+                "type": "current",
+                "time": 1800.0,
+                "period": 20.0,
+                "temperature": -5.1,
+                "dc_data": None,
+                "string": "Discharge at 1 A for 0.5 hours at -5.1oC",
+                "events": None,
+            },
+            {
+                "Current input [A]": -0.2,
+                "type": "current",
+                "time": 2700.0,
+                "period": 60.0,
+                "temperature": 10.2,
+                "dc_data": None,
+                "string": "Charge at 200 mA for 45 minutes at 10.2degC",
+                "events": None,
+            },
+            {
+                "Power input [W]": 1.0,
+                "type": "power",
+                "time": 1800.0,
+                "period": 20.0,
+                "temperature": -10.4,
+                "dc_data": None,
+                "string": "Discharge at 1W for 0.5 hours at -10.4oC",
+                "events": None,
+            },
+            {
+                "Power input [W]": -0.2,
+                "type": "power",
+                "time": 2700.0,
+                "period": 20.0,
+                "temperature": 43,
+                "dc_data": None,
+                "string": "Charge at 200mW for 45 minutes",
+                "events": None,
+            },
+            {
+                "Current input [A]": 0,
+                "type": "current",
+                "time": 600.0,
+                "period": 300.0,
+                "temperature": 43,
+                "dc_data": None,
+                "string": "Rest for 10 minutes",
+                "events": None,
+            },
+            {
+                "Voltage input [V]": 1,
+                "type": "voltage",
+                "time": 20.0,
+                "period": 20.0,
+                "temperature": 43,
+                "dc_data": None,
+                "string": "Hold at 1V for 20 seconds",
+                "events": None,
+            },
+            {
+                "C-rate input [-]": -1,
+                "type": "C-rate",
+                "time": None,
+                "period": 20.0,
+                "temperature": 43,
+                "dc_data": None,
+                "string": "Charge at 1 C until 4.1V",
+                "events": {"Voltage input [V]": 4.1, "type": "voltage"},
+            },
+            {
+                "Voltage input [V]": 4.1,
+                "type": "voltage",
+                "time": None,
+                "period": 20.0,
+                "temperature": 43,
+                "dc_data": None,
+                "string": "Hold at 4.1 V until 50mA",
+                "events": {"Current input [A]": 0.05, "type": "current"},
+            },
+            {
+                "Voltage input [V]": 3,
+                "type": "voltage",
+                "time": None,
+                "period": 20.0,
+                "temperature": 43,
+                "dc_data": None,
+                "string": "Hold at 3V until C/50",
+                "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+            },
+            {
+                "C-rate input [-]": 1 / 3,
+                "type": "C-rate",
+                "time": 7200.0,
+                "period": 20.0,
+                "temperature": 26,
+                "dc_data": None,
+                "string": "Discharge at C/3 for 2 hours or until 2.5 V at 26degC",
+                "events": {"Voltage input [V]": 2.5, "type": "voltage"},
+            },
+        ]
 
-        self.assertEqual(
-            experiment.operating_conditions[:-3],
-            [
-                {
-                    "C-rate input [-]": 1,
-                    "type": "C-rate",
-                    "time": 1800.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Discharge at 1C for 0.5 hours",
-                    "events": None,
-                },
-                {
-                    "C-rate input [-]": 0.05,
-                    "type": "C-rate",
-                    "time": 1800.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Discharge at C/20 for 0.5 hours",
-                    "events": None,
-                },
-                {
-                    "C-rate input [-]": -0.5,
-                    "type": "C-rate",
-                    "time": 2700.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Charge at 0.5 C for 45 minutes",
-                    "events": None,
-                },
-                {
-                    "Current input [A]": 1,
-                    "type": "current",
-                    "time": 1800.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Discharge at 1 A for 0.5 hours",
-                    "events": None,
-                },
-                {
-                    "Current input [A]": -0.2,
-                    "type": "current",
-                    "time": 2700.0,
-                    "period": 60.0,
-                    "dc_data": None,
-                    "string": "Charge at 200 mA for 45 minutes",
-                    "events": None,
-                },
-                {
-                    "Power input [W]": 1,
-                    "type": "power",
-                    "time": 1800.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Discharge at 1W for 0.5 hours",
-                    "events": None,
-                },
-                {
-                    "Power input [W]": -0.2,
-                    "type": "power",
-                    "time": 2700.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Charge at 200mW for 45 minutes",
-                    "events": None,
-                },
-                {
-                    "Current input [A]": 0,
-                    "type": "current",
-                    "time": 600.0,
-                    "period": 300.0,
-                    "dc_data": None,
-                    "string": "Rest for 10 minutes",
-                    "events": None,
-                },
-                {
-                    "Voltage input [V]": 1,
-                    "type": "voltage",
-                    "time": 20.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Hold at 1V for 20 seconds",
-                    "events": None,
-                },
-                {
-                    "C-rate input [-]": -1,
-                    "type": "C-rate",
-                    "time": None,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Charge at 1 C until 4.1V",
-                    "events": {"Voltage input [V]": 4.1, "type": "voltage"},
-                },
-                {
-                    "Voltage input [V]": 4.1,
-                    "type": "voltage",
-                    "time": None,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Hold at 4.1 V until 50mA",
-                    "events": {"Current input [A]": 0.05, "type": "current"},
-                },
-                {
-                    "Voltage input [V]": 3,
-                    "type": "voltage",
-                    "time": None,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Hold at 3V until C/50",
-                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
-                },
-                {
-                    "C-rate input [-]": 1 / 3,
-                    "type": "C-rate",
-                    "time": 7200.0,
-                    "period": 20.0,
-                    "dc_data": None,
-                    "string": "Discharge at C/3 for 2 hours or until 2.5 V",
-                    "events": {"Voltage input [V]": 2.5, "type": "voltage"},
-                },
-            ],
-        )
+        for expected, actual in zip(expected_result, experiment.operating_conditions):
+            for k in expected.keys():
+                # useful form for debugging
+                self.assertEqual([k, expected[k]], [k, actual[k]])
+
         # Calculation for operating conditions of drive cycle
         time_0 = drive_cycle[:, 0][-1]
         period_0 = np.min(np.diff(drive_cycle[:, 0]))
@@ -180,6 +196,7 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(experiment.operating_conditions[-3]["type"], "current")
         self.assertEqual(experiment.operating_conditions[-3]["time"], time_0)
         self.assertEqual(experiment.operating_conditions[-3]["period"], period_0)
+        self.assertEqual(experiment.operating_conditions[-3]["temperature"], -5)
         np.testing.assert_array_equal(
             experiment.operating_conditions[-2]["dc_data"], drive_cycle_1
         )
@@ -198,47 +215,52 @@ class TestExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 0.5 hours",
-                    "Charge at 0.5 C until 1V",
-                    "Hold at 1V until C/50",
+                    "Discharge at C/20 for 0.5 hours at 34 degC",
+                    "Charge at 0.5 C until 1V at 32 degC",
+                    "Hold at 1V until C/50 at 32 degC",
                     "Discharge at C/20 for 0.5 hours",
                 ),
             ],
             cccv_handling="ode",
         )
-        self.assertEqual(
-            experiment.operating_conditions,
-            [
-                {
-                    "C-rate input [-]": 0.05,
-                    "type": "C-rate",
-                    "time": 1800.0,
-                    "period": 60.0,
-                    "dc_data": None,
-                    "string": "Discharge at C/20 for 0.5 hours",
-                    "events": None,
-                },
-                {
-                    "type": "CCCV",
-                    "C-rate input [-]": -0.5,
-                    "Voltage input [V]": 1,
-                    "time": None,
-                    "period": 60.0,
-                    "dc_data": None,
-                    "string": "Charge at 0.5 C until 1V then hold at 1V until C/50",
-                    "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
-                },
-                {
-                    "C-rate input [-]": 0.05,
-                    "type": "C-rate",
-                    "time": 1800.0,
-                    "period": 60.0,
-                    "dc_data": None,
-                    "string": "Discharge at C/20 for 0.5 hours",
-                    "events": None,
-                },
-            ],
-        )
+        experiment.operating_conditions,
+        expected_result = [
+            {
+                "C-rate input [-]": 0.05,
+                "type": "C-rate",
+                "time": 1800.0,
+                "period": 60.0,
+                "temperature": 34.0,
+                "dc_data": None,
+                "string": "Discharge at C/20 for 0.5 hours at 34 degC",
+                "events": None,
+            },
+            {
+                "type": "CCCV",
+                "C-rate input [-]": -0.5,
+                "Voltage input [V]": 1,
+                "time": None,
+                "period": 60.0,
+                "temperature": 32.0,
+                "dc_data": None,
+                "string": "Charge at 0.5 C until 1V at 32 degC then hold at 1V until C/50 at 32 degC",
+                "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+            },
+            {
+                "C-rate input [-]": 0.05,
+                "type": "C-rate",
+                "time": 1800.0,
+                "period": 60.0,
+                "temperature": None,
+                "dc_data": None,
+                "string": "Discharge at C/20 for 0.5 hours",
+                "events": None,
+            },
+        ]
+
+        for expected, actual in zip(expected_result, experiment.operating_conditions):
+            for k in expected.keys():
+                self.assertEqual([k, expected[k]], [k, actual[k]])
 
         # Cases that don't quite match shouldn't do CCCV setup
         experiment = pybamm.Experiment(
@@ -256,6 +278,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "C-rate",
                     "time": None,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Charge at 0.5 C until 2V",
                     "events": {"Voltage input [V]": 2, "type": "voltage"},
@@ -265,6 +288,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "voltage",
                     "time": None,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
@@ -286,6 +310,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "C-rate",
                     "time": 120.0,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Charge at 0.5 C for 2 minutes",
                     "events": None,
@@ -295,6 +320,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "voltage",
                     "time": None,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
@@ -318,6 +344,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "C-rate",
                     "time": 1800.0,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
@@ -327,6 +354,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "C-rate",
                     "time": 2700.0,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Charge at C/5 for 45 minutes",
                     "events": None,
@@ -336,6 +364,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "C-rate",
                     "time": 1800.0,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
@@ -345,6 +374,7 @@ class TestExperiment(unittest.TestCase):
                     "type": "C-rate",
                     "time": 2700.0,
                     "period": 60.0,
+                    "temperature": None,
                     "dc_data": None,
                     "string": "Charge at C/5 for 45 minutes",
                     "events": None,
@@ -381,7 +411,7 @@ class TestExperiment(unittest.TestCase):
             TypeError, "Operating conditions should be strings or tuples of strings"
         ):
             pybamm.Experiment([(1, 2, 3)])
-        with self.assertRaisesRegex(ValueError, "Operating conditions must contain"):
+        with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Discharge at 1 A at 2 hours"])
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Run at 1 A for 2 hours"])
@@ -397,6 +427,25 @@ class TestExperiment(unittest.TestCase):
             pybamm.Experiment(["Discharge at 1 B for 2 hours"])
         with self.assertRaisesRegex(ValueError, "time units must be"):
             pybamm.Experiment(["Discharge at 1 A for 2 years"])
+        with self.assertRaisesRegex(
+            ValueError, "The temperature for the CC and CV steps"
+        ):
+            pybamm.Experiment(
+                [
+                    (
+                        "Discharge at 1A until 3.2V at 24degC",
+                        "Hold at 3.2V until C/50 at 27degC",
+                    )
+                ],
+                cccv_handling="ode",
+            )
+        with self.assertRaisesRegex(ValueError, "Instruction must be"):
+            pybamm.Experiment(["Discharge at 1 A for 2 hours at 25C"])
+
+        with self.assertRaisesRegex(
+            ValueError, "Temperature not written correctly on step"
+        ):
+            pybamm.Experiment(["Discharge at 1 A for 2 hours 25oC"])
 
     def test_termination(self):
         experiment = pybamm.Experiment(["Discharge at 1 C for 20 seconds"])

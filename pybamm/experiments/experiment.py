@@ -3,25 +3,27 @@
 #
 
 import numpy as np
+import re
 
 examples = """
 
-    Discharge at 1C for 0.5 hours,
-    Discharge at C/20 for 0.5 hours,
-    Charge at 0.5 C for 45 minutes,
-    Discharge at 1 A for 90 seconds,
-    Charge at 200mA for 45 minutes (1 minute period),
-    Discharge at 1 W for 0.5 hours,
-    Charge at 200 mW for 45 minutes,
-    Rest for 10 minutes (5 minute period),
-    Hold at 1 V for 20 seconds,
-    Charge at 1 C until 4.1V,
-    Hold at 4.1 V until 50 mA,
-    Hold at 3V until C/50,
-    Run US06 (A),
-    Run US06 (A) for 20 seconds,
-    Run US06 (V) for 45 minutes,
-    Run US06 (W) for 2 hours,
+    "Discharge at 1C for 0.5 hours at 27degC",
+    "Discharge at C/20 for 0.5 hours at 29oC",
+    "Charge at 0.5 C for 45 minutes at -5oC",
+    "Discharge at 1 A for 0.5 hours at -5.1oC",
+    "Charge at 200 mA for 45 minutes at 10.2degC (1 minute period)",
+    "Discharge at 1W for 0.5 hours at -10.4oC",
+    "Charge at 200mW for 45 minutes",
+    "Rest for 10 minutes (5 minute period)",
+    "Hold at 1V for 20 seconds",
+    "Charge at 1 C until 4.1V",
+    "Hold at 4.1 V until 50mA",
+    "Hold at 3V until C/50",
+    "Discharge at C/3 for 2 hours or until 2.5 V at 26degC",
+    "Run US06 (A) at -5degC",
+    "Run US06 (V) for 5 minutes",
+    "Run US06 (W) for 0.5 hours",
+
     """
 
 
@@ -31,12 +33,18 @@ class Experiment:
     list of operating conditions should be passed in. Each operating condition should
     be of the form "Do this for this long" or "Do this until this happens". For example,
     "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge at 1 C for 1
-    hour or until 4.2 V". The instructions can be of the form "(Dis)charge at x A/C/W",
-    "Rest", or "Hold at x V". The running time should be a time in seconds, minutes or
+    hour or until 4.2 V at 25oC". The instructions can be of the form 
+    "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A at z degC". The running 
+    time should be a time in seconds, minutes or
     hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
     a circuit state, e.g. "1 A", "C/50" or "3 V". The parameter drive_cycles is
     mandatory to run drive cycle. For example, "Run x", then x must be the key
-    of drive_cycles dictionary.
+    of drive_cycles dictionary. The temperature should be provided after the stopping 
+    condition but before the period, e.g. "1 A at 25 degC (1 second period)". It is 
+    not essential to provide a temperature and a global temperature can be set either
+    from within the paramter values of passing a temperature to this experiment class. 
+    If the temperature is not specified in a line, then the global temperature is used, 
+    even if another temperature has been set in an earlier line.
 
     Parameters
     ----------
@@ -45,6 +53,10 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
+    temperature: float, optional
+        The ambient air temperature in degrees Celsius at which to run the experiment.
+        Default is None whereby the ambient temperature is taken from the parameter set.
+        This value is overwritten if the temperature is specified in a step.
     termination : list, optional
         List of conditions under which to terminate the experiment. Default is None.
     drive_cycles : dict
@@ -60,6 +72,7 @@ class Experiment:
         self,
         operating_conditions,
         period="1 minute",
+        temperature=None,
         termination=None,
         drive_cycles={},
         cccv_handling="two-step",
@@ -71,12 +84,15 @@ class Experiment:
         self.args = (
             operating_conditions,
             period,
+            temperature,
             termination,
             drive_cycles,
             cccv_handling,
         )
 
         self.period = self.convert_time_to_seconds(period.split())
+        self.temperature = temperature
+
         operating_conditions_cycles = []
         for cycle in operating_conditions:
             # Check types and convert strings to 1-tuples
@@ -163,11 +179,20 @@ class Experiment:
             cond_CC, cond_CV = cond.split(" then ")
             op_CC = self.read_string(cond_CC, drive_cycles)
             op_CV = self.read_string(cond_CV, drive_cycles)
+
+            if op_CC["temperature"] != op_CV["temperature"]:
+                raise ValueError(
+                    "The temperature for the CC and CV steps must be the same."
+                    f"Got {op_CC['temperature']} and {op_CV['temperature']}"
+                    f"from {op_CC['string']} and {op_CV['string']}"
+                )
+
             outputs = {
                 "type": "CCCV",
                 "Voltage input [V]": op_CV["Voltage input [V]"],
                 "time": op_CV["time"],
                 "period": op_CV["period"],
+                "temperature": op_CC["temperature"],
                 "dc_data": None,
                 "string": cond,
                 "events": op_CV["events"],
@@ -185,11 +210,16 @@ class Experiment:
             period = self.convert_time_to_seconds(time.split())
         else:
             period = self.period
+
+        # Read temperature
+        temperature = self.read_temperature(cond)
+
         # Read instructions
         if "Run" in cond:
             cond_list = cond.split()
-            if "at" in cond:
-                raise ValueError(f"Instruction must be of the form: {examples}")
+            if not "degC" in cond and not "oC" in cond:
+                if "at" in cond:
+                    raise ValueError(f"Instruction must be of the form: {examples}")
             dc_types = ["(A)", "(V)", "(W)"]
             if all(x not in cond for x in dc_types):
                 raise ValueError(
@@ -221,15 +251,32 @@ class Experiment:
                 cond_list = cond.split()
                 idx_for = cond_list.index("for")
                 idx_until = cond_list.index("or")
+
                 electric = self.convert_electric(cond_list[:idx_for])
+
                 time = self.convert_time_to_seconds(cond_list[idx_for + 1 : idx_until])
-                events = self.convert_electric(cond_list[idx_until + 2 :])
+
+                # remove temperture part of string
+                reduced_cond_list = cond_list[idx_until + 2 :]
+                if "at" in reduced_cond_list:
+                    at_idx = reduced_cond_list.index("at")
+                    reduced_cond_list = reduced_cond_list[:at_idx]
+
+                events = self.convert_electric(reduced_cond_list)
             elif "for" in cond:
                 # e.g. for 3 hours
                 cond_list = cond.split()
                 idx = cond_list.index("for")
+
                 electric = self.convert_electric(cond_list[:idx])
-                time = self.convert_time_to_seconds(cond_list[idx + 1 :])
+
+                # remove temperture part of string
+                reduced_cond_list = cond_list[idx + 1 :]
+                if "at" in reduced_cond_list:
+                    at_idx = reduced_cond_list.index("at")
+                    reduced_cond_list = reduced_cond_list[:at_idx]
+
+                time = self.convert_time_to_seconds(reduced_cond_list)
                 events = None
             elif "until" in cond:
                 # e.g. until 4.2 V
@@ -237,7 +284,14 @@ class Experiment:
                 idx = cond_list.index("until")
                 electric = self.convert_electric(cond_list[:idx])
                 time = None
-                events = self.convert_electric(cond_list[idx + 1 :])
+
+                # remove temperture part of string
+                reduced_cond_list = cond_list[idx + 1 :]
+                if "at" in reduced_cond_list:
+                    at_idx = reduced_cond_list.index("at")
+                    reduced_cond_list = reduced_cond_list[:at_idx]
+
+                events = self.convert_electric(reduced_cond_list)
             else:
                 raise ValueError(
                     "Operating conditions must contain keyword 'for' or 'until' or "
@@ -251,6 +305,7 @@ class Experiment:
             **electric,
             "time": time,
             "period": period,
+            "temperature": temperature,
             "dc_data": dc_data,
             "string": cond,
             "events": events,
@@ -315,6 +370,9 @@ class Experiment:
                     raise ValueError(
                         "Instruction must be 'discharge', 'charge', 'rest', 'hold' or "
                         f"'Run'. For example: {examples}"
+                        ""
+                        "The following instruction does not comply: "
+                        f"{instruction}"
                     )
             elif len(electric) == 2:
                 # e.g. 3 A, 4.1 V
@@ -362,6 +420,54 @@ class Experiment:
                         unit, examples
                     )
                 )
+
+    def read_temperature(self, cond):
+
+        if (len(re.findall("at", cond)) > 1 or ("Run" in cond and "at" in cond)) and (
+            "degC" not in cond and "oC" not in cond
+        ):
+            raise ValueError(
+                "Instruction must be 'discharge', 'charge', 'rest', 'hold' or "
+                f"'Run'. For example: {examples}"
+                ""
+                "The following instruction does not comply: "
+                f"{cond}"
+            )
+
+        if "degC" in cond or "oC" in cond:
+            matches = re.findall(
+                "(\-*[0-9]*\.*[0-9]*)(\s*degC)|(\-*[0-9]*\.*[0-9]*)(\s*oC)", cond
+            )
+
+            non_empty_matches = [m for m in matches[0] if m]
+
+            first_match = non_empty_matches[0]
+
+            try:
+                temperature = float(first_match)
+            except ValueError:
+                raise ValueError(
+                    f"Temperature not found correctly "
+                    f"on step: {cond}. "
+                    f"Cannot convert {first_match} to a float."
+                    f" Regex matches found: {non_empty_matches}. "
+                    "If the temperature value is found by regex but is "
+                    "not the first match, please restucture your input."
+                )
+
+            # try to find 'at" keyword before temperature
+            matches = re.findall(f"at\s*{first_match}", cond)
+            if len(matches) == 0:
+                raise ValueError(
+                    f"Temperature not written correctly "
+                    f"on step: {cond}. "
+                    f"Cannot find 'at' keyword before temperature value: {first_match}."
+                )
+
+        else:
+            temperature = self.temperature
+
+        return temperature
 
     def convert_time_to_seconds(self, time_and_units):
         """Convert a time in seconds, minutes or hours to a time in seconds"""
@@ -428,7 +534,7 @@ class Experiment:
         # e.g. step="Charge at 2.0 A until 4.2V"
         # next_step="Hold at 4.2V until C/50"
         if (
-            step.startswith("Charge")
+            (step.startswith("Charge") or step.startswith("Discharge"))
             and "until" in step
             and "V" in step
             and "Hold at " in next_step
