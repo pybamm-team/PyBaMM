@@ -94,6 +94,7 @@ class TestEcmParameters(unittest.TestCase):
         value = parameter_values.evaluate(param.T_amb(sym))
         self.assertEqual(value, values["Ambient temperature [K]"] - 273.15)
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
