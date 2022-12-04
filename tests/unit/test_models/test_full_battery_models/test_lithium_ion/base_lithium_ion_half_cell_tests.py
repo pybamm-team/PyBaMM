@@ -55,6 +55,10 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"SEI": "reaction limited"}
         self.check_well_posedness(options)
 
+    def test_well_posed_asymmetric_reaction_limited_sei(self):
+        options = {"SEI": "reaction limited (asymmetric)"}
+        self.check_well_posedness(options)
+
     def test_well_posed_solvent_diffusion_limited_sei(self):
         options = {"SEI": "solvent-diffusion limited"}
         self.check_well_posedness(options)
@@ -69,6 +73,10 @@ class BaseUnitTestLithiumIonHalfCell:
 
     def test_well_posed_ec_reaction_limited_sei(self):
         options = {"SEI": "ec reaction limited"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_asymmetric_ec_reaction_limited_sei(self):
+        options = {"SEI": "ec reaction limited (asymmetric)"}
         self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal(self):

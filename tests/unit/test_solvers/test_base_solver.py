@@ -121,7 +121,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
                 self.len_rhs_and_alg = 1
-                self.interpolant_extrapolation_events_eval = []
+                self.events = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -160,7 +160,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
                 self.len_rhs = 1
                 self.len_rhs_and_alg = 4
-                self.interpolant_extrapolation_events_eval = []
+                self.events = []
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]
@@ -209,7 +209,6 @@ class TestBaseSolver(unittest.TestCase):
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
-                self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])

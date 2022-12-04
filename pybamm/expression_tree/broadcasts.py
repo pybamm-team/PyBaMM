@@ -87,6 +87,8 @@ class PrimaryBroadcast(Broadcast):
         # Can only do primary broadcast from current collector to electrode,
         # particle-size or particle or from electrode to particle-size or particle.
         # Note e.g. current collector to particle *is* allowed
+        if broadcast_domain == []:
+            raise pybamm.DomainError("Cannot Broadcast an object into empty domain.")
         if child.domain == []:
             pass
         elif child.domain == ["current collector"] and not (
@@ -430,7 +432,10 @@ class FullBroadcast(Broadcast):
 
     def check_and_set_domains(self, child, broadcast_domains):
         """See :meth:`Broadcast.check_and_set_domains`"""
-
+        if broadcast_domains["primary"] == []:
+            raise pybamm.DomainError(
+                """Cannot do full broadcast to an empty primary domain"""
+            )
         # Variables on the current collector can only be broadcast to 'primary'
         if child.domain == ["current collector"]:
             raise pybamm.DomainError(
@@ -544,6 +549,10 @@ def full_like(symbols, fill_value):
         return array_type(entries, domains=sum_symbol.domains)
 
     except NotImplementedError:
+        if sum_symbol.shape_for_testing == (1, 1) or sum_symbol.shape_for_testing == (
+            1,
+        ):
+            return pybamm.Scalar(fill_value)
         if sum_symbol.evaluates_on_edges("primary"):
             return FullBroadcastToEdges(
                 fill_value, broadcast_domains=sum_symbol.domains

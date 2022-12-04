@@ -123,10 +123,8 @@ class TestScipySolver(unittest.TestCase):
         disc.process_model(model)
 
         # Add user-supplied Jacobian to model
-        combined_submesh = mesh.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-        N = combined_submesh.npts
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        N = submesh.npts
 
         # construct jacobian in order of model.rhs
         J = []
@@ -501,6 +499,25 @@ class TestScipySolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_almost_equal(
             solution.y[0], 2 * np.exp(-solution.t), decimal=5
+        )
+
+    def test_scale_and_reference(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", scale=2, reference=1)
+        model.rhs = {var1: -var1}
+        model.initial_conditions = {var1: 3}
+        model.variables = {"var1": var1}
+        solver = pybamm.ScipySolver()
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+
+        # Check that the initial conditions and solution are scaled correctly
+        np.testing.assert_array_almost_equal(
+            model.concatenated_initial_conditions.evaluate(), 1
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[0], (solution["var1"].data - 1) / 2, decimal=14
         )
 
 

@@ -1,9 +1,13 @@
 #
 # Tests for the KLU Solver class
 #
-import pybamm
-import numpy as np
+from contextlib import redirect_stdout
+import io
 import unittest
+
+import numpy as np
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 
@@ -250,7 +254,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
+        for form in ["casadi", "python", "jax"]:
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
@@ -442,6 +446,81 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)
+
+    def test_options(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -0.1 * u}
+        model.algebraic = {v: v - u}
+        model.initial_conditions = {u: 1, v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 1)
+        solver = pybamm.IDAKLUSolver()
+        soln_base = solver.solve(model, t_eval)
+
+        # test print_stats
+        solver = pybamm.IDAKLUSolver(options={"print_stats": True})
+        f = io.StringIO()
+        with redirect_stdout(f):
+            solver.solve(model, t_eval)
+        s = f.getvalue()
+        self.assertIn("Solver Stats", s)
+
+        solver = pybamm.IDAKLUSolver(options={"print_stats": False})
+        f = io.StringIO()
+        with redirect_stdout(f):
+            solver.solve(model, t_eval)
+        s = f.getvalue()
+        self.assertEqual(len(s), 0)
+
+        # test everything else
+        for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
+            for linear_solver in [
+                "SUNLinSol_SPBCGS",
+                "SUNLinSol_Dense",
+                "SUNLinSol_KLU",
+                "SUNLinSol_SPFGMR",
+                "SUNLinSol_SPGMR",
+                "SUNLinSol_SPTFQMR",
+                "garbage",
+            ]:
+                for precon in ["none", "BBDP"]:
+                    options = {
+                        "jacobian": jacobian,
+                        "linear_solver": linear_solver,
+                        "preconditioner": precon,
+                    }
+                    solver = pybamm.IDAKLUSolver(options=options)
+                    if (
+                        jacobian == "none"
+                        and (linear_solver == "SUNLinSol_Dense")
+                        or jacobian == "dense"
+                        and (linear_solver == "SUNLinSol_Dense")
+                        or jacobian == "sparse"
+                        and (
+                            linear_solver != "SUNLinSol_Dense"
+                            and linear_solver != "garbage"
+                        )
+                        or jacobian == "matrix-free"
+                        and (
+                            linear_solver != "SUNLinSol_KLU"
+                            and linear_solver != "SUNLinSol_Dense"
+                            and linear_solver != "garbage"
+                        )
+                    ):
+                        works = True
+                    else:
+                        works = False
+
+                    if works:
+                        soln = solver.solve(model, t_eval)
+                        np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
+                    else:
+                        with self.assertRaises(ValueError):
+                            soln = solver.solve(model, t_eval)
 
 
 if __name__ == "__main__":

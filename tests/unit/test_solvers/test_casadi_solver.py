@@ -509,7 +509,7 @@ class TestCasadiSolver(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         param = pybamm.ParameterValues("NCA_Kim2011")
         experiment = pybamm.Experiment(
-            ["Charge at 1C until 4.6 V"], period="10 seconds"
+            ["Charge at 1C until 4.2 V"], period="10 seconds"
         )
 
         param["Upper voltage cut-off [V]"] = 4.8
@@ -524,18 +524,6 @@ class TestCasadiSolver(unittest.TestCase):
                 extrap_tol=1e-3,
                 extra_options_setup={"max_num_steps": 500},
             ),
-        )
-        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
-            sim.solve()
-
-        ci = param["Initial concentration in positive electrode [mol.m-3]"]
-        param["Initial concentration in positive electrode [mol.m-3]"] = 0.8 * ci
-
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=param,
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(mode="safe", dt_max=0.05),
         )
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
             sim.solve()

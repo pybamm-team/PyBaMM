@@ -60,7 +60,7 @@ class Discretisation(object):
                             )
                         )
 
-        self.bcs = {}
+        self._bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
         self.external_variables = {}
@@ -187,7 +187,7 @@ class Discretisation(object):
         pybamm.logger.verbose(
             "Discretise boundary conditions for {}".format(model.name)
         )
-        self.bcs = self.process_boundary_conditions(model)
+        self._bcs = self.process_boundary_conditions(model)
         pybamm.logger.verbose(
             "Set internal boundary conditions for {}".format(model.name)
         )
@@ -489,7 +489,9 @@ class Discretisation(object):
 
         """
         # Discretise initial conditions
-        processed_initial_conditions = self.process_dict(model.initial_conditions)
+        processed_initial_conditions = self.process_dict(
+            model.initial_conditions, ics=True
+        )
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
@@ -728,7 +730,7 @@ class Discretisation(object):
 
         return mass_matrix, mass_matrix_inv
 
-    def process_dict(self, var_eqn_dict):
+    def process_dict(self, var_eqn_dict, ics=False):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.algebraic, model.initial_conditions or
         model.variables).
@@ -739,6 +741,9 @@ class Discretisation(object):
             Equations ({variable: equation} dict) to dicretise
             (can be model.rhs, model.algebraic, model.initial_conditions or
             model.variables)
+        ics : bool, optional
+            Whether the equations are initial conditions. If True, the equations are
+            scaled by the reference value of the variable, if given
 
         Returns
         -------
@@ -750,14 +755,25 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
             if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
-                eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
+                if eqn_key.domain == []:
+                    eqn = eqn * pybamm.Vector([1])
+                else:
+                    eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-
             processed_eqn = self.process_symbol(eqn)
 
-            new_var_eqn_dict[eqn_key] = processed_eqn
+            # Calculate scale if the key has a scale
+            scale = getattr(eqn_key, "scale", 1)
+            if ics:
+                reference = getattr(eqn_key, "reference", 0)
+            else:
+                reference = 0
 
+            if scale != 1 or reference != 0:
+                processed_eqn = (processed_eqn - reference) / scale
+
+            new_var_eqn_dict[eqn_key] = processed_eqn
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -784,14 +800,15 @@ class Discretisation(object):
 
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
+                discretised_symbol.mesh = self.mesh[symbol.domain]
             else:
                 discretised_symbol.mesh = None
+
             # Assign secondary mesh
             if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
-                    *symbol.domains["secondary"]
-                )
+                discretised_symbol.secondary_mesh = self.mesh[
+                    symbol.domains["secondary"]
+                ]
             else:
                 discretised_symbol.secondary_mesh = None
             return discretised_symbol
@@ -897,13 +914,9 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
-                if symbol.domain == []:
-                    out = disc_child * pybamm.Vector([1])
-                else:
-                    out = spatial_method.broadcast(
-                        disc_child, symbol.domains, symbol.broadcast_type
-                    )
-                return out
+                return spatial_method.broadcast(
+                    disc_child, symbol.domains, symbol.broadcast_type
+                )
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
@@ -935,7 +948,9 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.VariableDot):
-            return pybamm.StateVectorDot(
+            # Add symbol's reference and multiply by the symbol's scale
+            # so that the state vector is of order 1
+            return symbol.reference + symbol.scale * pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable()],
                 domains=symbol.domains,
             )
@@ -982,10 +997,28 @@ class Discretisation(object):
                             symbol.name
                         )
                     )
-                return pybamm.StateVector(*y_slices, domains=symbol.domains)
+                # Add symbol's reference and multiply by the symbol's scale
+                # so that the state vector is of order 1
+                return symbol.reference + symbol.scale * pybamm.StateVector(
+                    *y_slices, domains=symbol.domains
+                )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)
+
+        elif isinstance(symbol, pybamm.ConcatenationVariable):
+            # create new children without scale and reference
+            # the scale and reference will be applied to the concatenation instead
+            new_children = []
+            for child in symbol.children:
+                child = child.create_copy()
+                child._scale = 1
+                child._reference = 0
+                child.set_id()
+                new_children.append(self.process_symbol(child))
+            new_symbol = spatial_method.concatenation(new_children)
+            # apply scale to the whole concatenation
+            return symbol.reference + symbol.scale * new_symbol
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]

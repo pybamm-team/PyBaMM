@@ -221,7 +221,7 @@ setup(
             "pybamm_install_odes = pybamm.install_odes:main",
             "pybamm_install_jax = pybamm.util:install_jax",
         ],
-        "pybamm_parameter_set": [
+        "pybamm_parameter_sets": [
             "Sulzer2019 = pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values",  # noqa: E501
             "Ai2020 = pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values",  # noqa: E501
             "Chen2020 = pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values",  # noqa: E501
@@ -235,6 +235,7 @@ setup(
             "Prada2013 = pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values",  # noqa: E501
             "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
             "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
+            "ECM_Example = pybamm.input.parameters.ecm.example_set:get_parameter_values",  # noqa: E501
         ],
     },
 )

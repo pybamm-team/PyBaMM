@@ -7,6 +7,7 @@ import numpy as np
 import copy
 import warnings
 import sys
+from functools import lru_cache
 
 
 def is_notebook():
@@ -374,7 +375,7 @@ class Simulation:
             self._model_with_set_params = self._parameter_values.process_model(
                 self._unprocessed_model, inplace=False
             )
-            self._parameter_values.process_geometry(self._geometry)
+            self._parameter_values.process_geometry(self.geometry)
         self.model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):
@@ -889,21 +890,19 @@ class Simulation:
 
         return self.solution
 
+    @lru_cache
     def get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
             or isinstance(self.model, pybamm.lead_acid.BaseModel)
+            or isinstance(self.model, pybamm.equivalent_circuit.Thevenin)
             or self.model.options["working electrode"] != "both"
         ):
             return None
 
-        try:
-            return self._esoh_solver
-        except AttributeError:
-            self._esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-                self.parameter_values, self.model.param
-            )
-            return self._esoh_solver
+        return pybamm.lithium_ion.ElectrodeSOHSolver(
+            self.parameter_values, self.model.param
+        )
 
     def plot(self, output_variables=None, **kwargs):
         """

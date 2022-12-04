@@ -30,13 +30,15 @@ drive_cycle_power = map_drive_cycle(drive_cycle_current, 1.5, 3.5)
 
 experiment = pybamm.Experiment(
     [
-        "Charge at 1 A until 4.0 V",
-        "Hold at 4.0 V until 50 mA",
-        "Rest for 30 minutes",
-        "Run US06_A (A)",
-        "Rest for 30 minutes",
-        "Run US06_W (W)",
-        "Rest for 30 minutes",
+        (
+            "Charge at 1 A until 4.0 V",
+            "Hold at 4.0 V until 50 mA",
+            "Rest for 30 minutes",
+            "Run US06_A (A)",
+            "Rest for 30 minutes",
+            "Run US06_W (W)",
+            "Rest for 30 minutes",
+        ),
     ],
     drive_cycles={
         "US06_A": drive_cycle_current,
