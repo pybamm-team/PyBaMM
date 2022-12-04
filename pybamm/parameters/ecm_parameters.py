@@ -47,7 +47,9 @@ class EcmParameters:
         self.initial_T_jig = pybamm.Parameter("Initial temperature [K]") - 273.15
 
     def T_amb(self, t):
-        ambient_temperature_K = pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
+        ambient_temperature_K = pybamm.FunctionParameter(
+            "Ambient temperature [K]", {"Time [s]": t}
+        )
         return ambient_temperature_K - 273.15
 
     def ocv(self, soc):

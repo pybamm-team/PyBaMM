@@ -370,10 +370,12 @@ class Simulation:
             experiment_parameter_values.update(
                 {"Ambient temperature [K]": ambient_temperature}
             )
-            if op_number == 0: 
-                experiment_parameter_values.update({
-                    "Initial temperature [K]": ambient_temperature,
-                })
+            if op_number == 0:
+                experiment_parameter_values.update(
+                    {
+                        "Initial temperature [K]": ambient_temperature,
+                    }
+                )
         else:
             experiment_parameter_values.update(
                 {"Ambient temperature [K]": self._original_temperature}

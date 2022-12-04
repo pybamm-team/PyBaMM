@@ -33,17 +33,17 @@ class Experiment:
     list of operating conditions should be passed in. Each operating condition should
     be of the form "Do this for this long" or "Do this until this happens". For example,
     "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge at 1 C for 1
-    hour or until 4.2 V at 25oC". The instructions can be of the form 
-    "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A at z degC". The running 
+    hour or until 4.2 V at 25oC". The instructions can be of the form
+    "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A at z degC". The running
     time should be a time in seconds, minutes or
     hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
     a circuit state, e.g. "1 A", "C/50" or "3 V". The parameter drive_cycles is
     mandatory to run drive cycle. For example, "Run x", then x must be the key
-    of drive_cycles dictionary. The temperature should be provided after the stopping 
-    condition but before the period, e.g. "1 A at 25 degC (1 second period)". It is 
+    of drive_cycles dictionary. The temperature should be provided after the stopping
+    condition but before the period, e.g. "1 A at 25 degC (1 second period)". It is
     not essential to provide a temperature and a global temperature can be set either
-    from within the paramter values of passing a temperature to this experiment class. 
-    If the temperature is not specified in a line, then the global temperature is used, 
+    from within the paramter values of passing a temperature to this experiment class.
+    If the temperature is not specified in a line, then the global temperature is used,
     even if another temperature has been set in an earlier line.
 
     Parameters
@@ -217,7 +217,7 @@ class Experiment:
         # Read instructions
         if "Run" in cond:
             cond_list = cond.split()
-            if not "degC" in cond and not "oC" in cond:
+            if "degC" not in cond and "oC" not in cond:
                 if "at" in cond:
                     raise ValueError(f"Instruction must be of the form: {examples}")
             dc_types = ["(A)", "(V)", "(W)"]

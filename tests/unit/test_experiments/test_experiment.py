@@ -243,7 +243,8 @@ class TestExperiment(unittest.TestCase):
                 "period": 60.0,
                 "temperature": 32.0,
                 "dc_data": None,
-                "string": "Charge at 0.5 C until 1V at 32 degC then hold at 1V until C/50 at 32 degC",
+                "string": "Charge at 0.5 C until 1V at 32 degC "
+                "then hold at 1V until C/50 at 32 degC",
                 "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
             },
             {
