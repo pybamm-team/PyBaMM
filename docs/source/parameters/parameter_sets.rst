@@ -99,4 +99,3 @@ Lithium-ion Parameter Sets
 ----------------------------
 {{ parameter_sets.get_docstring(k) }}
 {% endfor %}
-
