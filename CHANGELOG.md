@@ -4,6 +4,7 @@
 
 ## Features
 
+- Updated parameter sets so that interpolants are created explicitly in the parameter set python file. This does not change functionality but allows finer control, e.g. specifying a "cubic" interpolator instead of the default "linear" ([#2510](https://github.com/pybamm-team/PyBaMM/pull/2510))
 - Equivalent circuit models ([#2478](https://github.com/pybamm-team/PyBaMM/pull/2478))
 - New Idaklu solver options for jacobian type and linear solver, support Sundials v6 ([#2444](https://github.com/pybamm-team/PyBaMM/pull/2444))
 - Added `scale` and `reference` attributes to `Variable` objects, which can be use to make the ODE/DAE solver better conditioned ([#2440](https://github.com/pybamm-team/PyBaMM/pull/2440))
