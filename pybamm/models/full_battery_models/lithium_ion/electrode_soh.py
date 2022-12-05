@@ -210,8 +210,8 @@ class ElectrodeSOHSolver:
         if "n_Li" in inputs:
             warnings.warn(
                 "Input 'n_Li' has been replaced by 'Q_Li', which is 'n_Li * F / 3600'. "
-                "This will be automatically calculated for now."
-                "Q_Li can be calculated from parameters as 'param.Q_Li_particles_init'",
+                "This will be automatically calculated for now. "
+                "Q_Li can be read from parameters as 'param.Q_Li_particles_init'",
                 DeprecationWarning,
             )
             n_Li = inputs.pop("n_Li")
@@ -233,7 +233,7 @@ class ElectrodeSOHSolver:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs)
                 # if that didn't raise an error, raise the original error instead
-                raise split_error  # pragma: no cover
+                raise split_error
 
         return sol
 

@@ -67,7 +67,7 @@ class TestElectrodeSOH(unittest.TestCase):
     def test_error(self):
 
         param = pybamm.LithiumIonParameters()
-        parameter_values = pybamm.ParameterValues("Mohtat2020")
+        parameter_values = pybamm.ParameterValues("Ai2020")
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
 
@@ -84,12 +84,20 @@ class TestElectrodeSOH(unittest.TestCase):
             esoh_solver.solve(inputs)
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
+        inputs = {"V_min": 0, "V_max": 5, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        # Solver fails to find a solution but voltage limits are not violated
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Could not find acceptable solution"
+        ):
+            esoh_solver.solve(inputs)
+        # Solver fails to find a solution due to upper voltage limit
         inputs = {"V_min": 0, "V_max": 6, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
-            esoh_solver._check_esoh_feasible(inputs)
-        inputs = {"V_min": 3, "V_max": 6, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
-            esoh_solver._check_esoh_feasible(inputs)
+            esoh_solver.solve(inputs)
+        # Solver fails to find a solution due to lower voltage limit
+        inputs = {"V_min": -10, "V_max": 5, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
+            esoh_solver.solve(inputs)
 
         # errors for cell capacity based solver
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
