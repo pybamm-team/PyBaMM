@@ -5,6 +5,7 @@
 #
 import pybamm
 import os
+import sys
 import warnings
 import pybtex
 from pybtex.database import parse_file, parse_string, Entry
@@ -35,8 +36,18 @@ class Citations:
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
 
-        self.read_citations()
-        self._reset()
+        if "google.colab" in sys.modules:
+            warnings.warn(
+                """pybtex does not work with Google Colab due to a known bug -
+                https://bitbucket.org/pybtex-devs/pybtex/issues/148/.
+                Please manually cite all the references.""".replace(
+                    "\n                ", " "
+                ),
+                ImportWarning,
+            )
+        else:
+            self.read_citations()
+            self._reset()
 
     def _reset(self):
         """Reset citations to default only (only for testing purposes)"""
