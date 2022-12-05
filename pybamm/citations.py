@@ -36,15 +36,7 @@ class Citations:
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
 
-        if "google.colab" in sys.modules:
-            warnings.warn(
-                """pybtex does not work with Google Colab due to a known bug -
-                https://bitbucket.org/pybtex-devs/pybtex/issues/148/.
-                Please manually cite all the references.""".replace(
-                    "\n                ", " "
-                ),
-            )
-        else:
+        if "google.colab" not in sys.modules:
             self.read_citations()
             self._reset()
 
@@ -153,7 +145,16 @@ class Citations:
 
 def print_citations(filename=None, output_format="text"):
     """See :meth:`Citations.print`"""
-    pybamm.citations.print(filename, output_format)
+    if "google.colab" in sys.modules:
+        raise ImportWarning(
+            """pybtex does not work with Google Colab due to a known bug -
+            https://bitbucket.org/pybtex-devs/pybtex/issues/148/.
+            Please manually cite all the references.""".replace(
+                "\n                ", " "
+            ),
+        )
+    else:
+        pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()
