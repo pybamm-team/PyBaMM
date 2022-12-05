@@ -43,7 +43,9 @@ class _ElectrodeSOH(pybamm.BaseModel):
         solve_for = solve_for or ["x_0", "x_100"]
 
         if known_value == "cell capacity" and solve_for != ["x_0", "x_100"]:
-            raise ValueError
+            raise ValueError(
+                "If known_value is 'cell capacity', solve_for must be ['x_0', 'x_100']"
+            )
 
         # Define parameters and input parameters
         Un = param.n.prim.U_dimensional
@@ -231,7 +233,7 @@ class ElectrodeSOHSolver:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs)
                 # if that didn't raise an error, raise the original error instead
-                raise split_error
+                raise split_error  # pragma: no cover
 
         return sol
 
@@ -349,7 +351,7 @@ class ElectrodeSOHSolver:
                 f"x0_min={x0_min:.4f} and x100_max={x100_max:.4f} "
                 "or '0 < y100_min < y0_max < 1' is False for "
                 f"y100_min={y100_min:.4f} and y0_max={y0_max:.4f}"
-            )
+            )  # pragma: no cover
 
         return (x0_min, x100_max, y100_min, y0_max)
 

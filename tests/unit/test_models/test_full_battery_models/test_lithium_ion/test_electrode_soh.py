@@ -91,6 +91,19 @@ class TestElectrodeSOH(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
             esoh_solver._check_esoh_feasible(inputs)
 
+        # errors for cell capacity based solver
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, known_value="cell capacity"
+        )
+        with self.assertRaisesRegex(ValueError, "solve_for must be "):
+            esoh_solver._get_electrode_soh_sims_split()
+
+        inputs = {"V_min": 3, "V_max": 6, "Q_n": Q_n, "Q_p": Q_p, "Q": 2 * Q_p}
+        with self.assertRaisesRegex(
+            ValueError, "larger than the maximum possible capacity"
+        ):
+            esoh_solver.solve(inputs)
+
 
 class TestElectrodeSOHHalfCell(unittest.TestCase):
     def test_known_solution(self):
@@ -110,35 +123,33 @@ class TestElectrodeSOHHalfCell(unittest.TestCase):
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
 
 
-class TestSetInitialSOC(unittest.TestCase):
-    def test_known_solutions(self):
-
+class TestGetInitialSOC(unittest.TestCase):
+    def test_initial_soc(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
+        T = parameter_values.evaluate(param.T_ref)
 
-        V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-        V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
-        Q_n = parameter_values.evaluate(param.n.Q_init)
-        Q_p = parameter_values.evaluate(param.p.Q_init)
-        Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
-
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values)
-
-        inputs = {"V_min": V_min, "V_max": V_max, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-
-        # Solve the model and check outputs
-        esoh_sol = esoh_solver.solve(inputs)
-
-        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+        x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
             1, parameter_values, param
         )
-        self.assertAlmostEqual(x, esoh_sol["x_100"].data[0])
-        self.assertAlmostEqual(y, esoh_sol["y_100"].data[0])
-        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+        V = parameter_values.evaluate(
+            param.p.prim.U_dimensional(y100, T) - param.n.prim.U_dimensional(x100, T)
+        )
+        self.assertAlmostEqual(V, 4.2)
+
+        x0, y0 = pybamm.lithium_ion.get_initial_stoichiometries(
             0, parameter_values, param
         )
-        self.assertAlmostEqual(x, esoh_sol["x_0"].data[0])
-        self.assertAlmostEqual(y, esoh_sol["y_0"].data[0])
+        V = parameter_values.evaluate(
+            param.p.prim.U_dimensional(y0, T) - param.n.prim.U_dimensional(x0, T)
+        )
+        self.assertAlmostEqual(V, 2.8)
+
+        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+            0.4, parameter_values, param
+        )
+        self.assertEqual(x, x0 + 0.4 * (x100 - x0))
+        self.assertEqual(y, y0 - 0.4 * (y0 - y100))
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
             "4 V", parameter_values, param
@@ -148,6 +159,36 @@ class TestSetInitialSOC(unittest.TestCase):
             param.p.prim.U_dimensional(y, T) - param.n.prim.U_dimensional(x, T)
         )
         self.assertAlmostEqual(V, 4)
+
+    def test_min_max_stoich(self):
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+        T = parameter_values.evaluate(param.T_ref)
+
+        x0, x100, y100, y0 = pybamm.lithium_ion.get_min_max_stoichiometries(
+            parameter_values, param
+        )
+        V = parameter_values.evaluate(
+            param.p.prim.U_dimensional(y100, T) - param.n.prim.U_dimensional(x100, T)
+        )
+        self.assertAlmostEqual(V, 4.2)
+        V = parameter_values.evaluate(
+            param.p.prim.U_dimensional(y0, T) - param.n.prim.U_dimensional(x0, T)
+        )
+        self.assertAlmostEqual(V, 2.8)
+
+    def test_initial_soc_cell_capacity(self):
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+        T = parameter_values.evaluate(param.T_ref)
+
+        x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
+            1, parameter_values, param, known_value="cell capacity"
+        )
+        V = parameter_values.evaluate(
+            param.p.prim.U_dimensional(y100, T) - param.n.prim.U_dimensional(x100, T)
+        )
+        self.assertAlmostEqual(V, 4.2)
 
     def test_error(self):
 
@@ -160,6 +201,9 @@ class TestSetInitialSOC(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometries("1 V", parameter_values)
+
+        with self.assertRaisesRegex(ValueError, "must be a float"):
+            pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
 
 
 if __name__ == "__main__":
