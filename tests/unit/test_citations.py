@@ -67,9 +67,10 @@ class TestCitations(unittest.TestCase):
             pybamm.print_citations("test_citations.txt", "bad format")
 
         # google colab issue - https://github.com/pybamm-team/PyBaMM/issues/2524
-        sys.modules["google.colab"] == __import__("mock")
+        sys.modules["google.colab"] = "mock"
         with self.assertRaisesRegex(ImportWarning, "pybtex does not work"):
             pybamm.print_citations()
+        sys.modules.pop("google.colab")
 
     def test_overwrite_citation(self):
         # Unknown citation
