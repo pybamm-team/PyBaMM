@@ -147,11 +147,9 @@ def print_citations(filename=None, output_format="text"):
     """See :meth:`Citations.print`"""
     if "google.colab" in sys.modules:
         raise ImportWarning(
-            """pybtex does not work with Google Colab due to a known bug -
-            https://bitbucket.org/pybtex-devs/pybtex/issues/148/.
-            Please manually cite all the references.""".replace(
-                "\n            ", " "
-            ),
+            "pybtex does not work with Google Colab due to a known bug -"
+            "https://bitbucket.org/pybtex-devs/pybtex/issues/148/."
+            "Please manually cite all the references."
         )
     else:
         pybamm.citations.print(filename, output_format)
