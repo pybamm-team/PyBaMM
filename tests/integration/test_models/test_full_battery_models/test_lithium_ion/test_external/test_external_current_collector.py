@@ -1,9 +1,9 @@
 #
 # Tests for external submodels
 #
-import pybamm
+# import pybamm
 import unittest
-import numpy as np
+# import numpy as np
 
 
 class TestExternalCC(unittest.TestCase):
