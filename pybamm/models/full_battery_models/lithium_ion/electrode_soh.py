@@ -409,7 +409,8 @@ class ElectrodeSOHSolver:
         initial_value : float
             Target initial value.
             If integer, interpreted as SOC, must be between 0 and 1.
-            If string e.g. "4 V", interpreted as voltage, must be between V_min and V_max.
+            If string e.g. "4 V", interpreted as voltage,
+            must be between V_min and V_max.
 
         Returns
         -------
@@ -454,7 +455,8 @@ class ElectrodeSOHSolver:
 
         else:
             raise ValueError(
-                "Initial value must be a float between 0 and 1, or a string ending in 'V'"
+                "Initial value must be a float between 0 and 1, "
+                "or a string ending in 'V'"
             )
 
         x = x_0 + initial_soc * (x_100 - x_0)
