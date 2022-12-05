@@ -43,7 +43,6 @@ class Citations:
                 Please manually cite all the references.""".replace(
                     "\n                ", " "
                 ),
-                ImportWarning,
             )
         else:
             self.read_citations()
