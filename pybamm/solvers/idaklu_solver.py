@@ -56,7 +56,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "jacobian": "sparse",
 
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
-                # "SUNLinSol_Dense", "SUNLinSol_LapackDense" "SUNLinSol_SPBCGS",
+                # "SUNLinSol_Dense", "SUNLinSol_SPBCGS",
                 # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
                 "linear_solver": "SUNLinSol_KLU",
 

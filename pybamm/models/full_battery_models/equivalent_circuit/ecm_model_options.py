@@ -2,8 +2,8 @@ import types
 
 
 class NaturalNumberOption:
-    def __init__(self, defualt_value):
-        self.value = defualt_value
+    def __init__(self, default_value):
+        self.value = default_value
 
     def __contains__(self, value):
         is_an_integer = isinstance(value, int)

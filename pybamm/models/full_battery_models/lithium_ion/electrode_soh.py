@@ -276,23 +276,25 @@ class ElectrodeSOHSolver:
         return sol
 
     def _set_up_solve(self, inputs):
+        # Try with full sim
         sim = self._get_electrode_soh_sims_full()
         if sim.solution is not None:
-            x100_init = sim.solution["x_100"].data
-            x0_init = sim.solution["x_0"].data
-        else:
-            x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
-            # Check stoich limits are between 0 and 1
-            for x in ["x0_min", "x100_max", "y100_min", "y0_max"]:
-                xval = eval(x)
-                if not 0 < xval < 1:
-                    raise ValueError(
-                        f"'{x}' should be between 0 and 1, but is {xval:.4f}"
-                    )
-            x0_init = np.array(x0_min)
-            x100_init = np.array(x100_max)
+            x100_sol = sim.solution["x_100"].data
+            x0_sol = sim.solution["x_0"].data
+            return {"x_100": x100_sol, "x_0": x0_sol}
 
-        return {"x_100": x100_init, "x_0": x0_init}
+        # Try with split sims
+        x100_sim, x0_sim = self._get_electrode_soh_sims_split()
+        if x100_sim.solution is not None and x0_sim.solution is not None:
+            x100_sol = x100_sim.solution["x_100"].data
+            x0_sol = x0_sim.solution["x_0"].data
+            return {"x_100": x100_sol, "x_0": x0_sol}
+
+        # Fall back to initial conditions calculated from limits
+        x0_min, x100_max, _, _ = self._get_lims(inputs)
+        x100_init = min(x100_max, 0.8)
+        x0_init = max(x0_min, 0.2)
+        return {"x_100": np.array(x100_init), "x_0": np.array(x0_init)}
 
     def _solve_full(self, inputs, ics):
         sim = self._get_electrode_soh_sims_full()

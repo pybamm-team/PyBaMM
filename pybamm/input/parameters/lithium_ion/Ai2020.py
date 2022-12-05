@@ -498,10 +498,22 @@ def electrolyte_conductivity_Ai2020(c_e, T):
 
 # Load data in the appropriate format
 path, _ = os.path.split(os.path.abspath(__file__))
-graphite_ocp_Enertech_Ai2020 = pybamm.parameters.process_1D_data(
+graphite_ocp_Enertech_Ai2020_data = pybamm.parameters.process_1D_data(
     "graphite_ocp_Enertech_Ai2020.csv", path=path
 )
-lico2_ocp_Ai2020 = pybamm.parameters.process_1D_data("lico2_ocp_Ai2020.csv", path=path)
+lico2_ocp_Ai2020_data = pybamm.parameters.process_1D_data(
+    "lico2_ocp_Ai2020.csv", path=path
+)
+
+
+def graphite_ocp_Enertech_Ai2020(sto):
+    name, (x, y) = graphite_ocp_Enertech_Ai2020_data
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="cubic")
+
+
+def lico2_ocp_Ai2020(sto):
+    name, (x, y) = lico2_ocp_Ai2020_data
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="cubic")
 
 
 # Call dict via a function to avoid errors when editing in place
