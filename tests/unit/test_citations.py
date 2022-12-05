@@ -39,6 +39,8 @@ class TestCitations(unittest.TestCase):
             citations.register("not a citation")
 
     def test_print_citations(self):
+        import sys
+
         pybamm.citations._reset()
 
         # Text Style
@@ -63,6 +65,11 @@ class TestCitations(unittest.TestCase):
 
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
+
+        # google colab issue - https://github.com/pybamm-team/PyBaMM/issues/2524
+        sys.modules["google.colab"] == __import__("mock")
+        with self.assertRaisesRegex(ImportWarning, "pybtex does not work"):
+            pybamm.print_citations()
 
     def test_overwrite_citation(self):
         # Unknown citation

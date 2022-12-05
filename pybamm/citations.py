@@ -150,7 +150,7 @@ def print_citations(filename=None, output_format="text"):
             """pybtex does not work with Google Colab due to a known bug -
             https://bitbucket.org/pybtex-devs/pybtex/issues/148/.
             Please manually cite all the references.""".replace(
-                "\n                ", " "
+                "\n            ", " "
             ),
         )
     else:
