@@ -70,6 +70,7 @@ class Simulation:
         C_rate=None,
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
+        self._unprocessed_parameter_values = self.parameter_values
 
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
             if experiment is not None:
@@ -385,27 +386,14 @@ class Simulation:
             self._built_model = None
             self.op_conds_to_built_models = None
 
-        c_n_init = self.parameter_values[
-            "Initial concentration in negative electrode [mol.m-3]"
-        ]
-        c_p_init = self.parameter_values[
-            "Initial concentration in positive electrode [mol.m-3]"
-        ]
         param = self.model.param
-        c_n_max = self.parameter_values.evaluate(param.n.prim.c_max)
-        c_p_max = self.parameter_values.evaluate(param.p.prim.c_max)
-        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_soc, self.parameter_values, param
-        )
-        self.parameter_values.update(
-            {
-                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
-                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
-            }
+        self.parameter_values = (
+            self._unprocessed_parameter_values.set_initial_stoichiometries(
+                initial_soc, param=param, inplace=False
+            )
         )
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
-        return c_n_init, c_p_init
 
     def build(self, check_model=True, initial_soc=None):
         """
