@@ -14,7 +14,7 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 
-[![All Contributors](https://img.shields.io/badge/all_contributors-48-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-49-orange.svg)](#-contributors)
 
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
@@ -218,6 +218,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center"><a href="https://github.com/abillscmu"><img src="https://avatars.githubusercontent.com/u/48105066?v=4?s=100" width="100px;" alt="Alec Bills"/><br /><sub><b>Alec Bills</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=abillscmu" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/agriyakhetarpal"><img src="https://avatars.githubusercontent.com/u/74401230?v=4?s=100" width="100px;" alt="Agriya Khetarpal"/><br /><sub><b>Agriya Khetarpal</b></sub></a><br /><a href="#infra-agriyakhetarpal" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=agriyakhetarpal" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/awadell1"><img src="https://avatars.githubusercontent.com/u/5857298?v=4?s=100" width="100px;" alt="Alex Wadell"/><br /><sub><b>Alex Wadell</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Tests">⚠️</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Documentation">📖</a></td>
+      <td align="center"><a href="https://github.com/iatzak"><img src="https://avatars.githubusercontent.com/u/112731474?v=4?s=100" width="100px;" alt="iatzak"/><br /><sub><b>iatzak</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=iatzak" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
