@@ -27,6 +27,7 @@ class TestExternalThermalModels(unittest.TestCase):
             T_av += 1
             sim.step(dt, inputs=inputs)  # works
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
