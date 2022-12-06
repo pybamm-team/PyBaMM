@@ -960,6 +960,8 @@ class BoundaryValue(BoundaryOperator):
 class ExplicitTimeIntegral(UnaryOperator):
     def __init__(self, children, initial_condition):
         super().__init__("explicit time integral", children)
+        if initial_condition.evaluate() != 0:
+            n = 1
         self.initial_condition = initial_condition
 
     def _unary_new_copy(self, child):

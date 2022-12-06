@@ -14,7 +14,6 @@ OPTIONS_DICT = {
 }
 
 PRINT_OPTIONS_OUTPUT = """\
-'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
@@ -356,6 +355,10 @@ class TestBaseBatteryModel(unittest.TestCase):
         # phases
         with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
             pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
+
+        # calculate discharge energy
+        with self.assertWarns(DeprecationWarning):
+            pybamm.BaseBatteryModel({"calculate discharge energy": "true"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

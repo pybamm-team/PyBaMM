@@ -458,7 +458,6 @@ class Solution(object):
             variables = [variables]
         # Process
         for key in variables:
-            cumtrapz_ic = None
             pybamm.logger.debug("Post-processing {}".format(key))
             vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
@@ -469,13 +468,13 @@ class Solution(object):
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
                 if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
-                    cumtrapz_ic = var_pybamm.initial_condition
-                    cumtrapz_ic = cumtrapz_ic.evaluate()
+                    cumtrapz_ic = var_pybamm.initial_condition.evaluate()
                     var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
-                    model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
-                elif key in model._variables_casadi:
+                else:
+                    cumtrapz_ic = None
+
+                if key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
                 else:
                     var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)

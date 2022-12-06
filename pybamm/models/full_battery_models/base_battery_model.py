@@ -4,6 +4,7 @@
 
 import pybamm
 import numbers
+import warnings
 from functools import cached_property
 
 
@@ -21,11 +22,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         where a 2-tuple of strings can be provided instead to indicate a different
         option for the negative and positive electrodes.
 
-            * "calculate discharge energy": str
-                Whether to calculate the discharge energy, throughput energy and
-                throughput capacity in addition to discharge capacity. Must be one of
-                "true" or "false". "false" is the default, since calculating discharge
-                energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
                 Sets the geometry of the cell. Can be "pouch" (default) or
                 "arbitrary". The arbitrary geometry option solves a 1D electrochemical
@@ -191,7 +187,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
     def __init__(self, extra_options):
         self.possible_options = {
-            "calculate discharge energy": ["false", "true"],
             "cell geometry": ["arbitrary", "pouch"],
             "calculate heat source for isothermal models": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
@@ -302,6 +297,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["SEI film resistance"] = "distributed"
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
+
+        # Raise warning if "calculate discharge energy" is passed as an option
+        if extra_options.pop("calculate discharge energy", None) is not None:
+            warnings.warn(
+                "The 'calculate discharge energy' option is no longer supported. "
+                "Discharge energy is now calculated in all cases.",
+                DeprecationWarning,
+            )
 
         # Change the default for particle mechanics based on which SEI on cracks and LAM
         # options are provided

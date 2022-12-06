@@ -25,11 +25,6 @@ class Thevenin(pybamm.BaseModel):
 
             * "number of rc elements" : str
                 The number of RC elements to be added to the model. The default is 1.
-            * "calculate discharge energy": str
-                Whether to calculate the discharge energy, throughput energy and
-                throughput capacity in addition to discharge capacity. Must be one of
-                "true" or "false". "false" is the default, since calculating discharge
-                energy can be computationally expensive for simple models like SPM.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -86,7 +81,6 @@ class Thevenin(pybamm.BaseModel):
     def set_options(self, extra_options=None):
 
         possible_options = {
-            "calculate discharge energy": ["false", "true"],
             "operating mode": OperatingModes("current"),
             "number of rc elements": NaturalNumberOption(1),
             "external submodels": [[]],
@@ -122,9 +116,6 @@ class Thevenin(pybamm.BaseModel):
         # Hack to deal with submodels requiring electrochemical model
         # options
         self.options = pybamm.BatteryModelOptions({})
-        self.options["calculate discharge energy"] = self.ecm_options[
-            "calculate discharge energy"
-        ]
         self.options["operating mode"] = self.ecm_options["operating mode"]
 
     def set_external_circuit_submodel(self):

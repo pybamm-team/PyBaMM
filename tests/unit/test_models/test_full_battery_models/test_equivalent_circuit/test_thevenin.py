@@ -32,11 +32,6 @@ class TestThevenin(unittest.TestCase):
             model = pybamm.equivalent_circuit.Thevenin(options=options)
             model.check_well_posedness()
 
-    def test_calculate_discharge_energy(self):
-        options = {"calculate discharge energy": "true"}
-        model = pybamm.equivalent_circuit.Thevenin(options=options)
-        model.check_well_posedness()
-
     def test_well_posed_external_circuit_voltage(self):
         options = {"operating mode": "voltage"}
         model = pybamm.equivalent_circuit.Thevenin(options=options)

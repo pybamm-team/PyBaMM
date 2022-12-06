@@ -122,19 +122,15 @@ class ProcessedVariable(object):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
+                var_casadi_eval = float(base_var_casadi(t, y, inputs))
                 if self.cumtrapz_ic is not None:
                     if idx == 0:
-                        new_val = t * base_var_casadi(t, y, inputs).full()[0, 0]
-                        entries[idx] = self.cumtrapz_ic + (
-                            t * base_var_casadi(t, y, inputs).full()[0, 0]
-                        )
+                        entries[idx] = self.cumtrapz_ic + (t * var_casadi_eval)
                     else:
-                        new_val = (t - last_t) * (
-                            base_var_casadi(t, y, inputs).full()[0, 0]
-                        )
+                        new_val = (t - last_t) * (var_casadi_eval)
                         entries[idx] = new_val + entries[idx - 1]
                 else:
-                    entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
+                    entries[idx] = var_casadi_eval
 
                 idx += 1
                 last_t = t

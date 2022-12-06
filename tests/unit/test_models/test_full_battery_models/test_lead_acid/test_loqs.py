@@ -147,11 +147,6 @@ class TestLeadAcidLOQSExternalCircuits(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
-    def test_well_posed_discharge_energy(self):
-        options = {"calculate discharge energy": "true"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
