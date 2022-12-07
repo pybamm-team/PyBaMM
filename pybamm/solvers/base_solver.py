@@ -1212,17 +1212,15 @@ class BaseSolver(object):
                 final_event_values = {}
 
                 for event in termination_events:
-                    final_event_values[event.name] = abs(
-                        event.expression.evaluate(
-                            solution.t_event,
-                            solution.y_event,
-                            inputs=solution.all_inputs[-1],
-                        )
+                    final_event_values[event.name] = event.expression.evaluate(
+                        solution.t_event,
+                        solution.y_event,
+                        inputs=solution.all_inputs[-1],
                     )
                 termination_event = min(final_event_values, key=final_event_values.get)
 
                 # Check that it's actually an event
-                if abs(final_event_values[termination_event]) > 0.1:  # pragma: no cover
+                if final_event_values[termination_event] > 0.1:  # pragma: no cover
                     # Hard to test this
                     raise pybamm.SolverError(
                         "Could not determine which event was triggered "
