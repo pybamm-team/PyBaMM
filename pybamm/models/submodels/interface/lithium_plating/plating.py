@@ -41,7 +41,7 @@ class Plating(BasePlating):
             c_plated_Li_av = pybamm.Variable(
                 "X-averaged lithium plating concentration [mol.m-3]",
                 domain="current collector",
-                scale=self.param.c_plated_Li_0,
+                scale=self.param.c_Li_typ,
             )
             c_plated_Li = pybamm.PrimaryBroadcast(c_plated_Li_av, "negative electrode")
             c_dead_Li_av = pybamm.Variable(
@@ -54,7 +54,7 @@ class Plating(BasePlating):
                 "Lithium plating concentration [mol.m-3]",
                 domain="negative electrode",
                 auxiliary_domains={"secondary": "current collector"},
-                scale=self.param.c_plated_Li_0,
+                scale=self.param.c_Li_typ,
             )
             c_dead_Li = pybamm.Variable(
                 "Dead lithium concentration [mol.m-3]",
