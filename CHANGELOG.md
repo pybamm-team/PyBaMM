@@ -2,7 +2,12 @@
 
 ## Bug fixes
 
+- Fixed "constant concentration" electrolyte model so that "porosity times concentration" is conserved when porosity changes
 - Fix installation on `Google Colab` (`pybtex` and `Colab` issue) ([#2526](https://github.com/pybamm-team/PyBaMM/pull/2526))
+
+## Breaking changes
+
+- Renamed "Negative/Positive electrode SOC" to "Negative/Positive electrode stoichiometry" to avoid confusion with cell SOC
 
 # [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
 

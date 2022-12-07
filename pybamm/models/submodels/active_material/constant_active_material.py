@@ -35,4 +35,11 @@ class Constant(BaseModel):
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )
 
+        variables.update(
+            {
+                "Loss of lithium due to loss of active material "
+                f"in {domain} electrode [mol]": pybamm.Scalar(0)
+            }
+        )
+
         return variables
