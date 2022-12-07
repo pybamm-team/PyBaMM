@@ -99,20 +99,18 @@ class _ElectrodeSOH(pybamm.BaseModel):
             if known_value == "cyclable lithium capacity":
                 x_0 = pybamm.Variable("x_0")
                 Q = Q_n * (x_100 - x_0)
-            elif known_value == "cell capacity":
-                x_0 = x_100 - Q / Q_n
-                Q_Li = y_100 * Q_p + x_0 * Q_n
-            y_0 = y_100 + Q / Q_p
-            Un_0 = Un(x_0, T_ref)
-            Up_0 = Up(y_0, T_ref)
-            if known_value == "cyclable lithium capacity":
                 # the variable we are solving for is x0, since y_100 is calculated
                 # based on Q_Li
                 var = x_0
             elif known_value == "cell capacity":
+                x_0 = x_100 - Q / Q_n
+                Q_Li = y_100 * Q_p + x_0 * Q_n
                 # the variable we are solving for is y_100, since x_0 is calculated
                 # based on Q
                 var = y_100
+            y_0 = y_100 + Q / Q_p
+            Un_0 = Un(x_0, T_ref)
+            Up_0 = Up(y_0, T_ref)
             self.algebraic[var] = Up_0 - Un_0 - V_min
             self.initial_conditions[var] = pybamm.Scalar(0.1)
 
