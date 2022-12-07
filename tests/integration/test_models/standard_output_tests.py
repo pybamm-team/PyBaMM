@@ -502,6 +502,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         diff = (
             self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
         ) / self.c_e_tot(self.solution.t[:-1])
+        print(np.max(np.abs(diff)))
         np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
