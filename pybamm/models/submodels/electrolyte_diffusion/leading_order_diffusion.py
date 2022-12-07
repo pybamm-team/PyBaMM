@@ -59,7 +59,15 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         param = self.param
 
         c_e_av = variables["X-averaged electrolyte concentration"]
+
         T_av = variables["X-averaged cell temperature"]
+
+        eps_n_av = variables["X-averaged negative electrode porosity"]
+        eps_s_av = variables["X-averaged separator porosity"]
+        eps_p_av = variables["X-averaged positive electrode porosity"]
+
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
         div_Vbox_s_av = variables[
             "X-averaged separator transverse volume-averaged acceleration"
@@ -84,10 +92,16 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             + param.p.l * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
         ) / param.gamma_e
 
-        self.rhs = {eps_c_e_av: (source_terms - c_e_av * param.s.l * div_Vbox_s_av)}
+        self.rhs = {
+            c_e_av: 1
+            / (param.n.l * eps_n_av + param.s.l * eps_s_av + param.p.l * eps_p_av)
+            * (
+                source_terms
+                - c_e_av * (param.n.l * deps_n_dt_av + param.p.l * deps_p_dt_av)
+                - c_e_av * param.s.l * div_Vbox_s_av
+            )
+        }
 
     def set_initial_conditions(self, variables):
         c_e = variables["X-averaged electrolyte concentration"]
-        self.initial_conditions = {
-            c_e: pybamm.x_average(param.epsilon_init * self.param.c_e_init)
-        }
+        self.initial_conditions = {c_e: self.param.c_e_init}
