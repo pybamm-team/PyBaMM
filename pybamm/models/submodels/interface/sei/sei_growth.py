@@ -129,7 +129,7 @@ class SEIGrowth(BaseModel):
 
         if self.options["SEI"].startswith("reaction limited"):
             # Scott Marquis thesis (eq. 5.92)
-            j_sei = -phase_param.j0_sei * pybamm.exp(-0.5 * F_RT * eta_SEI)
+            j_sei = -phase_param.j0_sei * pybamm.exp(-alpha_SEI * F_RT * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":
             # Scott Marquis thesis (eq. 5.94)
@@ -236,15 +236,25 @@ class SEIGrowth(BaseModel):
             spreading_outer = 0
             spreading_inner = 0
 
-        Gamma_SEI = phase_param.V_bar_inner / (param.F * phase_param.z_sei)
-        v_bar = phase_param.V_bar_outer / phase_param.V_bar_inner
+        # a * j_sei / F is the rate of consumption of li moles by SEI reaction
+        # 1/z_sei converts from li moles to SEI moles (z_sei=li mol per sei mol)
+        # a * j_sei / (F * z_sei) is the rate of consumption of SEI moles by SEI reaction
+        # V_bar / a converts from SEI moles to SEI thickness
+        # V_bar * j_sei / (F * z_sei) is the rate of SEI thickness change
+        dLdt_SEI_inner = (
+            phase_param.V_bar_inner * j_inner / (param.F * phase_param.z_sei)
+        )
+        dLdt_SEI_outer = (
+            phase_param.V_bar_outer * j_outer / (param.F * phase_param.z_sei)
+        )
 
+        # we have to add the spreading rate to account for cracking
         if self.options["SEI"].startswith("ec reaction limited"):
-            self.rhs = {L_outer: -Gamma_SEI * j_outer + spreading_outer}
+            self.rhs = {L_outer: -dLdt_SEI_outer + spreading_outer}
         else:
             self.rhs = {
-                L_inner: -Gamma_SEI * j_inner + spreading_inner,
-                L_outer: -v_bar * Gamma_SEI * j_outer + spreading_outer,
+                L_inner: -dLdt_SEI_inner + spreading_inner,
+                L_outer: -dLdt_SEI_outer + spreading_outer,
             }
 
     def set_initial_conditions(self, variables):

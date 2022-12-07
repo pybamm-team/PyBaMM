@@ -167,20 +167,10 @@ class BaseModel(BaseInterface):
                 L_to_n_inner_0 = phase_param.a_typ / phase_param.V_bar_inner
                 L_to_n_outer_0 = phase_param.a_typ / phase_param.V_bar_outer
             z_sei = phase_param.z_sei
-            # Set scales for the "EC Reaction Limited" models (both symmetric and
-            # asymmetric)
-            if self.options["SEI"].startswith("ec reaction limited"):
-                L_inner_0 = 0
-                L_outer_0 = 1
-                L_inner_crack_0 = 0
-                # Dividing by 10000 makes initial condition effectively zero
-                # without triggering division by zero errors
-                L_outer_crack_0 = 1 / 10000
-            else:
-                L_inner_0 = phase_param.L_inner_0
-                L_outer_0 = phase_param.L_outer_0
-                L_inner_crack_0 = phase_param.L_inner_crack_0
-                L_outer_crack_0 = phase_param.L_outer_crack_0
+            L_inner_0 = phase_param.L_inner_0
+            L_outer_0 = phase_param.L_outer_0
+            L_inner_crack_0 = phase_param.L_inner_crack_0
+            L_outer_crack_0 = phase_param.L_outer_crack_0
             n_SEI_0 = L_inner_0 * L_to_n_inner_0 + L_outer_0 * L_to_n_outer_0
             n_crack_0 = (
                 L_inner_crack_0 * L_to_n_inner_0 + L_outer_crack_0 * L_to_n_outer_0
@@ -209,7 +199,10 @@ class BaseModel(BaseInterface):
             else:
                 L_n = self.param.n.L
 
-            Q_sei = z_sei * delta_n_SEI * L_n * self.param.L_y * self.param.L_z
+            # Multiply delta_n_SEI by V_n to get total moles of SEI formes
+            # multiply by z_sei to get total lithium moles consumed by SEI
+            V_n = L_n * self.param.L_y * self.param.L_z
+            Q_sei = z_sei * delta_n_SEI * V_n
 
             variables.update(
                 {
