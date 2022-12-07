@@ -59,9 +59,6 @@ class TestMPM(unittest.TestCase):
         options = {"particle size": "single"}
         with self.assertRaises(pybamm.OptionError):
             pybamm.lithium_ion.MPM(options)
-        options = {"surface form": "none"}
-        with self.assertRaises(pybamm.OptionError):
-            pybamm.lithium_ion.MPM(options)
 
     def test_nonspherical_particle_not_implemented(self):
         options = {"particle shape": "user"}
