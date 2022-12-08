@@ -41,10 +41,8 @@ class MPM(SPM):
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):
         # Necessary/default options
-        default_options = {"particle size": "distribution", "surface form": "algebraic"}
-        if options is None:
-            options = default_options
-        elif "particle size" in options and options["particle size"] != "distribution":
+        options = options or {}
+        if "particle size" in options and options["particle size"] != "distribution":
             raise pybamm.OptionError(
                 "particle size must be 'distribution' for MPM not '{}'".format(
                     options["particle size"]
@@ -55,7 +53,10 @@ class MPM(SPM):
                 "surface form must be 'algebraic' or 'differential' for MPM not 'false'"
             )
         else:
-            options.update(default_options)
+            surface_form = options.get("surface form", "algebraic")
+            options.update(
+                {"particle size": "distribution", "surface form": surface_form}
+            )
         super().__init__(options, name, build)
 
         pybamm.citations.register("Kirk2020")
