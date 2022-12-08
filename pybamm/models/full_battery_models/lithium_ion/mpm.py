@@ -40,33 +40,26 @@ class MPM(SPM):
     """
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):
-        # Necessary options
+        # Necessary/default options
+        default_options = {"particle size": "distribution", "surface form": "algebraic"}
         if options is None:
-            options = {"particle size": "distribution"}
+            options = default_options
         elif "particle size" in options and options["particle size"] != "distribution":
             raise pybamm.OptionError(
                 "particle size must be 'distribution' for MPM not '{}'".format(
                     options["particle size"]
                 )
             )
+        elif "surface form" in options and options["surface form"] == "false":
+            raise pybamm.OptionError(
+                "surface form must be 'algebraic' or 'differential' for MPM not 'false'"
+            )
         else:
-            options["particle size"] = "distribution"
+            options.update(default_options)
         super().__init__(options, name, build)
 
         pybamm.citations.register("Kirk2020")
         pybamm.citations.register("Kirk2021")
-
-    def set_particle_submodel(self):
-        for domain in ["negative", "positive"]:
-            if self.options["particle"] == "Fickian diffusion":
-                submod = pybamm.particle.FickianDiffusion(
-                    self.param, domain, self.options, x_average=True, phase="primary"
-                )
-            elif self.options["particle"] == "uniform profile":
-                submod = pybamm.particle.XAveragedPolynomialProfile(
-                    self.param, domain, self.options, phase="primary"
-                )
-            self.submodels[f"{domain} particle"] = submod
 
     @property
     def default_parameter_values(self):
