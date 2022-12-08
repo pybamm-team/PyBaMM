@@ -881,11 +881,7 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
         Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
         Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
 
-        inputs = {
-            "Q_n": Q_n,
-            "Q_p": Q_p,
-            "Q_Li": Q_Li
-        }
+        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
 
         try:
             esoh_sol = esoh_solver.solve(inputs)
