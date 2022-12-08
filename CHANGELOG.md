@@ -1,6 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+
 - Allow the option "surface form" to be "differential" in the `MPM` ([#2533](https://github.com/pybamm-team/PyBaMM/pull/2533))
 
 ## Bug fixes
