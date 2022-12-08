@@ -52,8 +52,8 @@ class _ElectrodeSOH(pybamm.BaseModel):
         Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
-        V_max = pybamm.InputParameter("V_max")
-        V_min = pybamm.InputParameter("V_min")
+        V_max = param.voltage_high_cut_dimensional
+        V_min = param.voltage_low_cut_dimensional
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -220,6 +220,18 @@ class ElectrodeSOHSolver:
         if "C_p" in inputs:
             warnings.warn("Input 'C_p' has been renamed to 'Q_p'", DeprecationWarning)
             inputs["Q_p"] = inputs.pop("C_p")
+        if inputs.pop("V_min", None) is not None:
+            warnings.warn(
+                "V_min has been removed from the inputs. "
+                "The 'Lower voltage cut-off [V]' parameter is now used automatically.",
+                DeprecationWarning,
+            )
+        if inputs.pop("V_max", None) is not None:
+            warnings.warn(
+                "V_max has been removed from the inputs. "
+                "The 'Upper voltage cut-off [V]' parameter is now used automatically.",
+                DeprecationWarning,
+            )
         ics = self._set_up_solve(inputs)
         try:
             sol = self._solve_full(inputs, ics)
@@ -264,20 +276,24 @@ class ElectrodeSOHSolver:
         x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
         if self.known_value == "cyclable lithium capacity":
             # trial and error suggests theses are good values
-            x100_init = np.array(min(x100_max, 0.8))
-            x0_init = np.array(max(x0_min, 0.2))
-            y100_init = np.array(max(y100_min, 0.2))
-            y0_init = np.array(min(y0_max, 0.8))
+            x100_init = np.minimum(x100_max, 0.8)
+            x0_init = np.maximum(x0_min, 0.2)
+            y100_init = np.maximum(y100_min, 0.2)
+            y0_init = np.minimum(y0_max, 0.8)
         elif self.known_value == "cell capacity":
             # Use stoich limits based on cell capacity and
             # electrode capacities
             Q = inputs["Q"]
             Q_n = inputs["Q_n"]
             Q_p = inputs["Q_p"]
-            x100_init = x0_min + Q / Q_n
-            x0_init = x100_max - Q / Q_n
-            y100_init = y0_max - Q / Q_p
-            y0_init = y100_min + Q / Q_p
+            x0_min = np.maximum(x0_min, 0.1)
+            x100_max = np.minimum(x100_max, 0.9)
+            y100_min = np.maximum(y100_min, 0.1)
+            y0_max = np.minimum(y0_max, 0.9)
+            x100_init = np.minimum(x0_min + Q / Q_n, 0.9)
+            x0_init = np.maximum(x100_max - Q / Q_n, 0.1)
+            y100_init = np.maximum(y0_max - Q / Q_p, 0.1)
+            y0_init = np.minimum(y100_min + Q / Q_p, 0.9)
         return {"x_100": x100_init, "x_0": x0_init, "y_100": y100_init, "y_0": y0_init}
 
     def _solve_full(self, inputs, ics):
@@ -358,14 +374,18 @@ class ElectrodeSOHSolver:
         Check that the electrode SOH calculation is feasible, based on voltage limits
         """
         x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
-        Vmax = inputs["V_max"]
-        Vmin = inputs["V_min"]
 
         # Parameterize the OCP functions
         if self.OCV_function is None:
             T = self.parameter_values["Reference temperature [K]"]
             x = pybamm.InputParameter("x")
             y = pybamm.InputParameter("y")
+            self.V_max = self.parameter_values.evaluate(
+                self.param.voltage_high_cut_dimensional
+            )
+            self.V_min = self.parameter_values.evaluate(
+                self.param.voltage_low_cut_dimensional
+            )
             self.OCV_function = self.parameter_values.process_symbol(
                 self.param.p.prim.U_dimensional(y, T)
                 - self.param.n.prim.U_dimensional(x, T)
@@ -379,20 +399,20 @@ class ElectrodeSOHSolver:
         V_upper_bound = float(
             self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
         )
-        if V_lower_bound > Vmin:
+        if V_lower_bound > self.V_min:
             raise (
                 ValueError(
                     f"The lower bound of the voltage, {V_lower_bound:.4f}V, "
-                    f"is greater than the target minimum voltage, {Vmin:.4f}V. "
+                    f"is greater than the target minimum voltage, {self.V_min:.4f}V. "
                     f"Stoichiometry limits are x:[{x0_min:.4f}, {x100_max:.4f}], "
                     f"y:[{y100_min:.4f}, {y0_max:.4f}]."
                 )
             )
-        if V_upper_bound < Vmax:
+        if V_upper_bound < self.V_max:
             raise (
                 ValueError(
                     f"The upper bound of the voltage, {V_upper_bound:.4f}V, "
-                    f"is less than the target maximum voltage, {Vmax:.4f}V. "
+                    f"is less than the target maximum voltage, {self.V_max:.4f}V. "
                     f"Stoichiometry limits are x:[{x0_min:.4f}, {x100_max:.4f}], "
                     f"y:[{y100_min:.4f}, {y0_max:.4f}]."
                 )
@@ -484,16 +504,10 @@ class ElectrodeSOHSolver:
 
         if self.known_value == "cyclable lithium capacity":
             Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
-            inputs = {
-                "V_min": V_min,
-                "V_max": V_max,
-                "Q_n": Q_n,
-                "Q_p": Q_p,
-                "Q_Li": Q_Li,
-            }
+            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         elif self.known_value == "cell capacity":
             Q = parameter_values.evaluate(param.Q / param.n_electrodes_parallel)
-            inputs = {"V_min": V_min, "V_max": V_max, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
+            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
         sol = self.solve(inputs)
         return [sol[var].data[0] for var in ["x_0", "x_100", "y_100", "y_0"]]

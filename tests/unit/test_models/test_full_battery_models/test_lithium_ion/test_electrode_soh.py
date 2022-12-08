@@ -12,13 +12,13 @@ class TestElectrodeSOH(unittest.TestCase):
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
 
-        Vmin = 3
+        Vmin = 2.8
         Vmax = 4.2
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
 
-        inputs = {"V_max": Vmax, "V_min": Vmin, "Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
+        inputs = {"Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
 
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
@@ -35,7 +35,7 @@ class TestElectrodeSOH(unittest.TestCase):
 
         # should still work with old inputs
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
-        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Q_n, "C_p": Q_p}
+        inputs = {"V_min": 3, "V_max": 4.2, "n_Li": n_Li, "C_n": Q_n, "C_p": Q_p}
 
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
@@ -49,13 +49,13 @@ class TestElectrodeSOH(unittest.TestCase):
             parameter_values, param, known_value="cell capacity"
         )
 
-        Vmin = 3
+        Vmin = 2.8
         Vmax = 4.2
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
         Q = parameter_values.evaluate(param.Q)
 
-        inputs = {"V_max": Vmax, "V_min": Vmin, "Q": Q, "Q_n": Q_n, "Q_p": Q_p}
+        inputs = {"Q": Q, "Q_n": Q_n, "Q_p": Q_p}
 
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
@@ -71,42 +71,55 @@ class TestElectrodeSOH(unittest.TestCase):
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
 
-        Vmin = 3
-        Vmax = 4.2
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
         Q_Li = 2 * (Q_n + Q_p)
 
-        inputs = {"V_max": Vmax, "V_min": Vmin, "Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
+        inputs = {"Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
 
         # Solve the model and check outputs
         with self.assertRaisesRegex(ValueError, "outside the range"):
             esoh_solver.solve(inputs)
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
-        inputs = {"V_min": 0, "V_max": 5, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        parameter_values.update(
+            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 5}
+        )
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         # Solver fails to find a solution but voltage limits are not violated
         with self.assertRaisesRegex(
             pybamm.SolverError, "Could not find acceptable solution"
         ):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to upper voltage limit
-        inputs = {"V_min": 0, "V_max": 6, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        parameter_values.update(
+            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 6}
+        )
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to lower voltage limit
-        inputs = {"V_min": -10, "V_max": 5, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        parameter_values.update(
+            {"Lower voltage cut-off [V]": -10, "Upper voltage cut-off [V]": 5}
+        )
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
             esoh_solver.solve(inputs)
 
         # errors for cell capacity based solver
+        parameter_values.update(
+            {"Lower voltage cut-off [V]": 3, "Upper voltage cut-off [V]": 4.2}
+        )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
             parameter_values, param, known_value="cell capacity"
         )
         with self.assertRaisesRegex(ValueError, "solve_for must be "):
             esoh_solver._get_electrode_soh_sims_split()
 
-        inputs = {"V_min": 3, "V_max": 6, "Q_n": Q_n, "Q_p": Q_p, "Q": 2 * Q_p}
+        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": 2 * Q_p}
         with self.assertRaisesRegex(
             ValueError, "larger than the maximum possible capacity"
         ):
@@ -121,12 +134,12 @@ class TestElectrodeSOHHalfCell(unittest.TestCase):
         parameter_values = pybamm.ParameterValues("Xu2019")
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
-        V_min = 3
+        V_min = 3.5
         V_max = 4.2
         Q_w = parameter_values.evaluate(param.p.Q_init)
 
         # Solve the model and check outputs
-        sol = sim.solve([0], inputs={"V_min": V_min, "V_max": V_max, "Q_w": Q_w})
+        sol = sim.solve([0], inputs={"Q_w": Q_w})
         self.assertAlmostEqual(sol["Uw(x_100)"].data[0], V_max, places=5)
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
 

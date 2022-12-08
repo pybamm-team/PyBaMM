@@ -877,18 +877,14 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
         and isinstance(model, pybamm.lithium_ion.BaseModel)
         and model.options.electrode_types["negative"] == "porous"
     ):
-        V_min = esoh_solver.parameter_values["Lower voltage cut-off [V]"]
-        V_max = esoh_solver.parameter_values["Upper voltage cut-off [V]"]
         Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
         Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
 
         inputs = {
-            "V_min": V_min,
-            "V_max": V_max,
             "Q_n": Q_n,
             "Q_p": Q_p,
-            "Q_Li": Q_Li,
+            "Q_Li": Q_Li
         }
 
         try:
