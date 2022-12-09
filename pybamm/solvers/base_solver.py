@@ -86,7 +86,7 @@ class BaseSolver(object):
     def copy(self):
         """Returns a copy of the solver"""
         new_solver = copy.copy(self)
-        # clear _model_set_up 
+        # clear _model_set_up
         new_solver._model_set_up = {}
         return new_solver
 
