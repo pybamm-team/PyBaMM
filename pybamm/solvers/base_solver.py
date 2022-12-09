@@ -55,7 +55,7 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
-        self.models_set_up = {}
+        self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -86,8 +86,8 @@ class BaseSolver(object):
     def copy(self):
         """Returns a copy of the solver"""
         new_solver = copy.copy(self)
-        # clear models_set_up
-        new_solver.models_set_up = {}
+        # clear _model_set_up 
+        new_solver._model_set_up = {}
         return new_solver
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
@@ -774,7 +774,7 @@ class BaseSolver(object):
             model.calculate_sensitivities = []
         model.calculate_sensitivities.sort()
         if calculate_sensitivities_list != model.calculate_sensitivities:
-            self.models_set_up.pop(model, None)
+            self._model_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
             if isinstance(self, pybamm.CasadiSolver):
                 self.integrators.pop(model, None)
@@ -785,9 +785,9 @@ class BaseSolver(object):
 
         # Set up (if not done already)
         timer = pybamm.Timer()
-        if model not in self.models_set_up:
-            if len(self.models_set_up) > 0:
-                existing_model = next(iter(self.models_set_up))
+        if model not in self._model_set_up:
+            if len(self._model_set_up) > 0:
+                existing_model = next(iter(self._model_set_up))
                 raise RuntimeError(
                     "This solver has already been initialised for model "
                     f'"{existing_model.name}". Please create a separate '
@@ -799,11 +799,11 @@ class BaseSolver(object):
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, ext_and_inputs_list[0], t_eval)
-            self.models_set_up.update(
+            self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         else:
-            ics_set_up = self.models_set_up[model]["initial conditions"]
+            ics_set_up = self._model_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
             if ics_set_up != model.concatenated_initial_conditions:
                 if self.algebraic_solver is True:
@@ -815,7 +815,7 @@ class BaseSolver(object):
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
                     self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)
-                self.models_set_up[model][
+                self._model_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
 
@@ -1148,17 +1148,17 @@ class BaseSolver(object):
         t = old_solution.t[-1]
 
         first_step_this_model = False
-        if model not in self.models_set_up:
+        if model not in self._model_set_up:
             first_step_this_model = True
-            if len(self.models_set_up) > 0:
-                existing_model = next(iter(self.models_set_up))
+            if len(self._model_set_up) > 0:
+                existing_model = next(iter(self._model_set_up))
                 raise RuntimeError(
                     "This solver has already been initialised for model "
                     f'"{existing_model.name}". Please create a separate '
                     "solver for this model"
                 )
             self.set_up(model, ext_and_inputs)
-            self.models_set_up.update(
+            self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
 
