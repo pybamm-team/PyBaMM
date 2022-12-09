@@ -47,20 +47,21 @@ class BaseSolver(object):
         atol=1e-6,
         root_method=None,
         root_tol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
     ):
         self.method = method
         self.rtol = rtol
         self.atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
-        self.extrap_tol = extrap_tol
+        self.extrap_tol = extrap_tol or -1e-10
         self.models_set_up = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
+        self._on_extrapolation = "warn"
 
     @property
     def root_method(self):
@@ -552,7 +553,7 @@ class BaseSolver(object):
             discontinuity_events,
         )
 
-    def _set_initial_conditions(self, model, inputs_dict, update_rhs):
+    def _set_initial_conditions(self, model, time, inputs_dict, update_rhs):
         """
         Set initial conditions for the model. This is skipped if the solver is an
         algebraic solver (since this would make the algebraic solver redundant), and if
@@ -587,14 +588,14 @@ class BaseSolver(object):
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0 = model.initial_conditions_eval(0, y_zero, inputs)
+                y0 = model.initial_conditions_eval(time, y_zero, inputs)
             else:
                 # Don't update model.y0
                 return
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.initial_conditions_eval(0, y_zero, inputs)
+                y0_from_inputs = model.initial_conditions_eval(time, y_zero, inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
                 len_rhs = model.len_rhs
@@ -609,7 +610,7 @@ class BaseSolver(object):
                     model.y0 = np.vstack(
                         (y0_from_inputs[:len_rhs], y0_from_model[len_rhs:])
                     )
-            y0 = self.calculate_consistent_state(model, 0, inputs_dict)
+            y0 = self.calculate_consistent_state(model, time, inputs_dict)
         # Make y0 a function of inputs if doing symbolic with casadi
         model.y0 = y0
 
@@ -645,6 +646,7 @@ class BaseSolver(object):
             )
         pybamm.logger.debug("Found consistent states")
 
+        self.check_extrapolation(root_sol, model.events)
         y0 = root_sol.all_ys[0]
         return y0
 
@@ -840,10 +842,12 @@ class BaseSolver(object):
                     "for initial conditions."
                 )
 
-        self._set_initial_conditions(model, ext_and_inputs_list[0], update_rhs=True)
-
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
+
+        self._set_initial_conditions(
+            model, t_eval_dimensionless[0], ext_and_inputs_list[0], update_rhs=True
+        )
 
         # Check initial conditions don't violate events
         self._check_events_with_initial_conditions(
@@ -919,14 +923,7 @@ class BaseSolver(object):
 
         for i, solution in enumerate(solutions):
             # Check if extrapolation occurred
-            extrapolation = self.check_extrapolation(solution, model.events)
-            if extrapolation:
-                warnings.warn(
-                    "While solving {} extrapolation occurred for {}".format(
-                        model.name, extrapolation
-                    ),
-                    pybamm.SolverWarning,
-                )
+            self.check_extrapolation(solution, model.events)
             # Identify the event that caused termination and update the solution to
             # include the event time and state
             solutions[i], termination = self.get_termination_reason(
@@ -1192,7 +1189,7 @@ class BaseSolver(object):
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(model, ext_and_inputs, update_rhs=False)
+        self._set_initial_conditions(model, t, ext_and_inputs, update_rhs=False)
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
@@ -1213,14 +1210,7 @@ class BaseSolver(object):
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
-        extrapolation = self.check_extrapolation(solution, model.events)
-        if extrapolation:
-            warnings.warn(
-                "While solving {} extrapolation occurred for {}".format(
-                    model.name, extrapolation
-                ),
-                pybamm.SolverWarning,
-            )
+        self.check_extrapolation(solution, model.events)
 
         # Identify the event that caused termination and update the solution to
         # include the event time and state
@@ -1338,31 +1328,41 @@ class BaseSolver(object):
         events : dict
             Dictionary of events
         """
-        extrap_events = {}
+        extrap_events = []
 
-        for event in events:
-            if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                # First set to False, then loop through and change to True if any
-                # events extrapolate
-                extrap_events[event.name] = False
-                # This might be a little bit slow but is ok for now
-                for ts, ys, inputs in zip(
-                    solution.all_ts, solution.all_ys, solution.all_inputs
-                ):
-                    for inner_idx, t in enumerate(ts):
-                        y = ys[:, inner_idx]
-                        if isinstance(y, casadi.DM):
-                            y = y.full()
-                        if (
-                            event.expression.evaluate(t, y, inputs=inputs)
-                            < self.extrap_tol
-                        ):
-                            extrap_events[event.name] = True
+        if any(
+            event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+            for event in events
+        ):
+            last_state = solution.last_state
+            t = last_state.all_ts[0][0]
+            y = last_state.all_ys[0][:, 0]
+            inputs = last_state.all_inputs[0]
 
-        # Add the event dictionaryto the solution object
-        solution.extrap_events = extrap_events
+            if isinstance(y, casadi.DM):
+                y = y.full()
+            for event in events:
+                if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                    if event.expression.evaluate(t, y, inputs=inputs) < self.extrap_tol:
+                        extrap_events.append(event.name)
 
-        return [k for k, v in extrap_events.items() if v]
+            if any(extrap_events):
+                if self._on_extrapolation == "warn":
+                    name = solution.all_models[-1].name
+                    warnings.warn(
+                        f"While solving {name} extrapolation occurred "
+                        f"for {extrap_events}",
+                        pybamm.SolverWarning,
+                    )
+                    # Add the event dictionaryto the solution object
+                    solution.extrap_events = extrap_events
+                elif self._on_extrapolation == "error":
+                    raise pybamm.SolverError(
+                        "Solver failed because the following "
+                        f"interpolation bounds were exceeded: {extrap_events}. "
+                        "You may need to provide additional interpolation points "
+                        "outside these bounds."
+                    )
 
     def _set_up_ext_and_inputs(self, model, external_variables, inputs):
         """Set up external variables and input parameters"""

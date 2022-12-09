@@ -56,7 +56,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "jacobian": "sparse",
 
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
-                # "SUNLinSol_Dense", "SUNLinSol_LapackDense" "SUNLinSol_SPBCGS",
+                # "SUNLinSol_Dense", "SUNLinSol_SPBCGS",
                 # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
                 "linear_solver": "SUNLinSol_KLU",
 
@@ -86,7 +86,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
         options=None,
     ):
 

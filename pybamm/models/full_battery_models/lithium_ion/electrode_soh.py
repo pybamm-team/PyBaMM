@@ -3,6 +3,7 @@
 #
 import pybamm
 import numpy as np
+from functools import lru_cache
 
 
 class ElectrodeSOH(pybamm.BaseModel):
@@ -246,28 +247,18 @@ class ElectrodeSOHSolver:
             - self.param.n.prim.U_dimensional(x, T)
         )
 
+    @lru_cache
     def _get_electrode_soh_sims_full(self):
-        try:
-            return self._full_sim
-        except AttributeError:
-            full_model = ElectrodeSOH(param=self.param)
-            self._full_sim = pybamm.Simulation(
-                full_model, parameter_values=self.parameter_values
-            )
-            return self._full_sim
+        full_model = ElectrodeSOH(param=self.param)
+        return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
+    @lru_cache
     def _get_electrode_soh_sims_split(self):
-        try:
-            return self._split_sims
-        except AttributeError:
-            x100_model = ElectrodeSOHx100(param=self.param)
-            x100_sim = pybamm.Simulation(
-                x100_model, parameter_values=self.parameter_values
-            )
-            x0_model = ElectrodeSOHx0(param=self.param)
-            x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
-            self._split_sims = [x100_sim, x0_sim]
-            return self._split_sims
+        x100_model = ElectrodeSOHx100(param=self.param)
+        x100_sim = pybamm.Simulation(x100_model, parameter_values=self.parameter_values)
+        x0_model = ElectrodeSOHx0(param=self.param)
+        x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
+        return [x100_sim, x0_sim]
 
     def solve(self, inputs):
         ics = self._set_up_solve(inputs)
@@ -286,19 +277,24 @@ class ElectrodeSOHSolver:
         return sol
 
     def _set_up_solve(self, inputs):
+        # Try with full sim
         sim = self._get_electrode_soh_sims_full()
-        x0_min, x100_max, _, _ = self._get_lims(inputs)
-
-        x100_init = x100_max
-        x0_init = x0_min
         if sim.solution is not None:
-            # Update the initial conditions if they are valid
-            x100_init_sol = sim.solution["x_100"].data[0]
-            if x0_min < x100_init_sol < x100_max:
-                x100_init = x100_init_sol
-            x0_init_sol = sim.solution["x_0"].data[0]
-            if x0_min < x0_init_sol < x100_max:
-                x0_init = x0_init_sol
+            x100_sol = sim.solution["x_100"].data
+            x0_sol = sim.solution["x_0"].data
+            return {"x_100": x100_sol, "x_0": x0_sol}
+
+        # Try with split sims
+        x100_sim, x0_sim = self._get_electrode_soh_sims_split()
+        if x100_sim.solution is not None and x0_sim.solution is not None:
+            x100_sol = x100_sim.solution["x_100"].data
+            x0_sol = x0_sim.solution["x_0"].data
+            return {"x_100": x100_sol, "x_0": x0_sol}
+
+        # Fall back to initial conditions calculated from limits
+        x0_min, x100_max, _, _ = self._get_lims(inputs)
+        x100_init = min(x100_max, 0.8)
+        x0_init = max(x0_min, 0.2)
         return {"x_100": np.array(x100_init), "x_0": np.array(x0_init)}
 
     def _solve_full(self, inputs, ics):
@@ -362,9 +358,11 @@ class ElectrodeSOHSolver:
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
-        V_lower_bound = self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
-        V_upper_bound = self.OCV_function.evaluate(
-            inputs={"x": x100_max, "y": y100_min}
+        V_lower_bound = float(
+            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+        )
+        V_upper_bound = float(
+            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
         )
         if V_lower_bound > Vmin:
             raise (

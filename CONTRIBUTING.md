@@ -61,7 +61,7 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Coding style guidelines
 
-PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and using-pre-commit) section for more details.
+PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and-using-pre-commit) section for more details.
 
 ### Flake8
 
@@ -194,67 +194,76 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 
 1. Run individual test scripts instead of the whole test suite:
 
-```bash
-python tests/unit/path/to/test
-```
+   ```bash
+   python tests/unit/path/to/test
+   ```
 
-You can also run an individual test from a particular script, e.g.
+   You can also run an individual test from a particular script, e.g.
 
-```bash
-python tests/unit/test_quick_plot.py TestQuickPlot.test_failure
-```
+   ```bash
+   python tests/unit/test_quick_plot.py TestQuickPlot.test_failure
+   ```
 
-If you want to run several, but not all, the tests from a script, you can restrict which tests are run from a particular script by using the skipping decorator:
+   If you want to run several, but not all, the tests from a script, you can restrict which tests are run from a particular script by using the skipping decorator:
 
-```python
-@unittest.skip("")
-def test_bit_of_code(self):
-    ...
-```
+   ```python
+   @unittest.skip("")
+   def test_bit_of_code(self):
+       ...
+   ```
 
-or by just commenting out all the tests you don't want to run 2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
+   or by just commenting out all the tests you don't want to run.
 
-```python
-import ipdb; ipdb.set_trace()
-```
+2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
 
-This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
+   ```python
+   import ipdb; ipdb.set_trace()
+   ```
 
-```python
-from IPython import embed; embed(); import ipdb; ipdb.set_trace()
-```
+   This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
 
-at the break point instead.
-Figuring out where to start the debugger is the real challenge. Some good ways to set debugging break points are:
-a. Try-except blocks. Suppose the line `do_something_complicated()` is raising a `ValueError`. Then you can put a try-except block around that line as:
+   ```python
+   from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+   ```
 
-```python
-try:
-    do_something_complicated()
-except ValueError:
-    import ipdb; ipdb.set_trace()
-```
+   at the break point instead.
+   Figuring out where to start the debugger is the real challenge. Some good ways to set debugging break points are:
 
-This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
-b. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
+   1. Try-except blocks. Suppose the line `do_something_complicated()` is raising a `ValueError`. Then you can put a try-except block around that line as:
 
-```python
-import warnings
-warnings.simplefilter("error")
-```
+      ```python
+      try:
+          do_something_complicated()
+      except ValueError:
+          import ipdb; ipdb.set_trace()
+      ```
 
-Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+      This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
 
-```python
-expression_tree.render()
-```
+   2. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
 
-You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc. 3. To isolate whether a bug is in a model, its jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models). 4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models. 5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
+      ```python
+      import warnings
+      warnings.simplefilter("error")
+      ```
 
-```python3
-pybamm.set_logging_level("DEBUG")
-```
+      Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
+
+   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+
+      ```python
+      expression_tree.render()
+      ```
+
+      You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc.
+
+3. To isolate whether a bug is in a model, its jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
+4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
+5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
+
+   ```python3
+   pybamm.set_logging_level("DEBUG")
+   ```
 
 6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_parameters_and_discretise` to process a symbol and see what it will look like.
 
@@ -270,24 +279,26 @@ as above, and then use some of the profiling tools. In order of increasing detai
 
 1. Simple timer. In ipython, the command
 
-```
-%time command_to_time()
-```
+   ```
+   %time command_to_time()
+   ```
 
-tells you how long the line `command_to_time()` takes. You can use `%timeit` instead to run the command several times and obtain more accurate timings. 2. Simple profiler. Using `%prun` instead of `%time` will give a brief profiling report 3. Detailed profiler. You can install the detailed profiler `snakeviz` through pip:
+   tells you how long the line `command_to_time()` takes. You can use `%timeit` instead to run the command several times and obtain more accurate timings.
 
-```bash
-pip install snakeviz
-```
+2. Simple profiler. Using `%prun` instead of `%time` will give a brief profiling report 3. Detailed profiler. You can install the detailed profiler `snakeviz` through pip:
 
-and then, in ipython, run
+   ```bash
+   pip install snakeviz
+   ```
 
-```
-%load_ext snakeviz
-%snakeviz command_to_time()
-```
+   and then, in ipython, run
 
-This will open a window in your browser with detailed profiling information.
+   ```
+   %load_ext snakeviz
+   %snakeviz command_to_time()
+   ```
+
+   This will open a window in your browser with detailed profiling information.
 
 ## Documentation
 
