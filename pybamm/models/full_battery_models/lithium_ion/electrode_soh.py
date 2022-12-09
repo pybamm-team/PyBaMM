@@ -497,8 +497,6 @@ class ElectrodeSOHSolver:
         parameter_values = self.parameter_values
         param = self.param
 
-        V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-        V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
 
