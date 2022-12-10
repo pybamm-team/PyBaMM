@@ -134,9 +134,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
             # LAM
-            C_k = self.variables[f"{Domain} capacity [A.h]"]
+            Q_k = self.variables[f"{Domain} capacity [A.h]"]
             domain_param = getattr(self.param, domain[0])  # param.n or param.p
-            LAM_k = (1 - C_k / domain_param.cap_init) * 100
+            LAM_k = (1 - Q_k / domain_param.Q_init) * 100
             self.variables.update(
                 {
                     f"LAM_{domain[0]}e [%]": LAM_k,
@@ -164,6 +164,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                 # Total lithium
                 "Total lithium [mol]": n_Li,
                 "Total lithium in particles [mol]": n_Li_particles,
+                "Total lithium capacity [A.h]": n_Li * param.F / 3600,
+                "Total lithium capacity in particles [A.h]": n_Li_particles
+                * param.F
+                / 3600,
                 # Lithium lost
                 "Total lithium lost [mol]": param.n_Li_init - n_Li,
                 "Total lithium lost from particles [mol]": param.n_Li_particles_init

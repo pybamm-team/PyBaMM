@@ -603,7 +603,7 @@ class BaseModel:
                         "To update a model from a solution, each variable in "
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
-                        f"{e.args[0]}"
+                        f"'{e.args[0]}' was not found."
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data

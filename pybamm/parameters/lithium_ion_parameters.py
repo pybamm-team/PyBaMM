@@ -137,6 +137,8 @@ class LithiumIonParameters(BaseParameters):
 
         self.n_Li_particles_init = self.n.n_Li_init + self.p.n_Li_init
         self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
+        self.Q_Li_particles_init = self.n_Li_particles_init * self.F / 3600
+        self.Q_Li_init = self.n_Li_init * self.F / 3600
 
         # Reference OCP based on initial concentration
         self.ocv_ref = self.p.U_ref - self.n.U_ref
@@ -465,13 +467,14 @@ class DomainLithiumIonParameters(BaseParameters):
             epsilon_s_tot = sum(phase.epsilon_s for phase in self.phase_params.values())
             self.epsilon_inactive = 1 - self.epsilon_init - epsilon_s_tot
 
-            self.cap_init = sum(phase.cap_init for phase in self.phase_params.values())
+            self.Q_init = sum(phase.Q_init for phase in self.phase_params.values())
             # Use primary phase to set the reference potential
             self.U_ref = self.prim.U_dimensional(self.prim.c_init_av, main.T_ref)
         else:
             self.U_ref = pybamm.Scalar(0)
 
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phase_params.values())
+        self.Q_Li_init = sum(phase.Q_Li_init for phase in self.phase_params.values())
 
         # Tortuosity parameters
         self.b_e = self.geo.b_e
@@ -731,6 +734,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         if main.options.electrode_types[domain] == "planar":
             self.n_Li_init = pybamm.Scalar(0)
+            self.Q_Li_init = pybamm.Scalar(0)
             self.U_init_dim = pybamm.Scalar(0)
             return
 
@@ -792,10 +796,11 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
         self.n_Li_init = eps_c_init_av * self.c_max * self.domain_param.L * main.A_cc
+        self.Q_Li_init = self.n_Li_init * main.F / 3600
 
         eps_s_av = pybamm.xyz_average(self.epsilon_s)
         self.elec_loading = eps_s_av * self.domain_param.L * self.c_max * main.F / 3600
-        self.cap_init = self.elec_loading * main.A_cc
+        self.Q_init = self.elec_loading * main.A_cc
 
         self.U_init_dim = self.U_dimensional(self.c_init_av, main.T_init_dim)
 
