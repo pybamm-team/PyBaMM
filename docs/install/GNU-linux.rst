@@ -28,7 +28,7 @@ brew <https://docs.python-guide.org/starting/install3/osx/>`__:
 
 .. code:: bash
 
-   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 then follow instructions in link on adding brew to path, and run
 
