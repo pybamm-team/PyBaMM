@@ -203,7 +203,12 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Loss of lithium due to loss of active material in positive electrode [mol]"
         ]
         n_Li_lost_LAM = n_Li_lost_LAM_n + n_Li_lost_LAM_p
-        self.variables.update({"Total lithium lost to LAM [mol]": n_Li_lost_LAM})
+        self.variables.update(
+            {
+                "Total lithium lost to LAM [mol]": n_Li_lost_LAM,
+                "Total lithium lost to LAM [A.h]": n_Li_lost_LAM * param.F / 3600,
+            }
+        )
 
         self.variables.update(
             {
@@ -242,6 +247,10 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Loss of capacity to SEI [A.h]",
             "Total lithium lost to side reactions [mol]",
             "Total capacity lost to side reactions [A.h]",
+            "Total lithium lost to LAM [mol]",
+            "Total lithium lost to LAM [A.h]",
+            "Total lithium in system [mol]",
+            "Total capacity in system [A.h]",
             # Resistance
             "Local ECM resistance [Ohm]",
         ]

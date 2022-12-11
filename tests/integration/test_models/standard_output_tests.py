@@ -815,19 +815,10 @@ class DegradationTests(BaseOutputTest):
 
     def test_lithium_lost(self):
         """Test the two ways of measuring lithium lost give the same value"""
-        print(
-            np.max(
-                np.abs(
-                    self.n_Li_lost(self.t)
-                    - self.n_Li_lost_rxn(self.t)
-                    - self.n_Li_lost_LAM(self.t)
-                )
-            )
-        )
         np.testing.assert_array_almost_equal(
             self.n_Li_lost(self.t),
             self.n_Li_lost_rxn(self.t) + self.n_Li_lost_LAM(self.t),
-            decimal=3,
+            decimal=5,
         )
 
     def test_all(self):
