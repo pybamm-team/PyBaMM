@@ -54,7 +54,8 @@ class LossActiveMaterial(BaseModel):
             )
         variables = self._get_standard_active_material_variables(eps_solid)
         lli_due_to_lam = pybamm.Variable(
-            f"Loss of lithium due to loss of active material in {domain} electrode [mol]"
+            "Loss of lithium due to loss of active material "
+            f"in {domain} electrode [mol]"
         )
         variables.update(
             {
@@ -147,7 +148,8 @@ class LossActiveMaterial(BaseModel):
         # simulations using adaptive inter-cycle extrapolation algorithm."
         # Journal of The Electrochemical Society 168.12 (2021): 120531.
         lli_due_to_lam = variables[
-            f"Loss of lithium due to loss of active material in {domain} electrode [mol]"
+            "Loss of lithium due to loss of active material "
+            f"in {domain} electrode [mol]"
         ]
         # Multiply by mol.m-3 * m3 to get mol
         c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
@@ -174,6 +176,7 @@ class LossActiveMaterial(BaseModel):
             self.initial_conditions = {eps_solid: eps_solid_init}
 
         lli_due_to_lam = variables[
-            f"Loss of lithium due to loss of active material in {domain} electrode [mol]"
+            "Loss of lithium due to loss of active material "
+            f"in {domain} electrode [mol]"
         ]
         self.initial_conditions[lli_due_to_lam] = pybamm.Scalar(0)

@@ -130,7 +130,7 @@ class BasicDFNHalfCell(BaseModel):
 
         # Particle diffusion parameters
         D_w = param.p.prim.D
-        C_w = param.p.prim.cap_init
+        Q_w = param.p.prim.Q_init
         a_R_w = param.p.prim.a_R
         gamma_e = param.c_e_typ / param.p.prim.c_max
         c_w_init = param.p.prim.c_init
@@ -175,14 +175,14 @@ class BasicDFNHalfCell(BaseModel):
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
         N_s_w = -D_w(c_s_w, T) * pybamm.grad(c_s_w)
-        self.rhs[c_s_w] = -(1 / C_w) * pybamm.div(N_s_w)
+        self.rhs[c_s_w] = -(1 / Q_w) * pybamm.div(N_s_w)
 
         # Boundary conditions must be provided for equations with spatial
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T),
+                -Q_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T),
                 "Neumann",
             ),
         }
