@@ -180,12 +180,22 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Different way of measuring LLI but should give same value
         n_Li_lost_sei = self.variables["Loss of lithium to SEI [mol]"]
         n_Li_lost_reactions = n_Li_lost_sei
+        n_Li_lost_LAM = pybamm.Scalar(0)
         if "negative electrode" in domains:
             n_Li_lost_sei_cracks = self.variables[
                 "Loss of lithium to SEI on cracks [mol]"
             ]
             n_Li_lost_pl = self.variables["Loss of lithium to lithium plating [mol]"]
             n_Li_lost_reactions += n_Li_lost_sei_cracks + n_Li_lost_pl
+            n_Li_lost_LAM += self.variables[
+                "Loss of lithium due to loss of active material "
+                "in negative electrode [mol]"
+            ]
+        if "positive electrode" in domains:
+            n_Li_lost_LAM += self.variables[
+                "Loss of lithium due to loss of active material "
+                "in positive electrode [mol]"
+            ]
 
         self.variables.update(
             {
@@ -196,13 +206,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
         # Lithium lost to loss of active material
-        n_Li_lost_LAM_n = self.variables[
-            "Loss of lithium due to loss of active material in negative electrode [mol]"
-        ]
-        n_Li_lost_LAM_p = self.variables[
-            "Loss of lithium due to loss of active material in positive electrode [mol]"
-        ]
-        n_Li_lost_LAM = n_Li_lost_LAM_n + n_Li_lost_LAM_p
         self.variables.update(
             {
                 "Total lithium lost to LAM [mol]": n_Li_lost_LAM,
