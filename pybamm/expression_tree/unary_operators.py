@@ -634,7 +634,7 @@ class BaseIndefiniteIntegral(Integral):
         if isinstance(integration_variable, list):
             if len(integration_variable) > 1:
                 raise NotImplementedError(
-                    "Indefinite integral only implemeted w.r.t. one variable"
+                    "Indefinite integral only implemented w.r.t. one variable"
                 )
             else:
                 integration_variable = integration_variable[0]

@@ -15,7 +15,7 @@ class Jacobian(object):
         cached jacobians
 
     clear_domain: bool
-        wether or not the jacobian clears the domain (default True)
+        whether or not the jacobian clears the domain (default True)
     """
 
     def __init__(self, known_jacs=None, clear_domain=True):
