@@ -196,15 +196,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-        self.variables.update(
-            {
-                "Total lithium in system [mol]": n_Li + LLI_reactions,
-                "Total lithium capacity in system [A.h]": (n_Li + LLI_reactions)
-                * param.F
-                / 3600,
-            }
-        )
-
     def set_summary_variables(self):
         """
         Sets the default summary variables.
