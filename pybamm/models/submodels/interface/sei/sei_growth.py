@@ -238,7 +238,8 @@ class SEIGrowth(BaseModel):
 
         # a * j_sei / F is the rate of consumption of li moles by SEI reaction
         # 1/z_sei converts from li moles to SEI moles (z_sei=li mol per sei mol)
-        # a * j_sei / (F * z_sei) is the rate of consumption of SEI moles by SEI reaction
+        # a * j_sei / (F * z_sei) is the rate of consumption of SEI moles by SEI
+        # reaction
         # V_bar / a converts from SEI moles to SEI thickness
         # V_bar * j_sei / (F * z_sei) is the rate of SEI thickness change
         dLdt_SEI_inner = (
