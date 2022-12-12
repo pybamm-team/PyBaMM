@@ -420,6 +420,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             + self.n_Li_LAM_n(self.solution.t)
             + self.n_Li_LAM_p(self.solution.t)
         )
+
         diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
         if self.model.options["particle"] == "quartic profile":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
