@@ -13,7 +13,7 @@
 
 ## Breaking changes
 
-- Renamed "Negative/Positive electrode SOC" to "Negative/Positive electrode stoichiometry" to avoid confusion with cell SOC ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
+- Renamed "Negative/Positive electrode SOC" to "Negative/Positive electrode filling fraction" to avoid confusion with cell SOC ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
 - Inputs for the `ElectrodeSOH` solver are now (i) "Q_Li", the total cyclable capacity of lithium in the electrodes (previously "n_Li", the total number of moles, n_Li = 3600/F \* Q_Li) (ii) "Q_n", the capacity of the negative electrode (previously "C_n"), and "Q_p", the capacity of the positive electrode (previously "C_p") ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
 
 # [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
