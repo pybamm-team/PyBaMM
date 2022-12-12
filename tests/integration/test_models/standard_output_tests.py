@@ -298,7 +298,13 @@ class ParticleConcentrationTests(BaseOutputTest):
             f"Positive {self.phase_name_p}particle flux [mol.m-2.s-1]"
         ]
 
-        self.c_Li_tot = solution["Total lithium in system except electrolyte [mol]"]
+        self.n_Li_side = solution["Total lithium lost to side reactions [mol]"]
+        self.n_Li_LAM_n = solution[
+            "Loss of lithium due to loss of active material in negative electrode [mol]"
+        ]
+        self.n_Li_LAM_p = solution[
+            "Loss of lithium due to loss of active material in positive electrode [mol]"
+        ]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.
@@ -407,7 +413,13 @@ class ParticleConcentrationTests(BaseOutputTest):
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is
         constant."""
-        c_s_tot = self.c_Li_tot(self.solution.t)
+        c_s_tot = (
+            self.c_s_n_tot(self.solution.t)
+            + self.c_s_p_tot(self.solution.t)
+            + self.n_Li_side(self.solution.t)
+            + self.n_Li_LAM_n(self.solution.t)
+            + self.n_Li_LAM_p(self.solution.t)
+        )
         diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
         if self.model.options["particle"] == "quartic profile":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
@@ -813,7 +825,6 @@ class DegradationTests(BaseOutputTest):
         self.LLI = solution["Loss of lithium inventory [%]"]
         self.n_Li_lost = solution["Total lithium lost [mol]"]
         self.n_Li_lost_rxn = solution["Total lithium lost to side reactions [mol]"]
-        self.n_Li_lost_LAM = solution["Total lithium lost to LAM [mol]"]
         self.n_Li_lost_LAM_n = solution[
             "Loss of lithium due to loss of active material in negative electrode [mol]"
         ]
@@ -836,7 +847,9 @@ class DegradationTests(BaseOutputTest):
         """Test the two ways of measuring lithium lost give the same value"""
         np.testing.assert_array_almost_equal(
             self.n_Li_lost(self.t),
-            self.n_Li_lost_rxn(self.t) + self.n_Li_lost_LAM(self.t),
+            self.n_Li_lost_rxn(self.t)
+            + self.n_Li_lost_LAM_n(self.t)
+            + self.n_Li_lost_LAM_p(self.t),
             decimal=5,
         )
 

@@ -147,7 +147,8 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables.update(
             {
-                f"{Domain} electrode {phase_name}stoichiometry": c_s_vol_av / c_scale,
+                f"{Domain} electrode {phase_name}filling fraction": c_s_vol_av
+                / c_scale,
                 f"{Domain} electrode {phase_name}volume-averaged "
                 "concentration": c_s_vol_av / c_scale,
                 f"{Domain} electrode {phase_name}volume-averaged "
