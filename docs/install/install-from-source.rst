@@ -50,7 +50,7 @@ You can install it with
 
 .. code:: bash
 
-	  python3.X -m pip install --user tox
+	  python3.X -m pip install --user "tox<4"
 
 Depending on your operating system, you may or may not have ``pip`` installed along python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
