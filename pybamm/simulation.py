@@ -443,7 +443,7 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
             # rebuilt model so clear solver setup
-            self._solver.models_set_up = {}
+            self._solver._model_set_up = {}
 
     def build_for_experiment(self, check_model=True, initial_soc=None):
         """
