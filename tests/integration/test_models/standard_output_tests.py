@@ -293,7 +293,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution[f"Negative {self.phase_name_n}particle flux"]
         self.N_s_p = solution[f"Positive {self.phase_name_p}particle flux"]
 
-        self.c_Li_tot = solution["Total lithium in system [mol]"]
+        self.c_Li_tot = solution["Total lithium in system except electrolyte [mol]"]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.

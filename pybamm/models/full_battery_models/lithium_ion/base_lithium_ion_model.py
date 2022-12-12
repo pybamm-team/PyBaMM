@@ -218,6 +218,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Total lithium in system [mol]": n_Li
                 + n_Li_lost_reactions
                 + n_Li_lost_LAM,
+                "Total lithium in system except electrolyte [mol]": n_Li_particles
+                + n_Li_lost_reactions
+                + n_Li_lost_LAM,
                 "Total capacity in system [A.h]": (
                     n_Li + n_Li_lost_reactions + n_Li_lost_LAM
                 )
