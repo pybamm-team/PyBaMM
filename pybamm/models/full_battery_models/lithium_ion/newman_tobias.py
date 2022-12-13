@@ -74,7 +74,7 @@ class NewmanTobias(DFN):
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
 
-    def set_electrolyte_concentration_submodel(self):
-        self.submodels[
-            "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
+    # def set_electrolyte_concentration_submodel(self):
+    #     self.submodels[
+    #         "electrolyte diffusion"
+    #     ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)

@@ -35,6 +35,7 @@ class BaseModel(Composite):
         delta_phi_av = pybamm.Variable(
             f"X-averaged {self.domain} electrode surface potential difference [V]",
             domain="current collector",
+            reference=self.domain_param.prim.U_init,
         )
 
         variables = self._get_standard_average_surface_potential_difference_variables(

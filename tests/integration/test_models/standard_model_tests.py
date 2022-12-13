@@ -71,6 +71,7 @@ class StandardModelTest(object):
         # Use tighter default tolerances for testing
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
+        self.solver.root_method.tol = 1e-8
 
         Crate = abs(
             self.parameter_values["Current function [A]"]

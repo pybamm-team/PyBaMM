@@ -35,8 +35,8 @@ class BaseModel(BaseElectrolyteConductivity):
             f"{Domain} electrode surface potential difference [V]",
             domain=f"{domain} electrode",
             auxiliary_domains={"secondary": "current collector"},
+            reference=self.domain_param.prim.U_init,
         )
-
         variables = self._get_standard_average_surface_potential_difference_variables(
             pybamm.x_average(delta_phi)
         )
