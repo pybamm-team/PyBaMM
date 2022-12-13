@@ -531,15 +531,33 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
 
-        # Test model with external variable runs
-        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
-        model = pybamm.lithium_ion.SPMe(model_options)
-        sim = pybamm.Simulation(model)
-        sim.build()
-        variable_names = ["Volume-averaged cell temperature"]
-        out = sim.built_model.export_casadi_objects(variable_names)
+        # Test fails if order not specified
+        with self.assertRaisesRegex(
+            ValueError, "input_parameter_order must be specified"
+        ):
+            model.export_casadi_objects(["a+b"])
+
+        # Fine if order is not specified if there is only one input parameter
+        model = pybamm.BaseModel()
+        p = pybamm.InputParameter("p")
+        model.rhs = {a: -a}
+        model.algebraic = {b: a - b}
+        model.initial_conditions = {a: 1, b: 1}
+        model.variables = {"a+b": a + b - p}
+
+        out = model.export_casadi_objects(["a+b"])
+
+        # Try making a function from the outputs
+        t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
+        var = out["variables"]["a+b"]
+        var_fn = casadi.Function("var", [t, x, z, p], [var])
+
+        # Test that function values are as expected
+        # a + b - p = 3 + 2 - 7 = -2
+        self.assertEqual(var_fn(6, 3, 2, [7]), -2)
 
         # Test fails if not discretised
+        model = pybamm.lithium_ion.SPMe()
         with self.assertRaisesRegex(
             pybamm.DiscretisationError, "Cannot automatically discretise model"
         ):

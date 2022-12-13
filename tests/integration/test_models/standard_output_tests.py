@@ -295,10 +295,10 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         self.n_Li_side = solution["Total lithium lost to side reactions [mol]"]
         self.n_Li_LAM_n = solution[
-            "Loss of lithium due to LAM in negative electrode [mol]"
+            "Loss of lithium due to loss of active material in negative electrode [mol]"
         ]
         self.n_Li_LAM_p = solution[
-            "Loss of lithium due to LAM in positive electrode [mol]"
+            "Loss of lithium due to loss of active material in positive electrode [mol]"
         ]
 
         if model.options["particle size"] == "distribution":
@@ -807,10 +807,10 @@ class DegradationTests(BaseOutputTest):
         self.n_Li_lost = solution["Total lithium lost [mol]"]
         self.n_Li_lost_rxn = solution["Total lithium lost to side reactions [mol]"]
         self.n_Li_lost_LAM_n = solution[
-            "Loss of lithium due to LAM in negative electrode [mol]"
+            "Loss of lithium due to loss of active material in negative electrode [mol]"
         ]
         self.n_Li_lost_LAM_p = solution[
-            "Loss of lithium due to LAM in positive electrode [mol]"
+            "Loss of lithium due to loss of active material in positive electrode [mol]"
         ]
 
     def test_degradation_modes(self):

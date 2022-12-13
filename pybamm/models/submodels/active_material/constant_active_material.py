@@ -37,7 +37,7 @@ class Constant(BaseModel):
 
         variables.update(
             {
-                "Loss of lithium due to LAM "
+                "Loss of lithium due to loss of active material "
                 f"in {domain} electrode [mol]": pybamm.Scalar(0)
             }
         )
