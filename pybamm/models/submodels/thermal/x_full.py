@@ -46,6 +46,7 @@ class OneDimensionalX(BaseThermal):
                 f"{Domain} temperature [K]",
                 domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
+                scale=self.param.T_ref,
             )
             T_dict[domain] = T_k
 
