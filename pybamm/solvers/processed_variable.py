@@ -132,7 +132,7 @@ class ProcessedVariable(object):
 
         if self.cumtrapz_ic is not None:
             entries = cumulative_trapezoid(
-                entries, self.t_pts_nondim, initial=self.cumtrapz_ic
+                entries, self.t_pts_nondim, initial=float(self.cumtrapz_ic)
             )
 
         # set up interpolation
