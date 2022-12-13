@@ -83,7 +83,6 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_changing_grid(self):
         model = pybamm.lithium_ion.SPM()
-        solver = pybamm.IDAKLUSolver()
 
         # load parameter values and geometry
         geometry = model.default_geometry
@@ -103,6 +102,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             model_disc = disc.process_model(model, inplace=False)
+            solver = pybamm.IDAKLUSolver()
 
             # solve
             solver.solve(model_disc, t_eval)
