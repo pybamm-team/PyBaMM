@@ -80,7 +80,7 @@ jobs:
       - name: Install standard python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install tox
+          python -m pip install "tox<4"
 
       - name: Install SuiteSparse and Sundials
         if: matrix.os == 'ubuntu-latest'
