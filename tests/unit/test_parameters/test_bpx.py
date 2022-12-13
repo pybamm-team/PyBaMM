@@ -69,7 +69,7 @@ class TestBPX(unittest.TestCase):
                     "Maximum stoichiometry": 0.824874,
                     "Maximum concentration [mol.m-3]": 28500,
                     "Diffusivity activation energy [J.mol-1]": 108000,
-                    "Reaction rate activation energy [J.mol-1]": 53400,
+                    "Reaction rate constant activation energy [J.mol-1]": 53400,
                 },
                 "Positive electrode": {
                     "Particle radius [m]": 4.6e-06,
@@ -94,7 +94,7 @@ class TestBPX(unittest.TestCase):
                     "Maximum stoichiometry": 0.940627,
                     "Maximum concentration [mol.m-3]": 56500,
                     "Diffusivity activation energy [J.mol-1]": 62400,
-                    "Reaction rate activation energy [J.mol-1]": 27010,
+                    "Reaction rate constant activation energy [J.mol-1]": 27010,
                 },
                 "Separator": {
                     "Thickness [m]": 2e-5,
