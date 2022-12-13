@@ -49,7 +49,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
             solution_loqs = solver.solve(
                 leading_order_model, t_eval, inputs={"Current function [A]": current}
             )
-            solution_full = solver.solve(
+            solution_full = solver.copy().solve(
                 full_model, t_eval, inputs={"Current function [A]": current}
             )
 

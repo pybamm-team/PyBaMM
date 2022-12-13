@@ -65,32 +65,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             entries = np.tile(symbol_mesh.nodes, repeats)
         return pybamm.Vector(entries, domains=symbol.domains)
 
-    def preprocess_external_variables(self, var):
-        """
-        For finite volumes, we need the boundary fluxes for discretising
-        properly. Here, we extrapolate and then add them to the boundary
-        conditions.
-
-        Parameters
-        ----------
-        var : :class:`pybamm.Variable` or :class:`pybamm.Concatenation`
-            The external variable that is to be processed
-
-        Returns
-        -------
-        new_bcs: dict
-            A dictionary containing the new boundary conditions
-        """
-
-        new_bcs = {
-            var: {
-                "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),
-                "right": (pybamm.BoundaryGradient(var, "right"), "Neumann"),
-            }
-        }
-
-        return new_bcs
-
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.SpatialMethod.gradient`

@@ -468,11 +468,6 @@ class ParameterValues:
 
         model.events = new_events
 
-        # Set external variables
-        model.external_variables = [
-            self.process_symbol(var) for var in unprocessed_model.external_variables
-        ]
-
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model

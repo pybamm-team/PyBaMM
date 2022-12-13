@@ -14,7 +14,10 @@
 ## Breaking changes
 
 - Renamed "Negative/Positive electrode SOC" to "Negative/Positive electrode filling fraction" to avoid confusion with cell SOC ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
+- Removed external variables and submodels. InputParameter should now be used in all cases ([#2502](https://github.com/pybamm-team/PyBaMM/pull/2502))
+- Trying to use a solver to solve multiple models results in a RuntimeError exception ([#2481](https://github.com/pybamm-team/PyBaMM/pull/2481))
 - Inputs for the `ElectrodeSOH` solver are now (i) "Q_Li", the total cyclable capacity of lithium in the electrodes (previously "n_Li", the total number of moles, n_Li = 3600/F \* Q_Li) (ii) "Q_n", the capacity of the negative electrode (previously "C_n"), and "Q_p", the capacity of the positive electrode (previously "C_p") ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
+- All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
 
 # [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
 
@@ -40,7 +43,6 @@
 
 ## Breaking changes
 
-- All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
 - Interpolants created from parameter data are now "linear" by default (was "cubic") ([#2494](https://github.com/pybamm-team/PyBaMM/pull/2494))
 - Renamed entry point for parameter sets to `pybamm_parameter_sets` ([#2475](https://github.com/pybamm-team/PyBaMM/pull/2475))
 - Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))

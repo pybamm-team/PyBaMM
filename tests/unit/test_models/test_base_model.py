@@ -524,15 +524,8 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
 
-        # Test model with external variable runs
-        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
-        model = pybamm.lithium_ion.SPMe(model_options)
-        sim = pybamm.Simulation(model)
-        sim.build()
-        variable_names = ["Volume-averaged cell temperature [K]"]
-        out = sim.built_model.export_casadi_objects(variable_names)
-
         # Test fails if not discretised
+        model = pybamm.lithium_ion.SPMe()
         with self.assertRaisesRegex(
             pybamm.DiscretisationError, "Cannot automatically discretise model"
         ):

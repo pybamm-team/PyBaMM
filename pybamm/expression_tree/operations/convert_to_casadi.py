@@ -55,7 +55,6 @@ class CasadiConverter(object):
                 pybamm.Array,
                 pybamm.Time,
                 pybamm.InputParameter,
-                pybamm.ExternalVariable,
             ),
         ):
             return casadi.MX(symbol.evaluate(t, y, y_dot, inputs))

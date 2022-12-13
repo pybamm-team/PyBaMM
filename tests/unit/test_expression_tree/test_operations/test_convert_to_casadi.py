@@ -360,31 +360,6 @@ class TestCasadiConverter(unittest.TestCase):
             casadi_inputs["Input 2"] * casadi_y,
         )
 
-    def test_convert_external_variable(self):
-        casadi_t = casadi.MX.sym("t")
-        casadi_y = casadi.MX.sym("y", 10)
-        casadi_inputs = {
-            "External 1": casadi.MX.sym("External 1", 3),
-            "External 2": casadi.MX.sym("External 2", 10),
-        }
-
-        pybamm_y = pybamm.StateVector(slice(0, 10))
-        pybamm_u1 = pybamm.ExternalVariable("External 1", 3)
-        pybamm_u2 = pybamm.ExternalVariable("External 2", 10)
-
-        # External only
-        self.assert_casadi_equal(
-            pybamm_u1.to_casadi(casadi_t, casadi_y, inputs=casadi_inputs),
-            casadi_inputs["External 1"],
-        )
-
-        # More complex
-        expr = pybamm_u2 + pybamm_y
-        self.assert_casadi_equal(
-            expr.to_casadi(casadi_t, casadi_y, inputs=casadi_inputs),
-            casadi_inputs["External 2"] + casadi_y,
-        )
-
     def test_errors(self):
         y = pybamm.StateVector(slice(0, 10))
         with self.assertRaisesRegex(
