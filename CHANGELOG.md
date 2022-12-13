@@ -1,5 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.11.1](https://github.com/pybamm-team/PyBaMM/tree/v22.11.1) - 2022-12-13
+
+## Bug fixes
+
+- Fixed installation on Google Colab (`pybtex` issues) ([#2547](https://github.com/pybamm-team/PyBaMM/pull/2547/files))
+
 # [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
 
 ## Features

@@ -41,7 +41,7 @@ class Citations:
         try:
             self.read_citations()
             self._reset()
-        except Exception as e:  # noqa
+        except Exception as e:  # pragma: no cover
             self._citation_err_msg = e
 
     def _reset(self):
