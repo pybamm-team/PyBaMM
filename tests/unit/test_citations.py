@@ -64,6 +64,11 @@ class TestCitations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
 
+        pybamm.citations._citation_err_msg = "Error"
+        with self.assertRaisesRegex(ImportError, "Error"):
+            pybamm.print_citations()
+        pybamm.citations._citation_err_msg = None
+
     def test_overwrite_citation(self):
         # Unknown citation
         fake_citation = r"@article{NotACitation, title = {This Doesn't Exist}}"
