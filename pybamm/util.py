@@ -61,7 +61,7 @@ class FuzzyDict(dict):
                 domain = key.split(" ")[0]
                 raise KeyError(
                     f"Variable '{domain} electrode SOC' has been renamed to "
-                    f"'{domain} electrode filling fraction' to avoid confusion "
+                    f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
                 )
             best_matches = self.get_best_matches(key)
