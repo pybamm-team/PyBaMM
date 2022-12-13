@@ -56,12 +56,6 @@ class ModelWarning(UserWarning):
     pass
 
 
-class InputError(Exception):
-    """An external variable has been input incorrectly into PyBaMM."""
-
-    pass
-
-
 class DiscretisationError(Exception):
     """A model could not be discretised."""
 
