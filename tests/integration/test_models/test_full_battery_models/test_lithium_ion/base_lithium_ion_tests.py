@@ -209,12 +209,12 @@ class BaseIntegrationTestLithiumIon:
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
-    def test_loss_active_material_stress_negative(self):
+    def test_loss_active_material_stress_positive(self):
         options = {"loss of active material": ("none", "stress-driven")}
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
-    def test_loss_active_material_stress_positive(self):
+    def test_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("stress-driven", "none")}
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)

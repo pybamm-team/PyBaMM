@@ -325,6 +325,35 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_stoichiometries(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+    ):
+        """
+        Set the initial stoichiometry of each electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters()
+        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+            initial_value, self, param=param, known_value=known_value
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+        c_n_max = self.evaluate(param.n.prim.c_max)
+        c_p_max = self.evaluate(param.p.prim.c_max)
+        parameter_values.update(
+            {
+                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
+                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        return parameter_values
+
     def check_parameter_values(self, values):
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
@@ -440,11 +469,6 @@ class ParameterValues:
             )
 
         model.events = new_events
-
-        # Set external variables
-        model.external_variables = [
-            self.process_symbol(var) for var in unprocessed_model.external_variables
-        ]
 
         # Process timescale
         new_timescale = self.process_symbol(unprocessed_model.timescale)

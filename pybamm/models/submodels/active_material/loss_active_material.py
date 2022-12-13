@@ -53,6 +53,16 @@ class LossActiveMaterial(BaseModel):
                 auxiliary_domains={"secondary": "current collector"},
             )
         variables = self._get_standard_active_material_variables(eps_solid)
+        lli_due_to_lam = pybamm.Variable(
+            "Loss of lithium due to loss of active material "
+            f"in {domain} electrode [mol]"
+        )
+        variables.update(
+            {
+                "Loss of lithium due to loss of active material "
+                f"in {domain} electrode [mol]": lli_due_to_lam
+            }
+        )
         return variables
 
     def get_coupled_variables(self, variables):
@@ -133,7 +143,23 @@ class LossActiveMaterial(BaseModel):
                 f"{Domain} electrode active material volume fraction change"
             ]
 
-        self.rhs = {eps_solid: deps_solid_dt}
+        # Loss of lithium due to loss of active material
+        # See eq 37 in "Sulzer, Valentin, et al. "Accelerated battery lifetime
+        # simulations using adaptive inter-cycle extrapolation algorithm."
+        # Journal of The Electrochemical Society 168.12 (2021): 120531.
+        lli_due_to_lam = variables[
+            "Loss of lithium due to loss of active material "
+            f"in {domain} electrode [mol]"
+        ]
+        # Multiply by mol.m-3 * m3 to get mol
+        c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
+        V = self.domain_param.L * self.param.A_cc
+
+        self.rhs = {
+            # minus sign because eps_solid is decreasing and LLI measures positive
+            lli_due_to_lam: -c_s_av * V * pybamm.x_average(deps_solid_dt),
+            eps_solid: deps_solid_dt,
+        }
 
     def set_initial_conditions(self, variables):
         domain, Domain = self.domain_Domain
@@ -148,3 +174,9 @@ class LossActiveMaterial(BaseModel):
         else:
             eps_solid = variables[f"{Domain} electrode active material volume fraction"]
             self.initial_conditions = {eps_solid: eps_solid_init}
+
+        lli_due_to_lam = variables[
+            "Loss of lithium due to loss of active material "
+            f"in {domain} electrode [mol]"
+        ]
+        self.initial_conditions[lli_due_to_lam] = pybamm.Scalar(0)

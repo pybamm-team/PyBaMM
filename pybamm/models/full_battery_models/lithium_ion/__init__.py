@@ -3,11 +3,9 @@
 #
 from .base_lithium_ion_model import BaseModel
 from .electrode_soh import (
-    ElectrodeSOH,
-    ElectrodeSOHx100,
-    ElectrodeSOHx0,
     ElectrodeSOHSolver,
     get_initial_stoichiometries,
+    get_min_max_stoichiometries,
 )
 from .electrode_soh_half_cell import ElectrodeSOHHalfCell
 from .spm import SPM

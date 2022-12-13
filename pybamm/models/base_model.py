@@ -90,9 +90,9 @@ class BaseModel:
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self._options = {"external submodels": []}
+        self._options = {}
         self._built = False
-        self._built_fundamental_and_external = False
+        self._built_fundamental = False
 
         # Initialise empty model
         self.submodels = {}
@@ -109,7 +109,6 @@ class BaseModel:
         self._mass_matrix_inv = None
         self._jacobian = None
         self._jacobian_algebraic = None
-        self.external_variables = []
         self._parameters = None
         self._input_parameters = None
         self._parameter_info = None
@@ -419,7 +418,6 @@ class BaseModel:
         new_model._boundary_conditions = self.boundary_conditions.copy()
         new_model._variables = self.variables.copy()
         new_model._events = self.events.copy()
-        new_model.external_variables = self.external_variables.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
         return new_model
 
@@ -445,7 +443,7 @@ class BaseModel:
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
 
-    def build_fundamental_and_external(self):
+    def build_fundamental(self):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
@@ -455,23 +453,7 @@ class BaseModel:
             )
             self.variables.update(submodel.get_fundamental_variables())
 
-        # Set the submodels that are external
-        for sub in self.options["external submodels"]:
-            self.submodels[sub].external = True
-
-        # Set any external variables
-        self.external_variables = []
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting external variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            external_variables = submodel.get_external_variables()
-
-            self.external_variables += external_variables
-
-        self._built_fundamental_and_external = True
+        self._built_fundamental = True
 
     def build_coupled_variables(self):
         # Note: pybamm will try to get the coupled variables for the submodels in the
@@ -520,38 +502,37 @@ class BaseModel:
     def build_model_equations(self):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
-            if submodel.external is False:
-                pybamm.logger.verbose(
-                    "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
-                )
+            pybamm.logger.verbose(
+                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+            )
 
-                submodel.set_rhs(self.variables)
-                pybamm.logger.verbose(
-                    "Setting algebraic for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
+            submodel.set_rhs(self.variables)
+            pybamm.logger.verbose(
+                "Setting algebraic for {} submodel ({})".format(
+                    submodel_name, self.name
                 )
+            )
 
-                submodel.set_algebraic(self.variables)
-                pybamm.logger.verbose(
-                    "Setting boundary conditions for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
+            submodel.set_algebraic(self.variables)
+            pybamm.logger.verbose(
+                "Setting boundary conditions for {} submodel ({})".format(
+                    submodel_name, self.name
                 )
+            )
 
-                submodel.set_boundary_conditions(self.variables)
-                pybamm.logger.verbose(
-                    "Setting initial conditions for {} submodel ({})".format(
-                        submodel_name, self.name
-                    )
+            submodel.set_boundary_conditions(self.variables)
+            pybamm.logger.verbose(
+                "Setting initial conditions for {} submodel ({})".format(
+                    submodel_name, self.name
                 )
-                submodel.set_initial_conditions(self.variables)
-                submodel.set_events(self.variables)
-                pybamm.logger.verbose(
-                    "Updating {} submodel ({})".format(submodel_name, self.name)
-                )
-                self.update(submodel)
-                self.check_no_repeated_keys()
+            )
+            submodel.set_initial_conditions(self.variables)
+            submodel.set_events(self.variables)
+            pybamm.logger.verbose(
+                "Updating {} submodel ({})".format(submodel_name, self.name)
+            )
+            self.update(submodel)
+            self.check_no_repeated_keys()
 
     def build_model(self):
         self._build_model()
@@ -568,8 +549,8 @@ class BaseModel:
 
         pybamm.logger.info("Start building {}".format(self.name))
 
-        if self._built_fundamental_and_external is False:
-            self.build_fundamental_and_external()
+        if self._built_fundamental is False:
+            self.build_fundamental()
 
         self.build_coupled_variables()
 
@@ -603,7 +584,7 @@ class BaseModel:
                         "To update a model from a solution, each variable in "
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
-                        f"{e.args[0]}"
+                        f"'{e.args[0]}' was not found."
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
@@ -813,16 +794,7 @@ class BaseModel:
         all_vars_in_keys = all_vars_in_rhs_keys.union(all_vars_in_algebraic_keys)
         extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
 
-        # get external variables
-        external_vars = set(self.external_variables)
-        for var in self.external_variables:
-            if isinstance(var, pybamm.Concatenation):
-                child_vars = set(var.children)
-                external_vars = external_vars.union(child_vars)
-
-        extra_variables = extra_variables_in_equations.difference(external_vars)
-
-        if extra_variables:
+        if extra_variables_in_equations:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
 
     def check_algebraic_equations(self, post_discretisation):
@@ -858,13 +830,9 @@ class BaseModel:
 
         vars_in_keys = set()
 
-        model_and_external_variables = (
-            list(self.rhs.keys())
-            + list(self.algebraic.keys())
-            + self.external_variables
-        )
+        model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
 
-        for var in model_and_external_variables:
+        for var in model_keys:
             if isinstance(var, pybamm.Variable):
                 vars_in_keys.add(var)
             # Key can be a concatenation
@@ -876,8 +844,8 @@ class BaseModel:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
-                    model.rhs, model.algebraic, or model.external_variables in an
-                    unmodified form (e.g. not Broadcasted)
+                    model.rhs or model.algebraic, in an unmodified form
+                    (e.g. not Broadcasted)
                     """.format(
                         var
                     )
@@ -948,8 +916,10 @@ class BaseModel:
         variable_names : list
             Variables to be exported alongside the model structure
         input_parameter_order : list, optional
-            Order in which the input parameters should be stacked. If None, the order
-            returned by :meth:`BaseModel.input_parameters` is used
+            Order in which the input parameters should be stacked.
+            If input_parameter_order=None and len(self.input_parameters) > 1, a
+            ValueError is raised (this helps to avoid accidentally using the wrong
+            order)
 
         Returns
         -------
@@ -970,21 +940,18 @@ class BaseModel:
         for input_param in self.input_parameters:
             name = input_param.name
             inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
-        # Read external variables
-        external_casadi = {}
-        for external_varaiable in self.external_variables:
-            name = external_varaiable.name
-            ev_size = external_varaiable._evaluate_for_shape().shape[0]
-            external_casadi[name] = casadi.MX.sym(name, ev_size)
         # Sort according to input_parameter_order
         if input_parameter_order is None:
+            if len(inputs_wrong_order) > 1:
+                raise ValueError(
+                    "input_parameter_order must be specified if there is more than one "
+                    "input parameter"
+                )
             inputs = inputs_wrong_order
         else:
             inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
-        # Set up external variables and inputs
-        # Put external variables first like the integrator expects
-        ext_and_in = {**external_casadi, **inputs}
-        inputs_stacked = casadi.vertcat(*[p for p in ext_and_in.values()])
+        # Set up inputs
+        inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
         # Convert initial conditions to casadi form
         y0 = self.concatenated_initial_conditions.to_casadi(
@@ -994,7 +961,7 @@ class BaseModel:
         z0 = y0[self.concatenated_rhs.size :]
 
         # Convert rhs and algebraic to casadi form and calculate jacobians
-        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=inputs)
         jac_rhs = casadi.jacobian(rhs, y_casadi)
         algebraic = self.concatenated_algebraic.to_casadi(
             t_casadi, y_casadi, inputs=inputs
@@ -1005,7 +972,7 @@ class BaseModel:
         variables = OrderedDict()
         for name in variable_names:
             var = self.variables[name]
-            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
 
         casadi_dict = {
             "t": t_casadi,
@@ -1036,8 +1003,10 @@ class BaseModel:
         variable_names : list
             Variables to be exported alongside the model structure
         input_parameter_order : list, optional
-            Order in which the input parameters should be stacked. If None, the order
-            returned by :meth:`BaseModel.input_parameters` is used
+            Order in which the input parameters should be stacked.
+            If input_parameter_order=None and len(self.input_parameters) > 1, a
+            ValueError is raised (this helps to avoid accidentally using the wrong
+            order)
         cg_options : dict
             Options to pass to the code generator.
             See https://web.casadi.org/docs/#generating-c-code
