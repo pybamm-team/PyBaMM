@@ -90,9 +90,9 @@ class BaseModel:
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self._options = {"external submodels": []}
+        self._options = {}
         self._built = False
-        self._built_fundamental_and_external = False
+        self._built_fundamental = False
 
         # Initialise empty model
         self.submodels = {}
@@ -443,7 +443,7 @@ class BaseModel:
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
 
-    def build_fundamental_and_external(self):
+    def build_fundamental(self):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
@@ -453,7 +453,7 @@ class BaseModel:
             )
             self.variables.update(submodel.get_fundamental_variables())
 
-        self._built_fundamental_and_external = True
+        self._built_fundamental = True
 
     def build_coupled_variables(self):
         # Note: pybamm will try to get the coupled variables for the submodels in the
@@ -549,8 +549,8 @@ class BaseModel:
 
         pybamm.logger.info("Start building {}".format(self.name))
 
-        if self._built_fundamental_and_external is False:
-            self.build_fundamental_and_external()
+        if self._built_fundamental is False:
+            self.build_fundamental()
 
         self.build_coupled_variables()
 

@@ -44,11 +44,6 @@ class Thevenin(pybamm.BaseModel):
                 - callable : if a callable is given as this option, the function \
                     defines the residual of an algebraic equation. The applied current \
                     will be solved for such that the algebraic constraint is satisfied.
-            * "external submodels" : list
-                A list of the submodels that you would like to supply an external
-                variable for instead of solving in PyBaMM. The entries of the lists
-                are strings that correspond to the submodel names in the keys
-                of `self.submodels`.
     build :  bool, optional
         Whether to build the model on instantiation. Default is True. Setting this
         option to False allows users to change any number of the submodels before
@@ -89,7 +84,6 @@ class Thevenin(pybamm.BaseModel):
             "calculate discharge energy": ["false", "true"],
             "operating mode": OperatingModes("current"),
             "number of rc elements": NaturalNumberOption(1),
-            "external submodels": [[]],
         }
 
         default_options = {

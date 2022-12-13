@@ -50,11 +50,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "electrolyte conductivity" : str
                 Can be "default" (default), "full", "leading order", "composite" or
                 "integrated".
-            * "external submodels" : list
-                A list of the submodels that you would like to supply an external
-                variable for instead of solving in PyBaMM. The entries of the lists
-                are strings that correspond to the submodel names in the keys
-                of `self.submodels`.
             * "hydrolysis" : str
                 Whether to include hydrolysis in the model. Only implemented for
                 lead-acid models. Can be "false" (default) or "true". If "true", then
@@ -278,7 +273,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         default_options = {
             name: options[0] for name, options in self.possible_options.items()
         }
-        default_options["external submodels"] = []
         default_options["timescale"] = "default"
 
         # Change the default for cell geometry based on which thermal option is provided
@@ -530,7 +524,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            if option in ["external submodels", "working electrode"]:
+            if option in ["working electrode"]:
                 pass
             else:
                 if isinstance(value, str) or option in [
@@ -890,7 +884,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
             )
 
-    def build_fundamental_and_external(self):
+    def build_fundamental(self):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
@@ -900,7 +894,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_fundamental_variables())
 
-        self._built_fundamental_and_external = True
+        self._built_fundamental = True
 
     def build_coupled_variables(self):
         # Note: pybamm will try to get the coupled variables for the submodels in the

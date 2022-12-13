@@ -1,12 +1,12 @@
 #
-# Tests for external submodels
+# Tests for inputting a temperature profile
 #
 import pybamm
 import unittest
 import numpy as np
 
 
-class TestExternalThermalModels(unittest.TestCase):
+class TestInputLumpedTemperature(unittest.TestCase):
     def test_input_lumped_temperature(self):
         model = pybamm.lithium_ion.SPMe()
         parameter_values = model.default_parameter_values

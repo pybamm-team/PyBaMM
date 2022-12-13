@@ -745,7 +745,7 @@ class BaseSolver(object):
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        # Set up external variables and inputs
+        # Set up inputs
         #
         # Argument "inputs" can be either a list of input dicts or
         # a single dict. The remaining of this function is only working
@@ -790,7 +790,7 @@ class BaseSolver(object):
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Thefore only `ext_and_inputs[0]`
+            # not depend on input parameters. Thefore only `model_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, model_inputs_list[0], t_eval)
@@ -819,7 +819,7 @@ class BaseSolver(object):
 
         # (Re-)calculate consistent initial conditions
         # Assuming initial conditions do not depend on input parameters
-        # when len(inputs_list) > 1, only `ext_and_inputs_list[0]`
+        # when len(inputs_list) > 1, only `model_inputs_list[0]`
         # is passed to `_set_initial_conditions`.
         # See https://github.com/pybamm-team/PyBaMM/pull/1261
         if len(inputs_list) > 1:
@@ -1133,7 +1133,7 @@ class BaseSolver(object):
         # Set timer
         timer = pybamm.Timer()
 
-        # Set up external variables and inputs
+        # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
 
         t = old_solution.t[-1]
@@ -1148,7 +1148,7 @@ class BaseSolver(object):
                     f'"{existing_model.name}". Please create a separate '
                     "solver for this model"
                 )
-            self.set_up(model, ext_and_inputs)
+            self.set_up(model, model_inputs)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -1356,7 +1356,7 @@ class BaseSolver(object):
                     )
 
     def _set_up_model_inputs(self, model, inputs):
-        """Set up external variables and input parameters"""
+        """Set up input parameters"""
         inputs = inputs or {}
 
         # Go through all input parameters that can be found in the model
