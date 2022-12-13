@@ -69,6 +69,9 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
             d.__getitem__("test3")
 
+        with self.assertRaisesRegex(KeyError, "stoichiometry"):
+            d.__getitem__("Negative electrode SOC")
+
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
         self.assertTrue(
@@ -91,17 +94,6 @@ class TestUtil(unittest.TestCase):
         git_commit_info = pybamm.get_git_commit_info()
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
-
-    @unittest.skipIf(not pybamm.have_julia(), "Julia not installed")
-    def test_have_julia(self):
-        # Remove julia from the path
-        with unittest.mock.patch.dict(
-            "os.environ", {"PATH": os.path.dirname(sys.executable)}
-        ):
-            self.assertFalse(pybamm.have_julia())
-
-        # Add it back
-        self.assertTrue(pybamm.have_julia())
 
 
 class TestSearch(unittest.TestCase):

@@ -123,10 +123,8 @@ class TestScipySolver(unittest.TestCase):
         disc.process_model(model)
 
         # Add user-supplied Jacobian to model
-        combined_submesh = mesh.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-        N = combined_submesh.npts
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        N = submesh.npts
 
         # construct jacobian in order of model.rhs
         J = []
@@ -223,12 +221,9 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_equal(step_sol1.t, [0, dt])
         np.testing.assert_array_almost_equal(step_sol1.y[0], np.exp(0.1 * step_sol1.t))
 
-        # Step again, the model has changed
-        step_sol2 = solver.step(step_sol1, model2, dt)
-        np.testing.assert_array_equal(step_sol2.t, [0, dt, 2 * dt])
-        np.testing.assert_array_almost_equal(
-            step_sol2.all_ys[0][0], np.exp(0.1 * step_sol1.t)
-        )
+        # Step again, the model has changed so this raises an error
+        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
+            solver.step(step_sol1, model2, dt)
 
     def test_model_solver_with_inputs(self):
         # Create model
@@ -373,32 +368,6 @@ class TestScipySolver(unittest.TestCase):
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-    def test_model_solver_with_external(self):
-        # Create model
-        model = pybamm.BaseModel()
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=domain)
-        var2 = pybamm.Variable("var2", domain=domain)
-        model.rhs = {var1: -var2}
-        model.initial_conditions = {var1: 1}
-        model.external_variables = [var2]
-        model.variables = {"var2": var2}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
-
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(
-            model, t_eval, external_variables={"var2": 0.5 * np.ones(100)}
-        )
-        np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
-
     def test_model_solver_with_event_with_casadi(self):
         # Create model
         model = pybamm.BaseModel()
@@ -498,9 +467,29 @@ class TestScipySolver(unittest.TestCase):
         model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
             pybamm.Vector([[2]])
         )
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_almost_equal(
             solution.y[0], 2 * np.exp(-solution.t), decimal=5
+        )
+
+    def test_scale_and_reference(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", scale=2, reference=1)
+        model.rhs = {var1: -var1}
+        model.initial_conditions = {var1: 3}
+        model.variables = {"var1": var1}
+        solver = pybamm.ScipySolver()
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+
+        # Check that the initial conditions and solution are scaled correctly
+        np.testing.assert_array_almost_equal(
+            model.concatenated_initial_conditions.evaluate(), 1
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[0], (solution["var1"].data - 1) / 2, decimal=14
         )
 
 

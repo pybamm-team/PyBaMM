@@ -81,7 +81,7 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(
             mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
-        for domain in mesh:
+        for domain in mesh.base_domains:
             if domain != "current collector":
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
@@ -223,7 +223,7 @@ class TestMesh(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create submesh
-        submesh = mesh.combine_submeshes("negative electrode", "separator")
+        submesh = mesh[("negative electrode", "separator")]
         self.assertEqual(submesh.edges[0], 0)
         self.assertEqual(submesh.edges[-1], mesh["separator"].edges[-1])
         np.testing.assert_almost_equal(

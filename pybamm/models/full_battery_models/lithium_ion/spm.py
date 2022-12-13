@@ -70,15 +70,6 @@ class SPM(BaseModel):
         ):
             pybamm.citations.register("BrosaPlanella2022")
 
-    def set_convection_submodel(self):
-
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
-
     def set_intercalation_kinetics_submodel(self):
 
         for domain in ["negative", "positive"]:

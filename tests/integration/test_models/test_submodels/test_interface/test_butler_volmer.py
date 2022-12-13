@@ -223,7 +223,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # test concatenated butler-volmer
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
+        whole_cell_mesh = disc.mesh[whole_cell]
         self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh.npts, 1))
 
     def test_diff_c_e_lead_acid(self):

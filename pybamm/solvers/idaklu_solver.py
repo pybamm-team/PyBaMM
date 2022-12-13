@@ -43,6 +43,41 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    options: dict, optional
+        Addititional options to pass to the solver, by default:
+
+        .. code-block:: python
+
+            options = {
+                # print statistics of the solver after every solve
+                "print_stats": False,
+
+                # jacobian form, can be "none", "dense", "sparse", "matrix-free"
+                "jacobian": "sparse",
+
+                # name of sundials linear solver to use options are: "SUNLinSol_KLU",
+                # "SUNLinSol_Dense", "SUNLinSol_SPBCGS",
+                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
+                "linear_solver": "SUNLinSol_KLU",
+
+                # preconditioner for iterative solvers, can be "none", "BBDP"
+                "preconditioner": "BBDP",
+
+                # for iterative linear solvers, max number of iterations
+                "linsol_max_iterations": 5,
+
+                # for iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian
+                "precon_half_bandwidth": 5,
+
+                # for iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian that is kept
+                "precon_half_bandwidth_keep": 5
+            }
+
+        Note: These options only have an effect if model.convert_to_format == 'casadi'
+
+
     """
 
     def __init__(
@@ -51,8 +86,28 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
+        options=None,
     ):
+
+        # set default options,
+        # (only if user does not supply)
+        default_options = {
+            "print_stats": False,
+            "jacobian": "sparse",
+            "linear_solver": "SUNLinSol_KLU",
+            "preconditioner": "BBDP",
+            "linsol_max_iterations": 5,
+            "precon_half_bandwidth": 5,
+            "precon_half_bandwidth_keep": 5,
+        }
+        if options is None:
+            options = default_options
+        else:
+            for key, value in default_options.items():
+                if key not in options:
+                    options[key] = value
+        self._options = options
 
         if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
@@ -177,7 +232,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "jax":
             mass_matrix = model.mass_matrix.entries.toarray()
         elif model.convert_to_format == "casadi":
-            mass_matrix = casadi.DM(model.mass_matrix.entries)
+            if self._options["jacobian"] == "dense":
+                mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
+            else:
+                mass_matrix = casadi.DM(model.mass_matrix.entries)
         else:
             mass_matrix = model.mass_matrix.entries
 
@@ -195,7 +253,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if not model.use_jacobian:
             raise pybamm.SolverError("KLU requires the Jacobian")
-        use_jac = 1
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
         if model.convert_to_format == "casadi":
@@ -372,6 +429,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 for i, dFdp_i in enumerate(dFdp.values()):
                     resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
 
+        try:
+            atol = model.atol
+        except AttributeError:
+            atol = self.atol
+
+        rtol = self.rtol
+        atol = self._check_atol_type(atol, y0.size)
+
         if model.convert_to_format == "casadi":
             rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
             jac_times_cjmass = idaklu.generate_function(jac_times_cjmass.serialize())
@@ -381,6 +446,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             rootfn = idaklu.generate_function(rootfn.serialize())
             mass_action = idaklu.generate_function(mass_action.serialize())
             sensfn = idaklu.generate_function(sensfn.serialize())
+
             self._setup = {
                 "rhs_algebraic": rhs_algebraic,
                 "jac_times_cjmass": jac_times_cjmass,
@@ -392,11 +458,32 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "sensfn": sensfn,
                 "rootfn": rootfn,
                 "num_of_events": num_of_events,
-                "use_jac": use_jac,
                 "ids": ids,
                 "sensitivity_names": sensitivity_names,
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
             }
+
+            solver = idaklu.create_casadi_solver(
+                len(y0),
+                self._setup["number_of_sensitivity_parameters"],
+                self._setup["rhs_algebraic"],
+                self._setup["jac_times_cjmass"],
+                self._setup["jac_times_cjmass_colptrs"],
+                self._setup["jac_times_cjmass_rowvals"],
+                self._setup["jac_times_cjmass_nnz"],
+                self._setup["jac_rhs_algebraic_action"],
+                self._setup["mass_action"],
+                self._setup["sensfn"],
+                self._setup["rootfn"],
+                self._setup["num_of_events"],
+                self._setup["ids"],
+                atol,
+                rtol,
+                len(inputs),
+                self._options,
+            )
+
+            self._setup["solver"] = solver
         else:
             self._setup = {
                 "resfn": resfn,
@@ -404,7 +491,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "sensfn": sensfn,
                 "rootfn": rootfn,
                 "num_of_events": num_of_events,
-                "use_jac": use_jac,
+                "use_jac": 1,
                 "ids": ids,
                 "sensitivity_names": sensitivity_names,
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
@@ -423,7 +510,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         inputs_dict : dict, optional
-            Any external variables or input parameters to pass to the model when solving
+            Any input parameters to pass to the model when solving
         """
         inputs_dict = inputs_dict or {}
         # stack inputs
@@ -452,26 +539,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi":
-            sol = idaklu.solve_casadi(
+            sol = self._setup["solver"].solve(
                 t_eval,
                 y0,
                 ydot0,
-                self._setup["rhs_algebraic"],
-                self._setup["jac_times_cjmass"],
-                self._setup["jac_times_cjmass_colptrs"],
-                self._setup["jac_times_cjmass_rowvals"],
-                self._setup["jac_times_cjmass_nnz"],
-                self._setup["jac_rhs_algebraic_action"],
-                self._setup["mass_action"],
-                self._setup["sensfn"],
-                self._setup["rootfn"],
-                self._setup["num_of_events"],
-                self._setup["use_jac"],
-                self._setup["ids"],
-                atol,
-                rtol,
                 inputs,
-                self._setup["number_of_sensitivity_parameters"],
             )
         else:
             sol = idaklu.solve_python(

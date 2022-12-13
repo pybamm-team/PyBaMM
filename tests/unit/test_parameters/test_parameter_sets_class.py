@@ -22,9 +22,9 @@ class TestParameterSets(unittest.TestCase):
 
     def test_all_registered(self):
         """Check that all parameter sets have been registered with the
-        ``pybamm_parameter_set`` entry point"""
+        ``pybamm_parameter_sets`` entry point"""
         known_entry_points = set(
-            ep.name for ep in pkg_resources.iter_entry_points("pybamm_parameter_set")
+            ep.name for ep in pkg_resources.iter_entry_points("pybamm_parameter_sets")
         )
         self.assertEqual(set(pybamm.parameter_sets.keys()), known_entry_points)
         self.assertEqual(len(known_entry_points), len(pybamm.parameter_sets))
@@ -32,7 +32,7 @@ class TestParameterSets(unittest.TestCase):
     def test_get_docstring(self):
         """Test that :meth:`pybamm.parameter_sets.get_doctstring` works"""
         docstring = pybamm.parameter_sets.get_docstring("Marquis2019")
-        self.assertRegexpMatches(docstring, "Parameters for a Kokam SLPB78205130H cell")
+        self.assertRegex(docstring, "Parameters for a Kokam SLPB78205130H cell")
 
     def test_iter(self):
         """Test that iterating `pybamm.parameter_sets` iterates over keys"""

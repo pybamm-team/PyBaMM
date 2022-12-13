@@ -107,7 +107,7 @@ class TestSpatialMethod(unittest.TestCase):
             var_disc = spatial_method.spatial_variable(var)
             self.assertIsInstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
-                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain).nodes
+                var_disc.evaluate()[:, 0], mesh[var.domain].nodes
             )
 
         # edges
@@ -118,7 +118,7 @@ class TestSpatialMethod(unittest.TestCase):
             var_disc = spatial_method.spatial_variable(var)
             self.assertIsInstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
-                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain).edges
+                var_disc.evaluate()[:, 0], mesh[var.domain].edges
             )
 
     def test_boundary_value_checks(self):

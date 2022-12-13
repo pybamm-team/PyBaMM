@@ -45,7 +45,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.set_id()`."""
         # We must include the value in the hash, since different scalars can be
         # indistinguishable by class and name alone
-        self._id = hash((self.__class__, self.name) + tuple(str(self._value)))
+        self._id = hash((self.__class__, str(self.value)))
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""

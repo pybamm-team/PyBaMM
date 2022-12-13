@@ -9,6 +9,7 @@ import pickle
 import pybamm
 import pandas as pd
 from scipy.io import savemat
+from functools import cached_property
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -344,15 +345,9 @@ class Solution(object):
         """Model(s) used for solution"""
         return self._all_models
 
-    @property
+    @cached_property
     def all_inputs_casadi(self):
-        try:
-            return self._all_inputs_casadi
-        except AttributeError:
-            self._all_inputs_casadi = [
-                casadi.vertcat(*inp.values()) for inp in self.all_inputs
-            ]
-            return self._all_inputs_casadi
+        return [casadi.vertcat(*inp.values()) for inp in self.all_inputs]
 
     @property
     def t_event(self):
@@ -374,63 +369,55 @@ class Solution(object):
         """Updates the reason for termination"""
         self._termination = value
 
-    @property
+    @cached_property
     def first_state(self):
         """
         A Solution object that only contains the first state. This is faster to evaluate
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
-        try:
-            return self._first_state
-        except AttributeError:
-            new_sol = Solution(
-                self.all_ts[0][:1],
-                self.all_ys[0][:, :1],
-                self.all_models[:1],
-                self.all_inputs[:1],
-                None,
-                None,
-                "success",
-            )
-            new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
-            new_sol._sub_solutions = self.sub_solutions[:1]
+        new_sol = Solution(
+            self.all_ts[0][:1],
+            self.all_ys[0][:, :1],
+            self.all_models[:1],
+            self.all_inputs[:1],
+            None,
+            None,
+            "success",
+        )
+        new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
+        new_sol._sub_solutions = self.sub_solutions[:1]
 
-            new_sol.solve_time = 0
-            new_sol.integration_time = 0
-            new_sol.set_up_time = 0
+        new_sol.solve_time = 0
+        new_sol.integration_time = 0
+        new_sol.set_up_time = 0
 
-            self._first_state = new_sol
-            return self._first_state
+        return new_sol
 
-    @property
+    @cached_property
     def last_state(self):
         """
         A Solution object that only contains the final state. This is faster to evaluate
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
-        try:
-            return self._last_state
-        except AttributeError:
-            new_sol = Solution(
-                self.all_ts[-1][-1:],
-                self.all_ys[-1][:, -1:],
-                self.all_models[-1:],
-                self.all_inputs[-1:],
-                self.t_event,
-                self.y_event,
-                self.termination,
-            )
-            new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
-            new_sol._sub_solutions = self.sub_solutions[-1:]
+        new_sol = Solution(
+            self.all_ts[-1][-1:],
+            self.all_ys[-1][:, -1:],
+            self.all_models[-1:],
+            self.all_inputs[-1:],
+            self.t_event,
+            self.y_event,
+            self.termination,
+        )
+        new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
+        new_sol._sub_solutions = self.sub_solutions[-1:]
 
-            new_sol.solve_time = 0
-            new_sol.integration_time = 0
-            new_sol.set_up_time = 0
+        new_sol.solve_time = 0
+        new_sol.integration_time = 0
+        new_sol.set_up_time = 0
 
-            self._last_state = new_sol
-            return self._last_state
+        return new_sol
 
     @property
     def total_time(self):
@@ -890,19 +877,11 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
         and isinstance(model, pybamm.lithium_ion.BaseModel)
         and model.options.electrode_types["negative"] == "porous"
     ):
-        V_min = esoh_solver.parameter_values["Lower voltage cut-off [V]"]
-        V_max = esoh_solver.parameter_values["Upper voltage cut-off [V]"]
-        C_n = last_state["Negative electrode capacity [A.h]"].data[0]
-        C_p = last_state["Positive electrode capacity [A.h]"].data[0]
-        n_Li = last_state["Total lithium in particles [mol]"].data[0]
+        Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
+        Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
+        Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
 
-        inputs = {
-            "V_min": V_min,
-            "V_max": V_max,
-            "C_n": C_n,
-            "C_p": C_p,
-            "n_Li": n_Li,
-        }
+        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
 
         try:
             esoh_sol = esoh_solver.solve(inputs)

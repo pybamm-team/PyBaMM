@@ -1,7 +1,6 @@
 #
 # Variable class
 #
-import numbers
 
 import numpy as np
 import sympy
@@ -18,7 +17,6 @@ class VariableBase(pybamm.Symbol):
 
     Parameters
     ----------
-
     name : str
         name of the node
     domain : iterable of str
@@ -39,6 +37,14 @@ class VariableBase(pybamm.Symbol):
         Physical bounds on the variable
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`Symbol`
     """
@@ -51,9 +57,16 @@ class VariableBase(pybamm.Symbol):
         domains=None,
         bounds=None,
         print_name=None,
+        scale=1,
+        reference=0,
     ):
+        self._scale = scale
+        self._reference = reference
         super().__init__(
-            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
         )
         if bounds is None:
             bounds = (-np.inf, np.inf)
@@ -66,6 +79,12 @@ class VariableBase(pybamm.Symbol):
         self.bounds = bounds
         self.print_name = print_name
 
+    def set_id(self):
+        self._id = hash(
+            (self.__class__, self.name, self.scale, self.reference)
+            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+        )
+
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
@@ -73,6 +92,8 @@ class VariableBase(pybamm.Symbol):
             domains=self.domains,
             bounds=self.bounds,
             print_name=self._raw_print_name,
+            scale=self.scale,
+            reference=self.reference,
         )
 
     def _evaluate_for_shape(self):
@@ -117,33 +138,26 @@ class Variable(VariableBase):
         Physical bounds on the variable
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`VariableBase`
     """
-
-    def __init__(
-        self,
-        name,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        bounds=None,
-        print_name=None,
-    ):
-        super().__init__(
-            name,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-            domains=domains,
-            bounds=bounds,
-            print_name=print_name,
-        )
 
     def diff(self, variable):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
-            return pybamm.VariableDot(self.name + "'", domains=self.domains)
+            # reference gets differentiated out
+            return pybamm.VariableDot(
+                self.name + "'", domains=self.domains, scale=self.scale
+            )
         else:
             return pybamm.Scalar(0)
 
@@ -180,27 +194,17 @@ class VariableDot(VariableBase):
         but ignored.
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
+    scale : float or :class:`pybamm.Symbol`, optional
+        The scale of the variable, used for scaling the model when solving. The state
+        vector representing this variable will be multiplied by this scale.
+        Default is 1.
+    reference : float or :class:`pybamm.Symbol`, optional
+        The reference value of the variable, used for scaling the model when solving.
+        This value will be added to the state vector representing this variable.
+        Default is 0.
 
     *Extends:* :class:`VariableBase`
     """
-
-    def __init__(
-        self,
-        name,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        bounds=None,
-        print_name=None,
-    ):
-        super().__init__(
-            name,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-            domains=domains,
-            bounds=bounds,
-            print_name=print_name,
-        )
 
     def get_variable(self):
         """
@@ -209,97 +213,12 @@ class VariableDot(VariableBase):
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
         """
-        return Variable(self.name[:-1], domains=self.domains)
+        return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
 
     def diff(self, variable):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
             raise pybamm.ModelError("cannot take second time derivative of a Variable")
-        else:
-            return pybamm.Scalar(0)
-
-
-class ExternalVariable(Variable):
-    """
-    A node in the expression tree representing an external variable variable.
-
-    This node will be discretised by :class:`.Discretisation` and converted
-    to a :class:`.Vector` node.
-
-    Parameters
-    ----------
-
-    name : str
-        name of the node
-    domain : iterable of str
-        list of domains that this variable is valid over
-    auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
-        'quaternary': ...}). For example, for the single particle model, the particle
-        concentration would be a Variable with domain 'negative particle' and secondary
-        auxiliary domain 'current collector'. For the DFN, the particle concentration
-        would be a Variable with domain 'negative particle', secondary domain
-        'negative electrode' and tertiary domain 'current collector'
-    domains : dict
-        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
-        'domain' and 'auxiliary_domains', or just 'domains', should be provided
-        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
-        deprecated.
-
-    *Extends:* :class:`pybamm.Variable`
-    """
-
-    def __init__(self, name, size, domain=None, auxiliary_domains=None, domains=None):
-        self._size = size
-        super().__init__(name, domain, auxiliary_domains, domains)
-
-    @property
-    def size(self):
-        return self._size
-
-    def create_copy(self):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return ExternalVariable(self.name, self.size, domains=self.domains)
-
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return np.nan * np.ones((self.size, 1))
-
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        # inputs should be a dictionary
-        # convert 'None' to empty dictionary for more informative error
-        if inputs is None:
-            inputs = {}
-        if not isinstance(inputs, dict):
-            # if the special input "shape test" is passed, just return 1
-            if inputs == "shape test":
-                return self.evaluate_for_shape()
-            raise TypeError("inputs should be a dictionary")
-        try:
-            out = inputs[self.name]
-            if isinstance(out, numbers.Number) or out.shape[0] == 1:
-                return out * np.ones((self.size, 1))
-            elif out.shape[0] != self.size:
-                raise ValueError(
-                    "External variable input has size {} but should be {}".format(
-                        out.shape[0], self.size
-                    )
-                )
-            else:
-                if isinstance(out, np.ndarray) and out.ndim == 1:
-                    out = out[:, np.newaxis]
-                return out
-        # raise more informative error if can't find name in dict
-        except KeyError:
-            raise KeyError("External variable '{}' not found".format(self.name))
-
-    def diff(self, variable):
-        if variable == self:
-            return pybamm.Scalar(1)
-        elif variable == pybamm.t:
-            raise pybamm.ModelError(
-                "cannot take time derivative of an external variable"
-            )
         else:
             return pybamm.Scalar(0)

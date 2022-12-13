@@ -14,7 +14,7 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 
-[![All Contributors](https://img.shields.io/badge/all_contributors-48-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-49-orange.svg)](#-contributors)
 
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
@@ -68,7 +68,9 @@ Additional supporting material can be found
 
 Note that the examples on the default `develop` branch are tested on the latest `develop` commit. This may sometimes cause errors when running the examples on the pybamm pip package, which is synced to the `main` branch. You can switch to the `main` branch on github to see the version of the examples that is compatible with the latest pip release.
 
-<!-- For further examples, see the list of repositories that use PyBaMM [here](https://github.com/pybamm-team/pybamm-example-results). -->
+## Versioning
+
+PyBaMM uses [CalVer](https://calver.org/), which means that we make new releases every month with the version number `YY.MM`. There is no difference between releases that increment the year and releases that increment the month; in particular, releases that increment the month may introduce breaking changes. Breaking changes for each release are communicated via the [CHANGELOG](CHANGELOG.md), and come with deprecation warnings or errors that are kept for at least one year (12 releases). If you find a breaking change that is not documented, or think it should be undone, please open an issue on [GitHub](https://github.com/pybamm-team/pybamm).
 
 ## 🚀 Installing PyBaMM
 
@@ -214,8 +216,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center"><a href="https://github.com/ndrewwang"><img src="https://avatars.githubusercontent.com/u/56122552?v=4?s=100" width="100px;" alt="ndrewwang"/><br /><sub><b>ndrewwang</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Andrewwang" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=ndrewwang" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/MichaPhilipp"><img src="https://avatars.githubusercontent.com/u/58085966?v=4?s=100" width="100px;" alt="MichaPhilipp"/><br /><sub><b>MichaPhilipp</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AMichaPhilipp" title="Bug reports">🐛</a></td>
       <td align="center"><a href="https://github.com/abillscmu"><img src="https://avatars.githubusercontent.com/u/48105066?v=4?s=100" width="100px;" alt="Alec Bills"/><br /><sub><b>Alec Bills</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=abillscmu" title="Code">💻</a></td>
-      <td align="center"><a href="https://github.com/agriyakhetarpal"><img src="https://avatars.githubusercontent.com/u/74401230?v=4?s=100" width="100px;" alt="Agriya Khetarpal"/><br /><sub><b>Agriya Khetarpal</b></sub></a><br /><a href="#infra-agriyakhetarpal" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center"><a href="https://github.com/agriyakhetarpal"><img src="https://avatars.githubusercontent.com/u/74401230?v=4?s=100" width="100px;" alt="Agriya Khetarpal"/><br /><sub><b>Agriya Khetarpal</b></sub></a><br /><a href="#infra-agriyakhetarpal" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=agriyakhetarpal" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/awadell1"><img src="https://avatars.githubusercontent.com/u/5857298?v=4?s=100" width="100px;" alt="Alex Wadell"/><br /><sub><b>Alex Wadell</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Tests">⚠️</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Documentation">📖</a></td>
+      <td align="center"><a href="https://github.com/iatzak"><img src="https://avatars.githubusercontent.com/u/112731474?v=4?s=100" width="100px;" alt="iatzak"/><br /><sub><b>iatzak</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=iatzak" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>

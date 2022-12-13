@@ -52,7 +52,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         self.assertEqual(
             mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
-        for domain in mesh:
+        for domain in mesh.base_domains:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts["y"] * var_pts["z"]
@@ -223,7 +223,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         self.assertEqual(
             mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
-        for domain in mesh:
+        for domain in mesh.base_domains:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts["y"] * var_pts["z"]
@@ -303,7 +303,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
         self.assertEqual(
             mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
-        for domain in mesh:
+        for domain in mesh.base_domains:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts["y"] * var_pts["z"]
@@ -391,7 +391,7 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
         self.assertEqual(
             mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
-        for domain in mesh:
+        for domain in mesh.base_domains:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts["y"] * var_pts["z"]

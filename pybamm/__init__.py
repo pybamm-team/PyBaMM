@@ -49,7 +49,6 @@ from .util import (
     have_jax,
     install_jax,
     is_jax_compatible,
-    have_julia,
     get_git_commit_info,
 )
 from .logger import logger, set_logging_level
@@ -96,10 +95,6 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.evaluate_julia import (
-    get_julia_function,
-    get_julia_mtk_model,
-)
 
 #
 # Model classes
@@ -116,6 +111,7 @@ from .models.full_battery_models.base_battery_model import (
 )
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
+from .models.full_battery_models import equivalent_circuit
 
 #
 # Submodel classes
@@ -137,6 +133,7 @@ from .models.submodels import (
     thermal,
     transport_efficiency,
     particle_mechanics,
+    equivalent_circuit_elements,
 )
 from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei
@@ -166,6 +163,7 @@ from .parameters.electrical_parameters import (
 from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
+from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
 from .parameters.parameter_sets import parameter_sets
 from .parameters_cli import add_parameter, remove_parameter, edit_parameter

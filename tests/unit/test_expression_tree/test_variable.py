@@ -17,6 +17,12 @@ class TestVariable(unittest.TestCase):
         a = pybamm.Variable("a", domain=["test"])
         self.assertEqual(a.domain[0], "test")
         self.assertRaises(TypeError, pybamm.Variable("a", domain="test"))
+        self.assertEqual(a.scale, 1)
+        self.assertEqual(a.reference, 0)
+
+        a = pybamm.Variable("a", scale=2, reference=-1)
+        self.assertEqual(a.scale, 2)
+        self.assertEqual(a.reference, -1)
 
     def test_variable_diff(self):
         a = pybamm.Variable("a")
@@ -77,42 +83,6 @@ class TestVariableDot(unittest.TestCase):
 
     def test_variable_diff(self):
         a = pybamm.VariableDot("a")
-        b = pybamm.Variable("b")
-        self.assertIsInstance(a.diff(a), pybamm.Scalar)
-        self.assertEqual(a.diff(a).evaluate(), 1)
-        self.assertIsInstance(a.diff(b), pybamm.Scalar)
-        self.assertEqual(a.diff(b).evaluate(), 0)
-
-
-class TestExternalVariable(unittest.TestCase):
-    def test_external_variable_scalar(self):
-        a = pybamm.ExternalVariable("a", 1)
-        self.assertEqual(a.size, 1)
-
-        self.assertEqual(a.evaluate(inputs={"a": 3}), 3)
-
-        with self.assertRaisesRegex(KeyError, "External variable"):
-            a.evaluate()
-        with self.assertRaisesRegex(TypeError, "inputs should be a dictionary"):
-            a.evaluate(inputs="not a dictionary")
-
-    def test_external_variable_vector(self):
-        a = pybamm.ExternalVariable("a", 10)
-        self.assertEqual(a.size, 10)
-
-        a_test = 2 * np.ones((10, 1))
-        np.testing.assert_array_equal(a.evaluate(inputs={"a": a_test}), a_test)
-        np.testing.assert_array_equal(
-            a.evaluate(inputs={"a": a_test.flatten()}), a_test
-        )
-
-        np.testing.assert_array_equal(a.evaluate(inputs={"a": 2}), a_test)
-
-        with self.assertRaisesRegex(ValueError, "External variable"):
-            a.evaluate(inputs={"a": np.ones((5, 1))})
-
-    def test_external_variable_diff(self):
-        a = pybamm.ExternalVariable("a", 10)
         b = pybamm.Variable("b")
         self.assertIsInstance(a.diff(a), pybamm.Scalar)
         self.assertEqual(a.diff(a).evaluate(), 1)

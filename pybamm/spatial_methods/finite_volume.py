@@ -57,39 +57,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        symbol_mesh = self.mesh[symbol.domain]
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
         if symbol.evaluates_on_edges("primary"):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)
         return pybamm.Vector(entries, domains=symbol.domains)
-
-    def preprocess_external_variables(self, var):
-        """
-        For finite volumes, we need the boundary fluxes for discretising
-        properly. Here, we extrapolate and then add them to the boundary
-        conditions.
-
-        Parameters
-        ----------
-        var : :class:`pybamm.Variable` or :class:`pybamm.Concatenation`
-            The external variable that is to be processed
-
-        Returns
-        -------
-        new_bcs: dict
-            A dictionary containing the new boundary conditions
-        """
-
-        new_bcs = {
-            var: {
-                "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),
-                "right": (pybamm.BoundaryGradient(var, "right"), "Neumann"),
-            }
-        }
-
-        return new_bcs
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -137,7 +111,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in primary domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # Create 1D matrix using submesh
         n = submesh.npts
@@ -160,7 +134,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
         """
-        submesh = self.mesh.combine_submeshes(*symbol.domain)
+        submesh = self.mesh[symbol.domain]
 
         divergence_matrix = self.divergence_matrix(symbol.domains)
 
@@ -195,7 +169,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume divergence matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh[domains["primary"]]
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
@@ -276,7 +250,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
         domain = child.domains[integration_dimension]
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
@@ -291,7 +265,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
-            submesh = self.mesh.combine_submeshes(*domains["primary"])
+            submesh = self.mesh[domains["primary"]]
 
             # Create vector of ones for primary domain submesh
 
@@ -306,7 +280,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             matrix = kron(eye(second_dim_repeats), d_edges)
         elif integration_dimension == "secondary":
             # Create appropriate submesh by combining submeshes in domain
-            primary_submesh = self.mesh.combine_submeshes(*domains["primary"])
+            primary_submesh = self.mesh[domains["primary"]]
 
             # Create matrix which integrates in the secondary dimension
             # Different number of edges depending on whether child evaluates on edges
@@ -348,7 +322,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # the case where child evaluates on edges
             # If it becomes necessary to implement this, will need to think about what
             # the cylindrical/spherical polar indefinite integral should be
-            submesh = self.mesh.combine_submeshes(*child.domain)
+            submesh = self.mesh[child.domain]
             if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
                 raise NotImplementedError(
                     f"Indefinite integral on a {submesh.coord_sys} domain is not "
@@ -438,7 +412,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh[domains["primary"]]
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
@@ -488,7 +462,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh[domains["primary"]]
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
@@ -518,7 +492,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.delta_function`
         """
         # Find the number of submeshes
-        submesh = self.mesh.combine_submeshes(*symbol.domain)
+        submesh = self.mesh[symbol.domain]
 
         prim_pts = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
@@ -635,7 +609,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # get relevant grid points
         domain = symbol.domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # Prepare sizes and empty bcs_vector
         n = submesh.npts
@@ -757,7 +731,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # get relevant grid points
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # Prepare sizes and empty bcs_vector
         n = submesh.npts - 1
@@ -849,7 +823,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # Find the number of submeshes
-        submesh = self.mesh.combine_submeshes(*discretised_child.domain)
+        submesh = self.mesh[discretised_child.domain]
 
         prim_pts = submesh.npts
         repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
@@ -1136,7 +1110,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.concatenation`
         """
         for idx, child in enumerate(disc_children):
-            submesh = self.mesh.combine_submeshes(*child.domain)
+            submesh = self.mesh[child.domain]
             repeats = self._get_auxiliary_domain_repeats(child.domains)
             n_nodes = len(submesh.nodes) * repeats
             n_edges = len(submesh.edges) * repeats
@@ -1203,7 +1177,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         def arithmetic_mean(array):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
-            submesh = self.mesh.combine_submeshes(*array.domain)
+            submesh = self.mesh[array.domain]
 
             # Create 1D matrix using submesh
             n = submesh.npts
@@ -1261,7 +1235,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             approximation to the diffusion equation." (2012).
             """
             # Create appropriate submesh by combining submeshes in domain
-            submesh = self.mesh.combine_submeshes(*array.domain)
+            submesh = self.mesh[array.domain]
 
             # Get second dimension length for use later
             second_dim_repeats = self._get_auxiliary_domain_repeats(
@@ -1398,7 +1372,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         direction : str
             Direction in which to apply the operator (upwind or downwind)
         """
-        submesh = self.mesh.combine_submeshes(*symbol.domain)
+        submesh = self.mesh[symbol.domain]
         n = submesh.npts
 
         if symbol not in bcs:

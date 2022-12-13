@@ -121,7 +121,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
                 self.len_rhs_and_alg = 1
-                self.interpolant_extrapolation_events_eval = []
+                self.events = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -160,7 +160,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
                 self.len_rhs = 1
                 self.len_rhs_and_alg = 4
-                self.interpolant_extrapolation_events_eval = []
+                self.events = []
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]
@@ -209,7 +209,6 @@ class TestBaseSolver(unittest.TestCase):
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
-                self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -332,6 +331,21 @@ class TestBaseSolver(unittest.TestCase):
 
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model, t_eval=[0, 1])
+
+    def test_multiple_models_error(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model2 = pybamm.BaseModel()
+        v2 = pybamm.Variable("v")
+        model2.rhs = {v2: -1}
+        model2.initial_conditions = {v2: 1}
+
+        solver = pybamm.ScipySolver()
+        solver.solve(model, t_eval=[0, 1])
+        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
+            solver.solve(model2, t_eval=[0, 1])
 
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):

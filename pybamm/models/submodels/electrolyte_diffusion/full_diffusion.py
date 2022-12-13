@@ -53,10 +53,15 @@ class Full(BaseElectrolyteDiffusion):
             c_e_k = eps_c_e_k / eps_k
             c_e_dict[domain] = c_e_k
 
-        variables.update(self._get_standard_concentration_variables(c_e_dict))
+        variables["Electrolyte concentration concatenation"] = pybamm.concatenation(
+            *c_e_dict.values()
+        )
+        variables.update(self._get_standard_domain_concentration_variables(c_e_dict))
+
+        c_e = variables["Porosity times concentration"] / variables["Porosity"]
+        variables.update(self._get_standard_whole_cell_concentration_variables(c_e))
 
         # Whole domain
-        c_e = variables["Electrolyte concentration"]
         tor = variables["Electrolyte transport efficiency"]
         i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
@@ -102,6 +107,7 @@ class Full(BaseElectrolyteDiffusion):
     def set_boundary_conditions(self, variables):
         param = self.param
         c_e = variables["Electrolyte concentration"]
+        c_e_conc = variables["Electrolyte concentration concatenation"]
         T = variables["Cell temperature"]
         tor = variables["Electrolyte transport efficiency"]
         i_boundary_cc = variables["Current collector current density"]
@@ -132,6 +138,8 @@ class Full(BaseElectrolyteDiffusion):
         #     # right bc at separator/cathode interface
         #     rbc = flux_bc("right")
 
+        # add boundary conditions to both forms of the concentration
         self.boundary_conditions = {
             c_e: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")},
+            c_e_conc: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")},
         }

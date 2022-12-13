@@ -36,12 +36,4 @@ class Uniform(BaseModel):
 
         variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
 
-        # Hack to get the leading-order current collector current density
-        # Note that this should be different from the actual (composite) current
-        # collector current density for 2+1D models, but not sure how to implement this
-        # using current structure of lithium-ion models
-        variables["Leading-order current collector current density"] = variables[
-            "Current collector current density"
-        ]
-
         return variables

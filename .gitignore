@@ -13,6 +13,7 @@
 !CMakeLists.txt
 !pybamm/CITATIONS.txt
 !pybamm/input/**/*.csv
+!tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png
 
 # running files
@@ -111,9 +112,6 @@ test.json
 
 # tox
 .tox/
-
-# julia
-Manifest.toml
 
 # vcpkg
 vcpkg_installed/

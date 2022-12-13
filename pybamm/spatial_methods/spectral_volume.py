@@ -14,7 +14,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     subdivision of any 1D mesh, so it shouldn't be a problem).
 
     For broadcast and mass_matrix, we follow the default behaviour from
-    SpatialMethod. For spatial_variable, preprocess_external_variables,
+    SpatialMethod. For spatial_variable,
     divergence, divergence_matrix, laplacian, integral,
     definite_integral_matrix, indefinite_integral,
     indefinite_integral_matrix, indefinite_integral_matrix_nodes,
@@ -160,8 +160,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         :class:`pybamm.Matrix`
             The (sparse) CV reconstruction matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh[domains["primary"]]
 
         # Obtain the basic reconstruction matrix.
         recon_sub_matrix = self.cv_boundary_reconstruction_sub_matrix()
@@ -316,8 +315,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         :class:`pybamm.Matrix`
             The (sparse) Spectral Volume gradient matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # Obtain the Chebyshev differentiation matrix.
         # Flip it, since it is defined for the Chebyshev
@@ -400,8 +398,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         :class:`pybamm.Matrix`
             The (sparse) Spectral Volume penalty matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh[domains["primary"]]
 
         # Create 1D matrix using submesh
         n = submesh.npts
@@ -523,7 +520,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         """
         # get relevant grid points
         domain = symbol.domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # Prepare sizes
         n = (submesh.npts // self.order) * (self.order + 1)
@@ -617,7 +614,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         """
         # get relevant grid points
         domain = symbol.domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh[domain]
 
         # Prepare sizes
         n = submesh.npts + 1

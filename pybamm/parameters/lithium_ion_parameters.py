@@ -137,10 +137,33 @@ class LithiumIonParameters(BaseParameters):
 
         self.n_Li_particles_init = self.n.n_Li_init + self.p.n_Li_init
         self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
+        self.Q_Li_particles_init = self.n_Li_particles_init * self.F / 3600
+        self.Q_Li_init = self.n_Li_init * self.F / 3600
 
         # Reference OCP based on initial concentration
         self.ocv_ref = self.p.U_ref - self.n.U_ref
         self.ocv_init_dim = self.p.prim.U_init_dim - self.n.prim.U_init_dim
+
+    def chi_dimensional(self, c_e, T):
+        """
+        Thermodynamic factor:
+            (1-2*t_plus) is for Nernst-Planck,
+            2*(1-t_plus) for Stefan-Maxwell,
+        see Bizeray et al (2016) "Resolving a discrepancy ...".
+        """
+        return (2 * (1 - self.t_plus_dimensional(c_e, T))) * (
+            self.one_plus_dlnf_dlnc_dimensional(c_e, T)
+        )
+
+    def t_plus_dimensional(self, c_e, T):
+        """Cation transference number (dimensionless)"""
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
+        return pybamm.FunctionParameter("Cation transference number", inputs)
+
+    def one_plus_dlnf_dlnc_dimensional(self, c_e, T):
+        """Thermodynamic factor (dimensionless)"""
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
+        return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
@@ -301,9 +324,11 @@ class LithiumIonParameters(BaseParameters):
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        return (2 * (1 - self.t_plus(c_e, T))) * (self.one_plus_dlnf_dlnc(c_e, T))
+        c_e_dimensional = c_e * self.c_e_typ
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.chi_dimensional(c_e_dimensional, T_dim)
 
-    def chiT_over_c(self, c_e, T):
+    def chiRT_over_Fc(self, c_e, T):
         """
         chi * (1 + Theta * T) / c,
         as it appears in the electrolyte potential equation
@@ -314,19 +339,9 @@ class LithiumIonParameters(BaseParameters):
 
     def t_plus(self, c_e, T):
         """Cation transference number (dimensionless)"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
-            "Temperature [K]": self.Delta_T * T + self.T_ref,
-        }
-        return pybamm.FunctionParameter("Cation transference number", inputs)
-
-    def one_plus_dlnf_dlnc(self, c_e, T):
-        """Thermodynamic factor (dimensionless)"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
-            "Temperature [K]": self.Delta_T * T + self.T_ref,
-        }
-        return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
+        c_e_dimensional = c_e * self.c_e_typ
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.t_plus_dimensional(c_e_dimensional, T_dim)
 
     def D_e(self, c_e, T):
         """Dimensionless electrolyte diffusivity"""
@@ -452,13 +467,14 @@ class DomainLithiumIonParameters(BaseParameters):
             epsilon_s_tot = sum(phase.epsilon_s for phase in self.phase_params.values())
             self.epsilon_inactive = 1 - self.epsilon_init - epsilon_s_tot
 
-            self.cap_init = sum(phase.cap_init for phase in self.phase_params.values())
+            self.Q_init = sum(phase.Q_init for phase in self.phase_params.values())
             # Use primary phase to set the reference potential
             self.U_ref = self.prim.U_dimensional(self.prim.c_init_av, main.T_ref)
         else:
             self.U_ref = pybamm.Scalar(0)
 
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phase_params.values())
+        self.Q_Li_init = sum(phase.Q_Li_init for phase in self.phase_params.values())
 
         # Tortuosity parameters
         self.b_e = self.geo.b_e
@@ -704,6 +720,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.E_sei_dimensional = pybamm.Parameter(
                 f"{pref}SEI growth activation energy [J.mol-1]"
             )
+            self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
 
             # EC reaction
             self.c_ec_0_dim = pybamm.Parameter(
@@ -717,6 +734,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         if main.options.electrode_types[domain] == "planar":
             self.n_Li_init = pybamm.Scalar(0)
+            self.Q_Li_init = pybamm.Scalar(0)
             self.U_init_dim = pybamm.Scalar(0)
             return
 
@@ -763,27 +781,26 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} electrode active material volume fraction",
             {"Through-cell distance (x) [m]": x},
         )
-        self.c_init = (
-            pybamm.FunctionParameter(
-                f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
-                {
-                    "Radial distance (r) [m]": r,
-                    "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
-                        x, f"{domain} {phase_name}particle"
-                    ),
-                },
-            )
-            / self.c_max
+        self.c_init_dimensional = pybamm.FunctionParameter(
+            f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
+            {
+                "Radial distance (r) [m]": r,
+                "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+                    x, f"{domain} {phase_name}particle"
+                ),
+            },
         )
+        self.c_init = self.c_init_dimensional / self.c_max
         self.c_init_av = pybamm.xyz_average(pybamm.r_average(self.c_init))
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
         self.n_Li_init = eps_c_init_av * self.c_max * self.domain_param.L * main.A_cc
+        self.Q_Li_init = self.n_Li_init * main.F / 3600
 
         eps_s_av = pybamm.xyz_average(self.epsilon_s)
         self.elec_loading = eps_s_av * self.domain_param.L * self.c_max * main.F / 3600
-        self.cap_init = self.elec_loading * main.A_cc
+        self.Q_init = self.elec_loading * main.A_cc
 
         self.U_init_dim = self.U_dimensional(self.c_init_av, main.T_init_dim)
 

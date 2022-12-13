@@ -134,9 +134,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
             # LAM
-            C_k = self.variables[f"{Domain} capacity [A.h]"]
+            Q_k = self.variables[f"{Domain} capacity [A.h]"]
             domain_param = getattr(self.param, domain[0])  # param.n or param.p
-            LAM_k = (1 - C_k / domain_param.cap_init) * 100
+            LAM_k = (1 - Q_k / domain_param.Q_init) * 100
             self.variables.update(
                 {
                     f"LAM_{domain[0]}e [%]": LAM_k,
@@ -164,6 +164,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                 # Total lithium
                 "Total lithium [mol]": n_Li,
                 "Total lithium in particles [mol]": n_Li_particles,
+                "Total lithium capacity [A.h]": n_Li * param.F / 3600,
+                "Total lithium capacity in particles [A.h]": n_Li_particles
+                * param.F
+                / 3600,
                 # Lithium lost
                 "Total lithium lost [mol]": param.n_Li_init - n_Li,
                 "Total lithium lost from particles [mol]": param.n_Li_particles_init
@@ -174,17 +178,19 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
-        LLI_reactions = LLI_sei
+        n_Li_lost_sei = self.variables["Loss of lithium to SEI [mol]"]
+        n_Li_lost_reactions = n_Li_lost_sei
         if "negative electrode" in domains:
-            LLI_sei_cracks = self.variables["Loss of lithium to SEI on cracks [mol]"]
-            LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
-            LLI_reactions += LLI_sei_cracks + LLI_pl
+            n_Li_lost_sei_cracks = self.variables[
+                "Loss of lithium to SEI on cracks [mol]"
+            ]
+            n_Li_lost_pl = self.variables["Loss of lithium to lithium plating [mol]"]
+            n_Li_lost_reactions += n_Li_lost_sei_cracks + n_Li_lost_pl
 
         self.variables.update(
             {
-                "Total lithium lost to side reactions [mol]": LLI_reactions,
-                "Total capacity lost to side reactions [A.h]": LLI_reactions
+                "Total lithium lost to side reactions [mol]": n_Li_lost_reactions,
+                "Total capacity lost to side reactions [A.h]": n_Li_lost_reactions
                 * param.F
                 / 3600,
             }
@@ -416,3 +422,11 @@ class BaseModel(pybamm.BaseBatteryModel):
                 ] = neg_intercalation_kinetics(
                     self.param, domain, "lithium metal plating", self.options, "primary"
                 )
+
+    def set_convection_submodel(self):
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)

@@ -322,7 +322,7 @@ class TestQuickPlot(unittest.TestCase):
             c_e_var = solution["Electrolyte concentration [mol.m-3]"]
             # 1D variables should be evaluated on edges
             L_x = param.evaluate(model.param.L_x)
-            c_e = c_e_var(t=t, x=mesh.combine_submeshes(*c_e_var.domain).edges * L_x)
+            c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges * L_x)
 
             for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                 quick_plot = pybamm.QuickPlot(
@@ -475,14 +475,15 @@ class TestQuickPlot(unittest.TestCase):
         timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
         model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         parameter_values.update({"Electrode height [m]": "[input]"})
-        solver = pybamm.CasadiSolver(mode="safe")
+        solver1 = pybamm.CasadiSolver(mode="safe")
         sim1 = pybamm.Simulation(
-            model, parameter_values=parameter_values, solver=solver
+            model, parameter_values=parameter_values, solver=solver1
         )
         inputs1 = {"Electrode height [m]": 1.00}
         sol1 = sim1.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs1)
+        solver2 = pybamm.CasadiSolver(mode="safe")
         sim2 = pybamm.Simulation(
-            model, parameter_values=parameter_values, solver=solver
+            model, parameter_values=parameter_values, solver=solver2
         )
         inputs2 = {"Electrode height [m]": 2.00}
         sol2 = sim2.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs2)

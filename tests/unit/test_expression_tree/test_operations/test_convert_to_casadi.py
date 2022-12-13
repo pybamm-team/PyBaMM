@@ -314,16 +314,20 @@ class TestCasadiConverter(unittest.TestCase):
         self.assert_casadi_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval)))
 
     def test_convert_differentiated_function(self):
-        a = pybamm.Scalar(0)
-        b = pybamm.Scalar(1)
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
 
         def myfunction(x, y):
             return x + y**3
 
         f = pybamm.Function(myfunction, a, b).diff(a)
-        self.assert_casadi_equal(f.to_casadi(), casadi.MX(1), evalf=True)
+        self.assert_casadi_equal(
+            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(1), evalf=True
+        )
         f = pybamm.Function(myfunction, a, b).diff(b)
-        self.assert_casadi_equal(f.to_casadi(), casadi.MX(3), evalf=True)
+        self.assert_casadi_equal(
+            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(12), evalf=True
+        )
 
     def test_convert_input_parameter(self):
         casadi_t = casadi.MX.sym("t")
@@ -354,31 +358,6 @@ class TestCasadiConverter(unittest.TestCase):
         self.assert_casadi_equal(
             expr.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_inputs),
             casadi_inputs["Input 2"] * casadi_y,
-        )
-
-    def test_convert_external_variable(self):
-        casadi_t = casadi.MX.sym("t")
-        casadi_y = casadi.MX.sym("y", 10)
-        casadi_inputs = {
-            "External 1": casadi.MX.sym("External 1", 3),
-            "External 2": casadi.MX.sym("External 2", 10),
-        }
-
-        pybamm_y = pybamm.StateVector(slice(0, 10))
-        pybamm_u1 = pybamm.ExternalVariable("External 1", 3)
-        pybamm_u2 = pybamm.ExternalVariable("External 2", 10)
-
-        # External only
-        self.assert_casadi_equal(
-            pybamm_u1.to_casadi(casadi_t, casadi_y, inputs=casadi_inputs),
-            casadi_inputs["External 1"],
-        )
-
-        # More complex
-        expr = pybamm_u2 + pybamm_y
-        self.assert_casadi_equal(
-            expr.to_casadi(casadi_t, casadi_y, inputs=casadi_inputs),
-            casadi_inputs["External 2"] + casadi_y,
         )
 
     def test_errors(self):

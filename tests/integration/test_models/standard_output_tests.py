@@ -83,11 +83,11 @@ class BaseOutputTest(object):
         self.x_s = disc.mesh["separator"].nodes * L_x
         self.x_p = disc.mesh["positive electrode"].nodes * L_x
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        self.x = disc.mesh.combine_submeshes(*whole_cell).nodes * L_x
+        self.x = disc.mesh[whole_cell].nodes * L_x
         self.x_n_edge = disc.mesh["negative electrode"].edges * L_x
         self.x_s_edge = disc.mesh["separator"].edges * L_x
         self.x_p_edge = disc.mesh["positive electrode"].edges * L_x
-        self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
+        self.x_edge = disc.mesh[whole_cell].edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             R_n_typ = model.length_scales["negative particle"].evaluate()
@@ -293,8 +293,13 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution[f"Negative {self.phase_name_n}particle flux"]
         self.N_s_p = solution[f"Positive {self.phase_name_p}particle flux"]
 
-        self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
-        self.c_Li_tot = solution["Loss of lithium to lithium plating [mol]"]
+        self.n_Li_side = solution["Total lithium lost to side reactions [mol]"]
+        self.n_Li_LAM_n = solution[
+            "Loss of lithium due to loss of active material in negative electrode [mol]"
+        ]
+        self.n_Li_LAM_p = solution[
+            "Loss of lithium due to loss of active material in positive electrode [mol]"
+        ]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.
@@ -404,8 +409,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         c_s_tot = (
             self.c_s_n_tot(self.solution.t)
             + self.c_s_p_tot(self.solution.t)
-            + self.c_SEI_tot(self.solution.t)
-            + self.c_Li_tot(self.solution.t)
+            + self.n_Li_side(self.solution.t)
+            + self.n_Li_LAM_n(self.solution.t)
+            + self.n_Li_LAM_p(self.solution.t)
         )
         diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
         if self.model.options["particle"] == "quartic profile":
@@ -550,7 +556,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
             (self.c_e_n(t, x_n), self.c_e_s(t, x_s), self.c_e_p(t, x_p)), axis=0
         )
 
-        np.testing.assert_array_equal(self.c_e(t, x), c_e_combined)
+        np.testing.assert_array_almost_equal(self.c_e(t, x), c_e_combined, decimal=14)
 
     def test_all(self):
         self.test_concentration_limit()
@@ -800,12 +806,20 @@ class DegradationTests(BaseOutputTest):
         self.LLI = solution["Loss of lithium inventory [%]"]
         self.n_Li_lost = solution["Total lithium lost [mol]"]
         self.n_Li_lost_rxn = solution["Total lithium lost to side reactions [mol]"]
+        self.n_Li_lost_LAM_n = solution[
+            "Loss of lithium due to loss of active material in negative electrode [mol]"
+        ]
+        self.n_Li_lost_LAM_p = solution[
+            "Loss of lithium due to loss of active material in positive electrode [mol]"
+        ]
 
     def test_degradation_modes(self):
         """Test degradation modes are between 0 and 100%"""
         np.testing.assert_array_less(-3e-3, self.LLI(self.t))
         np.testing.assert_array_less(-1e-13, self.LAM_ne(self.t))
         np.testing.assert_array_less(-1e-13, self.LAM_pe(self.t))
+        np.testing.assert_array_less(-1e-13, self.n_Li_lost_LAM_n(self.t))
+        np.testing.assert_array_less(-1e-13, self.n_Li_lost_LAM_p(self.t))
         np.testing.assert_array_less(self.LLI(self.t), 100)
         np.testing.assert_array_less(self.LAM_ne(self.t), 100)
         np.testing.assert_array_less(self.LAM_pe(self.t), 100)
@@ -813,7 +827,11 @@ class DegradationTests(BaseOutputTest):
     def test_lithium_lost(self):
         """Test the two ways of measuring lithium lost give the same value"""
         np.testing.assert_array_almost_equal(
-            self.n_Li_lost(self.t), self.n_Li_lost_rxn(self.t), decimal=3
+            self.n_Li_lost(self.t),
+            self.n_Li_lost_rxn(self.t)
+            + self.n_Li_lost_LAM_n(self.t)
+            + self.n_Li_lost_LAM_p(self.t),
+            decimal=5,
         )
 
     def test_all(self):
