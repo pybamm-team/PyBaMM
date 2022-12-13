@@ -30,8 +30,7 @@ class BaseModel(BaseElectrolyteConductivity):
         if self.domain == "separator":
             return {}
 
-        domain = self.domain
-        Domain = domain.capitalize()
+        domain, Domain = self.domain_Domain
         delta_phi = pybamm.Variable(
             f"{Domain} electrode surface potential difference [V]",
             domain=f"{domain} electrode",
