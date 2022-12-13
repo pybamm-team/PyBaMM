@@ -49,7 +49,6 @@ class TestSolution(unittest.TestCase):
             decimal=4,
         )
 
-    @unittest.skip("External variables will be removed")
     def test_append_external_variables(self):
         model = pybamm.lithium_ion.SPM(
             {

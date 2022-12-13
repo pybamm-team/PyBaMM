@@ -371,7 +371,6 @@ class TestScipySolver(unittest.TestCase):
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-    @unittest.skip("External variables will be removed")
     def test_model_solver_with_external(self):
         # Create model
         model = pybamm.BaseModel()

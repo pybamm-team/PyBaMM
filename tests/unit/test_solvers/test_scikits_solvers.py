@@ -701,7 +701,6 @@ class TestScikitsSolvers(unittest.TestCase):
             solution.y[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
         )
 
-    @unittest.skip("External variables will be removed")
     def test_model_solver_dae_with_external(self):
         # Create model
         model = pybamm.BaseModel()

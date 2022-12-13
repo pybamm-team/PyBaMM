@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 
 
-@unittest.skip("External variables will be removed")
 class TestExternalCC(unittest.TestCase):
     def test_2p1d(self):
         model_options = {

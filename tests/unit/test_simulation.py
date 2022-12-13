@@ -147,7 +147,6 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
         self.assertEqual(sim.C_rate, 2)
 
-    @unittest.skip("External variables will be removed")
     def test_set_external_variable(self):
         model_options = {
             "thermal": "lumped",

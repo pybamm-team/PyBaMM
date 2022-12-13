@@ -10,7 +10,6 @@ class TestSPMe(BaseUnitTestLithiumIon, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPMe
 
-    @unittest.skip("External variables will be removed")
     def test_external_variables(self):
         # a concatenation
         model_options = {"external submodels": ["electrolyte diffusion"]}
