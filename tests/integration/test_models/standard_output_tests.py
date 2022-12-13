@@ -429,7 +429,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         else:
-            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is

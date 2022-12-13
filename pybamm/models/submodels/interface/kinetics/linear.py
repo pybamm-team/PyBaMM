@@ -31,4 +31,4 @@ class Linear(BaseKinetics):
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
-        return 2 * u * j0 * ne * 0.5 * Feta_RT
+        return 2 * u * j0 * (ne * 0.5 * Feta_RT)

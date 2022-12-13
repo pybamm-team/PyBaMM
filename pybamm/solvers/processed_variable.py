@@ -111,7 +111,9 @@ class ProcessedVariable(object):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_pts))
         idx = 0
-        last_t = 0
+
+        entries = np.empty(len(self.t_pts))
+        idx = 0
         # Evaluate the base_variable index-by-index
         for ts, ys, inputs, base_var_casadi in zip(
             self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
@@ -122,7 +124,6 @@ class ProcessedVariable(object):
                 entries[idx] = float(base_var_casadi(t, y, inputs))
 
                 idx += 1
-                last_t = t
 
         if self.cumtrapz_ic is not None:
             entries = cumulative_trapezoid(
