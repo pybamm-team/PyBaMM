@@ -1,5 +1,4 @@
 import pybamm
-import os
 
 
 def graphite_diffusivity_Ecker2015(sto, T):
@@ -40,7 +39,7 @@ def graphite_diffusivity_Ecker2015(sto, T):
     return D_ref * arrhenius
 
 
-def graphite_ocp_Ecker2015_function(sto):
+def graphite_ocp_Ecker2015(sto):
     """
     Graphite OCP as a function of stochiometry [1, 2, 3].
 
@@ -190,7 +189,7 @@ def nco_diffusivity_Ecker2015(sto, T):
     return D_ref * arrhenius
 
 
-def nco_ocp_Ecker2015_function(sto):
+def nco_ocp_Ecker2015(sto):
     """
     NCO OCP as a function of stochiometry [1, 2, 3].
 
@@ -383,22 +382,6 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
     return sigma_e
 
 
-# Load data in the appropriate format
-path, _ = os.path.split(os.path.abspath(__file__))
-measured_graphite_diffusivity_Ecker2015 = pybamm.parameters.process_1D_data(
-    "measured_graphite_diffusivity_Ecker2015.csv", path=path
-)
-graphite_ocp_Ecker2015 = pybamm.parameters.process_1D_data(
-    "graphite_ocp_Ecker2015.csv", path=path
-)
-measured_nco_diffusivity_Ecker2015 = pybamm.parameters.process_1D_data(
-    "measured_nco_diffusivity_Ecker2015.csv", path=path
-)
-nco_ocp_Ecker2015 = pybamm.parameters.process_1D_data(
-    "nco_ocp_Ecker2015.csv", path=path
-)
-
-
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -518,11 +501,8 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 14.0,
         "Maximum concentration in negative electrode [mol.m-3]": 31920.0,
-        "Measured negative electrode diffusivity [m2.s-1]"
-        "": measured_graphite_diffusivity_Ecker2015,
         "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Ecker2015,
-        "Measured negative electrode OCP [V]": graphite_ocp_Ecker2015,
-        "Negative electrode OCP [V]": graphite_ocp_Ecker2015_function,
+        "Negative electrode OCP [V]": graphite_ocp_Ecker2015,
         "Negative electrode porosity": 0.329,
         "Negative electrode active material volume fraction": 0.372403,
         "Negative particle radius [m]": 1.37e-05,
@@ -539,11 +519,8 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 68.1,
         "Maximum concentration in positive electrode [mol.m-3]": 48580.0,
-        "Measured positive electrode diffusivity [m2.s-1]"
-        "": measured_nco_diffusivity_Ecker2015,
         "Positive electrode diffusivity [m2.s-1]": nco_diffusivity_Ecker2015,
-        "Measured positive electrode OCP [V]": nco_ocp_Ecker2015,
-        "Positive electrode OCP [V]": nco_ocp_Ecker2015_function,
+        "Positive electrode OCP [V]": nco_ocp_Ecker2015,
         "Positive electrode porosity": 0.296,
         "Positive electrode active material volume fraction": 0.40832,
         "Positive particle radius [m]": 6.5e-06,

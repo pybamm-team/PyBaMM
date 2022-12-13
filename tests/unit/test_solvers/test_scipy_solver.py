@@ -221,12 +221,9 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_equal(step_sol1.t, [0, dt])
         np.testing.assert_array_almost_equal(step_sol1.y[0], np.exp(0.1 * step_sol1.t))
 
-        # Step again, the model has changed
-        step_sol2 = solver.step(step_sol1, model2, dt)
-        np.testing.assert_array_equal(step_sol2.t, [0, dt, 2 * dt])
-        np.testing.assert_array_almost_equal(
-            step_sol2.all_ys[0][0], np.exp(0.1 * step_sol1.t)
-        )
+        # Step again, the model has changed so this raises an error
+        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
+            solver.step(step_sol1, model2, dt)
 
     def test_model_solver_with_inputs(self):
         # Create model
@@ -470,6 +467,7 @@ class TestScipySolver(unittest.TestCase):
         model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
             pybamm.Vector([[2]])
         )
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_almost_equal(
             solution.y[0], 2 * np.exp(-solution.t), decimal=5

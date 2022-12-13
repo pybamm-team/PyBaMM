@@ -132,6 +132,24 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
 
+    def test_set_initial_stoichiometries(self):
+        param = pybamm.ParameterValues("Chen2020")
+        param.set_initial_stoichiometries(0.4)
+        param_0 = param.set_initial_stoichiometries(0, inplace=False)
+        param_100 = param.set_initial_stoichiometries(1, inplace=False)
+
+        # check that the stoichiometry of param is linearly interpolated between
+        # the min and max stoichiometries
+        x = param["Initial concentration in negative electrode [mol.m-3]"]
+        x_0 = param_0["Initial concentration in negative electrode [mol.m-3]"]
+        x_100 = param_100["Initial concentration in negative electrode [mol.m-3]"]
+        self.assertAlmostEqual(x, x_0 + 0.4 * (x_100 - x_0))
+
+        y = param["Initial concentration in positive electrode [mol.m-3]"]
+        y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
+        y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
+        self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         with self.assertRaisesRegex(ValueError, "Typical current"):
