@@ -9,7 +9,6 @@ import pybamm
 class TestPrintName(unittest.TestCase):
     def test_prettify_print_name(self):
         param = pybamm.LithiumIonParameters()
-        param1 = pybamm.standard_variables
         param2 = pybamm.LeadAcidParameters()
 
         # Test PRINT_NAME_OVERRIDES

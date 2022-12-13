@@ -29,10 +29,10 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
 
     def get_fundamental_variables(self):
 
-        if self.domain == "negative":
-            delta_phi_av = pybamm.standard_variables.delta_phi_n_av
-        elif self.domain == "positive":
-            delta_phi_av = pybamm.standard_variables.delta_phi_p_av
+        delta_phi_av = pybamm.Variable(
+            f"X-averaged {self.domain} electrode surface potential difference [V]",
+            domain="current collector",
+        )
 
         variables = self._get_standard_average_surface_potential_difference_variables(
             delta_phi_av

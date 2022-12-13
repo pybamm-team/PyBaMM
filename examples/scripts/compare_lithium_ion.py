@@ -4,15 +4,16 @@
 import pybamm
 
 pybamm.set_logging_level("INFO")
-options = {"thermal": "x-full"}
 # load models
 models = [
-    pybamm.lithium_ion.SPMe(),
+    # pybamm.lithium_ion.SPMe(),
     # pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
-    pybamm.lithium_ion.SPMe({"thermal": "lumped"}),
+    # pybamm.lithium_ion.SPMe(options),
+    # pybamm.lithium_ion.SPMe({"thermal": "lumped"}),
     # pybamm.lithium_ion.DFN(options),
-    # pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.NewmanTobias({"surface form": "algebraic"}),
+    # pybamm.lithium_ion.NewmanTobias({"surface form": "differential"}),
 ]
 
 

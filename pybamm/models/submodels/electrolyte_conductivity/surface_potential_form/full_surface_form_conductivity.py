@@ -27,12 +27,16 @@ class BaseModel(BaseElectrolyteConductivity):
         super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
-        if self.domain == "negative":
-            delta_phi = pybamm.standard_variables.delta_phi_n
-        elif self.domain == "separator":
+        if self.domain == "separator":
             return {}
-        elif self.domain == "positive":
-            delta_phi = pybamm.standard_variables.delta_phi_p
+
+        domain = self.domain
+        Domain = domain.capitalize()
+        delta_phi = pybamm.Variable(
+            f"{Domain} electrode surface potential difference [V]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
 
         variables = self._get_standard_average_surface_potential_difference_variables(
             pybamm.x_average(delta_phi)
