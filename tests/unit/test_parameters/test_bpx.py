@@ -130,21 +130,8 @@ class TestBPX(unittest.TestCase):
             sim.solve()
 
     def test_bpx_soc_error(self):
-        bpx_obj = copy.copy(self.base)
-
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            # write to a tempory file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
-
-            with self.assertRaisesRegex(ValueError, "Target SOC"):
-                pybamm.ParameterValues.create_from_bpx(tmp.name, target_soc=10)
-
+        with self.assertRaisesRegex(ValueError, "Target SOC"):
+            pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
 
 
 if __name__ == "__main__":
