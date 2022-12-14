@@ -17,4 +17,4 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims, ["Total lithium in electrolyte [mol]"])
+pybamm.dynamic_plot(sims)
