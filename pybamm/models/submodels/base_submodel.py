@@ -250,7 +250,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set the boundary conditions for the submodel. Note: this method
         modifies the state of self.boundary_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in
+        submodel, the default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
         Parameters
@@ -264,7 +264,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set the initial conditions for the submodel. Note: this method
         modifies the state of self.initial_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in
+        submodel, the default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
 
@@ -279,7 +279,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the
-        default behaviour of 'pass' is used a implemented in
+        default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
         Parameters
