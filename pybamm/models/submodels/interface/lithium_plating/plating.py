@@ -75,8 +75,9 @@ class Plating(BasePlating):
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         # phi_ref is part of the de-dimensionalization used in PyBaMM
         phi_ref = param.n.U_ref / param.potential_scale
-
-        eta_stripping = delta_phi + phi_ref + eta_sei
+        U_pl = pybamm.Parameter(f"Li plating open-circuit potential [V]") / param.potential_scale
+        eta_stripping = delta_phi + phi_ref + eta_sei - U_pl
+        # eta_stripping =  phi_ref
         eta_plating = -eta_stripping
         prefactor = 1 / (1 + self.param.Theta * T)
         # NEW: transfer coefficients can be set by the user

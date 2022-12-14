@@ -4,6 +4,7 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],100,Scott Moura FastDFN,no info from Peyman MPM
 Maximum concentration in positive electrode [mol.m-3],35380,Peyman MPM, nickel manganese cobalt oxide
+Positive electrode diffusion coefficient [m2.s-1],8.0E-15,Peyman MPM,
 Positive electrode diffusivity [m2.s-1],[function]NMC_diffusivity_PeymanMPM,,
 Positive electrode OCP [V],[function]NMC_ocp_PeymanMPM,,
 ,,,

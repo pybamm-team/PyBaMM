@@ -4,7 +4,7 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],100,Scott Moura FastDFN,no info from Peyman MPM
 Maximum concentration in negative electrode [mol.m-3],28746,Peyman MPM,
-Negative electrode diffusion coefficient [m2.s-1],5.0E-15,Peyman MPM,
+Negative electrode diffusion coefficient [m2.s-1],8.0E-14,Peyman MPM,
 Negative electrode diffusivity [m2.s-1],[function]graphite_diffusivity_PeymanMPM,,
 Negative electrode OCP [V],[function]graphite_ocp_PeymanMPM,Peyman MPM,
 ,,,
@@ -19,7 +19,7 @@ Negative electrode transport efficiency, 0.16,
 # Interfacial reactions,,,
 Negative electrode cation signed stoichiometry,-1,,no info from Peyman MPM
 Negative electrode electrons in reaction,1,,no info from Peyman MPM
-Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5],1.061E-6,Peyman MPM,convert unit
+Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5],4.244E-6,Peyman MPM,convert unit
 Negative electrode charge transfer coefficient,0.5,Peyman MPM,
 Negative electrode double-layer capacity [F.m-2],0.2,,no info from Peyman MPM
 Negative electrode exchange-current density [A.m-2],[function]graphite_electrolyte_exchange_current_density_PeymanMPM,,

@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Parameter
 
 
 def graphite_diffusivity_PeymanMPM(sto, T):
@@ -22,8 +22,8 @@ def graphite_diffusivity_PeymanMPM(sto, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-
-    D_ref = 16*5.0 * 10 ** (-15)
+    D_ref =  Parameter("Negative electrode diffusion coefficient [m2.s-1]")
+    # D_ref = 16*5.0 * 10 ** (-15)
     E_D_s = 42770
     arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
