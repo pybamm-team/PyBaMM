@@ -6,11 +6,12 @@ import tempfile
 import unittest
 import json
 import pybamm
+import copy
 
 
 class TestBPX(unittest.TestCase):
-    def test_bpx(self):
-        bpx_obj = {
+    def setUp(self):
+        self.base = {
             "Header": {
                 "BPX": 1.0,
                 "Title": "Parametrisation example",
@@ -104,6 +105,9 @@ class TestBPX(unittest.TestCase):
             },
         }
 
+    def test_bpx(self):
+        bpx_obj = copy.copy(self.base)
+
         filename = "tmp.json"
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
@@ -124,6 +128,23 @@ class TestBPX(unittest.TestCase):
             )
             sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
             sim.solve()
+
+    def test_bpx_soc_error(self):
+        bpx_obj = copy.copy(self.base)
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            with self.assertRaisesRegex(ValueError, "Target SOC"):
+                pybamm.ParameterValues.create_from_bpx(tmp.name, target_soc=10)
+
 
 
 if __name__ == "__main__":

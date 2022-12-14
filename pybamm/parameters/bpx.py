@@ -90,7 +90,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrode)"] = 1.5
 
-    # BPX is for single-cell in series, user can chnage this later
+    # BPX is for single cell in series, user can change this later
     pybamm_dict["Number of cells connected in series to make a battery"] = 1
     pybamm_dict[
         "Number of electrodes connected in parallel to make a cell"
