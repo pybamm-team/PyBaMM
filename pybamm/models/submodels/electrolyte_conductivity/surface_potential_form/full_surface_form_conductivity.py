@@ -130,7 +130,6 @@ class BaseModel(BaseElectrolyteConductivity):
             )
 
         elif self.domain == "positive":
-            T = variables["Positive electrode temperature"]
             grad_c_e = pybamm.boundary_gradient(c_e, "left")
             grad_left = (
                 (i_boundary_cc / pybamm.boundary_value(conductivity, "left"))

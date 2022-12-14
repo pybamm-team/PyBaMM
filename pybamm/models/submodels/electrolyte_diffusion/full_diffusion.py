@@ -81,9 +81,9 @@ class Full(BaseElectrolyteDiffusion):
         variables.update(self._get_standard_flux_variables(N_e))
         variables.update(
             {
-                "Electrolyte diffusion flux": N_e_diffusion,
-                "Electrolyte migration flux": N_e_migration,
-                "Electrolyte convection flux": N_e_convection,
+                "Electrolyte diffusion flux [mol.m-2.s-1]": N_e_diffusion,
+                "Electrolyte migration flux [mol.m-2.s-1]": N_e_migration,
+                "Electrolyte convection flux [mol.m-2.s-1]": N_e_convection,
             }
         )
 
