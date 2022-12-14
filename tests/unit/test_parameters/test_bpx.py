@@ -146,7 +146,6 @@ class TestBPX(unittest.TestCase):
                 pybamm.ParameterValues.create_from_bpx(tmp.name, target_soc=10)
 
 
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
