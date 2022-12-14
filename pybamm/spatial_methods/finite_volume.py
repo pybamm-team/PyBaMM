@@ -754,9 +754,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
-        else:
+        elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
-
+        else:
+            raise ValueError(
+                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
+                    rbc_type
+                )
+            )
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(
                 ([1], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
@@ -767,8 +772,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
-        else:
+        elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
+        else:
+            raise ValueError(
+                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
+                    rbc_type
+                )
+            )
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
