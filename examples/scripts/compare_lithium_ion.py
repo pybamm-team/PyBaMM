@@ -48,7 +48,7 @@ pybamm.dynamic_plot(
         "Total lithium in electrolyte [mol]",
         "X-averaged negative electrode volumetric interfacial current density [A.m-3]",
         "X-averaged positive electrode volumetric interfacial current density [A.m-3]",
-        # "Electrolyte concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
         # "X-averaged negative particle concentration [mol.m-3]",
         # "X-averaged positive particle concentration [mol.m-3]",
         # "Negative electrode filling fraction",
