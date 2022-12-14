@@ -108,7 +108,7 @@ class Simulation:
         self.submesh_types = submesh_types or self.model.default_submesh_types
         self.var_pts = var_pts or self.model.default_var_pts
         self.spatial_methods = spatial_methods or self.model.default_spatial_methods
-        self._solver = solver or self.model.default_solver
+        self.solver = solver or self.model.default_solver
         self.output_variables = output_variables
 
         # Initialize empty built states

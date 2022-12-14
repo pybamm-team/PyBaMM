@@ -914,8 +914,10 @@ class BaseModel:
         variable_names : list
             Variables to be exported alongside the model structure
         input_parameter_order : list, optional
-            Order in which the input parameters should be stacked. If None, the order
-            returned by :meth:`BaseModel.input_parameters` is used
+            Order in which the input parameters should be stacked.
+            If input_parameter_order=None and len(self.input_parameters) > 1, a
+            ValueError is raised (this helps to avoid accidentally using the wrong
+            order)
 
         Returns
         -------
@@ -938,6 +940,11 @@ class BaseModel:
             inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
         # Sort according to input_parameter_order
         if input_parameter_order is None:
+            if len(inputs_wrong_order) > 1:
+                raise ValueError(
+                    "input_parameter_order must be specified if there is more than one "
+                    "input parameter"
+                )
             inputs = inputs_wrong_order
         else:
             inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
@@ -994,8 +1001,10 @@ class BaseModel:
         variable_names : list
             Variables to be exported alongside the model structure
         input_parameter_order : list, optional
-            Order in which the input parameters should be stacked. If None, the order
-            returned by :meth:`BaseModel.input_parameters` is used
+            Order in which the input parameters should be stacked.
+            If input_parameter_order=None and len(self.input_parameters) > 1, a
+            ValueError is raised (this helps to avoid accidentally using the wrong
+            order)
         cg_options : dict
             Options to pass to the code generator.
             See https://web.casadi.org/docs/#generating-c-code

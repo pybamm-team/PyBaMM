@@ -79,18 +79,30 @@ class Full(BaseElectrolyteDiffusion):
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
+        variables.update(
+            {
+                "Electrolyte diffusion flux": N_e_diffusion,
+                "Electrolyte migration flux": N_e_migration,
+                "Electrolyte convection flux": N_e_convection,
+            }
+        )
 
         return variables
 
     def set_rhs(self, variables):
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
         c_e = variables["Electrolyte concentration [mol.m-3]"]
-        N_e = variables["Electrolyte flux [mol.m-2.s-1]"]
+        T = variables["Cell temperature [K]"]
+        N_e_diffusion = variables["Electrolyte diffusion flux [mol.m-2.s-1]"]
+        N_e_convection = variables["Electrolyte convection flux [mol.m-2.s-1]"]
         div_Vbox = variables["Transverse volume-averaged acceleration [m.s-2]"]
 
         sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
+        sum_a_j = variables["Sum of volumetric interfacial current densities [A.m-3]"]
         sum_s_a_j.print_name = "aj"
         source_terms = sum_s_a_j / self.param.F
+
+        N_e = N_e_diffusion + N_e_convection
 
         self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
