@@ -563,10 +563,13 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
     def test_all(self):
         self.test_concentration_limit()
-        self.test_conservation()
         self.test_concentration_profile()
         self.test_fluxes()
         self.test_splitting()
+
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
+            # electrolyte is not conserved in lead-acid models
+            self.test_conservation()
 
 
 class PotentialTests(BaseOutputTest):
