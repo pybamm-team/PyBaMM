@@ -103,6 +103,10 @@ class DFN(BaseModel):
             self.param, self.options
         )
 
+        # self.submodels[
+        #     "electrolyte diffusion"
+        # ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
+
     def set_electrolyte_potential_submodel(self):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
