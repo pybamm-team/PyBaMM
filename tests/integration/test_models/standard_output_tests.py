@@ -508,7 +508,10 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         diff = (
             self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
         ) / self.c_e_tot(self.solution.t[:-1])
-        np.testing.assert_array_almost_equal(diff, 0)
+        if self.model.options["surface form"] == "differential":
+            np.testing.assert_array_almost_equal(diff, 0, decimal=9)
+        else:
+            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
 
     def test_concentration_profile(self):
         """Test continuity of the concentration profile. Test average concentration is
