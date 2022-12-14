@@ -133,7 +133,6 @@ class TestBPX(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Target SOC"):
             pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
 
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
