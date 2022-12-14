@@ -2,7 +2,6 @@
 # A model to calculate electrode-specific SOH, adapted to a half-cell
 #
 import pybamm
-import numpy as np
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
@@ -36,39 +35,32 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         param = pybamm.LithiumIonParameters({"working electrode": working_electrode})
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))
-        C = pybamm.Variable("C", bounds=(0, np.inf))
-        Cw = pybamm.InputParameter("C_w")
+        x_0 = pybamm.Variable("x_0", bounds=(0, 1))
+        Q_w = pybamm.InputParameter("Q_w")
         T_ref = param.T_ref
         if working_electrode == "negative":  # pragma: no cover
             raise NotImplementedError
         elif working_electrode == "positive":
-            Uw = param.p.prim.U_dimensional
-            x_0 = x_100 + C / Cw
+            U_w = param.p.prim.U_dimensional
+            Q = Q_w * (x_100 - x_0)
 
-        V_max = pybamm.InputParameter("V_max")
-        V_min = pybamm.InputParameter("V_min")
+        V_max = param.voltage_high_cut_dimensional
+        V_min = param.voltage_low_cut_dimensional
 
         self.algebraic = {
-            x_100: Uw(x_100, T_ref) - V_max,
-            C: Uw(x_0, T_ref) - V_min,
+            x_100: U_w(x_100, T_ref) - V_max,
+            x_0: U_w(x_0, T_ref) - V_min,
         }
-
-        # initial guess must be chosen such that 0 < x_0, x_100 < 1
-        # First guess for x_100
-        x_100_init = 0.85
-        # Make sure x_0 = x_100 - C/C_w > 0
-        C_init = param.Q
-        C_init = pybamm.minimum(Cw * x_100_init, C_init)
-        self.initial_conditions = {x_100: x_100_init, C: C_init}
+        self.initial_conditions = {x_100: 0.8, x_0: 0.2}
 
         self.variables = {
             "x_100": x_100,
-            "C": C,
             "x_0": x_0,
-            "Uw(x_100)": Uw(x_100, T_ref),
-            "Uw(x_0)": Uw(x_0, T_ref),
-            "C_w": Cw,
-            "C_w * (x_100 - x_0)": Cw * (x_100 - x_0),
+            "Q": Q,
+            "Uw(x_100)": U_w(x_100, T_ref),
+            "Uw(x_0)": U_w(x_0, T_ref),
+            "Q_w": Q_w,
+            "Q_w * (x_100 - x_0)": Q_w * (x_100 - x_0),
         }
 
     @property
