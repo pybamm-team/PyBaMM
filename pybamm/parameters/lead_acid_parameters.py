@@ -42,6 +42,10 @@ class LeadAcidParameters(BaseParameters):
         self.T_ref = self.therm.T_ref
         self.T_init = self.therm.T_init
         self.T_amb = self.therm.T_amb
+        self.h_edge = self.therm.h_edge
+        self.h_total = self.therm.h_total
+        self.rho_c_p_eff = self.therm.rho_c_p_eff
+        self.lambda_eff = self.therm.lambda_eff
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -50,6 +54,7 @@ class LeadAcidParameters(BaseParameters):
         self.A_cc = self.geo.A_cc
         self.A_cooling = self.geo.A_cooling
         self.V_cell = self.geo.V_cell
+        self.L = self.L_x
         self.W = self.L_y
         self.H = self.L_z
         self.A_cc = self.A_cc
@@ -266,6 +271,8 @@ class DomainLeadAcidParameters(BaseParameters):
         # Thermal
         self.rho_c_p = self.therm.rho_c_p
         self.lambda_ = self.therm.lambda_
+        self.h_cc = self.therm.h_cc
+        self.h_tab = self.therm.h_tab
 
         if self.domain == "separator":
             self.eps_max = pybamm.Parameter("Maximum porosity of separator")

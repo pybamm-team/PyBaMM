@@ -6,7 +6,10 @@ import pybamm
 pybamm.set_logging_level("INFO")
 
 # load models
-models = [pybamm.lead_acid.LOQS(), pybamm.lead_acid.Full()]
+models = [
+    pybamm.lead_acid.LOQS({"convection": "uniform transverse"}),
+    pybamm.lead_acid.LOQS(),
+]
 
 # create and run simulations
 sims = []
