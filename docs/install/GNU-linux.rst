@@ -161,7 +161,7 @@ repository
    git clone https://github.com/pybamm-team/PyBaMM.git
    cd PyBaMM
 
-Then, to install PyBaMM as a `developer <CONTRIBUTING.md>`__, type
+Then, to install PyBaMM as a `developer <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__, type
 
  .. code:: bash
 
@@ -174,7 +174,7 @@ To check whether PyBaMM has installed properly, you can run the tests:
    python3 run-tests.py --unit
 
 Before you start contributing to PyBaMM, please read the `contributing
-guidelines <CONTRIBUTING.md>`__.
+guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
 
 Uninstall PyBaMM
 ================
