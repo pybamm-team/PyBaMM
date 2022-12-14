@@ -5,7 +5,6 @@
 #
 import pybamm
 import os
-import sys
 import warnings
 import pybtex
 from pybtex.database import parse_file, parse_string, Entry

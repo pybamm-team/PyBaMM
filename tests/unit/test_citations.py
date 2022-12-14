@@ -39,8 +39,6 @@ class TestCitations(unittest.TestCase):
             citations.register("not a citation")
 
     def test_print_citations(self):
-        import sys
-
         pybamm.citations._reset()
 
         # Text Style
