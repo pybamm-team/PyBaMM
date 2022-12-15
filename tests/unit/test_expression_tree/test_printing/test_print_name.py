@@ -21,7 +21,9 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param.n.C_dl.print_name, r"C_{dl\,n}")
 
         # Test bar
-        self.assertEqual(param1.c_e_av.print_name, r"\bar{c}_{e}")
+        c_e_av = pybamm.Variable("c_e_av")
+        c_e_av.print_name = "c_e_av"
+        self.assertEqual(c_e_av.print_name, r"\bar{c}_{e}")
 
         # Test greek letters
         self.assertEqual(param2.delta.print_name, r"\delta")
@@ -31,7 +33,9 @@ class TestPrintName(unittest.TestCase):
         a_n.new_copy()
 
         # Test eps
-        self.assertEqual(param1.eps_n.print_name, r"\epsilon_n")
+        eps_n = pybamm.Variable("eps_n")
+        eps_n.print_name = "eps_n"
+        self.assertEqual(eps_n.print_name, r"\epsilon_n")
 
 
 if __name__ == "__main__":

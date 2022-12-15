@@ -100,7 +100,7 @@ class Full(BaseElectrolyteDiffusion):
         sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
         sum_a_j = variables["Sum of volumetric interfacial current densities [A.m-3]"]
         sum_s_a_j.print_name = "aj"
-        source_terms = sum_s_a_j / self.param.F
+        source_terms = (sum_s_a_j - self.param.t_plus(c_e, T) * sum_a_j) / self.param.F
 
         N_e = N_e_diffusion + N_e_convection
 
