@@ -3,6 +3,7 @@
 ## Features
 
 - Added functionality to create `pybamm.ParameterValues` from a [BPX standard](https://github.com/pybamm-team/BPX) JSON file ([#2555](https://github.com/pybamm-team/PyBaMM/pull/2555)).
+- Allow the option "surface form" to be "differential" in the `MPM` ([#2533](https://github.com/pybamm-team/PyBaMM/pull/2533))
 - Added variables "Loss of lithium due to loss of active material in negative/positive electrode [mol]". These should be included in the calculation of "total lithium in system" to make sure that lithium is truly conserved. ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
 - `initial_soc` can now be a string "x V", in which case the simulation is initialized to start from that voltage ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
 - The `ElectrodeSOH` solver can now calculate electrode balance based on a target "cell capacity" (requires cell capacity "Q" as input), as well as the default "cyclable cell capacity" (requires cyclable lithium capacity "Q_Li" as input). Use the keyword argument `known_value` to control which is used. ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
@@ -18,6 +19,12 @@
 - Removed external variables and submodels. InputParameter should now be used in all cases ([#2502](https://github.com/pybamm-team/PyBaMM/pull/2502))
 - Trying to use a solver to solve multiple models results in a RuntimeError exception ([#2481](https://github.com/pybamm-team/PyBaMM/pull/2481))
 - Inputs for the `ElectrodeSOH` solver are now (i) "Q_Li", the total cyclable capacity of lithium in the electrodes (previously "n_Li", the total number of moles, n_Li = 3600/F \* Q_Li) (ii) "Q_n", the capacity of the negative electrode (previously "C_n"), and "Q_p", the capacity of the positive electrode (previously "C_p") ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
+
+# [v22.11.1](https://github.com/pybamm-team/PyBaMM/tree/v22.11.1) - 2022-12-13
+
+## Bug fixes
+
+- Fixed installation on Google Colab (`pybtex` issues) ([#2547](https://github.com/pybamm-team/PyBaMM/pull/2547/files))
 
 # [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
 
