@@ -65,13 +65,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
         self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
 
-        # Fractional charge input
-        if "Fractional Charge Input" not in self.variables:
-            fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
-            self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.variables["Total current density [A.m-2]"] * 100
-            self.initial_conditions[fci] = self.param.q_init * 100
-
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
             self.submodels[

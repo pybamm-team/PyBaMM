@@ -171,7 +171,7 @@ class LeadAcidParameters(BaseParameters):
         # Some scales
         self.thermal_voltage = self.R * self.T_ref / self.F
         self.I_typ = self.Q / (self.A_cc * self.n_electrodes_parallel)
-        self.a_j_scale = self.I_typ / self.L_x
+        self.a_j_scale = self.I_typ / self.n.L
 
     def t_plus(self, c_e, T):
         """Rransference number"""

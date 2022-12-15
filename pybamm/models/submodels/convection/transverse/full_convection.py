@@ -47,8 +47,8 @@ class Full(BaseTransverseModel):
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        v_box_n_right = param.n.DeltaV * i_boundary_cc
-        v_box_p_left = param.p.DeltaV * i_boundary_cc
+        v_box_n_right = -param.n.DeltaV * i_boundary_cc / self.param.F
+        v_box_p_left = -param.p.DeltaV * i_boundary_cc / self.param.F
         d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.s.L
 
         # Simple formula for velocity in the separator

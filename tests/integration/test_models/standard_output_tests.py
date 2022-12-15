@@ -743,7 +743,7 @@ class CurrentTests(BaseOutputTest):
         np.testing.assert_allclose(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.L_p,
-            rtol=1e-4,
+            rtol=1e-3,
         )
 
     def test_conservation(self):
@@ -807,16 +807,17 @@ class VelocityTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        beta_n = self.model.param.n.beta
-        beta_n = self.param.evaluate(beta_n)
-        beta_p = self.model.param.p.beta
-        beta_p = self.param.evaluate(beta_p)
+        DeltaV_n = self.model.param.n.DeltaV
+        DeltaV_n = self.param.evaluate(DeltaV_n)
+        DeltaV_p = self.model.param.p.DeltaV
+        DeltaV_p = self.param.evaluate(DeltaV_p)
+        F = self.model.param.F.value
 
         np.testing.assert_array_almost_equal(
-            self.v_box(t, x_n), beta_n * self.i_e(t, x_n)
+            self.v_box(t, x_n), DeltaV_n * self.i_e(t, x_n) / F
         )
         np.testing.assert_array_almost_equal(
-            self.v_box(t, x_p), beta_p * self.i_e(t, x_p)
+            self.v_box(t, x_p), DeltaV_p * self.i_e(t, x_p) / F
         )
 
     def test_all(self):

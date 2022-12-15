@@ -28,20 +28,32 @@ class Explicit(BaseThroughCellModel):
         for domain in self.options.whole_cell_domains:
             if domain == "separator":
                 continue
-            j_k_av = variables[
-                f"X-averaged {domain} interfacial current density [A.m-2]"
+            a_j_k_av = variables[
+                f"X-averaged {domain} volumetric interfacial current density [A.m-3]"
             ]
             if domain == "negative electrode":
                 x_n = pybamm.standard_spatial_vars.x_n
                 DeltaV_k = param.n.DeltaV
-                p_k = DeltaV_k * j_k_av * (-(x_n**2) + param.n.L**2) / 2 + p_s
-                v_box_k = DeltaV_k * j_k_av * x_n
+                p_k = (
+                    -DeltaV_k * a_j_k_av / param.F * (-(x_n**2) + param.n.L**2) / 2
+                    + p_s
+                )
+                v_box_k = -DeltaV_k * a_j_k_av / param.F * x_n
             elif domain == "positive electrode":
                 x_p = pybamm.standard_spatial_vars.x_p
                 DeltaV_k = param.p.DeltaV
-                p_k = DeltaV_k * j_k_av * ((x_p - 1) ** 2 - param.p.L**2) / 2 + p_s
-                v_box_k = DeltaV_k * j_k_av * (x_p - 1)
-            div_v_box_k = pybamm.PrimaryBroadcast(DeltaV_k * j_k_av, domain)
+                p_k = (
+                    -DeltaV_k
+                    * a_j_k_av
+                    / param.F
+                    * ((x_p - 1) ** 2 - param.p.L**2)
+                    / 2
+                    + p_s
+                )
+                v_box_k = -DeltaV_k * a_j_k_av / param.F * (x_p - param.L_x)
+            div_v_box_k = pybamm.PrimaryBroadcast(
+                -DeltaV_k * a_j_k_av / param.F, domain
+            )
 
             variables.update(
                 self._get_standard_convection_variables(
@@ -54,7 +66,7 @@ class Explicit(BaseThroughCellModel):
             "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
         ]
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        v_box_n_right = param.n.DeltaV * i_boundary_cc
+        v_box_n_right = -param.n.DeltaV * i_boundary_cc / param.F
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
