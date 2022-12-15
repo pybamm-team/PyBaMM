@@ -9,6 +9,7 @@
 
 ## Bug fixes
 
+- Fixed electrolyte conservation when options {"surface form": "algebraic"} are used
 - Fixed "constant concentration" electrolyte model so that "porosity times concentration" is conserved when porosity changes ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
 - Fix installation on `Google Colab` (`pybtex` and `Colab` issue) ([#2526](https://github.com/pybamm-team/PyBaMM/pull/2526))
 
