@@ -15,7 +15,7 @@ class TestBPX(unittest.TestCase):
             "Header": {
                 "BPX": 1.0,
                 "Title": "Parametrisation example",
-                "Description": "NMC Pouch",
+                "Description": "Test",
                 "Model": "DFN",
             },
             "Parameterisation": {
@@ -60,7 +60,7 @@ class TestBPX(unittest.TestCase):
                         "9.41099327e02 * tanh(-6.91080049e-01 * (x + 2.49433043e00)) + "
                         "3.40646063e02 * tanh(7.27243978e-01 * (x + 1.64297574e00))"
                     ),
-                    "Entropic change coefficient [V.K-1]": 0,
+                    "Entropic change coefficient [V.K-1]": "-0.001*x",
                     "Conductivity [S.m-1]": 0.39,
                     "Surface area per unit volume [m-1]": 487864,
                     "Porosity": 0.33,
@@ -85,7 +85,7 @@ class TestBPX(unittest.TestCase):
                         "1.63480454 * tanh(82.26606342 * (x - 1.00945121)) - "
                         "10.70641562 * tanh(9.43939843 * (x - 0.79469384))"
                     ),
-                    "Entropic change coefficient [V.K-1]": 0,
+                    "Entropic change coefficient [V.K-1]": "-0.001*x",
                     "Conductivity [S.m-1]": 1.464,
                     "Surface area per unit volume [m-1]": 404348,
                     "Porosity": 0.385,
@@ -129,9 +129,61 @@ class TestBPX(unittest.TestCase):
             sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
             sim.solve()
 
+    def test_constant_functions(self):
+        bpx_obj = copy.copy(self.base)
+        bpx_obj["Parameterisation"]["Electrolyte"].update(
+            {
+                "Conductivity [S.m-1]": 1,
+                "Diffusivity [m2.s-1]": 1,
+            }
+        )
+        bpx_obj["Parameterisation"]["Negative electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": 1,
+                "Entropic change coefficient [V.K-1]": 1,
+            }
+        )
+        bpx_obj["Parameterisation"]["Positive electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": 1,
+                "Entropic change coefficient [V.K-1]": 1,
+            }
+        )
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+    def test_table_data(self):
+        bpx_obj = copy.copy(self.base)
+        bpx_obj["Parameterisation"]["Electrolyte"].update(
+            {"Conductivity [S.m-1]": {"x": [800, 1000, 1200], "y": [0.9, 1, 1.1]}}
+        )
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            pybamm.ParameterValues.create_from_bpx(tmp.name)
+
     def test_bpx_soc_error(self):
         with self.assertRaisesRegex(ValueError, "Target SOC"):
             pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
