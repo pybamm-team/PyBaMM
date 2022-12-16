@@ -443,8 +443,8 @@ class ElectrodeSOHSolver:
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-            V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
+            V_min = parameter_values.evaluate(param.opc_soc_0_dimensional)
+            V_max = parameter_values.evaluate(param.opc_soc_100_dimensional)
 
             if not V_min < V_init < V_max:
                 raise ValueError(

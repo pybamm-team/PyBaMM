@@ -437,6 +437,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.7,
         "Upper voltage cut-off [V]": 4.2,
+        "Open circuit potential at 0% [V]": 2.7,
+        "Open circuit potential at 0% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 18081.0,
         "Initial concentration in positive electrode [mol.m-3]": 20090.0,
         "Initial temperature [K]": 298.15,
