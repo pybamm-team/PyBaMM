@@ -43,9 +43,9 @@ class ElectricalParameters(BaseParameters):
         self.voltage_high_cut_dimensional = pybamm.Parameter(
             "Upper voltage cut-off [V]"
         )
-        self.opc_soc_0_dimensional = pybamm.Parameter("Open circuit potential at 0% [V]")
+        self.opc_soc_0_dimensional = pybamm.Parameter("Open circuit potential at 0% SOC [V]")
         self.opc_soc_100_dimensional = pybamm.Parameter(
-            "Open circuit potential at 0% SOC [V]"
+            "Open circuit potential at 100% SOC [V]"
         )
         # Current as a function of *dimensional* time. The below is overwritten in
         # lithium_ion_parameters.py and lead_acid_parameters.py to use the correct
