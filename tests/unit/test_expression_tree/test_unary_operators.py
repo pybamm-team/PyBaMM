@@ -577,6 +577,15 @@ class TestUnaryOperators(TestCase):
         ):
             pybamm.boundary_value(symbol_on_edges, "right")
 
+    def test_boundary_gradient(self):
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        grad = pybamm.boundary_gradient(var, "right")
+        self.assertIsInstance(grad, pybamm.BoundaryGradient)
+
+        zero = pybamm.PrimaryBroadcast(0, ["negative electrode"])
+        grad = pybamm.boundary_gradient(zero, "right")
+        self.assertEqual(grad, 0)
+
     def test_unary_simplifications(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)

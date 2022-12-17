@@ -332,6 +332,21 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model, t_eval=[0, 1])
 
+    def test_multiple_models_error(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model2 = pybamm.BaseModel()
+        v2 = pybamm.Variable("v")
+        model2.rhs = {v2: -1}
+        model2.initial_conditions = {v2: 1}
+
+        solver = pybamm.ScipySolver()
+        solver.solve(model, t_eval=[0, 1])
+        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
+            solver.solve(model2, t_eval=[0, 1])
+
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):

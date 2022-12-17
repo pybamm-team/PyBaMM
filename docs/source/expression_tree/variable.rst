@@ -7,6 +7,3 @@ Variable
 .. autoclass:: pybamm.VariableDot
   :members:
 
-.. autoclass:: pybamm.ExternalVariable
-  :members:
-

@@ -470,11 +470,6 @@ class ParameterValues:
 
         model.events = new_events
 
-        # Set external variables
-        model.external_variables = [
-            self.process_symbol(var) for var in unprocessed_model.external_variables
-        ]
-
         # Process timescale
         new_timescale = self.process_symbol(unprocessed_model.timescale)
         if isinstance(new_timescale, pybamm.Scalar):

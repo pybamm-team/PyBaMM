@@ -143,7 +143,7 @@ class CasadiSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         inputs_dict : dict, optional
-            Any external variables or input parameters to pass to the model when solving
+            Any input parameters to pass to the model when solving
         """
 
         # Record whether there are any symbolic inputs
@@ -605,7 +605,7 @@ class CasadiSolver(pybamm.BaseSolver):
         y0:
             casadi vector of initial conditions
         inputs_dict : dict, optional
-            Any external variables or input parameters to pass to the model when solving
+            Any input parameters to pass to the model when solving
         inputs:
             Casadi vector of inputs
         t_eval : numeric type

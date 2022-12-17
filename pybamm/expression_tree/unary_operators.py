@@ -1252,6 +1252,14 @@ def boundary_value(symbol, side):
         return BoundaryValue(symbol, side)
 
 
+def boundary_gradient(symbol, side):
+    # Gradient of a broadcast is zero
+    if isinstance(symbol, pybamm.Broadcast):
+        return 0 * symbol.reduce_one_dimension()
+    else:
+        return BoundaryGradient(symbol, side)
+
+
 def sign(symbol):
     """Returns a :class:`Sign` object."""
     if isinstance(symbol, pybamm.Broadcast):

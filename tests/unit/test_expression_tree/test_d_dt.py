@@ -40,9 +40,6 @@ class TestDDT(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             a = (pybamm.Variable("a")).diff(pybamm.t).diff(pybamm.t)
 
-        with self.assertRaises(pybamm.ModelError):
-            a = pybamm.ExternalVariable("a", 1).diff(pybamm.t)
-
     def test_time_derivative_of_state_vector(self):
 
         sv = pybamm.StateVector(slice(0, 10))

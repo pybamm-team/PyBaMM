@@ -40,40 +40,27 @@ class MPM(SPM):
     """
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):
-        # Necessary options
-        if options is None:
-            options = {"particle size": "distribution", "surface form": "algebraic"}
-        elif "particle size" in options and options["particle size"] != "distribution":
+        # Necessary/default options
+        options = options or {}
+        if "particle size" in options and options["particle size"] != "distribution":
             raise pybamm.OptionError(
                 "particle size must be 'distribution' for MPM not '{}'".format(
                     options["particle size"]
                 )
             )
-        elif "surface form" in options and options["surface form"] != "algebraic":
+        elif "surface form" in options and options["surface form"] == "false":
             raise pybamm.OptionError(
-                "surface form must be 'algebraic' for MPM not '{}'".format(
-                    options["surface form"]
-                )
+                "surface form must be 'algebraic' or 'differential' for MPM not 'false'"
             )
         else:
-            options["particle size"] = "distribution"
-            options["surface form"] = "algebraic"
+            surface_form = options.get("surface form", "algebraic")
+            options.update(
+                {"particle size": "distribution", "surface form": surface_form}
+            )
         super().__init__(options, name, build)
 
         pybamm.citations.register("Kirk2020")
         pybamm.citations.register("Kirk2021")
-
-    def set_particle_submodel(self):
-        for domain in ["negative", "positive"]:
-            if self.options["particle"] == "Fickian diffusion":
-                submod = pybamm.particle.FickianDiffusion(
-                    self.param, domain, self.options, x_average=True, phase="primary"
-                )
-            elif self.options["particle"] == "uniform profile":
-                submod = pybamm.particle.XAveragedPolynomialProfile(
-                    self.param, domain, self.options, phase="primary"
-                )
-            self.submodels[f"{domain} particle"] = submod
 
     @property
     def default_parameter_values(self):
