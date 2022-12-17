@@ -45,8 +45,8 @@ User install
 ------------
 
 We recommend to install PyBaMM within a virtual environment, in order
-not to alter any distribution python files.
-First, make sure you are using python 3.8 or 3.9.
+not to alter any distribution Python files.
+First, make sure you are using Python 3.8 or 3.9.
 To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash

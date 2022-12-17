@@ -126,7 +126,7 @@ class TestScipySolver(unittest.TestCase):
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
         N = submesh.npts
 
-        # construct jacobian in order of model.rhs
+        # construct Jacobian in order of model.rhs
         J = []
         for var in model.rhs.keys():
             if var == var1:

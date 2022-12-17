@@ -191,7 +191,7 @@ def test_notebook(path, executable="python"):
             print("-" * 70)
             return False
 
-    # Load notebook, convert to python
+    # Load notebook, convert to Python
     e = nbconvert.exporters.PythonExporter()
     code, __ = e.from_filename(path)
 
@@ -203,7 +203,7 @@ def test_notebook(path, executable="python"):
     env["MPLBACKEND"] = "Template"
 
     # If notebook makes use of magic commands then
-    # the script must be ran using ipython
+    # the script must be run using ipython
     # https://github.com/jupyter/nbconvert/issues/503#issuecomment-269527834
     executable = (
         "ipython"
@@ -285,7 +285,7 @@ def test_script(path, executable="python"):
 
 def export_notebook(ipath, opath):
     """
-    Exports the notebook at `ipath` to a python file at `opath`.
+    Exports the notebook at `ipath` to a Python file at `opath`.
     """
     import nbconvert
     from traitlets.config import Config
@@ -294,7 +294,7 @@ def export_notebook(ipath, opath):
     c = Config()
     c.TemplateExporter.exclude_markdown = True
 
-    # Load notebook, convert to python
+    # Load notebook, convert to Python
     e = nbconvert.exporters.PythonExporter(config=c)
     code, __ = e.from_filename(ipath)
 

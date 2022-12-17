@@ -435,7 +435,7 @@ class Divergence(SpatialOperator):
 
 class Laplacian(SpatialOperator):
     """
-    A node in the expression tree representing a laplacian operator. This is
+    A node in the expression tree representing a Laplacian operator. This is
     currently only implemeted in the weak form for finite element formulations.
 
     **Extends:** :class:`SpatialOperator`
@@ -1143,13 +1143,13 @@ def laplacian(symbol):
     ----------
 
     symbol : :class:`Symbol`
-        the laplacian will be performed on this sub-symbol
+        the Laplacian will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Laplacian`
-        the laplacian of ``symbol``
+        the Laplacian of ``symbol``
     """
 
     return Laplacian(symbol)
