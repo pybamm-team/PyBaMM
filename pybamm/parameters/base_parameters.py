@@ -62,7 +62,10 @@ class BaseParameters:
 
     @options.setter
     def options(self, extra_options):
-        self._options = pybamm.BatteryModelOptions(extra_options)
+        if extra_options == None or type(extra_options) == dict:
+            self._options = pybamm.BatteryModelOptions(extra_options)
+        else:
+            self._options = extra_options
 
     @property
     def domain(self):
