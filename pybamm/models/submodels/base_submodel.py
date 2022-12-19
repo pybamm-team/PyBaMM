@@ -73,7 +73,7 @@ class BaseSubModel(pybamm.BaseModel):
 
         self.external = external
 
-        if options == None or type(options) == dict:
+        if options is None or type(options) == dict:
             options = pybamm.BatteryModelOptions(options)
 
         self.options = options
