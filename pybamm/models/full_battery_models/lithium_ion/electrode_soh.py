@@ -52,8 +52,8 @@ class _ElectrodeSOH(pybamm.BaseModel):
         Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
-        V_max = param.voltage_high_cut_dimensional
-        V_min = param.voltage_low_cut_dimensional
+        V_max = param.opc_soc_100_dimensional
+        V_min = param.opc_soc_0_dimensional
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -223,13 +223,13 @@ class ElectrodeSOHSolver:
         if inputs.pop("V_min", None) is not None:
             warnings.warn(
                 "V_min has been removed from the inputs. "
-                "The 'Lower voltage cut-off [V]' parameter is now used automatically.",
+                "The 'Open circuit potential at 0% SOC [V]' parameter is now used automatically.",
                 DeprecationWarning,
             )
         if inputs.pop("V_max", None) is not None:
             warnings.warn(
                 "V_max has been removed from the inputs. "
-                "The 'Upper voltage cut-off [V]' parameter is now used automatically.",
+                "The 'Open circuit potential at 100% SOC [V]' parameter is now used automatically.",
                 DeprecationWarning,
             )
         ics = self._set_up_solve(inputs)
@@ -381,10 +381,10 @@ class ElectrodeSOHSolver:
             x = pybamm.InputParameter("x")
             y = pybamm.InputParameter("y")
             self.V_max = self.parameter_values.evaluate(
-                self.param.voltage_high_cut_dimensional
+                self.param.opc_soc_100_dimensional
             )
             self.V_min = self.parameter_values.evaluate(
-                self.param.voltage_low_cut_dimensional
+                self.param.opc_soc_0_dimensional
             )
             self.OCV_function = self.parameter_values.process_symbol(
                 self.param.p.prim.U_dimensional(y, T)
