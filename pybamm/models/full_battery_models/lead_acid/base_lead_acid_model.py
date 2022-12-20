@@ -58,7 +58,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_geometry(self):
-        return pybamm.battery_geometry(include_particles=False)
+        return pybamm.battery_geometry(include_particles=False, options=self.options)
 
     @property
     def default_var_pts(self):
