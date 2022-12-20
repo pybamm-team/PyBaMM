@@ -156,7 +156,7 @@ def get_2p1d_mesh_for_testing(
     cc_submesh=pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
 ):
     geometry = pybamm.battery_geometry(
-        include_particles=include_particles, options={"dimensionality": 1}
+        include_particles=include_particles, options={"dimensionality": 2}
     )
     return get_mesh_for_testing(
         xpts=xpts,
