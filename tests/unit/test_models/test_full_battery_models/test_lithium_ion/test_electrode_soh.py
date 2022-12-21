@@ -83,9 +83,8 @@ class TestElectrodeSOH(unittest.TestCase):
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 5, #changed to different varaibles
-            "Open circuit potential at 0% SOC [V]": 0, "Open circuit potential at 100% SOC [V]": 5}
-            # need tup update both the Cutoff voltage and the target SOC or else the simulation fails
+            {"Open circuit potential at 0% SOC [V]": 0, "Open circuit potential at 100% SOC [V]": 5}
+            # need to update both the target voltages at 0 and 100% SOC 
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
