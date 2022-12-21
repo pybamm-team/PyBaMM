@@ -12,7 +12,7 @@ import types
 import functools
 
 
-def copy_func(f):
+def _copy_func(f):
     """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
     g = types.FunctionType(
         f.__code__,
@@ -49,22 +49,24 @@ separator = Domain(name="separator", pre_name="Separator ", short_pre_name="")
 experiment = Domain(name="experiment", pre_name="", short_pre_name="")
 
 
-def bpx_to_param_dict(bpx: BPX) -> dict:
+def _bpx_to_param_dict(bpx: BPX) -> dict:
     pybamm_dict = {}
-    pybamm_dict = _bpx_to_param_dict(bpx.parameterisation.cell, pybamm_dict, cell)
-    pybamm_dict = _bpx_to_param_dict(
+    pybamm_dict = _bpx_to_domain_param_dict(
+        bpx.parameterisation.cell, pybamm_dict, cell
+    )
+    pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.negative_electrode, pybamm_dict, negative_electrode
     )
-    pybamm_dict = _bpx_to_param_dict(
+    pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.positive_electrode, pybamm_dict, positive_electrode
     )
-    pybamm_dict = _bpx_to_param_dict(
+    pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.electrolyte, pybamm_dict, electrolyte
     )
-    pybamm_dict = _bpx_to_param_dict(
+    pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.separator, pybamm_dict, separator
     )
-    pybamm_dict = _bpx_to_param_dict(
+    pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.separator, pybamm_dict, experiment
     )
 
@@ -146,17 +148,17 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     ]
     if callable(U_n):
 
-        def negative_electrode_entropic_change(sto, c_s_max):
+        def _negative_electrode_entropic_change(sto, c_s_max):
             return U_n(sto)
 
     else:
 
-        def negative_electrode_entropic_change(sto, c_s_max):
+        def _negative_electrode_entropic_change(sto, c_s_max):
             return U_n
 
     pybamm_dict[
         negative_electrode.pre_name + "OCP entropic change [V.K-1]"
-    ] = negative_electrode_entropic_change
+    ] = _negative_electrode_entropic_change
 
     # positive electrode
     U_p = pybamm_dict[
@@ -164,17 +166,17 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     ]
     if callable(U_p):
 
-        def positive_electrode_entropic_change(sto, c_s_max):
+        def _positive_electrode_entropic_change(sto, c_s_max):
             return U_p(sto)
 
     else:
 
-        def positive_electrode_entropic_change(sto, c_s_max):
+        def _positive_electrode_entropic_change(sto, c_s_max):
             return U_p
 
     pybamm_dict[
         positive_electrode.pre_name + "OCP entropic change [V.K-1]"
-    ] = positive_electrode_entropic_change
+    ] = _positive_electrode_entropic_change
 
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
@@ -194,7 +196,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     )
     k_n = k_n_norm * F / (c_n_max * c_e**0.5)
 
-    def negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
+    def _negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_n  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
         arrhenius = exp(E_a_n / constants.R * (1 / T_ref - 1 / T))
@@ -208,7 +210,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     pybamm_dict[
         negative_electrode.pre_name + "exchange-current density [A.m-2]"
-    ] = copy_func(negative_electrode_exchange_current_density)
+    ] = _copy_func(_negative_electrode_exchange_current_density)
 
     # positive electrode
     c_p_max = pybamm_dict[
@@ -222,7 +224,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     )
     k_p = k_p_norm * F / (c_p_max * c_e**0.5)
 
-    def positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
+    def _positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_p  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
         arrhenius = exp(E_a_p / constants.R * (1 / T_ref - 1 / T))
@@ -234,8 +236,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             * (c_s_max - c_s_surf) ** 0.5
         )
 
-    pybamm_dict[domain.pre_name + "exchange-current density [A.m-2]"] = copy_func(
-        positive_electrode_exchange_current_density
+    pybamm_dict[domain.pre_name + "exchange-current density [A.m-2]"] = _copy_func(
+        _positive_electrode_exchange_current_density
     )
 
     # diffusivity
@@ -248,18 +250,18 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     if callable(D_n_ref):
 
-        def negative_electrode_diffusivity(sto, T):
+        def _negative_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_n_ref(sto)
 
     else:
 
-        def negative_electrode_diffusivity(sto, T):
+        def _negative_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_n_ref
 
-    pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"] = copy_func(
-        negative_electrode_diffusivity
+    pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
+        _negative_electrode_diffusivity
     )
 
     # positive electrode
@@ -270,18 +272,18 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     if callable(D_p_ref):
 
-        def positive_electrode_diffusivity(sto, T):
+        def _positive_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_p_ref(sto)
 
     else:
 
-        def positive_electrode_diffusivity(sto, T):
+        def _positive_electrode_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_p_ref
 
-    pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"] = copy_func(
-        positive_electrode_diffusivity
+    pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
+        _positive_electrode_diffusivity
     )
 
     # electrolyte
@@ -292,18 +294,18 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     if callable(D_e_ref):
 
-        def electrolyte_diffusivity(sto, T):
+        def _electrolyte_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_e_ref(sto)
 
     else:
 
-        def electrolyte_diffusivity(sto, T):
+        def _electrolyte_diffusivity(sto, T):
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_e_ref
 
-    pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = copy_func(
-        electrolyte_diffusivity
+    pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
+        _electrolyte_diffusivity
     )
 
     # conductivity
@@ -315,7 +317,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     if callable(C_ref_value):
         C_ref_fun = copy.copy(C_ref_value)
 
-        def conductivity(c_e, T):
+        def _conductivity(c_e, T):
             C_ref = C_ref_fun(c_e)
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * C_ref
@@ -323,12 +325,14 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     else:
         C_ref_number = C_ref_value
 
-        def conductivity(c_e, T):
+        def _conductivity(c_e, T):
             C_ref = C_ref_number
             arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * C_ref
 
-    pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = copy_func(conductivity)
+    pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = _copy_func(
+        _conductivity
+    )
 
     return pybamm_dict
 
@@ -336,7 +340,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 preamble = "from pybamm import exp, tanh, cosh\n\n"
 
 
-def _bpx_to_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) -> dict:
+def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) -> dict:
     for name, field in instance.__fields__.items():
         value = getattr(instance, name)
         if value is None:

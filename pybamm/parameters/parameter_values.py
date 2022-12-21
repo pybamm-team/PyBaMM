@@ -122,11 +122,11 @@ class ParameterValues:
             raise ValueError("Target SOC should be between 0 and 1")
 
         from bpx import parse_bpx_file, get_electrode_concentrations
-        from .bpx import bpx_to_param_dict
+        from .bpx import _bpx_to_param_dict
 
         # parse bpx
         bpx = parse_bpx_file(filename)
-        pybamm_dict = bpx_to_param_dict(bpx)
+        pybamm_dict = _bpx_to_param_dict(bpx)
 
         # get initial concentrations based on SOC
         c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
