@@ -43,7 +43,9 @@ class ElectricalParameters(BaseParameters):
         self.voltage_high_cut_dimensional = pybamm.Parameter(
             "Upper voltage cut-off [V]"
         )
-        self.opc_soc_0_dimensional = pybamm.Parameter("Open circuit potential at 0% SOC [V]")
+        self.opc_soc_0_dimensional = pybamm.Parameter(
+            "Open circuit potential at 0% SOC [V]"
+        )
         self.opc_soc_100_dimensional = pybamm.Parameter(
             "Open circuit potential at 100% SOC [V]"
         )

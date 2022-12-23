@@ -96,7 +96,6 @@ class LithiumIonParameters(BaseParameters):
         self.opc_soc_0_dimensional = self.elec.opc_soc_0_dimensional
         self.opc_soc_100_dimensional = self.elec.opc_soc_100_dimensional
 
-
         # Domain parameters
         for domain in self.domain_params.values():
             domain._set_dimensional_parameters()
