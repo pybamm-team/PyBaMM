@@ -1,5 +1,4 @@
-from pybamm import exp, constants
-
+from pybamm import exp, constants, Parameter
 
 def electrolyte_conductivity_PeymanMPM(c_e, T):
     """
@@ -25,8 +24,8 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
     :class:`pybamm.Symbol`
         Electrolyte conductivity
     """
-
-    sigma_e = 1.3
+    # sigma_e = 1.3
+    sigma_e = Parameter("Typical electrolyte conductivity [m2.s-1]")
     E_k_e = 34700
     arrhenius = exp(E_k_e / constants.R * (1 / 298.15 - 1 / T))
 

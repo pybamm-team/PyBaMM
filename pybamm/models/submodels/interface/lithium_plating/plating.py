@@ -68,11 +68,17 @@ class Plating(BasePlating):
         param = self.param
         delta_phi = variables["Negative electrode surface potential difference"]
         c_e_n = variables["Negative electrolyte concentration"]
+        c_save_n = variables["R-averaged negative particle concentration"]
+        c_ss_n = variables["Negative particle surface concentration"]
         T = variables["Negative electrode temperature"]
         eta_sei = variables["SEI film overpotential"]
         c_plated_Li = variables["Lithium plating concentration"]
-        j0_stripping = param.j0_stripping(c_e_n, c_plated_Li, T)
-        j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
+        # NEW: transfer coefficients can be set by the user
+        alpha_stripping = self.param.alpha_stripping
+        alpha_plating = self.param.alpha_plating
+        j0_stripping = (c_ss_n-c_save_n)*param.j0_stripping(c_e_n, c_plated_Li, T)
+        # j0_plating = ((c_ss_n-c_save_n)**alpha_plating)*param.j0_plating(c_e_n, c_plated_Li, T)
+        j0_plating = ((c_ss_n-c_save_n))*param.j0_plating(c_e_n, c_plated_Li, T)
         # phi_ref is part of the de-dimensionalization used in PyBaMM
         phi_ref = param.n.U_ref / param.potential_scale
         U_pl = pybamm.Parameter(f"Li plating open-circuit potential [V]") / param.potential_scale
@@ -80,9 +86,7 @@ class Plating(BasePlating):
         # eta_stripping =  phi_ref
         eta_plating = -eta_stripping
         prefactor = 1 / (1 + self.param.Theta * T)
-        # NEW: transfer coefficients can be set by the user
-        alpha_stripping = self.param.alpha_stripping
-        alpha_plating = self.param.alpha_plating
+        
 
         if self.options["lithium plating"] in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(

@@ -383,7 +383,7 @@ def plotc2(all_sumvars_dict1,all_sumvars_dict2,esoh_data):
             ax.set_ylim([3,6.2])
         if k>3:
             ax.set_xlabel("Cycle number")
-    fig.legend(["sim1", "sim2" , "Data"], 
+    fig.legend(["No Plating", "Plating" , "Data"], 
            loc="lower center",bbox_to_anchor=[0.5,-0.05], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig

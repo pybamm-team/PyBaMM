@@ -1,5 +1,4 @@
-from pybamm import exp, constants
-
+from pybamm import exp, constants, Parameter
 
 def electrolyte_diffusivity_PeymanMPM(c_e, T):
     """
@@ -26,8 +25,8 @@ def electrolyte_diffusivity_PeymanMPM(c_e, T):
     :class:`pybamm.Symbol`
         Electrolyte diffusivity
     """
-
-    D_c_e = 5.35 * 10 ** (-10)
+    # D_c_e = 5.35 * 10 ** (-10)
+    D_c_e =  Parameter("Typical electrolyte diffusivity [m2.s-1]")
     E_D_e = 37040
     arrhenius = exp(E_D_e / constants.R * (1 / 298.15 - 1 / T))
 
