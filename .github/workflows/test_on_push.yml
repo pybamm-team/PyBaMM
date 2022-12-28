@@ -70,6 +70,7 @@ jobs:
         run: |
           rm -f /usr/local/bin/2to3*
           rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3.11
           brew update
           brew install graphviz
           brew install openblas
