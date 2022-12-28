@@ -5,6 +5,15 @@ import textwrap
 from collections.abc import Mapping
 
 
+def _is_entry_point(ps):
+    if isinstance(ps, importlib_metadata.EntryPoint):
+        return True
+    # Do this check separately to avoid calling setuptools unless necessary
+    if isinstance(ps, setuptools._vendor.importlib_metadata.EntryPoint):
+        return True
+    return False
+
+
 class ParameterSets(Mapping):
     """
     Dict-like interface for accessing registered pybamm parameter sets.
@@ -58,13 +67,7 @@ class ParameterSets(Mapping):
         if key not in self.__all_parameter_sets:
             raise KeyError(f"Unknown parameter set: {key}")
         ps = self.__all_parameter_sets[key]
-        if isinstance(
-            ps,
-            (
-                importlib_metadata.EntryPoint,
-                setuptools._vendor.importlib_metadata.EntryPoint,
-            ),
-        ):
+        if _is_entry_point(ps):
             ps = self.__all_parameter_sets[key] = ps.load()
         return ps
 
