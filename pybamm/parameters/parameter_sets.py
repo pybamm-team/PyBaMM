@@ -1,21 +1,8 @@
 import warnings
-import importlib_metadata
 import setuptools
+import importlib_metadata
 import textwrap
 from collections.abc import Mapping
-
-
-def _is_entry_point(ps):
-    if isinstance(ps, importlib_metadata.EntryPoint):
-        return True
-    # Do this check separately to avoid calling setuptools unless necessary
-    # and add the try-except in case setuptools._vendor is not available
-    try:
-        if isinstance(ps, setuptools._vendor.importlib_metadata.EntryPoint):
-            return True
-    except AttributeError:
-        return False
-    return False
 
 
 class ParameterSets(Mapping):
@@ -71,8 +58,10 @@ class ParameterSets(Mapping):
         if key not in self.__all_parameter_sets:
             raise KeyError(f"Unknown parameter set: {key}")
         ps = self.__all_parameter_sets[key]
-        if _is_entry_point(ps):
+        try:
             ps = self.__all_parameter_sets[key] = ps.load()
+        except AttributeError:
+            pass
         return ps
 
     def __iter__(self):
