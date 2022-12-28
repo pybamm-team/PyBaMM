@@ -1,6 +1,6 @@
 import warnings
 import importlib_metadata
-import setuptools._vendor.importlib_metadata as setuptools_metadata
+import setuptools
 import textwrap
 from collections.abc import Mapping
 
@@ -59,7 +59,11 @@ class ParameterSets(Mapping):
             raise KeyError(f"Unknown parameter set: {key}")
         ps = self.__all_parameter_sets[key]
         if isinstance(
-            ps, (importlib_metadata.EntryPoint, setuptools_metadata.EntryPoint)
+            ps,
+            (
+                importlib_metadata.EntryPoint,
+                setuptools._vendor.importlib_metadata.EntryPoint,
+            ),
         ):
             ps = self.__all_parameter_sets[key] = ps.load()
         return ps
