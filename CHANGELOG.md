@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
+
 ## Features
 
 - Added functionality to create `pybamm.ParameterValues` from a [BPX standard](https://github.com/pybamm-team/BPX) JSON file ([#2555](https://github.com/pybamm-team/PyBaMM/pull/2555)).
