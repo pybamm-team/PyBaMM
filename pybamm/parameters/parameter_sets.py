@@ -1,5 +1,4 @@
 import warnings
-import setuptools
 import importlib_metadata
 import textwrap
 from collections.abc import Mapping
