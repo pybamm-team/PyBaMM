@@ -9,8 +9,12 @@ def _is_entry_point(ps):
     if isinstance(ps, importlib_metadata.EntryPoint):
         return True
     # Do this check separately to avoid calling setuptools unless necessary
-    if isinstance(ps, setuptools._vendor.importlib_metadata.EntryPoint):
-        return True
+    # and add the try-except in case setuptools._vendor is not available
+    try:
+        if isinstance(ps, setuptools._vendor.importlib_metadata.EntryPoint):
+            return True
+    except AttributeError:
+        return False
     return False
 
 
