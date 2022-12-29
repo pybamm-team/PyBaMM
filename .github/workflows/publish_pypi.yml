@@ -79,6 +79,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           # https://github.com/actions/virtual-environments/issues/1280
+          rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
           brew update
           brew reinstall gcc
           python -m pip install cmake wget
