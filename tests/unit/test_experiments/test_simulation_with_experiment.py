@@ -171,6 +171,39 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         self.assertEqual(solutions[1].termination, "final time")
 
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    def test_run_experiment_cccv_solvers(self):
+        experiment_2step = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                ),
+            ]
+            * 2,
+        )
+
+        solutions = []
+        for solver in [pybamm.CasadiSolver(), pybamm.IDAKLUSolver()]:
+            model = pybamm.lithium_ion.SPM()
+            sim = pybamm.Simulation(model, experiment=experiment_2step, solver=solver)
+            solution = sim.solve()
+            solutions.append(solution)
+
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Terminal voltage [V]"].data,
+            solutions[1]["Terminal voltage [V]"].data,
+            decimal=1,
+        )
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Current [A]"].data,
+            solutions[1]["Current [A]"].data,
+            decimal=0,
+        )
+        self.assertEqual(solutions[1].termination, "final time")
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(

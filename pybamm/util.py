@@ -57,6 +57,13 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
+            if key in ["Negative electrode SOC", "Positive electrode SOC"]:
+                domain = key.split(" ")[0]
+                raise KeyError(
+                    f"Variable '{domain} electrode SOC' has been renamed to "
+                    f"'{domain} electrode stoichiometry' to avoid confusion "
+                    "with cell SOC"
+                )
             best_matches = self.get_best_matches(key)
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 

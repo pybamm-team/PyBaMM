@@ -149,34 +149,6 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
         self.assertEqual(sim.C_rate, 2)
 
-    def test_set_external_variable(self):
-        model_options = {
-            "thermal": "lumped",
-            "external submodels": ["thermal", "negative primary particle"],
-        }
-        model = pybamm.lithium_ion.SPMe(model_options)
-        sim = pybamm.Simulation(model)
-
-        Nr = model.default_var_pts["r_n"]
-
-        T_av = 0
-        c_s_n_av = np.ones((Nr, 1)) * 0.5
-        external_variables = {
-            "Volume-averaged cell temperature": T_av,
-            "X-averaged negative particle concentration": c_s_n_av,
-        }
-
-        # Step
-        dt = 0.1
-        for _ in range(5):
-            sim.step(dt, external_variables=external_variables)
-        sim.plot(testing=True)
-
-        # Solve
-        t_eval = np.linspace(0, 3600)
-        sim.solve(t_eval, external_variables=external_variables)
-        sim.plot(testing=True)
-
     def test_step(self):
 
         dt = 0.001
@@ -242,9 +214,10 @@ class TestSimulation(unittest.TestCase):
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
+        # Test that build works with initial_soc
         sim = pybamm.Simulation(model, parameter_values=param)
-        sim.build(initial_soc=0.8)
-        self.assertEqual(sim._built_initial_soc, 0.8)
+        sim.build(initial_soc=0.5)
+        self.assertEqual(sim._built_initial_soc, 0.5)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()

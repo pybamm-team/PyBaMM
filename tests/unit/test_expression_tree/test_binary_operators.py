@@ -653,6 +653,8 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr, (var - 12))
         expr = (5 - var) - 7
         self.assertEqual(expr, (-2 - var))
+        expr = var - (var + var2)
+        self.assertEqual(expr, -var2)
 
         # simplify multiplications and divisions
         expr = 10 * (var * 5)

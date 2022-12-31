@@ -42,6 +42,12 @@ class TestMPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_differential_surface_form(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.MPM(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
     def test_voltage_control(self):
         options = {"operating mode": "voltage"}
         model = pybamm.lithium_ion.MPM(options)
