@@ -123,8 +123,8 @@ def get_size_distribution_mesh_for_testing(
     zpts=15,
     cc_submesh=pybamm.Uniform1DSubMesh,
 ):
-    options = {"particle size": "distribution"}
-    geometry = pybamm.battery_geometry(options=options, current_collector_dimension=1)
+    options = {"particle size": "distribution", "dimensionality": 1}
+    geometry = pybamm.battery_geometry(options=options)
     return get_mesh_for_testing(
         xpts=xpts,
         rpts=rpts,
@@ -141,7 +141,7 @@ def get_1p1d_mesh_for_testing(
     zpts=15,
     cc_submesh=pybamm.Uniform1DSubMesh,
 ):
-    geometry = pybamm.battery_geometry(current_collector_dimension=1)
+    geometry = pybamm.battery_geometry(options={"dimensionality": 1})
     return get_mesh_for_testing(
         xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )
@@ -156,7 +156,7 @@ def get_2p1d_mesh_for_testing(
     cc_submesh=pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
 ):
     geometry = pybamm.battery_geometry(
-        include_particles=include_particles, current_collector_dimension=2
+        include_particles=include_particles, options={"dimensionality": 2}
     )
     return get_mesh_for_testing(
         xpts=xpts,
@@ -186,7 +186,7 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15, include_particles=True):
     )
 
     geometry = pybamm.battery_geometry(
-        include_particles=include_particles, current_collector_dimension=2
+        include_particles=include_particles, options={"dimensionality": 2}
     )
     param.process_geometry(geometry)
 
@@ -207,7 +207,7 @@ def get_cylindrical_mesh_for_testing(
 ):
     geometry = pybamm.battery_geometry(
         include_particles=include_particles,
-        current_collector_dimension=1,
+        options={"dimensionality": 1},
         form_factor="cylindrical",
     )
     return get_mesh_for_testing(

@@ -78,7 +78,7 @@ def get_1p1d_mesh_for_testing(
     zpts=15,
     cc_submesh=pybamm.Uniform1DSubMesh,
 ):
-    geometry = pybamm.battery_geometry(current_collector_dimension=1)
+    geometry = pybamm.battery_geometry(options={"dimensionality": 1})
     return get_mesh_for_testing(
         xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )

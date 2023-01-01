@@ -111,15 +111,7 @@ class Thevenin(pybamm.BaseModel):
                     )
                 )
 
-        self.ecm_options = options
-
-        # Hack to deal with submodels requiring electrochemical model
-        # options
-        self.options = pybamm.BatteryModelOptions({})
-        self.options["calculate discharge energy"] = self.ecm_options[
-            "calculate discharge energy"
-        ]
-        self.options["operating mode"] = self.ecm_options["operating mode"]
+        self.options = options
 
     def set_external_circuit_submodel(self):
         """
@@ -167,34 +159,34 @@ class Thevenin(pybamm.BaseModel):
     def set_ocv_submodel(self):
         self.submodels[
             "Open circuit voltage"
-        ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.ecm_options)
+        ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
 
     def set_resistor_submodel(self):
 
         name = "Element-0 (Resistor)"
         self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
-            self.param, self.ecm_options
+            self.param, self.options
         )
         self.element_counter += 1
 
     def set_rc_submodels(self):
-        number_of_rc_elements = self.ecm_options["number of rc elements"]
+        number_of_rc_elements = self.options["number of rc elements"]
 
         for _ in range(number_of_rc_elements):
             name = f"Element-{self.element_counter} (RC)"
             self.submodels[name] = pybamm.equivalent_circuit_elements.RCElement(
-                self.param, self.element_counter, self.ecm_options
+                self.param, self.element_counter, self.options
             )
             self.element_counter += 1
 
     def set_thermal_submodel(self):
         self.submodels["Thermal"] = pybamm.equivalent_circuit_elements.ThermalSubModel(
-            self.param, self.ecm_options
+            self.param, self.options
         )
 
     def set_voltage_submodel(self):
         self.submodels["Voltage"] = pybamm.equivalent_circuit_elements.VoltageModel(
-            self.param, self.ecm_options
+            self.param, self.options
         )
 
     def set_submodels(self, build):

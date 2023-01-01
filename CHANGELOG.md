@@ -12,6 +12,7 @@
 
 ## Bug fixes
 
+- Allow models that subclass `BaseBatteryModel` to use custom options classes ([#2571](https://github.com/pybamm-team/PyBaMM/pull/2571))
 - Fixed bug with `EntryPoints` in Spyder IDE ([#2584](https://github.com/pybamm-team/PyBaMM/pull/2584))
 - Fixed electrolyte conservation when options {"surface form": "algebraic"} are used
 - Fixed "constant concentration" electrolyte model so that "porosity times concentration" is conserved when porosity changes ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))

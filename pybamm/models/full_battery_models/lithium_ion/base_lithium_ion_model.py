@@ -9,13 +9,30 @@ class BaseModel(pybamm.BaseBatteryModel):
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models
 
+    Parameters
+    ----------
+    options : dict-like, optional
+        A dictionary of options to be passed to the model. If this is a dict (and not
+        a subtype of dict), it will be processed by :class:`pybamm.BatteryModelOptions`
+        to ensure that the options are valid. If this is a subtype of dict, it is
+        assumed that the options have already been processed and are valid. This allows
+        for the use of custom options classes. The default options are given by
+        :class:`pybamm.BatteryModelOptions`.
+    name : str, optional
+        The name of the model. The default is "Unnamed battery model".
+    build : bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     **Extends:** :class:`pybamm.BaseBatteryModel`
 
     """
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
         super().__init__(options, name)
-        self.param = pybamm.LithiumIonParameters(options)
+        self.param = pybamm.LithiumIonParameters(self.options)
 
         # Default timescale
         self._timescale = self.param.timescale
