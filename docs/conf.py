@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2018-2022, The PyBaMM Team"
+copyright = "2018-2023, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
