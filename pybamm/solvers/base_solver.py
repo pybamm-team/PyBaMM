@@ -1387,7 +1387,7 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
     name: str
         function evaluators created will have this base name
     use_jacobian: bool, optional
-        wether to return jacobian functions
+        whether to return Jacobian functions
 
     Returns
     -------
@@ -1399,7 +1399,7 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
             :class:`casadi.Function`
-        evaluator for the jacobian $\frac{\partial f}{\partial y}$
+        evaluator for the Jacobian $\frac{\partial f}{\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
@@ -1412,7 +1412,7 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
             :class:`casadi.Function`
-        evaluator for product of the jacobian with a vector $v$,
+        evaluator for product of the Jacobian with a vector $v$,
         i.e. $\frac{\partial f}{\partial y} * v$
     """
 
