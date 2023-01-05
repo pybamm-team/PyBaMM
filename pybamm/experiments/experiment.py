@@ -185,7 +185,7 @@ class Experiment:
             return outputs
 
         # Read tags
-        if "[" in cond:
+        if " [" in cond:
             cond, tag_str = cond.split(" [")
             tags = tag_str[0:-1].split(",")
         else:
@@ -454,3 +454,15 @@ class Experiment:
             if op["events"] == {k: v for k, v in next_op.items() if k in op["events"]}:
                 return True
         return False
+
+    def search_tag(self, tag):
+        cycles = []
+        for i, cycle in enumerate(self.operating_conditions_cycles):
+            for cond in cycle:
+                if " [" in cond:
+                    cond, tag_str = cond.split(" [")
+                    tags = tag_str[0:-1].split(",")
+                    if tag in tags:
+                        cycles.append(i)
+
+        return cycles
