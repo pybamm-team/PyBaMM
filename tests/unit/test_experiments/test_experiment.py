@@ -477,9 +477,7 @@ class TestExperiment(unittest.TestCase):
     def test_search_tag(self):
         experiment = pybamm.Experiment(
             [
-                (
-                    "Discharge at 1C for 0.5 hours [tag1]",
-                ),
+                ("Discharge at 1C for 0.5 hours [tag1]",),
                 "Discharge at C/20 for 0.5 hours [tag2,tag3]",
                 (
                     "Charge at 0.5 C for 45 minutes [tag2]",
