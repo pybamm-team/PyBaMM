@@ -123,7 +123,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Rest for 10 minutes",
                     "events": None,
-                    "tags": ["tag1", "tag3"]
+                    "tags": ["tag1", "tag3"],
                 },
                 {
                     "Voltage input [V]": 1,
