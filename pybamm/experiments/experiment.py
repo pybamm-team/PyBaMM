@@ -464,5 +464,6 @@ class Experiment:
                     tags = tag_str[0:-1].split(",")
                     if tag in tags:
                         cycles.append(i)
+                        break
 
         return cycles

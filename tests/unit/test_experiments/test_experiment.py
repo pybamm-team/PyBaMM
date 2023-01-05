@@ -477,22 +477,29 @@ class TestExperiment(unittest.TestCase):
     def test_search_tag(self):
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1C for 0.5 hours [tag1]",
+                (
+                    "Discharge at 1C for 0.5 hours [tag1]",
+                ),
                 "Discharge at C/20 for 0.5 hours [tag2,tag3]",
-                "Charge at 0.5 C for 45 minutes",
-                "Discharge at 1 A for 0.5 hours",
-                "Charge at 200 mA for 45 minutes (1 minute period)",
-                "Discharge at 1W for 0.5 hours",
-                "Charge at 200mW for 45 minutes",
-                "Rest for 10 minutes (5 minute period) [tag1,tag3]",
-            ],
-            period="20 seconds",
+                (
+                    "Charge at 0.5 C for 45 minutes [tag2]",
+                    "Discharge at 1 A for 0.5 hours [tag3]",
+                ),
+                "Charge at 200 mA for 45 minutes (1 minute period) [tag5]",
+                (
+                    "Discharge at 1W for 0.5 hours [tag4]",
+                    "Charge at 200mW for 45 minutes [tag4]",
+                ),
+                "Rest for 10 minutes (5 minute period) [tag1,tag3,tag4]",
+            ]
         )
 
-        self.assertEqual(experiment.search_tag("tag1"), [0, 7])
-        self.assertEqual(experiment.search_tag("tag2"), [1])
-        self.assertEqual(experiment.search_tag("tag3"), [1, 7])
-        self.assertEqual(experiment.search_tag("tag4"), [])
+        self.assertEqual(experiment.search_tag("tag1"), [0, 5])
+        self.assertEqual(experiment.search_tag("tag2"), [1, 2])
+        self.assertEqual(experiment.search_tag("tag3"), [1, 2, 5])
+        self.assertEqual(experiment.search_tag("tag4"), [4, 5])
+        self.assertEqual(experiment.search_tag("tag5"), [3])
+        self.assertEqual(experiment.search_tag("no_tag"), [])
 
 
 if __name__ == "__main__":
