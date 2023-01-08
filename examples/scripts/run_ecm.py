@@ -1,11 +1,7 @@
 import pybamm
-
 pybamm.set_logging_level("INFO")
 
-options = {}
-model = pybamm.equivalent_circuit.Thevenin(options=options)
-
-parameter_values = model.default_parameter_values
+model = pybamm.equivalent_circuit.Thevenin()
 
 experiment = pybamm.Experiment(
     [
@@ -21,17 +17,6 @@ experiment = pybamm.Experiment(
     ]
 )
 
-sim = pybamm.Simulation(model, experiment=experiment, parameter_values=parameter_values)
+sim = pybamm.Simulation(model, experiment=experiment)
 sim.solve()
-sim.plot(
-    output_variables=[
-        "SoC",
-        "Open circuit voltage [V]",
-        "Current [A]",
-        "Cell temperature [degC]",
-        "Entropic change [V/K]",
-        "R0 [Ohm]",
-        "R1 [Ohm]",
-        "C1 [F]",
-    ]
-)
+sim.plot()

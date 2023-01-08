@@ -4,6 +4,7 @@
 
 import numpy as np
 import re
+import pybamm
 
 examples = """
 
@@ -211,15 +212,15 @@ class Experiment:
         else:
             period = self.period
 
-        # Read temperature
-        temperature = self.read_temperature(cond)
+        # Temperature part of the condition is removed here
+        unprocessed_cond = cond
+        temperature, cond = self._read_and_drop_temperature(cond)
 
         # Read instructions
         if "Run" in cond:
             cond_list = cond.split()
-            if "oC" not in cond:
-                if "at" in cond:
-                    raise ValueError(f"Instruction must be of the form: {examples}")
+            if "at" in cond:
+                raise ValueError(f"Instruction must be of the form: {examples}")
             dc_types = ["(A)", "(V)", "(W)"]
             if all(x not in cond for x in dc_types):
                 raise ValueError(
@@ -255,28 +256,15 @@ class Experiment:
                 electric = self.convert_electric(cond_list[:idx_for])
 
                 time = self.convert_time_to_seconds(cond_list[idx_for + 1 : idx_until])
+                events = self.convert_electric(cond_list[idx_until + 2 :])
 
-                # remove temperture part of string
-                reduced_cond_list = cond_list[idx_until + 2 :]
-                if "at" in reduced_cond_list:
-                    at_idx = reduced_cond_list.index("at")
-                    reduced_cond_list = reduced_cond_list[:at_idx]
-
-                events = self.convert_electric(reduced_cond_list)
             elif "for" in cond:
                 # e.g. for 3 hours
                 cond_list = cond.split()
                 idx = cond_list.index("for")
 
                 electric = self.convert_electric(cond_list[:idx])
-
-                # remove temperture part of string
-                reduced_cond_list = cond_list[idx + 1 :]
-                if "at" in reduced_cond_list:
-                    at_idx = reduced_cond_list.index("at")
-                    reduced_cond_list = reduced_cond_list[:at_idx]
-
-                time = self.convert_time_to_seconds(reduced_cond_list)
+                time = self.convert_time_to_seconds(cond_list[idx + 1 :])
                 events = None
             elif "until" in cond:
                 # e.g. until 4.2 V
@@ -284,14 +272,7 @@ class Experiment:
                 idx = cond_list.index("until")
                 electric = self.convert_electric(cond_list[:idx])
                 time = None
-
-                # remove temperture part of string
-                reduced_cond_list = cond_list[idx + 1 :]
-                if "at" in reduced_cond_list:
-                    at_idx = reduced_cond_list.index("at")
-                    reduced_cond_list = reduced_cond_list[:at_idx]
-
-                events = self.convert_electric(reduced_cond_list)
+                events = self.convert_electric(cond_list[idx + 1 :])
             else:
                 raise ValueError(
                     "Operating conditions must contain keyword 'for' or 'until' or "
@@ -307,7 +288,7 @@ class Experiment:
             "period": period,
             "temperature": temperature,
             "dc_data": dc_data,
-            "string": cond,
+            "string": unprocessed_cond,
             "events": events,
         }
 
@@ -421,7 +402,7 @@ class Experiment:
                     )
                 )
 
-    def read_temperature(self, cond):
+    def _read_and_drop_temperature(self, cond):
 
         if (len(re.findall("at", cond)) > 1 or ("Run" in cond and "at" in cond)) and (
             "oC" not in cond
@@ -434,38 +415,45 @@ class Experiment:
                 f"{cond}"
             )
 
-        if "oC" in cond:
-            matches = re.findall("(\-*[0-9]*\.*[0-9]*)(\s*oC)", cond)
+        matches = re.findall(r"at\s-*\d+\.*\d*\s*oC", cond)
 
-            non_empty_matches = [m for m in matches[0] if m]
+        if len(matches) == 0 and "oC" in cond:
+            raise ValueError(
+                f"Temperature not written "
+                f"correctly on step: '{cond}'"
+            )
 
-            first_match = non_empty_matches[0]
+        if len(matches) == 0:
 
-            try:
-                temperature = float(first_match)
-            except ValueError:
-                raise ValueError(
-                    f"Temperature not found correctly "
-                    f"on step: {cond}. "
-                    f"Cannot convert {first_match} to a float."
-                    f" Regex matches found: {non_empty_matches}. "
-                    "If the temperature value is found by regex but is "
-                    "not the first match, please restucture your input."
+            if self.temperature is None:
+
+                pybamm.logger.warning(
+                    "Temperature not found on step: "
+                    f"'{cond}', using temperature "
+                    "from parameter values."
                 )
 
-            # try to find 'at" keyword before temperature
-            matches = re.findall(f"at\s*{first_match}", cond)
-            if len(matches) == 0:
-                raise ValueError(
-                    f"Temperature not written correctly "
-                    f"on step: {cond}. "
-                    f"Cannot find 'at' keyword before temperature value: {first_match}."
+            else:
+
+                pybamm.logger.warning(
+                    f"Temperature not found on step: '{cond}', "
+                    f"using global temperature "
+                    f"({self.temperature}oC) instead"
                 )
+
+            temperature = self.temperature
+            reduced_cond = cond
+
+        elif len(matches) == 1:
+            match = matches[0]
+            numerical_part = re.findall(r"-*\d+\.*\d*", match)[0]
+            temperature = float(numerical_part)
+            reduced_cond = cond.replace(match, "")
 
         else:
-            temperature = self.temperature
+            raise ValueError(f"More than one temperature found on step: '{cond}'")
 
-        return temperature
+        return temperature, reduced_cond
 
     def convert_time_to_seconds(self, time_and_units):
         """Convert a time in seconds, minutes or hours to a time in seconds"""

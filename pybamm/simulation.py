@@ -370,6 +370,9 @@ class Simulation:
             experiment_parameter_values.update(
                 {"Ambient temperature [K]": ambient_temperature}
             )
+
+            # If at the first operation, then the intial temperature
+            # should be the ambient temperature.
             if op_number == 0:
                 experiment_parameter_values.update(
                     {
