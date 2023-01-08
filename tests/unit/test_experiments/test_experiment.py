@@ -21,11 +21,11 @@ class TestExperiment(unittest.TestCase):
 
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1C for 0.5 hours at 27degC",
+                "Discharge at 1C for 0.5 hours at 27oC",
                 "Discharge at C/20 for 0.5 hours at 29oC",
                 "Charge at 0.5 C for 45 minutes at -5oC",
                 "Discharge at 1 A for 0.5 hours at -5.1oC",
-                "Charge at 200 mA for 45 minutes at 10.2degC (1 minute period)",
+                "Charge at 200 mA for 45 minutes at 10.2oC (1 minute period)",
                 "Discharge at 1W for 0.5 hours at -10.4oC",
                 "Charge at 200mW for 45 minutes",
                 "Rest for 10 minutes (5 minute period)",
@@ -33,8 +33,8 @@ class TestExperiment(unittest.TestCase):
                 "Charge at 1 C until 4.1V",
                 "Hold at 4.1 V until 50mA",
                 "Hold at 3V until C/50",
-                "Discharge at C/3 for 2 hours or until 2.5 V at 26degC",
-                "Run US06 (A) at -5degC",
+                "Discharge at C/3 for 2 hours or until 2.5 V at 26oC",
+                "Run US06 (A) at -5oC",
                 "Run US06 (V) for 5 minutes",
                 "Run US06 (W) for 0.5 hours",
             ],
@@ -50,7 +50,7 @@ class TestExperiment(unittest.TestCase):
                 "period": 20.0,
                 "temperature": 27.0,
                 "dc_data": None,
-                "string": "Discharge at 1C for 0.5 hours at 27degC",
+                "string": "Discharge at 1C for 0.5 hours at 27oC",
                 "events": None,
             },
             {
@@ -90,7 +90,7 @@ class TestExperiment(unittest.TestCase):
                 "period": 60.0,
                 "temperature": 10.2,
                 "dc_data": None,
-                "string": "Charge at 200 mA for 45 minutes at 10.2degC",
+                "string": "Charge at 200 mA for 45 minutes at 10.2oC",
                 "events": None,
             },
             {
@@ -170,7 +170,7 @@ class TestExperiment(unittest.TestCase):
                 "period": 20.0,
                 "temperature": 26,
                 "dc_data": None,
-                "string": "Discharge at C/3 for 2 hours or until 2.5 V at 26degC",
+                "string": "Discharge at C/3 for 2 hours or until 2.5 V at 26oC",
                 "events": {"Voltage input [V]": 2.5, "type": "voltage"},
             },
         ]
@@ -215,9 +215,9 @@ class TestExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 0.5 hours at 34 degC",
-                    "Charge at 0.5 C until 1V at 32 degC",
-                    "Hold at 1V until C/50 at 32 degC",
+                    "Discharge at C/20 for 0.5 hours at 34 oC",
+                    "Charge at 0.5 C until 1V at 32 oC",
+                    "Hold at 1V until C/50 at 32 oC",
                     "Discharge at C/20 for 0.5 hours",
                 ),
             ],
@@ -232,7 +232,7 @@ class TestExperiment(unittest.TestCase):
                 "period": 60.0,
                 "temperature": 34.0,
                 "dc_data": None,
-                "string": "Discharge at C/20 for 0.5 hours at 34 degC",
+                "string": "Discharge at C/20 for 0.5 hours at 34 oC",
                 "events": None,
             },
             {
@@ -243,8 +243,8 @@ class TestExperiment(unittest.TestCase):
                 "period": 60.0,
                 "temperature": 32.0,
                 "dc_data": None,
-                "string": "Charge at 0.5 C until 1V at 32 degC "
-                "then hold at 1V until C/50 at 32 degC",
+                "string": "Charge at 0.5 C until 1V at 32 oC "
+                "then hold at 1V until C/50 at 32 oC",
                 "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
             },
             {
@@ -434,8 +434,8 @@ class TestExperiment(unittest.TestCase):
             pybamm.Experiment(
                 [
                     (
-                        "Discharge at 1A until 3.2V at 24degC",
-                        "Hold at 3.2V until C/50 at 27degC",
+                        "Discharge at 1A until 3.2V at 24oC",
+                        "Hold at 3.2V until C/50 at 27oC",
                     )
                 ],
                 cccv_handling="ode",

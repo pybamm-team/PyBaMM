@@ -7,11 +7,11 @@ import re
 
 examples = """
 
-    "Discharge at 1C for 0.5 hours at 27degC",
+    "Discharge at 1C for 0.5 hours at 27oC",
     "Discharge at C/20 for 0.5 hours at 29oC",
     "Charge at 0.5 C for 45 minutes at -5oC",
     "Discharge at 1 A for 0.5 hours at -5.1oC",
-    "Charge at 200 mA for 45 minutes at 10.2degC (1 minute period)",
+    "Charge at 200 mA for 45 minutes at 10.2oC (1 minute period)",
     "Discharge at 1W for 0.5 hours at -10.4oC",
     "Charge at 200mW for 45 minutes",
     "Rest for 10 minutes (5 minute period)",
@@ -19,8 +19,8 @@ examples = """
     "Charge at 1 C until 4.1V",
     "Hold at 4.1 V until 50mA",
     "Hold at 3V until C/50",
-    "Discharge at C/3 for 2 hours or until 2.5 V at 26degC",
-    "Run US06 (A) at -5degC",
+    "Discharge at C/3 for 2 hours or until 2.5 V at 26oC",
+    "Run US06 (A) at -5oC",
     "Run US06 (V) for 5 minutes",
     "Run US06 (W) for 0.5 hours",
 
@@ -34,13 +34,13 @@ class Experiment:
     be of the form "Do this for this long" or "Do this until this happens". For example,
     "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge at 1 C for 1
     hour or until 4.2 V at 25oC". The instructions can be of the form
-    "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A at z degC". The running
+    "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A at z oC". The running
     time should be a time in seconds, minutes or
     hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
     a circuit state, e.g. "1 A", "C/50" or "3 V". The parameter drive_cycles is
     mandatory to run drive cycle. For example, "Run x", then x must be the key
     of drive_cycles dictionary. The temperature should be provided after the stopping
-    condition but before the period, e.g. "1 A at 25 degC (1 second period)". It is
+    condition but before the period, e.g. "1 A at 25 oC (1 second period)". It is
     not essential to provide a temperature and a global temperature can be set either
     from within the paramter values of passing a temperature to this experiment class.
     If the temperature is not specified in a line, then the global temperature is used,
@@ -217,7 +217,7 @@ class Experiment:
         # Read instructions
         if "Run" in cond:
             cond_list = cond.split()
-            if "degC" not in cond and "oC" not in cond:
+            if "oC" not in cond:
                 if "at" in cond:
                     raise ValueError(f"Instruction must be of the form: {examples}")
             dc_types = ["(A)", "(V)", "(W)"]
@@ -424,7 +424,7 @@ class Experiment:
     def read_temperature(self, cond):
 
         if (len(re.findall("at", cond)) > 1 or ("Run" in cond and "at" in cond)) and (
-            "degC" not in cond and "oC" not in cond
+            "oC" not in cond
         ):
             raise ValueError(
                 "Instruction must be 'discharge', 'charge', 'rest', 'hold' or "
@@ -434,10 +434,8 @@ class Experiment:
                 f"{cond}"
             )
 
-        if "degC" in cond or "oC" in cond:
-            matches = re.findall(
-                "(\-*[0-9]*\.*[0-9]*)(\s*degC)|(\-*[0-9]*\.*[0-9]*)(\s*oC)", cond
-            )
+        if "oC" in cond:
+            matches = re.findall("(\-*[0-9]*\.*[0-9]*)(\s*oC)", cond)
 
             non_empty_matches = [m for m in matches[0] if m]
 
