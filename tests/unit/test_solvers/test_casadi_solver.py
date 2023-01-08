@@ -150,6 +150,9 @@ class TestCasadiSolver(unittest.TestCase):
             solution = solver.solve(model_disc, t_eval)
         self.assertLess(solution.t[-1], 20)
         # Solve with failure at t=0
+        solver = pybamm.CasadiSolver(
+            dt_max=1e-3, return_solution_if_failed_early=True, max_step_decrease_count=2
+        )
         model.initial_conditions = {var: 0, var2: 1}
         model_disc = disc.process_model(model, inplace=False)
         t_eval = np.linspace(0, 20, 100)
@@ -440,29 +443,6 @@ class TestCasadiSolver(unittest.TestCase):
             solution.y.full()[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
         )
 
-    def test_model_solver_with_external(self):
-        # Create model
-        model = pybamm.BaseModel()
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=domain)
-        var2 = pybamm.Variable("var2", domain=domain)
-        model.rhs = {var1: -var2}
-        model.initial_conditions = {var1: 1}
-        model.external_variables = [var2]
-        model.variables = {"var1": var1, "var2": var2}
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
-        np.testing.assert_allclose(
-            solution.y.full()[0], 1 - 0.5 * solution.t, rtol=1e-06
-        )
-
     def test_model_solver_with_non_identity_mass(self):
         model = pybamm.BaseModel()
         var1 = pybamm.Variable("var1", domain="negative electrode")
@@ -509,7 +489,7 @@ class TestCasadiSolver(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         param = pybamm.ParameterValues("NCA_Kim2011")
         experiment = pybamm.Experiment(
-            ["Charge at 1C until 4.6 V"], period="10 seconds"
+            ["Charge at 1C until 4.2 V"], period="10 seconds"
         )
 
         param["Upper voltage cut-off [V]"] = 4.8
@@ -524,18 +504,6 @@ class TestCasadiSolver(unittest.TestCase):
                 extrap_tol=1e-3,
                 extra_options_setup={"max_num_steps": 500},
             ),
-        )
-        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
-            sim.solve()
-
-        ci = param["Initial concentration in positive electrode [mol.m-3]"]
-        param["Initial concentration in positive electrode [mol.m-3]"] = 0.8 * ci
-
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=param,
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(mode="safe", dt_max=0.05),
         )
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
             sim.solve()

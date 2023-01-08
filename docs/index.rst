@@ -96,13 +96,6 @@ and run locally using ``jupyter notebook``, or online through
 Contributing
 ============
 
-There are many ways to contribute to PyBaMM:
-
-.. toctree::
-    :maxdepth: 1
-
-    tutorials/add-model
-    tutorials/add-spatial-method
-    tutorials/add-solver
+Contributions to PyBaMM and its development are welcome! If you have ideas for features, bug fixes, models, spatial methods, or solvers, we would love to hear from you.
 
 Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`_.

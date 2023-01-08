@@ -224,7 +224,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
             )
             return solution["objective"].data.flatten()
 
-        # without jacobian
+        # without Jacobian
         lsq_sol = least_squares(objective, [2, 2], method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
@@ -237,7 +237,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
                 axis=1,
             )
 
-        # with jacobian
+        # with Jacobian
         lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
@@ -349,7 +349,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
             )
             return solution["objective"].data.flatten()
 
-        # without jacobian
+        # without Jacobian
         lsq_sol = least_squares(objective, [2, 2], method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 

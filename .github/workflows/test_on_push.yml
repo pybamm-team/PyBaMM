@@ -36,7 +36,7 @@ jobs:
 
       - name: Check style
         run: |
-          python -m pip install tox
+          python -m pip install "tox<4"
           tox -e flake8
 
   build:
@@ -68,7 +68,10 @@ jobs:
       - name: Install MacOS system dependencies
         if: matrix.os == 'macos-latest'
         run: |
-          rm -f /usr/local/bin/2to3
+          rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
           brew update
           brew install graphviz
           brew install openblas
@@ -80,7 +83,7 @@ jobs:
       - name: Install standard python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install tox
+          python -m pip install "tox<4"
 
       - name: Install SuiteSparse and Sundials
         if: matrix.os == 'ubuntu-latest'

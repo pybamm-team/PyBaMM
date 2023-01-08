@@ -60,6 +60,9 @@ class BaseModel(BaseElectrolyteConductivity):
                 + i_boundary_cc / sigma_eff
             )
             variables[f"{Domain} electrolyte current density"] = i_e
+            variables[
+                f"Divergence of {self.domain} electrolyte current density"
+            ] = pybamm.div(i_e)
 
             phi_s = variables[f"{Domain} electrode potential"]
             phi_e = phi_s - delta_phi
@@ -91,8 +94,8 @@ class BaseModel(BaseElectrolyteConductivity):
 
             # Update boundary conditions (for indefinite integral)
             self.boundary_conditions[c_e_s] = {
-                "left": (pybamm.BoundaryGradient(c_e_s, "left"), "Neumann"),
-                "right": (pybamm.BoundaryGradient(c_e_s, "right"), "Neumann"),
+                "left": (pybamm.boundary_gradient(c_e_s, "left"), "Neumann"),
+                "right": (pybamm.boundary_gradient(c_e_s, "right"), "Neumann"),
             }
 
         variables[f"{Domain} electrolyte potential"] = phi_e
@@ -111,6 +114,34 @@ class BaseModel(BaseElectrolyteConductivity):
             variables.update(self._get_standard_current_variables(i_e))
             variables.update(self._get_electrolyte_overpotentials(variables))
 
+        # save boundary conditons as variables
+        if self.domain == "negative":
+            grad_c_e = pybamm.boundary_gradient(c_e, "right")
+            grad_left = -i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "left")
+            grad_right = (
+                (i_boundary_cc / pybamm.boundary_value(conductivity, "right"))
+                - pybamm.boundary_value(param.chiRT_over_Fc(c_e, T), "right") * grad_c_e
+                - i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "right")
+            )
+
+        elif self.domain == "positive":
+            T = variables["Positive electrode temperature"]
+            grad_c_e = pybamm.boundary_gradient(c_e, "left")
+            grad_left = (
+                (i_boundary_cc / pybamm.boundary_value(conductivity, "left"))
+                - pybamm.boundary_value(param.chiRT_over_Fc(c_e, T), "left") * grad_c_e
+                - i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "left")
+            )
+            grad_right = -i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "right")
+
+        if self.domain in ["negative", "positive"]:
+            variables.update(
+                {
+                    f"{self.domain} grad(delta_phi) left": grad_left,
+                    f"{self.domain} grad(delta_phi) right": grad_right,
+                    f"{self.domain} grad(c_e) internal": grad_c_e,
+                }
+            )
         return variables
 
     def _get_conductivities(self, variables):
@@ -146,41 +177,20 @@ class BaseModel(BaseElectrolyteConductivity):
         if self.domain == "separator":
             return
 
-        param = self.param
-
-        conductivity, sigma_eff = self._get_conductivities(variables)
-        i_boundary_cc = variables["Current collector current density"]
         c_e = variables[f"{Domain} electrolyte concentration"]
         delta_phi = variables[f"{Domain} electrode surface potential difference"]
 
+        grad_left = variables[f"{self.domain} grad(delta_phi) left"]
+        grad_right = variables[f"{self.domain} grad(delta_phi) right"]
+        grad_c_e = variables[f"{self.domain} grad(c_e) internal"]
+
+        lbc = (grad_left, "Neumann")
+        rbc = (grad_right, "Neumann")
         if self.domain == "negative":
-            T = variables["Negative electrode temperature"]
-            c_e_flux = pybamm.BoundaryGradient(c_e, "right")
-            flux_left = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
-            flux_right = (
-                (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
-                - pybamm.BoundaryValue(param.chiRT_over_Fc(c_e, T), "right") * c_e_flux
-                - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
-            )
-
-            lbc = (flux_left, "Neumann")
-            rbc = (flux_right, "Neumann")
             lbc_c_e = (pybamm.Scalar(0), "Neumann")
-            rbc_c_e = (c_e_flux, "Neumann")
-
+            rbc_c_e = (grad_c_e, "Neumann")
         elif self.domain == "positive":
-            T = variables["Positive electrode temperature"]
-            c_e_flux = pybamm.BoundaryGradient(c_e, "left")
-            flux_left = (
-                (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
-                - pybamm.BoundaryValue(param.chiRT_over_Fc(c_e, T), "left") * c_e_flux
-                - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
-            )
-            flux_right = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
-
-            lbc = (flux_left, "Neumann")
-            rbc = (flux_right, "Neumann")
-            lbc_c_e = (c_e_flux, "Neumann")
+            lbc_c_e = (grad_c_e, "Neumann")
             rbc_c_e = (pybamm.Scalar(0), "Neumann")
 
         # TODO: check why we still need the boundary conditions for c_e, once we have

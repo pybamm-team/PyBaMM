@@ -5,7 +5,7 @@ Install from source (developer install)
 
 This page describes the build and installation of PyBaMM from the source code, available on GitHub. Note that this is **not the recommended approach for most users** and should be reserved to people wanting to participate in the development of PyBaMM, or people who really need to use bleeding-edge feature(s) not yet available in the latest released version. If you do not fall in the two previous categories, you would be better off installing PyBaMM using pip or conda.
 
-Lastly, familiarity with the python ecosystem is recommended (pip, virtualenvs).
+Lastly, familiarity with the Python ecosystem is recommended (pip, virtualenvs).
 Here is a gentle introduction/refresher: `Python Virtual Environments: A Primer <https://realpython.com/python-virtual-environments-a-primer/>`_.
 
 
@@ -26,7 +26,7 @@ or download the source archive on the repository's homepage.
 To install PyBaMM, you will need:
 
 - Python 3 (PyBaMM supports versions 3.8 and 3.9)
-- The python headers file for your current python version.
+- The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
@@ -50,9 +50,9 @@ You can install it with
 
 .. code:: bash
 
-	  python3.X -m pip install --user tox
+	  python3.X -m pip install --user "tox<4"
 
-Depending on your operating system, you may or may not have ``pip`` installed along python.
+Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
 
 Installing the build-time requirements
@@ -105,7 +105,7 @@ If you'd rather do things yourself,
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
 	 
 
-PyBaMM ships with a python script that automates points 2. and 3. You can run it with
+PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
 
 .. code:: bash
 
@@ -198,7 +198,7 @@ You can run unit tests for PyBaMM using
 
 
 The above starts a sub-process using the current python interpreter (i.e. using your current
-python environment) and run the unit tests. This can take a few minutes.
+Python environment) and run the unit tests. This can take a few minutes.
 
 You can also use the test runner to run the doctests:
 

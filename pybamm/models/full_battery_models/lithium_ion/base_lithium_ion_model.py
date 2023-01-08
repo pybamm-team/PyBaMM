@@ -9,13 +9,30 @@ class BaseModel(pybamm.BaseBatteryModel):
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models
 
+    Parameters
+    ----------
+    options : dict-like, optional
+        A dictionary of options to be passed to the model. If this is a dict (and not
+        a subtype of dict), it will be processed by :class:`pybamm.BatteryModelOptions`
+        to ensure that the options are valid. If this is a subtype of dict, it is
+        assumed that the options have already been processed and are valid. This allows
+        for the use of custom options classes. The default options are given by
+        :class:`pybamm.BatteryModelOptions`.
+    name : str, optional
+        The name of the model. The default is "Unnamed battery model".
+    build : bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     **Extends:** :class:`pybamm.BaseBatteryModel`
 
     """
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
         super().__init__(options, name)
-        self.param = pybamm.LithiumIonParameters(options)
+        self.param = pybamm.LithiumIonParameters(self.options)
 
         # Default timescale
         self._timescale = self.param.timescale
@@ -134,9 +151,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
             # LAM
-            C_k = self.variables[f"{Domain} capacity [A.h]"]
+            Q_k = self.variables[f"{Domain} capacity [A.h]"]
             domain_param = getattr(self.param, domain[0])  # param.n or param.p
-            LAM_k = (1 - C_k / domain_param.cap_init) * 100
+            LAM_k = (1 - Q_k / domain_param.Q_init) * 100
             self.variables.update(
                 {
                     f"LAM_{domain[0]}e [%]": LAM_k,
@@ -164,6 +181,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                 # Total lithium
                 "Total lithium [mol]": n_Li,
                 "Total lithium in particles [mol]": n_Li_particles,
+                "Total lithium capacity [A.h]": n_Li * param.F / 3600,
+                "Total lithium capacity in particles [A.h]": n_Li_particles
+                * param.F
+                / 3600,
                 # Lithium lost
                 "Total lithium lost [mol]": param.n_Li_init - n_Li,
                 "Total lithium lost from particles [mol]": param.n_Li_particles_init
@@ -174,17 +195,19 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
-        LLI_reactions = LLI_sei
+        n_Li_lost_sei = self.variables["Loss of lithium to SEI [mol]"]
+        n_Li_lost_reactions = n_Li_lost_sei
         if "negative electrode" in domains:
-            LLI_sei_cracks = self.variables["Loss of lithium to SEI on cracks [mol]"]
-            LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
-            LLI_reactions += LLI_sei_cracks + LLI_pl
+            n_Li_lost_sei_cracks = self.variables[
+                "Loss of lithium to SEI on cracks [mol]"
+            ]
+            n_Li_lost_pl = self.variables["Loss of lithium to lithium plating [mol]"]
+            n_Li_lost_reactions += n_Li_lost_sei_cracks + n_Li_lost_pl
 
         self.variables.update(
             {
-                "Total lithium lost to side reactions [mol]": LLI_reactions,
-                "Total capacity lost to side reactions [A.h]": LLI_reactions
+                "Total lithium lost to side reactions [mol]": n_Li_lost_reactions,
+                "Total capacity lost to side reactions [A.h]": n_Li_lost_reactions
                 * param.F
                 / 3600,
             }

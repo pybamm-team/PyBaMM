@@ -529,7 +529,8 @@
       "profile": "https://github.com/agriyakhetarpal",
       "contributions": [
         "infra",
-        "code"
+        "code",
+        "doc"
       ]
     },
     {
@@ -540,6 +541,15 @@
       "contributions": [
         "code",
         "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "iatzak",
+      "name": "iatzak",
+      "avatar_url": "https://avatars.githubusercontent.com/u/112731474?v=4",
+      "profile": "https://github.com/iatzak",
+      "contributions": [
         "doc"
       ]
     }

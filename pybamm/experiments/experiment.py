@@ -162,7 +162,7 @@ class Experiment:
 
     def read_string(self, cond, drive_cycles):
         """
-        Convert a string to a tuple of the right format
+        Convert a string to a dictionary of the right format
 
         Parameters
         ----------
@@ -188,6 +188,12 @@ class Experiment:
                     f"from {op_CC['string']} and {op_CV['string']}"
                 )
 
+            tag_CC = op_CC["tags"] or []
+            tag_CV = op_CV["tags"] or []
+            tags = list(np.unique(tag_CC + tag_CV))
+            if len(tags) == 0:
+                tags = None
+
             outputs = {
                 "type": "CCCV",
                 "Voltage input [V]": op_CV["Voltage input [V]"],
@@ -197,12 +203,20 @@ class Experiment:
                 "dc_data": None,
                 "string": cond,
                 "events": op_CV["events"],
+                "tags": tags,
             }
             if "Current input [A]" in op_CC:
                 outputs["Current input [A]"] = op_CC["Current input [A]"]
             else:
                 outputs["C-rate input [-]"] = op_CC["C-rate input [-]"]
             return outputs
+
+        # Read tags
+        if " [" in cond:
+            cond, tag_str = cond.split(" [")
+            tags = tag_str[0:-1].split(",")
+        else:
+            tags = None
 
         # Read period
         if " period)" in cond:
@@ -290,6 +304,7 @@ class Experiment:
             "dc_data": dc_data,
             "string": unprocessed_cond,
             "events": events,
+            "tags": tags,
         }
 
     def unit_to_type(self, electric):
@@ -532,3 +547,16 @@ class Experiment:
             if op["events"] == {k: v for k, v in next_op.items() if k in op["events"]}:
                 return True
         return False
+
+    def search_tag(self, tag):
+        cycles = []
+        for i, cycle in enumerate(self.operating_conditions_cycles):
+            for cond in cycle:
+                if " [" in cond:
+                    cond, tag_str = cond.split(" [")
+                    tags = tag_str[0:-1].split(",")
+                    if tag in tags:
+                        cycles.append(i)
+                        break
+
+        return cycles

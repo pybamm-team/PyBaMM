@@ -435,7 +435,7 @@ class Divergence(SpatialOperator):
 
 class Laplacian(SpatialOperator):
     """
-    A node in the expression tree representing a laplacian operator. This is
+    A node in the expression tree representing a Laplacian operator. This is
     currently only implemeted in the weak form for finite element formulations.
 
     **Extends:** :class:`SpatialOperator`
@@ -634,7 +634,7 @@ class BaseIndefiniteIntegral(Integral):
         if isinstance(integration_variable, list):
             if len(integration_variable) > 1:
                 raise NotImplementedError(
-                    "Indefinite integral only implemeted w.r.t. one variable"
+                    "Indefinite integral only implemented w.r.t. one variable"
                 )
             else:
                 integration_variable = integration_variable[0]
@@ -1143,13 +1143,13 @@ def laplacian(symbol):
     ----------
 
     symbol : :class:`Symbol`
-        the laplacian will be performed on this sub-symbol
+        the Laplacian will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Laplacian`
-        the laplacian of ``symbol``
+        the Laplacian of ``symbol``
     """
 
     return Laplacian(symbol)
@@ -1250,6 +1250,14 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
+
+
+def boundary_gradient(symbol, side):
+    # Gradient of a broadcast is zero
+    if isinstance(symbol, pybamm.Broadcast):
+        return 0 * symbol.reduce_one_dimension()
+    else:
+        return BoundaryGradient(symbol, side)
 
 
 def sign(symbol):

@@ -14,7 +14,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     subdivision of any 1D mesh, so it shouldn't be a problem).
 
     For broadcast and mass_matrix, we follow the default behaviour from
-    SpatialMethod. For spatial_variable, preprocess_external_variables,
+    SpatialMethod. For spatial_variable,
     divergence, divergence_matrix, laplacian, integral,
     definite_integral_matrix, indefinite_integral,
     indefinite_integral_matrix, indefinite_integral_matrix_nodes,

@@ -69,6 +69,9 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
             d.__getitem__("test3")
 
+        with self.assertRaisesRegex(KeyError, "stoichiometry"):
+            d.__getitem__("Negative electrode SOC")
+
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
         self.assertTrue(

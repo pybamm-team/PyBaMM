@@ -14,11 +14,11 @@ from pybtex.scanner import PybtexError
 class Citations:
 
     """Entry point to citations management.
-    This object may be used to record Bibtex citation information and then register that
+    This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
 
     Citations listed in `pybamm/CITATIONS.txt` can be registered with their citation
-    key. For all other works provide a BibTex Citation to :meth:`register`.
+    key. For all other works provide a BibTeX Citation to :meth:`register`.
 
     Examples
     --------
@@ -35,8 +35,14 @@ class Citations:
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
 
-        self.read_citations()
-        self._reset()
+        # store citation error
+        self._citation_err_msg = None
+
+        try:
+            self.read_citations()
+            self._reset()
+        except Exception as e:  # pragma: no cover
+            self._citation_err_msg = e
 
     def _reset(self):
         """Reset citations to default only (only for testing purposes)"""
@@ -48,7 +54,7 @@ class Citations:
 
     def read_citations(self):
         """Reads the citations in `pybamm.CITATIONS.txt`. Other works can be cited
-        by passing a BibTex citation to :meth:`register`.
+        by passing a BibTeX citation to :meth:`register`.
         """
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
         bib_data = parse_file(citations_file, bib_format="bibtex")
@@ -74,7 +80,7 @@ class Citations:
 
     @property
     def _cited(self):
-        """Return a list of the BibTex entries that have been cited"""
+        """Return a list of the BibTeX entries that have been cited"""
         return [self._all_citations[key] for key in self._papers_to_cite]
 
     def register(self, key):
@@ -82,36 +88,36 @@ class Citations:
         should be called only when the referenced functionality is actually being used.
 
         .. warning::
-            Registering a BibTex citation, with the same key as an existing citation,
+            Registering a BibTeX citation, with the same key as an existing citation,
             will overwrite the current citation.
 
         Parameters
         ----------
         key : str
             - The citation key for an entry in `pybamm/CITATIONS.txt` or
-            - One or more BibTex formatted citations
+            - One or more BibTeX formatted citations
         """
-
-        # Check if citation is a known key
-        if key in self._all_citations:
-            self._papers_to_cite.add(key)
-            return
-
-        # Try to parse the citation using pybtex
-        try:
-            # Parse string as a bibtex citation, and check that a citation was found
-            bib_data = parse_string(key, bib_format="bibtex")
-            if not bib_data.entries:
-                raise PybtexError("no entries found")
-
-            # Add and register all citations
-            for key, entry in bib_data.entries.items():
-                self._add_citation(key, entry)
-                self.register(key)
+        if self._citation_err_msg is None:
+            # Check if citation is a known key
+            if key in self._all_citations:
+                self._papers_to_cite.add(key)
                 return
-        except PybtexError:
-            # Unable to parse / unknown key
-            raise KeyError(f"Not a bibtex citation or known citation: {key}")
+
+            # Try to parse the citation using pybtex
+            try:
+                # Parse string as a bibtex citation, and check that a citation was found
+                bib_data = parse_string(key, bib_format="bibtex")
+                if not bib_data.entries:
+                    raise PybtexError("no entries found")
+
+                # Add and register all citations
+                for key, entry in bib_data.entries.items():
+                    self._add_citation(key, entry)
+                    self.register(key)
+                    return
+            except PybtexError:
+                # Unable to parse / unknown key
+                raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
     def print(self, filename=None, output_format="text"):
         """Print all citations that were used for running simulations.
@@ -143,7 +149,17 @@ class Citations:
 
 def print_citations(filename=None, output_format="text"):
     """See :meth:`Citations.print`"""
-    pybamm.citations.print(filename, output_format)
+    if citations._citation_err_msg is not None:
+        raise ImportError(
+            f"Citations could not be registered. If you are on Google Colab - "
+            "pybtex does not work with Google Colab due to a known bug - "
+            "https://bitbucket.org/pybtex-devs/pybtex/issues/148/. "
+            "Please manually cite all the references."
+            "\nError encountered -\n"
+            f"{citations._citation_err_msg}"
+        )
+    else:
+        pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()

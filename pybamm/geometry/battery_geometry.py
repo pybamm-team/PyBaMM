@@ -7,7 +7,6 @@ import pybamm
 def battery_geometry(
     include_particles=True,
     options=None,
-    current_collector_dimension=0,
     form_factor="pouch",
 ):
     """
@@ -20,9 +19,6 @@ def battery_geometry(
     options : dict, optional
         Dictionary of model options. Necessary for "particle-size geometry",
         relevant for lithium-ion chemistries.
-    current_collector_dimensions : int, optional
-        The dimensions of the current collector. Can be 0 (default), 1 or 2. For
-        a "cylindrical" form factor the current collector dimension must be 0 or 1.
     form_factor : str, optional
         The form factor of the cell. Can be "pouch" (default) or "cylindrical".
 
@@ -32,7 +28,9 @@ def battery_geometry(
         A geometry class for the battery
 
     """
-    options = pybamm.BatteryModelOptions(options or {})
+    if options is None or type(options) == dict:
+        options = pybamm.BatteryModelOptions(options)
+
     geo = pybamm.geometric_parameters
     l_n = geo.n.l
     l_s = geo.s.l
@@ -77,6 +75,7 @@ def battery_geometry(
             }
         )
     # Add current collector domains
+    current_collector_dimension = options["dimensionality"]
     if form_factor == "pouch":
         if current_collector_dimension == 0:
             geometry["current collector"] = {"z": {"position": 1}}
@@ -105,12 +104,6 @@ def battery_geometry(
                     },
                 },
             }
-        else:
-            raise pybamm.GeometryError(
-                "Invalid current collector dimension '{}' (should be 0, 1 or 2)".format(
-                    current_collector_dimension
-                )
-            )
     elif form_factor == "cylindrical":
         if current_collector_dimension == 0:
             geometry["current collector"] = {"r_macro": {"position": 1}}

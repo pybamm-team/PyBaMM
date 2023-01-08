@@ -102,6 +102,39 @@ class ParameterValues:
         for citation in citations:
             pybamm.citations.register(citation)
 
+    @staticmethod
+    def create_from_bpx(filename, target_soc=1):
+        """
+        Parameters
+        ----------
+        filename: str
+            The filename of the bpx file
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        if target_soc < 0 or target_soc > 1:
+            raise ValueError("Target SOC should be between 0 and 1")
+
+        from bpx import parse_bpx_file, get_electrode_concentrations
+        from .bpx import _bpx_to_param_dict
+
+        # parse bpx
+        bpx = parse_bpx_file(filename)
+        pybamm_dict = _bpx_to_param_dict(bpx)
+
+        # get initial concentrations based on SOC
+        c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
+        pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
+        pybamm_dict["Initial concentration in positive electrode [mol.m-3]"] = c_p_init
+
+        return pybamm.ParameterValues(pybamm_dict)
+
     def __getitem__(self, key):
         return self._dict_items[key]
 
@@ -325,6 +358,35 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_stoichiometries(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+    ):
+        """
+        Set the initial stoichiometry of each electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters()
+        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+            initial_value, self, param=param, known_value=known_value
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+        c_n_max = self.evaluate(param.n.prim.c_max)
+        c_p_max = self.evaluate(param.p.prim.c_max)
+        parameter_values.update(
+            {
+                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
+                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        return parameter_values
+
     def check_parameter_values(self, values):
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
@@ -440,11 +502,6 @@ class ParameterValues:
             )
 
         model.events = new_events
-
-        # Set external variables
-        model.external_variables = [
-            self.process_symbol(var) for var in unprocessed_model.external_variables
-        ]
 
         # Process timescale
         new_timescale = self.process_symbol(unprocessed_model.timescale)
@@ -644,7 +701,10 @@ class ParameterValues:
                     # For parameters provided as data we use a cubic interpolant
                     # Note: the cubic interpolant can be differentiated
                     function = pybamm.Interpolant(
-                        input_data[0], input_data[-1], new_children, name=name
+                        input_data[0],
+                        input_data[-1],
+                        new_children,
+                        name=name,
                     )
 
                 else:  # pragma: no cover

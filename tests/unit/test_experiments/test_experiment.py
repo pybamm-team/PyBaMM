@@ -21,14 +21,14 @@ class TestExperiment(unittest.TestCase):
 
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1C for 0.5 hours at 27oC",
-                "Discharge at C/20 for 0.5 hours at 29oC",
+                "Discharge at 1C for 0.5 hours at 27oC [tag1]",
+                "Discharge at C/20 for 0.5 hours at 29oC [tag2,tag3]",
                 "Charge at 0.5 C for 45 minutes at -5oC",
                 "Discharge at 1 A for 0.5 hours at -5.1oC",
                 "Charge at 200 mA for 45 minutes at 10.2oC (1 minute period)",
                 "Discharge at 1W for 0.5 hours at -10.4oC",
                 "Charge at 200mW for 45 minutes",
-                "Rest for 10 minutes (5 minute period)",
+                "Rest for 10 minutes (5 minute period) [tag1,tag3]",
                 "Hold at 1V for 20 seconds",
                 "Charge at 1 C until 4.1V",
                 "Hold at 4.1 V until 50mA",
@@ -52,6 +52,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at 1C for 0.5 hours at 27oC",
                 "events": None,
+                "tags": ["tag1"],
             },
             {
                 "C-rate input [-]": 0.05,
@@ -62,6 +63,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at C/20 for 0.5 hours at 29oC",
                 "events": None,
+                "tags": ["tag2", "tag3"],
             },
             {
                 "C-rate input [-]": -0.5,
@@ -72,6 +74,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Charge at 0.5 C for 45 minutes at -5oC",
                 "events": None,
+                "tags": None,
             },
             {
                 "Current input [A]": 1.0,
@@ -82,6 +85,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at 1 A for 0.5 hours at -5.1oC",
                 "events": None,
+                "tags": None,
             },
             {
                 "Current input [A]": -0.2,
@@ -92,6 +96,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Charge at 200 mA for 45 minutes at 10.2oC",
                 "events": None,
+                "tags": None,
             },
             {
                 "Power input [W]": 1.0,
@@ -102,6 +107,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at 1W for 0.5 hours at -10.4oC",
                 "events": None,
+                "tags": None,
             },
             {
                 "Power input [W]": -0.2,
@@ -112,6 +118,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Charge at 200mW for 45 minutes",
                 "events": None,
+                "tags": None,
             },
             {
                 "Current input [A]": 0,
@@ -122,6 +129,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Rest for 10 minutes",
                 "events": None,
+                "tags": ["tag1", "tag3"],
             },
             {
                 "Voltage input [V]": 1,
@@ -132,6 +140,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Hold at 1V for 20 seconds",
                 "events": None,
+                "tags": None,
             },
             {
                 "C-rate input [-]": -1,
@@ -142,6 +151,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Charge at 1 C until 4.1V",
                 "events": {"Voltage input [V]": 4.1, "type": "voltage"},
+                "tags": None,
             },
             {
                 "Voltage input [V]": 4.1,
@@ -152,6 +162,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Hold at 4.1 V until 50mA",
                 "events": {"Current input [A]": 0.05, "type": "current"},
+                "tags": None,
             },
             {
                 "Voltage input [V]": 3,
@@ -162,6 +173,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Hold at 3V until C/50",
                 "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                "tags": None,
             },
             {
                 "C-rate input [-]": 1 / 3,
@@ -172,6 +184,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at C/3 for 2 hours or until 2.5 V at 26oC",
                 "events": {"Voltage input [V]": 2.5, "type": "voltage"},
+                "tags": None,
             },
         ]
 
@@ -197,18 +210,21 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(experiment.operating_conditions[-3]["time"], time_0)
         self.assertEqual(experiment.operating_conditions[-3]["period"], period_0)
         self.assertEqual(experiment.operating_conditions[-3]["temperature"], -5)
+        self.assertEqual(experiment.operating_conditions[-3]["tags"], None)
         np.testing.assert_array_equal(
             experiment.operating_conditions[-2]["dc_data"], drive_cycle_1
         )
         self.assertEqual(experiment.operating_conditions[-2]["type"], "voltage")
         self.assertEqual(experiment.operating_conditions[-2]["time"], time_1)
         self.assertEqual(experiment.operating_conditions[-2]["period"], period_1)
+        self.assertEqual(experiment.operating_conditions[-2]["tags"], None)
         np.testing.assert_array_equal(
             experiment.operating_conditions[-1]["dc_data"], drive_cycle_2
         )
         self.assertEqual(experiment.operating_conditions[-1]["type"], "power")
         self.assertEqual(experiment.operating_conditions[-1]["time"], time_2)
         self.assertEqual(experiment.operating_conditions[-1]["period"], period_2)
+        self.assertEqual(experiment.operating_conditions[-1]["tags"], None)
         self.assertEqual(experiment.period, 20)
 
     def test_read_strings_cccv_combined(self):
@@ -223,6 +239,7 @@ class TestExperiment(unittest.TestCase):
             ],
             cccv_handling="ode",
         )
+
         experiment.operating_conditions,
         expected_result = [
             {
@@ -234,6 +251,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at C/20 for 0.5 hours at 34 oC",
                 "events": None,
+                "tags": None,
             },
             {
                 "type": "CCCV",
@@ -246,6 +264,7 @@ class TestExperiment(unittest.TestCase):
                 "string": "Charge at 0.5 C until 1V at 32 oC "
                 "then hold at 1V until C/50 at 32 oC",
                 "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                "tags": None,
             },
             {
                 "C-rate input [-]": 0.05,
@@ -256,6 +275,7 @@ class TestExperiment(unittest.TestCase):
                 "dc_data": None,
                 "string": "Discharge at C/20 for 0.5 hours",
                 "events": None,
+                "tags": None,
             },
         ]
 
@@ -283,6 +303,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 0.5 C until 2V",
                     "events": {"Voltage input [V]": 2, "type": "voltage"},
+                    "tags": None,
                 },
                 {
                     "Voltage input [V]": 1,
@@ -293,6 +314,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                    "tags": None,
                 },
             ],
         )
@@ -315,6 +337,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 0.5 C for 2 minutes",
                     "events": None,
+                    "tags": None,
                 },
                 {
                     "Voltage input [V]": 1,
@@ -325,6 +348,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                    "tags": None,
                 },
             ],
         )
@@ -349,6 +373,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "tags": None,
                 },
                 {
                     "C-rate input [-]": -0.2,
@@ -359,6 +384,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at C/5 for 45 minutes",
                     "events": None,
+                    "tags": None,
                 },
                 {
                     "C-rate input [-]": 0.05,
@@ -369,6 +395,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "tags": None,
                 },
                 {
                     "C-rate input [-]": -0.2,
@@ -379,6 +406,7 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at C/5 for 45 minutes",
                     "events": None,
+                    "tags": None,
                 },
             ],
         )
@@ -496,6 +524,31 @@ class TestExperiment(unittest.TestCase):
             experiment = pybamm.Experiment(
                 ["Discharge at 1 C for 20 seconds"], termination="1 capacity"
             )
+
+    def test_search_tag(self):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 1C for 0.5 hours [tag1]",),
+                "Discharge at C/20 for 0.5 hours [tag2,tag3]",
+                (
+                    "Charge at 0.5 C for 45 minutes [tag2]",
+                    "Discharge at 1 A for 0.5 hours [tag3]",
+                ),
+                "Charge at 200 mA for 45 minutes (1 minute period) [tag5]",
+                (
+                    "Discharge at 1W for 0.5 hours [tag4]",
+                    "Charge at 200mW for 45 minutes [tag4]",
+                ),
+                "Rest for 10 minutes (5 minute period) [tag1,tag3,tag4]",
+            ]
+        )
+
+        self.assertEqual(experiment.search_tag("tag1"), [0, 5])
+        self.assertEqual(experiment.search_tag("tag2"), [1, 2])
+        self.assertEqual(experiment.search_tag("tag3"), [1, 2, 5])
+        self.assertEqual(experiment.search_tag("tag4"), [4, 5])
+        self.assertEqual(experiment.search_tag("tag5"), [3])
+        self.assertEqual(experiment.search_tag("no_tag"), [])
 
 
 if __name__ == "__main__":

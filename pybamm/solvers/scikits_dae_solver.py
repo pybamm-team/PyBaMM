@@ -118,7 +118,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
                 )
 
         def rootfn(t, y, ydot, return_root):
-            return_root[:] = [event(t, y, inputs) for event in events]
+            return_root[:] = [float(event(t, y, inputs)) for event in events]
 
         extra_options = {
             **self.extra_options,
