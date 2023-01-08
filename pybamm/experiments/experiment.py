@@ -424,8 +424,6 @@ class Experiment:
     def _read_and_drop_temperature(self, cond):
 
         matches = re.findall(r"at\s-*\d+\.*\d*\s*oC", cond)
-        if len(matches) == 0 and "oC" in cond:
-            raise ValueError(f"Temperature not written " f"correctly on step: '{cond}'")
 
         if len(matches) == 0:
 
