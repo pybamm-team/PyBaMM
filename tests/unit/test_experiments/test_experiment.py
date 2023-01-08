@@ -440,7 +440,7 @@ class TestExperiment(unittest.TestCase):
             TypeError, "Operating conditions should be strings or tuples of strings"
         ):
             pybamm.Experiment([(1, 2, 3)])
-        with self.assertRaisesRegex(ValueError, "Instruction must be"):
+        with self.assertRaisesRegex(ValueError, "Operating conditions must"):
             pybamm.Experiment(["Discharge at 1 A at 2 hours"])
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Run at 1 A for 2 hours"])
@@ -450,12 +450,18 @@ class TestExperiment(unittest.TestCase):
             pybamm.Experiment(["Run at at 1 A for 2 hours"])
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Play at 1 A for 2 hours"])
+        with self.assertRaisesRegex(ValueError, "Operating conditions must"):
+            pybamm.Experiment(["Do at 1 A"])
+        with self.assertRaisesRegex(ValueError, "Instruction must be"):
+            pybamm.Experiment(["Run US06 at 1 A"])
         with self.assertRaisesRegex(ValueError, "Instruction"):
             pybamm.Experiment(["Cell Charge at 1 A for 2 hours"])
         with self.assertRaisesRegex(ValueError, "units must be"):
             pybamm.Experiment(["Discharge at 1 B for 2 hours"])
         with self.assertRaisesRegex(ValueError, "time units must be"):
             pybamm.Experiment(["Discharge at 1 A for 2 years"])
+        with self.assertRaisesRegex(ValueError, "More than one temperature found"):
+            pybamm.Experiment(["Discharge at 1 A for 2 hours at 25oC at 30oC"])
         with self.assertRaisesRegex(
             ValueError, "The temperature for the CC and CV steps"
         ):
@@ -468,8 +474,6 @@ class TestExperiment(unittest.TestCase):
                 ],
                 cccv_handling="ode",
             )
-        with self.assertRaisesRegex(ValueError, "Instruction must be"):
-            pybamm.Experiment(["Discharge at 1 A for 2 hours at 25C"])
 
         with self.assertRaisesRegex(
             ValueError, "Temperature not written correctly on step"

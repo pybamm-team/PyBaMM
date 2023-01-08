@@ -417,28 +417,23 @@ class Experiment:
                     )
                 )
 
-    def _read_and_drop_temperature(self, cond):
+    def _detect_mistyped_temperatures(self, cond):
 
-        if (len(re.findall("at", cond)) > 1 or ("Run" in cond and "at" in cond)) and (
-            "oC" not in cond
-        ):
-            raise ValueError(
-                "Instruction must be 'discharge', 'charge', 'rest', 'hold' or "
-                f"'Run'. For example: {examples}"
-                ""
-                "The following instruction does not comply: "
-                f"{cond}"
-            )
+        mistype = False
+
+        if "oC" in cond:
+            mistype = True
+
+        if mistype:
+            raise ValueError(f"Temperature not written correctly on step: '{cond}'")
+
+    def _read_and_drop_temperature(self, cond):
 
         matches = re.findall(r"at\s-*\d+\.*\d*\s*oC", cond)
 
-        if len(matches) == 0 and "oC" in cond:
-            raise ValueError(
-                f"Temperature not written "
-                f"correctly on step: '{cond}'"
-            )
-
         if len(matches) == 0:
+
+            self._detect_mistyped_temperatures(cond)
 
             if self.temperature is None:
 
