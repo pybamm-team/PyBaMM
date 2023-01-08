@@ -433,10 +433,7 @@ class Experiment:
         matches = re.findall(r"at\s-*\d+\.*\d*\s*oC", cond)
 
         if len(matches) == 0 and "oC" in cond:
-            raise ValueError(
-                f"Temperature not written "
-                f"correctly on step: '{cond}'"
-            )
+            raise ValueError(f"Temperature not written " f"correctly on step: '{cond}'")
 
         if len(matches) == 0:
 

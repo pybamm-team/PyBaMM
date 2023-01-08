@@ -1,4 +1,5 @@
 import pybamm
+
 pybamm.set_logging_level("INFO")
 
 model = pybamm.equivalent_circuit.Thevenin()
