@@ -34,6 +34,7 @@ class TestBPX(unittest.TestCase):
                     "in parallel to make a cell": 34,
                     "External surface area [m2]": 3.79e-2,
                     "Volume [m3]": 1.28e-4,
+                    "Contact resistance [Ohm]": 0,
                 },
                 "Electrolyte": {
                     "Initial concentration [mol.m-3]": 1000,
