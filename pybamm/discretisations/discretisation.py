@@ -1087,9 +1087,9 @@ class Discretisation(object):
         if not isinstance(var, pybamm.Variable):
             return False
 
-        this_var_is_independent = not (var.name in all_vars_in_eqns)
-        not_in_y_slices = not (var in list(self.y_slices.keys()))
-        not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+        this_var_is_independent = var.name not in all_vars_in_eqns
+        not_in_y_slices = var not in list(self.y_slices.keys())
+        not_in_discretised = var not in list(self._discretised_symbols.keys())
         is_0D = len(var.domain) == 0
         this_var_is_independent = (
             this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D
