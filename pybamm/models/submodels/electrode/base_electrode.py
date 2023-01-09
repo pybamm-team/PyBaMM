@@ -210,7 +210,9 @@ class BaseElectrode(pybamm.BaseSubModel):
             elif self.options["operating mode"] == "explicit resistance":
                 # Approximation: only valid if R_contact << R
                 R = pybamm.FunctionParameter(
-                    "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}
+                    "Resistance function [Ohm]", {
+                        "Time [s]": pybamm.t * self.param.timescale
+                    }
                 )
                 V_contact_dim = V_dim * (1 - param.R_contact / R)
             V_contact = V_contact_dim / param.potential_scale
