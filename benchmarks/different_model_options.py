@@ -85,7 +85,7 @@ class TimeSolveLossActiveMaterial:
     )
 
     def setup(self, model, params):
-        self.solve_setup(self, "Ai2020", model, "loss of active material", params)
+        SolveModel.solve_setup(self, "Ai2020", model, "loss of active material", params)
 
     def time_solve_model(self, model, params):
         self.solver.solve(self.model, t_eval=self.t_eval)
@@ -110,7 +110,7 @@ class TimeSolveLithiumPlating:
     )
 
     def setup(self, model, params):
-        self.solve_setup(self, "OKane2020", model, "lithium plating", params)
+        SolveModel.solve_setup(self, "OKane2020", model, "lithium plating", params)
 
     def time_solve_model(self, model, params):
         self.solver.solve(self.model, t_eval=self.t_eval)
