@@ -30,9 +30,9 @@ def build_model(parameter, model_, option, value):
 
 
 class SolveModel:
-    solver = pybamm.CasadiSolver()
 
     def solve_setup(self, parameter, model_, option, value):
+        self.solver = pybamm.CasadiSolver()
         self.model = model_({option: value})
         c_rate = 1
         tmax = 4000 / c_rate
@@ -62,7 +62,7 @@ class SolveModel:
         disc.process_model(self.model)
 
     def solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelLossActiveMaterial:
@@ -85,10 +85,10 @@ class TimeSolveLossActiveMaterial:
     )
 
     def setup(self, model, params):
-        SolveModel.solve_setup(self, "Ai2020", model, "loss of active material", params)
+        self.solve_setup(self, "Ai2020", model, "loss of active material", params)
 
     def time_solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelLithiumPlating:
@@ -110,10 +110,10 @@ class TimeSolveLithiumPlating:
     )
 
     def setup(self, model, params):
-        SolveModel.solve_setup(self, "OKane2020", model, "lithium plating", params)
+        self.solve_setup(self, "OKane2020", model, "lithium plating", params)
 
     def time_solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelSEI:
@@ -158,7 +158,7 @@ class TimeSolveSEI:
         SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params)
 
     def time_solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelParticle:
@@ -193,7 +193,7 @@ class TimeSolveParticle:
         SolveModel.solve_setup(self, "Marquis2019", model, "particle", params)
 
     def time_solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelThermal:
@@ -218,7 +218,7 @@ class TimeSolveThermal:
         SolveModel.solve_setup(self, "Marquis2019", model, "thermal", params)
 
     def time_solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelSurfaceForm:
@@ -243,4 +243,4 @@ class TimeSolveSurfaceForm:
         SolveModel.solve_setup(self, "Marquis2019", model, "surface form", params)
 
     def time_solve_model(self, model, params):
-        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval)
