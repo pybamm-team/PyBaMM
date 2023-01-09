@@ -68,7 +68,10 @@ jobs:
       - name: Install MacOS system dependencies
         if: matrix.os == 'macos-latest'
         run: |
-          rm -f /usr/local/bin/2to3
+          rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
           brew update
           brew install graphviz
           brew install openblas

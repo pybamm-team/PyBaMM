@@ -57,8 +57,10 @@ class ParameterSets(Mapping):
         if key not in self.__all_parameter_sets:
             raise KeyError(f"Unknown parameter set: {key}")
         ps = self.__all_parameter_sets[key]
-        if isinstance(ps, importlib_metadata.EntryPoint):
+        try:
             ps = self.__all_parameter_sets[key] = ps.load()
+        except AttributeError:
+            pass
         return ps
 
     def __iter__(self):

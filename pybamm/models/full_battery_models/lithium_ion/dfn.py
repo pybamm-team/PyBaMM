@@ -8,19 +8,8 @@ from .base_lithium_ion_model import BaseModel
 class DFN(BaseModel):
     """
     Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [1]_.
+    See :class:`pybamm.lithium_ion.BaseModel` for more details.
 
-    Parameters
-    ----------
-    options : dict, optional
-        A dictionary of options to be passed to the model. For a detailed list of
-        options see :class:`~pybamm.BatteryModelOptions`.
-    name : str, optional
-        The name of the model.
-    build :  bool, optional
-        Whether to build the model on instantiation. Default is True. Setting this
-        option to False allows users to change any number of the submodels before
-        building the complete model (submodels cannot be changed after the model is
-        built).
     Examples
     --------
     >>> import pybamm

@@ -1,13 +1,19 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
+
 ## Features
 
+- Added functionality to create `pybamm.ParameterValues` from a [BPX standard](https://github.com/pybamm-team/BPX) JSON file ([#2555](https://github.com/pybamm-team/PyBaMM/pull/2555)).
+- Allow the option "surface form" to be "differential" in the `MPM` ([#2533](https://github.com/pybamm-team/PyBaMM/pull/2533))
 - Added variables "Loss of lithium due to loss of active material in negative/positive electrode [mol]". These should be included in the calculation of "total lithium in system" to make sure that lithium is truly conserved. ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
 - `initial_soc` can now be a string "x V", in which case the simulation is initialized to start from that voltage ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
 - The `ElectrodeSOH` solver can now calculate electrode balance based on a target "cell capacity" (requires cell capacity "Q" as input), as well as the default "cyclable cell capacity" (requires cyclable lithium capacity "Q_Li" as input). Use the keyword argument `known_value` to control which is used. ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
 
 ## Bug fixes
 
+- Allow models that subclass `BaseBatteryModel` to use custom options classes ([#2571](https://github.com/pybamm-team/PyBaMM/pull/2571))
+- Fixed bug with `EntryPoints` in Spyder IDE ([#2584](https://github.com/pybamm-team/PyBaMM/pull/2584))
 - Fixed electrolyte conservation when options {"surface form": "algebraic"} are used
 - Fixed "constant concentration" electrolyte model so that "porosity times concentration" is conserved when porosity changes ([#2529](https://github.com/pybamm-team/PyBaMM/pull/2529))
 - Fix installation on `Google Colab` (`pybtex` and `Colab` issue) ([#2526](https://github.com/pybamm-team/PyBaMM/pull/2526))
@@ -19,6 +25,12 @@
 - Trying to use a solver to solve multiple models results in a RuntimeError exception ([#2481](https://github.com/pybamm-team/PyBaMM/pull/2481))
 - Inputs for the `ElectrodeSOH` solver are now (i) "Q_Li", the total cyclable capacity of lithium in the electrodes (previously "n_Li", the total number of moles, n_Li = 3600/F \* Q_Li) (ii) "Q_n", the capacity of the negative electrode (previously "C_n"), and "Q_p", the capacity of the positive electrode (previously "C_p") ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
 - All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
+
+# [v22.11.1](https://github.com/pybamm-team/PyBaMM/tree/v22.11.1) - 2022-12-13
+
+## Bug fixes
+
+- Fixed installation on Google Colab (`pybtex` issues) ([#2547](https://github.com/pybamm-team/PyBaMM/pull/2547/files))
 
 # [v22.11](https://github.com/pybamm-team/PyBaMM/tree/v22.11) - 2022-11-30
 

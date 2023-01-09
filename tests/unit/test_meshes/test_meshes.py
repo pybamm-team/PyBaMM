@@ -105,7 +105,7 @@ class TestMesh(unittest.TestCase):
             pybamm.Mesh(geometry, submesh_types, {})
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12}
-        geometry = pybamm.battery_geometry(current_collector_dimension=1)
+        geometry = pybamm.battery_geometry(options={"dimensionality": 1})
         with self.assertRaisesRegex(KeyError, "Points not given"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -325,7 +325,7 @@ class TestMesh(unittest.TestCase):
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=1
+            include_particles=False, options={"dimensionality": 1}
         )
         param.process_geometry(geometry)
 
@@ -361,7 +361,7 @@ class TestMesh(unittest.TestCase):
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=1
+            include_particles=False, options={"dimensionality": 1}
         )
         param.process_geometry(geometry)
 
