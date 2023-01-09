@@ -510,7 +510,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         inputs_dict : dict, optional
-            Any external variables or input parameters to pass to the model when solving
+            Any input parameters to pass to the model when solving
         """
         inputs_dict = inputs_dict or {}
         # stack inputs

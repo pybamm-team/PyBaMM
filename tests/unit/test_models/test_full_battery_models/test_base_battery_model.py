@@ -44,7 +44,6 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
-'external submodels': []
 'timescale': 'default'
 """  # noqa: E501
 
@@ -388,6 +387,20 @@ class TestBaseBatteryModel(unittest.TestCase):
     def test_timescale(self):
         model = pybamm.BaseModel()
         self.assertEqual(model.timescale.evaluate(), 1)
+
+    def test_option_type(self):
+        # no entry gets default options
+        model = pybamm.BaseBatteryModel()
+        self.assertIsInstance(model.options, pybamm.BatteryModelOptions)
+
+        # dict options get converted to BatteryModelOptions
+        model = pybamm.BaseBatteryModel({"thermal": "isothermal"})
+        self.assertIsInstance(model.options, pybamm.BatteryModelOptions)
+
+        # special dict types are not changed
+        options = pybamm.FuzzyDict({"thermal": "isothermal"})
+        model = pybamm.BaseBatteryModel(options)
+        self.assertEqual(model.options, options)
 
 
 class TestOptions(unittest.TestCase):

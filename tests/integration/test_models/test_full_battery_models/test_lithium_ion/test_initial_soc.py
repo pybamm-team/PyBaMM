@@ -21,7 +21,8 @@ class TestInitialSOC(unittest.TestCase):
             with self.subTest(param=param):
                 parameter_values = pybamm.ParameterValues(param)
                 sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
-                sim.solve([0, 3600], initial_soc=0.2)
+                sim.solve([0, 600], initial_soc=0.2)
+                sim.solve([0, 600], initial_soc="3.7 V")
 
 
 if __name__ == "__main__":

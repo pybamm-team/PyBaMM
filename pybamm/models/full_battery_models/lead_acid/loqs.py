@@ -8,19 +8,7 @@ from .base_lead_acid_model import BaseModel
 class LOQS(BaseModel):
     """
     Leading-Order Quasi-Static model for lead-acid, from [1]_.
-
-    Parameters
-    ----------
-    options : dict, optional
-        A dictionary of options to be passed to the model. For a detailed list of
-        options see :class:`~pybamm.BatteryModelOptions`.
-    name : str, optional
-        The name of the model.
-    build :  bool, optional
-        Whether to build the model on instantiation. Default is True. Setting this
-        option to False allows users to change any number of the submodels before
-        building the complete model (submodels cannot be changed after the model is
-        built).
+    See :class:`pybamm.lead_acid.BaseModel` for more details.
 
     References
     ----------

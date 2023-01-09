@@ -64,7 +64,7 @@ Use Visual Studio Code to run PyBaMM
 
 You will probably want to use a native Windows IDE such as Visual Studio
 Code or the full Microsoft Visual Studio IDE. Both of these packages can
-connect to WSL so that you can write python code in a native windows
+connect to WSL so that you can write Python code in a native windows
 environment, while at the same time using WSL to run the code using your
 installed Ubuntu distribution. The following instructions assume that
 you are using Visual Studio Code.

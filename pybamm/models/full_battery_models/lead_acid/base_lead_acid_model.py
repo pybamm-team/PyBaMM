@@ -10,6 +10,22 @@ class BaseModel(pybamm.BaseBatteryModel):
     Overwrites default parameters from Base Model with default parameters for
     lead-acid models
 
+    Parameters
+    ----------
+    options : dict-like, optional
+        A dictionary of options to be passed to the model. If this is a dict (and not
+        a subtype of dict), it will be processed by :class:`pybamm.BatteryModelOptions`
+        to ensure that the options are valid. If this is a subtype of dict, it is
+        assumed that the options have already been processed and are valid. This allows
+        for the use of custom options classes. The default options are given by
+        :class:`pybamm.BatteryModelOptions`.
+    name : str, optional
+        The name of the model. The default is "Unnamed battery model".
+    build : bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
 
     **Extends:** :class:`pybamm.BaseBatteryModel`
 
@@ -17,7 +33,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
         options = options or {}
-        # Specify that there are no particles in lead-acid, and no half-cell models
+        # Specify that there are no particles in lead-acid
         options["particle shape"] = "no particles"
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
@@ -42,10 +58,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_geometry(self):
-        return pybamm.battery_geometry(
-            include_particles=False,
-            current_collector_dimension=self.options["dimensionality"],
-        )
+        return pybamm.battery_geometry(include_particles=False, options=self.options)
 
     @property
     def default_var_pts(self):

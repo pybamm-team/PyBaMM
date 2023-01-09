@@ -148,7 +148,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=None, y=solution.y), sol[100:]
         )
 
-        # Test without jacobian
+        # Test without Jacobian
         model.use_jacobian = False
         solver.models_set_up = set()
         solution_no_jac = solver.solve(model)

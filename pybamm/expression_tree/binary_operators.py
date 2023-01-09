@@ -116,7 +116,7 @@ class BinaryOperator(pybamm.Symbol):
         return self._binary_evaluate(left, right)
 
     def _binary_jac(self, left_jac, right_jac):
-        """Calculate the jacobian of a binary operator."""
+        """Calculate the Jacobian of a binary operator."""
         raise NotImplementedError
 
     def _binary_evaluate(self, left, right):

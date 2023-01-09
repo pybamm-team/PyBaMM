@@ -39,8 +39,6 @@ class TestCitations(unittest.TestCase):
             citations.register("not a citation")
 
     def test_print_citations(self):
-        import sys
-
         pybamm.citations._reset()
 
         # Text Style
@@ -66,11 +64,10 @@ class TestCitations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
 
-        # google colab issue - https://github.com/pybamm-team/PyBaMM/issues/2524
-        sys.modules["google.colab"] = "mock"
-        with self.assertRaisesRegex(ImportWarning, "pybtex does not work"):
+        pybamm.citations._citation_err_msg = "Error"
+        with self.assertRaisesRegex(ImportError, "Error"):
             pybamm.print_citations()
-        sys.modules.pop("google.colab")
+        pybamm.citations._citation_err_msg = None
 
     def test_overwrite_citation(self):
         # Unknown citation
@@ -273,12 +270,9 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Mohtat2019", citations._papers_to_cite)
-        pybamm.lithium_ion.ElectrodeSOHx100()
-        self.assertIn("Mohtat2019", citations._papers_to_cite)
-
-        citations._reset()
-        self.assertNotIn("Mohtat2019", citations._papers_to_cite)
-        pybamm.lithium_ion.ElectrodeSOHx0()
+        pybamm.lithium_ion.ElectrodeSOHSolver(
+            pybamm.ParameterValues("Marquis2019")
+        )._get_electrode_soh_sims_full()
         self.assertIn("Mohtat2019", citations._papers_to_cite)
 
     def test_mohtat_2021(self):

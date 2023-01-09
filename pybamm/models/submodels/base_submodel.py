@@ -72,7 +72,11 @@ class BaseSubModel(pybamm.BaseModel):
         self.name = name
 
         self.external = external
-        self.options = pybamm.BatteryModelOptions(options or {})
+
+        if options is None or type(options) == dict:
+            options = pybamm.BatteryModelOptions(options)
+
+        self.options = options
 
         self.param = param
         if param is None or domain is None:
@@ -150,52 +154,6 @@ class BaseSubModel(pybamm.BaseModel):
         """
         return {}
 
-    def get_external_variables(self):
-        """
-        A public method that returns the variables in a submodel which are
-        supplied by an external source.
-
-        Returns
-        -------
-        list :
-            A list of the external variables in the model.
-        """
-
-        external_variables = []
-        list_of_vars = []
-
-        if self.external is True:
-            # look through all the variables in the submodel and get the
-            # variables which are state vectors
-            submodel_variables = self.get_fundamental_variables()
-            for var in submodel_variables.values():
-                if isinstance(var, pybamm.Variable):
-                    list_of_vars += [var]
-
-                elif isinstance(var, pybamm.Concatenation):
-                    if all(
-                        isinstance(child, pybamm.Variable) for child in var.children
-                    ):
-                        list_of_vars += [var]
-
-            # first add only unique concatenations
-            unique_ids = []
-            for var in list_of_vars:
-                if var.id not in unique_ids and isinstance(var, pybamm.Concatenation):
-                    external_variables += [var]
-                    unique_ids += [var]
-                    # also add the ids of the children to unique ids
-                    for child in var.children:
-                        unique_ids += [child]
-
-            # now add any unique variables that are not part of a concatentation
-            for var in list_of_vars:
-                if var.id not in unique_ids:
-                    external_variables += [var]
-                    unique_ids += [var]
-
-        return external_variables
-
     def get_coupled_variables(self, variables):
         """
         A public method that creates and returns the variables in a submodel which
@@ -250,7 +208,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set the boundary conditions for the submodel. Note: this method
         modifies the state of self.boundary_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in
+        submodel, the default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
         Parameters
@@ -264,7 +222,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set the initial conditions for the submodel. Note: this method
         modifies the state of self.initial_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in
+        submodel, the default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
 
@@ -279,7 +237,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the
-        default behaviour of 'pass' is used a implemented in
+        default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
         Parameters
