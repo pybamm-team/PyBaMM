@@ -118,7 +118,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
                     def jac_fn(y_alg):
                         """
-                        Evaluates jacobian using y0_diff (fixed) and y_alg (varying)
+                        Evaluates Jacobian using y0_diff (fixed) and y_alg (varying)
                         """
                         y = np.concatenate([y0_diff, y_alg])
                         return jac(0, y, inputs)[:, len_rhs:].toarray()
@@ -127,7 +127,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
                     def jac_fn(y_alg):
                         """
-                        Evaluates jacobian using y0_diff (fixed) and y_alg (varying)
+                        Evaluates Jacobian using y0_diff (fixed) and y_alg (varying)
                         """
                         y = np.concatenate([y0_diff, y_alg])
                         return jac(0, y, inputs)[:, len_rhs:]

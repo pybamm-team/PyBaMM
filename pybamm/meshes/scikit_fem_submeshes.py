@@ -191,7 +191,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
     The gridpoints in the z direction are given by
 
     .. math::
-        z_{k} = (b-a) + \\frac{\\exp{-\\alpha k / N} - 1}{\\exp{-\\alpha} - 1}} + a,
+        z_{k} = (b-a) + \\frac{\\exp{-\\alpha k / N} - 1}{\\exp{-\\alpha} - 1} + a,
 
     for k = 1, ..., N, where N is the number of nodes. Here alpha is
     a stretching factor. As the number of gridpoints tends to infinity, the ratio

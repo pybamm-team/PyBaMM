@@ -1041,7 +1041,7 @@ class Discretisation(object):
 
     def check_variables(self, model):
         """
-        Check variables in variable list against rhs
+        Check variables in variable list against rhs.
         Be lenient with size check if the variable in model.variables is broadcasted, or
         a concatenation
         (if broadcasted, variable is a multiplication with a vector of ones)

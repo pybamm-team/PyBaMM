@@ -14,11 +14,11 @@ from pybtex.scanner import PybtexError
 class Citations:
 
     """Entry point to citations management.
-    This object may be used to record Bibtex citation information and then register that
+    This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
 
     Citations listed in `pybamm/CITATIONS.txt` can be registered with their citation
-    key. For all other works provide a BibTex Citation to :meth:`register`.
+    key. For all other works provide a BibTeX Citation to :meth:`register`.
 
     Examples
     --------
@@ -54,7 +54,7 @@ class Citations:
 
     def read_citations(self):
         """Reads the citations in `pybamm.CITATIONS.txt`. Other works can be cited
-        by passing a BibTex citation to :meth:`register`.
+        by passing a BibTeX citation to :meth:`register`.
         """
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
         bib_data = parse_file(citations_file, bib_format="bibtex")
@@ -80,7 +80,7 @@ class Citations:
 
     @property
     def _cited(self):
-        """Return a list of the BibTex entries that have been cited"""
+        """Return a list of the BibTeX entries that have been cited"""
         return [self._all_citations[key] for key in self._papers_to_cite]
 
     def register(self, key):
@@ -88,14 +88,14 @@ class Citations:
         should be called only when the referenced functionality is actually being used.
 
         .. warning::
-            Registering a BibTex citation, with the same key as an existing citation,
+            Registering a BibTeX citation, with the same key as an existing citation,
             will overwrite the current citation.
 
         Parameters
         ----------
         key : str
             - The citation key for an entry in `pybamm/CITATIONS.txt` or
-            - One or more BibTex formatted citations
+            - One or more BibTeX formatted citations
         """
         if self._citation_err_msg is None:
             # Check if citation is a known key

@@ -356,7 +356,7 @@ class TestUnaryOperators(TestCase):
             pybamm.Integral(a, y)
         with self.assertRaisesRegex(
             NotImplementedError,
-            "Indefinite integral only implemeted w.r.t. one variable",
+            "Indefinite integral only implemented w.r.t. one variable",
         ):
             pybamm.IndefiniteIntegral(a, [x, y])
 

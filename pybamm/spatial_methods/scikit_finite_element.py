@@ -77,7 +77,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
-            The symbol that we will take the laplacian of.
+            The symbol that we will take the Laplacian of.
         discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
         boundary_conditions : dict
@@ -174,12 +174,12 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         raise NotImplementedError
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the laplacian operator.
+        """Matrix-vector multiplication to implement the Laplacian operator.
 
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
-            The symbol that we will take the laplacian of.
+            The symbol that we will take the Laplacian of.
         discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
         boundary_conditions : dict
@@ -253,7 +253,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
-            The symbol for which we want to calculate the laplacian matrix
+            The symbol for which we want to calculate the Laplacian matrix
         boundary_conditions : dict
             The boundary conditions of the model
             ({symbol: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
