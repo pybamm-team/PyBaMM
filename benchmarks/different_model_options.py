@@ -30,7 +30,6 @@ def build_model(parameter, model_, option, value):
 
 
 class SolveModel:
-
     def solve_setup(self, parameter, model_, option, value):
         self.solver = pybamm.CasadiSolver()
         self.model = model_({option: value})
