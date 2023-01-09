@@ -186,6 +186,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         variables.update({"Electrode current density": i_s})
 
         if self.set_positive_potential:
+            param = self.param
             # Get phi_s_cn from the current collector submodel and phi_s_p from the
             # electrode submodel
             phi_s_cn = variables["Negative current collector potential"]
@@ -196,5 +197,26 @@ class BaseElectrode(pybamm.BaseSubModel):
                     phi_s_cn, phi_s_cp
                 )
             )
+            V_dim = variables["Terminal voltage [V]"]
+            if "Current [A]" in variables:
+                I = variables["Current [A]"]
+                V_contact_dim = V_dim - I * param.R_contact
+            elif self.options["operating mode"] == "explicit power":
+                P = pybamm.FunctionParameter(
+                    "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+                )
+                discriminant = V_dim ** 2 - 4 * P * param.R_contact
+                V_contact_dim = (V_dim + pybamm.sqrt(discriminant)) / 2
+            elif self.options["operating mode"] == "explicit resistance":
+                # Approximation: only valid if R_contact << R
+                R = pybamm.FunctionParameter(
+                    "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}
+                )
+                V_contact_dim = V_dim * (1 - param.R_contact / R)
+            V_contact = V_contact_dim / param.potential_scale
+            variables.update({
+                "Contact voltage": V_contact,
+                "Contact voltage [V]": V_contact_dim,
+            })
 
         return variables
