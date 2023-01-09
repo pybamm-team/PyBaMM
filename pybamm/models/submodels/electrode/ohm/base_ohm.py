@@ -17,8 +17,6 @@ class BaseModel(BaseElectrode):
         Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrode.BaseElectrode`
     """
 
     def __init__(self, param, domain, options=None, set_positive_potential=True):

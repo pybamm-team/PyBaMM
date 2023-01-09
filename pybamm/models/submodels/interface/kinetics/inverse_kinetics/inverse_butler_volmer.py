@@ -21,9 +21,6 @@ class InverseButlerVolmer(BaseInterface):
     options: dict
         A dictionary of options to be passed to the model. In this case "SEI film
         resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     """
 
     def __init__(self, param, domain, reaction, options=None):
@@ -131,9 +128,6 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         The name of the reaction being implemented
     options: dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     """
 
     def __init__(self, param, domain, reaction, options=None):
@@ -175,8 +169,6 @@ class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
         The name of the reaction being implemented
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options=None):

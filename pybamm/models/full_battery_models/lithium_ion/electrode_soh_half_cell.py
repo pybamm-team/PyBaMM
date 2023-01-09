@@ -23,9 +23,6 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     .. [2] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
            better estimability of electrode-specific state of health: Decoding the cell
            expansion. Journal of Power Sources, 427, 101-111.
-
-
-    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(self, working_electrode, name="Electrode-specific SOH model"):

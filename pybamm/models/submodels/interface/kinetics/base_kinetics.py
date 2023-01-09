@@ -22,8 +22,6 @@ class BaseKinetics(BaseInterface):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

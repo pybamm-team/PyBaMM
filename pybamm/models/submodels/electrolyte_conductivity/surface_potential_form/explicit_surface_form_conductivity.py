@@ -17,8 +17,6 @@ class Explicit(BaseElectrolyteConductivity):
         The domain in which the model holds
     options : dict
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param, domain, options):

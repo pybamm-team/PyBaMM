@@ -23,8 +23,6 @@ class DiffusionLimited(BaseInterface):
         :class:`pybamm.BaseBatteryModel`
     order : str
         The order of the model ("leading" or "full")
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options, order):

@@ -17,8 +17,6 @@ class BaseModel(pybamm.BaseSubModel):
         Additional options to pass to the model
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options, phase="primary"):

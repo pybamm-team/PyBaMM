@@ -24,8 +24,6 @@ class MPM(SPM):
         heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size
         distributions”.
         In: arXiv preprint arXiv:2006.12208 (2020).
-
-    **Extends:** :class:`pybamm.lithium_ion.SPM`
     """
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):

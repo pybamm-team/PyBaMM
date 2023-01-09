@@ -22,8 +22,6 @@ class BaseOpenCircuitPotential(BaseInterface):
         :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

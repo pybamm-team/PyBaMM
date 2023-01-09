@@ -14,8 +14,6 @@ class BaseTransverseModel(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.convection.BaseModel`
     """
 
     def __init__(self, param, options=None):

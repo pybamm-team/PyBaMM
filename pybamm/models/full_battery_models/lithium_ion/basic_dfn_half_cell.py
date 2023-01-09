@@ -34,8 +34,6 @@ class BasicDFNHalfCell(BaseModel):
     .. [2] M Doyle, TF Fuller and JS Nwman. “Modeling of Galvanostatic Charge and
         Discharge of the Lithium/Polymer/Insertion Cell”. Journal of The
         Electrochemical Society, 140(6):1526-1533, 1993
-
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):

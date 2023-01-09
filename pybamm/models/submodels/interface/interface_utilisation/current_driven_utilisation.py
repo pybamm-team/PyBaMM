@@ -20,8 +20,6 @@ class CurrentDriven(BaseModel):
     reaction_loc : str
         Where the reaction happens: "x-average" (SPM, SPMe, etc),
         "full electrode" (full DFN), or "interface" (half-cell model)
-
-    **Extends:** :class:`pybamm.interface utilisation.BaseModel`
     """
 
     def __init__(self, param, domain, options, reaction_loc):

@@ -153,8 +153,6 @@ class BinaryOperator(pybamm.Symbol):
 class Power(BinaryOperator):
     """
     A node in the expression tree representing a `**` power operator.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -196,8 +194,6 @@ class Power(BinaryOperator):
 class Addition(BinaryOperator):
     """
     A node in the expression tree representing an addition operator.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -220,8 +216,6 @@ class Addition(BinaryOperator):
 class Subtraction(BinaryOperator):
     """
     A node in the expression tree representing a subtraction operator.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -247,8 +241,6 @@ class Multiplication(BinaryOperator):
     A node in the expression tree representing a multiplication operator
     (Hadamard product). Overloads cases where the "*" operator would usually return a
     matrix multiplication (e.g. scipy.sparse.coo.coo_matrix)
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -286,8 +278,6 @@ class Multiplication(BinaryOperator):
 class MatrixMultiplication(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -335,8 +325,6 @@ class MatrixMultiplication(BinaryOperator):
 class Division(BinaryOperator):
     """
     A node in the expression tree representing a division operator.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -381,8 +369,6 @@ class Inner(BinaryOperator):
     mathematical vectors are evaluated on cell edges). Therefore, inner also transfers
     the inner product of the vector onto the scalar part of the grid if required
     by a particular discretisation.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -452,7 +438,6 @@ class Equality(BinaryOperator):
     """
     A node in the expression tree representing an equality comparison between two
     nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -495,8 +480,6 @@ class _Heaviside(BinaryOperator):
     In the case where the Heaviside function is of the form `pybamm.t < x`, `pybamm.t <=
     x`, `x < pybamm.t`, or `x <= pybamm.t`, where `x` is any constant equation, this
     DISCONTINUITY event will automatically be added by the solver.
-
-    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, name, left, right):

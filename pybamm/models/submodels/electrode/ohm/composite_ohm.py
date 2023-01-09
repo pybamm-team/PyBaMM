@@ -19,8 +19,6 @@ class Composite(BaseModel):
         Either 'Negative electrode' or 'Positive electrode'
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.BaseOhm`
     """
 
     def __init__(self, param, domain, options=None):
