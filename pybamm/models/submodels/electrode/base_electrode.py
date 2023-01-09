@@ -197,6 +197,9 @@ class BaseElectrode(pybamm.BaseSubModel):
                     phi_s_cn, phi_s_cp
                 )
             )
+            # Contact resistance alters the voltage. To make sure it works for all
+            # operating modes, a new variable "Contact voltage [V]" is created instead
+            # of changing the existing "Terminal voltage [V]".
             V_dim = variables["Terminal voltage [V]"]
             if "Current [A]" in variables:
                 I = variables["Current [A]"]
