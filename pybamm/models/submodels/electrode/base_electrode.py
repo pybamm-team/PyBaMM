@@ -208,20 +208,21 @@ class BaseElectrode(pybamm.BaseSubModel):
                 P = pybamm.FunctionParameter(
                     "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
                 )
-                discriminant = V_dim ** 2 - 4 * P * param.R_contact
+                discriminant = V_dim**2 - 4 * P * param.R_contact
                 V_contact_dim = (V_dim + pybamm.sqrt(discriminant)) / 2
             elif self.options["operating mode"] == "explicit resistance":
                 # Approximation: only valid if R_contact << R
                 R = pybamm.FunctionParameter(
-                    "Resistance function [Ohm]", {
-                        "Time [s]": pybamm.t * self.param.timescale
-                    }
+                    "Resistance function [Ohm]",
+                    {"Time [s]": pybamm.t * self.param.timescale},
                 )
                 V_contact_dim = V_dim * (1 - param.R_contact / R)
             V_contact = V_contact_dim / param.potential_scale
-            variables.update({
-                "Contact voltage": V_contact,
-                "Contact voltage [V]": V_contact_dim,
-            })
+            variables.update(
+                {
+                    "Contact voltage": V_contact,
+                    "Contact voltage [V]": V_contact_dim,
+                }
+            )
 
         return variables
