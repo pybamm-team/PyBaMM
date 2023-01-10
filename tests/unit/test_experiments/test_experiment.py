@@ -240,7 +240,6 @@ class TestExperiment(unittest.TestCase):
             cccv_handling="ode",
         )
 
-        experiment.operating_conditions,
         expected_result = [
             {
                 "C-rate input [-]": 0.05,
