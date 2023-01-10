@@ -31,7 +31,7 @@ jobs:
           if [ $current_branch != "develop" ]; then
               git fetch origin develop:develop
           fi
-  
+
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
