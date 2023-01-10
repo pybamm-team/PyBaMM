@@ -10,7 +10,7 @@ def solve_model_once(model, solver, t_eval):
 
 
 class TimeSolveSPM:
-    param_names = ["solve first", "parameter"]
+    param_names = ["solve first", "parameter", "solver_class"]
     params = (
         [False, True],
         [
@@ -24,10 +24,15 @@ class TimeSolveSPM:
             "Chen2020",
             "Ecker2015",
         ],
+        [
+            pybamm.CasadiSolver,
+            pybamm.IDAKLUSolver,
+        ],
+
     )
 
-    def setup(self, solve_first, parameters):
-        self.solver = pybamm.CasadiSolver()
+    def setup(self, solve_first, parameters, solver_class):
+        self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPM()
         c_rate = 1
         tmax = 4000 / c_rate
@@ -58,12 +63,12 @@ class TimeSolveSPM:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters):
+    def time_solve_model(self, solve_first, parameters, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeSolveSPMe:
-    param_names = ["solve first", "parameter"]
+    param_names = ["solve first", "parameter", "solver_class"]
     params = (
         [False, True],
         [
@@ -77,10 +82,14 @@ class TimeSolveSPMe:
             "Chen2020",
             "Ecker2015",
         ],
+        [
+            pybamm.CasadiSolver,
+            pybamm.IDAKLUSolver,
+        ],
     )
 
-    def setup(self, solve_first, parameters):
-        self.solver = pybamm.CasadiSolver()
+    def setup(self, solve_first, parameters, solver_class):
+        self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPMe()
         c_rate = 1
         tmax = 4000 / c_rate
@@ -111,12 +120,12 @@ class TimeSolveSPMe:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters):
+    def time_solve_model(self, solve_first, parameters, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeSolveDFN:
-    param_names = ["solve first", "parameter"]
+    param_names = ["solve first", "parameter", "solver_class"]
     params = (
         [False, True],
         [
@@ -130,10 +139,14 @@ class TimeSolveDFN:
             "Chen2020",
             "Ecker2015",
         ],
+        [
+            pybamm.CasadiSolver,
+            pybamm.IDAKLUSolver,
+        ],
     )
 
-    def setup(self, solve_first, parameters):
-        self.solver = pybamm.CasadiSolver()
+    def setup(self, solve_first, parameters, solver_class):
+        self.solver = solver_class()
         self.model = pybamm.lithium_ion.DFN()
         c_rate = 1
         tmax = 4000 / c_rate
@@ -164,5 +177,5 @@ class TimeSolveDFN:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters):
+    def time_solve_model(self, solve_first, parameters, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)

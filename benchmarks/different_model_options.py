@@ -30,8 +30,8 @@ def build_model(parameter, model_, option, value):
 
 
 class SolveModel:
-    def solve_setup(self, parameter, model_, option, value):
-        self.solver = pybamm.CasadiSolver()
+    def solve_setup(self, parameter, model_, option, value, solver_class):
+        self.solver = solver_class()
         self.model = model_({option: value})
         c_rate = 1
         tmax = 4000 / c_rate
@@ -77,16 +77,17 @@ class TimeBuildModelLossActiveMaterial:
 
 
 class TimeSolveLossActiveMaterial:
-    param_names = ["model", "model option"]
+    param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
         ["none", "stress-driven", "reaction-driven", "stress and reaction-driven"],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 
-    def setup(self, model, params):
-        SolveModel.solve_setup(self, "Ai2020", model, "loss of active material", params)
+    def setup(self, model, params, solver_class):
+        SolveModel.solve_setup(self, "Ai2020", model, "loss of active material", params, solver_class)
 
-    def time_solve_model(self, model, params):
+    def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -102,16 +103,17 @@ class TimeBuildModelLithiumPlating:
 
 
 class TimeSolveLithiumPlating:
-    param_names = ["model", "model option"]
+    param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
         ["none", "irreversible", "reversible", "partially reversible"],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 
-    def setup(self, model, params):
-        SolveModel.solve_setup(self, "OKane2020", model, "lithium plating", params)
+    def setup(self, model, params, solver_class):
+        SolveModel.solve_setup(self, "OKane2020", model, "lithium plating", params, solver_class)
 
-    def time_solve_model(self, model, params):
+    def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -137,7 +139,7 @@ class TimeBuildModelSEI:
 
 
 class TimeSolveSEI:
-    param_names = ["model", "model option"]
+    param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
         [
@@ -151,12 +153,13 @@ class TimeSolveSEI:
             "ec reaction limited",
             "ec reaction limited (asymmetric)",
         ],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 
-    def setup(self, model, params):
-        SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params)
+    def setup(self, model, params, solver_class):
+        SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params, solver_class)
 
-    def time_solve_model(self, model, params):
+    def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -177,7 +180,7 @@ class TimeBuildModelParticle:
 
 
 class TimeSolveParticle:
-    param_names = ["model", "model option"]
+    param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
         [
@@ -186,12 +189,13 @@ class TimeSolveParticle:
             "quadratic profile",
             "quartic profile",
         ],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 
-    def setup(self, model, params):
-        SolveModel.solve_setup(self, "Marquis2019", model, "particle", params)
+    def setup(self, model, params, solver_class):
+        SolveModel.solve_setup(self, "Marquis2019", model, "particle", params, solver_class)
 
-    def time_solve_model(self, model, params):
+    def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -207,16 +211,17 @@ class TimeBuildModelThermal:
 
 
 class TimeSolveThermal:
-    param_names = ["model", "model option"]
+    param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
         ["isothermal", "lumped", "x-lumped", "x-full"],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 
-    def setup(self, model, params):
-        SolveModel.solve_setup(self, "Marquis2019", model, "thermal", params)
+    def setup(self, model, params, solver_class):
+        SolveModel.solve_setup(self, "Marquis2019", model, "thermal", params, solver_class)
 
-    def time_solve_model(self, model, params):
+    def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -232,14 +237,15 @@ class TimeBuildModelSurfaceForm:
 
 
 class TimeSolveSurfaceForm:
-    param_names = ["model", "model option"]
+    param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
         ["false", "differential", "algebraic"],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 
-    def setup(self, model, params):
-        SolveModel.solve_setup(self, "Marquis2019", model, "surface form", params)
+    def setup(self, model, params, solver_class):
+        SolveModel.solve_setup(self, "Marquis2019", model, "surface form", params, solver_class)
 
-    def time_solve_model(self, model, params):
+    def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
