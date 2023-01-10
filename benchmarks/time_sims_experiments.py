@@ -11,13 +11,13 @@ class TimeSimulation:
     ]
     experiment_descriptions = {
         "CCCV": [
-                    "Discharge at C/5 for 10 hours or until 3.3 V",
-                    "Rest for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until 10 mA",
-                    "Rest for 1 hour",
-                ],
-        "GITT": [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20
+            "Discharge at C/5 for 10 hours or until 3.3 V",
+            "Rest for 1 hour",
+            "Charge at 1 A until 4.1 V",
+            "Hold at 4.1 V until 10 mA",
+            "Rest for 1 hour",
+        ],
+        "GITT": [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20,
     }
 
     def setup(self, experiment, parameters, model_class, solver_class):
@@ -26,7 +26,10 @@ class TimeSimulation:
         self.solver = solver_class()
         self.exp = pybamm.Experiment(self.experiment_descriptions[experiment])
         self.sim = pybamm.Simulation(
-            self.model, parameter_values=self.param, experiment=self.exp, solver=self.solver
+            self.model,
+            parameter_values=self.param,
+            experiment=self.exp,
+            solver=self.solver,
         )
 
     def time_setup(self, experiment, parameters, model_class, solver_class):
@@ -38,5 +41,3 @@ class TimeSimulation:
 
     def time_solve(self, experiment, parameters, model_class, solver_class):
         self.sim.solve()
-
-

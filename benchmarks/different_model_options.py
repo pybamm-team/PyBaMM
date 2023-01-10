@@ -85,7 +85,9 @@ class TimeSolveLossActiveMaterial:
     )
 
     def setup(self, model, params, solver_class):
-        SolveModel.solve_setup(self, "Ai2020", model, "loss of active material", params, solver_class)
+        SolveModel.solve_setup(
+            self, "Ai2020", model, "loss of active material", params, solver_class
+        )
 
     def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
@@ -111,7 +113,9 @@ class TimeSolveLithiumPlating:
     )
 
     def setup(self, model, params, solver_class):
-        SolveModel.solve_setup(self, "OKane2020", model, "lithium plating", params, solver_class)
+        SolveModel.solve_setup(
+            self, "OKane2020", model, "lithium plating", params, solver_class
+        )
 
     def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
@@ -193,7 +197,9 @@ class TimeSolveParticle:
     )
 
     def setup(self, model, params, solver_class):
-        SolveModel.solve_setup(self, "Marquis2019", model, "particle", params, solver_class)
+        SolveModel.solve_setup(
+            self, "Marquis2019", model, "particle", params, solver_class
+        )
 
     def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
@@ -219,7 +225,9 @@ class TimeSolveThermal:
     )
 
     def setup(self, model, params, solver_class):
-        SolveModel.solve_setup(self, "Marquis2019", model, "thermal", params, solver_class)
+        SolveModel.solve_setup(
+            self, "Marquis2019", model, "thermal", params, solver_class
+        )
 
     def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
@@ -245,7 +253,9 @@ class TimeSolveSurfaceForm:
     )
 
     def setup(self, model, params, solver_class):
-        SolveModel.solve_setup(self, "Marquis2019", model, "surface form", params, solver_class)
+        SolveModel.solve_setup(
+            self, "Marquis2019", model, "surface form", params, solver_class
+        )
 
     def time_solve_model(self, model, params, solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)

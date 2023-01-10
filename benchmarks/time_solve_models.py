@@ -28,7 +28,6 @@ class TimeSolveSPM:
             pybamm.CasadiSolver,
             pybamm.IDAKLUSolver,
         ],
-
     )
 
     def setup(self, solve_first, parameters, solver_class):
