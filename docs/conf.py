@@ -15,7 +15,7 @@
 import os
 import sys
 import pybamm
-import guzzle_sphinx_theme
+import pydata_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -114,18 +114,17 @@ html_static_path = []
 #
 # html_sidebars = {}
 
-# Guzzle theme
+# Theme
 
-html_theme_path = guzzle_sphinx_theme.html_theme_path()
-html_theme = "guzzle_sphinx_theme"
+html_theme = "pydata_sphinx_theme"
 
 # Register the theme as an extension to generate a sitemap.xml
-extensions.append("guzzle_sphinx_theme")
+extensions.append("pydata_sphinx_theme")
 
 # Guzzle theme options (see theme.conf for more information)
 html_theme_options = {
     # Set the name of the project to appear in the sidebar
-    "project_nav_name": project
+    # "project_nav_name": project
 }
 
 

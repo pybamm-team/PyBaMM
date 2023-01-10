@@ -16,5 +16,5 @@ sympy >= 1.8
 # Should not be imported
 matplotlib >= 2.0
 #
-guzzle-sphinx-theme
+pydata-sphinx-theme
 sphinx>4.0

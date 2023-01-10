@@ -83,20 +83,20 @@ PyBaMM provides pre-defined parameter sets for several common chemistries,
 listed below. See :ref:`adding-parameter-sets` for information on registering new
 parameter sets with PyBaMM.
 
-Lead-acid Parameter Sets
-==========================
+.. Lead-acid Parameter Sets
+.. ========================
 
-{% for k,v in parameter_sets.items() if v.chemistry == "lead_acid" %}
-{{k}}
-----------------------------
-{{ parameter_sets.get_docstring(k) | safe }}
-{% endfor %}
+.. {% for k,v in parameter_sets.items() if v.chemistry == "lead_acid" %}
+.. {{k}}
+.. ----------------------------
+.. {{ parameter_sets.get_docstring(k) | safe }}
+.. {% endfor %}
 
-Lithium-ion Parameter Sets
-==========================
-{% for k,v in parameter_sets.items() if v.chemistry == "lithium_ion" %}
-{{k}}
-----------------------------
-{{ parameter_sets.get_docstring(k) }}
-{% endfor %}
+.. Lithium-ion Parameter Sets
+.. ==========================
+.. {% for k,v in parameter_sets.items() if v.chemistry == "lithium_ion" %}
+.. {{k}}
+.. ----------------------------
+.. {{ parameter_sets.get_docstring(k) }}
+.. {% endfor %}
 

@@ -208,7 +208,7 @@ setup(
         "matplotlib>=2.0",
     ],
     extras_require={
-        "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation
+        "docs": ["sphinx>=1.5", "pydata-sphinx-theme"],  # For doc generation
         "dev": [
             "flake8>=3",  # For code style checking
             "black",  # For code style auto-formatting
