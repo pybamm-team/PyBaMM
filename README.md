@@ -24,7 +24,7 @@
 
 PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
 written in Python. Our mission is to accelerate battery modelling research by
-providing an open-source tools for multi-institutional, interdisciplinary collaboration. 
+providing an open-source tools for multi-institutional, interdisciplinary collaboration.
 Broadly, PyBaMM consists of
 (i) a framework for writing and solving systems
 of differential equations,
@@ -32,6 +32,7 @@ of differential equations,
 (iii) specialized tools for simulating battery-specific experiments and visualizing the results.
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
+
 ## 💻 Using PyBaMM
 
 The easiest way to use PyBaMM is to run a 1C constant-current discharge with a model of your choice with all the default settings:
