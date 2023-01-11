@@ -22,9 +22,9 @@ jobs:
         run: python scripts/install_KLU_Sundials.py
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
-      - name: Install pybamm
         run: |
-          python -m pip install .
+          python -m pip wheel --no-deps --no-index .
+          cat setup.log
       - name: Fetch base branch
         run: |
           # This workflow also runs for merge commits
