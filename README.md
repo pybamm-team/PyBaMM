@@ -22,8 +22,16 @@
 
 # PyBaMM
 
-PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemical DAE models by using state-of-the-art automatic differentiation and numerical solvers. The Doyle-Fuller-Newman model can be solved in under 0.1 seconds, while the reduced-order Single Particle Model and Single Particle Model with electrolyte can be solved in just a few milliseconds. Additional physics can easily be included such as thermal effects, fast particle diffusion, 3D effects, and more. All models are implemented in a flexible manner, and a wide range of models and parameter sets (NCA, NMC, LiCoO2, ...) are available. There is also functionality to simulate any set of experimental instructions, such as CCCV or GITT, or specify drive cycles.
-
+PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
+written in Python. Our mission is to accelerate battery modelling research by
+providing an open-source tools for multi-institutional, interdisciplinary collaboration. 
+Broadly, PyBaMM consists of
+(i) a framework for writing and solving systems
+of differential equations,
+(ii) a library of battery models and parameters, and
+(iii) specialized tools for simulating battery-specific experiments and visualizing the results.
+Together, these enable flexible model definitions and fast battery simulations, allowing users to
+explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 ## 💻 Using PyBaMM
 
 The easiest way to use PyBaMM is to run a 1C constant-current discharge with a model of your choice with all the default settings:
