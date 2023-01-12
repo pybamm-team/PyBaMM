@@ -24,7 +24,7 @@
   // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
-    "cp -r {conf_dir}/pybmind11 .",
+    "cp -r {conf_dir}/pybind11 .",
     "python setup.py build",
     "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
   ],
