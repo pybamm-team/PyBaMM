@@ -42,7 +42,6 @@ class SolveModel:
                 print("XXXXX cannot find klu", e)
                 idaklu_spec = None
 
-
         self.solver = solver_class()
         self.model = model_({option: value})
         c_rate = 1
