@@ -16,7 +16,7 @@ if idaklu_spec is not None:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         idaklu_spec.loader.exec_module(idaklu)
     except ImportError as e:  # pragma: no cover
-        print('ERROR IS', e)
+        print("ERROR IS", e)
         idaklu_err = str(e)
         idaklu_spec = None
 
