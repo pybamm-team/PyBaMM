@@ -406,7 +406,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "and there are multiple phases then 'total interfacial "
                     "current density as a state' must be 'true'"
                 )
-        
+
         # Options not yet compatible with contact resistance
         if options["contact resistance"] == "true":
             if options["operating mode"] == "explicit power":

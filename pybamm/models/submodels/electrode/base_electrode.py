@@ -112,8 +112,8 @@ class BaseElectrode(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_current_collector_potential_variables(
-            self, phi_s_cn, phi_s_cp, delta_phi_contact
-        ):
+        self, phi_s_cn, phi_s_cp, delta_phi_contact
+    ):
         """
         A private function to obtain the standard variables which
         can be derived from the potentials in the current collector.
