@@ -187,8 +187,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def __init__(self, extra_options):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch"],
             "calculate heat source for isothermal models": ["false", "true"],
+            "cell geometry": ["arbitrary", "pouch"],
+            "contact resistance": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
                 "uniform",
@@ -404,6 +405,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If 'SEI film resistance' is not 'none' "
                     "and there are multiple phases then 'total interfacial "
                     "current density as a state' must be 'true'"
+                )
+        
+        # Options not yet compatible with contact resistance
+        if options["contact resistance"] == "true":
+            if options["operating mode"] == "explicit power":
+                raise NotImplementedError(
+                    "Contact resistance not yet supported for explicit power."
+                )
+            if options["operating mode"] == "explicit resistance":
+                raise NotImplementedError(
+                    "Contact resistance not yet supported for explicit resistance."
                 )
 
         # Options not yet compatible with particle-size distributions

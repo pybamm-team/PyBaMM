@@ -75,9 +75,6 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
     pybamm_dict["Typical current [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
 
-    # assume no contact resistance
-    pybamm_dict["Contact resistance [Ohm]"] = 0
-
     # number of electrons in reaction (1 for li-ion)
     for domain in [negative_electrode, positive_electrode]:
         pybamm_dict[domain.pre_name + "electrons in reaction"] = 1.0
