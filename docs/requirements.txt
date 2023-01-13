@@ -17,4 +17,5 @@ sympy >= 1.8
 matplotlib >= 2.0
 #
 pydata-sphinx-theme
+sphinx_design
 sphinx>4.0

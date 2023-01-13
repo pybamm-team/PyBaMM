@@ -36,7 +36,7 @@ sim.solve([0, 3600])  # solve for 1 hour
 sim.plot()
 ```
 
-or simulate an experiment such as CCCV:
+or simulate an experiment such as a constant-current discharge followed by a constant-current-constant-voltage charge:
 
 ```python3
 import pybamm
