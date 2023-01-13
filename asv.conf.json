@@ -80,7 +80,7 @@
       "cmake": []
     },
     "env": {
-      {"LD_LIBRARY_PATH": "/home/runner/.local/lib"}
+      "LD_LIBRARY_PATH": "/home/runner/.local/lib"
     }
   }
 
