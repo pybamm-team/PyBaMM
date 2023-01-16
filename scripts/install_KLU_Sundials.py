@@ -71,10 +71,10 @@ suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
 suitesparse_src = os.path.join(download_dir, suitesparse_dir)
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
 make_cmd = [
-    "make", 
+    "make",
     "library",
-    "CMAKE_OPTIONS=\"-DCMAKE_INSTALL_PREFIX={}\"".format(install_dir),
-    ]
+    'CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX={}"'.format(install_dir),
+]
 install_cmd = [
     "make",
     "install",
