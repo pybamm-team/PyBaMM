@@ -194,7 +194,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     E_a_n = pybamm_dict.get(
         negative_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
-    k_n = k_n_norm * F / (c_n_max * c_e**0.5)
+    # Note that in BPX j = F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
+    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
+    k_n = k_n_norm * F / (2 * c_n_max * c_e**0.5)
 
     def _negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_n  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
@@ -222,7 +224,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     E_a_p = pybamm_dict.get(
         positive_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
-    k_p = k_p_norm * F / (c_p_max * c_e**0.5)
+    # Note that in BPX j = F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
+    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
+    k_p = k_p_norm * F / (2 * c_p_max * c_e**0.5)
 
     def _positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_p  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
