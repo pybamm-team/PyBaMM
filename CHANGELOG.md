@@ -4,6 +4,10 @@
 
 - Steps in `Experiment` can now be tagged and cycle numbers be searched based on those tags ([#2593](https://github.com/pybamm-team/PyBaMM/pull/2593)).
 
+## Bug fixes
+
+- Fixed a bug where a factor of 2 was missing when converting the reaction rate for Butler-Volmer from BPX to PyBaMM ([#2610](https://github.com/pybamm-team/PyBaMM/pull/2610))
+
 # [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
 
 ## Features
