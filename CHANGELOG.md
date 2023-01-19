@@ -3,7 +3,7 @@
 ## Features
 
 - Steps in `Experiment` can now be tagged and cycle numbers be searched based on those tags ([#2593](https://github.com/pybamm-team/PyBaMM/pull/2593)).
-- New parameter `Contact resistance [Ohm]` and corresponding variable `Contact voltage [V]` ([#2598](https://github.com/pybamm-team/PyBaMM/pull/2598)).
+- New `contact resistance` option and corresponding parameter `Contact resistance [Ohm]` ([#2598](https://github.com/pybamm-team/PyBaMM/pull/2598)).
 
 # [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
 
