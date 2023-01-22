@@ -11,6 +11,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5334/jors.309.svg)](https://doi.org/10.5334/jors.309)
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](http://numfocus.org)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 
@@ -32,6 +33,22 @@ of differential equations,
 (iii) specialized tools for simulating battery-specific experiments and visualizing the results.
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
+
+[//]: # "numfocus-fiscal-sponsor-attribution"
+
+PyBaMM uses an [open governance model](./GOVERNANCE.md)
+and is fiscally sponsored by [NumFOCUS](https://numfocus.org/). Consider making
+a [tax-deductible donation](https://numfocus.org/donate-for-pybamm) to help the project
+pay for developer time, professional services, travel, workshops, and a variety of other needs.
+
+<div align="center">
+  <a href="https://numfocus.org/project/pybamm">
+    <img height="60px" 
+         src="https://raw.githubusercontent.com/numfocus/templates/master/images/numfocus-logo.png" 
+         align="center">
+  </a>
+</div>
+<br>
 
 ## 💻 Using PyBaMM
 
