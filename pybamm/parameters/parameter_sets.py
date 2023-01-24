@@ -1,5 +1,11 @@
+import sys
 import warnings
-import importlib_metadata
+
+if sys.version_info.minor <= 9:
+    import importlib_metadata
+else:
+    import importlib.metadata as importlib_metadata
+
 import textwrap
 from collections.abc import Mapping
 
