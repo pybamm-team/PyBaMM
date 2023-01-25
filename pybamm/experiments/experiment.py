@@ -27,6 +27,7 @@ examples = """
 
 # TODO: Add examples of timestamps! (if I have forgotten this at the PR stage please bring it up)
 
+
 class Experiment:
     """
     Base class for experimental conditions under which to run the model. In general, a
@@ -78,10 +79,7 @@ class Experiment:
             cccv_handling,
         )
 
-        self.datetime_formats = [
-            "Day %j %H:%M:%S",
-            "%Y-%m-%d %H:%M:%S"
-        ]
+        self.datetime_formats = ["Day %j %H:%M:%S", "%Y-%m-%d %H:%M:%S"]
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -178,7 +176,7 @@ class Experiment:
             tags = list(np.unique(tag_CC + tag_CV))
             if len(tags) == 0:
                 tags = None
-            
+
             current_timestamp = self._process_timestamp(cond)
             next_timestamp = self._process_timestamp(next_step)
 
@@ -497,11 +495,13 @@ class Experiment:
         elif cond[0] != "[":
             return None
         else:
-            timestamp = cond[cond.find("[") + 1: cond.find("]")]
+            timestamp = cond[cond.find("[") + 1 : cond.find("]")]
             for format in self.datetime_formats:
                 try:
                     return datetime.strptime(timestamp, format)
                 except ValueError:
                     pass
-                
-            raise ValueError(f"The timestamp [{timestamp}] does not match any of the supported formats.")
+
+            raise ValueError(
+                f"The timestamp [{timestamp}] does not match any of the supported formats."
+            )
