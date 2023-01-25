@@ -156,6 +156,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential [V]": phi_s_cp_dim,
             "Local voltage": V_cc,
             "Local voltage [V]": self.param.ocv_ref + V_cc * pot_scale,
+            "Contact overpotential": delta_phi_contact,
+            "Contact overpotential [V]": delta_phi_contact * pot_scale,
             "Terminal voltage": V - delta_phi_contact,
             "Terminal voltage [V]": V_dim - delta_phi_contact * pot_scale,
         }
