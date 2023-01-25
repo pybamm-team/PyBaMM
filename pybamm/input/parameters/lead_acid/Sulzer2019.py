@@ -259,6 +259,7 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 256.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 35.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 35.0,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 4800000.0,
         "Negative electrode pore size [m]": 1e-07,

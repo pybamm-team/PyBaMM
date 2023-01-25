@@ -419,6 +419,7 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 5.0,
         "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28746.0,
