@@ -53,6 +53,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at 1C for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": ["tag1"],
                 },
                 {
@@ -63,6 +65,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": ["tag2", "tag3"],
                 },
                 {
@@ -73,6 +77,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 0.5 C for 45 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -83,6 +89,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at 1 A for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -93,6 +101,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 200 mA for 45 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -103,6 +113,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at 1W for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -113,6 +125,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 200mW for 45 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -123,6 +137,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Rest for 10 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": ["tag1", "tag3"],
                 },
                 {
@@ -133,6 +149,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 1V for 20 seconds",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -143,6 +161,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 1 C until 4.1V",
                     "events": {"Voltage input [V]": 4.1, "type": "voltage"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -153,6 +173,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 4.1 V until 50mA",
                     "events": {"Current input [A]": 0.05, "type": "current"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -163,6 +185,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 3V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -173,6 +197,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/3 for 2 hours or until 2.5 V",
                     "events": {"Voltage input [V]": 2.5, "type": "voltage"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
             ],
@@ -233,6 +259,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -244,6 +272,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 0.5 C until 1V then hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -254,6 +284,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
             ],
@@ -278,6 +310,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 0.5 C until 2V",
                     "events": {"Voltage input [V]": 2, "type": "voltage"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -288,6 +322,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
             ],
@@ -310,6 +346,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at 0.5 C for 2 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -320,6 +358,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Hold at 1V until C/50",
                     "events": {"C-rate input [-]": 0.02, "type": "C-rate"},
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
             ],
@@ -344,6 +384,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -354,6 +396,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at C/5 for 45 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -364,6 +408,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Discharge at C/20 for 0.5 hours",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
                 {
@@ -374,6 +420,8 @@ class TestExperiment(unittest.TestCase):
                     "dc_data": None,
                     "string": "Charge at C/5 for 45 minutes",
                     "events": None,
+                    "current timestamp": None,
+                    "next timestamp": None,
                     "tags": None,
                 },
             ],

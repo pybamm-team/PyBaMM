@@ -3,6 +3,7 @@
 #
 
 import numpy as np
+from datetime import datetime
 
 examples = """
 
@@ -24,6 +25,7 @@ examples = """
     Run US06 (W) for 2 hours,
     """
 
+# TODO: Add examples of timestamps! (if I have forgotten this at the PR stage please bring it up)
 
 class Experiment:
     """
@@ -75,6 +77,11 @@ class Experiment:
             drive_cycles,
             cccv_handling,
         )
+
+        self.datetime_formats = [
+            "Day %j %H:%M:%S",
+            "%Y-%m-%d %H:%M:%S"
+        ]
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -128,7 +135,10 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions = [
-            self.read_string(cond, drive_cycles) for cond in operating_conditions
+            self.read_string(cond, drive_cycles, next_step)
+            for cond, next_step in zip(
+                operating_conditions, operating_conditions[1:] + [None]
+            )
         ]
 
         self.termination_string = termination
@@ -143,7 +153,7 @@ class Experiment:
     def __repr__(self):
         return "pybamm.Experiment({!s})".format(self)
 
-    def read_string(self, cond, drive_cycles):
+    def read_string(self, cond, drive_cycles, next_step):
         """
         Convert a string to a dictionary of the right format
 
@@ -161,13 +171,17 @@ class Experiment:
             # If the string contains " then ", then this is a two-step CCCV experiment
             # and we need to split it into two strings
             cond_CC, cond_CV = cond.split(" then ")
-            op_CC = self.read_string(cond_CC, drive_cycles)
-            op_CV = self.read_string(cond_CV, drive_cycles)
+            op_CC = self.read_string(cond_CC, drive_cycles, None)
+            op_CV = self.read_string(cond_CV, drive_cycles, next_step)
             tag_CC = op_CC["tags"] or []
             tag_CV = op_CV["tags"] or []
             tags = list(np.unique(tag_CC + tag_CV))
             if len(tags) == 0:
                 tags = None
+            
+            current_timestamp = self._process_timestamp(cond)
+            next_timestamp = self._process_timestamp(next_step)
+
             outputs = {
                 "type": "CCCV",
                 "Voltage input [V]": op_CV["Voltage input [V]"],
@@ -176,6 +190,8 @@ class Experiment:
                 "dc_data": None,
                 "string": cond,
                 "events": op_CV["events"],
+                "current timestamp": current_timestamp,
+                "next timestamp": next_timestamp,
                 "tags": tags,
             }
             if "Current input [A]" in op_CC:
@@ -183,6 +199,10 @@ class Experiment:
             else:
                 outputs["C-rate input [-]"] = op_CC["C-rate input [-]"]
             return outputs
+
+        # Read time stamp
+        current_timestamp = self._process_timestamp(cond)
+        next_timestamp = self._process_timestamp(next_step)
 
         # Read tags
         if " [" in cond:
@@ -198,6 +218,7 @@ class Experiment:
             period = self.convert_time_to_seconds(time.split())
         else:
             period = self.period
+
         # Read instructions
         if "Run" in cond:
             cond_list = cond.split()
@@ -267,6 +288,8 @@ class Experiment:
             "dc_data": dc_data,
             "string": cond,
             "events": events,
+            "current timestamp": current_timestamp,
+            "next timestamp": next_timestamp,
             "tags": tags,
         }
 
@@ -448,8 +471,8 @@ class Experiment:
             and "Hold at " in next_step
             and "V until" in next_step
         ):
-            op = self.read_string(step, None)
-            next_op = self.read_string(next_step, None)
+            op = self.read_string(step, None, None)
+            next_op = self.read_string(next_step, None, None)
             # Check that the event conditions are the same as the hold conditions
             if op["events"] == {k: v for k, v in next_op.items() if k in op["events"]}:
                 return True
@@ -467,3 +490,18 @@ class Experiment:
                         break
 
         return cycles
+
+    def _process_timestamp(self, cond):
+        if cond is None:
+            return None
+        elif cond[0] != "[":
+            return None
+        else:
+            timestamp = cond[cond.find("[") + 1: cond.find("]")]
+            for format in self.datetime_formats:
+                try:
+                    return datetime.strptime(timestamp, format)
+                except ValueError:
+                    pass
+                
+            raise ValueError(f"The timestamp [{timestamp}] does not match any of the supported formats.")
