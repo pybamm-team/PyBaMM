@@ -1254,8 +1254,6 @@ class BaseSolver(object):
 
             pybamm.logger.debug("Finish post-processing events")
             return solution, solution.termination
-        elif solution.termination == "success":
-            return solution, solution.termination
 
     def check_extrapolation(self, solution, events):
         """

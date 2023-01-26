@@ -497,6 +497,7 @@ def get_parameter_values():
         "Positive current collector thermal conductivity [W.m-1.K-1]": 238.0,
         "Nominal cell capacity [A.h]": 0.15625,
         "Current function [A]": 0.15652,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 14.0,
         "Maximum concentration in negative electrode [mol.m-3]": 31920.0,

@@ -64,6 +64,7 @@ class LeadAcidParameters(BaseParameters):
         self.current_with_time = self.elec.current_with_time
         self.current_density_with_time = self.elec.current_density_with_time
         self.Q = self.elec.Q
+        self.R_contact = self.elec.R_contact
         self.n_electrodes_parallel = self.elec.n_electrodes_parallel
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut

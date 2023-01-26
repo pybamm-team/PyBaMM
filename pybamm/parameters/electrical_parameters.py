@@ -26,6 +26,7 @@ class ElectricalParameters(BaseParameters):
         """Defines the dimensional parameters."""
 
         self.Q = pybamm.Parameter("Nominal cell capacity [A.h]")
+        self.R_contact = pybamm.Parameter("Contact resistance [Ohm]")
         self.n_electrodes_parallel = pybamm.Parameter(
             "Number of electrodes connected in parallel to make a cell"
         )

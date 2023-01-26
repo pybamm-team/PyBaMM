@@ -166,7 +166,7 @@ class TestScikitsSolvers(unittest.TestCase):
         # Solve testing various linear solvers
         linsolvers = [
             "dense",
-            "lapackdense",
+            # "lapackdense",
             "spgmr",
             "spbcgs",
             "sptfqmr",

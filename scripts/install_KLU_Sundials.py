@@ -55,7 +55,7 @@ install_dir = (
 )
 
 # 1 --- Download SuiteSparse
-suitesparse_version = "5.6.0"
+suitesparse_version = "6.0.3"
 suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
     + "SuiteSparse/archive/v{}.tar.gz".format(suitesparse_version)
@@ -70,12 +70,14 @@ download_extract_library(suitesparse_url, download_dir)
 suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
 suitesparse_src = os.path.join(download_dir, suitesparse_dir)
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
-make_cmd = ["make", "library"]
+make_cmd = [
+    "make",
+    "library",
+    'CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX={}"'.format(install_dir),
+]
 install_cmd = [
     "make",
     "install",
-    "INSTALL={}".format(install_dir),
-    "INSTALL_DOC=/tmp/doc",
 ]
 print("-" * 10, "Building SuiteSparse", "-" * 40)
 for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
@@ -84,7 +86,7 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     subprocess.run(install_cmd, cwd=build_dir)
 
 # 2 --- Download SUNDIALS
-sundials_version = "5.1.0"
+sundials_version = "6.5.0"
 sundials_url = (
     "https://github.com/LLNL/sundials/"
     + f"releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"

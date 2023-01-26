@@ -3,6 +3,11 @@
 ## Features
 
 - Steps in `Experiment` can now be tagged and cycle numbers be searched based on those tags ([#2593](https://github.com/pybamm-team/PyBaMM/pull/2593)).
+- New `contact resistance` option, new parameter `Contact resistance [Ohm]` and new variable `Contact overpotential [V]` ([#2598](https://github.com/pybamm-team/PyBaMM/pull/2598)).
+
+## Bug fixes
+
+- Changed termination from "success" to "final time" for algebraic solvers to match ODE/DAE solvers ([#2613](https://github.com/pybamm-team/PyBaMM/pull/2613)).
 
 # [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
 

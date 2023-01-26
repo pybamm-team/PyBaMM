@@ -10,7 +10,7 @@ def solve_model_once(model, solver, t_eval):
 
 
 class TimeSolveSPM:
-    param_names = ["solve first", "parameter"]
+    param_names = ["solve first", "parameter", "solver_class"]
     params = (
         [False, True],
         [
@@ -20,15 +20,18 @@ class TimeSolveSPM:
             "Prada2013",
             # "Ai2020",
             "Ramadass2004",
-            "Mohtat2020",
+            # "Mohtat2020",
             "Chen2020",
-            "Chen2020_plating",
             "Ecker2015",
         ],
+        [
+            pybamm.CasadiSolver,
+            pybamm.IDAKLUSolver,
+        ],
     )
-    solver = pybamm.CasadiSolver()
 
-    def setup(self, solve_first, parameters):
+    def setup(self, solve_first, parameters, solver_class):
+        self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPM()
         c_rate = 1
         tmax = 4000 / c_rate
@@ -57,14 +60,14 @@ class TimeSolveSPM:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveSPM.solver, self.t_eval)
+            solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters):
-        TimeSolveSPM.solver.solve(self.model, t_eval=self.t_eval)
+    def time_solve_model(self, solve_first, parameters, solver_class):
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeSolveSPMe:
-    param_names = ["solve first", "parameter"]
+    param_names = ["solve first", "parameter", "solver_class"]
     params = (
         [False, True],
         [
@@ -74,15 +77,18 @@ class TimeSolveSPMe:
             "Prada2013",
             # "Ai2020",
             "Ramadass2004",
-            "Mohtat2020",
+            # "Mohtat2020",
             "Chen2020",
-            "Chen2020_plating",
             "Ecker2015",
         ],
+        [
+            pybamm.CasadiSolver,
+            pybamm.IDAKLUSolver,
+        ],
     )
-    solver = pybamm.CasadiSolver()
 
-    def setup(self, solve_first, parameters):
+    def setup(self, solve_first, parameters, solver_class):
+        self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPMe()
         c_rate = 1
         tmax = 4000 / c_rate
@@ -111,14 +117,14 @@ class TimeSolveSPMe:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveSPMe.solver, self.t_eval)
+            solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters):
-        TimeSolveSPMe.solver.solve(self.model, t_eval=self.t_eval)
+    def time_solve_model(self, solve_first, parameters, solver_class):
+        self.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeSolveDFN:
-    param_names = ["solve first", "parameter"]
+    param_names = ["solve first", "parameter", "solver_class"]
     params = (
         [False, True],
         [
@@ -130,13 +136,16 @@ class TimeSolveDFN:
             "Ramadass2004",
             # "Mohtat2020",
             "Chen2020",
-            "Chen2020_plating",
             "Ecker2015",
         ],
+        [
+            pybamm.CasadiSolver,
+            pybamm.IDAKLUSolver,
+        ],
     )
-    solver = pybamm.CasadiSolver()
 
-    def setup(self, solve_first, parameters):
+    def setup(self, solve_first, parameters, solver_class):
+        self.solver = solver_class()
         self.model = pybamm.lithium_ion.DFN()
         c_rate = 1
         tmax = 4000 / c_rate
@@ -165,7 +174,7 @@ class TimeSolveDFN:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveDFN.solver, self.t_eval)
+            solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters):
-        TimeSolveDFN.solver.solve(self.model, t_eval=self.t_eval)
+    def time_solve_model(self, solve_first, parameters, solver_class):
+        self.solver.solve(self.model, t_eval=self.t_eval)

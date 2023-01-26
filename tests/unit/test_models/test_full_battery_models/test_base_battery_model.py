@@ -15,8 +15,9 @@ OPTIONS_DICT = {
 
 PRINT_OPTIONS_OUTPUT = """\
 'calculate discharge energy': 'false' (possible: ['false', 'true'])
-'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
+'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'dimensionality': 0 (possible: [0, 1, 2])
@@ -301,7 +302,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
-
         with self.assertRaisesRegex(
             pybamm.OptionError, "lithium plating porosity change"
         ):
@@ -311,6 +311,25 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "plating porosity change"
                 }
             )
+
+        # contact resistance
+        with self.assertRaisesRegex(pybamm.OptionError, "contact resistance"):
+            pybamm.BaseBatteryModel({"contact resistance": "bad contact resistance"})
+        with self.assertRaisesRegex(NotImplementedError, "Contact resistance not yet"):
+            pybamm.BaseBatteryModel(
+                {
+                    "contact resistance": "true",
+                    "operating mode": "explicit power",
+                }
+            )
+        with self.assertRaisesRegex(NotImplementedError, "Contact resistance not yet"):
+            pybamm.BaseBatteryModel(
+                {
+                    "contact resistance": "true",
+                    "operating mode": "explicit resistance",
+                }
+            )
+
         # stress-induced diffusion
         with self.assertRaisesRegex(pybamm.OptionError, "cannot have stress"):
             pybamm.BaseBatteryModel({"stress-induced diffusion": "true"})
