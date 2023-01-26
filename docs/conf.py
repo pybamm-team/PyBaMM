@@ -15,7 +15,6 @@
 import os
 import sys
 import pybamm
-import pydata_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -92,9 +91,9 @@ pygments_style = None
 html_static_path = ["source/_static"]
 
 # Theme
-html_theme = "pydata_sphinx_theme"
 
-# pydata theme options (see https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
+# pydata theme options (see
+# https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
 # mostly copied from numpy, scipy, pandas
 html_logo = "source/_static/pybamm_logo.png"
 
