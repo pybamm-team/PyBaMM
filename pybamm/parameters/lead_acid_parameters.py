@@ -67,6 +67,7 @@ class LeadAcidParameters(BaseParameters):
         # Electrical
         self.I_typ = self.elec.I_typ
         self.Q = self.elec.Q
+        self.R_contact = self.elec.R_contact
         self.C_rate = self.elec.C_rate
         self.n_electrodes_parallel = self.elec.n_electrodes_parallel
         self.n_cells = self.elec.n_cells
