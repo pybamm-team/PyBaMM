@@ -174,7 +174,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             if self.options["contact resistance"] == "true":
                 param = self.param
                 I = variables["Current [A]"]
-                delta_phi_contact = I * param.R_contact / param.potential_scale
+                delta_phi_contact = I * param.R_contact
             else:
                 delta_phi_contact = pybamm.Scalar(0)
             variables.update(
