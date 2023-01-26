@@ -71,7 +71,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-ref:: https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks
+      .. button-link:: https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks
          :expand:
          :color: secondary
          :click-parent:
@@ -108,7 +108,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-ref:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
+      .. button-link:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
          :expand:
          :color: secondary
          :click-parent:

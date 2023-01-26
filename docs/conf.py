@@ -88,6 +88,8 @@ pygments_style = None
 
 # -- Options for HTML output -------------------------------------------------
 
+html_theme = "pydata_sphinx_theme"
+
 html_static_path = ["source/_static"]
 
 # Theme
