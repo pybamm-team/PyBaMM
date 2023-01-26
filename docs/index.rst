@@ -1,6 +1,7 @@
 .. Root of all pybamm docs
 
 .. Remove the right side-bar for the home page
+
 :html_theme.sidebar_secondary.remove:
 
 ####################
