@@ -1,5 +1,7 @@
 :tocdepth: 3
 
+.. _parameter_sets:
+
 ===============
 Parameters Sets
 ===============
