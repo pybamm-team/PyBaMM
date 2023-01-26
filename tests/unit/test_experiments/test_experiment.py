@@ -552,11 +552,18 @@ class TestExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(["Rest for 1 hour"])
         self.assertIsNone(experiment._process_timestamp(None))
         self.assertIsNone(experiment._process_timestamp("No timestamp here"))
-        self.assertEqual(experiment._process_timestamp("[Day 1 08:01:05] Timestamp"), datetime(1900, 1, 1, 8, 1, 5))
-        self.assertEqual(experiment._process_timestamp("[2019-10-08 09:43:23] Timestamp"), datetime(2019, 10, 8, 9, 43, 23))
+        self.assertEqual(
+            experiment._process_timestamp("[Day 1 08:01:05] Timestamp"),
+            datetime(1900, 1, 1, 8, 1, 5),
+        )
+        self.assertEqual(
+            experiment._process_timestamp("[2019-10-08 09:43:23] Timestamp"),
+            datetime(2019, 10, 8, 9, 43, 23),
+        )
 
         with self.assertRaisesRegex(ValueError, "The timestamp"):
             experiment._process_timestamp("[bad 2019-10-08 09:43:23] Timestamp")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
