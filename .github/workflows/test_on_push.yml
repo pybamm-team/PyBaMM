@@ -37,7 +37,7 @@ jobs:
       - name: Check style
         run: |
           python -m pip install "tox<4"
-          tox -e flake8
+          tox -e ruff
 
   build:
     needs: style

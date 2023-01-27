@@ -1,5 +1,0 @@
-[tool.ruff]
-ignore = ["E741"]
-
-[tool.ruff.per-file-ignores]
-"__init__.py" = ["F401", "E402", "F403", "E501"]
