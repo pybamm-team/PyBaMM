@@ -72,7 +72,7 @@ python -m pip install pre-commit
 pre-commit run ruff
 ```
 
-ruff is configured inside the file `pre-comit.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
 When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
 
