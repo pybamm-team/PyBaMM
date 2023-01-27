@@ -13,6 +13,9 @@ class Uniform(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
 
     def __init__(self, param):

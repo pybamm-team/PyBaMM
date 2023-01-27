@@ -217,8 +217,6 @@ intersphinx_mapping = {
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
 
-autodoc_default_options = {"show-inheritance": True}
-
 
 def rstjinja(app, docname, source):
     """

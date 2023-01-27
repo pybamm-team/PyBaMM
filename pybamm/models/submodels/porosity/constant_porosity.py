@@ -13,6 +13,9 @@ class Constant(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.porosity.BaseModel`
     """
 
     def get_fundamental_variables(self):

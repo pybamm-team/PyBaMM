@@ -11,6 +11,9 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, options):

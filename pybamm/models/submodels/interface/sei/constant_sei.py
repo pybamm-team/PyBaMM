@@ -21,6 +21,8 @@ class ConstantSEI(BaseModel):
         A dictionary of options to be passed to the model.
     phase : str, optional
         Phase of the particle (default is "primary")
+
+    **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
     def __init__(self, param, options, phase="primary"):

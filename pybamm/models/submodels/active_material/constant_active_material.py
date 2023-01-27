@@ -19,6 +19,8 @@ class Constant(BaseModel):
         Additional options to pass to the model
     phase : str, optional
         Phase of the particle (default is "primary")
+
+    **Extends:** :class:`pybamm.active_material.BaseModel`
     """
 
     def get_fundamental_variables(self):

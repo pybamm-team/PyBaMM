@@ -18,6 +18,9 @@ class Full(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
     """
 
     def __init__(self, param):

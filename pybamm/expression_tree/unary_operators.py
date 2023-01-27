@@ -18,6 +18,8 @@ class UnaryOperator(pybamm.Symbol):
 
     Derived classes will specify the particular operator
 
+    **Extends:** :class:`Symbol`
+
     Parameters
     ----------
     name : str
@@ -93,6 +95,8 @@ class UnaryOperator(pybamm.Symbol):
 class Negate(UnaryOperator):
     """
     A node in the expression tree representing a `-` negation operator.
+
+    **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
@@ -123,6 +127,8 @@ class Negate(UnaryOperator):
 class AbsoluteValue(UnaryOperator):
     """
     A node in the expression tree representing an `abs` operator.
+
+    **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
@@ -149,6 +155,8 @@ class AbsoluteValue(UnaryOperator):
 class Sign(UnaryOperator):
     """
     A node in the expression tree representing a `sign` operator.
+
+    **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
@@ -183,6 +191,8 @@ class Sign(UnaryOperator):
 class Floor(UnaryOperator):
     """
     A node in the expression tree representing an `floor` operator.
+
+    **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
@@ -205,6 +215,8 @@ class Floor(UnaryOperator):
 class Ceiling(UnaryOperator):
     """
     A node in the expression tree representing a `ceil` operator.
+
+    **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
@@ -331,6 +343,8 @@ class SpatialOperator(UnaryOperator):
     This type of node will be replaced by the :class:`Discretisation`
     class with a :class:`Matrix`
 
+    **Extends:** :class:`UnaryOperator`
+
     Parameters
     ----------
 
@@ -353,6 +367,7 @@ class Gradient(SpatialOperator):
     """
     A node in the expression tree representing a grad operator.
 
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -384,6 +399,8 @@ class Gradient(SpatialOperator):
 class Divergence(SpatialOperator):
     """
     A node in the expression tree representing a div operator.
+
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -421,6 +438,7 @@ class Laplacian(SpatialOperator):
     A node in the expression tree representing a Laplacian operator. This is
     currently only implemeted in the weak form for finite element formulations.
 
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -437,6 +455,7 @@ class GradientSquared(SpatialOperator):
     operator with itself. In particular, this is useful in the finite element
     formualtion where we only require the (sclar valued) square of the gradient,
     and  not the gradient itself.
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -451,6 +470,7 @@ class Mass(SpatialOperator):
     """
     Returns the mass matrix for a given symbol, accounting for Dirchlet boundary
     conditions where necessary (e.g. in the finite element formualtion)
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -465,6 +485,7 @@ class BoundaryMass(SpatialOperator):
     Returns the mass matrix for a given symbol assembled over the boundary of
     the domain, accounting for Dirchlet boundary conditions where necessary
     (e.g. in the finite element formualtion)
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -490,6 +511,8 @@ class Integral(SpatialOperator):
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
+
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, integration_variable):
@@ -603,6 +626,8 @@ class BaseIndefiniteIntegral(Integral):
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
+
+    **Extends:** :class:`Integral`
     """
 
     def __init__(self, child, integration_variable):
@@ -642,6 +667,8 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
     """
 
     def __init__(self, child, integration_variable):
@@ -670,6 +697,8 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
     """
 
     def __init__(self, child, integration_variable):
@@ -699,6 +728,8 @@ class DefiniteIntegralVector(SpatialOperator):
         The variable whose basis will be integrated over the entire domain
     vector_type : str, optional
         Whether to return a row or column vector (default is row)
+
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, vector_type="row"):
@@ -747,6 +778,7 @@ class BoundaryIntegral(SpatialOperator):
         region is `negative tab` or `positive tab` then the integration is only
         carried out over the appropriate part of the boundary corresponding to
         the tab.
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, region="entire"):
@@ -793,6 +825,8 @@ class DeltaFunction(SpatialOperator):
         The variable that sets the strength of the delta function
     side : str
         Which side of the domain to implement the delta function on
+
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, side, domain):
@@ -839,6 +873,8 @@ class BoundaryOperator(SpatialOperator):
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
+
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, name, child, side):
@@ -889,6 +925,8 @@ class BoundaryValue(BoundaryOperator):
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
     """
 
     def __init__(self, child, side):
@@ -941,6 +979,8 @@ class BoundaryGradient(BoundaryOperator):
         The variable whose boundary flux to take
     side : str
         Which side to take the boundary flux on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
     """
 
     def __init__(self, child, side):
@@ -951,6 +991,8 @@ class UpwindDownwind(SpatialOperator):
     """
     A node in the expression tree representing an upwinding or downwinding operator.
     Usually to be used for better stability in convection-dominated equations.
+
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, name, child):
@@ -975,6 +1017,8 @@ class UpwindDownwind(SpatialOperator):
 class Upwind(UpwindDownwind):
     """
     Upwinding operator. To be used if flow velocity is positive (left to right).
+
+    **Extends:** :class:`UpwindDownwind`
     """
 
     def __init__(self, child):
@@ -984,6 +1028,8 @@ class Upwind(UpwindDownwind):
 class Downwind(UpwindDownwind):
     """
     Downwinding operator. To be used if flow velocity is negative (right to left).
+
+    **Extends:** :class:`UpwindDownwind`
     """
 
     def __init__(self, child):

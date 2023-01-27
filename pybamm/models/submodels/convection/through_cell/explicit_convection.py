@@ -12,6 +12,9 @@ class Explicit(BaseThroughCellModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
     """
 
     def __init__(self, param):

@@ -27,6 +27,9 @@ class NewmanTobias(DFN):
            of prismatic lithium–iron–phosphate cells through a streamlined
            thermal/electrochemical model". Journal of Power Sources, 453, p.227787,
            2020
+
+
+    **Extends:** :class:`pybamm.lithium_ion.DFN`
     """
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):

@@ -17,6 +17,8 @@ class TotalSEI(pybamm.BaseSubModel):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, options, cracks=False):

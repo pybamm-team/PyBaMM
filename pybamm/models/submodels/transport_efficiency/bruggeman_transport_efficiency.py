@@ -16,6 +16,8 @@ class Bruggeman(BaseModel):
         The material for the model ('electrolyte' or 'electrode').
     options : dict, optional
         A dictionary of options to be passed to the model.
+
+    **Extends:** :class:`pybamm.transport_efficiency.BaseModel`
     """
 
     def __init__(self, param, component, options=None):

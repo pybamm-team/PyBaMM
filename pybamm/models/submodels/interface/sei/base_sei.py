@@ -18,6 +18,8 @@ class BaseModel(BaseInterface):
         Phase of the particle (default is "primary")
     cracks : bool, optional
         Whether this is a submodel for standard SEI or SEI on cracks
+
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, options, phase="primary", cracks=False):
