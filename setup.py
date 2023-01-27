@@ -212,6 +212,7 @@ setup(
             "sphinx>=1.5",
             "pydata-sphinx-theme",
             "sphinx_design",
+            "sphinx-copybutton",
         ],  # For doc generation
         "dev": [
             "flake8>=3",  # For code style checking

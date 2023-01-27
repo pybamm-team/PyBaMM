@@ -5,14 +5,16 @@ PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulat
 written in Python. Our mission is to accelerate battery modelling research by
 providing open-source tools for multi-institutional, interdisciplinary collaboration. 
 Broadly, PyBaMM consists of
-(i) a framework for writing and solving systems
-of differential equations,
-(ii) a library of battery models and parameters, and
-(iii) specialized tools for simulating battery-specific experiments and visualizing the results.
+
+#. a framework for writing and solving systems of differential equations,
+#. a library of battery models and parameters, and
+#. specialized tools for simulating battery-specific experiments and visualizing the results.
+
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
 .. note::
+
     This user-guide is a work-in-progress, we hope that this brief but incomplete overview will be useful to you.
 
 Core framework
@@ -39,9 +41,9 @@ External parameter sets can be linked using entry points (see :ref:`parameter_se
 
 Battery-specific tools
 ~~~~~~~~~~~~~~~~~~~~~~
-One of PyBaMM's unique features is the `Experiment` class, which allows users to define synthetic experiments using simple instructions in English
+One of PyBaMM's unique features is the ``Experiment`` class, which allows users to define synthetic experiments using simple instructions in English
 
-.. code-block::python
+.. code-block:: python
 
     pybamm.Experiment(
         [
@@ -56,9 +58,9 @@ One of PyBaMM's unique features is the `Experiment` class, which allows users to
 
 The above instruction will conduct a standard discharge / rest / charge / rest cycle three times, with a 10 hour discharge and 1 hour rest at the end of each cycle. 
 
-The `Simulation` class handles simulating an `Experiment`, as well as calculating additional outputs such as capacity as a function of cycle number. For example, the following code will simulate the experiment above and plot the standard output variables:
+The ``Simulation`` class handles simulating an ``Experiment``, as well as calculating additional outputs such as capacity as a function of cycle number. For example, the following code will simulate the experiment above and plot the standard output variables:
 
-.. code-block::python
+.. code-block:: python
 
     import pybamm
     import matplotlib.pyplot as plt
@@ -76,7 +78,7 @@ Finally, PyBaMM provides cusotm visualization tools:
 
 Users are not limited to these tools and can plot the output of a simulation solution by accessing the underlying numpy array for the solution variables as
 
-.. code-block::python
+.. code-block:: python
 
     solution["variable name"].data
 
