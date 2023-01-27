@@ -36,8 +36,8 @@ jobs:
 
       - name: Check style
         run: |
-          python -m pip install "tox<4"
-          tox -e ruff
+          python -m pip install ruff
+          ruff .
 
   build:
     needs: style
