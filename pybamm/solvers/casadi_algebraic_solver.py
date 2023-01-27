@@ -174,7 +174,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             y_sol,
             model,
             inputs_dict,
-            termination="success",
+            termination="final time",
             sensitivities=explicit_sensitivities,
         )
         sol.integration_time = integration_time
