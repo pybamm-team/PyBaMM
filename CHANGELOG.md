@@ -2,8 +2,10 @@
 
 ## Features
 
-- Steps in `Experiment` can now be tagged and cycle numbers be searched based on those tags ([#2593](https://github.com/pybamm-team/PyBaMM/pull/2593)).
+- Changed linting from `flake8` to `ruff` ([#2630](https://github.com/pybamm-team/PyBaMM/pull/2630)).
+- Changed docs theme to pydata theme and start to improve docs in general ([#2618](https://github.com/pybamm-team/PyBaMM/pull/2618)).
 - New `contact resistance` option, new parameter `Contact resistance [Ohm]` and new variable `Contact overpotential [V]` ([#2598](https://github.com/pybamm-team/PyBaMM/pull/2598)).
+- Steps in `Experiment` can now be tagged and cycle numbers be searched based on those tags ([#2593](https://github.com/pybamm-team/PyBaMM/pull/2593)).
 
 ## Bug fixes
 
