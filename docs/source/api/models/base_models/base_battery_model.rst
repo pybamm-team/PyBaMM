@@ -1,3 +1,5 @@
+.. _base_battery_model:
+
 Base Battery Model
 ==================
 
