@@ -87,10 +87,14 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         "Initial concentration in electrolyte [mol.m-3]"
     ]
 
-    # assume Bruggeman relation
+    # assume Bruggeman relation for effection electrolyte properties
     for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
-        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrode)"] = 1.5
+
+    # solid phase properties reported in BPX are already "effective",
+    # so no correction is applied
+    for domain in [negative_electrode, positive_electrode]:
+        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrode)"] = 0
 
     # BPX is for single cell in series, user can change this later
     pybamm_dict["Number of cells connected in series to make a battery"] = 1
@@ -194,6 +198,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     E_a_n = pybamm_dict.get(
         negative_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
+    # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
+    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
     k_n = k_n_norm * F / (c_n_max * c_e**0.5)
 
     def _negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
@@ -222,6 +228,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     E_a_p = pybamm_dict.get(
         positive_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
+    # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
+    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
     k_p = k_p_norm * F / (c_p_max * c_e**0.5)
 
     def _positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
