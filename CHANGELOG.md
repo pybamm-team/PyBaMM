@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.1](https://github.com/pybamm-team/PyBaMM/tree/v23.1) - 2023-01-31
+
 ## Features
 
 - Changed linting from `flake8` to `ruff` ([#2630](https://github.com/pybamm-team/PyBaMM/pull/2630)).
