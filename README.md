@@ -87,7 +87,7 @@ However, much greater customisation is available. It is possible to change the p
 For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Getting%20Started) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop).
 
 Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md), hosted here on
-github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
+github. In addition, there is a [full API documentation](https://pybamm.readthedocs.io/en/latest/source/api/index.html),
 hosted on [Read The Docs](https://readthedocs.org/).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
@@ -128,8 +128,8 @@ conda install -c conda-forge pybamm
 
 Following GNU/Linux and macOS solvers are optionally available:
 
-- [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-scikits-odes-solver).
-- [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver).
+- [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver).
+- [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver).
 
 ## 📖 Citing PyBaMM
 
