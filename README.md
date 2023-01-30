@@ -102,7 +102,7 @@ PyBaMM uses [CalVer](https://calver.org/), which means that we make new releases
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 We strongly recommend to install PyBaMM within a python virtual environment, in order not to alter any distribution python files.
-For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#user-install).
+For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#user-install).
 
 ### Using pip
 
