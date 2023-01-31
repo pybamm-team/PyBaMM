@@ -61,9 +61,6 @@ dist/
 coverage.xml
 htmlcov/
 
-# black setup file seems to make Travis CI fail
-pyproject.toml
-
 # virtual enviroment
 env/
 venv/

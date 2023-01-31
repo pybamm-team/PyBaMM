@@ -63,17 +63,18 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and-using-pre-commit) section for more details.
 
-### Flake8
+### Ruff
 
-We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
+We use [ruff](https://github.com/charliermarsh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
-flake8
+python -m pip install pre-commit
+pre-commit run ruff
 ```
 
-Flake8 is configured inside the file `tox.ini`, under the section `[flake8]`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
-When you commit your changes they will be checked against flake8 automatically (see [infrastructure](#infrastructure)).
+When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
 
 ### Black
 
@@ -85,11 +86,11 @@ We use [black](https://black.readthedocs.io/en/stable/) to automatically configu
 black {source_file_or_directory}
 ```
 
-2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
+2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a Python script each time the script is saved in an editor.
 
 If you want to use black in your editor, you may need to change the max line length in your editor settings.
 
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [Flake8](#flake8).
+Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [ruff](#ruff).
 
 ### Naming
 
@@ -111,7 +112,7 @@ On the other hand... We _do_ want to compare several tools, to generate document
 1. Core PyBaMM: A minimal set, including things like NumPy, SciPy, etc. All infrastructure should run against this set of dependencies, as well as any numerical methods we implement ourselves.
 2. Extras: Other inference packages and their dependencies. Methods we don't want to implement ourselves, but do want to provide an interface to can have their dependencies added here.
 3. Documentation generating code: Everything you need to generate and work on the docs.
-4. Development code: Everything you need to do PyBaMM development (so all of the above packages, plus flake8 and other testing tools).
+4. Development code: Everything you need to do PyBaMM development (so all of the above packages, plus ruff and other testing tools).
 
 Only 'core pybamm' is installed by default. The others have to be specified explicitly when running the installation command.
 
@@ -214,7 +215,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 
    or by just commenting out all the tests you don't want to run.
 
-2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
+2. Set break points, either in your IDE or using the Python debugging module. To use the latter, add the following line where you want to set the break point
 
    ```python
    import ipdb; ipdb.set_trace()
@@ -257,7 +258,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 
       You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc.
 
-3. To isolate whether a bug is in a model, its jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
+3. To isolate whether a bug is in a model, its Jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
 4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
 5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
 
@@ -340,9 +341,9 @@ Adding the command
 pybamm.print_citations()
 ```
 
-to the end of a script will print all citations that were used by that script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead.
+to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the bibtex for your paper to [CITATIONS.txt](pybamm/CITATIONS.txt). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.txt](pybamm/CITATIONS.txt). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")
@@ -368,7 +369,7 @@ Note that this file must be kept in sync with the version number in [pybamm/**in
 
 Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub actions](https://github.com/features/actions).
 
-Tests are run for different operating systems, and for all python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
+Tests are run for different operating systems, and for all Python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
 Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmark results are compared to the results available for the latest commit on the `develop` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
 

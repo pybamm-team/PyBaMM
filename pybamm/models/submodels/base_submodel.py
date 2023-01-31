@@ -72,7 +72,11 @@ class BaseSubModel(pybamm.BaseModel):
         self.name = name
 
         self.external = external
-        self.options = pybamm.BatteryModelOptions(options or {})
+
+        if options is None or type(options) == dict:
+            options = pybamm.BatteryModelOptions(options)
+
+        self.options = options
 
         self.param = param
         if param is None or domain is None:
@@ -204,7 +208,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set the boundary conditions for the submodel. Note: this method
         modifies the state of self.boundary_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in
+        submodel, the default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
         Parameters
@@ -218,7 +222,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set the initial conditions for the submodel. Note: this method
         modifies the state of self.initial_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in
+        submodel, the default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
 
@@ -233,7 +237,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the
-        default behaviour of 'pass' is used a implemented in
+        default behaviour of 'pass' is used as implemented in
         :class:`pybamm.BaseSubModel`.
 
         Parameters

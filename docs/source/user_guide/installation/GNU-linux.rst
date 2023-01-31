@@ -28,7 +28,7 @@ brew <https://docs.python-guide.org/starting/install3/osx/>`__:
 
 .. code:: bash
 
-   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 then follow instructions in link on adding brew to path, and run
 
@@ -45,8 +45,8 @@ User install
 ------------
 
 We recommend to install PyBaMM within a virtual environment, in order
-not to alter any distribution python files.
-First, make sure you are using python 3.8 or 3.9.
+not to alter any distribution Python files.
+First, make sure you are using Python 3.8 or 3.9.
 To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash
@@ -161,7 +161,7 @@ repository
    git clone https://github.com/pybamm-team/PyBaMM.git
    cd PyBaMM
 
-Then, to install PyBaMM as a `developer <CONTRIBUTING.md>`__, type
+Then, to install PyBaMM as a `developer <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__, type
 
  .. code:: bash
 
@@ -174,7 +174,7 @@ To check whether PyBaMM has installed properly, you can run the tests:
    python3 run-tests.py --unit
 
 Before you start contributing to PyBaMM, please read the `contributing
-guidelines <CONTRIBUTING.md>`__.
+guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
 
 Uninstall PyBaMM
 ================

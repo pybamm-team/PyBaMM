@@ -15,8 +15,9 @@ OPTIONS_DICT = {
 
 PRINT_OPTIONS_OUTPUT = """\
 'calculate discharge energy': 'false' (possible: ['false', 'true'])
-'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
+'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'dimensionality': 0 (possible: [0, 1, 2])
@@ -310,7 +311,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
-
         with self.assertRaisesRegex(
             pybamm.OptionError, "lithium plating porosity change"
         ):
@@ -320,6 +320,25 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "plating porosity change"
                 }
             )
+
+        # contact resistance
+        with self.assertRaisesRegex(pybamm.OptionError, "contact resistance"):
+            pybamm.BaseBatteryModel({"contact resistance": "bad contact resistance"})
+        with self.assertRaisesRegex(NotImplementedError, "Contact resistance not yet"):
+            pybamm.BaseBatteryModel(
+                {
+                    "contact resistance": "true",
+                    "operating mode": "explicit power",
+                }
+            )
+        with self.assertRaisesRegex(NotImplementedError, "Contact resistance not yet"):
+            pybamm.BaseBatteryModel(
+                {
+                    "contact resistance": "true",
+                    "operating mode": "explicit resistance",
+                }
+            )
+
         # stress-induced diffusion
         with self.assertRaisesRegex(pybamm.OptionError, "cannot have stress"):
             pybamm.BaseBatteryModel({"stress-induced diffusion": "true"})
@@ -387,6 +406,20 @@ class TestBaseBatteryModel(unittest.TestCase):
     def test_timescale(self):
         model = pybamm.BaseModel()
         self.assertEqual(model.timescale.evaluate(), 1)
+
+    def test_option_type(self):
+        # no entry gets default options
+        model = pybamm.BaseBatteryModel()
+        self.assertIsInstance(model.options, pybamm.BatteryModelOptions)
+
+        # dict options get converted to BatteryModelOptions
+        model = pybamm.BaseBatteryModel({"thermal": "isothermal"})
+        self.assertIsInstance(model.options, pybamm.BatteryModelOptions)
+
+        # special dict types are not changed
+        options = pybamm.FuzzyDict({"thermal": "isothermal"})
+        model = pybamm.BaseBatteryModel(options)
+        self.assertEqual(model.options, options)
 
 
 class TestOptions(unittest.TestCase):

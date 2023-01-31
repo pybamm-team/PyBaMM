@@ -175,7 +175,7 @@ class TestBaseSolver(unittest.TestCase):
         init_cond = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
 
-        # With jacobian
+        # With Jacobian
         def jac_dense(t, y, inputs):
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
@@ -183,7 +183,7 @@ class TestBaseSolver(unittest.TestCase):
         init_cond = solver.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
-        # With sparse jacobian
+        # With sparse Jacobian
         def jac_sparse(t, y, inputs):
             return 2 * csr_matrix(
                 np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])

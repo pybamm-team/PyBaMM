@@ -1,4 +1,4 @@
-Copyright (c) 2018-2022, the PyBaMM team.
+Copyright (c) 2018-2023, the PyBaMM team.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

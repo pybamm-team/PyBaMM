@@ -187,8 +187,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def __init__(self, extra_options):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch"],
             "calculate heat source for isothermal models": ["false", "true"],
+            "cell geometry": ["arbitrary", "pouch"],
+            "contact resistance": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
                 "uniform",
@@ -404,6 +405,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If 'SEI film resistance' is not 'none' "
                     "and there are multiple phases then 'total interfacial "
                     "current density as a state' must be 'true'"
+                )
+
+        # Options not yet compatible with contact resistance
+        if options["contact resistance"] == "true":
+            if options["operating mode"] == "explicit power":
+                raise NotImplementedError(
+                    "Contact resistance not yet supported for explicit power."
+                )
+            if options["operating mode"] == "explicit resistance":
+                raise NotImplementedError(
+                    "Contact resistance not yet supported for explicit resistance."
                 )
 
         # Options not yet compatible with particle-size distributions
@@ -686,6 +698,19 @@ class BatteryModelPhaseOptions(dict):
 class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
+
+    Parameters
+    ----------
+    options : dict-like, optional
+        A dictionary of options to be passed to the model. If this is a dict (and not
+        a subtype of dict), it will be processed by :class:`pybamm.BatteryModelOptions`
+        to ensure that the options are valid. If this is a subtype of dict, it is
+        assumed that the options have already been processed and are valid. This allows
+        for the use of custom options classes. The default options are given by
+        :class:`pybamm.BatteryModelOptions`.
+    name : str, optional
+        The name of the model. The default is "Unnamed battery model".
+
     **Extends:** :class:`pybamm.BaseModel`
     """
 
@@ -710,10 +735,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.battery_geometry(
-            options=self.options,
-            current_collector_dimension=self.options["dimensionality"],
-        )
+        return pybamm.battery_geometry(options=self.options)
 
     @property
     def default_var_pts(self):
@@ -791,7 +813,13 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @options.setter
     def options(self, extra_options):
-        options = BatteryModelOptions(extra_options)
+        # if extra_options is a dict then process it into a BatteryModelOptions
+        # this does not catch cases that subclass the dict type
+        # so other submodels can pass in their own options class if needed
+        if extra_options is None or type(extra_options) == dict:
+            options = BatteryModelOptions(extra_options)
+        else:
+            options = extra_options
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
@@ -883,62 +911,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
             )
-
-    def build_fundamental(self):
-        # Get the fundamental variables
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting fundamental variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            self.variables.update(submodel.get_fundamental_variables())
-
-        self._built_fundamental = True
-
-    def build_coupled_variables(self):
-        # Note: pybamm will try to get the coupled variables for the submodels in the
-        # order they are set by the user. If this fails for a particular submodel,
-        # return to it later and try again. If setting coupled variables fails and
-        # there are no more submodels to try, raise an error.
-        submodels = list(self.submodels.keys())
-        count = 0
-        # For this part the FuzzyDict of variables is briefly converted back into a
-        # normal dictionary for speed with KeyErrors
-        self._variables = dict(self._variables)
-        while len(submodels) > 0:
-            count += 1
-            for submodel_name, submodel in self.submodels.items():
-                if submodel_name in submodels:
-                    pybamm.logger.debug(
-                        "Getting coupled variables for {} submodel ({})".format(
-                            submodel_name, self.name
-                        )
-                    )
-                    try:
-                        self.variables.update(
-                            submodel.get_coupled_variables(self.variables)
-                        )
-                        submodels.remove(submodel_name)
-                    except KeyError as key:
-                        if len(submodels) == 1 or count == 100:
-                            # no more submodels to try
-                            raise pybamm.ModelError(
-                                "Missing variable for submodel '{}': {}.\n".format(
-                                    submodel_name, key
-                                )
-                                + "Check the selected "
-                                "submodels provide all of the required variables."
-                            )
-                        else:
-                            # try setting coupled variables on next loop through
-                            pybamm.logger.debug(
-                                "Can't find {}, trying other submodels first".format(
-                                    key
-                                )
-                            )
-        # Convert variables back into FuzzyDict
-        self.variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations

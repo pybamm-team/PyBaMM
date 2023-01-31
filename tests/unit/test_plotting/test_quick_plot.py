@@ -47,7 +47,7 @@ class TestQuickPlot(unittest.TestCase):
         }
         model._timescale = pybamm.Scalar(1)
 
-        # ODEs only (don't use jacobian)
+        # ODEs only (don't use Jacobian)
         model.use_jacobian = False
 
         # Process and solve

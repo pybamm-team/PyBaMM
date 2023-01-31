@@ -15,18 +15,8 @@ class NewmanTobias(DFN):
     charge as in [2]_. The user can pass the "particle" option to include mass
     transport in the particles.
 
-    Parameters
-    ----------
-    options : dict, optional
-        A dictionary of options to be passed to the model. For a detailed list of
-        options see :class:`~pybamm.BatteryModelOptions`.
-    name : str, optional
-        The name of the model.
-    build :  bool, optional
-        Whether to build the model on instantiation. Default is True. Setting this
-        option to False allows users to change any number of the submodels before
-        building the complete model (submodels cannot be changed after the model is
-        built).
+    See :class:`pybamm.lithium_ion.BaseModel` for more details.
+
 
     References
     ----------

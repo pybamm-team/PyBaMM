@@ -11,8 +11,15 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
-      - name: Install asv
-        run: pip install -U pip virtualenv asv
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc libopenblas-dev
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
+      - name: Install SuiteSparse and Sundials
+        run: python scripts/install_KLU_Sundials.py
       - name: Fetch base branch
         run: |
           # This workflow also runs for merge commits
@@ -22,6 +29,7 @@ jobs:
           if [ $current_branch != "develop" ]; then
               git fetch origin develop:develop
           fi
+
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
@@ -30,7 +38,7 @@ jobs:
           HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
-          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr -v
       - name: Compare commits' benchmark results
         run: |
           BASE_COMMIT=$(head -1 commits_to_compare.txt)

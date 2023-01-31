@@ -383,7 +383,7 @@ class Solution(object):
             self.all_inputs[:1],
             None,
             None,
-            "success",
+            "final time",
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]

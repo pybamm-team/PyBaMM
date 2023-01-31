@@ -4,6 +4,7 @@
 
 <div align="center">
 
+[![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](http://numfocus.org)
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/main/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
@@ -22,7 +23,32 @@
 
 # PyBaMM
 
-PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemical DAE models by using state-of-the-art automatic differentiation and numerical solvers. The Doyle-Fuller-Newman model can be solved in under 0.1 seconds, while the reduced-order Single Particle Model and Single Particle Model with electrolyte can be solved in just a few milliseconds. Additional physics can easily be included such as thermal effects, fast particle diffusion, 3D effects, and more. All models are implemented in a flexible manner, and a wide range of models and parameter sets (NCA, NMC, LiCoO2, ...) are available. There is also functionality to simulate any set of experimental instructions, such as CCCV or GITT, or specify drive cycles.
+PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
+written in Python. Our mission is to accelerate battery modelling research by
+providing open-source tools for multi-institutional, interdisciplinary collaboration.
+Broadly, PyBaMM consists of
+(i) a framework for writing and solving systems
+of differential equations,
+(ii) a library of battery models and parameters, and
+(iii) specialized tools for simulating battery-specific experiments and visualizing the results.
+Together, these enable flexible model definitions and fast battery simulations, allowing users to
+explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
+
+[//]: # "numfocus-fiscal-sponsor-attribution"
+
+PyBaMM uses an [open governance model](./GOVERNANCE.md)
+and is fiscally sponsored by [NumFOCUS](https://numfocus.org/). Consider making
+a [tax-deductible donation](https://numfocus.org/donate-for-pybamm) to help the project
+pay for developer time, professional services, travel, workshops, and a variety of other needs.
+
+<div align="center">
+  <a href="https://numfocus.org/project/pybamm">
+    <img height="60px" 
+         src="https://raw.githubusercontent.com/numfocus/templates/master/images/numfocus-logo.png" 
+         align="center">
+  </a>
+</div>
+<br>
 
 ## 💻 Using PyBaMM
 
@@ -36,7 +62,7 @@ sim.solve([0, 3600])  # solve for 1 hour
 sim.plot()
 ```
 
-or simulate an experiment such as CCCV:
+or simulate an experiment such as a constant-current discharge followed by a constant-current-constant-voltage charge:
 
 ```python3
 import pybamm
@@ -61,7 +87,7 @@ However, much greater customisation is available. It is possible to change the p
 For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Getting%20Started) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop).
 
 Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md), hosted here on
-github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
+github. In addition, there is a [full API documentation](https://pybamm.readthedocs.io/en/latest/source/api/index.html),
 hosted on [Read The Docs](https://readthedocs.org/).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
@@ -76,7 +102,7 @@ PyBaMM uses [CalVer](https://calver.org/), which means that we make new releases
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 We strongly recommend to install PyBaMM within a python virtual environment, in order not to alter any distribution python files.
-For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#user-install).
+For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#user-install).
 
 ### Using pip
 
@@ -102,8 +128,8 @@ conda install -c conda-forge pybamm
 
 Following GNU/Linux and macOS solvers are optionally available:
 
-- [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-scikits-odes-solver).
-- [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver).
+- [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver).
+- [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver).
 
 ## 📖 Citing PyBaMM
 
@@ -111,7 +137,7 @@ If you use PyBaMM in your work, please cite our paper
 
 > Sulzer, V., Marquis, S. G., Timms, R., Robinson, M., & Chapman, S. J. (2021). Python Battery Mathematical Modelling (PyBaMM). _Journal of Open Research Software, 9(1)_.
 
-You can use the bibtex
+You can use the BibTeX
 
 ```
 @article{Sulzer2021,
@@ -133,7 +159,7 @@ We would be grateful if you could also cite the relevant papers. These will chan
 pybamm.print_citations()
 ```
 
-to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+to the end of your script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
 See [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## 🛠️ Contributing to PyBaMM
@@ -216,7 +242,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center"><a href="https://github.com/ndrewwang"><img src="https://avatars.githubusercontent.com/u/56122552?v=4?s=100" width="100px;" alt="ndrewwang"/><br /><sub><b>ndrewwang</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Andrewwang" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=ndrewwang" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/MichaPhilipp"><img src="https://avatars.githubusercontent.com/u/58085966?v=4?s=100" width="100px;" alt="MichaPhilipp"/><br /><sub><b>MichaPhilipp</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AMichaPhilipp" title="Bug reports">🐛</a></td>
       <td align="center"><a href="https://github.com/abillscmu"><img src="https://avatars.githubusercontent.com/u/48105066?v=4?s=100" width="100px;" alt="Alec Bills"/><br /><sub><b>Alec Bills</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=abillscmu" title="Code">💻</a></td>
-      <td align="center"><a href="https://github.com/agriyakhetarpal"><img src="https://avatars.githubusercontent.com/u/74401230?v=4?s=100" width="100px;" alt="Agriya Khetarpal"/><br /><sub><b>Agriya Khetarpal</b></sub></a><br /><a href="#infra-agriyakhetarpal" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=agriyakhetarpal" title="Code">💻</a></td>
+      <td align="center"><a href="https://github.com/agriyakhetarpal"><img src="https://avatars.githubusercontent.com/u/74401230?v=4?s=100" width="100px;" alt="Agriya Khetarpal"/><br /><sub><b>Agriya Khetarpal</b></sub></a><br /><a href="#infra-agriyakhetarpal" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=agriyakhetarpal" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=agriyakhetarpal" title="Documentation">📖</a></td>
       <td align="center"><a href="https://github.com/awadell1"><img src="https://avatars.githubusercontent.com/u/5857298?v=4?s=100" width="100px;" alt="Alex Wadell"/><br /><sub><b>Alex Wadell</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Tests">⚠️</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=awadell1" title="Documentation">📖</a></td>
       <td align="center"><a href="https://github.com/iatzak"><img src="https://avatars.githubusercontent.com/u/112731474?v=4?s=100" width="100px;" alt="iatzak"/><br /><sub><b>iatzak</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=iatzak" title="Documentation">📖</a></td>
     </tr>

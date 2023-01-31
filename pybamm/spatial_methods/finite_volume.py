@@ -525,7 +525,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
         """
-        A method to find the internal neumann conditions between two symbols
+        A method to find the internal Neumann conditions between two symbols
         on adjacent subdomains.
 
         Parameters
