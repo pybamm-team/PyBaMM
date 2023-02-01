@@ -15,8 +15,12 @@ Options::Options(py::dict options)
 {
 
   using_sparse_matrix = true;
+  using_banded_matrix = false;
   if (jacobian == "sparse")
   {
+  }
+  else if (jacobian == "banded") {
+    using_banded_matrix = true;
   }
   else if (jacobian == "dense" || jacobian == "none")
   {
@@ -29,7 +33,7 @@ Options::Options(py::dict options)
   {
     throw std::domain_error(
       "Unknown jacobian type \""s + jacobian + 
-      "\". Should be one of \"sparse\", \"dense\", \"matrix-free\" or \"none\"."s
+      "\". Should be one of \"sparse\", \"banded"\, \"dense\", \"matrix-free\" or \"none\"."s
     );
   }
 
