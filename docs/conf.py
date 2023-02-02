@@ -49,6 +49,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_design",
     "sphinx_copybutton",
+    "myst_parser",
 ]
 
 
@@ -99,6 +100,7 @@ html_static_path = ["source/_static"]
 # https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
 # mostly copied from numpy, scipy, pandas
 html_logo = "source/_static/pybamm_logo.png"
+html_favicon = "source/_static/favicon/favicon.png"
 
 html_theme_options = {
     "logo": {
