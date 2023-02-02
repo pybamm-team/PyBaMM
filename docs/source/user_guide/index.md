@@ -1,4 +1,5 @@
 (user)=
+
 # PyBaMM user guide
 
 This guide is an overview and explains the important features;

@@ -2,7 +2,7 @@
 
 PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
 written in Python. Our mission is to accelerate battery modelling research by
-providing open-source tools for multi-institutional, interdisciplinary collaboration. 
+providing open-source tools for multi-institutional, interdisciplinary collaboration.
 Broadly, PyBaMM consists of
 
 1. a framework for writing and solving systems of differential equations,
@@ -12,7 +12,7 @@ Broadly, PyBaMM consists of
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
->**NOTE**: This user-guide is a work-in-progress, we hope that this brief but incomplete overview will be useful to you.
+> **NOTE**: This user-guide is a work-in-progress, we hope that this brief but incomplete overview will be useful to you.
 
 ## Core framework
 
@@ -40,7 +40,7 @@ External parameter sets can be linked using entry points (see [](parameter_sets)
 
 One of PyBaMM's unique features is the `Experiment` class, which allows users to define synthetic experiments using simple instructions in English
 
-``` python
+```python
 pybamm.Experiment(
     [
         ("Discharge at C/10 for 10 hours or until 3.3 V",
@@ -53,11 +53,11 @@ pybamm.Experiment(
 )
 ```
 
-The above instruction will conduct a standard discharge / rest / charge / rest cycle three times, with a 10 hour discharge and 1 hour rest at the end of each cycle. 
+The above instruction will conduct a standard discharge / rest / charge / rest cycle three times, with a 10 hour discharge and 1 hour rest at the end of each cycle.
 
 The `Simulation` class handles simulating an `Experiment`, as well as calculating additional outputs such as capacity as a function of cycle number. For example, the following code will simulate the experiment above and plot the standard output variables:
 
-``` python
+```python
 import pybamm
 import matplotlib.pyplot as plt
 
@@ -75,7 +75,7 @@ Finally, PyBaMM provides cusotm visualization tools:
 
 Users are not limited to these tools and can plot the output of a simulation solution by accessing the underlying numpy array for the solution variables as
 
-``` python
+```python
 solution["variable name"].data
 ```
 
