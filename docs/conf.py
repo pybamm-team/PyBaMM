@@ -50,7 +50,9 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "myst_parser",
+     "sphinxcontrib.bibtex"
 ]
+bibtex_bibfiles = ['refs.bib']
 
 
 napoleon_use_rtype = True
