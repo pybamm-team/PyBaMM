@@ -37,7 +37,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 1. Create an [issue](https://guides.github.com/features/issues/) where new proposals can be discussed before any coding is done.
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
-4. [Install](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
+4. [Install](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html) PyBaMM with the developer options.
 5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
 
 You now have everything you need to start making changes!
