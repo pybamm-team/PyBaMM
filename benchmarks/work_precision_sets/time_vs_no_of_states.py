@@ -28,7 +28,6 @@ for ax, i, j in zip(
     itertools.product(solvers.values(), models.values()),
     itertools.product(solvers, models),
 ):
-
     for params in parameters:
         time_points = []
         ns = []
@@ -42,7 +41,6 @@ for ax, i, j in zip(
         i = list(i)
 
         for N in npts:
-
             var_pts = {
                 "x_n": N,  # negative electrode
                 "x_s": N,  # separator
@@ -57,7 +55,6 @@ for ax, i, j in zip(
             time = 0
             runs = 20
             for k in range(0, runs):
-
                 solution = sim.solve([0, 3500])
                 time += solution.solve_time.value
             time = time / runs

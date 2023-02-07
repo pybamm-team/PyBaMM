@@ -948,7 +948,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.check_no_repeated_keys()
 
     def build_model(self):
-
         # Build model variables and equations
         self._build_model()
 
@@ -1071,7 +1070,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
 
     def set_thermal_submodel(self):
-
         if self.options["thermal"] == "isothermal":
             thermal_submodel = pybamm.thermal.isothermal.Isothermal
         elif self.options["thermal"] == "lumped":
@@ -1090,7 +1088,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
     def set_current_collector_submodel(self):
-
         if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":

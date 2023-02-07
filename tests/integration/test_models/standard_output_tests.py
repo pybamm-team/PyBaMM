@@ -644,7 +644,6 @@ class PotentialTests(BaseOutputTest):
         )
 
     def test_gradient_splitting(self):
-
         t, x_n, x_s, x_p, x = self.t, self.x_n, self.x_s, self.x_p, self.x
         grad_phi_e_combined = np.concatenate(
             (

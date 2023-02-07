@@ -251,7 +251,6 @@ class Interpolant(pybamm.Function):
         if self.dimension == 1:
             return self.function(*children_eval_flat).flatten()[:, np.newaxis]
         elif self.dimension in [2, 3]:
-
             # If the children are scalars, we need to add a dimension
             shapes = []
             for child in evaluated_children:
@@ -273,7 +272,6 @@ class Interpolant(pybamm.Function):
                 shape = shapes.pop()
             new_evaluated_children = []
             for child in evaluated_children:
-
                 if hasattr(child, "shape") and child.shape == shape:
                     new_evaluated_children.append(child.flatten())
                 else:

@@ -92,7 +92,6 @@ class Full(BaseModel):
         self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
-
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(

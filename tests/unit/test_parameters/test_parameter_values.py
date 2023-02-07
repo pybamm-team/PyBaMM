@@ -494,7 +494,6 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_diff_interp.evaluate(inputs={"a": 3.01}), 2)
 
     def test_process_interpolant_2d(self):
-
         x_ = [np.linspace(0, 10), np.linspace(0, 20)]
 
         X = list(np.meshgrid(*x_, indexing="ij"))
@@ -641,7 +640,6 @@ class TestParameterValues(unittest.TestCase):
 
         # check that passing the input columns give the correct output
         for values in raw_df.values:
-
             y = np.array([values[0], values[1], values[2]])
             f = values[3]
             casadi_sol = casadi_f(y)
@@ -683,7 +681,6 @@ class TestParameterValues(unittest.TestCase):
 
         # check that passing the input columns give the correct output
         for values in raw_df.values:
-
             y = np.array([values[0], values[1]])
             f = values[2]
 
