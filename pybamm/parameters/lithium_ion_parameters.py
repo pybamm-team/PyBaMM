@@ -745,6 +745,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
         self.R_sei_dimensional = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
+        self.R_plated_Li_dimensional = pybamm.Parameter(f"{pref}Li plating resistivity [Ohm.m]")
         self.D_sol_dimensional = pybamm.Parameter(
             f"{pref}Outer SEI solvent diffusivity [m2.s-1]"
         )
@@ -957,6 +958,15 @@ class ParticleLithiumIonParameters(BaseParameters):
             main.F
             * self.j_scale
             * self.R_sei_dimensional
+            * self.L_sei_0_dim
+            / main.R
+            / main.T_ref
+        )
+
+        self.R_plated_Li = (
+            main.F
+            * self.j_scale
+            * self.R_plated_Li_dimensional
             * self.L_sei_0_dim
             / main.R
             / main.T_ref

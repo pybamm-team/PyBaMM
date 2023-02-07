@@ -244,6 +244,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "X-averaged SEI thickness [m]",
                 "Loss of lithium to SEI on cracks [mol]",
                 "Loss of capacity to SEI on cracks [A.h]",
+                "X-averaged lithium plating concentration [mol.m-3]",
             ]
 
         self.summary_variables = summary_variables

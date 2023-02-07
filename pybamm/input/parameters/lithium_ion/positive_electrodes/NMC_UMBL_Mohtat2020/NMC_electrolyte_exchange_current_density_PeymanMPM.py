@@ -27,7 +27,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
         Exchange-current density [A.m-2]
     """
     m_ref =  Parameter("Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]")
-    m_ref = 4.824 * 10 ** (-6)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    # m_ref = 4.824 * 10 ** (-6)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 39570
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 

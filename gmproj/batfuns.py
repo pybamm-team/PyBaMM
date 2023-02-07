@@ -60,7 +60,7 @@ def get_parameter_values():
             "Positive electrode Poisson's ratio": 0.3,
             "Positive electrode Young's modulus [Pa]": 375e9,
             "Positive electrode reference concentration for free of deformation [mol.m-3]": 0,
-            "Positive electrode partial molar volume [m3.mol-1]": -7.28e-7,
+            "Positive electrode partial molar volume [m3.mol-1]": 7.28e-7,
             "Positive electrode volume change": nmc_volume_change_mohtat,
             # Loss of active materials (LAM) model
             "Positive electrode LAM constant exponential term": 2,
@@ -98,11 +98,12 @@ def split_long_string(title, max_words=None):
         second_line = (" ").join(words[max_words:])
         return first_line + "\n" + second_line
 
-def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_at_cycles=None):
+def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_at_cycles=None,drive_cycle=None):
     experiment_one_cycle = pybamm.Experiment(
         experiment.operating_conditions_cycles[:1],
         termination=experiment.termination_string,
         cccv_handling=experiment.cccv_handling,
+        drive_cycles={"DriveCycle": drive_cycle},
     )
     Vmin = 3.0
     Vmax = 4.2
@@ -339,6 +340,7 @@ def plot1(all_sumvars_dict,esoh_data):
            loc="upper right", ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
+
 def plotc(all_sumvars_dict,esoh_data):
     esoh_vars = ["x_100", "y_0", "C_n", "C_p", "Capacity [A.h]", "Loss of lithium inventory [%]"]
     fig, axes = plt.subplots(3,2,figsize=(7,7))
@@ -347,12 +349,12 @@ def plotc(all_sumvars_dict,esoh_data):
         ax.plot(all_sumvars_dict["Cycle number"],all_sumvars_dict[name],"ro")
         ax.plot(esoh_data["N"],esoh_data[name],"kx")
         ax.set_title(split_long_string(name))
-        if k ==2 or k==3:
-            ax.set_ylim([3,6.2])
+        # if k ==2 or k==3:
+        #     ax.set_ylim([3,6.2])
         if k>3:
             ax.set_xlabel("Cycle number")
     fig.legend(["Sim"] + ["Data"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
+           loc="lower center",bbox_to_anchor=[0.5,-0.1], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
 
@@ -375,16 +377,16 @@ def plotc2(all_sumvars_dict1,all_sumvars_dict2,esoh_data,leg1="sim1",leg2="sim2"
     fig, axes = plt.subplots(3,2,figsize=(7,7))
     for k, name in enumerate(esoh_vars):
         ax = axes.flat[k]
-        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"b.")
-        ax.plot(all_sumvars_dict2["Cycle number"],all_sumvars_dict2[name],"rv")
+        ax.plot(all_sumvars_dict1["Cycle number"],all_sumvars_dict1[name],"b--")
+        ax.plot(all_sumvars_dict2["Cycle number"],all_sumvars_dict2[name],"r--")
         ax.plot(esoh_data["N"],esoh_data[name],"kx")
         ax.set_title(split_long_string(name))
-        if k ==2 or k==3:
-            ax.set_ylim([3,6.2])
+        # if k ==2 or k==3:
+        #     ax.set_ylim([3,6.2])
         if k>3:
             ax.set_xlabel("Cycle number")
     fig.legend([leg1, leg2 , "Data"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.05], ncol=1, fontsize=11)
+           loc="lower center",bbox_to_anchor=[0.5,-0.1], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
 
@@ -401,7 +403,7 @@ def plotcomp(all_sumvars_dict0,all_sumvars_dict1):
         if k>3:
             ax.set_xlabel("Cycle number")
     fig.legend(["Baseline"] + ["Sim"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.02], ncol=1, fontsize=11)
+           loc="lower center",bbox_to_anchor=[0.5,-0.05], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
 
@@ -497,6 +499,7 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
         dfe_0 = dfe_0.drop(dfe_0.index[-1])
         dfe_0 = dfe_0.reset_index(drop=True)
     dfe['N']=dfe['N']-dfe['N'][0]
+    dfe['Ah_th']=dfe['Ah_th']-dfe['Ah_th'][0]
     cycles = np.array(dfe['N'].astype('int'))
     cycles=cycles-1
     cycles[0]=cycles[0]+1

@@ -87,7 +87,12 @@ class LossActiveMaterial(BaseModel):
 
             stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
             # compressive stress make no contribution
-            # stress_h_surf *= stress_h_surf > 0
+            # stress_h_surf1 = 0.5*stress_h_surf0
+            # stress_h_surf2 = 1*stress_h_surf0
+            # stress_h_surf1 *= stress_h_surf1 > 0
+            # stress_h_surf2 *= stress_h_surf2 < 0
+            # stress_h_surf = (stress_h_surf1+stress_h_surf2)
+            stress_h_surf *= stress_h_surf < 0
             # assuming the minimum hydrostatic stress is zero for full cycles
             stress_h_surf_min = stress_h_surf * 0
             j_stress_LAM = (

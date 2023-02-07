@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath("__file__"))))
 from batfuns import *
 plt.rcParams = set_rc_params(plt.rcParams)
 
-eSOH_DIR = "C:/Users/spannala/PyBaMM/gmproj/data/esoh_V/"
+eSOH_DIR = "C:/Users/spannala/PyBaMM/gmproj/data/esoh_R/"
 oCV_DIR =  "C:/Users/spannala/PyBaMM/gmproj/data/ocv/"
 fig_DIR =  "C:/Users/spannala/PyBaMM/gmproj/figures/figures_sens/"
 fig_DIR =  "C:/Users/spannala/PyBaMM/gmproj/data/results_sens/"

@@ -90,8 +90,24 @@ class InverseButlerVolmer(BaseInterface):
             )
         else:
             eta_sei = pybamm.Scalar(0)
+        if self.domain == "Negative":
+            if self.options["lithium plating"] != "none":
+                R_plated_Li = self.phase_param.R_plated_Li
+                if self.half_cell:
+                    L_plated_Li = variables["Lithium plating thickness"]
+                else:
+                    L_plated_Li = variables["X-averaged lithium plating thickness"]
+                eta_plated_Li = -j_tot * L_plated_Li * R_plated_Li
+            # Without SEI resistance
+            else:
+                eta_plated_Li = pybamm.Scalar(0)
+            # variables.update(
+            #     self._get_standard_sei_film_overpotential_variables(eta_sei)
+            # )
+        else:
+            eta_plated_Li = pybamm.Scalar(0)
 
-        delta_phi = eta_r + ocp - eta_sei  # = phi_s - phi_e
+        delta_phi = eta_r + ocp - eta_sei - eta_plated_Li  # = phi_s - phi_e
 
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))

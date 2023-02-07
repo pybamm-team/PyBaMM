@@ -122,6 +122,13 @@ class BaseKinetics(BaseInterface):
             else:
                 eta_sei = pybamm.Scalar(0)
             eta_r += eta_sei
+            if self.options["lithium plating"] != "none":
+                R_plated_Li = self.phase_param.R_plated_Li
+                L_plated_Li = variables[f"X-averaged {phase_name}lithium plating thickness"]
+                eta_plated_Li = -j_tot_av * L_plated_Li * R_plated_Li
+            else:
+                eta_plated_Li = pybamm.Scalar(0)
+            eta_r += eta_plated_Li
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
