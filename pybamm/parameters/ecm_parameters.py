@@ -3,7 +3,6 @@ import pybamm
 
 class EcmParameters:
     def __init__(self):
-
         self.timescale = pybamm.Scalar(1)
 
         self.cell_capacity = pybamm.Parameter("Cell capacity [A.h]")

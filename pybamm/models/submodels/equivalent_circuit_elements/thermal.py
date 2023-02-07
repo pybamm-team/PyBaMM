@@ -42,7 +42,6 @@ class ThermalSubModel(pybamm.BaseSubModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         number_of_rc_elements = self.model_options["number of rc elements"]
         number_of_elements = number_of_rc_elements + 1
 

@@ -89,7 +89,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         extrap_tol=None,
         options=None,
     ):
-
         # set default options,
         # (only if user does not supply)
         default_options = {

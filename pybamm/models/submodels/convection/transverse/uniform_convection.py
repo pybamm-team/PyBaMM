@@ -22,14 +22,12 @@ class Uniform(BaseTransverseModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-
         p_s = pybamm.PrimaryBroadcast(0, "current collector")
         variables = self._get_standard_separator_pressure_variables(p_s)
 
         return variables
 
     def get_coupled_variables(self, variables):
-
         # Set up
         param = self.param
         z = pybamm.standard_spatial_vars.z

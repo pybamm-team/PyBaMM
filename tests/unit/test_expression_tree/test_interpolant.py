@@ -44,7 +44,6 @@ class TestInterpolant(unittest.TestCase):
             )
 
     def test_warnings(self):
-
         with self.assertWarnsRegex(Warning, "cubic spline"):
             pybamm.Interpolant(
                 np.linspace(0, 1, 10),

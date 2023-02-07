@@ -322,7 +322,6 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         def find_t_event(sol, typ):
-
             # Check most recent y to see if any events have been crossed
             if model.terminate_events_eval:
                 y_last = sol.all_ys[-1][:, -1]
