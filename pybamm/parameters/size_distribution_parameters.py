@@ -1,8 +1,7 @@
-"""
-Adding particle-size distribution parameter values to a parameter set
-"""
-
-
+#
+# Helper function for adding particle-size distribution parameter values
+# to a parameter set
+#
 import pybamm
 import numpy as np
 

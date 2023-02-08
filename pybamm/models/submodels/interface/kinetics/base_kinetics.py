@@ -82,7 +82,10 @@ class BaseKinetics(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        if domain_options["particle size"] == "distribution":
+        if (
+            domain_options["particle size"] == "distribution"
+            and self.options.electrode_types[domain] == "porous"
+        ):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open circuit potential distribution"
             ]
