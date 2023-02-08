@@ -16,7 +16,7 @@ class TestSizeDistributionParameters(unittest.TestCase):
         # add distribution parameter values for negative electrode
         values = pybamm.get_size_distribution_parameters(values, electrode="negative")
 
-        # check positive parameters aren't there yet 
+        # check positive parameters aren't there yet
         with self.assertRaises(KeyError):
             values["Positive maximum particle radius [m]"]
 
@@ -39,7 +39,6 @@ class TestSizeDistributionParameters(unittest.TestCase):
         R_test = pybamm.Scalar(1.0)
         values.evaluate(param.n.prim.f_a_dist(R_test))
         values.evaluate(param.p.prim.f_a_dist(R_test))
-
 
 
 if __name__ == "__main__":
