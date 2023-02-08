@@ -59,6 +59,14 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
         )
         modeltest.test_all()
 
+    def test_basic_processing_tuple(self):
+        options = {"particle size": ("single", "distribution")}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all()
+
     def test_uniform_profile(self):
         options = {"particle size": "distribution", "particle": "uniform profile"}
         model = pybamm.lithium_ion.DFN(options)

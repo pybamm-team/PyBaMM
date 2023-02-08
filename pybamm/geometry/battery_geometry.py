@@ -63,14 +63,19 @@ def battery_geometry(
                     }
                 )
     # Add particle size domains
-    if options is not None and options["particle size"] == "distribution":
+    if options is not None and options.negative["particle size"] == "distribution":
         R_min_n = geo.n.prim.R_min
-        R_min_p = geo.p.prim.R_min
         R_max_n = geo.n.prim.R_max
-        R_max_p = geo.p.prim.R_max
         geometry.update(
             {
                 "negative particle size": {"R_n": {"min": R_min_n, "max": R_max_n}},
+            }
+        )
+    if options is not None and options.positive["particle size"] == "distribution":
+        R_min_p = geo.p.prim.R_min
+        R_max_p = geo.p.prim.R_max
+        geometry.update(
+            {
                 "positive particle size": {"R_p": {"min": R_min_p, "max": R_max_p}},
             }
         )

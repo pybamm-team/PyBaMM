@@ -73,11 +73,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
-            * "particle phases": str
-                Number of phases present in the electrode. A 2-tuple can be provided for
-                different behaviour in negative and positive electrodes.
-                For example, set to ("2", "1") for a negative electrode with 2 phases,
-                e.g. graphite and silicon.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -97,7 +92,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", or "quartic profile".
+                "quadratic profile", or "quartic profile". A 2-tuple can be provided for 
+                different behaviour in negative and positive electrodes.
+            * "particle mechanics" : str
+                Sets the model to account for mechanical effects such as particle
+                swelling and cracking. Can be "none" (default), "swelling only",
+                or "swelling and cracking".
+                A 2-tuple can be provided for different behaviour in negative and
+                positive electrodes.
+            * "particle phases": str
+                Number of phases present in the electrode. A 2-tuple can be provided for
+                different behaviour in negative and positive electrodes.
+                For example, set to ("2", "1") for a negative electrode with 2 phases,
+                e.g. graphite and silicon.
             * "particle shape" : str
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
@@ -106,12 +113,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the model to include a single active particle size or a
                 distribution of sizes at any macroscale location. Can be "single"
                 (default) or "distribution". Option applies to both electrodes.
-            * "particle mechanics" : str
-                Sets the model to account for mechanical effects such as particle
-                swelling and cracking. Can be "none" (default), "swelling only",
-                or "swelling and cracking".
-                A 2-tuple can be provided for different behaviour in negative and
-                positive electrodes.
             * "SEI" : str
                 Set the SEI submodel to be used. Options are:
 
@@ -528,7 +529,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
-                    "'false', 'particle size' must be 'false', 'particle' must be "
+                    "'false', 'particle size' must be 'single', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
                     "be 'none': 'particle mechanics', "
                     "'loss of active material', 'lithium plating'"
@@ -554,9 +555,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "interface utilisation",
                                 "loss of active material",
                                 "open circuit potential",
-                                "particle mechanics",
                                 "particle",
+                                "particle mechanics",
                                 "particle phases",
+                                "particle size",
                                 "stress-induced diffusion",
                             ]
                             and isinstance(value, tuple)
