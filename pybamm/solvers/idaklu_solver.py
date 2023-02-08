@@ -14,7 +14,8 @@ if idaklu_spec is not None:
     try:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         idaklu_spec.loader.exec_module(idaklu)
-    except ImportError:  # pragma: no cover
+    except ImportError as e:  # pragma: no cover
+        print(e)
         idaklu_spec = None
 
 
@@ -146,7 +147,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if isinstance(variable, pybamm.StateVector):
                 atol = self.set_state_vec_tol(atol, variable, tol)
             else:
-                raise pybamm.SolverError("Can only set tolerances for state variables")
+                raise pybamm.SolverError(
+                    "Can only set tolerances for state variables")
 
         model.atol = atol
 
@@ -165,6 +167,87 @@ class IDAKLUSolver(pybamm.BaseSolver):
         slices = state_vec.y_slices[0]
         atol[slices] = tol
         return atol
+
+    def _check_banded_jacobian(self, sparsity, fill_in=True):
+        jac_times_cjmass_colptrs = np.array(
+            sparsity.colind(), dtype=np.int64
+        )
+        jac_times_cjmass_rowvals = np.array(
+            sparsity.row(), dtype=np.int64
+        )
+        jac_half_bandwidth = None
+        # check that the Jacobian is banded
+        generic_error_message = "Cannot use solver with a banded Jacobian"
+        n = sparsity.columns()
+        if n != sparsity.rows():
+            raise RuntimeError(generic_error_message +
+                               ": Jacobian is not square")
+        max_bandwidth = 0
+        if fill_in:
+            for i in range(n - 1):
+                col_lower = jac_times_cjmass_colptrs[i]
+                col_upper = jac_times_cjmass_colptrs[i + 1]
+                col = jac_times_cjmass_rowvals[col_lower:col_upper]
+                max_bandwidth = max(*[
+                    -col[0] - i,
+                    col[-1] - i,
+                    max_bandwidth,
+                ])
+
+        pybamm.logger.verbose("checking banded Jacobian: max_bandwidth = {}".format(max_bandwidth))
+
+        has_been_altered = False
+        for i in range(n - 1):
+            col_lower = jac_times_cjmass_colptrs[i]
+            col_upper = jac_times_cjmass_colptrs[i + 1]
+            col = jac_times_cjmass_rowvals[col_lower:col_upper]
+            col_min = col[0]
+            col_max = col[-1]
+            col_is_dense = col_max - col_min == col.size - 1
+            if not col_is_dense:
+                raise RuntimeError(
+                    generic_error_message + ": column is not dense for column {} - {}".format(i, col))
+            col_contains_diag = np.any(col == i)
+            if not col_contains_diag:
+                raise RuntimeError(
+                    generic_error_message + ": column does not contain diagonal for column {} - {}".format(i, col))
+            col_diag = np.where(col == i)[0][0]
+            col_lower_bandwidth = (col_max - i)
+            col_upper_bandwidth = (i - col_min)
+
+            # if we are near the edge of the matrix, the bandwidth may be truncated
+            col_half_bandwidth = max(col_lower_bandwidth, col_upper_bandwidth)
+            if i < col_half_bandwidth and col_upper_bandwidth == i:
+                col_upper_bandwidth = col_half_bandwidth
+            if i > n - col_half_bandwidth and col_lower_bandwidth == n - i:
+                col_lower_bandwidth = col_half_bandwidth
+            col_is_symmetric = col_lower_bandwidth == col_upper_bandwidth
+
+            if fill_in and (col_lower_bandwidth < max_bandwidth):
+                for j in range(col_lower_bandwidth, max_bandwidth):
+                    print('adding', i + j + 1, i)
+                    sparsity.add_nz(i + j + 1, i)
+
+            if fill_in and (col_upper_bandwidth < max_bandwidth):
+                for j in range(col_upper_bandwidth, max_bandwidth):
+                    print('adding', i - j - 1, i)
+                    sparsity.add_nz(i - j - 1, i)
+            if not fill_in and not col_is_symmetric:
+                print(col_half_bandwidth, col_upper_bandwidth,
+                      col_lower_bandwidth, n)
+                raise RuntimeError(
+                    generic_error_message + ": column is not symmetric around diagonal for column {} - {}".format(i, col))
+            if jac_half_bandwidth is None:
+                jac_half_bandwidth = col_half_bandwidth
+            elif col_half_bandwidth != jac_half_bandwidth:
+                raise RuntimeError(
+                    generic_error_message + ": column has different bandwidth to previous columns for column {} - {}".format(i, col))
+        if has_been_altered:
+            jac_half_bandwidth = self._check_banded_jacobian(
+                sparsity, fill_in=False)
+        if jac_half_bandwidth is None:
+            raise RuntimeError(generic_error_message + ": no columns found")
+        return jac_half_bandwidth
 
     def _check_atol_type(self, atol, size):
         """
@@ -207,7 +290,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs or {}
         # stack inputs
         if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
+            arrays_to_stack = [np.array(x).reshape(-1, 1)
+                               for x in inputs_dict.values()]
             inputs_sizes = [len(array) for array in arrays_to_stack]
             inputs = np.vstack(arrays_to_stack)
         else:
@@ -217,7 +301,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         def inputs_to_dict(inputs):
             index = 0
             for n, key in zip(inputs_sizes, inputs_dict.keys()):
-                inputs_dict[key] = inputs[index : (index + n)]
+                inputs_dict[key] = inputs[index: (index + n)]
                 index += n
             return inputs_dict
 
@@ -247,7 +331,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             def resfn(t, y, inputs, ydot):
                 return (
-                    model.rhs_algebraic_eval(t, y, inputs_to_dict(inputs)).flatten()
+                    model.rhs_algebraic_eval(
+                        t, y, inputs_to_dict(inputs)).flatten()
                     - mass_matrix @ ydot
                 )
 
@@ -267,15 +352,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-            jac_times_cjmass = casadi.Function(
-                "jac_times_cjmass",
-                [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
-                [
-                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-                    - cj_casadi * mass_matrix
-                ],
-            )
+            jac_times_cjmass = model.jac_rhs_algebraic_eval(
+                    t_casadi, y_casadi, p_casadi_stacked
+                ) - cj_casadi * mass_matrix
+
+
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
+            jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
+            jac_bw_upper= jac_times_cjmass_sparsity.bw_upper()
             jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
             jac_times_cjmass_colptrs = np.array(
                 jac_times_cjmass_sparsity.colind(), dtype=np.int64
@@ -290,7 +374,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             # also need the action of the mass matrix on a vector
             mass_action = casadi.Function(
-                "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
+                "mass_action", [v_casadi], [
+                    casadi.densify(mass_matrix @ v_casadi)]
             )
 
         else:
@@ -300,7 +385,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 def jacfn(t, y, inputs, cj):
                     j = (
-                        model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
+                        model.jac_rhs_algebraic_eval(
+                            t, y, inputs_to_dict(inputs))
                         - cj * mass_matrix
                     )
                     return j
@@ -309,7 +395,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 def jacfn(t, y, inputs, cj):
                     jac_eval = (
-                        model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
+                        model.jac_rhs_algebraic_eval(
+                            t, y, inputs_to_dict(inputs))
                         - cj * mass_matrix
                     )
                     return sparse.csr_matrix(jac_eval)
@@ -360,7 +447,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             def rootfn(t, y, inputs):
                 new_inputs = inputs_to_dict(inputs)
                 return_root = np.array(
-                    [event(t, y, new_inputs) for event in model.terminate_events_eval]
+                    [event(t, y, new_inputs)
+                     for event in model.terminate_events_eval]
                 ).reshape(-1)
 
                 return return_root
@@ -439,7 +527,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if model.convert_to_format == "casadi":
             rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
-            jac_times_cjmass = idaklu.generate_function(jac_times_cjmass.serialize())
+            jac_times_cjmass = idaklu.generate_function(
+                jac_times_cjmass.serialize())
             jac_rhs_algebraic_action = idaklu.generate_function(
                 jac_rhs_algebraic_action.serialize()
             )
@@ -448,6 +537,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             sensfn = idaklu.generate_function(sensfn.serialize())
 
             self._setup = {
+                "jac_bandwidth_upper": jac_bw_upper,
+                "jac_bandwidth_lower": jac_bw_lower,
                 "rhs_algebraic": rhs_algebraic,
                 "jac_times_cjmass": jac_times_cjmass,
                 "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,
@@ -463,6 +554,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
             }
 
+            int_jac_bw_upper = self._setup["jac_bandwidth_upper"]
+            int_jac_bw_lower = self._setup["jac_bandwidth_upper"]
+            if int_jac_bw_upper is None:
+                int_jac_bw_upper = -1
+            if int_jac_bw_lower is None:
+                int_jac_bw_lower = -1
             solver = idaklu.create_casadi_solver(
                 len(y0),
                 self._setup["number_of_sensitivity_parameters"],
@@ -471,6 +568,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup["jac_times_cjmass_colptrs"],
                 self._setup["jac_times_cjmass_rowvals"],
                 self._setup["jac_times_cjmass_nnz"],
+                int_jac_bw_lower,
+                int_jac_bw_upper,
                 self._setup["jac_rhs_algebraic_action"],
                 self._setup["mass_action"],
                 self._setup["sensfn"],
@@ -515,7 +614,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs_dict or {}
         # stack inputs
         if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
+            arrays_to_stack = [np.array(x).reshape(-1, 1)
+                               for x in inputs_dict.values()]
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])

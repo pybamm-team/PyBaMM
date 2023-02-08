@@ -15,7 +15,7 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   p_python_functions->rhs_alg.m_res[0] = NV_DATA_S(rr);
   p_python_functions->rhs_alg();
 
-  realtype *tmp = p_python_functions->get_tmp();
+  realtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action.m_arg[0] = NV_DATA_S(yp);
   p_python_functions->mass_action.m_res[0] = tmp;
   p_python_functions->mass_action();
@@ -108,7 +108,7 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   p_python_functions->jac_action();
 
   // tmp has -∂F/∂y˙ v
-  realtype *tmp = p_python_functions->get_tmp();
+  realtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action.m_arg[0] = NV_DATA_S(v);
   p_python_functions->mass_action.m_res[0] = tmp;
   p_python_functions->mass_action();
@@ -157,6 +157,9 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
     jac_rowvals = SUNSparseMatrix_IndexValues(JJ);
     jac_data = SUNSparseMatrix_Data(JJ);
   }
+  else if (p_python_functions->options.using_banded_matrix) {
+    jac_data = p_python_functions->get_tmp_sparse_jacobian_data();
+  }
   else
   {
     jac_data = SUNDenseMatrix_Data(JJ);
@@ -169,9 +172,23 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       p_python_functions->inputs.data();
   p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
   p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
+
   p_python_functions->jac_times_cjmass();
 
-  if (p_python_functions->options.using_sparse_matrix)
+
+  if (p_python_functions->options.using_banded_matrix) 
+  {
+    // copy data from temporary matrix to the banded matrix
+    realtype *ret_jac_data = SUNBandMatrix_Data(JJ);
+    for (int j = 0; j < SUNSparseMatrix_Columns(JJ); j++) {
+      realtype *col_j = SM_COLUMN_B(JJ, j);
+      for (sunindextype data_i = jac_colptrs[j]; data_i < jac_colptrs[j+1]; data_i++) {
+        sunindextype row_i = jac_rowvals[data_i];
+        SM_COLUMN_ELEMENT_B(col_j, row_i, j) = jac_data[data_i];
+      }
+    }
+  } 
+  else if (p_python_functions->options.using_sparse_matrix)
   {
     // row vals and col ptrs
     const int n_row_vals = p_python_functions->jac_times_cjmass_rowvals.size();
@@ -262,7 +279,7 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp
-    realtype *tmp = p_python_functions->get_tmp();
+    realtype *tmp = p_python_functions->get_tmp_state_vector();
     p_python_functions->jac_action.m_arg[0] = &t;
     p_python_functions->jac_action.m_arg[1] = NV_DATA_S(yy);
     p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();

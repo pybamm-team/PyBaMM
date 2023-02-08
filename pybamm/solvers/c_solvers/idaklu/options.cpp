@@ -33,7 +33,7 @@ Options::Options(py::dict options)
   {
     throw std::domain_error(
       "Unknown jacobian type \""s + jacobian + 
-      "\". Should be one of \"sparse\", \"banded"\, \"dense\", \"matrix-free\" or \"none\"."s
+      "\". Should be one of \"sparse\", \"banded\", \"dense\", \"matrix-free\" or \"none\"."s
     );
   }
 
@@ -43,6 +43,17 @@ Options::Options(py::dict options)
   }
   else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
   {
+  }
+  else if (linear_solver == "SUNLinSol_Band" && jacobian == "banded")
+  {
+  }
+  else if (jacobian == "banded") {
+    throw std::domain_error(
+      "Unknown linear solver or incompatible options: "
+      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver +
+      "\". For a banded jacobian "
+      "please use the SUNLinSol_Band linear solver"
+    );
   }
   else if ((linear_solver == "SUNLinSol_SPBCGS" ||
             linear_solver == "SUNLinSol_SPFGMR" ||

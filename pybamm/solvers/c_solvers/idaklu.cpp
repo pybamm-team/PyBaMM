@@ -44,6 +44,7 @@ PYBIND11_MODULE(idaklu, m)
         py::arg("number_of_parameters"), py::arg("rhs_alg"),
         py::arg("jac_times_cjmass"), py::arg("jac_times_cjmass_colptrs"),
         py::arg("jac_times_cjmass_rowvals"), py::arg("jac_times_cjmass_nnz"),
+        py::arg("jac_bandwidth_lower"), py::arg("jac_bandwidth_upper"),
         py::arg("jac_action"), py::arg("mass_action"), py::arg("sens"),
         py::arg("events"), py::arg("number_of_events"), py::arg("rhs_alg_id"),
         py::arg("atol"), py::arg("rtol"), py::arg("inputs"), py::arg("options"),
