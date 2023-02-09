@@ -847,12 +847,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "x-average side reactions cannot be 'false' for SPM models"
                 )
-        if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
-            self, pybamm.lithium_ion.MPM
-        ):
-            if options["particle size"] == "distribution":
+        if isinstance(self, pybamm.lithium_ion.SPM):
+            if (
+                "distribution" in options["particle size"]
+                and options["surface form"] == "false"
+            ):
                 raise pybamm.OptionError(
-                    "'particle size' should be 'single' for SPM and SPMe models"
+                    "surface form must be 'algebraic' or 'differential' if "
+                    " 'particle size' contains a 'distribution'"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
