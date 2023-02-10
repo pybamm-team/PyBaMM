@@ -52,7 +52,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # print statistics of the solver after every solve
                 "print_stats": False,
 
-                # jacobian form, can be "none", "dense", 
+                # jacobian form, can be "none", "dense",
                 # "banded", "sparse", "matrix-free"
                 "jacobian": "sparse",
 
