@@ -446,8 +446,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)
-            
-            
+
     def test_banded(self):
         model = pybamm.lithium_ion.SPM()
         model.convert_to_format = "casadi"
@@ -458,7 +457,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        
+
         t_eval = np.linspace(0, 3600, 100)
         solver = pybamm.IDAKLUSolver()
         soln = solver.solve(model, t_eval)
@@ -471,7 +470,6 @@ class TestIDAKLUSolver(unittest.TestCase):
         soln_banded = solver_banded.solve(model, t_eval)
 
         np.testing.assert_array_almost_equal(soln.y, soln_banded.y, 5)
-
 
     def test_options(self):
         model = pybamm.BaseModel()
