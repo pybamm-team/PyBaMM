@@ -92,8 +92,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", or "quartic profile". A 2-tuple can be provided for 
-                different behaviour in negative and positive electrodes.
+                "quadratic profile", or "quartic profile". A 2-tuple can be provided 
+                for different behaviour in negative and positive electrodes.
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle
                 swelling and cracking. Can be "none" (default), "swelling only",
