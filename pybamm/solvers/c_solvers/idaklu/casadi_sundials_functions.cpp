@@ -148,13 +148,10 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       static_cast<CasadiFunctions *>(user_data);
 
   // create pointer to jac data, column pointers, and row values
-  sunindextype *jac_colptrs;
-  sunindextype *jac_rowvals;
   realtype *jac_data;
   if (p_python_functions->options.using_sparse_matrix)
   {
-    jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
-    jac_rowvals = SUNSparseMatrix_IndexValues(JJ);
+    DEBUG("sparse jacobian_casadi");
     jac_data = SUNSparseMatrix_Data(JJ);
   }
   else if (p_python_functions->options.using_banded_matrix) {
@@ -162,6 +159,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   }
   else
   {
+    DEBUG("dense jacobian_casadi");
     jac_data = SUNDenseMatrix_Data(JJ);
   }
 
@@ -179,17 +177,26 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   if (p_python_functions->options.using_banded_matrix) 
   {
     // copy data from temporary matrix to the banded matrix
+    DEBUG("banded jacobian_casadi");
     realtype *ret_jac_data = SUNBandMatrix_Data(JJ);
-    for (int j = 0; j < SUNSparseMatrix_Columns(JJ); j++) {
-      realtype *col_j = SM_COLUMN_B(JJ, j);
-      for (sunindextype data_i = jac_colptrs[j]; data_i < jac_colptrs[j+1]; data_i++) {
-        sunindextype row_i = jac_rowvals[data_i];
-        SM_COLUMN_ELEMENT_B(col_j, row_i, j) = jac_data[data_i];
+    auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
+    auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
+    auto ncols = p_python_functions->number_of_states;
+    for (int col_ij = 0; col_ij < ncols; col_ij++) {
+      auto banded_col = SM_COLUMN_B(JJ, col_ij);
+      for (auto data_i = jac_colptrs[col_ij]; data_i < jac_colptrs[col_ij+1]; data_i++) {
+        auto row_ij = jac_rowvals[data_i];
+        auto value_ij = jac_data[data_i];
+        DEBUG("(" << row_ij << ", " << col_ij << ") = " << value_ij);
+        SM_COLUMN_ELEMENT_B(banded_col, row_ij, col_ij) = value_ij;
       }
     }
   } 
   else if (p_python_functions->options.using_sparse_matrix)
   {
+
+    sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
+    sunindextype *jac_rowvals = SUNSparseMatrix_IndexValues(JJ);
     // row vals and col ptrs
     const int n_row_vals = p_python_functions->jac_times_cjmass_rowvals.size();
     auto p_jac_times_cjmass_rowvals =

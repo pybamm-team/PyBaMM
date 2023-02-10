@@ -1,4 +1,5 @@
 #include "options.hpp"
+#include <iostream>
 #include <stdexcept>
 
  
@@ -21,6 +22,7 @@ Options::Options(py::dict options)
   }
   else if (jacobian == "banded") {
     using_banded_matrix = true;
+    using_sparse_matrix = false;
   }
   else if (jacobian == "dense" || jacobian == "none")
   {

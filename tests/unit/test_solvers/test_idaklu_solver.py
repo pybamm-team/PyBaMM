@@ -461,14 +461,12 @@ class TestIDAKLUSolver(unittest.TestCase):
         
         t_eval = np.linspace(0, 3600, 100)
         solver = pybamm.IDAKLUSolver()
-        print('running normal')
         soln = solver.solve(model, t_eval)
 
         options = {
             "jacobian": "banded",
             "linear_solver": "SUNLinSol_Band",
         }
-        print('running banded')
         solver_banded = pybamm.IDAKLUSolver(options=options)
         soln_banded = solver_banded.solve(model, t_eval)
 

@@ -14,8 +14,7 @@ if idaklu_spec is not None:
     try:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         idaklu_spec.loader.exec_module(idaklu)
-    except ImportError as e:  # pragma: no cover
-        print(e)
+    except ImportError:  # pragma: no cover
         idaklu_spec = None
 
 
@@ -168,87 +167,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol[slices] = tol
         return atol
 
-    def _check_banded_jacobian(self, sparsity, fill_in=True):
-        jac_times_cjmass_colptrs = np.array(
-            sparsity.colind(), dtype=np.int64
-        )
-        jac_times_cjmass_rowvals = np.array(
-            sparsity.row(), dtype=np.int64
-        )
-        jac_half_bandwidth = None
-        # check that the Jacobian is banded
-        generic_error_message = "Cannot use solver with a banded Jacobian"
-        n = sparsity.columns()
-        if n != sparsity.rows():
-            raise RuntimeError(generic_error_message +
-                               ": Jacobian is not square")
-        max_bandwidth = 0
-        if fill_in:
-            for i in range(n - 1):
-                col_lower = jac_times_cjmass_colptrs[i]
-                col_upper = jac_times_cjmass_colptrs[i + 1]
-                col = jac_times_cjmass_rowvals[col_lower:col_upper]
-                max_bandwidth = max(*[
-                    -col[0] - i,
-                    col[-1] - i,
-                    max_bandwidth,
-                ])
-
-        pybamm.logger.verbose("checking banded Jacobian: max_bandwidth = {}".format(max_bandwidth))
-
-        has_been_altered = False
-        for i in range(n - 1):
-            col_lower = jac_times_cjmass_colptrs[i]
-            col_upper = jac_times_cjmass_colptrs[i + 1]
-            col = jac_times_cjmass_rowvals[col_lower:col_upper]
-            col_min = col[0]
-            col_max = col[-1]
-            col_is_dense = col_max - col_min == col.size - 1
-            if not col_is_dense:
-                raise RuntimeError(
-                    generic_error_message + ": column is not dense for column {} - {}".format(i, col))
-            col_contains_diag = np.any(col == i)
-            if not col_contains_diag:
-                raise RuntimeError(
-                    generic_error_message + ": column does not contain diagonal for column {} - {}".format(i, col))
-            col_diag = np.where(col == i)[0][0]
-            col_lower_bandwidth = (col_max - i)
-            col_upper_bandwidth = (i - col_min)
-
-            # if we are near the edge of the matrix, the bandwidth may be truncated
-            col_half_bandwidth = max(col_lower_bandwidth, col_upper_bandwidth)
-            if i < col_half_bandwidth and col_upper_bandwidth == i:
-                col_upper_bandwidth = col_half_bandwidth
-            if i > n - col_half_bandwidth and col_lower_bandwidth == n - i:
-                col_lower_bandwidth = col_half_bandwidth
-            col_is_symmetric = col_lower_bandwidth == col_upper_bandwidth
-
-            if fill_in and (col_lower_bandwidth < max_bandwidth):
-                for j in range(col_lower_bandwidth, max_bandwidth):
-                    print('adding', i + j + 1, i)
-                    sparsity.add_nz(i + j + 1, i)
-
-            if fill_in and (col_upper_bandwidth < max_bandwidth):
-                for j in range(col_upper_bandwidth, max_bandwidth):
-                    print('adding', i - j - 1, i)
-                    sparsity.add_nz(i - j - 1, i)
-            if not fill_in and not col_is_symmetric:
-                print(col_half_bandwidth, col_upper_bandwidth,
-                      col_lower_bandwidth, n)
-                raise RuntimeError(
-                    generic_error_message + ": column is not symmetric around diagonal for column {} - {}".format(i, col))
-            if jac_half_bandwidth is None:
-                jac_half_bandwidth = col_half_bandwidth
-            elif col_half_bandwidth != jac_half_bandwidth:
-                raise RuntimeError(
-                    generic_error_message + ": column has different bandwidth to previous columns for column {} - {}".format(i, col))
-        if has_been_altered:
-            jac_half_bandwidth = self._check_banded_jacobian(
-                sparsity, fill_in=False)
-        if jac_half_bandwidth is None:
-            raise RuntimeError(generic_error_message + ": no columns found")
-        return jac_half_bandwidth
-
     def _check_atol_type(self, atol, size):
         """
         This method checks that the atol vector is of the right shape and
@@ -352,10 +270,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-            jac_times_cjmass = model.jac_rhs_algebraic_eval(
-                    t_casadi, y_casadi, p_casadi_stacked
-                ) - cj_casadi * mass_matrix
-
+            jac_times_cjmass = casadi.Function(
+                "jac_times_cjmass",
+                [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
+                [
+                    model.jac_rhs_algebraic_eval(
+                        t_casadi, y_casadi, p_casadi_stacked
+                    ) - cj_casadi * mass_matrix
+                ],
+            )
 
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
             jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
