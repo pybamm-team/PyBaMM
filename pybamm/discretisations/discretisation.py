@@ -32,11 +32,9 @@ class Discretisation(object):
             a dictionary of the spatial methods to be used on each
             domain. The keys correspond to the model domains and the
             values to the spatial method.
-    banded : bool, optional
-        If True, the discretised matrices are banded. Default is False.
     """
 
-    def __init__(self, mesh=None, spatial_methods=None, banded=False):
+    def __init__(self, mesh=None, spatial_methods=None):
         self._mesh = mesh
         if mesh is None:
             self._spatial_methods = {}
@@ -65,7 +63,6 @@ class Discretisation(object):
         self._bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
-        self._banded = banded
 
     @property
     def mesh(self):
