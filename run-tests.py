@@ -315,7 +315,13 @@ if __name__ == "__main__":
         description="Run unit tests for PyBaMM.",
         epilog="To run individual unit tests, use e.g. '$ tests/unit/test_timer.py'",
     )
+
     # Unit tests
+    parser.add_argument(
+        "--integration",
+        action="store_true",
+        help="Which folder to run the tests from.",
+    )
     parser.add_argument(
         "--unit",
         action="store_true",
@@ -380,6 +386,10 @@ if __name__ == "__main__":
     folder = args.folder[0]
     interpreter = args.interpreter
     # Unit tests
+    if args.integration:
+        has_run= True
+        folder=args.folder[1]
+        run_code_tests(True, folder, interpreter)
     if args.unit:
         has_run = True
         run_code_tests(True, folder, interpreter)
