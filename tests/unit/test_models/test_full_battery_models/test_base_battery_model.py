@@ -101,7 +101,6 @@ class TestBaseBatteryModel(unittest.TestCase):
             model.length_scales = {}
 
     def test_default_geometry(self):
-
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertEqual(
             model.default_geometry["current collector"]["z"]["position"], 1

@@ -218,7 +218,6 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
     """
 
     def __init__(self, lims, npts, side="top", stretch=2.3):
-
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
@@ -333,7 +332,6 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     """
 
     def __init__(self, lims, npts, y_edges=None, z_edges=None):
-
         # raise error if no edges passed
         if y_edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'y_edges'")
@@ -346,7 +344,6 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         # check and store edges
         edges = {"y": y_edges, "z": z_edges}
         for var in spatial_vars:
-
             # check that npts equals number of user-supplied edges
             if npts[var.name] != len(edges[var.name]):
                 raise pybamm.GeometryError(

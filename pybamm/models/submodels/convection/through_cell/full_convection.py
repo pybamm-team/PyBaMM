@@ -46,7 +46,6 @@ class Full(BaseThroughCellModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         # Set up
         param = self.param
         l_n = param.n.l
