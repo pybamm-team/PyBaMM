@@ -469,12 +469,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
             }
 
-            int_jac_bw_upper = self._setup["jac_bandwidth_upper"]
-            int_jac_bw_lower = self._setup["jac_bandwidth_upper"]
-            if int_jac_bw_upper is None:
-                int_jac_bw_upper = -1
-            if int_jac_bw_lower is None:
-                int_jac_bw_lower = -1
             solver = idaklu.create_casadi_solver(
                 len(y0),
                 self._setup["number_of_sensitivity_parameters"],
@@ -483,8 +477,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup["jac_times_cjmass_colptrs"],
                 self._setup["jac_times_cjmass_rowvals"],
                 self._setup["jac_times_cjmass_nnz"],
-                int_jac_bw_lower,
-                int_jac_bw_upper,
+                jac_bw_lower,
+                jac_bw_upper,
                 self._setup["jac_rhs_algebraic_action"],
                 self._setup["mass_action"],
                 self._setup["sensfn"],
