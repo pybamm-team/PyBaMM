@@ -320,7 +320,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--integration",
         action="store_true",
-        help="Which folder to run the tests from.",
+        help="Run integration tests using the python interpreter.",
     )
     parser.add_argument(
         "--unit",
