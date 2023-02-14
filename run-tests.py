@@ -387,8 +387,8 @@ if __name__ == "__main__":
     interpreter = args.interpreter
     # Unit tests
     if args.integration:
-        has_run= True
-        folder=args.folder[1]
+        has_run = True
+        folder = args.folder[1]
         run_code_tests(True, folder, interpreter)
     if args.unit:
         has_run = True
