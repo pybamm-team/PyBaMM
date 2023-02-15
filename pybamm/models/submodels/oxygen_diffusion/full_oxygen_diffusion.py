@@ -49,7 +49,6 @@ class Full(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         tor_s = variables["Separator electrolyte transport efficiency"]
         tor_p = variables["Positive electrolyte transport efficiency"]
         tor = pybamm.concatenation(tor_s, tor_p)
@@ -73,7 +72,6 @@ class Full(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-
         param = self.param
 
         eps_s = variables["Separator porosity"]
@@ -99,7 +97,6 @@ class Full(BaseModel):
         }
 
     def set_boundary_conditions(self, variables):
-
         c_ox = variables["Separator and positive electrode oxygen concentration"]
 
         self.boundary_conditions = {
@@ -110,7 +107,6 @@ class Full(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-
         c_ox = variables["Separator and positive electrode oxygen concentration"]
 
         self.initial_conditions = {c_ox: self.param.c_ox_init}

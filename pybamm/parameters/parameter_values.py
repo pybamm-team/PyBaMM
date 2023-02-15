@@ -818,7 +818,6 @@ class ParameterValues:
         return list(self._dict_items.keys())
 
     def export_csv(self, filename):
-
         # process functions and data to output
         # like they appear in inputs csv files
         parameter_output = {}

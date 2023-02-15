@@ -12,7 +12,6 @@ import unittest
 
 
 def errors(pts, function, method_options, bcs=None):
-
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
     geometry = {domain: {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
@@ -47,7 +46,6 @@ def errors(pts, function, method_options, bcs=None):
 
 
 def get_errors(function, method_options, pts, bcs=None):
-
     l_errors = np.zeros(pts.shape)
     r_errors = np.zeros(pts.shape)
 
@@ -59,7 +57,6 @@ def get_errors(function, method_options, pts, bcs=None):
 
 class TestExtrapolation(unittest.TestCase):
     def test_convergence_without_bcs(self):
-
         # all tests are performed on x in [0, 1]
         linear = {"extrapolation": {"order": "linear"}}
         quad = {"extrapolation": {"order": "quadratic"}}

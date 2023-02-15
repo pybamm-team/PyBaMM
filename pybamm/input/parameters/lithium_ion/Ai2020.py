@@ -83,8 +83,9 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     References
     ----------
     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
-    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. # noqa
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES # noqa
+    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+    Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES
 
     Parameters
     ----------
@@ -607,6 +608,7 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 2.28,
         "Typical current [A]": 2.28,
         "Current function [A]": 2.28,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,

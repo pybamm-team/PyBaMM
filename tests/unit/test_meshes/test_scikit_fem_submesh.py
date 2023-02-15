@@ -232,7 +232,6 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
-
         # only one lim
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
@@ -312,7 +311,6 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
-
         # only one lim
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):

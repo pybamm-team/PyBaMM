@@ -259,6 +259,7 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 256.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 35.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 35.0,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 4800000.0,
         "Negative electrode pore size [m]": 1e-07,
@@ -310,18 +311,10 @@ def get_parameter_values():
         "Positive electrode electrons in reaction": 2.0,
         "Positive electrode exchange-current density [A.m-2]"
         "": lead_dioxide_exchange_current_density_Sulzer2019,
-        "Signed stoichiometry of cations (oxygen reaction)": 4.0,
-        "Signed stoichiometry of oxygen (oxygen reaction)": 1.0,
-        "Electrons in oxygen reaction": 4.0,
         "Positive electrode oxygen exchange-current density [A.m-2]"
         "": oxygen_exchange_current_density_Sulzer2019,
-        "Reference oxygen molecule concentration [mol.m-3]": 1000.0,
-        "Oxygen reference OCP vs SHE [V]": 1.229,
-        "Signed stoichiometry of cations (hydrogen reaction)": 2.0,
-        "Electrons in hydrogen reaction": 2.0,
         "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
         "": 0.0,
-        "Hydrogen reference OCP vs SHE [V]": 0.0,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode density [kg.m-3]": 9375.0,
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 256.0,

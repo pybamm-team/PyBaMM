@@ -326,7 +326,7 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
         )
 
         # check Chebyshev subdivision locations
-        for (a, b) in zip(
+        for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1],
         ):
@@ -343,7 +343,7 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        for (a, b) in zip(
+        for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0],
         ):
