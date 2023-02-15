@@ -30,7 +30,6 @@ class BasePotentialPair(BaseModel):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-
         phi_s_cn = pybamm.standard_variables.phi_s_cn
 
         variables = self._get_standard_negative_potential_variables(phi_s_cn)
@@ -44,7 +43,6 @@ class BasePotentialPair(BaseModel):
         return variables
 
     def set_algebraic(self, variables):
-
         param = self.param
 
         phi_s_cn = variables["Negative current collector potential"]
@@ -61,7 +59,6 @@ class BasePotentialPair(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-
         applied_current = self.param.current_with_time
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
@@ -79,7 +76,6 @@ class PotentialPair1plus1D(BasePotentialPair):
         super().__init__(param)
 
     def set_boundary_conditions(self, variables):
-
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
 
@@ -119,7 +115,6 @@ class PotentialPair2plus1D(BasePotentialPair):
         super().__init__(param)
 
     def set_boundary_conditions(self, variables):
-
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
 

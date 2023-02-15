@@ -26,7 +26,6 @@ class BaseModel(Composite):
         super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
-
         if self.domain == "negative":
             delta_phi_av = pybamm.standard_variables.delta_phi_n_av
         elif self.domain == "separator":

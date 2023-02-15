@@ -178,7 +178,6 @@ class TestUnaryOperators(TestCase):
         )
 
     def test_size_average(self):
-
         # no domain
         a = pybamm.Scalar(1)
         average_a = pybamm.size_average(a)

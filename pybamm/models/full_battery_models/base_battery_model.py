@@ -185,8 +185,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def __init__(self, extra_options):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch"],
             "calculate heat source for isothermal models": ["false", "true"],
+            "cell geometry": ["arbitrary", "pouch"],
+            "contact resistance": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
                 "uniform",
@@ -402,6 +403,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If 'SEI film resistance' is not 'none' "
                     "and there are multiple phases then 'total interfacial "
                     "current density as a state' must be 'true'"
+                )
+
+        # Options not yet compatible with contact resistance
+        if options["contact resistance"] == "true":
+            if options["operating mode"] == "explicit power":
+                raise NotImplementedError(
+                    "Contact resistance not yet supported for explicit power."
+                )
+            if options["operating mode"] == "explicit resistance":
+                raise NotImplementedError(
+                    "Contact resistance not yet supported for explicit resistance."
                 )
 
         # Options not yet compatible with particle-size distributions
@@ -932,7 +944,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.check_no_repeated_keys()
 
     def build_model(self):
-
         # Build model variables and equations
         self._build_model()
 
@@ -1055,7 +1066,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
 
     def set_thermal_submodel(self):
-
         if self.options["thermal"] == "isothermal":
             thermal_submodel = pybamm.thermal.isothermal.Isothermal
         elif self.options["thermal"] == "lumped":
@@ -1074,7 +1084,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
     def set_current_collector_submodel(self):
-
         if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":

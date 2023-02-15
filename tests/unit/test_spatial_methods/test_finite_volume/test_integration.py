@@ -297,7 +297,6 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         self.assertEqual(vec_disc.shape[1], 1)
 
     def test_indefinite_integral(self):
-
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
@@ -451,7 +450,6 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         )
 
     def test_backward_indefinite_integral(self):
-
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}

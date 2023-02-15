@@ -35,9 +35,7 @@ for ax, i, j in zip(
     itertools.product(solvers.values(), models.values()),
     itertools.product(solvers, models),
 ):
-
     for params in parameters:
-
         time_points = []
         solver = i[0]
 
@@ -70,13 +68,11 @@ for ax, i, j in zip(
         disc.process_model(model)
 
         for tol in abstols:
-
             solver.atol = tol
             solver.solve(model, t_eval=t_eval)
             time = 0
             runs = 20
             for k in range(0, runs):
-
                 solution = solver.solve(model, t_eval=t_eval)
                 time += solution.solve_time.value
             time = time / runs

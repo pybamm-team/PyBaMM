@@ -1,3 +1,5 @@
+.. _plot_voltage_components:
+
 Plot Voltage Components
 =======================
 
