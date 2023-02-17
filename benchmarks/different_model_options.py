@@ -83,7 +83,6 @@ class TimeBuildModelLossActiveMaterial:
     )
 
     def time_setup_model(self, model, params):
-
         build_model("Ai2020", model, "loss of active material", params)
 
 

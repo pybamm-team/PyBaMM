@@ -69,7 +69,6 @@ class TestFunctionParameter(unittest.TestCase):
             pybamm.FunctionParameter("a", {"var": var, "var 2": var_2})
 
     def test_set_input_names(self):
-
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("a", {"var": var})
 

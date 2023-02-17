@@ -28,7 +28,6 @@ class BaseModel(Composite):
         super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
-
         if self.domain == "separator":
             return {}
 

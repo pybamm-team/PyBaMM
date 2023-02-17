@@ -17,7 +17,6 @@ class ThermalParameters(BaseParameters):
     """
 
     def __init__(self):
-
         # Get geometric parameters
         self.geo = pybamm.geometric_parameters
 

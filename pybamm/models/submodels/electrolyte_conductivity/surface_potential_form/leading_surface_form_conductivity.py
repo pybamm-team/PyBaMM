@@ -28,7 +28,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
-
         delta_phi_av = pybamm.Variable(
             f"X-averaged {self.domain} electrode surface potential difference [V]",
             domain="current collector",

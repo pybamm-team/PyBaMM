@@ -11,7 +11,6 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
-
             T = variables[f"{Domain} electrode temperature [K]"]
             # For "particle-size distribution" models, take distribution version
             # of sto that depends on particle size.

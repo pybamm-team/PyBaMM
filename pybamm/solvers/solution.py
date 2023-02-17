@@ -451,7 +451,7 @@ class Solution(object):
             # Iterate through all models, some may be in the list several times and
             # therefore only get set up once
             vars_casadi = []
-            for (i, (model, ys, inputs, var_pybamm)) in enumerate(
+            for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
                 if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):

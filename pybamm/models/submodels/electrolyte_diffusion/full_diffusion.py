@@ -45,7 +45,6 @@ class Full(BaseElectrolyteDiffusion):
         return variables
 
     def get_coupled_variables(self, variables):
-
         c_e_dict = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
@@ -107,7 +106,6 @@ class Full(BaseElectrolyteDiffusion):
         self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
     def set_initial_conditions(self, variables):
-
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
 
         self.initial_conditions = {

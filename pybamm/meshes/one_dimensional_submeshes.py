@@ -90,7 +90,6 @@ class Uniform1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts):
-
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
@@ -154,7 +153,6 @@ class Exponential1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts, side="symmetric", stretch=None):
-
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         a = spatial_lims["min"]
         b = spatial_lims["max"]
@@ -234,7 +232,6 @@ class Chebyshev1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts, tabs=None):
-
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
@@ -273,7 +270,6 @@ class UserSupplied1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts, edges=None):
-
         # raise error if no edges passed
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
@@ -338,7 +334,6 @@ class SpectralVolume1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts, edges=None, order=2):
-
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 

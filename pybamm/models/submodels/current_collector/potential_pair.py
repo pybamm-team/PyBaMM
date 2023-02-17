@@ -52,7 +52,6 @@ class BasePotentialPair(BaseModel):
         return variables
 
     def set_algebraic(self, variables):
-
         param = self.param
 
         phi_s_cn = variables["Negative current collector potential [V]"]
@@ -68,7 +67,6 @@ class BasePotentialPair(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-
         applied_current = self.param.current_with_time
         phi_s_cn = variables["Negative current collector potential [V]"]
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
@@ -86,7 +84,6 @@ class PotentialPair1plus1D(BasePotentialPair):
         super().__init__(param)
 
     def set_boundary_conditions(self, variables):
-
         phi_s_cn = variables["Negative current collector potential [V]"]
         phi_s_cp = variables["Positive current collector potential [V]"]
 
@@ -122,7 +119,6 @@ class PotentialPair2plus1D(BasePotentialPair):
         super().__init__(param)
 
     def set_boundary_conditions(self, variables):
-
         phi_s_cn = variables["Negative current collector potential [V]"]
         phi_s_cp = variables["Positive current collector potential [V]"]
 

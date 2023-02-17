@@ -33,7 +33,6 @@ parameter_values = pybamm.ParameterValues(values)
 
 class TestEcmParameters(unittest.TestCase):
     def test_init_parameters(self):
-
         param = pybamm.EcmParameters()
 
         simpled_mapped_parameters = [

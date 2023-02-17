@@ -60,7 +60,6 @@ class SPM(BaseModel):
             pybamm.citations.register("BrosaPlanella2022")
 
     def set_intercalation_kinetics_submodel(self):
-
         for domain in ["negative", "positive"]:
             electrode_type = self.options.electrode_types[domain]
             if electrode_type == "planar":
@@ -128,7 +127,6 @@ class SPM(BaseModel):
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)
 
     def set_electrolyte_potential_submodel(self):
-
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if self.options["electrolyte conductivity"] not in ["default", "leading order"]:

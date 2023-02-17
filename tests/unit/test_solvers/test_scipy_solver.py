@@ -10,7 +10,6 @@ import sys
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
-
         if pybamm.have_jax():
             formats = ["python", "jax"]
         else:
