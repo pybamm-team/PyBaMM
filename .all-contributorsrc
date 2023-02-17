@@ -550,7 +550,18 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/112731474?v=4",
       "profile": "https://github.com/iatzak",
       "contributions": [
-        "doc"
+        "doc",
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "ayeankit",
+      "name": "Ankit Kumar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/72691866?v=4",
+      "profile": "https://github.com/ayeankit",
+      "contributions": [
+        "code"
       ]
     }
   ],

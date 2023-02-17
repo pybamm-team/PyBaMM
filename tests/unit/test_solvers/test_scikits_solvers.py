@@ -843,7 +843,6 @@ class TestScikitsSolvers(unittest.TestCase):
         model3.events = [pybamm.Event("var1 = 1.5", pybamm.min(1.5 - var1))]
 
         for model in [model1, model2, model3]:
-
             disc = get_discretisation_for_testing()
             disc.process_model(model)
 

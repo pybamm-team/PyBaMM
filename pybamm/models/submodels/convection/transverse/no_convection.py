@@ -23,7 +23,6 @@ class NoConvection(BaseTransverseModel):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-
         p_s = pybamm.PrimaryBroadcast(0, "current collector")
         variables = self._get_standard_separator_pressure_variables(p_s)
 

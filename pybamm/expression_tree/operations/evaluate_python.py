@@ -304,7 +304,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             symbol_str = "{}({})".format(funct_var, children_str)
 
     elif isinstance(symbol, pybamm.Concatenation):
-
         # no need to concatenate if there is only a single child
         if isinstance(symbol, pybamm.NumpyConcatenation):
             if len(children_vars) == 1:

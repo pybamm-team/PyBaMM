@@ -98,7 +98,6 @@ class StandardModelTest(object):
     def test_sensitivities(
         self, param_name, param_value, output_name="Terminal voltage [V]"
     ):
-
         self.parameter_values.update({param_name: param_value})
         Crate = abs(
             self.parameter_values["Current function [A]"]
@@ -181,7 +180,6 @@ class OptimisationsTest(object):
     def evaluate_model(self, to_python=False, to_jax=False):
         result = np.empty((0, 1))
         for eqn in [self.model.concatenated_rhs, self.model.concatenated_algebraic]:
-
             y = self.model.concatenated_initial_conditions.evaluate(t=0)
             if to_python:
                 evaluator = pybamm.EvaluatorPython(eqn)

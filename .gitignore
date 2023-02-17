@@ -6,6 +6,7 @@
 *.DS_Store
 *.mat
 *.csv
+*.hidden
 
 # don't ignore important .txt and .csv files
 !requirements*

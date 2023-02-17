@@ -13,7 +13,7 @@ PyBaMM documentation
    :maxdepth: 1
    :hidden:
 
-   source/user_guide/index
+   User Guide <source/user_guide/index>
    source/api/index
 
 **Version**: |version|

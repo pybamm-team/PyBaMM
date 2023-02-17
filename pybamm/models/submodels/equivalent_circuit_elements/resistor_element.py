@@ -18,7 +18,6 @@ class ResistorElement(pybamm.BaseSubModel):
         self.model_options = options
 
     def get_coupled_variables(self, variables):
-
         T_cell = variables["Cell temperature [degC]"]
         current = variables["Current [A]"]
         soc = variables["SoC"]
