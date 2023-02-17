@@ -14,7 +14,9 @@
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+
 [![All Contributors](https://img.shields.io/badge/all_contributors-50-orange.svg)](#-contributors)
+
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
