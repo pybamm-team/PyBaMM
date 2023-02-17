@@ -1,5 +1,7 @@
 :tocdepth: 3
 
+.. _parameter_sets:
+
 ===============
 Parameters Sets
 ===============
@@ -84,7 +86,7 @@ listed below. See :ref:`adding-parameter-sets` for information on registering ne
 parameter sets with PyBaMM.
 
 Lead-acid Parameter Sets
-==========================
+========================
 
 {% for k,v in parameter_sets.items() if v.chemistry == "lead_acid" %}
 {{k}}
@@ -99,4 +101,3 @@ Lithium-ion Parameter Sets
 ----------------------------
 {{ parameter_sets.get_docstring(k) }}
 {% endfor %}
-

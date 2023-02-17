@@ -79,11 +79,10 @@ def get_parameter_values():
     values = {
         "chemistry": "ecm",
         "Initial SoC": 0.5,
-        "Initial cell temperature [degC]": 25,
-        "Initial jig temperature [degC]": 25,
+        "Initial temperature [K]": 25 + 273.15,
         "Cell capacity [A.h]": cell_capacity,
         "Nominal cell capacity [A.h]": cell_capacity,
-        "Ambient temperature [degC]": 25,
+        "Ambient temperature [K]": 25 + 273.15,
         "Current function [A]": 100,
         "Upper voltage cut-off [V]": 4.2,
         "Lower voltage cut-off [V]": 3.2,

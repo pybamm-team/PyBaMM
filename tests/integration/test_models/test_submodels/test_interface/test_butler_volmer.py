@@ -227,7 +227,6 @@ class TestButlerVolmer(unittest.TestCase):
         self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh.npts, 1))
 
     def test_diff_c_e_lead_acid(self):
-
         # With intercalation
         param = pybamm.LeadAcidParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(
@@ -298,7 +297,6 @@ class TestButlerVolmer(unittest.TestCase):
         )
 
     def test_diff_delta_phi_e_lead_acid(self):
-
         # With intercalation
         param = pybamm.LeadAcidParameters()
         model_n = pybamm.kinetics.SymmetricButlerVolmer(

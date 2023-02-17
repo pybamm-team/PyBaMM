@@ -362,14 +362,9 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        if self.first_dimension == "r" and self.second_dimension == "R":
-            # for an r-R variable, must leave r nondimensional as it was scaled using
-            # R
-            first_length_scale = 1
-        else:
-            first_length_scale = self.get_spatial_scale(
-                self.first_dimension, self.domain[0]
-            )
+        first_length_scale = self.get_spatial_scale(
+            self.first_dimension, self.domain[0]
+        )
         first_dim_pts_for_interp = first_dim_pts * first_length_scale
 
         second_length_scale = self.get_spatial_scale(

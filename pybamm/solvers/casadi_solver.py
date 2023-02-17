@@ -322,7 +322,6 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         def find_t_event(sol, typ):
-
             # Check most recent y to see if any events have been crossed
             if model.terminate_events_eval:
                 y_last = sol.all_ys[-1][:, -1]
@@ -493,7 +492,7 @@ class CasadiSolver(pybamm.BaseSolver):
         pybamm.logger.debug("Creating CasADi integrator")
 
         # Use grid if t_eval is given
-        use_grid = not (t_eval is None)
+        use_grid = t_eval is not None
         if use_grid is True:
             t_eval_shifted = t_eval - t_eval[0]
             t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()

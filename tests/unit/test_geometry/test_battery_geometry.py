@@ -59,10 +59,10 @@ class TestBatteryGeometry(unittest.TestCase):
         self.assertEqual(geometry["negative primary particle"]["r_n_prim"]["max"], 1)
         self.assertEqual(geometry["negative secondary particle"]["r_n_sec"]["min"], 0)
         self.assertEqual(geometry["negative secondary particle"]["r_n_sec"]["max"], 1)
-        self.assertEqual(geometry["positive primary particle"]["r_n_prim"]["min"], 0)
-        self.assertEqual(geometry["positive primary particle"]["r_n_prim"]["max"], 1)
-        self.assertEqual(geometry["positive secondary particle"]["r_n_sec"]["min"], 0)
-        self.assertEqual(geometry["positive secondary particle"]["r_n_sec"]["max"], 1)
+        self.assertEqual(geometry["positive primary particle"]["r_p_prim"]["min"], 0)
+        self.assertEqual(geometry["positive primary particle"]["r_p_prim"]["max"], 1)
+        self.assertEqual(geometry["positive secondary particle"]["r_p_sec"]["min"], 0)
+        self.assertEqual(geometry["positive secondary particle"]["r_p_sec"]["max"], 1)
 
     def test_geometry_error(self):
         with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):
