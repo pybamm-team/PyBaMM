@@ -43,44 +43,59 @@ def battery_geometry(
         "separator": {"x_s": {"min": L_n, "max": L_n_L_s}},
         "positive electrode": {"x_p": {"min": L_n_L_s, "max": geo.L_x}},
     }
+
     # Add particle domains
     if include_particles is True:
         for domain in ["negative", "positive"]:
-            if options.electrode_types[domain] == "planar":
-                continue
-            geo_domain = geo.domain_params[domain]
-            d = domain[0]
-            geometry.update(
-                {
-                    f"{domain} particle": {
-                        f"r_{d}": {"min": 0, "max": geo_domain.prim.R_typ}
-                    },
-                }
-            )
-            phases = int(getattr(options, domain)["particle phases"])
-            if phases >= 2:
+            if options.electrode_types[domain] == "porous":
+                geo_domain = geo.domain_params[domain]
+                d = domain[0]
                 geometry.update(
                     {
-                        f"{domain} primary particle": {
-                            f"r_{d}_prim": {"min": 0, "max": geo_domain.prim.R_typ}
-                        },
-                        f"{domain} secondary particle": {
-                            f"r_{d}_sec": {"min": 0, "max": geo_domain.sec.R_typ}
+                        f"{domain} particle": {
+                            f"r_{d}": {"min": 0, "max": geo_domain.prim.R_typ}
                         },
                     }
                 )
+                phases = int(getattr(options, domain)["particle phases"])
+                if phases >= 2:
+                    geometry.update(
+                        {
+                            f"{domain} primary particle": {
+                                f"r_{d}_prim": {"min": 0, "max": geo_domain.prim.R_typ}
+                            },
+                            f"{domain} secondary particle": {
+                                f"r_{d}_sec": {"min": 0, "max": geo_domain.sec.R_typ}
+                            },
+                        }
+                    )
+
     # Add particle size domains
-    if options is not None and options["particle size"] == "distribution":
+    if (
+        options is not None
+        and options.negative["particle size"] == "distribution"
+        and options.electrode_types["negative"] == "porous"
+    ):
         R_min_n = geo.n.prim.R_min
-        R_min_p = geo.p.prim.R_min
         R_max_n = geo.n.prim.R_max
-        R_max_p = geo.p.prim.R_max
         geometry.update(
             {
                 "negative particle size": {"R_n": {"min": R_min_n, "max": R_max_n}},
+            }
+        )
+    if (
+        options is not None
+        and options.positive["particle size"] == "distribution"
+        and options.electrode_types["positive"] == "porous"
+    ):
+        R_min_p = geo.p.prim.R_min
+        R_max_p = geo.p.prim.R_max
+        geometry.update(
+            {
                 "positive particle size": {"R_p": {"min": R_min_p, "max": R_max_p}},
             }
         )
+
     # Add current collector domains
     current_collector_dimension = options["dimensionality"]
     if form_factor == "pouch":

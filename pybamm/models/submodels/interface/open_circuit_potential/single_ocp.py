@@ -13,8 +13,9 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
         if self.reaction == "lithium-ion main":
             T = variables[f"{Domain} electrode temperature [K]"]
             # For "particle-size distribution" models, take distribution version
-            # of sto that depends on particle size.
-            if self.options["particle size"] == "distribution":
+            # of c_s_surf that depends on particle size.
+            domain_options = getattr(self.options, domain)
+            if domain_options["particle size"] == "distribution":
                 sto = variables[
                     f"{Domain} {phase_name}particle surface stoichiometry distribution"
                 ]

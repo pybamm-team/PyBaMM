@@ -28,7 +28,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             "Negative electrode temperature [K]": 300,
             "Positive electrode temperature [K]": 300,
         }
-        self.options = {"particle size": "single"}
+        self.options = pybamm.BatteryModelOptions({"particle size": "single"})
 
     def tearDown(self):
         del self.variables
