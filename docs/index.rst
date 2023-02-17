@@ -19,7 +19,6 @@ PyBaMM documentation
 **Version**: |version|
 
 .. **Download documentation**:
-.. `PDF Version <https://numpy.org/doc/1.23/numpy-user.pdf>`_ |
 .. `Historical versions of documentation <https://numpy.org/doc/>`_
    
 **Useful links**:
