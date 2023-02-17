@@ -18,9 +18,6 @@ PyBaMM documentation
 
 **Version**: |version|
 
-.. **Download documentation**:
-.. `Historical versions of documentation <https://numpy.org/doc/>`_
-   
 **Useful links**:
 `Project Home Page <https://www.pybamm.org>`_ |
 `Installation <source/user_guide/installation/index.html>`_ |
