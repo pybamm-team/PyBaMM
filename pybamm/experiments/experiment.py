@@ -422,15 +422,12 @@ class Experiment:
             raise ValueError(f"Temperature not written correctly on step: '{cond}'")
 
     def _read_and_drop_temperature(self, cond):
-
         matches = re.findall(r"at\s-*\d+\.*\d*\s*oC", cond)
 
         if len(matches) == 0:
-
             self._detect_mistyped_temperatures(cond)
 
             if self.temperature is None:
-
                 pybamm.logger.warning(
                     "Temperature not found on step: "
                     f"'{cond}', using temperature "
@@ -438,7 +435,6 @@ class Experiment:
                 )
 
             else:
-
                 pybamm.logger.warning(
                     f"Temperature not found on step: '{cond}', "
                     f"using global temperature "
