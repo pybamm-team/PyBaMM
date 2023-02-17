@@ -15,7 +15,7 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 
-[![All Contributors](https://img.shields.io/badge/all_contributors-50-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-51-orange.svg)](#-contributors)
 
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
@@ -248,6 +248,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ayeankit"><img src="https://avatars.githubusercontent.com/u/72691866?v=4?s=100" width="100px;" alt="Ankit Kumar"/><br /><sub><b>Ankit Kumar</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=ayeankit" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://aniketsinghrawat.vercel.app/"><img src="https://avatars.githubusercontent.com/u/31622972?v=4?s=100" width="100px;" alt="Aniket Singh Rawat"/><br /><sub><b>Aniket Singh Rawat</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=dikwickley" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>

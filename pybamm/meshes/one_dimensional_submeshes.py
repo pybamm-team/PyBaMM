@@ -109,14 +109,16 @@ class Exponential1DSubMesh(SubMesh1D):
     If side is "left", the gridpoints are given by
 
     .. math::
-        x_{k} = (b-a) + \\frac{\\exp{\\alpha k / N} - 1}{\\exp{\\alpha} - 1} + a,
+        x_{k} = (b-a) +
+        \\frac{\mathrm{e}^{\\alpha k / N} - 1}{\mathrm{e}^{\\alpha} - 1} + a,
 
     for k = 1, ..., N, where N is the number of nodes.
 
     Is side is "right", the gridpoints are given by
 
     .. math::
-        x_{k} = (b-a) + \\frac{\\exp{-\\alpha k / N} - 1}{\\exp{-\\alpha} - 1} + a,
+        x_{k} = (b-a) +
+        \\frac{\mathrm{e}^{-\\alpha k / N} - 1}{\mathrm{e}^{-\\alpha} - 1} + a,
 
     for k = 1, ..., N.
 
@@ -124,7 +126,8 @@ class Exponential1DSubMesh(SubMesh1D):
     gridpoints
 
     .. math::
-        x_{k} = (b/2-a) + \\frac{\\exp{\\alpha k / N} - 1}{\\exp{\\alpha} - 1} + a,
+        x_{k} = (b/2-a) +
+        \\frac{\mathrm{e}^{\\alpha k / N} - 1}{\mathrm{e}^{\\alpha} - 1} + a,
 
     for k = 1, ..., N. The grid spacing is then reflected to contruct the grid
     on the full interval [a,b].
