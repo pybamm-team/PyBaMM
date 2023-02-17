@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- The "particle size" option can now be a tuple to allow different behaviour in each electrode([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
+
 # [v23.1](https://github.com/pybamm-team/PyBaMM/tree/v23.1) - 2023-01-31
 
 ## Features
