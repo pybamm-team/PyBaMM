@@ -234,7 +234,7 @@ class TestSimulationExperiment(unittest.TestCase):
             t_eval, solver=pybamm.CasadiSolver(), callbacks=pybamm.callbacks.Callback()
         )
         pybamm.set_logging_level("WARNING")
-        self.assertEqual(sim._solution.termination, "event: Minimum voltage")
+        self.assertEqual(sim._solution.termination, "event: Minimum voltage [V]")
 
     def test_run_experiment_breaks_early_error(self):
         experiment = pybamm.Experiment(

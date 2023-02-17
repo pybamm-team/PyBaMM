@@ -334,7 +334,7 @@ class Simulation:
         # so that they are not triggered before the voltage limits in the
         # experiment
         for i, event in enumerate(new_model.events):
-            if event.name in ["Minimum voltage", "Maximum voltage"]:
+            if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )

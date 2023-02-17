@@ -21,12 +21,12 @@ class TestButlerVolmer(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         self.c_e_n = pybamm.Variable(
-            "concentration",
+            "concentration [mol.m-3]",
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
         self.c_e_p = pybamm.Variable(
-            "concentration",
+            "concentration [mol.m-3]",
             domain=["positive electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
@@ -259,7 +259,7 @@ class TestButlerVolmer(unittest.TestCase):
             variables = {
                 **self.variables,
                 "Negative electrode surface potential difference [V]": 1,
-                "Negative electrolyte concentration": c_e,
+                "Negative electrolyte concentration [mol.m-3]": c_e,
             }
             return model_n.get_coupled_variables(variables)[
                 "Negative electrode interfacial current density [A.m-2]"
@@ -269,7 +269,7 @@ class TestButlerVolmer(unittest.TestCase):
             variables = {
                 **self.variables,
                 "Positive electrode surface potential difference [V]": 1,
-                "Positive electrolyte concentration": c_e,
+                "Positive electrolyte concentration [mol.m-3]": c_e,
             }
             return model_p.get_coupled_variables(variables)[
                 "Positive electrode interfacial current density [A.m-2]"
@@ -287,16 +287,18 @@ class TestButlerVolmer(unittest.TestCase):
             (j_n(c_e + h) - j_n(c_e - h)) / (2 * h)
         )
         np.testing.assert_almost_equal(
-            j_n_diff.evaluate(inputs={"c_e": 0.5}),
-            j_n_FD.evaluate(inputs={"c_e": 0.5}),
+            j_n_diff.evaluate(inputs={"c_e": 0.5})
+            / j_n_FD.evaluate(inputs={"c_e": 0.5}),
+            1,
             decimal=5,
         )
         j_p_FD = parameter_values.process_symbol(
             (j_p(c_e + h) - j_p(c_e - h)) / (2 * h)
         )
         np.testing.assert_almost_equal(
-            j_p_diff.evaluate(inputs={"c_e": 0.5}),
-            j_p_FD.evaluate(inputs={"c_e": 0.5}),
+            j_p_diff.evaluate(inputs={"c_e": 0.5})
+            / j_p_FD.evaluate(inputs={"c_e": 0.5}),
+            1,
             decimal=5,
         )
 
@@ -329,7 +331,7 @@ class TestButlerVolmer(unittest.TestCase):
             variables = {
                 **self.variables,
                 "Negative electrode surface potential difference [V]": delta_phi,
-                "Negative electrolyte concentration": 1,
+                "Negative electrolyte concentration [mol.m-3]": 1,
             }
             return model_n.get_coupled_variables(variables)[
                 "Negative electrode interfacial current density [A.m-2]"
@@ -339,7 +341,7 @@ class TestButlerVolmer(unittest.TestCase):
             variables = {
                 **self.variables,
                 "Positive electrode surface potential difference [V]": delta_phi,
-                "Positive electrolyte concentration": 1,
+                "Positive electrolyte concentration [mol.m-3]": 1,
             }
             return model_p.get_coupled_variables(variables)[
                 "Positive electrode interfacial current density [A.m-2]"
@@ -359,16 +361,18 @@ class TestButlerVolmer(unittest.TestCase):
             (j_n(delta_phi + h) - j_n(delta_phi - h)) / (2 * h)
         )
         self.assertAlmostEqual(
-            j_n_diff.evaluate(inputs={"delta_phi": 0.5}),
-            j_n_FD.evaluate(inputs={"delta_phi": 0.5}),
+            j_n_diff.evaluate(inputs={"delta_phi": 0.5})
+            / j_n_FD.evaluate(inputs={"delta_phi": 0.5}),
+            1,
             places=5,
         )
         j_p_FD = parameter_values.process_symbol(
             (j_p(delta_phi + h) - j_p(delta_phi - h)) / (2 * h)
         )
         self.assertAlmostEqual(
-            j_p_diff.evaluate(inputs={"delta_phi": 0.5}),
-            j_p_FD.evaluate(inputs={"delta_phi": 0.5}),
+            j_p_diff.evaluate(inputs={"delta_phi": 0.5})
+            / j_p_FD.evaluate(inputs={"delta_phi": 0.5}),
+            1,
             places=5,
         )
 

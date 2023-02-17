@@ -305,7 +305,7 @@ class BasicFull(BaseModel):
         }
         self.events.extend(
             [
-                pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-                pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
+                pybamm.Event("Minimum voltage [V]", voltage - param.voltage_low_cut),
+                pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - voltage),
             ]
         )

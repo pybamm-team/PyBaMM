@@ -57,14 +57,14 @@ class VoltageModel(pybamm.BaseSubModel):
 
         # Add voltage events
         maximum_voltage = pybamm.Event(
-            "Maximum voltage",
+            "Maximum voltage [V]",
             self.param.voltage_high_cut - voltage,
             pybamm.EventType.TERMINATION,
         )
         self.events.append(maximum_voltage)
 
         minimum_voltage = pybamm.Event(
-            "Minimum voltage",
+            "Minimum voltage [V]",
             voltage - self.param.voltage_low_cut,
             pybamm.EventType.TERMINATION,
         )

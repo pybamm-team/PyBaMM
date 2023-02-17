@@ -264,10 +264,10 @@ class BasicDFNHalfCell(BaseModel):
 
         # Cut-off voltage
         self.events.append(
-            pybamm.Event("Minimum voltage", voltage - self.param.voltage_low_cut)
+            pybamm.Event("Minimum voltage [V]", voltage - self.param.voltage_low_cut)
         )
         self.events.append(
-            pybamm.Event("Maximum voltage", self.param.voltage_high_cut - voltage)
+            pybamm.Event("Maximum voltage [V]", self.param.voltage_high_cut - voltage)
         )
 
         # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'

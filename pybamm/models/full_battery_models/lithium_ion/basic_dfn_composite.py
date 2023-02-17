@@ -387,6 +387,6 @@ class BasicDFNComposite(BaseModel):
             "interfacial current density [A.m-3]": a_j_n_p2_av,
         }
         self.events += [
-            pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", param.voltage_high_cut - voltage),
+            pybamm.Event("Minimum voltage [V]", voltage - param.voltage_low_cut),
+            pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - voltage),
         ]
