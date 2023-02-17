@@ -27,7 +27,6 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-
         phi_s_cn = pybamm.Variable(
             "Negative current collector potential [V]", domain="current collector"
         )
@@ -50,7 +49,6 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         return variables
 
     def set_algebraic(self, variables):
-
         param = self.param
         applied_current = variables["Total current density [A.m-2]"]
         cc_area = self._get_effective_current_collector_area()
@@ -77,7 +75,6 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         }
 
     def set_initial_conditions(self, variables):
-
         param = self.param
         applied_current = param.current_with_time
         cc_area = self._get_effective_current_collector_area()
