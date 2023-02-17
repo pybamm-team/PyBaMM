@@ -3,6 +3,15 @@
 ## Features
 
 - The "particle size" option can now be a tuple to allow different behaviour in each electrode([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
+- Added temperature control to experiment class. [#2518](https://github.com/pybamm-team/PyBaMM/pull/2518)
+
+## Bug fixes
+
+- Fixed the length scaling for the first dimension of r-R plots ([#2663](https://github.com/pybamm-team/PyBaMM/pull/2663)).
+
+## Breaking changes
+
+- All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
 
 # [v23.1](https://github.com/pybamm-team/PyBaMM/tree/v23.1) - 2023-01-31
 
@@ -17,7 +26,6 @@
 
 - Fixed a bug where the solid phase conductivity was double-corrected for tortuosity when loading parameters from a BPX file ([#2638](https://github.com/pybamm-team/PyBaMM/pull/2638)).
 - Changed termination from "success" to "final time" for algebraic solvers to match ODE/DAE solvers ([#2613](https://github.com/pybamm-team/PyBaMM/pull/2613)).
-- Fixed the length scaling for the first dimension of r-R plots ([#2663](https://github.com/pybamm-team/PyBaMM/pull/2663)).
 
 # [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
 
@@ -43,7 +51,6 @@
 - Removed external variables and submodels. InputParameter should now be used in all cases ([#2502](https://github.com/pybamm-team/PyBaMM/pull/2502))
 - Trying to use a solver to solve multiple models results in a RuntimeError exception ([#2481](https://github.com/pybamm-team/PyBaMM/pull/2481))
 - Inputs for the `ElectrodeSOH` solver are now (i) "Q_Li", the total cyclable capacity of lithium in the electrodes (previously "n_Li", the total number of moles, n_Li = 3600/F \* Q_Li) (ii) "Q_n", the capacity of the negative electrode (previously "C_n"), and "Q_p", the capacity of the positive electrode (previously "C_p") ([#2508](https://github.com/pybamm-team/PyBaMM/pull/2508))
-- All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
 
 # [v22.11.1](https://github.com/pybamm-team/PyBaMM/tree/v22.11.1) - 2022-12-13
 
