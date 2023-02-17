@@ -125,7 +125,19 @@ class ParticleGeometricParameters(BaseParameters):
 
     @property
     def R_typ(self):
-        return pybamm.xyz_average(self.R)
+        # evaluate the typical particle radius
+        # in the middle of the electrode
+        main = self.main_param
+        if self.domain == "negative":
+            x = main.n.L / 2
+        elif self.domain == "positive":
+            x = main.n.L + main.s.L + main.p.L / 2
+
+        inputs = {"Through-cell distance (x) [m]": x}
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} particle radius [m]", inputs
+        )
 
     @property
     def R(self):

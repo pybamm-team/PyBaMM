@@ -15,14 +15,14 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 10
+    * 3
 )
-model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+model = pybamm.lithium_ion.DFN()
 
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim = pybamm.Simulation(
+    model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+)
 sim.solve()
-
-sim.plot(["Total lithium in particles [mol]"])
 
 # Plot voltages from the discharge segments only
 fig, ax = plt.subplots()
