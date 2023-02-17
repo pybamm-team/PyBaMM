@@ -1,101 +1,117 @@
 .. Root of all pybamm docs
 
-.. _GitHub: https://github.com/pybamm-team/PyBaMM
+.. Remove the right side-bar for the home page
 
-Welcome to PyBaMM's documentation!
-==================================
+:html_theme.sidebar_secondary.remove:
 
-Python Battery Mathematical Modelling (**PyBAMM**) solves continuum models for
-batteries, using both numerical methods and asymptotic analysis.
+####################
+PyBaMM documentation
+####################
 
-PyBaMM is hosted on GitHub_. This page provides the *API*, or *developer
-documentation* for ``pybamm``.
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-Quickstart
-=========================
-PyBaMM is available on GNU/Linux, MacOS and Windows.
-
-Using pip
-----------
-
-GNU/Linux and Windows
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. code:: bash
-
-   pip install pybamm
-
-macOS
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. code:: bash
-
-   brew install sundials && pip install pybamm
-
-Using conda
--------------
-PyBaMM is available as a conda package through the conda-forge channel.
-
-.. code:: bash
-
-   conda install -c conda-forge pybamm
-
-Optional solvers
------------------
-Following GNU/Linux and macOS solvers are optionally available:
-
-*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-scikits-odes-solver>`_.
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver>`_.
-
-Installation
-============
-
+.. This TOC defines what goes in the top navbar
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
-   install/GNU-linux
-   install/windows
-   install/windows-wsl
-   install/install-from-source
+   User Guide <source/user_guide/index>
+   source/api/index
 
-API documentation
-====================
+**Version**: |version|
 
-.. module:: pybamm
+.. **Download documentation**:
+.. `PDF Version <https://numpy.org/doc/stable/numpy-user.pdf>`_ |
+.. `Historical versions of documentation <https://numpy.org/doc/>`_
+   
+**Useful links**:
+`Project Home Page <https://pybamm.org>`_ |
+`Installation <source/user_guide/installation/index.html>`_ |
+`Source Repository <https://github.com/pybamm-team/pybamm>`_ |
+`Issue Tracker <https://github.com/pybamm-team/pybamm/issues>`_ |
+`Discussions <https://github.com/pybamm-team/pybamm/discussions>`_
 
-.. toctree::
-   :maxdepth: 2
+PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
+written in Python. Our mission is to accelerate battery modelling research by
+providing open-source tools for multi-institutional, interdisciplinary collaboration. 
+Broadly, PyBaMM consists of
 
-   source/expression_tree/index
-   source/models/index
-   source/parameters/index
-   source/geometry/index
-   source/meshes/index
-   source/spatial_methods/index
-   source/solvers/index
-   source/experiments/index
-   source/simulation
-   source/plotting/index
-   source/util
-   source/callbacks
-   source/citations
-   source/batch_study
+#. a framework for writing and solving systems of differential equations,
+#. a library of battery models and parameters, and
+#. specialized tools for simulating battery-specific experiments and visualizing the results.
 
-Examples
-========
+Together, these enable flexible model definitions and fast battery simulations, allowing users to
+explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
-Detailed examples can be viewed on the
-`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks>`_,
-and run locally using ``jupyter notebook``, or online through
-`Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_.
+.. grid:: 2
 
-Contributing
-============
+   .. grid-item-card::
+      :img-top: source/_static/index-images/getting_started.svg
 
-Contributions to PyBaMM and its development are welcome! If you have ideas for features, bug fixes, models, spatial methods, or solvers, we would love to hear from you.
+      User Guide
+      ^^^^^^^^^^
 
-Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`_.
+      The user guide is the best place to start learning PyBaMM. It contains an installation
+      guide, an introduction to the main concepts and links to additional tutorials.
+
+      +++
+
+      .. button-ref:: source/user_guide/index
+         :expand:
+         :color: secondary
+         :click-parent:
+
+         To the user guide
+    
+   .. grid-item-card::
+      :img-top: source/_static/index-images/examples.svg
+
+      Examples
+      ^^^^^^^^
+
+      Examples and tutorials can be viewed on the GitHub examples page,
+      which also provides a link to run them online through Google Colab.
+
+      +++
+
+      .. button-link:: https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks
+         :expand:
+         :color: secondary
+         :click-parent:
+
+         To the examples
+
+   .. grid-item-card::
+      :img-top: source/_static/index-images/api.svg
+
+      API Documentation
+      ^^^^^^^^^^^^^^^^^
+
+      The reference guide contains a detailed description of the functions,
+      modules, and objects included in PyBaMM. The reference describes how the
+      methods work and which parameters can be used.
+
+      +++
+
+      .. button-ref:: source/api/index
+         :expand:
+         :color: secondary
+         :click-parent:
+
+         To the API documentation
+
+   .. grid-item-card::
+      :img-top: source/_static/index-images/contributor.svg
+
+      Contributor's Guide
+      ^^^^^^^^^^^^^^^^^^^
+
+      Contributions to PyBaMM and its development are welcome! If you have ideas for
+      features, bug fixes, models, spatial methods, or solvers, we would love to hear from you.
+
+      +++
+
+      .. button-link:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
+         :expand:
+         :color: secondary
+         :click-parent:
+
+         To the contributor's guide

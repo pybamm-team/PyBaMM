@@ -23,10 +23,11 @@
   //
   // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
-  // "build_command": [
-  //     "python setup.py build",
-  //     "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
-  // ],
+  "build_command": [
+    "/usr/bin/git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git",
+    "python setup.py build",
+    "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+  ],
 
   // List of branches to benchmark. If not provided, defaults to "master"
   // (for git) or "default" (for mercurial).
@@ -44,7 +45,7 @@
   // If missing or the empty string, the tool will be automatically
   // determined by looking for tools on the PATH environment
   // variable.
-  "environment_type": "virtualenv"
+  "environment_type": "virtualenv",
 
   // timeout in seconds for installing any dependencies in environment
   // defaults to 10 min
@@ -71,11 +72,17 @@
   // pip (with all the conda available packages installed first,
   // followed by the pip installed packages).
   //
-  // "matrix": {
-  //     "numpy": ["1.6", "1.7"],
-  //     "six": ["", null],        // test with and without six installed
-  //     "pip+emcee": [""],   // emcee is only available for install with pip.
-  // },
+  "matrix": {
+    "req": {
+      "numpy": [],
+      "casadi": [],
+      "wget": [],
+      "cmake": []
+    },
+    "env": {
+      "LD_LIBRARY_PATH": "/home/runner/.local/lib"
+    }
+  }
 
   // Combinations of libraries/python versions can be excluded/included
   // from the set to test. Each entry is a dictionary containing additional

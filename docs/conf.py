@@ -15,7 +15,6 @@
 import os
 import sys
 import pybamm
-import guzzle_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -27,7 +26,7 @@ copyright = "2018-2023, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "22.12"
+version = "23.1"
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -48,6 +47,9 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx_design",
+    "sphinx_copybutton",
+    "myst_parser",
 ]
 
 
@@ -88,44 +90,64 @@ pygments_style = None
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-# html_theme = "sphinxdoc"
+html_theme = "pydata_sphinx_theme"
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
+html_static_path = ["source/_static"]
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = []
+# Theme
 
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# The default sidebars (for documents that don't match any pattern) are
-# defined by theme itself.  Builtin themes are using these templates by
-# default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
-# 'searchbox.html']``.
-#
-# html_sidebars = {}
+# pydata theme options (see
+# https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
+# mostly copied from numpy, scipy, pandas
+html_logo = "source/_static/pybamm_logo.png"
+html_favicon = "source/_static/favicon/favicon.png"
 
-# Guzzle theme
-
-html_theme_path = guzzle_sphinx_theme.html_theme_path()
-html_theme = "guzzle_sphinx_theme"
-
-# Register the theme as an extension to generate a sitemap.xml
-extensions.append("guzzle_sphinx_theme")
-
-# Guzzle theme options (see theme.conf for more information)
 html_theme_options = {
-    # Set the name of the project to appear in the sidebar
-    "project_nav_name": project
+    "logo": {
+        "image_light": "pybamm_logo.png",
+        "image_dark": "pybamm_logo.png",
+    },
+    "github_url": "https://github.com/pybamm-team/pybamm",
+    "twitter_url": "https://twitter.com/pybamm_",
+    "collapse_navigation": True,
+    "external_links": [
+        {
+            "name": "Examples",
+            "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/examples",
+        },
+        {
+            "name": "Contributing",
+            "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
+        },
+    ],
+    # Add light/dark mode and documentation version switcher:
+    # "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
+    # "switcher": {
+    #     "version_match": switcher_version,
+    #     "json_url": "https://numpy.org/doc/_static/versions.json",
+    # },
+    "use_edit_page_button": True,
+}
+
+html_title = "%s v%s Manual" % (project, version)
+html_last_updated_fmt = "%b %d, %Y"
+html_css_files = ["pybamm.css"]
+html_context = {"default_mode": "light"}
+html_use_modindex = True
+html_copy_source = False
+html_domain_indices = False
+html_file_suffix = ".html"
+
+htmlhelp_basename = "pybamm"
+
+html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+
+# For edit button
+html_context = {
+    "github_user": "pybamm-team",
+    "github_repo": "pybamm",
+    "github_version": "develop",
+    "doc_path": "docs/",
 }
 
 
@@ -210,7 +232,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
-    # "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "matplotlib": ("https://matplotlib.org", None),
 }
 
@@ -235,6 +257,8 @@ def setup(app):
 
 
 # Context for Jinja Templates
-html_context = {
-    "parameter_sets": pybamm.parameter_sets,
-}
+html_context.update(
+    {
+        "parameter_sets": pybamm.parameter_sets,
+    }
+)

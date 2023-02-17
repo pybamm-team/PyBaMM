@@ -9,7 +9,6 @@ from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
-
     if symbol in bcs:
         if bcs[symbol][side][1] == form:
             return True
@@ -346,7 +345,6 @@ class Discretisation(object):
         """
 
         def boundary_gradient(left_symbol, right_symbol):
-
             pybamm.logger.debug(
                 "Calculate boundary gradient ({} and {})".format(
                     left_symbol, right_symbol
@@ -1001,7 +999,6 @@ class Discretisation(object):
         self.check_variables(model)
 
     def check_initial_conditions(self, model):
-
         # Check initial conditions are a numpy array
         # Individual
         for var, eqn in model.initial_conditions.items():
@@ -1087,9 +1084,9 @@ class Discretisation(object):
         if not isinstance(var, pybamm.Variable):
             return False
 
-        this_var_is_independent = not (var.name in all_vars_in_eqns)
-        not_in_y_slices = not (var in list(self.y_slices.keys()))
-        not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+        this_var_is_independent = var.name not in all_vars_in_eqns
+        not_in_y_slices = var not in list(self.y_slices.keys())
+        not_in_discretised = var not in list(self._discretised_symbols.keys())
         is_0D = len(var.domain) == 0
         this_var_is_independent = (
             this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D

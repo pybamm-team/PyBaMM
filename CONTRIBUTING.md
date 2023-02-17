@@ -63,17 +63,18 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and-using-pre-commit) section for more details.
 
-### Flake8
+### Ruff
 
-We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
+We use [ruff](https://github.com/charliermarsh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
-flake8
+python -m pip install pre-commit
+pre-commit run ruff
 ```
 
-Flake8 is configured inside the file `tox.ini`, under the section `[flake8]`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
-When you commit your changes they will be checked against flake8 automatically (see [infrastructure](#infrastructure)).
+When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
 
 ### Black
 
@@ -89,7 +90,7 @@ black {source_file_or_directory}
 
 If you want to use black in your editor, you may need to change the max line length in your editor settings.
 
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [Flake8](#flake8).
+Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [ruff](#ruff).
 
 ### Naming
 
@@ -111,7 +112,7 @@ On the other hand... We _do_ want to compare several tools, to generate document
 1. Core PyBaMM: A minimal set, including things like NumPy, SciPy, etc. All infrastructure should run against this set of dependencies, as well as any numerical methods we implement ourselves.
 2. Extras: Other inference packages and their dependencies. Methods we don't want to implement ourselves, but do want to provide an interface to can have their dependencies added here.
 3. Documentation generating code: Everything you need to generate and work on the docs.
-4. Development code: Everything you need to do PyBaMM development (so all of the above packages, plus flake8 and other testing tools).
+4. Development code: Everything you need to do PyBaMM development (so all of the above packages, plus ruff and other testing tools).
 
 Only 'core pybamm' is installed by default. The others have to be specified explicitly when running the installation command.
 

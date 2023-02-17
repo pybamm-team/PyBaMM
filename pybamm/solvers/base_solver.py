@@ -415,7 +415,6 @@ class BaseSolver(object):
                 model.mass_matrix is not None
                 and model.mass_matrix.shape[0] == model.len_rhs_and_alg
             ):
-
                 if model.mass_matrix_inv is not None:
                     model.mass_matrix_inv = pybamm.Matrix(
                         block_diag(
@@ -1301,8 +1300,6 @@ class BaseSolver(object):
                 solution = solution + event_sol
 
             pybamm.logger.debug("Finish post-processing events")
-            return solution, solution.termination
-        elif solution.termination == "success":
             return solution, solution.termination
 
     def check_extrapolation(self, solution, events):
