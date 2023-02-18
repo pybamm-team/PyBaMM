@@ -115,6 +115,16 @@ class PolynomialProfile(BaseParticle):
                 f"{Domain} volume-weighted particle-size distribution [m-1]"
             ]
             c_s_rav = pybamm.Integral(f_v_dist * c_s_rav_distribution, R)
+            c_s_surf = c_s_rav
+            c_s = pybamm.PrimaryBroadcast(c_s_rav, [f"{domain} particle"])
+
+            variables.update(
+                self._get_standard_concentration_variables(
+                    c_s, c_s_rav=c_s_rav, c_s_surf=c_s_surf
+                )
+            )
+
+            return variables
 
         if self.name == "uniform profile":
             # The concentration is uniform so the surface value is equal to
@@ -167,10 +177,6 @@ class PolynomialProfile(BaseParticle):
             A = 39 / 4 * c_s_surf - 3 * q_s_rav * R - 35 / 4 * c_s_rav
             B = -35 * c_s_surf + 10 * q_s_rav + 35 * c_s_rav
             C = 105 / 4 * c_s_surf - 7 * q_s_rav * R - 105 / 4 * c_s_rav
-        if self.size_distribution is True:
-            A = pybamm.PrimaryBroadcast(A, [f"{domain} particle size"])
-            B = pybamm.PrimaryBroadcast(B, [f"{domain} particle size"])
-            C = pybamm.PrimaryBroadcast(C, [f"{domain} particle size"])
         A = pybamm.PrimaryBroadcast(A, [f"{domain} particle"])
         B = pybamm.PrimaryBroadcast(B, [f"{domain} particle"])
         C = pybamm.PrimaryBroadcast(C, [f"{domain} particle"])

@@ -44,19 +44,19 @@ for sim in sims:
 
 # plot MP-DFN variables
 output_variables = [
-    "Negative particle surface concentration distribution",
-    "Positive particle surface concentration distribution",
+    "Negative particle surface concentration distribution [mol.m-3]",
+    "Positive particle surface concentration distribution [mol.m-3]",
     "Current [A]",
-    "X-averaged negative area-weighted particle-size distribution",
-    "X-averaged positive area-weighted particle-size distribution",
+    "X-averaged negative area-weighted particle-size distribution [m-1]",
+    "X-averaged positive area-weighted particle-size distribution [m-1]",
     "Terminal voltage [V]",
 ]
 sims[0].plot(output_variables)
 
 # compare models (size-averaged concentrations)
 output_variables = [
-    "Negative particle surface concentration",
-    "Positive particle surface concentration",
+    "Negative particle surface concentration [mol.m-3]",
+    "Positive particle surface concentration [mol.m-3]",
     "Current [A]",
     "Terminal voltage [V]",
 ]

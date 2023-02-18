@@ -154,53 +154,12 @@ class BasicFull(BaseModel):
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
-        # Convection
-        ######################
-        v_n = -pybamm.grad(pressure_n)
-        v_p = -pybamm.grad(pressure_p)
-        L_s = param.s.L
-        L_n = param.n.L
-        x_s = pybamm.SpatialVariable("x_s", domain="separator")
-
-        # Difference in negative and positive electrode velocities determines the
-        # velocity in the separator
-        v_n_right = -param.n.DeltaV * i_cell
-        v_p_left = -param.p.DeltaV * i_cell
-        d_v_s__dx = (v_p_left - v_n_right) / L_s
-
-        # Simple formula for velocity in the separator
-        div_V_s = -d_v_s__dx
-        v_s = d_v_s__dx * (x_s - L_n) + v_n_right
-
-        # v is the velocity in the x-direction
-        # div_V is the divergence of the velocity in the yz-directions
-        v = pybamm.concatenation(v_n, v_s, v_p)
-        div_V = pybamm.concatenation(
-            pybamm.PrimaryBroadcast(0, "negative electrode"),
-            pybamm.PrimaryBroadcast(div_V_s, "separator"),
-            pybamm.PrimaryBroadcast(0, "positive electrode"),
-        )
-        # Simple formula for velocity in the separator
-        self.algebraic[pressure_n] = pybamm.div(v_n) + param.n.DeltaV * a_j_n
-        self.algebraic[pressure_p] = pybamm.div(v_p) + param.p.DeltaV * a_j_p
-        self.boundary_conditions[pressure_n] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (pybamm.Scalar(0), "Dirichlet"),
-        }
-        self.boundary_conditions[pressure_p] = {
-            "left": (pybamm.Scalar(0), "Dirichlet"),
-            "right": (pybamm.Scalar(0), "Neumann"),
-        }
-        self.initial_conditions[pressure_n] = pybamm.Scalar(0)
-        self.initial_conditions[pressure_p] = pybamm.Scalar(0)
-
-        ######################
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
-        self.algebraic[phi_e] = pybamm.div(i_e) - a_j
+        self.algebraic[phi_e] = (pybamm.div(i_e) - a_j) * param.L_x**2
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -215,8 +174,8 @@ class BasicFull(BaseModel):
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
-        self.algebraic[phi_s_n] = pybamm.div(i_s_n) + a_j_n
-        self.algebraic[phi_s_p] = pybamm.div(i_s_p) + a_j_p
+        self.algebraic[phi_s_n] = (pybamm.div(i_s_n) + a_j_n) * param.L_x**2
+        self.algebraic[phi_s_p] = (pybamm.div(i_s_p) + a_j_p) * param.L_x**2
         self.boundary_conditions[phi_s_n] = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -265,7 +224,6 @@ class BasicFull(BaseModel):
         N_e = (
             -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
             + param.t_plus(c_e, T) * i_e / param.F
-            + c_e * v
         )
         s = pybamm.concatenation(
             pybamm.PrimaryBroadcast(param.n.prim.s_plus_S, "negative electrode"),
@@ -273,7 +231,7 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(param.p.prim.s_plus_S, "positive electrode"),
         )
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) + s * a_j / param.F - c_e * deps_dt - c_e * div_V
+            -pybamm.div(N_e) + s * a_j / param.F - c_e * deps_dt
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -300,8 +258,6 @@ class BasicFull(BaseModel):
             "Positive electrode potential [V]": phi_s_p,
             "Terminal voltage [V]": voltage,
             "Porosity": eps,
-            "Volume-averaged velocity [m.s-1]": v,
-            "X-averaged separator transverse volume-averaged velocity [m.s-1]": div_V_s,
         }
         self.events.extend(
             [

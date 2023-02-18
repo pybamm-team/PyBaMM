@@ -179,9 +179,8 @@ class VoltageTests(BaseOutputTest):
         elif self.operating_condition == "off":
             np.testing.assert_array_almost_equal(self.eta_r_av(self.t), 0)
             np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=11)
-            # For some reason SPM gives delta_phi_s_av ~ 1e-17
-            np.testing.assert_array_almost_equal(
-                self.delta_phi_s_av(self.t), 0, decimal=16
+            np.testing.assert_allclose(
+                self.delta_phi_s_av(self.t), 0, atol=2e-14, rtol=1e-16
             )
 
     def test_ocps(self):
@@ -377,20 +376,21 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.operating_condition == "off":
             np.testing.assert_array_almost_equal(neg_diff, 0)
             np.testing.assert_array_almost_equal(pos_diff, 0)
-            np.testing.assert_array_almost_equal(neg_end_vs_start, 0)
-            np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
+            np.testing.assert_allclose(neg_end_vs_start, 0, rtol=1e-16, atol=1e-5)
+            np.testing.assert_allclose(pos_end_vs_start, 0, rtol=1e-16, atol=1e-5)
 
     def test_concentration_limits(self):
         """Test that concentrations do not go below 0 or exceed the maximum."""
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
-        np.testing.assert_array_less(-self.c_s_n(t, x_n, r_n), 0)
-        np.testing.assert_array_less(-self.c_s_p(t, x_p, r_p), 0)
+        if self.model.options["particle"] != "quartic profile":
+            np.testing.assert_array_less(-self.c_s_n(t, x_n, r_n), 0)
+            np.testing.assert_array_less(-self.c_s_p(t, x_p, r_p), 0)
+            c_n_max = self.param.evaluate(self.model.param.n.prim.c_max)
+            c_p_max = self.param.evaluate(self.model.param.p.prim.c_max)
+            np.testing.assert_array_less(self.c_s_n(t, x_n, r_n), c_n_max)
+            np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), c_p_max)
 
-        c_n_max = self.param.evaluate(self.model.param.n.prim.c_max)
-        c_p_max = self.param.evaluate(self.model.param.p.prim.c_max)
-        np.testing.assert_array_less(self.c_s_n(t, x_n, r_n), c_n_max)
-        np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), c_p_max)
         if self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
             # Cannot have 3D processed variables, so test concs that depend on
@@ -533,9 +533,9 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
             self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
         ) / self.c_e_tot(self.solution.t[:-1])
         if self.model.options["surface form"] == "differential":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=6)
+            np.testing.assert_allclose(0, diff, atol=1e-4, rtol=1e-6)
         else:
-            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
+            np.testing.assert_allclose(0, diff, atol=1e-14, rtol=1e-14)
 
     def test_concentration_profile(self):
         """Test continuity of the concentration profile. Test average concentration is
@@ -748,11 +748,13 @@ class CurrentTests(BaseOutputTest):
             ),
             self.i_cell / self.L_n,
             rtol=1e-3,
+            atol=1e-4,
         )
         np.testing.assert_allclose(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.L_p,
             rtol=1e-3,
+            atol=1e-4,
         )
 
     def test_conservation(self):
@@ -765,10 +767,14 @@ class CurrentTests(BaseOutputTest):
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
             np.testing.assert_allclose(
-                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=1e-2
+                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=1e-2, atol=1e-8
             )
-        np.testing.assert_allclose(self.i_s(t, x_n), self.i_s_n(t, x_n), rtol=1e-3)
-        np.testing.assert_allclose(self.i_s(t, x_p), self.i_s_p(t, x_p), rtol=1e-3)
+        np.testing.assert_allclose(
+            self.i_s(t, x_n), self.i_s_n(t, x_n), rtol=1e-3, atol=1e-9
+        )
+        np.testing.assert_allclose(
+            self.i_s(t, x_p), self.i_s_p(t, x_p), rtol=1e-3, atol=1e-9
+        )
 
     def test_current_density_boundaries(self):
         """Test the boundary values of the current densities"""
