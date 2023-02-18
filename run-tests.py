@@ -325,11 +325,23 @@ if __name__ == "__main__":
         metavar=("in", "out"),
         help="Export a Jupyter notebook to a Python file for manual testing.",
     )
+    # Flake8 (deprecated)
+    parser.add_argument(
+        "--flake8",
+        action="store_true",
+        help="Run flake8 to check for style issues (deprecated, use pre-commit)",
+    )
     # Doctests
     parser.add_argument(
         "--doctest",
         action="store_true",
         help="Run any doctests, check if docs can be built",
+    )
+    # Combined test sets
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Run quick checks (code tests, docs)",
     )
     # Non-standard Python interpreter name for subprocesses
     parser.add_argument(
