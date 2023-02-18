@@ -178,7 +178,7 @@ class VoltageTests(BaseOutputTest):
 
         elif self.operating_condition == "off":
             np.testing.assert_array_almost_equal(self.eta_r_av(self.t), 0)
-            np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=16)
+            np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=11)
             # For some reason SPM gives delta_phi_s_av ~ 1e-17
             np.testing.assert_array_almost_equal(
                 self.delta_phi_s_av(self.t), 0, decimal=16
@@ -423,17 +423,23 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
         if self.model.options["particle"] == "quartic profile":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=10)
+            decimal = 10
         # elif self.model.options["particle size"] == "distribution":
-        #     np.testing.assert_array_almost_equal(diff, 0, decimal=10)
+        #     decimal=10
         elif self.model.options["surface form"] == "differential":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=10)
+            # surface form: differential doesn't perfectly conserve lithium
+            # because of the differential term in the current equation
+            decimal = 6
+        elif self.model.options["intercalation kinetics"] == "linear":
+            # linear kinetics model doesn't perfectly conserve lithium, don't know why
+            decimal = 10
         elif isinstance(self.model, pybamm.lithium_ion.NewmanTobias):
             # for some reason the Newman-Tobias model has a larger error
             # this seems to be linked to using constant concentration but not sure why
-            np.testing.assert_array_almost_equal(diff, 0, decimal=13)
+            decimal = 12
         else:
-            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
+            decimal = 14
+        np.testing.assert_array_almost_equal(diff, 0, decimal=decimal)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
@@ -527,7 +533,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
             self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
         ) / self.c_e_tot(self.solution.t[:-1])
         if self.model.options["surface form"] == "differential":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=9)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=6)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=14)
 

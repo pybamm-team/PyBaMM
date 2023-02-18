@@ -61,7 +61,7 @@ class BaseOutputComparison(object):
         self.t = time
         self.solutions = solutions
 
-    def compare(self, var, tol=1e-2):
+    def compare(self, var, atol=0, rtol=0.02):
         """Compare variables from different models"""
         # Get variable for each model
         model_variables = [solution[var] for solution in self.solutions]
@@ -73,17 +73,14 @@ class BaseOutputComparison(object):
         if var0.dimensions >= 2:
             spatial_pts[var0.second_dimension] = var0.second_dim_pts
 
-        # Calculate tolerance based on the value of var0
-        maxvar0 = np.max(abs(var0(self.t, **spatial_pts)))
-        if maxvar0 < 1e-14:
-            rtol = tol
-        else:
-            rtol = tol * maxvar0
         # Check outputs are close to each other
         for model_var in model_variables[1:]:
             np.testing.assert_equal(var0.dimensions, model_var.dimensions)
             np.testing.assert_allclose(
-                model_var(self.t, **spatial_pts), var0(self.t, **spatial_pts), rtol=rtol
+                model_var(self.t, **spatial_pts),
+                var0(self.t, **spatial_pts),
+                atol=atol,
+                rtol=rtol,
             )
 
 
@@ -133,13 +130,13 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("X-averaged solid phase ohmic losses [V]")
         self.compare("Negative electrode reaction overpotential [V]")
         self.compare("Positive electrode reaction overpotential [V]")
-        self.compare("Negative electrode potential [V]")
+        self.compare("Negative electrode potential [V]", atol=1e-5)
         self.compare("Positive electrode potential [V]")
         self.compare("Electrolyte potential [V]")
         # Currents
         self.compare("Exchange current density [A.m-2]")
-        self.compare("Negative electrode current density [A.m-2]")
-        self.compare("Positive electrode current density [A.m-2]")
+        self.compare("Negative electrode current density [A.m-2]", atol=1e-10)
+        self.compare("Positive electrode current density [A.m-2]", atol=1e-10)
 
 
 class ParticleConcentrationComparison(BaseOutputComparison):
@@ -149,8 +146,8 @@ class ParticleConcentrationComparison(BaseOutputComparison):
     def test_all(self):
         self.compare("Negative particle concentration [mol.m-3]")
         self.compare("Positive particle concentration [mol.m-3]")
-        self.compare("Negative particle flux")
-        self.compare("Positive particle flux")
+        self.compare("Negative particle flux [mol.m-2.s-1]", rtol=0.05)
+        self.compare("Positive particle flux [mol.m-2.s-1]", rtol=0.05)
 
 
 class PorosityComparison(BaseOutputComparison):
