@@ -204,21 +204,6 @@ def diffusivity_Gu1997(c_e):
     return (1.75 + 260e-6 * c_e) * 1e-9
 
 
-def viscosity_Chapman1968(c_e):
-    """
-    Dimensional viscosity of sulfuric acid [kg.m-1.s-1], from data in [1]_, as a
-    function of the electrolyte concentration c_e [mol.m-3].
-
-    References
-    ----------
-    .. [1] TW Chapman and J Newman. Compilation of selected thermodynamic and transport
-           properties of binary electrolytes in aqueous solution. Technical report,
-           California Univ., Berkeley. Lawrence Radiation Lab., 1968.
-
-    """
-    return 0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e**2
-
-
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -312,6 +297,7 @@ def get_parameter_values():
         "": lead_dioxide_exchange_current_density_Sulzer2019,
         "Positive electrode oxygen exchange-current density [A.m-2]"
         "": oxygen_exchange_current_density_Sulzer2019,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
         "": 0.0,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
@@ -340,7 +326,6 @@ def get_parameter_values():
         "Electrolyte conductivity [S.m-1]": conductivity_Gu1997,
         "Darken thermodynamic factor": darken_thermodynamic_factor_Chapman1968,
         "Electrolyte diffusivity [m2.s-1]": diffusivity_Gu1997,
-        "Electrolyte viscosity [kg.m-1.s-1]": viscosity_Chapman1968,
         "Oxygen diffusivity [m2.s-1]": 2.1e-09,
         "Typical oxygen concentration [mol.m-3]": 1000.0,
         "Hydrogen diffusivity [m2.s-1]": 4.5e-09,

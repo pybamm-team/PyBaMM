@@ -26,7 +26,6 @@ class Full(BaseTransverseModel):
         )
         variables = self._get_standard_separator_pressure_variables(p_s)
 
-        # TODO: put in permeability and viscosity
         Vbox_s = -pybamm.grad(p_s)
         variables.update(
             self._get_standard_transverse_velocity_variables(Vbox_s, "velocity")

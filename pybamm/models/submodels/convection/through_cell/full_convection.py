@@ -31,7 +31,6 @@ class Full(BaseThroughCellModel):
                     domain=domain,
                     auxiliary_domains={"secondary": "current collector"},
                 )
-                # TODO: add permeability and viscosity, and other terms
                 v_mass_k = -pybamm.grad(p_k)
                 v_box_k = v_mass_k
 

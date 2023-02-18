@@ -624,10 +624,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the possible options with the ones currently selected
         """
         for key, value in self.items():
-            if key in self.possible_options.keys():
-                print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
-            else:
-                print(f"{key!r}: {value!r}")
+            print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
 
     def print_detailed_options(self):
         """

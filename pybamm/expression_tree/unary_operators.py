@@ -183,10 +183,6 @@ class Sign(UnaryOperator):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return sign(child)
 
-    def _sympy_operator(self, child):
-        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        return sympy.functions.elementary.complexes.sign(child)
-
 
 class Floor(UnaryOperator):
     """
