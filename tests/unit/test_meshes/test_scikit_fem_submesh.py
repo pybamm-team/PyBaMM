@@ -155,7 +155,23 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
 
-        param = get_param()
+        # set base parameters
+        param = pybamm.ParameterValues(
+            values={
+                "Electrode width [m]": 0.4,
+                "Electrode height [m]": 0.5,
+                "Negative tab width [m]": 0.1,
+                "Negative tab centre y-coordinate [m]": 0.0,
+                "Negative tab centre z-coordinate [m]": 0.25,
+                "Positive tab centre y-coordinate [m]": 0.4,
+                "Positive tab centre z-coordinate [m]": 0.25,
+                "Positive tab width [m]": 0.1,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
+            }
+        )
+
         # check mesh can be built
         geometry = pybamm.battery_geometry(
             include_particles=False, options={"dimensionality": 2}
