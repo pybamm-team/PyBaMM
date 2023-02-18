@@ -9,14 +9,6 @@ class LithiumIonParameters(BaseParameters):
     """
     Standard parameters for lithium-ion battery models
 
-    Layout:
-        1. Dimensional Parameters
-        2. Dimensional Functions
-        3. Scalings
-        4. Dimensionless Parameters
-        5. Dimensionless Functions
-        6. Input Current
-
     Parameters
     ----------
 

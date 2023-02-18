@@ -8,13 +8,6 @@ from .base_parameters import BaseParameters
 class GeometricParameters(BaseParameters):
     """
     Standard geometric parameters
-
-    Layout:
-        1. Dimensional Parameters
-        2. Dimensional Functions
-        3. Scalings
-        4. Dimensionless Parameters
-        5. Dimensionless Functions
     """
 
     def __init__(self, options=None):

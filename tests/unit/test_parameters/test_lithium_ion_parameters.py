@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 
 
-class TestDimensionlessParameterValues(unittest.TestCase):
+class TestLithiumIonParameterValues(unittest.TestCase):
     def test_print_parameters(self):
         parameters = pybamm.LithiumIonParameters()
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values

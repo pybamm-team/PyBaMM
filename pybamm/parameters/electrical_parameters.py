@@ -8,10 +8,6 @@ from .base_parameters import BaseParameters
 class ElectricalParameters(BaseParameters):
     """
     Standard electrical parameters
-
-    Layout:
-        1. Dimensional Parameters
-        2. Dimensionless Parameters
     """
 
     def __init__(self):

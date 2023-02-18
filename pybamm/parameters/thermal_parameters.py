@@ -8,12 +8,6 @@ from .base_parameters import BaseParameters
 class ThermalParameters(BaseParameters):
     """
     Standard thermal parameters
-
-    Layout:
-        1. Dimensional Parameters
-        2. Dimensional Functions
-        3. Dimensionless Parameters
-        4. Dimensionless Functions
     """
 
     def __init__(self):
