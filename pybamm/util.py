@@ -65,8 +65,12 @@ class FuzzyDict(dict):
                     "with cell SOC"
                 )
             best_matches = self.get_best_matches(key)
-            if any(key in k for k in best_matches):
-                print(f"Only dimensional variable found for {key}")
+            for k in best_matches:
+                if key in k and k.endswith("]"):
+                    raise KeyError(
+                        f"'{key}' not found. Did you mean the dimensional "
+                        f"version '{k}'?"
+                    )
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
     def search(self, key, print_values=False):

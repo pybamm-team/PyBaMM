@@ -86,7 +86,7 @@ class OneDimensionalX(BaseThermal):
             self.param.p.rho_c_p(T_p),
         )
 
-        # Devine thermal conductivity
+        # Define thermal conductivity
         lambda_ = pybamm.concatenation(
             self.param.n.lambda_(T_n),
             self.param.s.lambda_(T_s),

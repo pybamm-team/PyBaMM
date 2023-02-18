@@ -143,11 +143,6 @@ class ParameterValues:
         try:
             return self._dict_items[key]
         except KeyError:
-            if key == "Typical current [A]":
-                raise KeyError(
-                    "The 'Typical current [A]' parameter has been removed. "
-                    "Use 'Current function [A]' instead."
-                )
             return default
 
     def __setitem__(self, key, value):

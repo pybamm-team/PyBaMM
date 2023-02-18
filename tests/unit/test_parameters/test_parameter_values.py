@@ -132,6 +132,10 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
 
+        # test deleting a parameter
+        del param["a"]
+        self.assertNotIn("a", param.keys())
+
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")
         param.set_initial_stoichiometries(0.4)

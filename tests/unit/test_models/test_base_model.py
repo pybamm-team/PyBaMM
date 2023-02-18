@@ -970,6 +970,17 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.rhs[u].value, 2)
         self.assertEqual(model.algebraic[v], -1.0 + v)
 
+    def test_timescale_lengthscale_get_set_not_implemented(self):
+        model = pybamm.BaseModel()
+        with self.assertRaises(NotImplementedError):
+            model.timescale
+        with self.assertRaises(NotImplementedError):
+            model.length_scales
+        with self.assertRaises(NotImplementedError):
+            model.timescale = 1
+        with self.assertRaises(NotImplementedError):
+            model.length_scales = 1
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
