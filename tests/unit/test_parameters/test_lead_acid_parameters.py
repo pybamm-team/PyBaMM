@@ -101,6 +101,8 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "U_n_0.5": param.n.prim.U(c_e_pt5, T),
             "U_p_1": param.p.prim.U(c_e_1, T),
             "U_p_0.5": param.p.prim.U(c_e_pt5, T),
+            "j0_Ox_1": param.p.prim.j0_Ox(c_e_1, T),
+            "j0_Ox_0.5": param.p.prim.j0_Ox(c_e_pt5, T),
         }
         # Process
         parameter_values = pybamm.ParameterValues("Sulzer2019")
@@ -110,6 +112,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertGreater(param_eval["chi_1"], param_eval["chi_0.5"])
         self.assertLess(param_eval["U_n_1"], param_eval["U_n_0.5"])
         self.assertGreater(param_eval["U_p_1"], param_eval["U_p_0.5"])
+        self.assertGreater(param_eval["j0_Ox_1"], param_eval["j0_Ox_0.5"])
 
 
 if __name__ == "__main__":

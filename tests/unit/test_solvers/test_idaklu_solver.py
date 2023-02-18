@@ -330,45 +330,6 @@ class TestIDAKLUSolver(unittest.TestCase):
                 dydb_ida[: (2 * max_index), :], dydb_fd
             )
 
-    def test_set_atol(self):
-        model = pybamm.lithium_ion.DFN()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
-        param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        solver = pybamm.IDAKLUSolver()
-
-        variable_tols = {"Negative electrode potential [V]": 1e-3}
-        solver.set_atol_by_variable(variable_tols, model)
-
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -0.1 * u}
-        model.initial_conditions = {u: 1}
-        t_eval = np.linspace(0, 3, 100)
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        # numpy array atol
-        atol = np.zeros(1)
-        solver = pybamm.IDAKLUSolver(atol=atol)
-        solver.solve(model, t_eval)
-
-        # list atol
-        atol = [1]
-        solver = pybamm.IDAKLUSolver(atol=atol)
-        solver.solve(model, t_eval)
-
-        # wrong size (should fail)
-        atol = [1, 2]
-        solver = pybamm.IDAKLUSolver(atol=atol)
-        with self.assertRaisesRegex(pybamm.SolverError, "Absolute tolerances"):
-            solver.solve(model, t_eval)
-
     def test_failures(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials

@@ -11,12 +11,12 @@ models = [
     pybamm.lithium_ion.DFN(
         options={"particle": "uniform profile"}, name="uniform profile"
     ),
-    # pybamm.lithium_ion.DFN(
-    #     options={"particle": "quadratic profile"}, name="quadratic profile"
-    # ),
-    # pybamm.lithium_ion.DFN(
-    #     options={"particle": "quartic profile"}, name="quartic profile"
-    # ),
+    pybamm.lithium_ion.DFN(
+        options={"particle": "quadratic profile"}, name="quadratic profile"
+    ),
+    pybamm.lithium_ion.DFN(
+        options={"particle": "quartic profile"}, name="quartic profile"
+    ),
 ]
 
 # pick parameter values
@@ -26,8 +26,7 @@ parameter_values = pybamm.ParameterValues("Ecker2015")
 sims = []
 for model in models:
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
-    solver = pybamm.CasadiSolver(root_method="lm")
-    sim.solve([0, 3600], solver=solver)
+    sim.solve([0, 3600])
     sims.append(sim)
     print("Particle model: {}".format(model.name))
     print("Solve time: {}s".format(sim.solution.solve_time))
