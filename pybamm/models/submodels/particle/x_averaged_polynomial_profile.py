@@ -266,11 +266,11 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             ]
 
             # eq 30 of Subramanian2005
-            self.rhs[q_s_av] = pybamm.source(
+            dqdt = (
                 -30 * pybamm.surf(D_eff_xav) * q_s_av / R**2
-                - 45 / 2 * j_xav / param.F / R**2,
-                q_s_av,
+                - 45 / 2 * j_xav / param.F / R**2
             )
+            self.rhs[q_s_av] = pybamm.source(dqdt, q_s_av)
 
     def set_algebraic(self, variables):
         pass

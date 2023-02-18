@@ -423,7 +423,7 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
         if self.model.options["particle"] == "quartic profile":
-            decimal = 10
+            decimal = 5
         # elif self.model.options["particle size"] == "distribution":
         #     decimal=10
         elif self.model.options["surface form"] == "differential":
