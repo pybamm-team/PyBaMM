@@ -44,7 +44,6 @@ class LeadAcidParameters(BaseParameters):
         self.h_edge = self.therm.h_edge
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
-        self.lambda_eff = self.therm.lambda_eff
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -199,31 +198,12 @@ class LeadAcidParameters(BaseParameters):
             + (self.V_w - self.V_hy) * c_hy
         ) / self.V_w
 
-    def rho(self, c_e, c_ox=0, c_hy=0):
-        """
-        Dimensional density of electrolyte [kg.m-3], from thermodynamics.
-        c_k in [mol.m-3].
-        """
-        return (
-            self.M_w / self.V_w
-            + (self.M_e - self.V_e * self.M_w / self.V_w) * c_e
-            + (self.M_ox - self.V_ox * self.M_w / self.V_w) * c_ox
-            + (self.M_hy - self.V_hy * self.M_w / self.V_w) * c_hy
-        )
-
     def m(self, c_e):
         """
         Dimensional electrolyte molar mass [mol.kg-1], from thermodynamics.
         c_e in [mol.m-3].
         """
         return c_e * self.V_w / ((1 - c_e * self.V_e) * self.M_w)
-
-    def mu(self, c_e):
-        """
-        Dimensional viscosity of electrolyte [kg.m-1.s-1].
-        """
-        inputs = {"Electrolyte concentration [mol.m-3]": c_e}
-        return pybamm.FunctionParameter("Electrolyte viscosity [kg.m-1.s-1]", inputs)
 
     def chiRT_over_Fc(self, c_e, T):
         """

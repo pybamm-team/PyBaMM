@@ -7,8 +7,8 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lead_acid.Full({"convection": "uniform transverse"}),
-    pybamm.lead_acid.Full(),
+    pybamm.lead_acid.LOQS({"surface form": "differential", "hydrolysis": "true"}),
+    # pybamm.lead_acid.Full(),
 ]
 
 # create and run simulations
