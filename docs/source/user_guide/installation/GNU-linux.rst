@@ -197,12 +197,6 @@ not being used when I run my Python script.
 i.e. ``pip install -e .``. This sets the installed location of the
 source files to your current directory.
 
-**Problem:** When running ``python run-tests.py --quick``, gives error
-``FileNotFoundError: [Errno 2] No such file or directory: 'flake8': 'flake8``.
-
-**Solution:** make sure you have included the ``[dev,docs]`` flags when
-you pip installed PyBaMM, i.e. ``pip install -e .[dev,docs]``
-
 **Problem:** Errors when solving model
 ``ValueError: Integrator name ida does not exsist``, or
 ``ValueError: Integrator name cvode does not exsist``.
