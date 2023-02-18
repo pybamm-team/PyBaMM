@@ -99,19 +99,6 @@ class BasicFull(BaseModel):
         )
         eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
-        # Pressure (for convection)
-        pressure_scale = param.Q / (param.c_e_typ * param.F * param.L_x)
-        pressure_n = pybamm.Variable(
-            "Negative electrolyte pressure [Pa]",
-            domain="negative electrode",
-            scale=pressure_scale,
-        )
-        pressure_p = pybamm.Variable(
-            "Positive electrolyte pressure [Pa]",
-            domain="positive electrode",
-            scale=pressure_scale,
-        )
-
         # Constant temperature
         T = param.T_init
 
