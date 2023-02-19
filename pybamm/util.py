@@ -68,8 +68,7 @@ class FuzzyDict(dict):
             for k in best_matches:
                 if key in k and k.endswith("]"):
                     raise KeyError(
-                        f"'{key}' not found. Did you mean the dimensional "
-                        f"version '{k}'?"
+                        f"'{key}' not found. Use the dimensional version '{k}' instead."
                     )
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 

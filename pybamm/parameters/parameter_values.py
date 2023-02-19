@@ -757,7 +757,10 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
-            new_symbol._reference = self.process_symbol(symbol.reference)
+            reference = self.process_symbol(symbol.reference)
+            if isinstance(reference, pybamm.Vector):
+                reference = pybamm.Scalar(float(reference.evaluate()))
+            new_symbol._reference = reference
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
 

@@ -47,7 +47,6 @@ pb.dynamic_plot(
         "Electrolyte concentration [mol.m-3]",
         "Total SEI thickness [m]",
         "X-averaged total SEI thickness [m]",
-        "X-averaged total SEI thickness",
         "X-averaged SEI concentration [mol.m-3]",
         "Sum of x-averaged negative electrode volumetric "
         "interfacial current densities [A.m-3]",

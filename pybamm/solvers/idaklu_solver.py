@@ -141,21 +141,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if isinstance(atol, float):
             atol = atol * np.ones(size)
-        elif isinstance(atol, list):
-            atol = np.array(atol)
-        elif isinstance(atol, np.ndarray):
-            pass
-        else:
+        elif not isinstance(atol, np.ndarray):
             raise pybamm.SolverError(
-                "Absolute tolerances must be a numpy array, float, or list"
-            )
-
-        if atol.size != size:
-            raise pybamm.SolverError(
-                """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape as y0 ({})""".format(
-                    size
-                )
+                "Absolute tolerances must be a numpy array or float"
             )
 
         return atol

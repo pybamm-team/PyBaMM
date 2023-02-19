@@ -356,12 +356,11 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
         elif isinstance(value, Function):
             value = value.to_python_function(preamble=preamble)
         elif isinstance(value, InterpolatedTable):
-            timescale = 1
             x = np.array(value.x)
             y = np.array(value.y)
             interpolator = "linear"
             value = pybamm.Interpolant(
-                [x], y, pybamm.t * timescale, name=name, interpolator=interpolator
+                [x], y, pybamm.t, name=name, interpolator=interpolator
             )
 
         pybamm_name = field.field_info.alias

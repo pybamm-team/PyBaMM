@@ -620,10 +620,10 @@ class BaseModel:
                     "Variable must have type 'Variable' or 'Concatenation'"
                 )
 
-            scale, reference = var.scale.evaluate(), var.reference.evaluate()
-            initial_conditions[var] = pybamm.Vector(
-                (final_state_eval - reference) / scale
-            )
+            scale, reference = var.scale, var.reference
+            initial_conditions[var] = (
+                pybamm.Vector(final_state_eval) - reference
+            ) / scale
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
