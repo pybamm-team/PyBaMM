@@ -7,18 +7,22 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM(),
-    pybamm.lithium_ion.SPMe(),
+    # pybamm.lithium_ion.SPM(),
+    # pybamm.lithium_ion.SPMe(),
     pybamm.lithium_ion.DFN(),
-    pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.BasicDFN(),
+    # pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations
 sims = []
 for model in models:
+    # model.events = []
     sim = pybamm.Simulation(model)
     sim.solve([0, 3600])
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims)
+pybamm.dynamic_plot(
+    sims, ["Terminal voltage [V]", "Electrolyte current density [A.m-2]"]
+)
