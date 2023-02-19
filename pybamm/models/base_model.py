@@ -620,7 +620,13 @@ class BaseModel:
                     "Variable must have type 'Variable' or 'Concatenation'"
                 )
 
-            scale, reference = var.scale, var.reference
+            # If the model is already discretised, then the initial conditions must
+            # be scaled and offset (otherwise, this is done when the model is
+            # discretised)
+            if self.is_discretised:
+                scale, reference = var.scale, var.reference
+            else:
+                scale, reference = 1, 0
             initial_conditions[var] = (
                 pybamm.Vector(final_state_eval) - reference
             ) / scale
