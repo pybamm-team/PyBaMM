@@ -492,7 +492,7 @@ class TestQuickPlot(unittest.TestCase):
             "Negative electrode potential [V]",
             "Positive electrode potential [V]",
             "Electrolyte potential [V]",
-            "Electrolyte concentration",
+            "Electrolyte concentration [Molar]",
             "Negative particle surface concentration",
             "Positive particle surface concentration",
         ]
