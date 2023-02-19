@@ -72,6 +72,7 @@ class LeadAcidParameters(BaseParameters):
         self.c_e_init = pybamm.Parameter(
             "Initial concentration in electrolyte [mol.m-3]"
         )
+        self.c_e_init_av = self.c_e_init
         self.V_w = pybamm.Parameter("Partial molar volume of water [m3.mol-1]")
         self.V_plus = pybamm.Parameter("Partial molar volume of cations [m3.mol-1]")
         self.V_minus = pybamm.Parameter("Partial molar volume of anions [m3.mol-1]")
