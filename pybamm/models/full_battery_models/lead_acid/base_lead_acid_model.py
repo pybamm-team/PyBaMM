@@ -71,7 +71,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         soc = (
             pybamm.Integral(
                 self.variables["X-averaged electrolyte concentration [mol.m-3]"]
-                / self.param.c_e_typ,
+                / self.param.c_e_init,
                 z,
             )
             * 100

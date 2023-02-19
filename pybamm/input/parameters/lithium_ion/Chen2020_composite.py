@@ -457,7 +457,6 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
         "1 + dlnf/dlnc": 1.0,

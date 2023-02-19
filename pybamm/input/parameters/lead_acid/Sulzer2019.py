@@ -47,8 +47,8 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
 
     """
     j0_ref = 0.06  # srinivasan2003mathematical
-    c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-    j0 = j0_ref * (c_e / c_e_typ)
+    c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
+    j0 = j0_ref * (c_e / c_e_init)
 
     return j0
 
@@ -102,11 +102,11 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     c_hy = 0
     param = pybamm.LeadAcidParameters()
     c_w_dim = (1 - c_e * param.V_e - c_ox * param.V_ox - c_hy * param.V_hy) / param.V_w
-    c_w_ref = (1 - param.c_e_typ * param.V_e) / param.V_w
+    c_w_ref = (1 - param.c_e_init * param.V_e) / param.V_w
     c_w = c_w_dim / c_w_ref
 
     j0_ref = 0.004  # srinivasan2003mathematical
-    j0 = j0_ref * (c_e / param.c_e_typ) ** 2 * c_w
+    j0 = j0_ref * (c_e / param.c_e_init) ** 2 * c_w
 
     return j0
 
@@ -136,8 +136,8 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
 
     """
     j0_ref = 2.5e-23  # srinivasan2003mathematical
-    c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-    j0 = j0_ref * (c_e / c_e_typ)
+    c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
+    j0 = j0_ref * (c_e / c_e_init)
 
     return j0
 
@@ -311,7 +311,7 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.04,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 5650.0,
+        "Initial concentration in electrolyte [mol.m-3]": 5650.0,
         "Cation transference number": 0.7,
         "1 + dlnf/dlnc": 1.0,
         "Partial molar volume of water [m3.mol-1]": 1.75e-05,

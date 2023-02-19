@@ -69,8 +69,9 @@ class LeadAcidParameters(BaseParameters):
         self.voltage_high_cut = self.elec.voltage_high_cut
 
         # Electrolyte properties
-        self.c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-        self.c_e_init = self.c_e_typ
+        self.c_e_init = pybamm.Parameter(
+            "Initial concentration in electrolyte [mol.m-3]"
+        )
         self.V_w = pybamm.Parameter("Partial molar volume of water [m3.mol-1]")
         self.V_plus = pybamm.Parameter("Partial molar volume of cations [m3.mol-1]")
         self.V_minus = pybamm.Parameter("Partial molar volume of anions [m3.mol-1]")
@@ -84,7 +85,7 @@ class LeadAcidParameters(BaseParameters):
         # Other species properties
         self.c_ox_init = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
         self.c_ox_typ = (
-            self.c_e_typ
+            self.c_e_init
         )  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
         # Electrode properties
@@ -147,7 +148,7 @@ class LeadAcidParameters(BaseParameters):
             / self.L_x
             / (self.p.prim.s_plus_S - self.n.prim.s_plus_S)
         )
-        self.Q_e_max = self.Q_e_max * self.c_e_typ * self.F
+        self.Q_e_max = self.Q_e_max * self.c_e_init * self.F
         self.capacity = self.Q_e_max * self.n_electrodes_parallel * self.A_cc * self.L_x
 
         # Initial conditions

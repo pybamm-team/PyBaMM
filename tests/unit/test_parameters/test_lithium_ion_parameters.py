@@ -39,10 +39,10 @@ class TestLithiumIonParameterValues(unittest.TestCase):
         # j0_m
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.n.prim.j0(param.c_e_typ, param.n.prim.c_max / 2, param.T_ref)
+                param.n.prim.j0(param.c_e_init_av, param.n.prim.c_max / 2, param.T_ref)
             ),
             values.evaluate(
-                2 * 10 ** (-5) * param.c_e_typ**0.5 * param.n.prim.c_max / 2
+                2 * 10 ** (-5) * param.c_e_init_av**0.5 * param.n.prim.c_max / 2
             ),
             8,
         )
@@ -50,10 +50,10 @@ class TestLithiumIonParameterValues(unittest.TestCase):
         # j0_p
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.p.prim.j0(param.c_e_typ, param.p.prim.c_max / 2, param.T_ref)
+                param.p.prim.j0(param.c_e_init_av, param.p.prim.c_max / 2, param.T_ref)
             ),
             values.evaluate(
-                6 * 10 ** (-7) * param.c_e_typ**0.5 * param.p.prim.c_max / 2
+                6 * 10 ** (-7) * param.c_e_init_av**0.5 * param.p.prim.c_max / 2
             ),
             8,
         )
@@ -83,14 +83,14 @@ class TestLithiumIonParameterValues(unittest.TestCase):
 
         # electrolyte dynamics
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_e(param.c_e_typ, param.T_ref)),
+            values.evaluate(param.D_e(param.c_e_init_av, param.T_ref)),
             5.34 * 10 ** (-10) * np.exp(-0.65),
             10,
         )
 
         # electrolyte conductivity
         np.testing.assert_almost_equal(
-            values.evaluate(param.kappa_e(param.c_e_typ, param.T_ref)), 1.1045, 3
+            values.evaluate(param.kappa_e(param.c_e_init_av, param.T_ref)), 1.1045, 3
         )
 
         # electrode conductivities

@@ -81,11 +81,6 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # activity
     pybamm_dict["1 + dlnf/dlnc"] = 1.0
 
-    # typical electrolyte concentration
-    pybamm_dict["Typical electrolyte concentration [mol.m-3]"] = pybamm_dict[
-        "Initial concentration in electrolyte [mol.m-3]"
-    ]
-
     # assume Bruggeman relation for effection electrolyte properties
     for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
@@ -184,7 +179,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
-    c_e = pybamm_dict["Typical electrolyte concentration [mol.m-3]"]
+    c_e = pybamm_dict["Initial concentration in electrolyte [mol.m-3]"]
     F = 96485
 
     # negative electrode

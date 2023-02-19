@@ -46,10 +46,7 @@ class SEIGrowth(BaseModel):
         Ls = []
         for pos in ["inner", "outer"]:
             Pos = pos.capitalize()
-            if pos == "inner":
-                scale = self.phase_param.L_inner_0
-            else:
-                scale = self.phase_param.L_outer_0
+            scale = self.phase_param.L_sei_0
             if self.reaction_loc == "x-average":
                 L_av = pybamm.Variable(
                     f"X-averaged {pos} {self.reaction_name}thickness [m]",
@@ -148,20 +145,22 @@ class SEIGrowth(BaseModel):
 
         elif self.options["SEI"].startswith("ec reaction limited"):
             # we have a linear system for j and c
-            #  c = c_0 + j * L * D / F          [1] (eq 11 in the Yang2017 paper)
-            #  j = - F * k * c * exp()          [2] (eq 10 in the Yang2017 paper, factor
+            #  c = c_0 + j * L / F / D          [1] (eq 11 in the Yang2017 paper)
+            #  j = - F * c * k_exp()            [2] (eq 10 in the Yang2017 paper, factor
             #                                        of a is outside the defn of j here)
             # [1] into [2] gives (F cancels in the second terms)
-            #  j = - F * k * c_0 * exp() - k * j * L * D * exp()
+            #  j = - F * c_0 * k_exp() - j * L * k_exp() / D
             # rearrange
-            #  j = -F * k * c_0 * exp() / (1 + k * L * D * exp())
-            #  c_ec = c_0 - L * D * k * exp() / (1 + k * L * D * exp())
-            #       = c_0 / (1 + k * L * D * exp())
+            #  j = -F * c_0* k_exp() / (1 + L * k_exp() / D)
+            #  c_ec = c_0 - L * k_exp() / D / (1 + L * k_exp() / D)
+            #       = c_0 / (1 + L * k_exp() / D)
             k_exp = phase_param.k_sei * pybamm.exp(-alpha_SEI * F_RT * eta_SEI)
-            L_D = L_sei * phase_param.D_ec
+            L_over_D = L_sei / phase_param.D_ec
             c_0 = phase_param.c_ec_0
-            j_sei = -param.F * c_0 * k_exp / (1 + L_D * k_exp)
-            c_ec = c_0 / (1 + L_D * k_exp)
+            j_sei = -param.F * c_0 * k_exp / (1 + L_over_D * k_exp)
+            c_ec = c_0 / (1 + L_over_D * k_exp)
+
+            variables.update({})
 
             # Get variables related to the concentration
             c_ec_av = pybamm.x_average(c_ec)

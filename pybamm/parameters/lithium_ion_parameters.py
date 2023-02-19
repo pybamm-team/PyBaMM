@@ -90,8 +90,6 @@ class LithiumIonParameters(BaseParameters):
             domain._set_parameters()
 
         # Electrolyte properties
-        self.c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-
         self.epsilon_init = pybamm.concatenation(
             *[
                 self.domain_params[domain.split()[0]].epsilon_init
@@ -118,6 +116,7 @@ class LithiumIonParameters(BaseParameters):
         self.c_e_init = pybamm.Parameter(
             "Initial concentration in electrolyte [mol.m-3]"
         )
+        self.c_e_init_av = pybamm.xyz_average(self.c_e_init)
 
         self.alpha_T_cell = pybamm.Parameter(
             "Cell thermal expansion coefficient [m.K-1]"

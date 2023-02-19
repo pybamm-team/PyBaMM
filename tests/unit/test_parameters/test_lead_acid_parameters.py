@@ -61,7 +61,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Negative electrode thickness [m]": 1,
                 "Separator thickness [m]": 1,
                 "Positive electrode thickness [m]": 1,
-                "Typical electrolyte concentration [mol.m-3]": 1,
+                "Initial concentration in electrolyte [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Current function [A]": 2,
             }

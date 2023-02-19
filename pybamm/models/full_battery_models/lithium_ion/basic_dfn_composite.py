@@ -46,17 +46,17 @@ class BasicDFNComposite(BaseModel):
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
             domain="negative electrode",
-            scale=param.c_e_typ,
+            scale=param.c_e_init_av,
         )
         c_e_s = pybamm.Variable(
             "Separator electrolyte concentration [mol.m-3]",
             domain="separator",
-            scale=param.c_e_typ,
+            scale=param.c_e_init_av,
         )
         c_e_p = pybamm.Variable(
             "Positive electrolyte concentration [mol.m-3]",
             domain="positive electrode",
-            scale=param.c_e_typ,
+            scale=param.c_e_init_av,
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
