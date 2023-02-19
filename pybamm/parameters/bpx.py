@@ -73,7 +73,6 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # set a default current function and typical current based on the nominal capacity
     # i.e. a default C-rate of 1
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
-    pybamm_dict["Typical current [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
 
     # number of electrons in reaction (1 for li-ion)
     for domain in [negative_electrode, positive_electrode]:
