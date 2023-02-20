@@ -117,6 +117,7 @@ class LithiumIonParameters(BaseParameters):
             "Initial concentration in electrolyte [mol.m-3]"
         )
         self.c_e_init_av = pybamm.xyz_average(self.c_e_init)
+        self.c_e_init_av.print_name = "c_e_init"
 
         self.alpha_T_cell = pybamm.Parameter(
             "Cell thermal expansion coefficient [m.K-1]"
