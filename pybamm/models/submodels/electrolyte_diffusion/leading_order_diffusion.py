@@ -26,7 +26,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
 
     def get_fundamental_variables(self):
         c_e_av = pybamm.Variable(
-            "X-averaged electrolyte concentration",
+            "X-averaged electrolyte concentration [mol.m-3]",
             domain="current collector",
             bounds=(0, np.inf),
         )
@@ -47,7 +47,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         return variables
 
     def get_coupled_variables(self, variables):
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
         eps = variables["Porosity"]
 
         variables.update(self._get_total_concentration_electrolyte(eps * c_e))
@@ -57,50 +57,52 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     def set_rhs(self, variables):
         param = self.param
 
-        c_e_av = variables["X-averaged electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
 
         eps_n_av = variables["X-averaged negative electrode porosity"]
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
-        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change [s-1]"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change [s-1]"]
 
         div_Vbox_s_av = variables[
-            "X-averaged separator transverse volume-averaged acceleration"
+            "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
         ]
 
         sum_a_j_n_0 = variables[
             "Sum of x-averaged negative electrode volumetric "
-            "interfacial current densities"
+            "interfacial current densities [A.m-3]"
         ]
         sum_a_j_p_0 = variables[
             "Sum of x-averaged positive electrode volumetric "
-            "interfacial current densities"
+            "interfacial current densities [A.m-3]"
         ]
         sum_s_j_n_0 = variables[
-            "Sum of x-averaged negative electrode electrolyte reaction source terms"
+            "Sum of x-averaged negative electrode electrolyte "
+            "reaction source terms [A.m-3]"
         ]
         sum_s_j_p_0 = variables[
-            "Sum of x-averaged positive electrode electrolyte reaction source terms"
+            "Sum of x-averaged positive electrode electrolyte "
+            "reaction source terms [A.m-3]"
         ]
         source_terms = (
-            param.n.l * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
-            + param.p.l * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
-        ) / param.gamma_e
+            param.n.L * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
+            + param.p.L * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
+        ) / param.F
 
         self.rhs = {
             c_e_av: 1
-            / (param.n.l * eps_n_av + param.s.l * eps_s_av + param.p.l * eps_p_av)
+            / (param.n.L * eps_n_av + param.s.L * eps_s_av + param.p.L * eps_p_av)
             * (
                 source_terms
-                - c_e_av * (param.n.l * deps_n_dt_av + param.p.l * deps_p_dt_av)
-                - c_e_av * param.s.l * div_Vbox_s_av
+                - c_e_av * (param.n.L * deps_n_dt_av + param.p.L * deps_p_dt_av)
+                - c_e_av * param.s.L * div_Vbox_s_av
             )
         }
 
     def set_initial_conditions(self, variables):
-        c_e = variables["X-averaged electrolyte concentration"]
+        c_e = variables["X-averaged electrolyte concentration [mol.m-3]"]
         self.initial_conditions = {c_e: self.param.c_e_init}

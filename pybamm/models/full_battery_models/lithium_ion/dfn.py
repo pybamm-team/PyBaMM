@@ -83,7 +83,7 @@ class DFN(BaseModel):
                 submodel = pybamm.electrode.ohm.Full
             else:
                 submodel = pybamm.electrode.ohm.SurfaceForm
-            self.submodels[f"{domain} electrode potential"] = submodel(
+            self.submodels[f"{domain} electrode potential [V]"] = submodel(
                 self.param, domain, self.options
             )
 
@@ -117,6 +117,6 @@ class DFN(BaseModel):
         for domain in ["negative", "separator", "positive"]:
             if self.options.electrode_types.get(domain) == "planar":
                 continue
-            self.submodels[f"{domain} surface potential difference"] = surf_model(
+            self.submodels[f"{domain} surface potential difference [V]"] = surf_model(
                 self.param, domain, self.options
             )

@@ -155,6 +155,6 @@ class SPM(BaseModel):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
-            self.submodels[f"{domain} surface potential difference"] = surf_model(
+            self.submodels[f"{domain} surface potential difference [V]"] = surf_model(
                 self.param, domain, options=self.options
             )

@@ -265,8 +265,12 @@ class TestExtrapolation(unittest.TestCase):
 
         # check linear variable extrapolates correctly
         linear_y = macro_submesh.nodes
-        self.assertEqual(extrap_left_disc.evaluate(None, linear_y), 0)
-        self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 3
+        )
 
         # Fluxes
         extrap_flux_left = pybamm.BoundaryGradient(2 * var, "left")
@@ -275,12 +279,12 @@ class TestExtrapolation(unittest.TestCase):
         extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
 
         # check constant extrapolates to constant
-        self.assertEqual(extrap_flux_left_disc.evaluate(None, constant_y), 0)
-        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+        np.testing.assert_allclose(extrap_flux_left_disc.evaluate(y=constant_y), 0)
+        np.testing.assert_allclose(extrap_flux_right_disc.evaluate(y=constant_y), 0)
 
         # check linear variable extrapolates correctly
-        self.assertEqual(extrap_flux_left_disc.evaluate(None, linear_y), 2)
-        self.assertEqual(extrap_flux_right_disc.evaluate(None, linear_y), -1)
+        np.testing.assert_allclose(extrap_flux_left_disc.evaluate(y=linear_y), 2)
+        np.testing.assert_allclose(extrap_flux_right_disc.evaluate(y=linear_y), -1)
 
         # Microscale
         # create variable
@@ -447,9 +451,9 @@ class TestExtrapolation(unittest.TestCase):
         y_macro = mesh["negative electrode"].nodes
         y_micro = mesh["negative particle"].nodes
         y = np.outer(y_macro, y_micro).reshape(-1, 1)
-        # extrapolate to r=1 --> should evaluate to y_macro
+        # extrapolate to r=0.5 --> should evaluate to 0.5*y_macro
         np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(y=y)[:, 0], y_macro
+            extrap_right_disc.evaluate(y=y)[:, 0], 0.5 * y_macro
         )
 
         var = pybamm.Variable("var", domain="positive particle")

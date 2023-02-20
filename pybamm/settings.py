@@ -16,7 +16,8 @@ class Settings(object):
         "D_e__c_e": 10,  # dimensional
         "kappa_e__c_e": 10,  # dimensional
         "chi__c_e": 1e-2,  # dimensionless
-        "U__c_s": 1e-10,  # dimensional
+        "D__c_s": 1e-10,  # dimensionless
+        "U__c_s": 1e-10,  # dimensionless
         "j0__c_e": 1e-8,  # dimensionless
         "j0__c_s": 1e-8,  # dimensionless
         "macinnes__c_e": 1e-15,  # dimensionless

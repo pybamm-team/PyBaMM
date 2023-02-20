@@ -643,8 +643,6 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_vector_var_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        # Set length scales to avoid warning
-        model.length_scales = {"negative electrode": 1}
         param = pybamm.InputParameter("param")
         model.rhs = {var: -param * var}
         model.initial_conditions = {var: 2}
@@ -675,8 +673,6 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         # More complicated model
         # Create model
         model = pybamm.BaseModel()
-        # Set length scales to avoid warning
-        model.length_scales = {"negative electrode": 1}
         var = pybamm.Variable("var", "negative electrode")
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
@@ -755,8 +751,6 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        # Set length scales to avoid warning
-        model.length_scales = {"negative electrode": 1}
 
         param = pybamm.InputParameter("param", "negative electrode")
         model.rhs = {var: -param * var}

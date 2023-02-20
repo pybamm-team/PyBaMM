@@ -91,16 +91,6 @@ class _BaseEquations:
     def events(self):
         return self._events
 
-    @property
-    def timescale(self):
-        """Timescale of model, to be used for non-dimensionalising time when solving"""
-        return self._timescale
-
-    @property
-    def length_scales(self):
-        "Length scales of model"
-        return self._length_scales
-
     def copy(self):
         """
         Creates a copy of the model, explicitly copying all the mutable attributes
@@ -354,8 +344,6 @@ class _BaseEquations:
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
-            + [self.timescale]
-            + list(self.length_scales.values())
         )
         return list(all_input_parameters)
 

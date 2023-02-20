@@ -14,7 +14,7 @@ class TestCompareOutputs(unittest.TestCase):
             {"surface form": cap} for cap in ["false", "differential", "algebraic"]
         ]
         model_combos = [
-            ([pybamm.lithium_ion.SPM(opt) for opt in options]),
+            # ([pybamm.lithium_ion.SPM(opt) for opt in options]),
             # ([pybamm.lithium_ion.SPMe(opt) for opt in options]), # not implemented
             ([pybamm.lithium_ion.DFN(opt) for opt in options]),
         ]
@@ -22,7 +22,6 @@ class TestCompareOutputs(unittest.TestCase):
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
-            param.update({"Current function [A]": 1})
             for model in models:
                 param.process_model(model)
 

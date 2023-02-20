@@ -1,5 +1,5 @@
 #
-# Dimensional and dimensionless parameter values, and scales
+# Parameter values for a simulation
 #
 import numpy as np
 import pybamm
@@ -139,7 +139,7 @@ class ParameterValues:
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        """Return item correspoonding to key if it exists, otherwise return default"""
+        """Return item corresponding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
@@ -393,13 +393,6 @@ class ParameterValues:
         return parameter_values
 
     def check_parameter_values(self, values):
-        # Make sure typical current is non-zero
-        if "Typical current [A]" in values and values["Typical current [A]"] == 0:
-            raise ValueError(
-                "'Typical current [A]' cannot be zero. A possible alternative is to "
-                "set 'Current function [A]' to `0` instead."
-            )
-
         for param in values:
             if "propotional term" in param:
                 raise ValueError(
@@ -475,7 +468,7 @@ class ParameterValues:
                 )
             )
 
-        interpolant_events = self._get_interpolant_events(model)
+        interpolant_events = self._get_interpolant_events(unprocessed_model)
         for event in interpolant_events:
             pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
@@ -485,8 +478,6 @@ class ParameterValues:
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
-
-        model.events = new_events
 
         parameterised_equations = pybamm._ParameterisedEquations(
             self,
@@ -580,8 +571,6 @@ class ParameterValues:
         """
 
         def process_and_check(sym):
-            if isinstance(sym, numbers.Number):
-                return pybamm.Scalar(sym)
             new_sym = self.process_symbol(sym)
             if not isinstance(new_sym, pybamm.Scalar):
                 raise ValueError(
@@ -769,8 +758,15 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
-            new_symbol._reference = self.process_symbol(symbol.reference)
+            reference = self.process_symbol(symbol.reference)
+            if isinstance(reference, pybamm.Vector):
+                reference = pybamm.Scalar(float(reference.evaluate()))
+            new_symbol._reference = reference
+            new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
+
+        elif isinstance(symbol, numbers.Number):
+            return pybamm.Scalar(symbol)
 
         else:
             # Backup option: return the object
@@ -818,9 +814,6 @@ class ParameterValues:
         """
         Return dictionary of evaluated parameters, and optionally print these evaluated
         parameters to an output file.
-        For dimensionless parameters that depend on the C-rate, the value is given as a
-        function of the C-rate (either x * Crate or x / Crate depending on the
-        dependence)
 
         Parameters
         ----------

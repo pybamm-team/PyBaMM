@@ -66,7 +66,7 @@ for domain in ["negative", "positive"]:
         model.param, domain, "lithium-ion main"
     )
     model.submodels[
-        f"{domain} surface potential difference"
+        f"{domain} surface potential difference [V]"
     ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
         model.param, domain, model.options
     )

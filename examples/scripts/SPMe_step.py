@@ -33,8 +33,7 @@ solution = solver.solve(model, t_eval)
 # step model
 dt = 500
 time = 0
-timescale = model.timescale_eval
-end_time = solution.t[-1] * timescale
+end_time = solution.t[-1]
 step_solver = pybamm.CasadiSolver()
 step_solution = None
 while time < end_time:

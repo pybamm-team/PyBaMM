@@ -24,7 +24,7 @@ class LeadingOrder(BaseModel):
 
     def get_fundamental_variables(self):
         c_ox_av = pybamm.Variable(
-            "X-averaged oxygen concentration", domain="current collector"
+            "X-averaged oxygen concentration [mol.m-3]", domain="current collector"
         )
         c_ox_n = pybamm.PrimaryBroadcast(c_ox_av, "negative electrode")
         c_ox_s = pybamm.PrimaryBroadcast(c_ox_av, "separator")
@@ -46,36 +46,38 @@ class LeadingOrder(BaseModel):
     def set_rhs(self, variables):
         param = self.param
 
-        c_ox_av = variables["X-averaged oxygen concentration"]
+        c_ox_av = variables["X-averaged oxygen concentration [mol.m-3]"]
 
         eps_n_av = variables["X-averaged negative electrode porosity"]
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
-        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change [s-1]"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change [s-1]"]
 
-        j_ox_n_av = variables[
-            "X-averaged negative electrode oxygen interfacial current density"
+        a_j_ox_n_av = variables[
+            "X-averaged negative electrode oxygen "
+            "volumetric interfacial current density [A.m-3]"
         ]
-        j_ox_p_av = variables[
-            "X-averaged positive electrode oxygen interfacial current density"
+        a_j_ox_p_av = variables[
+            "X-averaged positive electrode oxygen "
+            "volumetric interfacial current density [A.m-3]"
         ]
 
         source_terms = (
-            param.n.l * param.s_ox_Ox * j_ox_n_av
-            + param.p.l * param.s_ox_Ox * j_ox_p_av
+            param.n.L * param.s_ox_Ox * a_j_ox_n_av
+            + param.p.L * param.s_ox_Ox * a_j_ox_p_av
         )
 
         self.rhs = {
             c_ox_av: 1
-            / (param.n.l * eps_n_av + param.s.l * eps_s_av + param.p.l * eps_p_av)
+            / (param.n.L * eps_n_av + param.s.L * eps_s_av + param.p.L * eps_p_av)
             * (
-                source_terms
-                - c_ox_av * (param.n.l * deps_n_dt_av + param.p.l * deps_p_dt_av)
+                source_terms / param.F
+                - c_ox_av * (param.n.L * deps_n_dt_av + param.p.L * deps_p_dt_av)
             )
         }
 
     def set_initial_conditions(self, variables):
-        c_ox = variables["X-averaged oxygen concentration"]
+        c_ox = variables["X-averaged oxygen concentration [mol.m-3]"]
         self.initial_conditions = {c_ox: self.param.c_ox_init}

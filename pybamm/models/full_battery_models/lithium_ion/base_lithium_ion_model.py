@@ -34,36 +34,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(self.options)
 
-        # Default timescale
-        self.set_timescale(self.param.timescale)
-
-        # Set default length scales
-        length_scales = {
-            "negative electrode": self.param.L_x,
-            "separator": self.param.L_x,
-            "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
-
-        for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "porous":
-                domain_param = self.param.domain_params[domain]
-                length_scales.update(
-                    {
-                        f"{domain} particle": domain_param.prim.R_typ,
-                        f"{domain} primary particle": domain_param.prim.R_typ,
-                        f"{domain} particle size": domain_param.prim.R_typ,
-                    }
-                )
-
-                # Add relevant secondary length scales
-                if len(self.options.phases[domain]) >= 2:
-                    length_scales[
-                        f"{domain} secondary particle"
-                    ] = domain_param.sec.R_typ
-
-        self.set_length_scales(length_scales)
         self.set_standard_output_variables()
 
     def set_submodels(self, build):
@@ -131,13 +101,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Particle concentration position
         var = pybamm.standard_spatial_vars
         if self.options.electrode_types["negative"] == "porous":
-            self.variables.update(
-                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.n.prim.R_typ}
-            )
+            self.variables.update({"r_n [m]": var.r_n})
         if self.options.electrode_types["positive"] == "porous":
-            self.variables.update(
-                {"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.prim.R_typ}
-            )
+            self.variables.update({"r_p [m]": var.r_p})
 
     def set_degradation_variables(self):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""

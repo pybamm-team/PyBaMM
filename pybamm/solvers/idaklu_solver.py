@@ -109,8 +109,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     options[key] = value
         self._options = options
 
-        if idaklu_spec is None:  # pragma: no cover
-            raise ImportError("KLU is not installed")
+        # if idaklu_spec is None:  # pragma: no cover
+        #     raise ImportError("KLU is not installed")
 
         super().__init__(
             "ida",
@@ -124,47 +124,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
-
-    def set_atol_by_variable(self, variables_with_tols, model):
-        """
-        A method to set the absolute tolerances in the solver by state variable.
-        This method attaches a vector of tolerance to the model. (i.e. model.atol)
-
-        Parameters
-        ----------
-        variables_with_tols : dict
-            A dictionary with keys that are strings indicating the variable you
-            wish to set the tolerance of and values that are the tolerances.
-        model : :class:`pybamm.BaseModel`
-            The model that is going to be solved.
-        """
-
-        size = model.concatenated_initial_conditions.size
-        atol = self._check_atol_type(self.atol, size)
-        for var, tol in variables_with_tols.items():
-            variable = model.variables[var]
-            if isinstance(variable, pybamm.StateVector):
-                atol = self.set_state_vec_tol(atol, variable, tol)
-            else:
-                raise pybamm.SolverError("Can only set tolerances for state variables")
-
-        model.atol = atol
-
-    def set_state_vec_tol(self, atol, state_vec, tol):
-        """
-        A method to set the tolerances in the atol vector of a specific
-        state variable. This method modifies self.atol
-
-        Parameters
-        ----------
-        state_vec : :class:`pybamm.StateVector`
-            The state vector to apply to the tolerance to
-        tol: float
-            The tolerance value
-        """
-        slices = state_vec.y_slices[0]
-        atol[slices] = tol
-        return atol
 
     def _check_atol_type(self, atol, size):
         """
@@ -182,21 +141,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if isinstance(atol, float):
             atol = atol * np.ones(size)
-        elif isinstance(atol, list):
-            atol = np.array(atol)
-        elif isinstance(atol, np.ndarray):
-            pass
-        else:
+        elif not isinstance(atol, np.ndarray):
             raise pybamm.SolverError(
-                "Absolute tolerances must be a numpy array, float, or list"
-            )
-
-        if atol.size != size:
-            raise pybamm.SolverError(
-                """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape as y0 ({})""".format(
-                    size
-                )
+                "Absolute tolerances must be a numpy array or float"
             )
 
         return atol

@@ -83,20 +83,20 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         new_variables.update(
             {
                 f"Sum of {domain} electrode {phase_name}"
-                "electrolyte reaction source terms": 0,
+                "electrolyte reaction source terms [A.m-3]": 0,
                 f"Sum of x-averaged {domain} electrode {phase_name}"
-                "electrolyte reaction source terms": 0,
+                "electrolyte reaction source terms [A.m-3]": 0,
                 f"Sum of {domain} electrode {phase_name}"
-                "volumetric interfacial current densities": 0,
+                "volumetric interfacial current densities [A.m-3]": 0,
                 f"Sum of x-averaged {domain} electrode {phase_name}"
-                "volumetric interfacial current densities": 0,
+                "volumetric interfacial current densities [A.m-3]": 0,
             }
         )
         for reaction_name in reaction_names:
             # Sum variables
             a_j_k = new_variables[
                 f"{Domain} electrode {reaction_name}{phase_name}volumetric "
-                "interfacial current density"
+                "interfacial current density [A.m-3]"
             ]
 
             if self.chemistry == "lithium-ion":
@@ -111,20 +111,20 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
 
             new_variables[
                 f"Sum of {domain} electrode {phase_name}"
-                "electrolyte reaction source terms"
+                "electrolyte reaction source terms [A.m-3]"
             ] += (s_k * a_j_k)
             new_variables[
                 f"Sum of x-averaged {domain} electrode {phase_name}"
-                "electrolyte reaction source terms"
+                "electrolyte reaction source terms [A.m-3]"
             ] += pybamm.x_average(s_k * a_j_k)
 
             new_variables[
                 f"Sum of {domain} electrode {phase_name}volumetric "
-                "interfacial current densities"
+                "interfacial current densities [A.m-3]"
             ] += a_j_k
             new_variables[
                 f"Sum of x-averaged {domain} electrode {phase_name}"
-                "volumetric interfacial current densities"
+                "volumetric interfacial current densities [A.m-3]"
             ] += pybamm.x_average(a_j_k)
 
         variables.update(new_variables)
@@ -140,9 +140,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             and self.options.positive["particle phases"] == "1"
         ):
             for variable_template in [
-                "{}interfacial current density",
                 "{}interfacial current density [A.m-2]",
-                "{}exchange current density",
                 "{}exchange current density [A.m-2]",
             ]:
                 var_dict = {}
@@ -161,8 +159,8 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
 
         # Sum variables
         for variable_template in [
-            "Sum of {}volumetric interfacial current densities",
-            "Sum of {}electrolyte reaction source terms",
+            "Sum of {}volumetric interfacial current densities [A.m-3]",
+            "Sum of {}electrolyte reaction source terms [A.m-3]",
         ]:
             var_dict = {}
             for domain in self.options.whole_cell_domains:
@@ -171,6 +169,6 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 else:
                     var_dict[domain] = variables[variable_template.format(domain + " ")]
             var = pybamm.concatenation(*var_dict.values())
-            variables.update({variable_template.format("").capitalize(): var})
+            variables.update({variable_template.format(""): var})
 
         return variables

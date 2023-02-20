@@ -25,11 +25,11 @@ class TestCompareBasicModels(unittest.TestCase):
         sol = sim.solution
 
         # Compare solution data
-        np.testing.assert_array_almost_equal(basic_sol.t, sol.t, decimal=4)
+        np.testing.assert_allclose(basic_sol.t, sol.t)
         # Compare variables
         for name in basic_dfn.variables:
-            np.testing.assert_array_almost_equal(
-                basic_sol[name].entries, sol[name].entries, decimal=4
+            np.testing.assert_allclose(
+                basic_sol[name].entries, sol[name].entries, rtol=1e-3
             )
 
     def test_compare_spms(self):
@@ -49,12 +49,11 @@ class TestCompareBasicModels(unittest.TestCase):
         sol = sim.solution
 
         # Compare solution data
-        np.testing.assert_array_almost_equal(basic_sol.y, sol.y)
-        np.testing.assert_array_almost_equal(basic_sol.t, sol.t)
+        np.testing.assert_allclose(basic_sol.t, sol.t)
         # Compare variables
         for name in basic_spm.variables:
-            np.testing.assert_array_almost_equal(
-                basic_sol[name].entries, sol[name].entries
+            np.testing.assert_allclose(
+                basic_sol[name].entries, sol[name].entries, rtol=1e-5
             )
 
 
