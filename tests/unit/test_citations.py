@@ -64,6 +64,11 @@ class TestCitations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
 
+        pybamm.citations._citation_err_msg = "Error"
+        with self.assertRaisesRegex(ImportError, "Error"):
+            pybamm.print_citations()
+        pybamm.citations._citation_err_msg = None
+
     def test_overwrite_citation(self):
         # Unknown citation
         fake_citation = r"@article{NotACitation, title = {This Doesn't Exist}}"
@@ -265,12 +270,9 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Mohtat2019", citations._papers_to_cite)
-        pybamm.lithium_ion.ElectrodeSOHx100()
-        self.assertIn("Mohtat2019", citations._papers_to_cite)
-
-        citations._reset()
-        self.assertNotIn("Mohtat2019", citations._papers_to_cite)
-        pybamm.lithium_ion.ElectrodeSOHx0()
+        pybamm.lithium_ion.ElectrodeSOHSolver(
+            pybamm.ParameterValues("Marquis2019")
+        )._get_electrode_soh_sims_full()
         self.assertIn("Mohtat2019", citations._papers_to_cite)
 
     def test_mohtat_2021(self):

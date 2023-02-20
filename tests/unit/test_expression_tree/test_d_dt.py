@@ -25,7 +25,6 @@ class TestDDT(unittest.TestCase):
         self.assertEqual(a.evaluate(t=1), 2)
 
     def test_time_derivative_of_variable(self):
-
         a = (pybamm.Variable("a")).diff(pybamm.t)
         self.assertIsInstance(a, pybamm.VariableDot)
         self.assertEqual(a.name, "a'")
@@ -40,11 +39,7 @@ class TestDDT(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             a = (pybamm.Variable("a")).diff(pybamm.t).diff(pybamm.t)
 
-        with self.assertRaises(pybamm.ModelError):
-            a = pybamm.ExternalVariable("a", 1).diff(pybamm.t)
-
     def test_time_derivative_of_state_vector(self):
-
         sv = pybamm.StateVector(slice(0, 10))
         y_dot = np.linspace(0, 2, 19)
 

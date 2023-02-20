@@ -7,7 +7,6 @@ import pybamm
 def battery_geometry(
     include_particles=True,
     options=None,
-    current_collector_dimension=0,
     form_factor="pouch",
 ):
     """
@@ -20,9 +19,6 @@ def battery_geometry(
     options : dict, optional
         Dictionary of model options. Necessary for "particle-size geometry",
         relevant for lithium-ion chemistries.
-    current_collector_dimensions : int, optional
-        The dimensions of the current collector. Can be 0 (default), 1 or 2. For
-        a "cylindrical" form factor the current collector dimension must be 0 or 1.
     form_factor : str, optional
         The form factor of the cell. Can be "pouch" (default) or "cylindrical".
 
@@ -32,7 +28,9 @@ def battery_geometry(
         A geometry class for the battery
 
     """
-    options = pybamm.BatteryModelOptions(options or {})
+    if options is None or type(options) == dict:
+        options = pybamm.BatteryModelOptions(options)
+
     geo = pybamm.geometric_parameters
     l_n = geo.n.l
     l_s = geo.s.l
@@ -46,37 +44,58 @@ def battery_geometry(
         "separator": {"x_s": {"min": l_n, "max": l_n_l_s}},
         "positive electrode": {"x_p": {"min": l_n_l_s, "max": 1}},
     }
+
     # Add particle domains
     if include_particles is True:
         zero_one = {"min": 0, "max": 1}
-        geometry.update(
-            {
-                "negative particle": {"r_n": zero_one},
-                "positive particle": {"r_p": zero_one},
-            }
-        )
         for domain in ["negative", "positive"]:
-            phases = int(getattr(options, domain)["particle phases"])
-            if phases >= 2:
+            if options.electrode_types[domain] == "porous":
                 geometry.update(
                     {
-                        f"{domain} primary particle": {"r_n_prim": zero_one},
-                        f"{domain} secondary particle": {"r_n_sec": zero_one},
+                        f"{domain} particle": {f"r_{domain[0]}": zero_one},
                     }
                 )
+                phases = int(getattr(options, domain)["particle phases"])
+                if phases >= 2:
+                    geometry.update(
+                        {
+                            f"{domain} primary particle": {
+                                f"r_{domain[0]}_prim": zero_one
+                            },
+                            f"{domain} secondary particle": {
+                                f"r_{domain[0]}_sec": zero_one
+                            },
+                        }
+                    )
+
     # Add particle size domains
-    if options is not None and options["particle size"] == "distribution":
+    if (
+        options is not None
+        and options.negative["particle size"] == "distribution"
+        and options.electrode_types["negative"] == "porous"
+    ):
         R_min_n = geo.n.prim.R_min
-        R_min_p = geo.p.prim.R_min
         R_max_n = geo.n.prim.R_max
-        R_max_p = geo.p.prim.R_max
         geometry.update(
             {
                 "negative particle size": {"R_n": {"min": R_min_n, "max": R_max_n}},
+            }
+        )
+    if (
+        options is not None
+        and options.positive["particle size"] == "distribution"
+        and options.electrode_types["positive"] == "porous"
+    ):
+        R_min_p = geo.p.prim.R_min
+        R_max_p = geo.p.prim.R_max
+        geometry.update(
+            {
                 "positive particle size": {"R_p": {"min": R_min_p, "max": R_max_p}},
             }
         )
+
     # Add current collector domains
+    current_collector_dimension = options["dimensionality"]
     if form_factor == "pouch":
         if current_collector_dimension == 0:
             geometry["current collector"] = {"z": {"position": 1}}
@@ -105,12 +124,6 @@ def battery_geometry(
                     },
                 },
             }
-        else:
-            raise pybamm.GeometryError(
-                "Invalid current collector dimension '{}' (should be 0, 1 or 2)".format(
-                    current_collector_dimension
-                )
-            )
     elif form_factor == "cylindrical":
         if current_collector_dimension == 0:
             geometry["current collector"] = {"r_macro": {"position": 1}}

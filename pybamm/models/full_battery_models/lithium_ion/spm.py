@@ -8,19 +8,8 @@ from .base_lithium_ion_model import BaseModel
 class SPM(BaseModel):
     """
     Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
+    See :class:`pybamm.lithium_ion.BaseModel` for more details.
 
-    Parameters
-    ----------
-    options : dict, optional
-        A dictionary of options to be passed to the model. For a detailed list of
-        options see :class:`~pybamm.BatteryModelOptions`.
-    name : str, optional
-        The name of the model.
-    build :  bool, optional
-        Whether to build the model on instantiation. Default is True. Setting this
-        option to False allows users to change any number of the submodels before
-        building the complete model (submodels cannot be changed after the model is
-        built).
     Examples
     --------
     >>> import pybamm
@@ -71,7 +60,6 @@ class SPM(BaseModel):
             pybamm.citations.register("BrosaPlanella2022")
 
     def set_intercalation_kinetics_submodel(self):
-
         for domain in ["negative", "positive"]:
             electrode_type = self.options.electrode_types[domain]
             if electrode_type == "planar":
@@ -139,7 +127,6 @@ class SPM(BaseModel):
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)
 
     def set_electrolyte_potential_submodel(self):
-
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if self.options["electrolyte conductivity"] not in ["default", "leading order"]:

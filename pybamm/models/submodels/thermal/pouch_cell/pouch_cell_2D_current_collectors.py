@@ -36,7 +36,6 @@ class CurrentCollector2D(BaseThermal):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-
         T_x_av = pybamm.Variable(
             "X-averaged cell temperature", domain="current collector"
         )
@@ -115,8 +114,8 @@ class CurrentCollector2D(BaseThermal):
             / self.param.delta
         )
 
-        T_av_n = pybamm.BoundaryValue(T_av, "negative tab")
-        T_av_p = pybamm.BoundaryValue(T_av, "positive tab")
+        T_av_n = pybamm.boundary_value(T_av, "negative tab")
+        T_av_p = pybamm.boundary_value(T_av, "positive tab")
 
         self.boundary_conditions = {
             T_av: {

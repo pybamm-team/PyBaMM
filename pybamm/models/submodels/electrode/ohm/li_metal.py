@@ -122,7 +122,7 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
 
     Parameters
     ----------
-    param : parameteslackr class
+    param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.

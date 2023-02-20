@@ -48,7 +48,6 @@ class ReactionDrivenODE(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
             domain_param = self.param.domain_params[domain.split()[0]]

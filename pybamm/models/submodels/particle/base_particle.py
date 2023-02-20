@@ -26,7 +26,8 @@ class BaseParticle(pybamm.BaseSubModel):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
         # Read from options to see if we have a particle size distribution
-        self.size_distribution = self.options["particle size"] == "distribution"
+        domain_options = getattr(self.options, domain)
+        self.size_distribution = domain_options["particle size"] == "distribution"
 
     def _get_effective_diffusivity(self, c, T):
         param = self.param
@@ -139,7 +140,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables.update(
             {
-                f"{Domain} electrode {phase_name}SOC": c_s_vol_av,
+                f"{Domain} electrode {phase_name}stoichiometry": c_s_vol_av,
                 f"{Domain} electrode {phase_name}volume-averaged "
                 "concentration": c_s_vol_av,
                 f"{Domain} electrode {phase_name}volume-averaged "

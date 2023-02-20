@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: 3.8
       - name: Install tox and asv
-        run: pip install -U pip tox asv
+        run: pip install -U pip "tox<4" asv
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"

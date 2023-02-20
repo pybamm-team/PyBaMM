@@ -7,6 +7,7 @@ import numpy as np
 import copy
 import warnings
 import sys
+from functools import lru_cache
 
 
 def is_notebook():
@@ -69,6 +70,7 @@ class Simulation:
         C_rate=None,
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
+        self._unprocessed_parameter_values = self.parameter_values
 
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
             if experiment is not None:
@@ -114,6 +116,7 @@ class Simulation:
         self._built_model = None
         self._built_initial_soc = None
         self.op_conds_to_built_models = None
+        self.op_conds_to_built_solvers = None
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -140,6 +143,7 @@ class Simulation:
         # Update experiment using parameters such as timescale and capacity
         timescale = self._parameter_values.evaluate(model.timescale)
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
+
         for op_conds in experiment.operating_conditions:
             op_type = op_conds["type"]
             if op_conds["dc_data"] is not None:
@@ -208,7 +212,7 @@ class Simulation:
         """
         self.op_type_to_model = {}
         self.op_string_to_model = {}
-        for op in self.experiment.operating_conditions:
+        for op_number, op in enumerate(self.experiment.operating_conditions):
             # Create model for this operating condition type (current/voltage/power)
             # if it has not already been seen before
             if op["type"] not in self.op_type_to_model:
@@ -255,7 +259,12 @@ class Simulation:
                 self.update_new_model_events(new_model, op)
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
-                experiment_parameter_values = self.get_experiment_parameter_values(op)
+                self._original_temperature = new_parameter_values[
+                    "Ambient temperature [K]"
+                ]
+                experiment_parameter_values = self.get_experiment_parameter_values(
+                    op, op_number
+                )
                 new_parameter_values.update(
                     experiment_parameter_values, check_already_exists=False
                 )
@@ -339,7 +348,7 @@ class Simulation:
                     event.name, event.expression + 1, event.event_type
                 )
 
-    def get_experiment_parameter_values(self, op):
+    def get_experiment_parameter_values(self, op, op_number):
         experiment_parameter_values = {}
         if op["type"] == "current":
             experiment_parameter_values.update(
@@ -357,6 +366,26 @@ class Simulation:
             experiment_parameter_values.update(
                 {"Power function [W]": op["Power input [W]"]}
             )
+
+        if op["temperature"] is not None:
+            ambient_temperature = op["temperature"] + 273.15
+            experiment_parameter_values.update(
+                {"Ambient temperature [K]": ambient_temperature}
+            )
+
+            # If at the first operation, then the intial temperature
+            # should be the ambient temperature.
+            if op_number == 0:
+                experiment_parameter_values.update(
+                    {
+                        "Initial temperature [K]": ambient_temperature,
+                    }
+                )
+        else:
+            experiment_parameter_values.update(
+                {"Ambient temperature [K]": self._original_temperature}
+            )
+
         return experiment_parameter_values
 
     def set_parameters(self):
@@ -383,28 +412,16 @@ class Simulation:
             self._model_with_set_params = None
             self._built_model = None
             self.op_conds_to_built_models = None
+            self.op_conds_to_built_solvers = None
 
-        c_n_init = self.parameter_values[
-            "Initial concentration in negative electrode [mol.m-3]"
-        ]
-        c_p_init = self.parameter_values[
-            "Initial concentration in positive electrode [mol.m-3]"
-        ]
-        param = pybamm.LithiumIonParameters()
-        c_n_max = self.parameter_values.evaluate(param.n.prim.c_max)
-        c_p_max = self.parameter_values.evaluate(param.p.prim.c_max)
-        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_soc, self.parameter_values
-        )
-        self.parameter_values.update(
-            {
-                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
-                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
-            }
+        param = self.model.param
+        self.parameter_values = (
+            self._unprocessed_parameter_values.set_initial_stoichiometries(
+                initial_soc, param=param, inplace=False
+            )
         )
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
-        return c_n_init, c_p_init
 
     def build(self, check_model=True, initial_soc=None):
         """
@@ -439,11 +456,13 @@ class Simulation:
             self._built_model = self._disc.process_model(
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
+            # rebuilt model so clear solver setup
+            self._solver._model_set_up = {}
 
     def build_for_experiment(self, check_model=True, initial_soc=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
-        experiment, where there may be several models to build
+        experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
             self.set_initial_soc(initial_soc)
@@ -461,12 +480,15 @@ class Simulation:
             self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
             # Process all the different models
             self.op_conds_to_built_models = {}
+            self.op_conds_to_built_solvers = {}
             for op_cond, model_with_set_params in self.op_string_to_model.items():
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
                     model_with_set_params, inplace=True, check_model=check_model
                 )
+                solver = self.solver.copy()
+                self.op_conds_to_built_solvers[op_cond] = solver
                 self.op_conds_to_built_models[op_cond] = built_model
 
     def solve(
@@ -548,13 +570,9 @@ class Simulation:
                 raise ValueError(
                     "starting_solution can only be provided if simulating an Experiment"
                 )
-            if self.operating_mode == "without experiment" or isinstance(
-                self.model,
-                (
-                    pybamm.lithium_ion.ElectrodeSOH,
-                    pybamm.lithium_ion.ElectrodeSOHx0,
-                    pybamm.lithium_ion.ElectrodeSOHx0,
-                ),
+            if (
+                self.operating_mode == "without experiment"
+                or self.model.name == "ElectrodeSOH model"
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -707,6 +725,7 @@ class Simulation:
                     dt = op_conds["time"]
                     op_conds_str = op_conds["string"]
                     model = self.op_conds_to_built_models[op_conds_str]
+                    solver = self.op_conds_to_built_solvers[op_conds_str]
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = op_conds_str
@@ -889,21 +908,19 @@ class Simulation:
 
         return self.solution
 
+    @lru_cache
     def get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
             or isinstance(self.model, pybamm.lead_acid.BaseModel)
+            or isinstance(self.model, pybamm.equivalent_circuit.Thevenin)
             or self.model.options["working electrode"] != "both"
         ):
             return None
 
-        try:
-            return self._esoh_solver
-        except AttributeError:
-            self._esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-                self.parameter_values, self.model.param
-            )
-            return self._esoh_solver
+        return pybamm.lithium_ion.ElectrodeSOHSolver(
+            self.parameter_values, self.model.param
+        )
 
     def plot(self, output_variables=None, **kwargs):
         """

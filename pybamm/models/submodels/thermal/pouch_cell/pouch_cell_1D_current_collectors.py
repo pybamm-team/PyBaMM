@@ -36,7 +36,6 @@ class CurrentCollector1D(BaseThermal):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-
         T_x_av = pybamm.Variable(
             "X-averaged cell temperature", domain="current collector"
         )

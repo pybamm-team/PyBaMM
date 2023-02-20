@@ -6,6 +6,7 @@
 *.DS_Store
 *.mat
 *.csv
+*.hidden
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -13,6 +14,7 @@
 !CMakeLists.txt
 !pybamm/CITATIONS.txt
 !pybamm/input/**/*.csv
+!tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png
 
 # running files
@@ -59,9 +61,6 @@ dist/
 .coverage
 coverage.xml
 htmlcov/
-
-# black setup file seems to make Travis CI fail
-pyproject.toml
 
 # virtual enviroment
 env/

@@ -128,7 +128,7 @@
       "login": "dalonsoa",
       "name": "Diego",
       "avatar_url": "https://avatars1.githubusercontent.com/u/6095790?v=4",
-      "profile": "https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/research-software-engineering/",
+      "profile": "https://github.com/dalonsoa",
       "contributions": [
         "bug",
         "review",
@@ -528,7 +528,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/74401230?v=4",
       "profile": "https://github.com/agriyakhetarpal",
       "contributions": [
-        "infra"
+        "infra",
+        "code",
+        "doc"
       ]
     },
     {
@@ -539,6 +541,44 @@
       "contributions": [
         "code",
         "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "iatzak",
+      "name": "iatzak",
+      "avatar_url": "https://avatars.githubusercontent.com/u/112731474?v=4",
+      "profile": "https://github.com/iatzak",
+      "contributions": [
+        "doc",
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "ayeankit",
+      "name": "Ankit Kumar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/72691866?v=4",
+      "profile": "https://github.com/ayeankit",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "dikwickley",
+      "name": "Aniket Singh Rawat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/31622972?v=4",
+      "profile": "https://aniketsinghrawat.vercel.app/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "jeromtom",
+      "name": "Jerom Palimattom Tom",
+      "avatar_url": "https://avatars.githubusercontent.com/u/83979298?v=4",
+      "profile": "https://github.com/jeromtom",
+      "contributions": [
         "doc"
       ]
     }

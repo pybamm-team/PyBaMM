@@ -63,9 +63,8 @@ Once you are comfortable with the expression tree structure, a good starting poi
 
 #### Lead-acid models
 
-- [Full porous-electrode](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/full.html)
-- [Leading-Order Quasi-Static](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/loqs.html)
-- [Higher-Order](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/higher_order.html)
+- [Full porous-electrode](https://pybamm.readthedocs.io/en/latest/source/api/models/lead_acid/full.html)
+- [Leading-Order Quasi-Static](https://pybamm.readthedocs.io/en/latest/source/api/models/lead_acid/loqs.html)
 
 ### Spatial Methods
 

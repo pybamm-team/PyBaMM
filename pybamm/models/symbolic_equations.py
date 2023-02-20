@@ -24,10 +24,6 @@ class _SymbolicEquations(pybamm._BaseEquations):
             boundary_conditions={},
             variables=pybamm.FuzzyDict({}),
             events=[],
-            external_variables=[],
-            # Default timescale is 1 second
-            timescale=pybamm.Scalar(1),
-            length_scales={},
         )
 
     @pybamm._BaseEquations.rhs.setter
@@ -70,24 +66,7 @@ class _SymbolicEquations(pybamm._BaseEquations):
     def events(self, events):
         self._events = events
 
-    @pybamm._BaseEquations.external_variables.setter
-    def external_variables(self, external_variables):
-        self._external_variables = external_variables
-
-    @pybamm._BaseEquations.timescale.setter
-    def timescale(self, value):
-        """Set the timescale"""
-        self._timescale = value
-
-    @pybamm._BaseEquations.length_scales.setter
-    def length_scales(self, values):
-        "Set the length scale, converting any numbers to pybamm.Scalar"
-        for domain, scale in values.items():
-            if isinstance(scale, numbers.Number):
-                values[domain] = pybamm.Scalar(scale)
-        self._length_scales = values
-
-    def build_fundamental_and_external(self, model):
+    def build_fundamental(self, model):
         # Get the fundamental variables
         for submodel_name, submodel in model.submodels.items():
             pybamm.logger.debug(
@@ -101,19 +80,7 @@ class _SymbolicEquations(pybamm._BaseEquations):
         for sub in model.options["external submodels"]:
             model.submodels[sub].external = True
 
-        # Set any external variables
-        self.external_variables = []
-        for submodel_name, submodel in model.submodels.items():
-            pybamm.logger.debug(
-                "Getting external variables for {} submodel ({})".format(
-                    submodel_name, model.name
-                )
-            )
-            external_variables = submodel.get_external_variables()
-
-            self.external_variables += external_variables
-
-        self._built_fundamental_and_external = True
+        self._built_fundamental = True
 
     def build_coupled_variables(self, model):
         # Note: pybamm will try to get the coupled variables for the submodels in the

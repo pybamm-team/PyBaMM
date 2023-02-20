@@ -54,7 +54,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
         extra_options=None,
     ):
         if scikits_odes_spec is None:
@@ -118,7 +118,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
                 )
 
         def rootfn(t, y, ydot, return_root):
-            return_root[:] = [event(t, y, inputs) for event in events]
+            return_root[:] = [float(event(t, y, inputs)) for event in events]
 
         extra_options = {
             **self.extra_options,

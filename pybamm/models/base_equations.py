@@ -45,9 +45,6 @@ class _BaseEquations:
         boundary_conditions,
         variables,
         events,
-        external_variables,
-        timescale,
-        length_scales,
     ):
         # Initialise model with read-only attributes
         self._rhs = rhs
@@ -56,9 +53,6 @@ class _BaseEquations:
         self._boundary_conditions = boundary_conditions
         self._variables = variables
         self._events = events
-        self._external_variables = external_variables
-        self._timescale = timescale
-        self._length_scales = length_scales
 
         self._input_parameters = None
 
@@ -98,10 +92,6 @@ class _BaseEquations:
         return self._events
 
     @property
-    def external_variables(self):
-        return self._external_variables
-
-    @property
     def timescale(self):
         """Timescale of model, to be used for non-dimensionalising time when solving"""
         return self._timescale
@@ -123,7 +113,6 @@ class _BaseEquations:
         new_equations._boundary_conditions = self.boundary_conditions.copy()
         new_equations._variables = self.variables.copy()
         new_equations._events = self.events.copy()
-        new_equations._external_variables = self.external_variables.copy()
         return new_equations
 
     def check_well_posedness(self, post_discretisation=False):
@@ -243,13 +232,6 @@ class _BaseEquations:
         all_vars_in_keys = all_vars_in_rhs_keys.union(all_vars_in_algebraic_keys)
         extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
 
-        # get external variables
-        external_vars = set(self.external_variables)
-        for var in self.external_variables:
-            if isinstance(var, pybamm.Concatenation):
-                child_vars = set(var.children)
-                external_vars = external_vars.union(child_vars)
-
         extra_variables = extra_variables_in_equations.difference(external_vars)
 
         if extra_variables:
@@ -288,13 +270,9 @@ class _BaseEquations:
 
         vars_in_keys = set()
 
-        model_and_external_variables = (
-            list(self.rhs.keys())
-            + list(self.algebraic.keys())
-            + self.external_variables
-        )
+        model_variables = list(self.rhs.keys()) + list(self.algebraic.keys())
 
-        for var in model_and_external_variables:
+        for var in model_variables:
             if isinstance(var, pybamm.Variable):
                 vars_in_keys.add(var)
             # Key can be a concatenation
@@ -306,7 +284,7 @@ class _BaseEquations:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
-                    model.rhs, model.algebraic, or model.external_variables in an
+                    model.rhs, model.algebraic in an
                     unmodified form (e.g. not Broadcasted)
                     """.format(
                         var
@@ -399,9 +377,6 @@ class _BaseProcessedEquations(_BaseEquations):
         boundary_conditions,
         unprocessed_variables,
         events,
-        external_variables,
-        timescale,
-        length_scales,
     ):
         super().__init__(
             # Initialise model with read-only attributes
@@ -415,9 +390,6 @@ class _BaseProcessedEquations(_BaseEquations):
                 unprocessed_variables, self.variables_update_function
             ),
             events=events,
-            external_variables=external_variables,
-            timescale=timescale,
-            length_scales=length_scales,
         )
 
     @_BaseEquations.rhs.setter

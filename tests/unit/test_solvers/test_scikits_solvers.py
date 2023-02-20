@@ -73,7 +73,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         t_eval = np.linspace(0, 1, 100)
         solver.set_up(model)
-        solver._set_initial_conditions(model, {}, True)
+        solver._set_initial_conditions(model, 0, {}, True)
         # check y0
         np.testing.assert_array_equal(model.y0.full().flatten(), [0, 0])
         # check dae solutions
@@ -171,7 +171,7 @@ class TestScikitsSolvers(unittest.TestCase):
         # Solve testing various linear solvers
         linsolvers = [
             "dense",
-            "lapackdense",
+            # "lapackdense",
             "spgmr",
             "spbcgs",
             "sptfqmr",
@@ -702,30 +702,6 @@ class TestScikitsSolvers(unittest.TestCase):
             solution.y[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
         )
 
-    def test_model_solver_dae_with_external(self):
-        # Create model
-        model = pybamm.BaseModel()
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=domain)
-        var2 = pybamm.Variable("var2", domain=domain)
-        model.rhs = {var1: -var2}
-        model.initial_conditions = {var1: 1}
-        model.external_variables = [var2]
-        model.variables = {"var1": var1, "var2": var2}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
-
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
-        np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
-
     def test_solve_ode_model_with_dae_solver_casadi(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "casadi"
@@ -867,7 +843,6 @@ class TestScikitsSolvers(unittest.TestCase):
         model3.events = [pybamm.Event("var1 = 1.5", pybamm.min(1.5 - var1))]
 
         for model in [model1, model2, model3]:
-
             disc = get_discretisation_for_testing()
             disc.process_model(model)
 

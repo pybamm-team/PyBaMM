@@ -83,8 +83,9 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     References
     ----------
     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
-    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. # noqa
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES # noqa
+    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+    Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES
 
     Parameters
     ----------
@@ -498,10 +499,22 @@ def electrolyte_conductivity_Ai2020(c_e, T):
 
 # Load data in the appropriate format
 path, _ = os.path.split(os.path.abspath(__file__))
-graphite_ocp_Enertech_Ai2020 = pybamm.parameters.process_1D_data(
+graphite_ocp_Enertech_Ai2020_data = pybamm.parameters.process_1D_data(
     "graphite_ocp_Enertech_Ai2020.csv", path=path
 )
-lico2_ocp_Ai2020 = pybamm.parameters.process_1D_data("lico2_ocp_Ai2020.csv", path=path)
+lico2_ocp_Ai2020_data = pybamm.parameters.process_1D_data(
+    "lico2_ocp_Ai2020.csv", path=path
+)
+
+
+def graphite_ocp_Enertech_Ai2020(sto):
+    name, (x, y) = graphite_ocp_Enertech_Ai2020_data
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="cubic")
+
+
+def lico2_ocp_Ai2020(sto):
+    name, (x, y) = lico2_ocp_Ai2020_data
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="cubic")
 
 
 # Call dict via a function to avoid errors when editing in place
@@ -595,6 +608,7 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 2.28,
         "Typical current [A]": 2.28,
         "Current function [A]": 2.28,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,

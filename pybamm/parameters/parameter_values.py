@@ -66,7 +66,7 @@ class ParameterValues:
         # Then update with values dictionary or file
         if values is not None:
             if isinstance(values, dict):
-                if "chemistry" in values:
+                if "negative electrode" in values:
                     warnings.warn(
                         "Creating a parameter set from a dictionary of components has "
                         "been deprecated and will be removed in a future release. "
@@ -92,7 +92,6 @@ class ParameterValues:
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
-        self.parameter_events = []
 
         # save citations
         citations = []
@@ -102,6 +101,39 @@ class ParameterValues:
             citations = self._dict_items["citations"]
         for citation in citations:
             pybamm.citations.register(citation)
+
+    @staticmethod
+    def create_from_bpx(filename, target_soc=1):
+        """
+        Parameters
+        ----------
+        filename: str
+            The filename of the bpx file
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        if target_soc < 0 or target_soc > 1:
+            raise ValueError("Target SOC should be between 0 and 1")
+
+        from bpx import parse_bpx_file, get_electrode_concentrations
+        from .bpx import _bpx_to_param_dict
+
+        # parse bpx
+        bpx = parse_bpx_file(filename)
+        pybamm_dict = _bpx_to_param_dict(bpx)
+
+        # get initial concentrations based on SOC
+        c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
+        pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
+        pybamm_dict["Initial concentration in positive electrode [mol.m-3]"] = c_p_init
+
+        return pybamm.ParameterValues(pybamm_dict)
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -331,6 +363,35 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_stoichiometries(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+    ):
+        """
+        Set the initial stoichiometry of each electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters()
+        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+            initial_value, self, param=param, known_value=known_value
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+        c_n_max = self.evaluate(param.n.prim.c_max)
+        c_p_max = self.evaluate(param.p.prim.c_max)
+        parameter_values.update(
+            {
+                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
+                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        return parameter_values
+
     def check_parameter_values(self, values):
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
@@ -414,28 +475,18 @@ class ParameterValues:
                 )
             )
 
-        # Set external variables
-        new_external_variables = [
-            self.process_symbol(var) for var in unprocessed_model.external_variables
-        ]
-
-        # Process timescale
-        new_timescale = self.process_symbol(unprocessed_model.timescale)
-        if not isinstance(new_timescale, pybamm.Scalar):
-            raise ValueError(
-                "model.timescale must be a Scalar after parameter processing "
-                "(cannot contain 'InputParameter's). "
-                "You have probably set one of the parameters used to calculate the "
-                "timescale to an InputParameter. To avoid this error, hardcode "
-                "model.timescale to a constant value by passing the option "
-                "{'timescale': value} to the model."
+        interpolant_events = self._get_interpolant_events(model)
+        for event in interpolant_events:
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
+            )
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
             )
 
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in unprocessed_model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            new_length_scales[domain] = new_scale
+        model.events = new_events
 
         parameterised_equations = pybamm._ParameterisedEquations(
             self,
@@ -445,9 +496,6 @@ class ParameterValues:
             new_boundary_conditions,
             unprocessed_model.variables,
             new_events,
-            new_external_variables,
-            new_timescale,
-            new_length_scales,
         )
 
         # inplace vs not inplace
@@ -461,6 +509,33 @@ class ParameterValues:
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model
+
+    def _get_interpolant_events(self, model):
+        """Add events for functions that have been defined as parameters"""
+        # Define events to catch extrapolation. In these events the sign is
+        # important: it should be positive inside of the range and negative
+        # outside of it
+        interpolants = model._find_symbols(pybamm.Interpolant)
+        interpolant_events = []
+        for interpolant in interpolants:
+            xs = interpolant.x
+            children = interpolant.children
+            for x, child in zip(xs, children):
+                interpolant_events.extend(
+                    [
+                        pybamm.Event(
+                            f"Interpolant '{interpolant.name}' lower bound",
+                            pybamm.min(child - min(x)),
+                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                        ),
+                        pybamm.Event(
+                            f"Interpolant '{interpolant.name}' upper bound",
+                            pybamm.min(max(x) - child),
+                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                        ),
+                    ]
+                )
+        return interpolant_events
 
     def process_boundary_conditions(self, model):
         """
@@ -559,7 +634,7 @@ class ParameterValues:
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(value):
                     raise ValueError(f"Parameter '{symbol.name}' not found")
-                # Scalar inherits name (for updating parameters)
+                # Scalar inherits name
                 return pybamm.Scalar(value, name=symbol.name)
             elif isinstance(value, pybamm.Symbol):
                 new_value = self.process_symbol(value)
@@ -569,18 +644,29 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = []
-            for child in symbol.children:
-                if symbol.diff_variable is not None and any(
-                    x == symbol.diff_variable for x in child.pre_order()
-                ):
-                    # Wrap with NotConstant to avoid simplification,
-                    # which would stop symbolic diff from working properly
-                    new_child = pybamm.NotConstant(child)
-                    new_children.append(self.process_symbol(new_child))
-                else:
-                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
+            if isinstance(
+                function_name,
+                (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
+            ) or (
+                isinstance(function_name, pybamm.Symbol)
+                and function_name.size_for_testing == 1
+            ):
+                # no need to process children, they will only be used for shape
+                new_children = symbol.children
+            else:
+                # process children
+                new_children = []
+                for child in symbol.children:
+                    if symbol.diff_variable is not None and any(
+                        x == symbol.diff_variable for x in child.pre_order()
+                    ):
+                        # Wrap with NotConstant to avoid simplification,
+                        # which would stop symbolic diff from working properly
+                        new_child = pybamm.NotConstant(child)
+                        new_children.append(self.process_symbol(new_child))
+                    else:
+                        new_children.append(self.process_symbol(child))
 
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
@@ -600,31 +686,8 @@ class ParameterValues:
                         input_data[0],
                         input_data[-1],
                         new_children,
-                        interpolator="cubic",
                         name=name,
                     )
-                    # Define event to catch extrapolation. In these events the sign is
-                    # important: it should be positive inside of the range and negative
-                    # outside of it
-                    for data_index in range(len(data[0])):
-                        self.parameter_events.append(
-                            pybamm.Event(
-                                "Interpolant {} lower bound".format(name),
-                                pybamm.min(
-                                    new_children[data_index] - min(data[0][data_index])
-                                ),
-                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                            )
-                        )
-                        self.parameter_events.append(
-                            pybamm.Event(
-                                "Interpolant {} upper bound".format(name),
-                                pybamm.min(
-                                    max(data[0][data_index]) - new_children[data_index]
-                                ),
-                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                            )
-                        )
 
                 else:  # pragma: no cover
                     raise ValueError(
@@ -737,7 +800,6 @@ class ParameterValues:
         return list(self._dict_items.keys())
 
     def export_csv(self, filename):
-
         # process functions and data to output
         # like they appear in inputs csv files
         parameter_output = {}

@@ -14,7 +14,6 @@ _EQUATION_ATTRIBUTES = [
     "initial_conditions",
     "boundary_conditions",
     "variables",
-    "external_variables",
     "events",
     "len_rhs",
     "len_alg",
@@ -62,7 +61,7 @@ class BaseModel:
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self._options = {"external submodels": []}
+        self._options = {}
 
         # Initialise empty model
         self.submodels = {}
@@ -213,8 +212,8 @@ class BaseModel:
 
         pybamm.logger.info("Start building {}".format(self.name))
 
-        if self._equations._built_fundamental_and_external is False:
-            self._equations.build_fundamental_and_external(self)
+        if self._equations._built_fundamental is False:
+            self._equations.build_fundamental(self)
 
         self._equations.build_coupled_variables(self)
 
@@ -251,7 +250,7 @@ class BaseModel:
                         "To update a model from a solution, each variable in "
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
-                        f"{e.args[0]}"
+                        f"'{e.args[0]}' was not found."
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
@@ -377,8 +376,10 @@ class BaseModel:
         variable_names : list
             Variables to be exported alongside the model structure
         input_parameter_order : list, optional
-            Order in which the input parameters should be stacked. If None, the order
-            returned by :meth:`BaseModel.input_parameters` is used
+            Order in which the input parameters should be stacked.
+            If input_parameter_order=None and len(self.input_parameters) > 1, a
+            ValueError is raised (this helps to avoid accidentally using the wrong
+            order)
 
         Returns
         -------
@@ -399,21 +400,18 @@ class BaseModel:
         for input_param in self.input_parameters:
             name = input_param.name
             inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
-        # Read external variables
-        external_casadi = {}
-        for external_varaiable in self.external_variables:
-            name = external_varaiable.name
-            ev_size = external_varaiable._evaluate_for_shape().shape[0]
-            external_casadi[name] = casadi.MX.sym(name, ev_size)
         # Sort according to input_parameter_order
         if input_parameter_order is None:
+            if len(inputs_wrong_order) > 1:
+                raise ValueError(
+                    "input_parameter_order must be specified if there is more than one "
+                    "input parameter"
+                )
             inputs = inputs_wrong_order
         else:
             inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
-        # Set up external variables and inputs
-        # Put external variables first like the integrator expects
-        ext_and_in = {**external_casadi, **inputs}
-        inputs_stacked = casadi.vertcat(*[p for p in ext_and_in.values()])
+        # Set up inputs
+        inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
         # Convert initial conditions to casadi form
         y0 = self.concatenated_initial_conditions.to_casadi(
@@ -423,7 +421,7 @@ class BaseModel:
         z0 = y0[self.concatenated_rhs.size :]
 
         # Convert rhs and algebraic to casadi form and calculate jacobians
-        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=inputs)
         jac_rhs = casadi.jacobian(rhs, y_casadi)
         algebraic = self.concatenated_algebraic.to_casadi(
             t_casadi, y_casadi, inputs=inputs
@@ -434,7 +432,7 @@ class BaseModel:
         variables = {}
         for name in variable_names:
             var = self.variables[name]
-            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
 
         casadi_dict = {
             "t": t_casadi,
@@ -465,8 +463,10 @@ class BaseModel:
         variable_names : list
             Variables to be exported alongside the model structure
         input_parameter_order : list, optional
-            Order in which the input parameters should be stacked. If None, the order
-            returned by :meth:`BaseModel.input_parameters` is used
+            Order in which the input parameters should be stacked.
+            If input_parameter_order=None and len(self.input_parameters) > 1, a
+            ValueError is raised (this helps to avoid accidentally using the wrong
+            order)
         cg_options : dict
             Options to pass to the code generator.
             See https://web.casadi.org/docs/#generating-c-code

@@ -58,6 +58,13 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
+            if key in ["Negative electrode SOC", "Positive electrode SOC"]:
+                domain = key.split(" ")[0]
+                raise KeyError(
+                    f"Variable '{domain} electrode SOC' has been renamed to "
+                    f"'{domain} electrode stoichiometry' to avoid confusion "
+                    "with cell SOC"
+                )
             best_matches = self.get_best_matches(key)
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
@@ -259,7 +266,7 @@ def load_function(filename, funcname=None):
         root_path = filename.replace(os.getcwd(), "")
     # If the function is not in the current working directory and the path provided is
     # absolute
-    elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
+    elif os.path.isabs(filename) and os.getcwd() not in filename:  # pragma: no cover
         # Change directory to import the function
         dir_path = os.path.split(filename)[0]
         os.chdir(dir_path)

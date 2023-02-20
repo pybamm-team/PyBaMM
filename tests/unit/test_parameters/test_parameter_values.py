@@ -18,6 +18,7 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
     lico2_diffusivity_Dualfoil1998,
 )
+import casadi
 
 
 class TestParameterValues(unittest.TestCase):
@@ -130,6 +131,24 @@ class TestParameterValues(unittest.TestCase):
         # with parameter not existing yet
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
+
+    def test_set_initial_stoichiometries(self):
+        param = pybamm.ParameterValues("Chen2020")
+        param.set_initial_stoichiometries(0.4)
+        param_0 = param.set_initial_stoichiometries(0, inplace=False)
+        param_100 = param.set_initial_stoichiometries(1, inplace=False)
+
+        # check that the stoichiometry of param is linearly interpolated between
+        # the min and max stoichiometries
+        x = param["Initial concentration in negative electrode [mol.m-3]"]
+        x_0 = param_0["Initial concentration in negative electrode [mol.m-3]"]
+        x_100 = param_100["Initial concentration in negative electrode [mol.m-3]"]
+        self.assertAlmostEqual(x, x_0 + 0.4 * (x_100 - x_0))
+
+        y = param["Initial concentration in positive electrode [mol.m-3]"]
+        y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
+        y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
+        self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
 
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
@@ -343,7 +362,10 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 369)
 
         # process constant function
-        const = pybamm.FunctionParameter("const", {"a": a})
+        # this should work even if the parameter in the function is not provided
+        const = pybamm.FunctionParameter(
+            "const", {"a": pybamm.Parameter("not provided")}
+        )
         processed_const = parameter_values.process_symbol(const)
         self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
@@ -461,26 +483,20 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_func, pybamm.Interpolant)
         self.assertEqual(processed_func.evaluate(inputs={"a": 3.01}), 6.02)
 
-        # process differentiated function parameter
-        diff_func = func.diff(a)
-        processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3.01}), 2)
-
         # interpolant defined up front
-        interp2 = pybamm.Interpolant(data[:, 0], data[:, 1], a)
-        processed_interp2 = parameter_values.process_symbol(interp2)
-        self.assertEqual(processed_interp2.evaluate(inputs={"a": 3.01}), 6.02)
+        interp = pybamm.Interpolant(data[:, 0], data[:, 1], a, interpolator="cubic")
+        processed_interp = parameter_values.process_symbol(interp)
+        self.assertEqual(processed_interp.evaluate(inputs={"a": 3.01}), 6.02)
 
-        data3 = np.hstack([x, 3 * x])
-        interp3 = pybamm.Interpolant(data3[:, 0], data3[:, 1], a)
-        processed_interp3 = parameter_values.process_symbol(interp3)
-        self.assertEqual(processed_interp3.evaluate(inputs={"a": 3.01}), 9.03)
+        # process differentiated function parameter
+        diff_interp = interp.diff(a)
+        processed_diff_interp = parameter_values.process_symbol(diff_interp)
+        self.assertEqual(processed_diff_interp.evaluate(inputs={"a": 3.01}), 2)
 
     def test_process_interpolant_2d(self):
-
         x_ = [np.linspace(0, 10), np.linspace(0, 20)]
 
-        X = list(np.meshgrid(*x_))
+        X = list(np.meshgrid(*x_, indexing="ij"))
 
         x = np.column_stack([el.reshape(-1, 1) for el in X])
 
@@ -571,15 +587,6 @@ class TestParameterValues(unittest.TestCase):
             processed_func.evaluate(), processed_interp.evaluate(), decimal=3
         )
 
-        # process differentiated function parameter
-        diff_func = func.diff(a)
-        diff_interp = interp.diff(a)
-        processed_diff_func = parameter_values.process_symbol(diff_func)
-        processed_diff_interp = parameter_values.process_symbol(diff_interp)
-        np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
-        )
-
     def test_interpolant_2d_from_json(self):
         parameter_values = pybamm.ParameterValues(
             {"function": lico2_diffusivity_Dualfoil1998}
@@ -603,6 +610,93 @@ class TestParameterValues(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             processed_func.evaluate(), processed_interp.evaluate(), decimal=4
         )
+
+    def test_process_interpolant_3D_from_csv(self):
+        name = "data_for_testing_3D"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+
+        processed = pybamm.parameters.process_3D_data_csv(name, path)
+        parameter_values = pybamm.ParameterValues({"interpolation": processed})
+
+        x1 = pybamm.StateVector(slice(0, 1))
+        x2 = pybamm.StateVector(slice(1, 2))
+        x3 = pybamm.StateVector(slice(2, 3))
+        interpolation = pybamm.FunctionParameter(
+            "interpolation", {"x1": x1, "x2": x2, "x3": x3}
+        )
+
+        processed_interpolation = parameter_values.process_symbol(interpolation)
+
+        filename, name = pybamm.parameters.process_parameter_data._process_name(
+            name, path, ".csv"
+        )
+        raw_df = pd.read_csv(filename)
+
+        # It's also helpful to check the casadi conversion here aswell
+        # We check elsewhere but this helps catch additional bugs
+        casadi_y = casadi.MX.sym("y", 3)
+        interp_casadi = processed_interpolation.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        # check that passing the input columns give the correct output
+        for values in raw_df.values:
+            y = np.array([values[0], values[1], values[2]])
+            f = values[3]
+            casadi_sol = casadi_f(y)
+
+            np.testing.assert_almost_equal(
+                processed_interpolation.evaluate(y=y)[0][0],
+                f,
+                decimal=10,
+            )
+
+            np.testing.assert_almost_equal(
+                f,
+                casadi_sol.__float__(),
+                decimal=10,
+            )
+
+    def test_process_interpolant_2D_from_csv(self):
+        name = "data_for_testing_2D"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+
+        processed = pybamm.parameters.process_2D_data_csv(name, path)
+        parameter_values = pybamm.ParameterValues({"interpolation": processed})
+
+        x1 = pybamm.StateVector(slice(0, 1))
+        x2 = pybamm.StateVector(slice(1, 2))
+        interpolation = pybamm.FunctionParameter("interpolation", {"x1": x1, "x2": x2})
+        processed_interpolation = parameter_values.process_symbol(interpolation)
+
+        # It's also helpful to check the casadi conversion here aswell
+        # We check elsewhere but this helps catch additional bugs
+        casadi_y = casadi.MX.sym("y", 2)
+        interp_casadi = processed_interpolation.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        filename, name = pybamm.parameters.process_parameter_data._process_name(
+            name, path, ".csv"
+        )
+        raw_df = pd.read_csv(filename)
+
+        # check that passing the input columns give the correct output
+        for values in raw_df.values:
+            y = np.array([values[0], values[1]])
+            f = values[2]
+
+            casadi_sol = casadi_f(y)
+
+            np.testing.assert_almost_equal(
+                processed_interpolation.evaluate(y=y)[0][0],
+                f,
+                decimal=10,
+            )
+
+            np.testing.assert_almost_equal(
+                f,
+                casadi_sol.__float__(),
+                decimal=10,
+            )
 
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast gets processed correctly

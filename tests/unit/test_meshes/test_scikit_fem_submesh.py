@@ -25,7 +25,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         param.process_geometry(geometry)
 
@@ -68,7 +68,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         with self.assertRaises(KeyError):
             pybamm.Mesh(geometry, submesh_types, {})
@@ -135,7 +135,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
         # check error raised if tab not on boundary
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         param.process_geometry(geometry)
         with self.assertRaises(pybamm.GeometryError):
@@ -171,7 +171,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
         # check mesh can be built
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         param.process_geometry(geometry)
         pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -196,7 +196,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         param.process_geometry(geometry)
 
@@ -232,7 +232,6 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
-
         # only one lim
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
@@ -274,7 +273,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         param.process_geometry(geometry)
 
@@ -312,7 +311,6 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
-
         # only one lim
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
@@ -358,7 +356,7 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, current_collector_dimension=2
+            include_particles=False, options={"dimensionality": 2}
         )
         param.process_geometry(geometry)
 

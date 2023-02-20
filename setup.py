@@ -200,6 +200,7 @@ setup(
         "jupyter",  # For example notebooks
         "pybtex>=0.24.0",
         "sympy>=1.8",
+        "bpx",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -207,9 +208,15 @@ setup(
         "matplotlib>=2.0",
     ],
     extras_require={
-        "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation
+        "docs": [
+            "sphinx>=1.5",
+            "pydata-sphinx-theme",
+            "sphinx_design",
+            "sphinx-copybutton",
+            "myst-parser",
+        ],  # For doc generation
         "dev": [
-            "flake8>=3",  # For code style checking
+            "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
         ],
     },
@@ -235,6 +242,7 @@ setup(
             "Prada2013 = pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values",  # noqa: E501
             "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
             "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
+            "ECM_Example = pybamm.input.parameters.ecm.example_set:get_parameter_values",  # noqa: E501
         ],
     },
 )

@@ -48,7 +48,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         method="cvode",
         rtol=1e-6,
         atol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
         extra_options=None,
     ):
         if scikits_odes_spec is None:  # pragma: no cover
@@ -103,7 +103,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
                 return_ydot[:] = derivs(t, y, inputs).flatten()
 
         def rootfn(t, y, return_root):
-            return_root[:] = [event(t, y, inputs) for event in events]
+            return_root[:] = [float(event(t, y, inputs)) for event in events]
 
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0, inputs)

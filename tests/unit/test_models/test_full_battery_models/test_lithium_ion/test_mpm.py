@@ -55,11 +55,22 @@ class TestMPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
+    def test_differential_surface_form(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
+    def test_current_sigmoid(self):
+        options = {"open circuit potential": "current sigmoid"}
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
     def test_necessary_options(self):
         options = {"particle size": "single"}
         with self.assertRaises(pybamm.OptionError):
             pybamm.lithium_ion.MPM(options)
-        options = {"surface form": "none"}
+
+        options = {"surface form": "false"}
         with self.assertRaises(pybamm.OptionError):
             pybamm.lithium_ion.MPM(options)
 

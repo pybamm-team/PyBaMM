@@ -78,7 +78,7 @@ def get_1p1d_mesh_for_testing(
     zpts=15,
     cc_submesh=pybamm.Uniform1DSubMesh,
 ):
-    geometry = pybamm.battery_geometry(current_collector_dimension=1)
+    geometry = pybamm.battery_geometry(options={"dimensionality": 1})
     return get_mesh_for_testing(
         xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )
@@ -532,7 +532,6 @@ class TestSpectralVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(div_eval, 6 * np.ones([sec_pts, prim_pts]))
 
     def test_grad_div_shapes_mixed_domain(self):
-
         # Create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.SpectralVolume()}

@@ -122,13 +122,13 @@ class Function(pybamm.Symbol):
                 )
 
     def _function_jac(self, children_jacs):
-        """Calculate the jacobian of a function."""
+        """Calculate the Jacobian of a function."""
 
         if all(child.evaluates_to_constant_number() for child in self.children):
             jacobian = pybamm.Scalar(0)
         else:
             # if at least one child contains variable dependence, then
-            # calculate the required partial jacobians and add them
+            # calculate the required partial Jacobians and add them
             jacobian = None
             children = self.orphans
             for i, child in enumerate(children):

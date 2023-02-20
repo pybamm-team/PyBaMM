@@ -308,9 +308,14 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 
 # Load data in the appropriate format
 path, _ = os.path.split(os.path.abspath(__file__))
-graphite_ocp_Enertech_Ai2020 = pybamm.parameters.process_1D_data(
+graphite_ocp_Enertech_Ai2020_data = pybamm.parameters.process_1D_data(
     "graphite_ocp_Enertech_Ai2020.csv", path=path
 )
+
+
+def graphite_ocp_Enertech_Ai2020(sto):
+    name, (x, y) = graphite_ocp_Enertech_Ai2020_data
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="cubic")
 
 
 # Call dict via a function to avoid errors when editing in place
@@ -390,6 +395,7 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 5.0,
         "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Primary: Maximum concentration in negative electrode [mol.m-3]": 28700.0,
@@ -400,7 +406,7 @@ def get_parameter_values():
         "Primary: Negative electrode active material volume fraction": 0.735,
         "Primary: Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Negative electrode Bruggeman coefficient (electrode)": 1.5,
+        "Negative electrode Bruggeman coefficient (electrode)": 0,
         "Negative electrode cation signed stoichiometry": -1.0,
         "Primary: Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
@@ -434,7 +440,7 @@ def get_parameter_values():
         "Positive electrode active material volume fraction": 0.665,
         "Positive particle radius [m]": 5.22e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Positive electrode Bruggeman coefficient (electrode)": 1.5,
+        "Positive electrode Bruggeman coefficient (electrode)": 0,
         "Positive electrode cation signed stoichiometry": -1.0,
         "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,

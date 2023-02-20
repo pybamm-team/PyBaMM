@@ -21,7 +21,6 @@ class SpatialMethod:
     """
 
     def __init__(self, options=None):
-
         self.options = {"extrapolation": {"order": "linear", "use bcs": False}}
 
         # update double-layered dict
@@ -187,7 +186,7 @@ class SpatialMethod:
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
-        Implements the laplacian for a spatial method.
+        Implements the Laplacian for a spatial method.
 
         Parameters
         ----------
@@ -202,7 +201,7 @@ class SpatialMethod:
         Returns
         -------
         :class: `pybamm.Array`
-            Contains the result of acting the discretised laplacian on
+            Contains the result of acting the discretised Laplacian on
             the child discretised_symbol
         """
         raise NotImplementedError
@@ -313,7 +312,7 @@ class SpatialMethod:
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
         """
-        A method to find the internal neumann conditions between two symbols
+        A method to find the internal Neumann conditions between two symbols
         on adjacent subdomains.
 
         Parameters
@@ -329,9 +328,6 @@ class SpatialMethod:
         """
 
         raise NotImplementedError
-
-    def preprocess_external_variables(self, var):
-        return {}
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """

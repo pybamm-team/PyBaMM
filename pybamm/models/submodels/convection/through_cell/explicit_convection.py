@@ -21,7 +21,6 @@ class Explicit(BaseThroughCellModel):
         super().__init__(param)
 
     def get_coupled_variables(self, variables):
-
         # Set up
         param = self.param
         p_s = variables["X-averaged separator pressure"]

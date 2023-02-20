@@ -31,6 +31,9 @@ class TestBaseParameters(unittest.TestCase):
         with self.assertRaisesRegex(AttributeError, "has no attribute 'c_s_test"):
             getattr(pybamm.electrical_parameters, "c_s_test")
 
+        self.assertEqual(param.n.cap_init, param.n.Q_init)
+        self.assertEqual(param.p.prim.cap_init, param.p.prim.Q_init)
+
     def test__setattr__(self):
         param = pybamm.ElectricalParameters()
         self.assertEqual(param.I_typ.print_name, r"I{}^{typ}")

@@ -267,6 +267,11 @@ nca_ocp_Kim2011_data = pybamm.parameters.process_1D_data(
 )
 
 
+def nca_ocp_Kim2011(sto):
+    name, (x, y) = nca_ocp_Kim2011_data
+    return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
+
+
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -364,6 +369,7 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 0.43,
         "Typical current [A]": 0.43,
         "Current function [A]": 0.43,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
@@ -388,7 +394,7 @@ def get_parameter_values():
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49000.0,
         "Positive electrode diffusivity [m2.s-1]": nca_diffusivity_Kim2011,
-        "Positive electrode OCP [V]": nca_ocp_Kim2011_data,
+        "Positive electrode OCP [V]": nca_ocp_Kim2011,
         "Positive electrode porosity": 0.4,
         "Positive electrode active material volume fraction": 0.41,
         "Positive particle radius [m]": 1.633e-06,

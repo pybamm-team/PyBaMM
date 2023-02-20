@@ -55,12 +55,12 @@ class JaxSolver(pybamm.BaseSolver):
         root_method=None,
         rtol=1e-6,
         atol=1e-6,
-        extrap_tol=0,
+        extrap_tol=None,
         extra_options=None,
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
 
         # note: bdf solver itself calculates consistent initial conditions so can set
@@ -98,7 +98,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         """
         if model not in self._cached_solves:
-            if model not in self.models_set_up:
+            if model not in self._model_set_up:
                 raise RuntimeError(
                     "Model is not set up for solving, run" "`solver.solve(model)` first"
                 )
