@@ -437,7 +437,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             # for some reason the Newman-Tobias model has a larger error
             # this seems to be linked to using constant concentration but not sure why
             decimal = 12
-        elif self.model.options["particle phases"] == "2":
+        elif self.model.options["particle phases"] != "1":
             decimal = 13
         else:
             decimal = 14
