@@ -6,6 +6,7 @@ import numbers
 import numpy as np
 import pybamm
 import scipy.interpolate as interp
+from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import cumulative_trapezoid
 
 
@@ -627,11 +628,10 @@ class Interpolant2D:
     def __init__(
         self, first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
     ):
-        self.interpolant = interp.interp2d(
-            second_dim_pts_for_interp,
-            first_dim_pts_for_interp,
+        self.interpolant = interp.RegularGridInterpolator(
+            (first_dim_pts_for_interp, second_dim_pts_for_interp),
             entries_for_interp[:, :, 0],
-            kind="linear",
+            method="linear",
             fill_value=np.nan,
             bounds_error=False,
         )
@@ -645,15 +645,15 @@ class Interpolant2D:
         if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
             first_dim = first_dim[:, 0, 0]
             second_dim = second_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)
+            return self.interpolant((first_dim, second_dim))
         elif isinstance(first_dim, np.ndarray):
             first_dim = first_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)[:, 0]
+            return self.interpolant((first_dim, second_dim))[:, 0]
         elif isinstance(second_dim, np.ndarray):
             second_dim = second_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)
+            return self.interpolant((first_dim, second_dim))
         else:
-            return self.interpolant(second_dim, first_dim)[0]
+            return self.interpolant((first_dim, second_dim))
 
 
 def eval_dimension_name(name, x, r, y, z, R):
