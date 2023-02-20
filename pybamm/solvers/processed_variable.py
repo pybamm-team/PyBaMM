@@ -227,11 +227,11 @@ class ProcessedVariable(object):
         else:
             # function of space and time. Note that the order of 't' and 'space'
             # is the reverse of what you'd expect
-            self._interpolation_function = interp.interp2d(
-                self.t_pts,
-                pts_for_interp,
-                entries_for_interp,
-                kind="linear",
+            self._interpolation_function = interp.RegularGridInterpolator(
+                (self.t_pts,
+                pts_for_interp),
+                entries_for_interp.T,
+                method="linear",
                 fill_value=np.nan,
                 bounds_error=False,
             )
@@ -627,11 +627,10 @@ class Interpolant2D:
     def __init__(
         self, first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
     ):
-        self.interpolant = interp.interp2d(
-            second_dim_pts_for_interp,
-            first_dim_pts_for_interp,
-            entries_for_interp[:, :, 0],
-            kind="linear",
+        self.interpolant = interp.RegularGridInterpolator(
+            (second_dim_pts_for_interp,first_dim_pts_for_interp),
+            entries_for_interp[:, :, 0].T,
+            method="linear",
             fill_value=np.nan,
             bounds_error=False,
         )
