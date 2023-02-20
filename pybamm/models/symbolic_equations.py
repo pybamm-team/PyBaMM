@@ -14,7 +14,7 @@ class _SymbolicEquations(pybamm._BaseEquations):
 
     def __init__(self):
         self._built = False
-        self._built_fundamental_and_external = False
+        self._built_fundamental = False
 
         # Initialise empty model
         super().__init__(
@@ -75,10 +75,6 @@ class _SymbolicEquations(pybamm._BaseEquations):
                 )
             )
             self.variables.update(submodel.get_fundamental_variables())
-
-        # Set the submodels that are external
-        for sub in model.options["external submodels"]:
-            model.submodels[sub].external = True
 
         self._built_fundamental = True
 
