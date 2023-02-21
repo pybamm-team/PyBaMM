@@ -8,14 +8,14 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.SPMe({"particle": "quartic profile", "thermal": "lumped"})
+model = pybamm.lithium_ion.SPMe()
 model.convert_to_format = "python"
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
-param = pybamm.ParameterValues("Chen2020")
+param = model.default_parameter_values
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -42,7 +42,6 @@ plot = pybamm.QuickPlot(
         "Electrolyte potential [V]",
         "Positive electrode potential [V]",
         "Terminal voltage [V]",
-        "X-averaged cell temperature [K]",
     ],
     time_unit="seconds",
     spatial_unit="um",

@@ -182,7 +182,7 @@ class LOQS(BaseModel):
             surf_model = surf_form.LeadingOrderAlgebraic
 
         for domain in ["negative", "positive"]:
-            self.submodels[f"{domain} surface potential difference [V]"] = surf_model(
+            self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, self.options
             )
 

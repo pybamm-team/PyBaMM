@@ -89,7 +89,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
 
         # Current density
-        i_cell = param.current_with_time
+        i_cell = param.current_density_with_time
 
         # Define particle surface concentration
         # Surf takes the surface value of a variable, i.e. its boundary value on the
@@ -195,6 +195,7 @@ class BasicDFNHalfCell(BaseModel):
                 "Neumann",
             ),
         }
+        # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_s_w] = param.L_x**2 * (pybamm.div(i_s_w) + a_j_w)
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
@@ -230,6 +231,7 @@ class BasicDFNHalfCell(BaseModel):
         i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
+        # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_e] = param.L_x**2 * (pybamm.div(i_e) - a_j)
 
         # reference potential

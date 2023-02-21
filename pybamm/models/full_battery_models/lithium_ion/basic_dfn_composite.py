@@ -170,25 +170,25 @@ class BasicDFNComposite(BaseModel):
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
-        RT_F = param.R * T / param.F
+        F_RT = param.F / (param.R * T)
         j0_n_p1 = param.n.prim.j0(c_e_n, c_s_surf_n_p1, T)
         j_n_p1 = (
             2
             * j0_n_p1
-            * pybamm.sinh(param.n.prim.ne / 2 * RT_F * (phi_s_n - phi_e_n - ocp_n_p1))
+            * pybamm.sinh(param.n.prim.ne / 2 * F_RT * (phi_s_n - phi_e_n - ocp_n_p1))
         )
         j0_n_p2 = param.n.sec.j0(c_e_n, c_s_surf_n_p2, T)
         j_n_p2 = (
             2
             * j0_n_p2
-            * pybamm.sinh(param.n.sec.ne / 2 * RT_F * (phi_s_n - phi_e_n - ocp_n_p2))
+            * pybamm.sinh(param.n.sec.ne / 2 * F_RT * (phi_s_n - phi_e_n - ocp_n_p2))
         )
         j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
         a_j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
             * j0_p
-            * pybamm.sinh(param.p.prim.ne / 2 * RT_F * (phi_s_p - phi_e_p - ocp_p))
+            * pybamm.sinh(param.p.prim.ne / 2 * F_RT * (phi_s_p - phi_e_p - ocp_p))
         )
 
         # Volumetric
@@ -221,7 +221,7 @@ class BasicDFNComposite(BaseModel):
         N_s_n_p2 = -param.n.sec.D(c_s_n_p2, T) * pybamm.grad(c_s_n_p2)
         N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n_p1] = -pybamm.div(N_s_n_p1)
-        self.rhs[c_s_n_p2] = pybamm.div(N_s_n_p2)
+        self.rhs[c_s_n_p2] = -pybamm.div(N_s_n_p2)
         self.rhs[c_s_p] = -pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n_p1] = {
@@ -276,8 +276,9 @@ class BasicDFNComposite(BaseModel):
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
-        self.algebraic[phi_s_n] = pybamm.div(i_s_n) + a_j_n
-        self.algebraic[phi_s_p] = pybamm.div(i_s_p) + a_j_p
+        # multiply by Lx**2 to improve conditioning
+        self.algebraic[phi_s_n] = param.L_x**2 * (pybamm.div(i_s_n) + a_j_n)
+        self.algebraic[phi_s_p] = param.L_x**2 * (pybamm.div(i_s_p) + a_j_p)
         self.boundary_conditions[phi_s_n] = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -298,9 +299,10 @@ class BasicDFNComposite(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor) * (
-            RT_F * param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
-        self.algebraic[phi_e] = pybamm.div(i_e) - a_j
+        # multiply by Lx**2 to improve conditioning
+        self.algebraic[phi_e] = param.L_x**2 * (pybamm.div(i_e) - a_j)
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -319,11 +321,6 @@ class BasicDFNComposite(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events.append(
-            pybamm.Event(
-                "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
-            )
-        )
 
         ######################
         # (Some) variables

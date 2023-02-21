@@ -289,9 +289,6 @@ class DomainLithiumIonParameters(BaseParameters):
 
             self.Q_init = sum(phase.Q_init for phase in self.phase_params.values())
             # Use primary phase to set the reference potential
-            # self.U_ref = self.prim.U(self.prim.c_init_av, main.T_ref)
-        # else:
-        #     self.U_ref = pybamm.Scalar(0)
 
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phase_params.values())
         self.Q_Li_init = sum(phase.Q_Li_init for phase in self.phase_params.values())
@@ -522,8 +519,12 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
     def D(self, c_s, T):
-        """Dimensional diffusivity in particle. Note this is defined as a
-        function of stochiometry"""
+        """
+        Dimensional diffusivity in particle. In the parameter sets this is defined as
+        a function of stoichiometry (dimensionless), but in the models we use it as a
+        function of concentration (mol/m3). We convert from concentration to
+        stoichiometry by dividing by the maximum concentration.
+        """
         Domain = self.domain.capitalize()
         sto = c_s / self.c_max
         tol = pybamm.settings.tolerances["D__c_s"]

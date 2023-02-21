@@ -109,8 +109,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     options[key] = value
         self._options = options
 
-        # if idaklu_spec is None:  # pragma: no cover
-        #     raise ImportError("KLU is not installed")
+        if idaklu_spec is None:  # pragma: no cover
+            raise ImportError("KLU is not installed")
 
         super().__init__(
             "ida",
