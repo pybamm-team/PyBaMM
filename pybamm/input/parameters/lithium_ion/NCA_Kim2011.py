@@ -8,10 +8,8 @@ def graphite_diffusivity_Kim2011(sto, T):
 
     References
     ----------
-    .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
-    (2011). Multi-domain modeling of lithium-ion batteries encompassing
-    multi-physics in varied length scales. Journal of The Electrochemical
-    Society, 158(8), A955-A969.
+    :cite:t:`2011:Kim`
+    .. bibliography::
 
     Parameters
     ----------

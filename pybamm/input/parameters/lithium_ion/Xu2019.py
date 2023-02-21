@@ -8,10 +8,8 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
 
     References
     ----------
-    .. [1] Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
-    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
-    Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
-    Electrochemical Society 166.14 (2019): A3456-A3463.
+    :cite:t:`2019:Xu`
+    .. bibliography::
 
     Parameters
     ----------

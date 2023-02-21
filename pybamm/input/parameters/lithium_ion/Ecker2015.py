@@ -7,15 +7,12 @@ def graphite_diffusivity_Ecker2015(sto, T):
 
     References
     ----------
-     .. [1] Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of
-    a lithium-ion battery i. determination of parameters." Journal of the
-    Electrochemical Society 162.9 (2015): A1836-A1848.
-    .. [2] Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of
-    a lithium-ion battery ii. model validation." Journal of The Electrochemical
-    Society 162.9 (2015): A1849-A1857.
-    .. [3] Richardson, Giles, et. al. "Generalised single particle models for
-    high-rate operation of graded lithium-ion electrodes: Systematic derivation
-    and validation." Electrochemica Acta 339 (2020): 135862
+    :cite:t:`2015:Ecker-i`
+    .. bibliography::
+    :cite:t:`2015:Ecker-ii`
+    .. bibliography::
+    :cite:t:`2020:Richardson`
+    .. bibliography::
 
     Parameters
     ----------
