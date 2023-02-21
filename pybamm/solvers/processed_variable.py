@@ -645,15 +645,15 @@ class Interpolant2D:
         if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
             first_dim = first_dim[:, 0, 0]
             second_dim = second_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)
+            return self.interpolant((second_dim, first_dim))
         elif isinstance(first_dim, np.ndarray):
             first_dim = first_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)[:, 0]
+            return self.interpolant((second_dim, first_dim))[:, 0]
         elif isinstance(second_dim, np.ndarray):
             second_dim = second_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)
+            return self.interpolant((second_dim, first_dim))
         else:
-            return self.interpolant(second_dim, first_dim)[0]
+            return self.interpolant((second_dim, first_dim))[0]
 
 
 def eval_dimension_name(name, x, r, y, z, R):
