@@ -270,9 +270,8 @@ class BaseModel(BaseInterface):
             else:
                 L_sei = variables[f"single layer {reaction_name}thickness"]
 
-                n_SEI = L_sei  # SEI concentration
+                n_SEI = L_sei  # single layer SEI concentration
 
-                n_SEI_av = pybamm.x_average(n_SEI)
                 n_SEI_xav = pybamm.x_average(n_SEI)
                 n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
