@@ -3,8 +3,6 @@ import pybamm
 
 class EcmParameters:
     def __init__(self):
-        self.timescale = pybamm.Scalar(1)
-
         self.cell_capacity = pybamm.Parameter("Cell capacity [A.h]")
 
         self._set_current_parameters()
@@ -14,8 +12,8 @@ class EcmParameters:
         self._set_compatibility_parameters()
 
     def _set_current_parameters(self):
-        self.dimensional_current_with_time = pybamm.FunctionParameter(
-            "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
+        self.current_with_time = pybamm.FunctionParameter(
+            "Current function [A]", {"Time [s]": pybamm.t}
         )
 
     def _set_voltage_parameters(self):
@@ -33,9 +31,7 @@ class EcmParameters:
         # These are parameters that for compatibility with
         # external circuits submodels
         self.Q = self.cell_capacity
-        self.current_with_time = self.dimensional_current_with_time
-        self.dimensional_current_density_with_time = self.dimensional_current_with_time
-        self.I_typ = pybamm.Scalar(1)
+        self.current_density_with_time = self.current_with_time
         self.n_electrodes_parallel = pybamm.Scalar(1)
         self.A_cc = pybamm.Scalar(1)
         self.n_cells = pybamm.Scalar(1)

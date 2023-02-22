@@ -32,6 +32,5 @@ Positive current collector thermal conductivity [W.m-1.K-1],237,CRC Handbook,alu
 ,,,
 # Electrical,,,
 Nominal cell capacity [A.h], 2.28,Ai 2020,2.28/34
-Typical current [A], 2.28,Ai 2020,
 Current function [A], 2.28,default current function,
 Contact resistance [Ohm], 0,,

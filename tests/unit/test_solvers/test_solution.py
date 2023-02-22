@@ -189,7 +189,7 @@ class TestSolution(unittest.TestCase):
 
         self.assertIsInstance(sol.cycles[1], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1 - 1 :])
-        np.testing.assert_array_equal(sol.cycles[1].y, sol.y[:, len_cycle_1 - 1 :])
+        np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1 - 1 :])
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
@@ -237,7 +237,6 @@ class TestSolution(unittest.TestCase):
 
     def test_save(self):
         model = pybamm.BaseModel()
-        model.length_scales = {"negative electrode": pybamm.Scalar(1)}
         # create both 1D and 2D variables
         c = pybamm.Variable("c")
         d = pybamm.Variable("d", domain="negative electrode")

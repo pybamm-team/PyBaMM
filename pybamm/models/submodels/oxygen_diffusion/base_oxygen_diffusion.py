@@ -31,26 +31,20 @@ class BaseModel(pybamm.BaseSubModel):
             oxygen.
         """
 
-        c_ox_typ = self.param.c_ox_typ
         c_ox = pybamm.concatenation(c_ox_n, c_ox_s, c_ox_p)
         c_ox_av = pybamm.x_average(c_ox)
 
         variables = {
-            "Oxygen concentration": c_ox,
-            "Oxygen concentration [mol.m-3]": c_ox_typ * c_ox,
-            "Oxygen concentration [Molar]": c_ox_typ * c_ox / 1000,
-            "X-averaged oxygen concentration": c_ox_av,
-            "X-averaged oxygen concentration [mol.m-3]": c_ox_typ * c_ox_av,
-            "X-averaged oxygen concentration [Molar]": c_ox_typ * c_ox_av / 1000,
-            "Negative oxygen concentration": c_ox_n,
-            "Negative oxygen concentration [mol.m-3]": c_ox_typ * c_ox_n,
-            "Negative oxygen concentration [Molar]": c_ox_typ * c_ox_n / 1000,
-            "Separator oxygen concentration": c_ox_s,
-            "Separator oxygen concentration [mol.m-3]": c_ox_typ * c_ox_s,
-            "Separator oxygen concentration [Molar]": c_ox_typ * c_ox_s / 1000,
-            "Positive oxygen concentration": c_ox_p,
-            "Positive oxygen concentration [mol.m-3]": c_ox_typ * c_ox_p,
-            "Positive oxygen concentration [Molar]": c_ox_typ * c_ox_p / 1000,
+            "Oxygen concentration [mol.m-3]": c_ox,
+            "Oxygen concentration [Molar]": c_ox / 1000,
+            "X-averaged oxygen concentration [mol.m-3]": c_ox_av,
+            "X-averaged oxygen concentration [Molar]": c_ox_av / 1000,
+            "Negative oxygen concentration [mol.m-3]": c_ox_n,
+            "Negative oxygen concentration [Molar]": c_ox_n / 1000,
+            "Separator oxygen concentration [mol.m-3]": c_ox_s,
+            "Separator oxygen concentration [Molar]": c_ox_s / 1000,
+            "Positive oxygen concentration [mol.m-3]": c_ox_p,
+            "Positive oxygen concentration [Molar]": c_ox_p / 1000,
         }
 
         return variables
@@ -70,13 +64,5 @@ class BaseModel(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the flux of oxygen.
         """
-
-        param = self.param
-        flux_scale = param.curlyD_ox * param.c_ox_typ / param.L_x
-
-        variables = {
-            "Oxygen flux": N_ox,
-            "Oxygen flux [mol.m-2.s-1]": N_ox * flux_scale,
-        }
-
+        variables = {"Oxygen flux [mol.m-2.s-1]": N_ox}
         return variables

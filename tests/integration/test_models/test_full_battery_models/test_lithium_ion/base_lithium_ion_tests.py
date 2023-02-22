@@ -15,9 +15,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_basic_processing(self):
         options = {}
-        # use Ecker parameters for nonlinear diffusion
-        param = pybamm.ParameterValues("Ecker2015")
-        self.run_basic_processing_test(options, parameter_values=param)
+        self.run_basic_processing_test(options)
 
     def test_sensitivities(self):
         model = self.model()

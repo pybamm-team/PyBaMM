@@ -46,7 +46,6 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_domain_concentration_variables(self, c_e_dict):
-        c_e_typ = self.param.c_e_typ
         variables = {}
         # Case where an electrode is not included (half-cell)
         if "negative electrode" not in self.options.whole_cell_domains:
@@ -59,48 +58,39 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             c_e_k_av = pybamm.x_average(c_e_k)
             variables.update(
                 {
-                    f"{Domain} electrolyte concentration": c_e_k,
-                    f"X-averaged {domain} electrolyte concentration": c_e_k_av,
+                    f"{Domain} electrolyte concentration [mol.m-3]": c_e_k,
+                    f"X-averaged {domain} electrolyte "
+                    "concentration [mol.m-3]": c_e_k_av,
                 }
             )
 
-        # Calculate dimensional variables
-        variables_nondim = variables.copy()
-        for name, var in variables_nondim.items():
-            variables.update(
-                {
-                    f"{name} [mol.m-3]": c_e_typ * var,
-                    f"{name} [Molar]": c_e_typ * var / 1000,
-                }
-            )
+        # Calculate dimensionless and molar variables
+        variables_dim = variables.copy()
+        for name, var in variables_dim.items():
+            name = name.replace("[mol.m-3]", "[Molar]")
+            variables[name] = var / 1000
 
         return variables
 
     def _get_standard_whole_cell_concentration_variables(self, c_e):
-        c_e_typ = self.param.c_e_typ
-
         variables = {
-            "Electrolyte concentration": c_e,
-            "X-averaged electrolyte concentration": pybamm.x_average(c_e),
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "X-averaged electrolyte concentration [mol.m-3]": pybamm.x_average(c_e),
         }
         variables_nondim = variables.copy()
         for name, var in variables_nondim.items():
-            variables.update(
-                {
-                    f"{name} [mol.m-3]": c_e_typ * var,
-                    f"{name} [Molar]": c_e_typ * var / 1000,
-                }
-            )
+            name = name.replace("[mol.m-3]", "[Molar]")
+            variables[name] = var / 1000
 
         return variables
 
     def _get_standard_porosity_times_concentration_variables(self, eps_c_e_dict):
         eps_c_e = pybamm.concatenation(*eps_c_e_dict.values())
-        variables = {"Porosity times concentration": eps_c_e}
+        variables = {"Porosity times concentration [mol.m-3]": eps_c_e}
 
         for domain, eps_c_e_k in eps_c_e_dict.items():
             Domain = domain.capitalize()
-            variables[f"{Domain} porosity times concentration"] = eps_c_e_k
+            variables[f"{Domain} porosity times concentration [mol.m-3]"] = eps_c_e_k
 
         # Total lithium concentration in electrolyte
         variables.update(self._get_total_concentration_electrolyte(eps_c_e))
@@ -123,15 +113,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             The variables which can be derived from the flux in the
             electrolyte.
         """
-
-        param = self.param
-        flux_scale = param.D_e_typ * param.c_e_typ / param.L_x
-
-        variables = {
-            "Electrolyte flux": N_e,
-            "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
-        }
-
+        variables = {"Electrolyte flux [mol.m-2.s-1]": N_e}
         return variables
 
     def _get_total_concentration_electrolyte(self, eps_c_e):
@@ -146,16 +128,11 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables : dict
             The "Total lithium in electrolyte [mol]" variable.
         """
-
-        c_e_typ = self.param.c_e_typ
         L_x = self.param.L_x
         A = self.param.A_cc
 
         eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
 
-        variables = {
-            "Total lithium in electrolyte": eps_c_e_av,
-            "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av,
-        }
+        variables = {"Total lithium in electrolyte [mol]": L_x * A * eps_c_e_av}
 
         return variables

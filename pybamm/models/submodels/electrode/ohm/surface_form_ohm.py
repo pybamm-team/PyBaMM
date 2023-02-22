@@ -31,11 +31,11 @@ class SurfaceForm(BaseModel):
 
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
-        i_boundary_cc = variables["Current collector current density"]
-        i_e = variables[f"{Domain} electrolyte current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        i_e = variables[f"{Domain} electrolyte current density [A.m-2]"]
         tor = variables[f"{Domain} electrode transport efficiency"]
-        phi_s_cn = variables["Negative current collector potential"]
-        T = variables[f"{Domain} electrode temperature"]
+        phi_s_cn = variables["Negative current collector potential [V]"]
+        T = variables[f"{Domain} electrode temperature [K]"]
 
         conductivity = self.domain_param.sigma(T) * tor
         i_s = i_boundary_cc - i_e
@@ -44,8 +44,10 @@ class SurfaceForm(BaseModel):
             phi_s = phi_s_cn - pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
 
         elif self.domain == "positive":
-            phi_e_s = variables["Separator electrolyte potential"]
-            delta_phi_p = variables["Positive electrode surface potential difference"]
+            phi_e_s = variables["Separator electrolyte potential [V]"]
+            delta_phi_p = variables[
+                "Positive electrode surface potential difference [V]"
+            ]
 
             phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_p) + (
                 pybamm.boundary_value(phi_e_s, "right")
@@ -57,8 +59,8 @@ class SurfaceForm(BaseModel):
 
         if (
             self.options.electrode_types["negative"] == "planar"
-            or "Negative electrode current density" in variables
-        ) and "Positive electrode current density" in variables:
+            or "Negative electrode current density [A.m-2]" in variables
+        ) and "Positive electrode current density [A.m-2]" in variables:
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables

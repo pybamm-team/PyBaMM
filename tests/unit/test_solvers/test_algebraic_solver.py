@@ -41,8 +41,6 @@ class TestAlgebraicSolver(unittest.TestCase):
         class Model(pybamm.BaseModel):
             y0 = np.array([2])
             rhs = {}
-            timescale_eval = 1
-            length_scales = {}
             jac_algebraic_eval = None
             len_rhs_and_alg = 1
 
@@ -68,8 +66,6 @@ class TestAlgebraicSolver(unittest.TestCase):
         class Model(pybamm.BaseModel):
             y0 = np.array([2])
             rhs = {}
-            timescale_eval = 1
-            length_scales = {}
             jac_algebraic_eval = None
             len_rhs_and_alg = 1
 
@@ -103,8 +99,6 @@ class TestAlgebraicSolver(unittest.TestCase):
         class Model(pybamm.BaseModel):
             y0 = np.zeros(2)
             rhs = {}
-            timescale_eval = 1
-            length_scales = {}
             len_rhs_and_alg = 2
 
             def __init__(self):

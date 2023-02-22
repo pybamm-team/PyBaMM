@@ -35,14 +35,7 @@ class BaseModel(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             current collector.
         """
-
-        pot_scale = self.param.potential_scale
-
-        variables = {
-            "Negative current collector potential": phi_s_cn,
-            "Negative current collector potential [V]": phi_s_cn * pot_scale,
-        }
-
+        variables = {"Negative current collector potential [V]": phi_s_cn}
         return variables
 
     def _get_standard_current_variables(self, i_cc, i_boundary_cc):
@@ -63,13 +56,8 @@ class BaseModel(pybamm.BaseSubModel):
             The variables which can be derived from the current in the current
             collector.
         """
-        i_typ = self.param.i_typ
-
         # TO DO: implement grad in 2D to get i_cc
         # just need this to get 1D models working for now
-        variables = {
-            "Current collector current density": i_boundary_cc,
-            "Current collector current density [A.m-2]": i_typ * i_boundary_cc,
-        }
+        variables = {"Current collector current density [A.m-2]": i_boundary_cc}
 
         return variables

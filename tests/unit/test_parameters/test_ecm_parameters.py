@@ -36,7 +36,7 @@ class TestEcmParameters(unittest.TestCase):
 
         simpled_mapped_parameters = [
             (param.cell_capacity, "Cell capacity [A.h]"),
-            (param.dimensional_current_with_time, "Current function [A]"),
+            (param.current_with_time, "Current function [A]"),
             (param.voltage_high_cut, "Upper voltage cut-off [V]"),
             (param.voltage_low_cut, "Lower voltage cut-off [V]"),
             (param.cth_cell, "Cell thermal mass [J/K]"),
@@ -44,8 +44,7 @@ class TestEcmParameters(unittest.TestCase):
             (param.cth_jig, "Jig thermal mass [J/K]"),
             (param.k_jig_air, "Jig-air heat transfer coefficient [W/K]"),
             (param.Q, "Cell capacity [A.h]"),
-            (param.current_with_time, "Current function [A]"),
-            (param.dimensional_current_density_with_time, "Current function [A]"),
+            (param.current_density_with_time, "Current function [A]"),
             (param.initial_soc, "Initial SoC"),
         ]
 
@@ -61,7 +60,6 @@ class TestEcmParameters(unittest.TestCase):
         self.assertEqual(value, values["Initial temperature [K]"] - 273.15)
 
         compatibility_parameters = [
-            (param.I_typ, 1),
             (param.n_electrodes_parallel, 1),
             (param.A_cc, 1),
             (param.n_cells, 1),

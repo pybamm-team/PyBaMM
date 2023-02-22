@@ -47,8 +47,7 @@ class CasadiSolver(pybamm.BaseSolver):
         raised. Default is 5.
     dt_max : float, optional
         The maximum global step size (in seconds) used in "safe" mode. If None
-        the default value corresponds to a non-dimensional time of 0.01
-        (i.e. ``0.01 * model.timescale_eval``).
+        the default value is 600 seconds.
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
@@ -104,7 +103,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 "'fast with events' (both experimental)".format(mode)
             )
         self.max_step_decrease_count = max_step_decrease_count
-        self.dt_max = dt_max
+        self.dt_max = dt_max or 600
 
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
@@ -206,13 +205,14 @@ class CasadiSolver(pybamm.BaseSolver):
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
             # by some tolerance, here 1.01) to avoid an empty integration window below
-            if self.dt_max:
-                # Non-dimensionalise provided dt_max
-                dt_max = self.dt_max / model.timescale_eval
-            else:
-                dt_max = 0.01
+            dt_max = self.dt_max
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
-            dt_max = np.max([dt_max, dt_eval_max])
+            if dt_max < dt_eval_max:
+                pybamm.logger.debug(
+                    "Setting dt_max to be as big as the largest step in "
+                    f"t_eval ({dt_eval_max})"
+                )
+                dt_max = dt_eval_max
             termination_due_to_small_dt = False
             first_ts_solved = False
             while t < t_f:
@@ -238,6 +238,10 @@ class CasadiSolver(pybamm.BaseSolver):
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
+                        pybamm.logger.debug(
+                            "Running integrator for "
+                            f"{t_window[0]:.2f} < t < {t_window[-1]:.2f}"
+                        )
                         current_step_sol = self._run_integrator(
                             model,
                             y0,
@@ -250,6 +254,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         first_ts_solved = True
                         solved = True
                     except pybamm.SolverError as error:
+                        pybamm.logger.debug("Failed, halving step size")
                         dt /= 2
                         # also reduce maximum step size for future global steps,
                         # but skip them in the beginning
@@ -259,13 +264,11 @@ class CasadiSolver(pybamm.BaseSolver):
                         if first_ts_solved:
                             dt_max = dt
                         if count >= self.max_step_decrease_count:
-                            t_dim = t * model.timescale_eval
-                            dt_max_dim = dt_max * model.timescale_eval
                             message = (
                                 "Maximum number of decreased steps occurred at "
-                                f"t={t_dim} (final SolverError: '{error}'). "
+                                f"t={t} (final SolverError: '{error}'). "
                                 "For a full solution try reducing dt_max (currently, "
-                                f"dt_max={dt_max_dim}) and/or reducing the size of the "
+                                f"dt_max={dt_max}) and/or reducing the size of the "
                                 "time steps or period of the experiment."
                             )
                             if first_ts_solved and self.return_solution_if_failed_early:

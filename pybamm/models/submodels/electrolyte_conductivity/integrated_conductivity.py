@@ -39,31 +39,38 @@ class Integrated(BaseElectrolyteConductivity):
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
-        c_e_av = variables["X-averaged electrolyte concentration"]
+        param = self.param
+        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
-        i_boundary_cc = variables["Current collector current density"]
-        c_e_n = variables["Negative electrolyte concentration"]
-        c_e_s = variables["Separator electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
+        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
+        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
         c_e_n0 = pybamm.boundary_value(c_e_n, "left")
 
         delta_phi_n_av = variables[
-            "X-averaged negative electrode surface potential difference"
+            "X-averaged negative electrode surface potential difference [V]"
         ]
-        phi_s_n_av = variables["X-averaged negative electrode potential"]
+        phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
 
         tor_n = variables["Negative electrolyte transport efficiency"]
         tor_s = variables["Separator electrolyte transport efficiency"]
         tor_p = variables["Positive electrolyte transport efficiency"]
 
-        T_av = variables["X-averaged cell temperature"]
+        T_av = variables["X-averaged cell temperature [K]"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
+        RT_F_av = param.R * T_av / param.F
+        RT_F_av_n = param.R * T_av_n / param.F
+        RT_F_av_s = param.R * T_av_s / param.F
+        RT_F_av_p = param.R * T_av_p / param.F
+
         param = self.param
-        l_n = param.n.l
-        l_p = param.p.l
+        L_n = param.n.L
+        L_p = param.p.L
+        L_x = param.L_x
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
@@ -76,36 +83,24 @@ class Integrated(BaseElectrolyteConductivity):
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
 
         # electrolyte current
-        i_e_n = i_boundary_cc * x_n / l_n
+        i_e_n = i_boundary_cc * x_n / L_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
-        i_e_p = i_boundary_cc * (1 - x_p) / l_p
+        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
-        i_e_n_edge = i_boundary_cc * x_n_edge / l_n
+        i_e_n_edge = i_boundary_cc * x_n_edge / L_n
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
-        i_e_p_edge = i_boundary_cc * (1 - x_p_edge) / l_p
+        i_e_p_edge = i_boundary_cc * (L_x - x_p_edge) / L_p
 
         # electrolyte potential
-        indef_integral_n = (
-            pybamm.IndefiniteIntegral(
-                i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
-            )
-            * param.C_e
-            / param.gamma_e
+        indef_integral_n = pybamm.IndefiniteIntegral(
+            i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
         )
-        indef_integral_s = (
-            pybamm.IndefiniteIntegral(
-                i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
-            )
-            * param.C_e
-            / param.gamma_e
+        indef_integral_s = pybamm.IndefiniteIntegral(
+            i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
         )
-        indef_integral_p = (
-            pybamm.IndefiniteIntegral(
-                i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
-            )
-            * param.C_e
-            / param.gamma_e
+        indef_integral_p = pybamm.IndefiniteIntegral(
+            i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
         )
 
         integral_n = indef_integral_n
@@ -117,7 +112,7 @@ class Integrated(BaseElectrolyteConductivity):
             + phi_s_n_av
             - (
                 chi_av
-                * (1 + param.Theta * T_av)
+                * RT_F_av
                 * pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_n0))
             )
             + pybamm.x_average(integral_n)
@@ -127,7 +122,7 @@ class Integrated(BaseElectrolyteConductivity):
             phi_e_const
             + (
                 chi_av_n
-                * (1 + param.Theta * T_av_n)
+                * RT_F_av_n
                 * self._higher_order_macinnes_function(c_e_n / c_e_n0)
             )
             - integral_n
@@ -137,7 +132,7 @@ class Integrated(BaseElectrolyteConductivity):
             phi_e_const
             + (
                 chi_av_s
-                * (1 + param.Theta * T_av_s)
+                * RT_F_av_s
                 * self._higher_order_macinnes_function(c_e_s / c_e_n0)
             )
             - integral_s
@@ -147,7 +142,7 @@ class Integrated(BaseElectrolyteConductivity):
             phi_e_const
             + (
                 chi_av_p
-                * (1 + param.Theta * T_av_p)
+                * RT_F_av_p
                 * self._higher_order_macinnes_function(c_e_p / c_e_n0)
             )
             - integral_p
@@ -156,7 +151,7 @@ class Integrated(BaseElectrolyteConductivity):
         # concentration overpotential
         eta_c_av = (
             chi_av
-            * (1 + param.Theta * T_av)
+            * RT_F_av
             * (
                 pybamm.x_average(self._higher_order_macinnes_function(c_e_p / c_e_av))
                 - pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_av))
