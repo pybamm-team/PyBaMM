@@ -128,8 +128,8 @@ class BaseModel(BaseInterface):
             L_inner = L_sei
             L_outer = L_sei
             variables = {
-                f"Single layer SEI {self.reaction_name}thickness": L_sei,
-                f"Single layer SEI {self.reaction_name}thickness [m]": L_sei * L_scale,
+                f"Single layer {self.reaction_name}thickness": L_sei,
+                f"Single layer {self.reaction_name}thickness [m]": L_sei * L_scale,
             }
 
             if self.reaction_loc != "interface":
@@ -268,7 +268,7 @@ class BaseModel(BaseInterface):
                 delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
             else:
-                L_sei = variables[f"single layer{reaction_name}thickness"]
+                L_sei = variables[f"single layer {reaction_name}thickness"]
 
                 n_SEI = L_sei  # SEI concentration
 
@@ -336,7 +336,7 @@ class BaseModel(BaseInterface):
                 )
                 delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
             else:
-                L_sei_cr = variables[f"Single layer SEI{reaction_name}thickness"]
+                L_sei_cr = variables[f"Single layer {reaction_name}thickness"]
                 roughness = variables[f"{Domain} electrode roughness ratio"]
 
                 n_SEI_cr = L_sei_cr * (roughness - 1)  # SEI on cracks concentration
