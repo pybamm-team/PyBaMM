@@ -272,6 +272,10 @@ class BaseModel(BaseInterface):
 
                 n_SEI = L_sei  # SEI concentration
 
+                n_SEI_av = pybamm.x_average(n_SEI)
+                n_SEI_xav = pybamm.x_average(n_SEI)
+                n_SEI_av = pybamm.yz_average(n_SEI_xav)
+
                 # Calculate change in SEI concentration with respect to initial state
                 delta_n_SEI = n_SEI_av - (L_sei_0)
 
