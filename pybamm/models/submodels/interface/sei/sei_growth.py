@@ -54,12 +54,12 @@ class SEIGrowth(BaseModel):
             L.print_name = f"L_{pos}"
             Ls.append(L)
 
-        L_inner, L_outer = Ls
+        L_inner, L_outer, L_sei = Ls
 
         if self.options["SEI"].startswith("ec reaction limited"):
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
-        variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        variables = self._get_standard_thickness_variables(L_inner, L_outer, L_sei)
 
         return variables
 
