@@ -90,71 +90,38 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
-        if self.options["number of SEI layers"] == 2:
-            # Set length scale to one for the "no SEI" model so that it is not
-            # required by parameter values in general
-            if isinstance(self, pybamm.sei.NoSEI):
-                L_scale = 1
-            else:
-                L_scale = self.phase_param.L_sei_0_dim
-
-            variables = {
-                f"Inner {self.reaction_name}thickness": L_inner,
-                f"Inner {self.reaction_name}thickness [m]": L_inner * L_scale,
-                f"Outer {self.reaction_name}thickness": L_outer,
-                f"Outer {self.reaction_name}thickness [m]": L_outer * L_scale,
-            }
-
-            if self.reaction_loc != "interface":
-                L_inner_av = pybamm.x_average(L_inner)
-                L_outer_av = pybamm.x_average(L_outer)
-                variables.update(
-                    {
-                        f"X-averaged inner {self.reaction_name}thickness": L_inner_av,
-                        f"X-averaged inner {self.reaction_name}thickness [m]": {
-                            L_inner_av * L_scale
-                        },
-                        f"X-averaged outer {self.reaction_name}thickness": L_outer_av,
-                        f"X-averaged outer {self.reaction_name}thickness [m]": {
-                            L_outer_av * L_scale
-                        },
-                    }
-                )
-            # Get variables related to the total thickness
-            L_sei = L_inner + L_outer
-            variables.update(self._get_standard_total_thickness_variables(L_sei))
-
-            return variables
-
-        # Single layer SEI
+        # Set length scale to one for the "no SEI" model so that it is not
+        # required by parameter values in general
+        if isinstance(self, pybamm.sei.NoSEI):
+            L_scale = 1
         else:
-            # Set length scale to one for the "no SEI" model so that it is not
-            # required by parameter values in general
-            if isinstance(self, pybamm.sei.NoSEI):
-                L_scale = 1
-            else:
-                L_scale = self.phase_param.L_sei_0_dim
+            L_scale = self.phase_param.L_sei_0_dim
 
-            variables = {
-                f"SEI {self.reaction_name}thickness": L_sei,
-                f"SEI {self.reaction_name}thickness [m]": L_sei * L_scale,
-            }
+        variables = {
+            f"Inner {self.reaction_name}thickness": L_inner,
+            f"Inner {self.reaction_name}thickness [m]": L_inner * L_scale,
+            f"Outer {self.reaction_name}thickness": L_outer,
+            f"Outer {self.reaction_name}thickness [m]": L_outer * L_scale,
+        }
 
-            if self.reaction_loc != "interface":
-                L_outer_av = pybamm.x_average(L_outer)
-                variables.update(
-                    {
-                        f"X-averaged outer {self.reaction_name}thickness": L_outer_av,
-                        f"X-averaged outer {self.reaction_name}thickness [m]": {
-                            L_outer_av * L_scale
-                        },
-                    }
-                )
-            # Get variables related to the total thickness
-            L_sei = L_outer
-            variables.update(self._get_standard_total_thickness_variables(L_sei))
+        if self.reaction_loc != "interface":
+            L_inner_av = pybamm.x_average(L_inner)
+            L_outer_av = pybamm.x_average(L_outer)
+            variables.update(
+                {
+                    f"X-averaged inner {self.reaction_name}thickness": L_inner_av,
+                    f"X-averaged inner {self.reaction_name}thickness [m]": L_inner_av
+                    * L_scale,
+                    f"X-averaged outer {self.reaction_name}thickness": L_outer_av,
+                    f"X-averaged outer {self.reaction_name}thickness [m]": L_outer_av
+                    * L_scale,
+                }
+            )
+        # Get variables related to the total thickness
+        L_sei = L_inner + L_outer
+        variables.update(self._get_standard_total_thickness_variables(L_sei))
 
-            return variables
+        return variables
 
     def _get_standard_total_thickness_variables(self, L_sei):
         """Update variables related to total SEI thickness."""
@@ -247,104 +214,50 @@ class BaseModel(BaseInterface):
                 L_outer_crack_0 = phase_param.L_outer_crack_0
 
         if self.reaction == "SEI":
-            if self.options["number of SEI layers"] == 2:
-                L_inner = variables[f"Inner {reaction_name}thickness"]
-                L_outer = variables[f"Outer {reaction_name}thickness"]
+            L_inner = variables[f"Inner {reaction_name}thickness"]
+            L_outer = variables[f"Outer {reaction_name}thickness"]
 
-                n_inner = L_inner  # inner SEI concentration
-                n_outer = L_outer  # outer SEI concentration
+            n_inner = L_inner  # inner SEI concentration
+            n_outer = L_outer  # outer SEI concentration
 
-                n_inner_av = pybamm.x_average(n_inner)
-                n_outer_av = pybamm.x_average(n_outer)
+            n_inner_av = pybamm.x_average(n_inner)
+            n_outer_av = pybamm.x_average(n_outer)
 
-                n_sei = n_inner + n_outer / v_bar  # SEI concentration
-                n_sei_xav = pybamm.x_average(n_sei)
-                n_sei_av = pybamm.yz_average(n_sei_xav)
+            n_SEI = n_inner + n_outer / v_bar  # SEI concentration
+            n_SEI_xav = pybamm.x_average(n_SEI)
+            n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
-                # Calculate change in SEI concentration with respect to initial state
-                delta_n_sei = n_sei_av - (L_inner_0 + L_outer_0 / v_bar)
+            # Calculate change in SEI concentration with respect to initial state
+            delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
-                # Q_sei in mol
-                if self.reaction_loc == "interface":
-                    L_n = 1
-                else:
-                    L_n = self.param.n.L
-
-                Q_sei = (
-                    z_sei
-                    * delta_n_sei
-                    * n_scale
-                    * L_n
-                    * self.param.L_y
-                    * self.param.L_z
-                )
-
-                variables.update(
-                    {
-                        f"Inner {reaction_name}concentration [mol.m-3]": n_inner
-                        * n_scale,
-                        f"X-averaged inner {reaction_name}"
-                        "concentration [mol.m-3]": n_inner_av * n_scale,
-                        f"Outer {reaction_name}"
-                        "concentration [mol.m-3]": n_outer * n_outer_scale,
-                        f"X-averaged outer {reaction_name}"
-                        "concentration [mol.m-3]": n_outer_av * n_outer_scale,
-                        f"{reaction_name}concentration [mol.m-3]": n_sei * n_scale,
-                        f"X-averaged {reaction_name}"
-                        "concentration [mol.m-3]": n_sei_xav * n_scale,
-                        f"Loss of lithium to {reaction_name}[mol]": Q_sei,
-                        f"Loss of capacity to {reaction_name}[A.h]": Q_sei
-                        * self.param.F
-                        / 3600,
-                    }
-                )
-            # Single layer SEI
+            # Q_sei in mol
+            if self.reaction_loc == "interface":
+                L_n = 1
             else:
-                L_sei = variables[f"SEI {reaction_name}thickness"]
+                L_n = self.param.n.L
 
-                n_sei = L_sei  # inner SEI concentration
+            Q_sei = (
+                z_sei * delta_n_SEI * n_scale * L_n * self.param.L_y * self.param.L_z
+            )
 
-                n_sei_av = pybamm.x_average(n_sei)
-                n_sei_xav = pybamm.x_average(n_sei)
-                n_sei_av = pybamm.yz_average(n_sei_xav)
-
-                # Calculate change in SEI concentration with respect to initial state
-                delta_n_sei = n_sei_av - n_sei
-
-                # Q_sei in mol
-                if self.reaction_loc == "interface":
-                    L_n = 1
-                else:
-                    L_n = self.param.n.L
-
-                Q_sei = (
-                    z_sei
-                    * delta_n_sei
-                    * n_scale
-                    * L_n
-                    * self.param.L_y
-                    * self.param.L_z
-                )
-
-                variables.update(
-                    {
-                        f"Inner {reaction_name}concentration [mol.m-3]": n_inner
-                        * n_scale,
-                        f"X-averaged inner {reaction_name}"
-                        "concentration [mol.m-3]": n_inner_av * n_scale,
-                        f"Outer {reaction_name}"
-                        "concentration [mol.m-3]": n_outer * n_outer_scale,
-                        f"X-averaged outer {reaction_name}"
-                        "concentration [mol.m-3]": n_outer_av * n_outer_scale,
-                        f"{reaction_name}concentration [mol.m-3]": n_sei * n_scale,
-                        f"X-averaged {reaction_name}"
-                        "concentration [mol.m-3]": n_sei_xav * n_scale,
-                        f"Loss of lithium to {reaction_name}[mol]": Q_sei,
-                        f"Loss of capacity to {reaction_name}[A.h]": Q_sei
-                        * self.param.F
-                        / 3600,
-                    }
-                )
+            variables.update(
+                {
+                    f"Inner {reaction_name}concentration [mol.m-3]": n_inner * n_scale,
+                    f"X-averaged inner {reaction_name}"
+                    "concentration [mol.m-3]": n_inner_av * n_scale,
+                    f"Outer {reaction_name}"
+                    "concentration [mol.m-3]": n_outer * n_outer_scale,
+                    f"X-averaged outer {reaction_name}"
+                    "concentration [mol.m-3]": n_outer_av * n_outer_scale,
+                    f"{reaction_name}concentration [mol.m-3]": n_SEI * n_scale,
+                    f"X-averaged {reaction_name}"
+                    "concentration [mol.m-3]": n_SEI_xav * n_scale,
+                    f"Loss of lithium to {reaction_name}[mol]": Q_sei,
+                    f"Loss of capacity to {reaction_name}[A.h]": Q_sei
+                    * self.param.F
+                    / 3600,
+                }
+            )
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
             L_inner_cr = variables[f"Inner {reaction_name}thickness"]
@@ -357,24 +270,24 @@ class BaseModel(BaseInterface):
             n_inner_cr_av = pybamm.x_average(n_inner_cr)
             n_outer_cr_av = pybamm.x_average(n_outer_cr)
 
-            n_sei_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
-            n_sei_cr_xav = pybamm.x_average(n_sei_cr)
-            n_sei_cr_av = pybamm.yz_average(n_sei_cr_xav)
+            n_SEI_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
+            n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+            n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
             # Calculate change in SEI cracks concentration
             # Initial state depends on roughness (to avoid division by zero)
             roughness_av = pybamm.yz_average(pybamm.x_average(roughness))
             # choose an initial condition that is as close to zero to get the
             # physics right, but doesn't cause a division by zero error
-            n_sei_cr_init = (L_inner_crack_0 + L_outer_crack_0 / v_bar) * (
+            n_SEI_cr_init = (L_inner_crack_0 + L_outer_crack_0 / v_bar) * (
                 roughness_av - 1
             )
-            delta_n_sei_cr = n_sei_cr_av - n_sei_cr_init
+            delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
             # Q_sei_cr in mol
             Q_sei_cr = (
                 z_sei
-                * delta_n_sei_cr
+                * delta_n_SEI_cr
                 * n_scale
                 * self.param.n.L
                 * self.param.L_y
@@ -391,9 +304,9 @@ class BaseModel(BaseInterface):
                     "concentration [mol.m-3]": n_outer_cr * n_outer_scale,
                     f"X-averaged outer {reaction_name}"
                     "concentration [mol.m-3]": n_outer_cr_av * n_outer_scale,
-                    f"{reaction_name}" "concentration [mol.m-3]": n_sei_cr * n_scale,
+                    f"{reaction_name}" "concentration [mol.m-3]": n_SEI_cr * n_scale,
                     f"X-averaged {reaction_name}"
-                    "concentration [mol.m-3]": n_sei_cr_xav * n_scale,
+                    "concentration [mol.m-3]": n_SEI_cr_xav * n_scale,
                     f"Loss of lithium to {reaction_name}[mol]": Q_sei_cr,
                     f"Loss of capacity to {reaction_name}[A.h]": Q_sei_cr
                     * self.param.F
