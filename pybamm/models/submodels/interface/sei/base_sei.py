@@ -125,6 +125,8 @@ class BaseModel(BaseInterface):
                 L_sei = L_inner + L_outer
 
         else:  # Default to single layer SEI
+            L_inner = L_sei
+            L_outer = L_sei
             variables = {
                 f"Single layer SEI {self.reaction_name}thickness": L_sei,
                 f"Single layer SEI {self.reaction_name}thickness [m]": L_sei * L_scale,
