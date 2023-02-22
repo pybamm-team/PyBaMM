@@ -265,6 +265,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited",
                 "ec reaction limited (asymmetric)",
             ],
+            "number of SEI layers": ["1", "2"],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
             "SEI porosity change": ["false", "true"],
