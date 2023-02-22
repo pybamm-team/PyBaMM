@@ -136,10 +136,10 @@ class BaseModel(BaseInterface):
                 L_sei_av = pybamm.x_average(L_sei)
                 variables.update(
                     {
-                        f"X-avgd single layer SEI {self.reaction_name}thickness": {
+                        f"X-avgd single layer {self.reaction_name}thickness": {
                             L_sei_av
                         },
-                        f"X-avgd single layer SEI {self.reaction_name}thickness[m]": {
+                        f"X-avgd single layer {self.reaction_name}thickness[m]": {
                             L_sei_av * L_scale
                         },
                     }
@@ -268,7 +268,7 @@ class BaseModel(BaseInterface):
                 delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
             else:
-                L_sei = variables[f"Single layer SEI{reaction_name}thickness"]
+                L_sei = variables[f"single layer{reaction_name}thickness"]
 
                 n_SEI = L_sei  # SEI concentration
 
