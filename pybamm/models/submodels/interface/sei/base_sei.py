@@ -200,8 +200,10 @@ class BaseModel(BaseInterface):
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
+            L_sei_0 = 0
             L_inner_crack_0 = 0
             L_outer_crack_0 = 0
+            L_sei_crack_0 = 0
             z_sei = 1
         else:
             if self.reaction_loc == "interface":
@@ -227,34 +229,51 @@ class BaseModel(BaseInterface):
             # Set scales for the "EC Reaction Limited" models (both symmetric and
             # asymmetric)
             if self.options["SEI"].startswith("ec reaction limited"):
-                L_inner_0 = 0
-                L_outer_0 = 1
-                L_inner_crack_0 = 0
-                # Dividing by 10000 makes initial condition effectively zero
-                # without triggering division by zero errors
-                L_outer_crack_0 = 1 / 10000
+                if self.options["number of SEI layers"] == "2":
+                    L_inner_0 = 0
+                    L_outer_0 = 1
+                    L_inner_crack_0 = 0
+                    # Dividing by 10000 makes initial condition effectively zero
+                    # without triggering division by zero errors
+                    L_outer_crack_0 = 1 / 10000
+                else:
+                    L_sei_0 = 1
+                    L_sei_crack_0 = 1 / 10000
             else:
-                L_inner_0 = phase_param.L_inner_0
-                L_outer_0 = phase_param.L_outer_0
-                L_inner_crack_0 = phase_param.L_inner_crack_0
-                L_outer_crack_0 = phase_param.L_outer_crack_0
+                if self.options["number of SEI layers"] == "2":
+                    L_inner_0 = phase_param.L_inner_0
+                    L_outer_0 = phase_param.L_outer_0
+                    L_inner_crack_0 = phase_param.L_inner_crack_0
+                    L_outer_crack_0 = phase_param.L_outer_crack_0
+                else:
+                    L_sei_0 = phase_param.L_sei_0
+                    L_sei_crack_0 = phase_param.L_sei_crack_0
 
         if self.reaction == "SEI":
-            L_inner = variables[f"Inner {reaction_name}thickness"]
-            L_outer = variables[f"Outer {reaction_name}thickness"]
+            if self.options["number of SEI layers"] == "2":
+                L_inner = variables[f"Inner {reaction_name}thickness"]
+                L_outer = variables[f"Outer {reaction_name}thickness"]
 
-            n_inner = L_inner  # inner SEI concentration
-            n_outer = L_outer  # outer SEI concentration
+                n_inner = L_inner  # inner SEI concentration
+                n_outer = L_outer  # outer SEI concentration
 
-            n_inner_av = pybamm.x_average(n_inner)
-            n_outer_av = pybamm.x_average(n_outer)
+                n_inner_av = pybamm.x_average(n_inner)
+                n_outer_av = pybamm.x_average(n_outer)
 
-            n_SEI = n_inner + n_outer / v_bar  # SEI concentration
-            n_SEI_xav = pybamm.x_average(n_SEI)
-            n_SEI_av = pybamm.yz_average(n_SEI_xav)
+                n_SEI = n_inner + n_outer / v_bar  # SEI concentration
+                n_SEI_xav = pybamm.x_average(n_SEI)
+                n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
-            # Calculate change in SEI concentration with respect to initial state
-            delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
+                # Calculate change in SEI concentration with respect to initial state
+                delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
+
+            else:
+                L_sei = variables[f"Single layer SEI{reaction_name}thickness"]
+
+                n_SEI = L_sei  # SEI concentration
+
+                # Calculate change in SEI concentration with respect to initial state
+                delta_n_SEI = n_SEI_av - (L_sei_0)
 
             # Q_sei in mol
             if self.reaction_loc == "interface":
@@ -286,29 +305,51 @@ class BaseModel(BaseInterface):
             )
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
-            L_inner_cr = variables[f"Inner {reaction_name}thickness"]
-            L_outer_cr = variables[f"Outer {reaction_name}thickness"]
-            roughness = variables[f"{Domain} electrode roughness ratio"]
+            if self.options["number of SEI layers"] == "2":
+                L_inner_cr = variables[f"Inner {reaction_name}thickness"]
+                L_outer_cr = variables[f"Outer {reaction_name}thickness"]
+                roughness = variables[f"{Domain} electrode roughness ratio"]
 
-            n_inner_cr = L_inner_cr * (roughness - 1)  # inner SEI cracks concentration
-            n_outer_cr = L_outer_cr * (roughness - 1)  # outer SEI cracks concentration
+                n_inner_cr = L_inner_cr * (
+                    roughness - 1
+                )  # inner SEI cracks concentration
+                n_outer_cr = L_outer_cr * (
+                    roughness - 1
+                )  # outer SEI cracks concentration
 
-            n_inner_cr_av = pybamm.x_average(n_inner_cr)
-            n_outer_cr_av = pybamm.x_average(n_outer_cr)
+                n_inner_cr_av = pybamm.x_average(n_inner_cr)
+                n_outer_cr_av = pybamm.x_average(n_outer_cr)
 
-            n_SEI_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
-            n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
-            n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
+                n_SEI_cr = (
+                    n_inner_cr + n_outer_cr / v_bar
+                )  # SEI on cracks concentration
+                n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+                n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
-            # Calculate change in SEI cracks concentration
-            # Initial state depends on roughness (to avoid division by zero)
-            roughness_av = pybamm.yz_average(pybamm.x_average(roughness))
-            # choose an initial condition that is as close to zero to get the
-            # physics right, but doesn't cause a division by zero error
-            n_SEI_cr_init = (L_inner_crack_0 + L_outer_crack_0 / v_bar) * (
-                roughness_av - 1
-            )
-            delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
+                # Calculate change in SEI cracks concentration
+                # Initial state depends on roughness (to avoid division by zero)
+                roughness_av = pybamm.yz_average(pybamm.x_average(roughness))
+                # choose an initial condition that is as close to zero to get the
+                # physics right, but doesn't cause a division by zero error
+                n_SEI_cr_init = (L_inner_crack_0 + L_outer_crack_0 / v_bar) * (
+                    roughness_av - 1
+                )
+                delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
+            else:
+                L_sei_cr = variables[f"Single layer SEI{reaction_name}thickness"]
+                roughness = variables[f"{Domain} electrode roughness ratio"]
+
+                n_SEI_cr = L_sei_cr * (roughness - 1)  # SEI on cracks concentration
+                n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+                n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
+
+                # Calculate change in SEI cracks concentration
+                # Initial state depends on roughness (to avoid division by zero)
+                roughness_av = pybamm.yz_average(pybamm.x_average(roughness))
+                # choose an initial condition that is as close to zero to get the
+                # physics right, but doesn't cause a division by zero error
+                n_SEI_cr_init = (L_sei_crack_0) * (roughness_av - 1)
+                delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
             # Q_sei_cr in mol
             Q_sei_cr = (
