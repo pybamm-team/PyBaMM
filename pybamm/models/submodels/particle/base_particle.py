@@ -26,7 +26,8 @@ class BaseParticle(pybamm.BaseSubModel):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
         # Read from options to see if we have a particle size distribution
-        self.size_distribution = self.options["particle size"] == "distribution"
+        domain_options = getattr(self.options, domain)
+        self.size_distribution = domain_options["particle size"] == "distribution"
 
     def _get_effective_diffusivity(self, c, T):
         param = self.param

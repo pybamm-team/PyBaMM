@@ -216,7 +216,7 @@ setup(
             "myst-parser",
         ],  # For doc generation
         "dev": [
-            "flake8>=3",  # For code style checking
+            "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
         ],
     },

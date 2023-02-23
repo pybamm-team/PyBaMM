@@ -128,7 +128,7 @@
       "login": "dalonsoa",
       "name": "Diego",
       "avatar_url": "https://avatars1.githubusercontent.com/u/6095790?v=4",
-      "profile": "https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/research-software-engineering/",
+      "profile": "https://github.com/dalonsoa",
       "contributions": [
         "bug",
         "review",
@@ -553,6 +553,42 @@
         "doc",
         "bug",
         "code"
+      ]
+    },
+    {
+      "login": "ayeankit",
+      "name": "Ankit Kumar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/72691866?v=4",
+      "profile": "https://github.com/ayeankit",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "dikwickley",
+      "name": "Aniket Singh Rawat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/31622972?v=4",
+      "profile": "https://aniketsinghrawat.vercel.app/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "jeromtom",
+      "name": "Jerom Palimattom Tom",
+      "avatar_url": "https://avatars.githubusercontent.com/u/83979298?v=4",
+      "profile": "https://github.com/jeromtom",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "BradyPlanden",
+      "name": "Brady Planden",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55357039?v=4",
+      "profile": "http://bradyplanden.github.io",
+      "contributions": [
+        "example"
       ]
     }
   ],

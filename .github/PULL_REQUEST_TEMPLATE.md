@@ -14,11 +14,11 @@ Please add a line in the relevant section of [CHANGELOG.md](https://github.com/p
 
 # Key checklist:
 
-- [ ] No style issues: `$ pre-commit run`
-- [ ] All tests pass: `$ python run-tests.py --unit`
-- [ ] The documentation builds: `$ cd docs` and then `$ make clean; make html`
+- [ ] No style issues: `$ pre-commit run` (see [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and-using-pre-commit) for how to set this up to run automatically when committing locally, in just two lines of code)
+- [ ] All tests pass: `$ python run-tests.py --all`
+- [ ] The documentation builds: `$ python run-tests.py --doctest`
 
-You can run all three at once, using `$ python run-tests.py --quick`.
+You can run unit and doctests together at once, using `$ python run-tests.py --quick`.
 
 ## Further checks:
 
