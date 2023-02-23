@@ -288,15 +288,24 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         phases = self.options.phases["negative"]
         for phase in phases:
-            if self.options["SEI"] == "none":
-                submodel = pybamm.sei.NoSEI(self.param, self.options, phase)
-            elif self.options["SEI"] == "constant":
-                submodel = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+            if self.options["number of SEI layers"] == 2:
+                if self.options["SEI"] == "none":
+                    submodel = pybamm.sei.NoSEI(self.param, self.options, phase)
+                elif self.options["SEI"] == "constant":
+                    submodel = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+                else:
+                    submodel = pybamm.sei.SEIGrowth(
+                        self.param, reaction_loc, self.options, phase, cracks=False
+                    )
+                self.submodels[f"{phase} sei"] = submodel
             else:
-                submodel = pybamm.sei.SEIGrowth(
-                    self.param, reaction_loc, self.options, phase, cracks=False
-                )
-            self.submodels[f"{phase} sei"] = submodel
+                if self.options["SEI"] == "constant":
+                    submodel = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+                else:
+                    submodel = pybamm.sei.SEIGrowth(
+                        self.param, reaction_loc, self.options, phase, cracks=False
+                    )
+
             # Do not set "sei on cracks" submodel for half-cells
             # For full cells, "sei on cracks" submodel must be set, even if it is zero
             if reaction_loc != "interface":
