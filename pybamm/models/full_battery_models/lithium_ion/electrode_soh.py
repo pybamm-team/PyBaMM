@@ -223,13 +223,15 @@ class ElectrodeSOHSolver:
         if inputs.pop("V_min", None) is not None:
             warnings.warn(
                 "V_min has been removed from the inputs. "
-                "The 'Open circuit potential at 0% SOC [V]' parameter is now used automatically.",
+                "The 'Open circuit potential at 0% SOC [V]' "
+                "parameter is now used automatically.",
                 DeprecationWarning,
             )
         if inputs.pop("V_max", None) is not None:
             warnings.warn(
                 "V_max has been removed from the inputs. "
-                "The 'Open circuit potential at 100% SOC [V]' parameter is now used automatically.",
+                "The 'Open circuit potential at 100% SOC [V]' "
+                "parameter is now used automatically.",
                 DeprecationWarning,
             )
         ics = self._set_up_solve(inputs)
