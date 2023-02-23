@@ -124,8 +124,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
             * "number of SEI layers": int
                 Number of SEI layers to include in the model. Can be:
-                - "1"(default) : Single outer SEI layer
-                - "2" : Two SEI layers, inner and outer
+                - 1(default) : Single outer SEI layer
+                - 2 : Two SEI layers, inner and outer
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "none" if the "SEI" option is "none", and
