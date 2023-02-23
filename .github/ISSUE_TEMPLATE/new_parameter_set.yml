@@ -6,7 +6,7 @@ body:
       value: |
         Third-party parameter sets can be added to PyBaMM by registering an entry
         point with `pybamm-parameter-sets` as described in our
-        [documentation](https://pybamm.readthedocs.io/en/latest/source/parameters/parameter_sets.html).
+        [documentation](https://pybamm.readthedocs.io/en/latest/source/api/parameters/parameter_sets.html).
   - type: input
     id: parameter-set-url
     attributes:

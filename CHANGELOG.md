@@ -1,5 +1,15 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve [#2677](https://github.com/pybamm-team/PyBaMM/pull/2677)
+- The "particle size" option can now be a tuple to allow different behaviour in each electrode([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
+- Added temperature control to experiment class. [#2518](https://github.com/pybamm-team/PyBaMM/pull/2518)
+
+## Bug fixes
+
+- Fixed the length scaling for the first dimension of r-R plots ([#2663](https://github.com/pybamm-team/PyBaMM/pull/2663)).
+
 # [v23.1](https://github.com/pybamm-team/PyBaMM/tree/v23.1) - 2023-01-31
 
 ## Features
@@ -13,7 +23,6 @@
 
 - Fixed a bug where the solid phase conductivity was double-corrected for tortuosity when loading parameters from a BPX file ([#2638](https://github.com/pybamm-team/PyBaMM/pull/2638)).
 - Changed termination from "success" to "final time" for algebraic solvers to match ODE/DAE solvers ([#2613](https://github.com/pybamm-team/PyBaMM/pull/2613)).
-- Fixed the length scaling for the first dimension of r-R plots ([#2663](https://github.com/pybamm-team/PyBaMM/pull/2663)).
 
 # [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
 

@@ -16,6 +16,7 @@
 
 #include <sunlinsol/sunlinsol_klu.h> /* access to KLU linear solver          */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense linear solver          */
+#include <sunlinsol/sunlinsol_band.h> /* access to dense linear solver          */
 #include <sunlinsol/sunlinsol_spbcgs.h> /* access to spbcgs iterative linear solver          */
 #include <sunlinsol/sunlinsol_spfgmr.h>
 #include <sunlinsol/sunlinsol_spgmr.h>

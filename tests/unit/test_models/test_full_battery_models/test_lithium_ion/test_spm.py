@@ -40,8 +40,12 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
             pybamm.lithium_ion.SPM(options)
 
     def test_distribution_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "particle size"):
+        with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.lithium_ion.SPM({"particle size": "distribution"})
+
+    def test_particle_size_distribution(self):
+        options = {"surface form": "algebraic", "particle size": "distribution"}
+        self.check_well_posedness(options)
 
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})

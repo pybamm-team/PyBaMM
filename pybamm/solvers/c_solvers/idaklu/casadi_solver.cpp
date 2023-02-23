@@ -8,7 +8,9 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &rhs_alg, const Function &jac_times_cjmass,
                      const np_array_int &jac_times_cjmass_colptrs,
                      const np_array_int &jac_times_cjmass_rowvals,
-                     const int jac_times_cjmass_nnz, const Function &jac_action,
+                     const int jac_times_cjmass_nnz, 
+                     const int jac_bandwidth_lower, const int jac_bandwidth_upper, 
+                     const Function &jac_action,
                      const Function &mass_action, const Function &sens,
                      const Function &events, const int number_of_events,
                      np_array rhs_alg_id, np_array atol_np, double rel_tol,
@@ -16,19 +18,21 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
 {
   auto options_cpp = Options(options);
   auto functions = std::make_unique<CasadiFunctions>(
-      rhs_alg, jac_times_cjmass, jac_times_cjmass_nnz, jac_times_cjmass_rowvals,
+      rhs_alg, jac_times_cjmass, jac_times_cjmass_nnz, jac_bandwidth_lower, jac_bandwidth_upper,  jac_times_cjmass_rowvals,
       jac_times_cjmass_colptrs, inputs_length, jac_action, mass_action, sens,
       events, number_of_states, number_of_events, number_of_parameters,
       options_cpp);
 
   return new CasadiSolver(atol_np, rel_tol, rhs_alg_id, number_of_parameters,
-                          number_of_events, jac_times_cjmass_nnz,
+                          number_of_events, jac_times_cjmass_nnz, 
+                          jac_bandwidth_lower, jac_bandwidth_upper,
                           std::move(functions), options_cpp);
 }
 
 CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
                            np_array rhs_alg_id, int number_of_parameters,
                            int number_of_events, int jac_times_cjmass_nnz,
+                           int jac_bandwidth_lower, int jac_bandwidth_upper,
                            std::unique_ptr<CasadiFunctions> functions_arg,
                            const Options &options)
     : number_of_states(atol_np.request().size),
@@ -107,7 +111,14 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
                         jac_times_cjmass_nnz, CSC_MAT);
 #endif
   }
-  else if (options.jacobian == "dense" || options.jacobian == "none")
+  else if (options.jacobian == "banded") {
+    DEBUG("\tsetting banded matrix");
+    #if SUNDIALS_VERSION_MAJOR >= 6
+        J = SUNBandMatrix(number_of_states, jac_bandwidth_upper, jac_bandwidth_lower, sunctx);
+    #else
+        J = SUNBandMatrix(number_of_states, jac_bandwidth_upper, jac_bandwidth_lower);
+    #endif
+  } else if (options.jacobian == "dense" || options.jacobian == "none")
   {
     DEBUG("\tsetting dense matrix");
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -151,6 +162,15 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_KLU(yy, J, sunctx);
 #else
     LS = SUNLinSol_KLU(yy, J);
+#endif
+  }
+  else if (options.linear_solver == "SUNLinSol_Band")
+  {
+    DEBUG("\tsetting SUNLinSol_Band linear solver");  
+#if SUNDIALS_VERSION_MAJOR >= 6
+    LS = SUNLinSol_Band(yy, J, sunctx);
+#else
+    LS = SUNLinSol_Band(yy, J);
 #endif
   }
   else if (options.linear_solver == "SUNLinSol_SPBCGS")

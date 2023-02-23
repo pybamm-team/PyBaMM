@@ -55,12 +55,13 @@ class TestSimulationExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
+                    "Discharge at C/20 for 1 hour at 30.5oC",
+                    "Charge at 1 A until 4.1 V at 24oC",
+                    "Hold at 4.1 V until C/2 at 24oC",
                     "Discharge at 2 W for 1 hour",
                 )
-            ]
+            ],
+            temperature=-14,
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
@@ -77,6 +78,22 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
+        )
+
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[0]["Ambient temperature [C]"].data[0], 30.5
+        )
+
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[1]["Ambient temperature [C]"].data[0], 24
+        )
+
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[2]["Ambient temperature [C]"].data[0], 24
+        )
+
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[3]["Ambient temperature [C]"].data[0], -14
         )
 
         for i, step in enumerate(sol.cycles[0].steps[:-1]):
@@ -114,8 +131,8 @@ class TestSimulationExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at C/20 until 4.1 V",
+                    "Discharge at C/20 for 1 hour at 24oC",
+                    "Charge at C/20 until 4.1 V at 26oC",
                 )
             ]
             * 3
@@ -134,9 +151,9 @@ class TestSimulationExperiment(unittest.TestCase):
         experiment_2step = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
+                    "Discharge at C/20 for 1 hour at 20oC",
+                    "Charge at 1 A until 4.1 V at 24oC",
+                    "Hold at 4.1 V until C/2 at 24oC",
                     "Discharge at 2 W for 1 hour",
                 ),
             ],
@@ -144,9 +161,9 @@ class TestSimulationExperiment(unittest.TestCase):
         experiment_ode = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
+                    "Discharge at C/20 for 1 hour at 20oC",
+                    "Charge at 1 A until 4.1 V at 24oC",
+                    "Hold at 4.1 V until C/2 at 24oC",
                     "Discharge at 2 W for 1 hour",
                 ),
             ],
@@ -169,6 +186,12 @@ class TestSimulationExperiment(unittest.TestCase):
             solutions[1]["Current [A]"].data,
             decimal=0,
         )
+
+        np.testing.assert_array_equal(
+            solutions[0]["Ambient temperature [C]"].data,
+            solutions[1]["Ambient temperature [C]"].data,
+        )
+
         self.assertEqual(solutions[1].termination, "final time")
 
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
@@ -209,7 +232,7 @@ class TestSimulationExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    "Run drive_cycle (A)",
+                    "Run drive_cycle (A) at 35oC",
                     "Run drive_cycle (V)",
                     "Run drive_cycle (W)",
                 )
@@ -219,7 +242,7 @@ class TestSimulationExperiment(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        self.assertIn(("Run drive_cycle (A)"), sim.op_string_to_model)
+        self.assertIn(("Run drive_cycle (A) at 35oC"), sim.op_string_to_model)
         self.assertIn(("Run drive_cycle (V)"), sim.op_string_to_model)
         self.assertIn(("Run drive_cycle (W)"), sim.op_string_to_model)
 
