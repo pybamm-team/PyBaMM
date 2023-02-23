@@ -305,6 +305,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                     submodel = pybamm.sei.SEIGrowth(
                         self.param, reaction_loc, self.options, phase, cracks=False
                     )
+                self.submodels[f"{phase} sei"] = submodel
 
             # Do not set "sei on cracks" submodel for half-cells
             # For full cells, "sei on cracks" submodel must be set, even if it is zero
