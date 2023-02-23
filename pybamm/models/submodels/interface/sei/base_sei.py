@@ -144,6 +144,7 @@ class BaseModel(BaseInterface):
                         },
                     }
                 )
+                return L_sei
 
         variables.update(self._get_standard_total_thickness_variables(L_sei))
 
