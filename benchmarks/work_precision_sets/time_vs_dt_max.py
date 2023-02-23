@@ -39,9 +39,7 @@ for ax, model_, model_name in zip(
     models.values(),
     models,
 ):
-
     for params in parameters:
-
         time_points = []
         # solver = pybamm.CasadiSolver()
 
@@ -74,14 +72,12 @@ for ax, model_, model_name in zip(
         disc.process_model(model)
 
         for t in dt_max:
-
             solver = pybamm.CasadiSolver(dt_max=t)
 
             solver.solve(model, t_eval=t_eval)
             time = 0
             runs = 20
             for k in range(0, runs):
-
                 solution = solver.solve(model, t_eval=t_eval)
                 time += solution.solve_time.value
             time = time / runs

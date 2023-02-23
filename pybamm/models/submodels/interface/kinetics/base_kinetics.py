@@ -72,16 +72,20 @@ class BaseKinetics(BaseInterface):
                 delta_phi = delta_phi.orphans[0]
         # For "particle-size distribution" models, delta_phi must then be
         # broadcast to "particle size" domain
+        domain_options = getattr(self.options, domain)
         if (
             self.reaction == "lithium-ion main"
-            and self.options["particle size"] == "distribution"
+            and domain_options["particle size"] == "distribution"
         ):
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, [f"{domain} particle size"])
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        if self.options["particle size"] == "distribution":
+        if (
+            domain_options["particle size"] == "distribution"
+            and self.options.electrode_types[domain] == "porous"
+        ):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open circuit potential distribution"
             ]

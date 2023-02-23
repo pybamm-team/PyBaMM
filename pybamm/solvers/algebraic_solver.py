@@ -142,7 +142,6 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 # Methods which use least-squares are specified as either "lsq",
                 # which uses the default method, or with "lsq__methodname"
                 if self.method.startswith("lsq"):
-
                     if self.method == "lsq":
                         method = "trf"
                     else:

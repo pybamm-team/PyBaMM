@@ -13,17 +13,13 @@ PyBaMM documentation
    :maxdepth: 1
    :hidden:
 
-   source/user_guide/index
+   User Guide <source/user_guide/index>
    source/api/index
 
 **Version**: |version|
 
-.. **Download documentation**:
-.. `PDF Version <https://numpy.org/doc/stable/numpy-user.pdf>`_ |
-.. `Historical versions of documentation <https://numpy.org/doc/>`_
-   
 **Useful links**:
-`Project Home Page <https://pybamm.org>`_ |
+`Project Home Page <https://www.pybamm.org>`_ |
 `Installation <source/user_guide/installation/index.html>`_ |
 `Source Repository <https://github.com/pybamm-team/pybamm>`_ |
 `Issue Tracker <https://github.com/pybamm-team/pybamm/issues>`_ |
