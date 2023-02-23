@@ -53,13 +53,17 @@ class SEIGrowth(BaseModel):
                 )
             L.print_name = f"L_{pos}"
             Ls.append(L)
+        if self.options["number of SEI layers"] == 2:
+            L_inner, L_outer = Ls
+            if self.options["SEI"].startswith("ec reaction limited"):
+                L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
+        else:
+            L_sei = Ls
 
-        L_inner, L_outer, L_sei = Ls
-
-        if self.options["SEI"].startswith("ec reaction limited"):
-            L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
-
-        variables = self._get_standard_thickness_variables(L_inner, L_outer, L_sei)
+        if self.options["number of SEI layers"] == 2:
+            variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        else:
+            variables = self._get_standard_thickness_variables(L_sei)
 
         return variables
 
