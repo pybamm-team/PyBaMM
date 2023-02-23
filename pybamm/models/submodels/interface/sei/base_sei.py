@@ -268,7 +268,7 @@ class BaseModel(BaseInterface):
                 delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
             else:
-                L_sei = variables[f"single layer {reaction_name}thickness"]
+                L_sei = variables[f"Single layer {reaction_name}thickness"]
 
                 n_SEI = L_sei  # single layer SEI concentration
 
