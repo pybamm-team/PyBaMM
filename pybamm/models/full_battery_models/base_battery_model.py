@@ -295,6 +295,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Default number of SEI layer is 1.
         default_options["number of SEI layers"] = 1
+        number_of_sei_layer = extra_options.get["number of SEI layers", 2]
+        if number_of_sei_layer == 2:
+            default_options["number of SEI layers"] = 2
         # Change the default for SEI film resistance based on which SEI option is
         # provided
         # return "none" if option not given
