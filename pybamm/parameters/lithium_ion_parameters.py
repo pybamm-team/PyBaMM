@@ -153,7 +153,7 @@ class LithiumIonParameters(BaseParameters):
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
         return (2 * (1 - self.t_plus_dimensional(c_e, T))) * (
-            self.one_plus_dlnf_dlnc_dimensional(c_e, T)
+            self.thermodynamic_factor_dimensional(c_e, T)
         )
 
     def t_plus_dimensional(self, c_e, T):
@@ -161,7 +161,7 @@ class LithiumIonParameters(BaseParameters):
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
-    def one_plus_dlnf_dlnc_dimensional(self, c_e, T):
+    def thermodynamic_factor_dimensional(self, c_e, T):
         """Thermodynamic factor (dimensionless)"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
