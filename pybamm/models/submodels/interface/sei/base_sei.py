@@ -123,32 +123,29 @@ class BaseModel(BaseInterface):
                 )
                 # Get variables related to the total thickness
                 L_sei = L_inner + L_outer
-
-        else:  # Default to single layer SEI
-            L_inner = L_sei
-            L_outer = L_sei
+                variables.update(
+                    self._get_standard_total_thickness_variables(
+                        L_inner, L_outer, L_sei
+                    )
+                )
+        else:
             variables = {
                 f"Single layer {self.reaction_name}thickness": L_sei,
                 f"Single layer {self.reaction_name}thickness [m]": L_sei * L_scale,
             }
-
             if self.reaction_loc != "interface":
                 L_sei_av = pybamm.x_average(L_sei)
                 variables.update(
                     {
-                        f"X-avgd single layer {self.reaction_name}thickness": {
+                        f"X-averaged single layer {self.reaction_name}thickness": {
                             L_sei_av
                         },
-                        f"X-avgd single layer {self.reaction_name}thickness[m]": {
+                        f"X-averaged single layer {self.reaction_name}thickness [m]": {
                             L_sei_av * L_scale
                         },
                     }
                 )
-                return L_sei
-
-        variables.update(
-            self._get_standard_total_thickness_variables(L_inner, L_outer, L_sei)
-        )
+                variables.update(self._get_standard_total_thickness_variables(L_sei))
 
         return variables
 
