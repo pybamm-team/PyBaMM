@@ -126,9 +126,7 @@ class BaseModel(BaseInterface):
                 # Get variables related to the total thickness
                 L_sei = L_inner + L_outer
                 variables.update(
-                    self._get_standard_total_thickness_variables(
-                        L_inner, L_outer, L_sei
-                    )
+                    self._get_standard_total_thickness_variables(L_inner, L_outer)
                 )
         else:
             if self.reaction_loc != "interface":
