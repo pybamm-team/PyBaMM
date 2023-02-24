@@ -317,6 +317,11 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
+            if values == "1 + dlnf/dlnc":
+                raise ValueError(
+                    "parameter '{}' has value '1 + dlnf/dlnc',"
+                    + "which has been changed to `thermodynamic_factor`"
+                )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
