@@ -164,7 +164,7 @@ class LithiumIonParameters(BaseParameters):
     def thermodynamic_factor_dimensional(self, c_e, T):
         """Thermodynamic factor (dimensionless)"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
-        return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
+        return pybamm.FunctionParameter("Thermodynamic factor", inputs)
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""

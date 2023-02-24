@@ -545,7 +545,7 @@ def get_parameter_values():
         "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.26,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ecker2015,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ecker2015,
         # experiment

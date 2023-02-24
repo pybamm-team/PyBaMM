@@ -80,7 +80,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         pybamm_dict[domain.pre_name + "electrons in reaction"] = 1.0
 
     # activity
-    pybamm_dict["1 + dlnf/dlnc"] = 1.0
+    pybamm_dict["Thermodynamic factor"] = 1.0
 
     # typical electrolyte concentration
     pybamm_dict["Typical electrolyte concentration [mol.m-3]"] = pybamm_dict[
