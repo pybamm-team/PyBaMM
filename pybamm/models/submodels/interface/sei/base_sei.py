@@ -125,9 +125,7 @@ class BaseModel(BaseInterface):
                 )
                 # Get variables related to the total thickness
                 L_sei = L_inner + L_outer
-                variables.update(
-                    self._get_standard_total_thickness_variables(L_inner, L_outer)
-                )
+                variables.update(self._get_standard_total_thickness_variables(L_sei))
         else:
             if self.reaction_loc != "interface":
                 L_sei_av = pybamm.x_average(L_sei)
