@@ -8,6 +8,8 @@ from .base_porosity import BaseModel
 class ReactionDriven(BaseModel):
     """Reaction-driven porosity changes as a multiple of SEI/plating thicknesses
 
+    **Extends:** :class:`pybamm.porosity.BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -16,8 +18,6 @@ class ReactionDriven(BaseModel):
         Options dictionary passed from the full model
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
-
-    **Extends:** :class:`pybamm.porosity.BaseModel`
     """
 
     def __init__(self, param, options, x_average):

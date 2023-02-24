@@ -9,6 +9,8 @@ from .base_active_material import BaseModel
 class LossActiveMaterial(BaseModel):
     """Submodel for varying active material volume fraction from [1]_ and [2]_.
 
+    **Extends:** :class:`pybamm.active_material.BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -19,8 +21,6 @@ class LossActiveMaterial(BaseModel):
         Additional options to pass to the model
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
-
-    **Extends:** :class:`pybamm.active_material.BaseModel`
 
     References
     ----------

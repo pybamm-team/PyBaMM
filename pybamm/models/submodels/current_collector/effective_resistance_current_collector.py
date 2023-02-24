@@ -99,6 +99,8 @@ class EffectiveResistance(BaseEffectiveResistance):
     assumes a uniform *current density* at the tabs (in 1D the two formulations
     are equivalent).
 
+    **Extends:** :class:`BaseEffectiveResistance`
+
     Parameters
     ----------
     options: dict
@@ -116,8 +118,6 @@ class EffectiveResistance(BaseEffectiveResistance):
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
            Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
            Mathematics, 81(3), 765--788, 2021
-
-    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(

@@ -10,6 +10,8 @@ class BaseModel(BaseElectrolyteConductivity):
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
 
+    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
+
     Parameters
     ----------
     param : parameter class
@@ -18,9 +20,6 @@ class BaseModel(BaseElectrolyteConductivity):
         The domain in which the model holds
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param, domain, options=None):
@@ -217,14 +216,14 @@ class FullAlgebraic(BaseModel):
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by
     asymptotic methods)
 
+    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
     def __init__(self, param, domain, options=None):
@@ -252,14 +251,14 @@ class FullDifferential(BaseModel):
     Stefan-Maxwell constitutive equations and where capacitance is present.
     (Full refers to unreduced by asymptotic methods)
 
+    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
     def __init__(self, param, domain, options=None):

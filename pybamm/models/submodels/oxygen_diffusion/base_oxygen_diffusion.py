@@ -7,13 +7,12 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Base class for conservation of mass of oxygen.
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param):

@@ -9,6 +9,8 @@ class BaseInterface(pybamm.BaseSubModel):
     """
     Base class for interfacial currents
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -22,8 +24,6 @@ class BaseInterface(pybamm.BaseSubModel):
         :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

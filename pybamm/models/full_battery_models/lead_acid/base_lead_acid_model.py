@@ -10,6 +10,8 @@ class BaseModel(pybamm.BaseBatteryModel):
     Overwrites default parameters from Base Model with default parameters for
     lead-acid models
 
+    **Extends:** :class:`pybamm.BaseBatteryModel`
+
     Parameters
     ----------
     options : dict-like, optional
@@ -26,9 +28,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
-
-    **Extends:** :class:`pybamm.BaseBatteryModel`
-
     """
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):

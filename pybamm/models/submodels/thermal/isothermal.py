@@ -10,14 +10,14 @@ class Isothermal(BaseThermal):
     """
     Class for isothermal submodel.
 
+    **Extends:** :class:`pybamm.thermal.BaseThermal`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
     def __init__(self, param, options=None):

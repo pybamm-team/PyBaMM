@@ -701,6 +701,8 @@ class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
 
+    **Extends:** :class:`pybamm.BaseModel`
+
     Parameters
     ----------
     options : dict-like, optional
@@ -712,8 +714,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         :class:`pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model. The default is "Unnamed battery model".
-
-    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(self, options=None, name="Unnamed battery model"):

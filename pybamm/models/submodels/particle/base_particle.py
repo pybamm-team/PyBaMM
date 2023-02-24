@@ -8,6 +8,8 @@ class BaseParticle(pybamm.BaseSubModel):
     """
     Base class for molar conservation in particles.
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -19,8 +21,6 @@ class BaseParticle(pybamm.BaseSubModel):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options, phase="primary"):

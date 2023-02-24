@@ -8,14 +8,14 @@ from .base_plating import BasePlating
 class NoPlating(BasePlating):
     """Base class for no lithium plating/stripping.
 
+    **Extends:** :class:`pybamm.lithium_plating.BasePlating`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 
     def __init__(self, param, options=None):

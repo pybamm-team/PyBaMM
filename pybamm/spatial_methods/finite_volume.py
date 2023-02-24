@@ -24,12 +24,12 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     For broadcast and mass_matrix, we follow the default behaviour from SpatialMethod.
 
+    **Extends:"": :class:`pybamm.SpatialMethod`
+
     Parameters
     ----------
     mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
-
-    **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
     def __init__(self, options=None):

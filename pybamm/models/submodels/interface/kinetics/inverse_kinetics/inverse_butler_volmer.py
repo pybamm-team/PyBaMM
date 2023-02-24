@@ -10,6 +10,8 @@ class InverseButlerVolmer(BaseInterface):
     A submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.
 
+    **Extends:** :class:`pybamm.interface.BaseInterface`
+
     Parameters
     ----------
     param
@@ -21,8 +23,6 @@ class InverseButlerVolmer(BaseInterface):
     options: dict
         A dictionary of options to be passed to the model. In this case "SEI film
         resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
 
     """
 
@@ -121,6 +121,8 @@ class CurrentForInverseButlerVolmer(BaseInterface):
     form" model solves a differential or algebraic equation for delta_phi, which gives
     the exact right answer. Comparing the two approaches shows almost no difference.
 
+    **Extends:** :class:`pybamm.interface.BaseInterface`
+
     Parameters
     ----------
     param
@@ -131,9 +133,6 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         The name of the reaction being implemented
     options: dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     """
 
     def __init__(self, param, domain, reaction, options=None):
@@ -165,6 +164,8 @@ class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
     Submodel for the current associated with the inverse Butler-Volmer formulation in
     a lithium metal cell. This is simply equal to the current collector current density.
 
+    **Extends:** :class:`pybamm.interface.BaseInterface`
+
     Parameters
     ----------
     param
@@ -175,8 +176,6 @@ class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
         The name of the reaction being implemented
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options=None):

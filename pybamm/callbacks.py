@@ -142,12 +142,13 @@ class LoggingCallback(Callback):
     """
     Logging callback, implements methods to log progress of the simulation.
 
+    **Extends:** :class:`pybamm.callbacks.Callback`
+
     Parameters
     ----------
     logfile : str, optional
         Where to send the log output. If None, uses pybamm's logger.
 
-    **Extends:** :class:`pybamm.callbacks.Callback`
     """
 
     def __init__(self, logfile=None):

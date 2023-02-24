@@ -11,6 +11,8 @@ class Composite(BaseModel):
     current conservation with ohm's law. Note that the returned current density is
     only the leading order approximation.
 
+    **Extends:** :class:`pybamm.BaseOhm`
+
     Parameters
     ----------
     param : parameter class
@@ -19,8 +21,6 @@ class Composite(BaseModel):
         Either 'Negative electrode' or 'Positive electrode'
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.BaseOhm`
     """
 
     def __init__(self, param, domain, options=None):

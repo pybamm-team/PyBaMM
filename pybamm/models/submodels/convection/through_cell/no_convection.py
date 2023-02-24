@@ -8,14 +8,14 @@ from .base_through_cell_convection import BaseThroughCellModel
 class NoConvection(BaseThroughCellModel):
     """A submodel for case where there is no convection.
 
+    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
     """
 
     def __init__(self, param, options=None):

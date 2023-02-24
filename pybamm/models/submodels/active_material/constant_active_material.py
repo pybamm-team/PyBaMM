@@ -9,6 +9,8 @@ from .base_active_material import BaseModel
 class Constant(BaseModel):
     """Submodel for constant active material
 
+    **Extends:** :class:`pybamm.active_material.BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -19,8 +21,6 @@ class Constant(BaseModel):
         Additional options to pass to the model
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.active_material.BaseModel`
     """
 
     def get_fundamental_variables(self):

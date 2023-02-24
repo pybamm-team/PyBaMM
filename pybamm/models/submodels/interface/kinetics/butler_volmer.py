@@ -13,6 +13,8 @@ class SymmetricButlerVolmer(BaseKinetics):
     .. math::
         j = 2 * j_0(c) * \\sinh( (ne / (2 * (1 + \\Theta T)) * \\eta_r(c))
 
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+
     Parameters
     ----------
     param : parameter class
@@ -26,8 +28,6 @@ class SymmetricButlerVolmer(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
@@ -42,6 +42,8 @@ class AsymmetricButlerVolmer(BaseKinetics):
     """
     Submodel which implements the asymmetric forward Butler-Volmer equation
 
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+
     Parameters
     ----------
     param : parameter class
@@ -55,8 +57,6 @@ class AsymmetricButlerVolmer(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

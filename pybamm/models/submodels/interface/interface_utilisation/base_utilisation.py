@@ -7,6 +7,8 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Base class for interface utilisation
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -15,8 +17,6 @@ class BaseModel(pybamm.BaseSubModel):
         Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options):

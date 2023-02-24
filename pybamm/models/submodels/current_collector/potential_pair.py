@@ -9,6 +9,8 @@ class BasePotentialPair(BaseModel):
     """A submodel for Ohm's law plus conservation of current in the current collectors.
     For details on the potential pair formulation see [1]_ and [2]_.
 
+    **Extends:** :class:`pybamm.current_collector.BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -22,8 +24,6 @@ class BasePotentialPair(BaseModel):
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
            Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
            of The Electrochemical Society, 167(14):140513, 2020
-
-    **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
 
     def __init__(self, param):

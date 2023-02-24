@@ -10,6 +10,8 @@ class Lumped(BaseThermal):
     """
     Class for lumped thermal submodel. For more information see [1]_ and [2]_.
 
+    **Extends:** :class:`pybamm.thermal.BaseThermal`
+
     Parameters
     ----------
     param : parameter class
@@ -25,8 +27,6 @@ class Lumped(BaseThermal):
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
            Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
            of The Electrochemical Society, 167(14):140513, 2020
-
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
     def __init__(self, param, options=None):

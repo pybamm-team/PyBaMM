@@ -10,6 +10,8 @@ class NoReaction(BaseInterface):
     """
     Base submodel for when no reaction occurs
 
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+
     Parameters
     ----------
     param :
@@ -23,8 +25,6 @@ class NoReaction(BaseInterface):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

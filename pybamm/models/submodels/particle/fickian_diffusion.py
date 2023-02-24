@@ -9,6 +9,8 @@ class FickianDiffusion(BaseParticle):
     """
     Class for molar conservation in particles, employing Fick's law
 
+    **Extends:** :class:`pybamm.particle.BaseParticle`
+
     Parameters
     ----------
     param : parameter class
@@ -22,8 +24,6 @@ class FickianDiffusion(BaseParticle):
         Phase of the particle (default is "primary")
     x_average : bool
         Whether the particle concentration is averaged over the x-direction
-
-    **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
     def __init__(self, param, domain, options, phase="primary", x_average=False):

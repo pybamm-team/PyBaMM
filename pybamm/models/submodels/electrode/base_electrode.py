@@ -7,6 +7,8 @@ import pybamm
 class BaseElectrode(pybamm.BaseSubModel):
     """Base class for electrode submodels.
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -18,8 +20,6 @@ class BaseElectrode(pybamm.BaseSubModel):
     set_positive_potential :  bool, optional
         If True the battery model sets the positive potential based on the current.
         If False, the potential is specified by the user. Default is True.
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options=None, set_positive_potential=True):

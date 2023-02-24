@@ -7,14 +7,14 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Base class for convection submodels.
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, options=None):

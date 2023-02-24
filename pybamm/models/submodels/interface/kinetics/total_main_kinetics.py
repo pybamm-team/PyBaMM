@@ -10,6 +10,8 @@ class TotalMainKinetics(pybamm.BaseSubModel):
     Class summing up contributions to the main (e.g. intercalation) reaction
     for cases with primary, secondary, ... reactions e.g. silicon-graphite
 
+    **Extends:** :class:`pybamm.interface.BaseInterface`
+
     Parameters
     ----------
     param :
@@ -21,8 +23,6 @@ class TotalMainKinetics(pybamm.BaseSubModel):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options):

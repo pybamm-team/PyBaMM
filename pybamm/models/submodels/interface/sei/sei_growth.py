@@ -9,6 +9,8 @@ class SEIGrowth(BaseModel):
     """
     Class for SEI growth.
 
+    **Extends:** :class:`pybamm.sei.BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -22,8 +24,6 @@ class SEIGrowth(BaseModel):
         Phase of the particle (default is "primary")
     cracks : bool, optional
         Whether this is a submodel for standard SEI or SEI on cracks
-
-    **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
     def __init__(self, param, reaction_loc, options, phase="primary", cracks=False):

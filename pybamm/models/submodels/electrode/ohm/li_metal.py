@@ -33,6 +33,8 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """Model for potential drop across a lithium metal electrode, with a
     differential or algebraic equation for the surface potential difference
 
+    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -41,8 +43,6 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         The domain of the submodel, can be "negative" or "positive"
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
     """
 
     def get_fundamental_variables(self):
@@ -120,14 +120,14 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
 class LithiumMetalExplicit(LithiumMetalBaseModel):
     """Explicit model for potential drop across a lithium metal electrode.
 
+    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
     """
 
     def get_coupled_variables(self, variables):

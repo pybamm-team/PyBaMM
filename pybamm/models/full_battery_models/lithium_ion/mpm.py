@@ -18,14 +18,14 @@ class MPM(SPM):
     >>> model.name
     'Many-Particle Model'
 
+    **Extends:** :class:`pybamm.lithium_ion.SPM`
+
     References
     ----------
     .. [1] TL Kirk, J Evans, CP Please and SJ Chapman. “Modelling electrode
         heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size
         distributions”.
         In: arXiv preprint arXiv:2006.12208 (2020).
-
-    **Extends:** :class:`pybamm.lithium_ion.SPM`
     """
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):

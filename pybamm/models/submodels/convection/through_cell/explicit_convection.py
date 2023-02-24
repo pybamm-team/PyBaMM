@@ -8,13 +8,12 @@ from .base_through_cell_convection import BaseThroughCellModel
 class Explicit(BaseThroughCellModel):
     """A submodel for the leading-order approximation of pressure-driven convection
 
+    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-
-
-    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
     """
 
     def __init__(self, param):

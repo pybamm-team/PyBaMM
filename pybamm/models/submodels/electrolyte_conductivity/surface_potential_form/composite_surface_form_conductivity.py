@@ -12,6 +12,8 @@ class BaseModel(Composite):
     the Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
 
+    **Extends:** :class:`pybamm.electrolyte_conductivity.Composite`
+
     Parameters
     ----------
     param : parameter class
@@ -20,8 +22,6 @@ class BaseModel(Composite):
         The domain in which the model holds
     options : dict
         Additional options to pass to the model
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.Composite`
     """
 
     def __init__(self, param, domain, options=None):
@@ -81,6 +81,8 @@ class CompositeDifferential(BaseModel):
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation and where capacitance is present.
 
+    **Extends:** :class:`BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -89,8 +91,6 @@ class CompositeDifferential(BaseModel):
         The domain in which the model holds
     options : dict
         Additional options to pass to the model
-
-    **Extends:** :class:`BaseModel`
     """
 
     def __init__(self, param, domain, options=None):
@@ -123,6 +123,8 @@ class CompositeAlgebraic(BaseModel):
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
 
+    **Extends:** :class:`BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -131,8 +133,6 @@ class CompositeAlgebraic(BaseModel):
         The domain in which the model holds
     options : dict
         Additional options to pass to the model
-
-    **Extends:** :class:`BaseModel`
     """
 
     def __init__(self, param, domain, options=None):

@@ -9,6 +9,8 @@ class Linear(BaseKinetics):
     """
     Submodel which implements linear kinetics. Valid for small overpotentials/currents.
 
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+
     Parameters
     ----------
     param : parameter class
@@ -22,8 +24,6 @@ class Linear(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

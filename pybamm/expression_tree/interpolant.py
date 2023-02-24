@@ -13,6 +13,8 @@ class Interpolant(pybamm.Function):
     Interpolate data in 1D, 2D, or 3D. Interpolation in 3D requires the input data to be
     on a regular grid (as per scipy.interpolate.RegularGridInterpolator).
 
+    **Extends**: :class:`pybamm.Function`
+
     Parameters
     ----------
     x : iterable of :class:`numpy.ndarray`
@@ -37,8 +39,6 @@ class Interpolant(pybamm.Function):
         range, or return NaN (following default behaviour from scipy). Default is True.
         Generally, it is best to set this to be False for 3D interpolation due to
         the higher potential for errors in extrapolation.
-
-    **Extends**: :class:`pybamm.Function`
     """
 
     def __init__(

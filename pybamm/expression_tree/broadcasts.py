@@ -19,6 +19,8 @@ class Broadcast(pybamm.SpatialOperator):
     `this example notebook
     <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
+    **Extends:** :class:`SpatialOperator`
+
     Parameters
     ----------
     child : :class:`Symbol`
@@ -27,8 +29,6 @@ class Broadcast(pybamm.SpatialOperator):
         Domain(s) of the symbol after broadcasting
     name : str
         name of the node
-
-    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, domains, name=None):
@@ -57,6 +57,8 @@ class PrimaryBroadcast(Broadcast):
     temperature T(x) from the electrode to the particles, or broadcasting current
     collector current i(y, z) from the current collector to the electrodes.
 
+    **Extends:** :class:`Broadcast`
+
     Parameters
     ----------
     child : :class:`Symbol`
@@ -65,8 +67,6 @@ class PrimaryBroadcast(Broadcast):
         Primary domain for broadcast. This will become the domain of the symbol
     name : str
         name of the node
-
-    **Extends:** :class:`Broadcast`
     """
 
     def __init__(self, child, broadcast_domain, name=None):
@@ -177,6 +177,8 @@ class SecondaryBroadcast(Broadcast):
     this wouldn't be used to broadcast particle concentrations in the DFN, since these
     already depend on both x and r.
 
+    **Extends:** :class:`Broadcast`
+
     Parameters
     ----------
     child : :class:`Symbol`
@@ -187,8 +189,6 @@ class SecondaryBroadcast(Broadcast):
         one position.
     name : str
         name of the node
-
-    **Extends:** :class:`Broadcast`
     """
 
     def __init__(self, child, broadcast_domain, name=None):
@@ -303,6 +303,8 @@ class TertiaryBroadcast(Broadcast):
     domain. Note: the symbol for broadcast must already have a non-empty `secondary`
     domain.
 
+    **Extends:** :class:`Broadcast`
+
     Parameters
     ----------
     child : :class:`Symbol`
@@ -313,8 +315,6 @@ class TertiaryBroadcast(Broadcast):
         `quaternary` domain of the symbol.
     name : str
         name of the node
-
-    **Extends:** :class:`Broadcast`
     """
 
     def __init__(self, child, broadcast_domain, name=None):

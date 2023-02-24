@@ -7,6 +7,8 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Base class for transport_efficiency
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -15,8 +17,6 @@ class BaseModel(pybamm.BaseSubModel):
         The material for the model ('electrolyte' or 'electrode').
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, component, options=None):

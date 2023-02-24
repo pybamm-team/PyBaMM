@@ -11,6 +11,8 @@ class DFN(LithiumIonDFN):
     submodels from the lithium-ion DFN, and adds some submodels specific to
     lithium-metal.
 
+    **Extends:** :class:`pybamm.lithium_ion.DFN`
+
     Parameters
     ----------
     options : dict, optional
@@ -23,8 +25,6 @@ class DFN(LithiumIonDFN):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
-
-    **Extends:** :class:`pybamm.lithium_ion.DFN`
     """
 
     def __init__(

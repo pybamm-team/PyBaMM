@@ -7,6 +7,8 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Base class for active material volume fraction
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -17,8 +19,6 @@ class BaseModel(pybamm.BaseSubModel):
         Additional options to pass to the model
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options, phase="primary"):

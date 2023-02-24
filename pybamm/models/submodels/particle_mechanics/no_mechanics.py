@@ -9,6 +9,8 @@ class NoMechanics(BaseMechanics):
     """
     Class for no particle mechanics.
 
+    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
+
     Parameters
     ----------
     param : parameter class
@@ -20,8 +22,6 @@ class NoMechanics(BaseMechanics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
     def __init__(self, param, domain, options, phase="primary"):

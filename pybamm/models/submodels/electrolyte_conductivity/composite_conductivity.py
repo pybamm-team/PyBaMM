@@ -9,6 +9,8 @@ class Composite(BaseElectrolyteConductivity):
     """Base class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations.
 
+    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
+
     Parameters
     ----------
     param : parameter class
@@ -19,8 +21,6 @@ class Composite(BaseElectrolyteConductivity):
         A dictionary of options to be passed to the model.
     higher_order_terms : str
         What kind of higher-order terms to use ('composite' or 'first-order')
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param, domain=None, options=None):

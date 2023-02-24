@@ -9,12 +9,12 @@ class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
     """
     A discretisation class for the zero dimensional mesh
 
+    **Extends** : :class:`pybamm.SpatialMethod`
+
     Parameters
     ----------
     mesh : :class: `pybamm.Mesh`
         Contains all the submeshes for discretisation
-
-    **Extends** : :class:`pybamm.SpatialMethod`
     """
 
     def __init__(self, options=None):

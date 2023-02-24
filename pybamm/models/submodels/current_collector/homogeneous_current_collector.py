@@ -9,13 +9,12 @@ class Uniform(BaseModel):
     """A submodel for uniform potential in the current collectors which
     is valid in the limit of fast conductivity in the current collectors.
 
+    **Extends:** :class:`pybamm.current_collector.BaseModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-
-
-    **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
 
     def __init__(self, param):

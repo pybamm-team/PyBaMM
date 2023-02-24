@@ -14,6 +14,8 @@ class BasicDFNComposite(BaseModel):
     comparing different physical effects, and in general the main DFN class should be
     used instead.
 
+    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
+
     Parameters
     ----------
     name : str, optional
@@ -24,8 +26,6 @@ class BasicDFNComposite(BaseModel):
     ..  W. Ai, N. Kirkaldy, Y. Jiang, G. Offer, H. Wang, B. Wu (2022).
         A composite electrode model for lithium-ion battery with a
         silicon/graphite negative electrode. Journal of Power Sources. 527, 231142.
-
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):

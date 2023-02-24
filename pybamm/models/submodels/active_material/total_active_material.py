@@ -7,6 +7,8 @@ import pybamm
 class Total(pybamm.BaseSubModel):
     """Class for total active material volume fraction, for models with multiple phases
 
+    **Extends:** :class:`pybamm.BaseSubModel`
+
     Parameters
     ----------
     param : parameter class
@@ -15,8 +17,6 @@ class Total(pybamm.BaseSubModel):
         The domain of the model either 'Negative' or 'Positive'
     options : dict
         Additional options to pass to the model
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options):

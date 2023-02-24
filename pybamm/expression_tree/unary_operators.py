@@ -505,14 +505,14 @@ class Integral(SpatialOperator):
     where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
     the domain respectively, and :math:`u\\in\\text{domain}`.
 
+    **Extends:** :class:`SpatialOperator`
+
     Parameters
     ----------
     function : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
-
-    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, integration_variable):
@@ -661,14 +661,14 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
     where :math:`u\\in\\text{domain}` which can represent either a
     spatial or temporal variable.
 
+    **Extends:** :class:`BaseIndefiniteIntegral`
+
     Parameters
     ----------
     function : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
-
-    **Extends:** :class:`BaseIndefiniteIntegral`
     """
 
     def __init__(self, child, integration_variable):
@@ -722,14 +722,14 @@ class DefiniteIntegralVector(SpatialOperator):
     where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
     the domain respectively and :math:`\\psi` is the basis function.
 
+    **Extends:** :class:`SpatialOperator`
+
     Parameters
     ----------
     variable : :class:`pybamm.Symbol`
         The variable whose basis will be integrated over the entire domain
     vector_type : str, optional
         Whether to return a row or column vector (default is row)
-
-    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, vector_type="row"):
@@ -819,14 +819,14 @@ class DeltaFunction(SpatialOperator):
     """
     Delta function. Currently can only be implemented at the edge of a domain.
 
+    **Extends:** :class:`SpatialOperator`
+
     Parameters
     ----------
     child : :class:`pybamm.Symbol`
         The variable that sets the strength of the delta function
     side : str
         Which side of the domain to implement the delta function on
-
-    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, side, domain):
@@ -919,14 +919,14 @@ class BoundaryValue(BoundaryOperator):
     """
     A node in the expression tree which gets the boundary value of a variable.
 
+    **Extends:** :class:`BoundaryOperator`
+
     Parameters
     ----------
     child : :class:`pybamm.Symbol`
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
-
-    **Extends:** :class:`BoundaryOperator`
     """
 
     def __init__(self, child, side):

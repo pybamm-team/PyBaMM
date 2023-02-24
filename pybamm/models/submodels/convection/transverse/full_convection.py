@@ -9,12 +9,12 @@ class Full(BaseTransverseModel):
     """
     Submodel for the full model of pressure-driven convection in transverse directions
 
+    **Extends:** :class:`pybamm.convection.through_cell.BaseTransverseModel`
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-
-    **Extends:** :class:`pybamm.convection.through_cell.BaseTransverseModel`
     """
 
     def __init__(self, param):

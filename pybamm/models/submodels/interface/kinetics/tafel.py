@@ -12,6 +12,8 @@ class ForwardTafel(BaseKinetics):
     .. math::
         j = u * j_0(c) * \\exp((ne / (2 * (1 + \\Theta T)) * \\eta_r(c))
 
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+
     Parameters
     ----------
     param :
@@ -25,8 +27,6 @@ class ForwardTafel(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

@@ -9,6 +9,8 @@ from .base_utilisation import BaseModel
 class Constant(BaseModel):
     """Submodel for constant interface utilisation
 
+    **Extends:** :class:`pybamm.interface_utilisation.BaseModel`
+
     Parameters
     ----------
     param : parameter class
@@ -17,8 +19,6 @@ class Constant(BaseModel):
         Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface_utilisation.BaseModel`
     """
 
     def get_fundamental_variables(self):
