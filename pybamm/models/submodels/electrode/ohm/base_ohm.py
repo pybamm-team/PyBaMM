@@ -9,6 +9,8 @@ class BaseModel(BaseElectrode):
     """A base class for electrode submodels that employ
     Ohm's law.
 
+    **Extends:** :class:`pybamm.electrode.BaseElectrode`
+
     Parameters
     ----------
     param : parameter class
