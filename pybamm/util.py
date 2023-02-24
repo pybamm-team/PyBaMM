@@ -333,7 +333,6 @@ def install_jax(arguments=None):  # pragma: no cover
 
     Command Line Interface:
     -----------------------
-    To install compatible versions of jax and jaxlib, run:
     $ pybamm_install_jax
 
     optional arguments:
