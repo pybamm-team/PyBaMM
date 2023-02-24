@@ -817,7 +817,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_number_of_sei_layers(self):
-        number_of_sei_layer_option = self["number of SEI layers"]
+        number_of_sei_layer_option = self.options["number of SEI layers"]
         if number_of_sei_layer_option == "2":
             default_number_of_sei_layers = "2"
         else:
