@@ -317,7 +317,8 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
-            if values == "1 + dlnf/dlnc":
+            # specific check for depreciated parameter "1 + dlnf/dlnc"
+            if value == "1 + dlnf/dlnc" and values == "1 + dlnf/dlnc":
                 raise ValueError(
                     "parameter '{}' has value '1 + dlnf/dlnc',"
                     + "which has been changed to `Thermodynamic factor`"
