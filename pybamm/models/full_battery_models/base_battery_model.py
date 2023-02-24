@@ -296,7 +296,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Change the default for number of SEI layer based on which option is provided.
         # return 1 if option not given
         default_options["number of SEI layers"] = "1"
-        number_of_sei_layer_option = extra_options.get["number of SEI layers", "2"]
+        number_of_sei_layer_option = self.options["number of SEI layers", "2"]
         if number_of_sei_layer_option == "2":
             default_options["number of SEI layers"] = "2"
 
