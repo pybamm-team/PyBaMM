@@ -288,7 +288,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         phases = self.options.phases["negative"]
         for phase in phases:
-            if self.options["number of SEI layers"] == 2:
+            if self.options["number of SEI layers"] == "2":
                 if self.options["SEI"] == "none":
                     submodel = pybamm.sei.NoSEI(self.param, self.options, phase)
                 elif self.options["SEI"] == "constant":

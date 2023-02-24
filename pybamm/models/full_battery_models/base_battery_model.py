@@ -122,10 +122,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "solvent-diffusion limited", "electron-migration limited", \
                     "interstitial-diffusion limited", "ec reaction limited" \
                     or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
-            * "number of SEI layers": int
+            * "number of SEI layers": str
                 Number of SEI layers to include in the model. Can be:
-                - 1(default) : Single outer SEI layer
-                - 2 : Two SEI layers, inner and outer
+                - "1"(default) : Single outer SEI layer
+                - "2" : Two SEI layers, inner and outer
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "none" if the "SEI" option is "none", and
@@ -258,14 +258,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "none",
                 "constant",
                 "reaction limited",
-                "reaction limited (asymmetric)",
+                "reaction limited (asymmet'ric)",
                 "solvent-diffusion limited",
                 "electron-migration limited",
                 "interstitial-diffusion limited",
                 "ec reaction limited",
                 "ec reaction limited (asymmetric)",
             ],
-            "number of SEI layers": [1, 2],
+            "number of SEI layers": ["1", "2"],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
             "SEI porosity change": ["false", "true"],
@@ -293,11 +293,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
-        # Default number of SEI layer is 1.
-        default_options["number of SEI layers"] = 1
-        number_of_sei_layer = extra_options.get["number of SEI layers", 2]
-        if number_of_sei_layer == 2:
-            default_options["number of SEI layers"] = 2
+        # Change the default for number of SEI layer based on which option is provided.
+        # return 1 if option not given
+        default_options["number of SEI layers"] = "1"
+        number_of_sei_layer_option = extra_options.get["number of SEI layers", "2"]
+        if number_of_sei_layer_option == "2":
+            default_options["number of SEI layers"] = "2"
+
         # Change the default for SEI film resistance based on which SEI option is
         # provided
         # return "none" if option not given

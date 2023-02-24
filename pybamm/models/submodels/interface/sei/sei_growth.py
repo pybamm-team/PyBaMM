@@ -53,7 +53,7 @@ class SEIGrowth(BaseModel):
                 )
             L.print_name = f"L_{pos}"
             Ls.append(L)
-        if self.options["number of SEI layers"] == 2:
+        if self.options["number of SEI layers"] == "2":
             L_inner, L_outer = Ls
             if self.options["SEI"].startswith("ec reaction limited"):
                 L_inner = 0 * L_inner  # Set L_inner to zero, copying domains

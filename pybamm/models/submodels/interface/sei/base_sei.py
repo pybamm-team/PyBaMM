@@ -107,7 +107,7 @@ class BaseModel(BaseInterface):
             f"Single layer {self.reaction_name}thickness": L_sei,
             f"Single layer {self.reaction_name}thickness [m]": L_sei * L_scale,
         }
-        if self.options["number of SEI layers"] == 2:
+        if self.options["number of SEI layers"] == "2":
             if self.reaction_loc != "interface":
                 L_inner_av = pybamm.x_average(L_inner)
                 L_outer_av = pybamm.x_average(L_outer)
@@ -223,7 +223,7 @@ class BaseModel(BaseInterface):
             # Set scales for the "EC Reaction Limited" models (both symmetric and
             # asymmetric)
             if self.options["SEI"].startswith("ec reaction limited"):
-                if self.options["number of SEI layers"] == 2:
+                if self.options["number of SEI layers"] == "2":
                     L_inner_0 = 0
                     L_outer_0 = 1
                     L_inner_crack_0 = 0
@@ -234,7 +234,7 @@ class BaseModel(BaseInterface):
                     L_sei_0 = 1
                     L_sei_crack_0 = 1 / 10000
             else:
-                if self.options["number of SEI layers"] == 2:
+                if self.options["number of SEI layers"] == "2":
                     L_inner_0 = phase_param.L_inner_0
                     L_outer_0 = phase_param.L_outer_0
                     L_inner_crack_0 = phase_param.L_inner_crack_0
@@ -244,7 +244,7 @@ class BaseModel(BaseInterface):
                     L_sei_crack_0 = phase_param.L_sei_crack_0
 
         if self.reaction == "SEI":
-            if self.options["number of SEI layers"] == 2:
+            if self.options["number of SEI layers"] == "2":
                 L_inner = variables[f"Inner {reaction_name}thickness"]
                 L_outer = variables[f"Outer {reaction_name}thickness"]
 
@@ -302,7 +302,7 @@ class BaseModel(BaseInterface):
             )
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
-            if self.options["number of SEI layers"] == 2:
+            if self.options["number of SEI layers"] == "2":
                 L_inner_cr = variables[f"Inner {reaction_name}thickness"]
                 L_outer_cr = variables[f"Outer {reaction_name}thickness"]
                 roughness = variables[f"{Domain} electrode roughness ratio"]
