@@ -549,6 +549,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "dimensionality",
                     "operating mode",
                     "timescale",
+                    "number of SEI layers",
                 ]:  # some options accept non-strings
                     value = (value,)
                 else:
