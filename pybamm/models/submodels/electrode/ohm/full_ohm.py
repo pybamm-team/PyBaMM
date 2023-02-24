@@ -3,11 +3,11 @@
 #
 import pybamm
 from .base_ohm import BaseModel
-from pybamm.doc_utils import parameters_from, extends
+from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
 
 
-@parameters_from
-@extends
+@copy_parameter_doc_from_parent
+@doc_extend_parent
 class Full(BaseModel):
     """Full model of electrode employing Ohm's law."""
 

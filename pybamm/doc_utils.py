@@ -4,7 +4,7 @@
 from inspect import getmro
 
 
-def parameters_from(cls):
+def copy_parameter_doc_from_parent(cls):
     """
     Add parameters from the base class to the docstring (Sphinx
     documentation). This constructs a new docstring by concatenating with
@@ -18,7 +18,7 @@ def parameters_from(cls):
     return cls
 
 
-def extends(cls):
+def doc_extend_parent(cls):
     """
     Add a link to the base class in the docstring (Sphinx documentation) via the
     **Extends** directive. Constructs a new docstring element by concatenating
