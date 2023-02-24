@@ -293,13 +293,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for number of SEI layer based on which option is provided.
-        # return 1 if option not given
-        default_options["number of SEI layers"] = "1"
-        number_of_sei_layer_option = self["number of SEI layers"]
-        if number_of_sei_layer_option == "2":
-            default_options["number of SEI layers"] = "2"
-
         # Change the default for SEI film resistance based on which SEI option is
         # provided
         # return "none" if option not given
@@ -821,6 +814,15 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
         return base_spatial_methods
+
+    @property
+    def default_number_of_sei_layers(self):
+        number_of_sei_layer_option = self["number of SEI layers"]
+        if number_of_sei_layer_option == "2":
+            default_number_of_sei_layers = "2"
+        else:
+            default_number_of_sei_layers = "1"
+        return default_number_of_sei_layers
 
     @property
     def options(self):
