@@ -60,11 +60,7 @@ class SEIGrowth(BaseModel):
         else:
             L_sei = Ls
 
-        if self.options["number of SEI layers"] == 2:
-            variables = self._get_standard_thickness_variables(L_inner, L_outer)
-        else:
-            variables = self._get_standard_thickness_variables(L_sei)
-
+        variables = self._get_standard_thickness_variables(L_inner, L_outer, L_sei)
         return variables
 
     def get_coupled_variables(self, variables):
