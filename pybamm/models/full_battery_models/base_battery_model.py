@@ -293,6 +293,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
+        # Default number of SEI layer is 1.
+        default_options["number of SEI layers"] = 1
         # Change the default for SEI film resistance based on which SEI option is
         # provided
         # return "none" if option not given
