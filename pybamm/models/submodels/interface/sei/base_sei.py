@@ -99,13 +99,15 @@ class BaseModel(BaseInterface):
         else:
             L_scale = self.phase_param.L_sei_0_dim
 
+        variables = {
+            f"Inner {self.reaction_name}thickness": L_inner,
+            f"Inner {self.reaction_name}thickness [m]": L_inner * L_scale,
+            f"Outer {self.reaction_name}thickness": L_outer,
+            f"Outer {self.reaction_name}thickness [m]": L_outer * L_scale,
+            f"Single layer {self.reaction_name}thickness": L_sei,
+            f"Single layer {self.reaction_name}thickness [m]": L_sei * L_scale,
+        }
         if self.options["number of SEI layers"] == 2:
-            variables = {
-                f"Inner {self.reaction_name}thickness": L_inner,
-                f"Inner {self.reaction_name}thickness [m]": L_inner * L_scale,
-                f"Outer {self.reaction_name}thickness": L_outer,
-                f"Outer {self.reaction_name}thickness [m]": L_outer * L_scale,
-            }
             if self.reaction_loc != "interface":
                 L_inner_av = pybamm.x_average(L_inner)
                 L_outer_av = pybamm.x_average(L_outer)
@@ -129,10 +131,6 @@ class BaseModel(BaseInterface):
                     )
                 )
         else:
-            variables = {
-                f"Single layer {self.reaction_name}thickness": L_sei,
-                f"Single layer {self.reaction_name}thickness [m]": L_sei * L_scale,
-            }
             if self.reaction_loc != "interface":
                 L_sei_av = pybamm.x_average(L_sei)
                 variables.update(
