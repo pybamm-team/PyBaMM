@@ -318,10 +318,10 @@ class ParameterValues:
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
             # specific check for depreciated parameter "1 + dlnf/dlnc"
-            if value == "1 + dlnf/dlnc" and values == "1 + dlnf/dlnc":
+            if name in self.keys() == "1 + dlnf/dlnc":
                 raise ValueError(
-                    "parameter '{}' has value '1 + dlnf/dlnc',"
-                    + "which has been changed to `Thermodynamic factor`"
+                    "parameter '{}' is depreciated"
+                    + "and has been changed to `Thermodynamic factor`"
                 )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
