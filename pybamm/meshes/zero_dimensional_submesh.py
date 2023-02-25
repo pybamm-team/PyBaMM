@@ -12,7 +12,7 @@ class SubMesh0D(SubMesh):
     0D submesh class.
     Contains the position of the node.
 
-    **Extends:"": :class:`pybamm.SubMesh`
+    **Extends:** :class:`pybamm.SubMesh`
 
     Parameters
     ----------
