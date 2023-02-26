@@ -1,0 +1,28 @@
+name: Check URLs with Lychee
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Run everyday at 3 am UTC
+    - cron: 0 3 * * *
+
+jobs:
+  linkChecker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lychee URL checker
+      # use stable version for now to avoid breaking changes
+        uses: lycheeverse/lychee-action@v1
+        with:
+          fail: true
+        # env:
+          # to be used in case rate limits are surpassed
+          # GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          args: --no-progress 
+                --exclude-path CHANGELOG.md
+                --exclude http://127.0.0.1
+                --timeout 10
+                --max-retries 5
