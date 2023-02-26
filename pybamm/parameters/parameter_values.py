@@ -321,11 +321,13 @@ class ParameterValues:
                 if name in self._dict_items.keys():
                     raise KeyError(
                         "Cannot update parameter '{}' as it ".format(name)
-                        + "has a default value. ({}). If you are ".format(self._dict_items[name])
+                        + "has a default value. ({}). If you are ".format(
+                            self._dict_items[name]
+                        )
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=True)"
                     )
-                
+
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
@@ -827,7 +829,6 @@ class ParameterValues:
         return list(self._dict_items.keys())
 
     def export_csv(self, filename):
-
         # process functions and data to output
         # like they appear in inputs csv files
         parameter_output = {}
