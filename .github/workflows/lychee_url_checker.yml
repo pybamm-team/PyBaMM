@@ -20,9 +20,9 @@ jobs:
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
 
-      # check URLs
-      - name: Lychee URL checker
+      # check URLs with Lychee
       - uses: actions/checkout@v3
+      - name: Lychee URL checker
       # use stable version for now to avoid breaking changes
         uses: lycheeverse/lychee-action@v1.6.1
         with:
