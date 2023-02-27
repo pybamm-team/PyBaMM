@@ -23,7 +23,6 @@ jobs:
           # to be used in case rate limits are surpassed
           # GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           args: --no-progress 
-                --exclude-path CHANGELOG.md
                 --exclude http://127.0.0.1
                 --timeout 10
                 --max-retries 5
