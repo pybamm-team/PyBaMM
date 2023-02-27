@@ -18,11 +18,10 @@ jobs:
       # sha-256 hash of latest stable version for security reasons
         uses: lycheeverse/lychee-action@d322e38893906cef8788eefe9c63694c562c7dfa
         with:
+          # fail the action on broken links
           fail: true
         # env:
           # to be used in case rate limits are surpassed
           # GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          args: --no-progress 
-                --exclude http://127.0.0.1
-                --timeout 10
-                --max-retries 5
+          # arguments with file types to check
+          args: --no-progress  './**/*.rst' './**/*.md' './**/*.py' './**/*.ipynb' --timeout 10 --max-retries 5
