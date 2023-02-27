@@ -20,8 +20,8 @@ jobs:
         with:
           # fail the action on broken links
           fail: true
-          env:
-          # to be used in case rate limits are surpassed
-            GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        env:
+        # to be used in case rate limits are surpassed
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           # arguments with file types to check
           args: --no-progress  './**/*.rst' './**/*.md' './**/*.py' './**/*.ipynb' --timeout 10 --max-retries 5
