@@ -15,7 +15,8 @@ jobs:
 
       - name: Lychee URL checker
       # use stable version for now to avoid breaking changes
-        uses: lycheeverse/lychee-action@v1
+      # sha-256 hash of latest stable version for security reasons
+        uses: lycheeverse/lychee-action@d322e38893906cef8788eefe9c63694c562c7dfa
         with:
           fail: true
         # env:
