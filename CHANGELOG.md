@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.2](https://github.com/pybamm-team/PyBaMM/tree/v23.2) - 2023-02-28
+
 ## Features
 
 - Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve [#2677](https://github.com/pybamm-team/PyBaMM/pull/2677)
