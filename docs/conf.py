@@ -107,9 +107,17 @@ html_theme_options = {
         "image_light": "pybamm_logo.png",
         "image_dark": "pybamm_logo.png",
     },
-    "github_url": "https://github.com/pybamm-team/pybamm",
-    "twitter_url": "https://twitter.com/pybamm_",
     "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pybamm-team/pybamm",
+            "icon": "fa-brands fa-square-github",
+        },
+        {
+            "name": "Twitter",
+            "url": "https://twitter.com/pybamm_",
+            "icon": "fa-brands fa-square-twitter",
+        },
         {
             "name": "PyPI",
             "url": "https://pypi.org/project/pybamm/",
