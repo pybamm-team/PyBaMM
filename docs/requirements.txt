@@ -20,3 +20,4 @@ sphinx>4.0
 pydata-sphinx-theme
 sphinx_design
 sphinx-copybutton
+myst-parser

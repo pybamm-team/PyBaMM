@@ -1,5 +1,18 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.2](https://github.com/pybamm-team/PyBaMM/tree/v23.2) - 2023-02-28
+
+## Features
+
+- Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve [#2677](https://github.com/pybamm-team/PyBaMM/pull/2677)
+- The "particle size" option can now be a tuple to allow different behaviour in each electrode([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
+- Added temperature control to experiment class. [#2518](https://github.com/pybamm-team/PyBaMM/pull/2518)
+
+## Bug fixes
+
+- Fixed current_sigmoid_ocp to be valid for both electrodes ([#2719](https://github.com/pybamm-team/PyBaMM/pull/2719)).
+- Fixed the length scaling for the first dimension of r-R plots ([#2663](https://github.com/pybamm-team/PyBaMM/pull/2663)).
+
 # [v23.1](https://github.com/pybamm-team/PyBaMM/tree/v23.1) - 2023-01-31
 
 ## Features

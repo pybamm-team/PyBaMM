@@ -55,7 +55,6 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         return variables
 
     def set_rhs(self, variables):
-
         param = self.param
 
         c_e_av = variables["X-averaged electrolyte concentration"]

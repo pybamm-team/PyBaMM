@@ -532,7 +532,6 @@ class TestSpectralVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(div_eval, 6 * np.ones([sec_pts, prim_pts]))
 
     def test_grad_div_shapes_mixed_domain(self):
-
         # Create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.SpectralVolume()}

@@ -24,7 +24,6 @@ class Full(BaseModel):
         super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
-
         if self.domain == "negative":
             phi_s = pybamm.standard_variables.phi_s_n
         elif self.domain == "positive":

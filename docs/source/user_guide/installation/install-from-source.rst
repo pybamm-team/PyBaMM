@@ -130,7 +130,7 @@ Using Tox (recommended)
 
 
 This creates a virtual environment ``.tox/dev`` (or ``windows-dev``) inside the ``PyBaMM/`` directory.
-It comes ready with PyBaMM and some useful development tools like `flake8 <https://flake8.pycqa.org/en/latest/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
+It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
 You can now activate the environment with
 
@@ -228,7 +228,6 @@ Doctests, examples, style and coverage
 --------------------------------------
 
 - ``tox -e examples``: Run the example scripts in ``examples/scripts``.
-- ``tox -e flake8``: Check for PEP8 compliance.
 - ``tox -e doctests``: Run doctests.
 - ``tox -e coverage``: Measure current test coverage.
 

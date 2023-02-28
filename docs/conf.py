@@ -26,7 +26,7 @@ copyright = "2018-2023, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "23.1"
+version = "23.2"
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -49,6 +49,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_design",
     "sphinx_copybutton",
+    "myst_parser",
 ]
 
 
@@ -99,14 +100,30 @@ html_static_path = ["source/_static"]
 # https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
 # mostly copied from numpy, scipy, pandas
 html_logo = "source/_static/pybamm_logo.png"
+html_favicon = "source/_static/favicon/favicon.png"
 
 html_theme_options = {
     "logo": {
         "image_light": "pybamm_logo.png",
         "image_dark": "pybamm_logo.png",
     },
-    "github_url": "https://github.com/pybamm-team/pybamm",
-    "twitter_url": "https://twitter.com/pybamm_",
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pybamm-team/pybamm",
+            "icon": "fa-brands fa-square-github",
+        },
+        {
+            "name": "Twitter",
+            "url": "https://twitter.com/pybamm_",
+            "icon": "fa-brands fa-square-twitter",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/pybamm/",
+            "icon": "fa-solid fa-box",
+        },
+    ],
     "collapse_navigation": True,
     "external_links": [
         {

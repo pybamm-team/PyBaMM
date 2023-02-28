@@ -7,11 +7,10 @@ import unittest
 
 values = {
     "Initial SoC": 0.5,
-    "Initial cell temperature [degC]": 25,
-    "Initial jig temperature [degC]": 25,
+    "Initial temperature [K]": 25 + 273.15,
     "Cell capacity [A.h]": 100,
     "Nominal cell capacity [A.h]": 100,
-    "Ambient temperature [degC]": 25,
+    "Ambient temperature [K]": 25 + 273.15,
     "Current function [A]": 100,
     "Upper voltage cut-off [V]": 4.2,
     "Lower voltage cut-off [V]": 3.2,
@@ -33,7 +32,6 @@ parameter_values = pybamm.ParameterValues(values)
 
 class TestEcmParameters(unittest.TestCase):
     def test_init_parameters(self):
-
         param = pybamm.EcmParameters()
 
         simpled_mapped_parameters = [
@@ -49,14 +47,18 @@ class TestEcmParameters(unittest.TestCase):
             (param.current_with_time, "Current function [A]"),
             (param.dimensional_current_density_with_time, "Current function [A]"),
             (param.initial_soc, "Initial SoC"),
-            (param.initial_T_cell, "Initial cell temperature [degC]"),
-            (param.initial_T_jig, "Initial jig temperature [degC]"),
         ]
 
         for symbol, key in simpled_mapped_parameters:
             value = parameter_values.evaluate(symbol)
             expected_value = values[key]
             self.assertEqual(value, expected_value)
+
+        value = parameter_values.evaluate(param.initial_T_cell)
+        self.assertEqual(value, values["Initial temperature [K]"] - 273.15)
+
+        value = parameter_values.evaluate(param.initial_T_jig)
+        self.assertEqual(value, values["Initial temperature [K]"] - 273.15)
 
         compatibility_parameters = [
             (param.I_typ, 1),
@@ -75,7 +77,6 @@ class TestEcmParameters(unittest.TestCase):
         sym = pybamm.Scalar(1)
 
         mapped_functions = [
-            (param.T_amb(sym), "Ambient temperature [degC]"),
             (param.ocv(sym), "Open circuit voltage [V]"),
             (param.rcr_element("R0 [Ohm]", sym, sym, sym), "R0 [Ohm]"),
             (param.rcr_element("R1 [Ohm]", sym, sym, sym), "R1 [Ohm]"),
@@ -88,6 +89,9 @@ class TestEcmParameters(unittest.TestCase):
             value = parameter_values.evaluate(symbol)
             expected_value = values[key]
             self.assertEqual(value, expected_value)
+
+        value = parameter_values.evaluate(param.T_amb(sym))
+        self.assertEqual(value, values["Ambient temperature [K]"] - 273.15)
 
 
 if __name__ == "__main__":

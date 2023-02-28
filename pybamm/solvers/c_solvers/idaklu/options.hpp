@@ -6,6 +6,7 @@
 struct Options {
   bool print_stats;
   bool using_sparse_matrix;
+  bool using_banded_matrix;
   bool using_iterative_solver;
   std::string jacobian;
   std::string linear_solver; // klu, lapack, spbcg 

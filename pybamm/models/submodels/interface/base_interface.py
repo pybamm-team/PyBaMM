@@ -73,7 +73,8 @@ class BaseInterface(pybamm.BaseSubModel):
         if self.reaction == "lithium-ion main":
             # For "particle-size distribution" submodels, take distribution version
             # of c_s_surf that depends on particle size.
-            if self.options["particle size"] == "distribution":
+            domain_options = getattr(self.options, domain)
+            if domain_options["particle size"] == "distribution":
                 c_s_surf = variables[
                     f"{Domain} {phase_name}particle surface concentration distribution"
                 ]

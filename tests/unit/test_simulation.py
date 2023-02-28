@@ -20,7 +20,6 @@ class TestSimulation(unittest.TestCase):
         np.testing.assert_array_almost_equal(sol.y.full()[0], np.exp(-sol.t), decimal=5)
 
     def test_basic_ops(self):
-
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
@@ -62,7 +61,6 @@ class TestSimulation(unittest.TestCase):
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
     def test_solve(self):
-
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve([0, 600])
         self.assertFalse(sim._solution is None)
@@ -88,7 +86,6 @@ class TestSimulation(unittest.TestCase):
             sim.solve(starting_solution=sol)
 
     def test_solve_non_battery_model(self):
-
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
         model.rhs = {v: -v}
@@ -105,7 +102,6 @@ class TestSimulation(unittest.TestCase):
         )
 
     def test_solve_already_partially_processed_model(self):
-
         model = pybamm.lithium_ion.SPM()
 
         # Process model manually
@@ -126,7 +122,6 @@ class TestSimulation(unittest.TestCase):
         sim.solve([0, 600])
 
     def test_reuse_commands(self):
-
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
         sim.set_parameters()
@@ -150,7 +145,6 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.C_rate, 2)
 
     def test_step(self):
-
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)

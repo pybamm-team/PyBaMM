@@ -20,7 +20,6 @@ class LeadAcidParameters(BaseParameters):
     """
 
     def __init__(self):
-
         # Get geometric, electrical and thermal parameters
         self.geo = pybamm.geometric_parameters
         self.elec = pybamm.electrical_parameters

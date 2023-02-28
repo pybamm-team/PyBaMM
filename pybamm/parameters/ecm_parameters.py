@@ -3,7 +3,6 @@ import pybamm
 
 class EcmParameters:
     def __init__(self):
-
         self.timescale = pybamm.Scalar(1)
 
         self.cell_capacity = pybamm.Parameter("Cell capacity [A.h]")
@@ -43,11 +42,14 @@ class EcmParameters:
 
     def _set_initial_condition_parameters(self):
         self.initial_soc = pybamm.Parameter("Initial SoC")
-        self.initial_T_cell = pybamm.Parameter("Initial cell temperature [degC]")
-        self.initial_T_jig = pybamm.Parameter("Initial jig temperature [degC]")
+        self.initial_T_cell = pybamm.Parameter("Initial temperature [K]") - 273.15
+        self.initial_T_jig = pybamm.Parameter("Initial temperature [K]") - 273.15
 
     def T_amb(self, t):
-        return pybamm.FunctionParameter("Ambient temperature [degC]", {"Time [s]": t})
+        ambient_temperature_K = pybamm.FunctionParameter(
+            "Ambient temperature [K]", {"Time [s]": t}
+        )
+        return ambient_temperature_K - 273.15
 
     def ocv(self, soc):
         return pybamm.FunctionParameter("Open circuit voltage [V]", {"SoC": soc})
