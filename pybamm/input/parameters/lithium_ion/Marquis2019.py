@@ -32,7 +32,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
 def graphite_mcmb2528_ocp_Dualfoil1998(sto):
     """
-    Graphite MCMB 2528 Open Circuit Potential (OCP) as a function of the
+    Graphite MCMB 2528 Open-circuit Potential (OCP) as a function of the
     stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data
     was measured by Chris Bogatu at Telcordia and PolyStor materials, 2000. However,
     we could not find any other records of this measurment.
@@ -96,7 +96,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
 def graphite_entropic_change_Moura2016(sto, c_s_max):
     """
-    Graphite entropic change in open circuit potential (OCP) at a temperature of
+    Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from Scott Moura's FastDFN code
     [1].
 
@@ -155,7 +155,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
 def lico2_ocp_Dualfoil1998(sto):
     """
-    Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
+    Lithium Cobalt Oxide (LiCO2) Open-circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data
     was measured by Oscar Garcia 2001 using Quallion electrodes for 0.5 < sto < 0.99
     and by Marc Doyle for sto<0.4 (for unstated electrodes). We could not find any
@@ -227,7 +227,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
 def lico2_entropic_change_Moura2016(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Scott Moura's FastDFN code [1].
 

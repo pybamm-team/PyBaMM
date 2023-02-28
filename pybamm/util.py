@@ -64,6 +64,15 @@ class FuzzyDict(dict):
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
                 )
+            if "Measured open circuit voltage" in key:
+                raise KeyError(
+                    "The variable for open circuit voltage is now called "
+                    "'Open-circuit voltage [V]'. The variable that used to be called "
+                    "'Measured open circuit voltage [V]' is now called "
+                    "'Surface open-circuit voltage [V]', but this is not the true "
+                    "open-circuit voltage of the cell since it includes the "
+                    "particle concentration overpotentials."
+                )
             best_matches = self.get_best_matches(key)
             for k in best_matches:
                 if key in k and k.endswith("]"):

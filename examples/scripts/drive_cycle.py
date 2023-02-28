@@ -41,7 +41,7 @@ sim.plot(
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
         "Positive electrode potential [V]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "X-averaged cell temperature [K]",
     ]
 )

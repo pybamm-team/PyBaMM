@@ -70,7 +70,7 @@ class TestThevenin(unittest.TestCase):
     def test_well_posed_external_circuit_function(self):
         def external_circuit_function(variables):
             I = variables["Current [A]"]
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             return (
                 V
                 + I

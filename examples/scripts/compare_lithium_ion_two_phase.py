@@ -7,7 +7,7 @@ pybamm.set_logging_level("INFO")
 # load models
 options = {
     "particle phases": ("2", "1"),
-    "open circuit potential": (("single", "current sigmoid"), "single"),
+    "open-circuit potential": (("single", "current sigmoid"), "single"),
 }
 models = [
     pybamm.lithium_ion.SPM(options),
@@ -40,9 +40,9 @@ pybamm.dynamic_plot(
             "X-averaged negative electrode volumetric "
             "interfacial current density [A.m-3]",
         ],
-        "X-averaged negative electrode primary open circuit potential [V]",
-        "X-averaged negative electrode secondary open circuit potential [V]",
+        "X-averaged negative electrode primary open-circuit potential [V]",
+        "X-averaged negative electrode secondary open-circuit potential [V]",
         "Average positive particle concentration [mol.m-3]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
     ],
 )

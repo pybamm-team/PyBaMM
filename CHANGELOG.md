@@ -2,6 +2,19 @@
 
 ## Features
 
+- Renamed "Terminal voltage [V]" to just "Voltage [V]". "Terminal voltage [V]" can still be used and will return the same value as "Voltage [V]".
+- Added "Anode potential [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Cathode potential [V]", which is the value of the surface potential difference at the cathode/separator interface.
+- Added "Open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]".
+
+## Breaking changes
+
+- Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Open-circuit voltage [V]" is calculated from bulk particle concentrations instead.
+- Renamed all references to "open circuit" to be "open-circuit" instead
+
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Features
+
 - Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve [#2677](https://github.com/pybamm-team/PyBaMM/pull/2677)
 - The "particle size" option can now be a tuple to allow different behaviour in each electrode([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
 - Added temperature control to experiment class. [#2518](https://github.com/pybamm-team/PyBaMM/pull/2518)

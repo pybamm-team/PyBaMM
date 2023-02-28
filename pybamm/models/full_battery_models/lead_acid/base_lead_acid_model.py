@@ -61,7 +61,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Current [A]",
             "Porosity",
             "Electrolyte potential [V]",
-            "Terminal voltage [V]",
+            "Voltage [V]",
         ]
 
     def set_soc_variables(self):
@@ -81,12 +81,12 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
             self.submodels[
-                f"{domain} open circuit potential"
+                f"{domain} open-circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
                 self.param, domain, "lead-acid main", self.options, "primary"
             )
             self.submodels[
-                f"{domain} oxygen open circuit potential"
+                f"{domain} oxygen open-circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
                 self.param, domain, "lead-acid oxygen", self.options, "primary"
             )

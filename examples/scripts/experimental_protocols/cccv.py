@@ -31,7 +31,7 @@ for i in range(3):
     sol = sim.solution.cycles[i]
     # Extract variables
     t = sol["Time [h]"].entries
-    V = sol["Terminal voltage [V]"].entries
+    V = sol["Voltage [V]"].entries
     # Plot
     ax.plot(t - t[0], V, label="Discharge {}".format(i + 1))
     ax.set_xlabel("Time [h]")
@@ -46,7 +46,7 @@ sim.solution.save_data(
     [
         "Time [h]",
         "Current [A]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Discharge capacity [A.h]",
         "X-averaged cell temperature [K]",
         "Electrolyte concentration [mol.m-3]",
@@ -55,7 +55,7 @@ sim.solution.save_data(
     short_names={
         "Time [h]": "t",
         "Current [A]": "I",
-        "Terminal voltage [V]": "V",
+        "Voltage [V]": "V",
         "Discharge capacity [A.h]": "Q",
         "X-averaged cell temperature [K]": "T",
         "Electrolyte concentration [mol.m-3]": "c_e",
@@ -67,7 +67,7 @@ sim.solution.save_data(
     [
         "Time [h]",
         "Current [A]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Discharge capacity [A.h]",
         "X-averaged cell temperature [K]",
     ],

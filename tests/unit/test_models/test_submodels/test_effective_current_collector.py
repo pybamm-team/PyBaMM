@@ -67,7 +67,7 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
         t_eval = np.linspace(0, 100, 10)
         solution_1D = models[0].default_solver.solve(models[0], t_eval)
         # Process SPM V and I
-        V = solution_1D["Terminal voltage [V]"]
+        V = solution_1D["Voltage [V]"]
         I = solution_1D["Total current density [A.m-2]"]
 
         # Test potential can be constructed and evaluated without raising error
@@ -79,7 +79,7 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
                 param.evaluate(model.param.L_y), param.evaluate(model.param.L_z)
             )
             for var, processed_var in vars.items():
-                if "Terminal voltage [V]" in var:
+                if "Voltage [V]" in var:
                     processed_var(t=solution_1D.t[5])
                 else:
                     processed_var(t=solution_1D.t[5], y=pts, z=pts)

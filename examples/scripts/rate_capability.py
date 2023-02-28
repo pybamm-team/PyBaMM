@@ -24,7 +24,7 @@ for i, C_rate in enumerate(C_rates):
     time = sim.solution["Time [s]"].entries
     capacity = sim.solution["Discharge capacity [A.h]"]
     current = sim.solution["Current [A]"]
-    voltage = sim.solution["Terminal voltage [V]"]
+    voltage = sim.solution["Voltage [V]"]
 
     capacities[i] = capacity(time[-1])
     currents[i] = current(time[-1])

@@ -133,14 +133,14 @@ class VoltageTests(BaseOutputTest):
 
         self.ocp_n_av = solution[
             f"X-averaged negative electrode {self.phase_name_n}"
-            "open circuit potential [V]"
+            "open-circuit potential [V]"
         ]
         self.ocp_p_av = solution[
             f"X-averaged positive electrode {self.phase_name_p}"
-            "open circuit potential [V]"
+            "open-circuit potential [V]"
         ]
-        self.ocv_av = solution["X-averaged open circuit voltage [V]"]
-        self.voltage = solution["Terminal voltage [V]"]
+        self.ocv_av = solution["X-averaged open-circuit voltage [V]"]
+        self.voltage = solution["Voltage [V]"]
 
     def test_each_reaction_overpotential(self):
         """Testing that:

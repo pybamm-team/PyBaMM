@@ -46,7 +46,7 @@ for domain in ["negative", "positive"]:
     )
 
     model.submodels[
-        f"{domain} open circuit potential"
+        f"{domain} open-circuit potential"
     ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
         model.param,
         domain,

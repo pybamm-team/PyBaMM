@@ -148,7 +148,7 @@ class BasicDFNComposite(BaseModel):
             eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
         )
 
-        # Open circuit potentials
+        # Open-circuit potentials
         c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
         sto_surf_n_p1 = c_s_surf_n_p1 / param.n.prim.c_max
         ocp_n_p1 = param.n.prim.U(sto_surf_n_p1, T)
@@ -350,15 +350,15 @@ class BasicDFNComposite(BaseModel):
             "Current [A]": I,
             "Discharge capacity [A.h]": Q,
             "Time [s]": pybamm.t,
-            "Terminal voltage [V]": voltage,
-            "Negative electrode primary open circuit potential [V]": ocp_n_p1,
-            "Negative electrode secondary open circuit potential [V]": ocp_n_p2,
-            "X-averaged negative electrode primary open circuit potential "
+            "Voltage [V]": voltage,
+            "Negative electrode primary open-circuit potential [V]": ocp_n_p1,
+            "Negative electrode secondary open-circuit potential [V]": ocp_n_p2,
+            "X-averaged negative electrode primary open-circuit potential "
             "[V]": ocp_av_n_p1,
-            "X-averaged negative electrode secondary open circuit potential "
+            "X-averaged negative electrode secondary open-circuit potential "
             "[V]": ocp_av_n_p2,
-            "Positive electrode open circuit potential [V]": ocp_p,
-            "X-averaged positive electrode open circuit potential [V]": ocp_av_p,
+            "Positive electrode open-circuit potential [V]": ocp_p,
+            "X-averaged positive electrode open-circuit potential [V]": ocp_av_p,
             "R-averaged negative primary particle concentration "
             "[mol.m-3]": c_s_rav_n_p1,
             "R-averaged negative secondary particle concentration "

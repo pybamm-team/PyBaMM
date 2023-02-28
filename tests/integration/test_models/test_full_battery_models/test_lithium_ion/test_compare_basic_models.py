@@ -37,7 +37,7 @@ class TestCompareBasicModels(unittest.TestCase):
         dfn = pybamm.lithium_ion.DFN(
             {
                 "particle phases": ("2", "1"),
-                "open circuit potential": (("single", "current sigmoid"), "single"),
+                "open-circuit potential": (("single", "current sigmoid"), "single"),
             }
         )
         parameter_values = pybamm.ParameterValues("Chen2020_composite")

@@ -5,7 +5,12 @@ import numpy as np
 
 
 def plot_voltage_components(
-    solution, ax=None, show_legend=True, testing=False, **kwargs_fill
+    solution,
+    ax=None,
+    show_legend=True,
+    split_by_electrode=False,
+    testing=False,
+    **kwargs_fill
 ):
     """
     Generate a plot showing the component overpotentials that make up the voltage
@@ -18,6 +23,9 @@ def plot_voltage_components(
         The axis on which to put the plot. If None, a new figure and axis is created.
     show_legend : bool, optional
         Whether to display the legend. Default is True
+    split_by_electrode : bool, optional
+        Whether to show the overpotentials for the negative and positive electrodes
+        separately. Default is False.
     testing : bool, optional
         Whether to actually make the plot (turned off for unit tests)
     kwargs_fill
@@ -35,24 +43,48 @@ def plot_voltage_components(
     else:
         fig, ax = plt.subplots()
 
-    overpotentials = [
-        "X-averaged battery reaction overpotential [V]",
-        "X-averaged battery concentration overpotential [V]",
-        "X-averaged battery electrolyte ohmic losses [V]",
-        "X-averaged battery solid phase ohmic losses [V]",
-    ]
-    labels = [
-        "Reaction overpotential",
-        "Concentration overpotential",
-        "Ohmic electrolyte overpotential",
-        "Ohmic electrode overpotential",
-    ]
+    if split_by_electrode is False:
+        overpotentials = [
+            # "Battery particle concentration overpotential [V]",
+            "X-averaged battery reaction overpotential [V]",
+            "X-averaged battery concentration overpotential [V]",
+            "X-averaged battery electrolyte ohmic losses [V]",
+            "X-averaged battery solid phase ohmic losses [V]",
+        ]
+        labels = [
+            # "Particle concentration overpotential",
+            "Reaction overpotential",
+            "Electrolyte concentration overpotential",
+            "Ohmic electrolyte overpotential",
+            "Ohmic electrode overpotential",
+        ]
+    else:
+        overpotentials = [
+            # "Battery negative particle concentration overpotential [V]",
+            # "Battery positive particle concentration overpotential [V]",
+            "X-averaged battery negative reaction overpotential [V]",
+            "X-averaged battery positive reaction overpotential [V]",
+            "X-averaged battery concentration overpotential [V]",
+            "X-averaged battery electrolyte ohmic losses [V]",
+            "X-averaged battery negative solid phase ohmic losses [V]",
+            "X-averaged battery positive solid phase ohmic losses [V]",
+        ]
+        labels = [
+            # "Negative particle concentration overpotential",
+            # "Positive particle concentration overpotential",
+            "Negative reaction overpotential",
+            "Positive reaction overpotential",
+            "Electrolyte concentration overpotential",
+            "Ohmic electrolyte overpotential",
+            "Ohmic negative electrode overpotential",
+            "Ohmic positive electrode overpotential",
+        ]
 
     # Plot
     # Initialise
     time = solution["Time [h]"].entries
-    initial_ocv = solution["X-averaged battery open circuit voltage [V]"](0)
-    ocv = solution["X-averaged battery open circuit voltage [V]"].entries
+    initial_ocv = solution["Surface open-circuit voltage [V]"](0)
+    ocv = solution["Surface open-circuit voltage [V]"].entries
     ax.fill_between(time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage")
     top = ocv
     # Plot components
