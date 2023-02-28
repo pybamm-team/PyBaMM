@@ -109,7 +109,13 @@ html_theme_options = {
     },
     "github_url": "https://github.com/pybamm-team/pybamm",
     "twitter_url": "https://twitter.com/pybamm_",
-    "icon_links": [],  # required for pydata-sphinx-theme v0.13.0
+    "icon_links": [
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/pybamm/",
+            "icon": "fa-solid fa-box",
+        },
+    ],
     "collapse_navigation": True,
     "external_links": [
         {
