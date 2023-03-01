@@ -87,30 +87,6 @@ class TestCompareOutputs(unittest.TestCase):
             comparison = StandardOutputComparison(solutions)
             comparison.test_all(skip_first_timestep=True)
 
-    def test_compare_outputs_timescale(self):
-        """
-        Changing the timescale (via options) should not change the result.
-        """
-        for model_class in [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]:
-            model1 = model_class()
-            parameter_values = model1.default_parameter_values
-            tau = parameter_values.evaluate(model1.param.timescale)
-            model2 = model_class({"timescale": 2 * tau})
-
-            sim1 = pybamm.Simulation(model1)
-            sim2 = pybamm.Simulation(model2)
-            sol1 = sim1.solve(
-                [0, 3600], solver=pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
-            )
-            sol2 = sim2.solve(
-                [0, 3600], solver=pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
-            )
-
-            # sol.t should be different (different internal scalings for the solver)
-            np.testing.assert_array_equal(sol1.t, 2 * sol2.t)
-            # sol.y should be identical (within solver tolerance)
-            np.testing.assert_array_almost_equal(sol1.y, sol2.y)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

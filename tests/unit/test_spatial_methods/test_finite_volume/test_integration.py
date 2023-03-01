@@ -73,16 +73,19 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         constant_y = np.ones_like(mesh["negative particle"].nodes[:, np.newaxis])
+        r_end = mesh["negative particle"].edges[-1]
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y), 4 * np.pi / 3
+            integral_eqn_disc.evaluate(None, constant_y), 4 * np.pi * r_end**3 / 3
         )
         linear_y = mesh["negative particle"].nodes
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), np.pi, decimal=4
+            integral_eqn_disc.evaluate(None, linear_y), np.pi * r_end**4, decimal=4
         )
         one_over_y = 1 / mesh["negative particle"].nodes
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi, decimal=3
+            integral_eqn_disc.evaluate(None, one_over_y),
+            2 * np.pi * r_end**2,
+            decimal=3,
         )
 
         # cylindrical coordinates
@@ -265,9 +268,11 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         submesh = mesh["positive particle"]
+        r_end = submesh.edges[-1]
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate().flatten(),
             lp
+            * r_end
             * np.tile(
                 np.linspace(0, 1, submesh.npts + 1), mesh["current collector"].npts
             ),
@@ -339,13 +344,17 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         phi_exact = submesh.nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, decimal=16
+        )
 
         # sine case
         phi_exact = np.sin(submesh.nodes[:, np.newaxis])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, decimal=16
+        )
 
         # --------------------------------------------------------------------
         # region which doesn't start at zero

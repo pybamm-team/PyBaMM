@@ -112,11 +112,5 @@ class NullParameters:
         else:
             return super().__getattribute__(name)
 
-    def _set_dimensional_parameters(self):
-        pass
-
-    def _set_scales(self):
-        pass
-
-    def _set_dimensionless_parameters(self):
+    def _set_parameters(self):
         pass

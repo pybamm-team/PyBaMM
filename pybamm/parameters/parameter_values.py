@@ -1,5 +1,5 @@
 #
-# Dimensional and dimensionless parameter values, and scales
+# Parameter values for a simulation
 #
 import numpy as np
 import pybamm
@@ -139,7 +139,7 @@ class ParameterValues:
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        """Return item correspoonding to key if it exists, otherwise return default"""
+        """Return item corresponding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
@@ -388,13 +388,6 @@ class ParameterValues:
         return parameter_values
 
     def check_parameter_values(self, values):
-        # Make sure typical current is non-zero
-        if "Typical current [A]" in values and values["Typical current [A]"] == 0:
-            raise ValueError(
-                "'Typical current [A]' cannot be zero. A possible alternative is to "
-                "set 'Current function [A]' to `0` instead."
-            )
-
         for param in values:
             if "propotional term" in param:
                 raise ValueError(
@@ -503,27 +496,6 @@ class ParameterValues:
 
         model.events = new_events
 
-        # Process timescale
-        new_timescale = self.process_symbol(unprocessed_model.timescale)
-        if isinstance(new_timescale, pybamm.Scalar):
-            model._timescale = new_timescale
-        else:
-            raise ValueError(
-                "model.timescale must be a Scalar after parameter processing "
-                "(cannot contain 'InputParameter's). "
-                "You have probably set one of the parameters used to calculate the "
-                "timescale to an InputParameter. To avoid this error, hardcode "
-                "model.timescale to a constant value by passing the option "
-                "{'timescale': value} to the model."
-            )
-
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in unprocessed_model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            new_length_scales[domain] = new_scale
-        model._length_scales = new_length_scales
-
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model
@@ -598,8 +570,6 @@ class ParameterValues:
         """
 
         def process_and_check(sym):
-            if isinstance(sym, numbers.Number):
-                return pybamm.Scalar(sym)
             new_sym = self.process_symbol(sym)
             if not isinstance(new_sym, pybamm.Scalar):
                 raise ValueError(
@@ -787,8 +757,15 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
-            new_symbol._reference = self.process_symbol(symbol.reference)
+            reference = self.process_symbol(symbol.reference)
+            if isinstance(reference, pybamm.Vector):
+                reference = pybamm.Scalar(float(reference.evaluate()))
+            new_symbol._reference = reference
+            new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
+
+        elif isinstance(symbol, numbers.Number):
+            return pybamm.Scalar(symbol)
 
         else:
             # Backup option: return the object
@@ -836,9 +813,6 @@ class ParameterValues:
         """
         Return dictionary of evaluated parameters, and optionally print these evaluated
         parameters to an output file.
-        For dimensionless parameters that depend on the C-rate, the value is given as a
-        function of the C-rate (either x * Crate or x / Crate depending on the
-        dependence)
 
         Parameters
         ----------

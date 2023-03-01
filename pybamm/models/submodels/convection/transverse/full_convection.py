@@ -22,11 +22,10 @@ class Full(BaseTransverseModel):
 
     def get_fundamental_variables(self):
         p_s = pybamm.Variable(
-            "X-averaged separator pressure", domain="current collector"
+            "X-averaged separator pressure [Pa]", domain="current collector"
         )
         variables = self._get_standard_separator_pressure_variables(p_s)
 
-        # TODO: put in permeability and viscosity
         Vbox_s = -pybamm.grad(p_s)
         variables.update(
             self._get_standard_transverse_velocity_variables(Vbox_s, "velocity")
@@ -42,23 +41,25 @@ class Full(BaseTransverseModel):
     def set_algebraic(self, variables):
         param = self.param
 
-        p_s = variables["X-averaged separator pressure"]
+        p_s = variables["X-averaged separator pressure [Pa]"]
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
-        i_boundary_cc = variables["Current collector current density"]
-        v_box_n_right = param.n.beta * i_boundary_cc
-        v_box_p_left = param.p.beta * i_boundary_cc
-        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.s.l
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        v_box_n_right = -param.n.DeltaV * i_boundary_cc / self.param.F
+        v_box_p_left = -param.p.DeltaV * i_boundary_cc / self.param.F
+        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.s.L
 
         # Simple formula for velocity in the separator
         div_Vbox_s = -d_vbox_s_dx
-        Vbox_s = variables["X-averaged separator transverse volume-averaged velocity"]
+        Vbox_s = variables[
+            "X-averaged separator transverse volume-averaged velocity [m.s-1]"
+        ]
 
         # Problem in the z-direction for p_s
         self.algebraic = {p_s: pybamm.div(Vbox_s) - div_Vbox_s}
 
     def set_boundary_conditions(self, variables):
-        p_s = variables["X-averaged separator pressure"]
+        p_s = variables["X-averaged separator pressure [Pa]"]
 
         # Boundary conditions in z-direction for p_s (left=bottom, right=top)
         self.boundary_conditions = {
@@ -69,6 +70,6 @@ class Full(BaseTransverseModel):
         }
 
     def set_initial_conditions(self, variables):
-        p_s = variables["X-averaged separator pressure"]
+        p_s = variables["X-averaged separator pressure [Pa]"]
 
         self.initial_conditions = {p_s: pybamm.Scalar(0)}

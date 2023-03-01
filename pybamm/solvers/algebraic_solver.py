@@ -107,7 +107,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 out = algebraic(t, y)
                 pybamm.logger.debug(
                     "Evaluating algebraic equations at t={}, L2-norm is {}".format(
-                        t * model.timescale_eval, np.linalg.norm(out)
+                        t, np.linalg.norm(out)
                     )
                 )
                 return out

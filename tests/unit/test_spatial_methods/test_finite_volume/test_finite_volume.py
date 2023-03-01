@@ -258,11 +258,11 @@ class TestFiniteVolume(unittest.TestCase):
         grad_matrix = spatial_method.gradient_matrix(
             whole_cell, {"primary": whole_cell}
         ).entries
-        np.testing.assert_array_equal(jacobian.toarray()[1:-1], grad_matrix.toarray())
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(jacobian.toarray()[1:-1], grad_matrix.toarray())
+        np.testing.assert_allclose(
             jacobian.toarray()[0, 0], grad_matrix.toarray()[0][0] * -2
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             jacobian.toarray()[-1, -1], grad_matrix.toarray()[-1][-1] * -2
         )
 
@@ -360,7 +360,7 @@ class TestFiniteVolume(unittest.TestCase):
         var_disc = disc.process_symbol(var)
         x = pybamm.standard_spatial_vars.x_n
         delta_fn_int_disc = disc.process_symbol(pybamm.Integral(delta_fn_left, x))
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             var_disc.evaluate(y=y) * mesh["negative electrode"].edges[-1],
             np.sum(delta_fn_int_disc.evaluate(y=y)),
         )

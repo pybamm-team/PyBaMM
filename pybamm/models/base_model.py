@@ -122,10 +122,6 @@ class BaseModel:
         self.is_discretised = False
         self.y_slices = None
 
-        # Default timescale is 1 second
-        self._timescale = pybamm.Scalar(1)
-        self._length_scales = {}
-
     @property
     def name(self):
         return self._name
@@ -294,26 +290,27 @@ class BaseModel:
 
     @property
     def timescale(self):
-        """Timescale of model, to be used for non-dimensionalising time when solving"""
-        return self._timescale
+        raise NotImplementedError(
+            "timescale has been removed since models are now dimensional"
+        )
 
     @timescale.setter
     def timescale(self, value):
-        """Set the timescale"""
-        self._timescale = value
+        raise NotImplementedError(
+            "timescale has been removed since models are now dimensional"
+        )
 
     @property
     def length_scales(self):
-        "Length scales of model"
-        return self._length_scales
+        raise NotImplementedError(
+            "length_scales has been removed since models are now dimensional"
+        )
 
     @length_scales.setter
     def length_scales(self, values):
-        "Set the length scale, converting any numbers to pybamm.Scalar"
-        for domain, scale in values.items():
-            if isinstance(scale, numbers.Number):
-                values[domain] = pybamm.Scalar(scale)
-        self._length_scales = values
+        raise NotImplementedError(
+            "length_scales has been removed since models are now dimensional"
+        )
 
     @property
     def default_var_pts(self):
@@ -401,8 +398,6 @@ class BaseModel:
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
-            + [self.timescale]
-            + list(self.length_scales.values())
         )
         return list(all_input_parameters)
 
@@ -598,7 +593,6 @@ class BaseModel:
                     final_state_eval = final_state[:, :, -1].flatten(order="F")
                 else:
                     raise NotImplementedError("Variable must be 0D, 1D, or 2D")
-                initial_conditions[var] = pybamm.Vector(final_state_eval)
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
@@ -620,12 +614,22 @@ class BaseModel:
                             "Variable in concatenation must be 1D"
                         )
                     children.append(final_state_eval)
-                initial_conditions[var] = pybamm.Vector(np.concatenate(children))
-
+                final_state_eval = np.concatenate(children)
             else:
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"
                 )
+
+            # If the model is already discretised, then the initial conditions must
+            # be scaled and offset (otherwise, this is done when the model is
+            # discretised)
+            if self.is_discretised:
+                scale, reference = var.scale, var.reference
+            else:
+                scale, reference = 1, 0
+            initial_conditions[var] = (
+                pybamm.Vector(final_state_eval) - reference
+            ) / scale
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
@@ -1077,6 +1081,13 @@ class BaseModel:
         # Set y slices
         if disc.y_slices == {}:
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
+            for variable in variables:
+                variable.bounds = tuple(
+                    [
+                        parameter_values.process_symbol(bound)
+                        for bound in variable.bounds
+                    ]
+                )
             disc.set_variable_slices(variables)
 
         # Set boundary conditions (also requires setting parameter values)

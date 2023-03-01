@@ -4,7 +4,7 @@
 
 import numpy as np
 import sympy
-
+import numbers
 import pybamm
 
 
@@ -60,6 +60,10 @@ class VariableBase(pybamm.Symbol):
         scale=1,
         reference=0,
     ):
+        if isinstance(scale, numbers.Number):
+            scale = pybamm.Scalar(scale)
+        if isinstance(reference, numbers.Number):
+            reference = pybamm.Scalar(reference)
         self._scale = scale
         self._reference = reference
         super().__init__(
@@ -68,16 +72,34 @@ class VariableBase(pybamm.Symbol):
             auxiliary_domains=auxiliary_domains,
             domains=domains,
         )
-        if bounds is None:
-            bounds = (-np.inf, np.inf)
+        self.bounds = bounds
+
+        self.print_name = print_name
+
+    @property
+    def bounds(self):
+        """Physical bounds on the variable."""
+        return self._bounds
+
+    @bounds.setter
+    def bounds(self, values):
+        if values is None:
+            values = (-np.inf, np.inf)
         else:
-            if bounds[0] >= bounds[1]:
+            if (
+                all(isinstance(b, numbers.Number) for b in values)
+                and values[0] >= values[1]
+            ):
                 raise ValueError(
-                    "Invalid bounds {}. ".format(bounds)
+                    f"Invalid bounds {values}. "
                     + "Lower bound should be strictly less than upper bound."
                 )
-        self.bounds = bounds
-        self.print_name = print_name
+
+        values = list(values)
+        for idx, bound in enumerate(values):
+            if isinstance(bound, numbers.Number):
+                values[idx] = pybamm.Scalar(bound)
+        self._bounds = tuple(values)
 
     def set_id(self):
         self._id = hash(
