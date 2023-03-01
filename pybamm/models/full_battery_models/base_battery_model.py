@@ -1094,11 +1094,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         else:
             phase_p = "primary "
 
-        ocp_n = self.variables[
-            f"Negative electrode {phase_n}open-circuit potential [V]"
+        ocp_surf_n_av = self.variables[
+            f"X-averaged negative electrode {phase_n}open-circuit potential [V]"
         ]
-        ocp_p = self.variables[
-            f"Positive electrode {phase_p}open-circuit potential [V]"
+        ocp_surf_p_av = self.variables[
+            f"X-averaged positive electrode {phase_p}open-circuit potential [V]"
         ]
         ocp_n_bulk = self.variables[
             f"Negative electrode {phase_n}bulk open-circuit potential [V]"
@@ -1106,16 +1106,17 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocp_p_bulk = self.variables[
             f"Positive electrode {phase_p}bulk open-circuit potential [V]"
         ]
+        eta_particle_n = self.variables[
+            f"Negative {phase_n}particle concentration overpotential [V]"
+        ]
+        eta_particle_p = self.variables[
+            f"Positive {phase_p}particle concentration overpotential [V]"
+        ]
 
-        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
-        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
-
-        ocv_surf = ocp_p_right - ocp_n_left
+        ocv_surf = ocp_surf_p_av - ocp_surf_n_av
         ocv_bulk = ocp_p_bulk - ocp_n_bulk
 
-        eta_particle = ocv_surf - ocv_bulk
-        eta_particle_n = ocp_n_left - ocp_n_bulk
-        eta_particle_p = ocp_p_right - ocp_p_bulk
+        eta_particle = eta_particle_p - eta_particle_n
 
         # overpotentials
         if self.options.electrode_types["negative"] == "planar":
@@ -1131,14 +1132,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         ]
         eta_r_av = eta_r_p_av - eta_r_n_av
 
-        # both ohmic losses are negative for discharge, positive for charge
         delta_phi_s_n_av = self.variables[
             "X-averaged negative electrode ohmic losses [V]"
         ]
         delta_phi_s_p_av = self.variables[
             "X-averaged positive electrode ohmic losses [V]"
         ]
-        delta_phi_s_av = delta_phi_s_p_av + delta_phi_s_n_av
+        delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
 
         # SEI film overpotential
         if self.options.electrode_types["negative"] == "planar":
@@ -1155,8 +1155,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Surface open-circuit voltage [V]": ocv_surf,
                 "Open-circuit voltage [V]": ocv_bulk,
                 "Particle concentration overpotential [V]": eta_particle,
-                "Negative particle concentration overpotential [V]": eta_particle_n,
-                "Positive particle concentration overpotential [V]": eta_particle_p,
                 "X-averaged reaction overpotential [V]": eta_r_av,
                 "X-averaged SEI film overpotential [V]": eta_sei_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av,
@@ -1173,6 +1171,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.variables.update(
             {
                 "Battery open-circuit voltage [V]": ocv_bulk * num_cells,
+                "Battery negative electrode bulk open-circuit potential [V]": ocp_n_bulk
+                * num_cells,
+                "Battery positive electrode bulk open-circuit potential [V]": ocp_p_bulk
+                * num_cells,
                 "Battery particle concentration overpotential [V]": eta_particle
                 * num_cells,
                 "Battery negative particle concentration overpotential [V]"
@@ -1180,7 +1182,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Battery positive particle concentration overpotential [V]"
                 "": eta_particle_p * num_cells,
                 "X-averaged battery reaction overpotential [V]": eta_r_av * num_cells,
-                "X-averaged battery negative reaction overpotential [V]": -eta_r_n_av
+                "X-averaged battery negative reaction overpotential [V]": eta_r_n_av
                 * num_cells,
                 "X-averaged battery positive reaction overpotential [V]": eta_r_p_av
                 * num_cells,
@@ -1246,14 +1248,14 @@ class BaseBatteryModel(pybamm.BaseModel):
         tol = 0.1
         self.events.append(
             pybamm.Event(
-                "Minimum voltage switch",
+                "Minimum voltage switch [V]",
                 V - (self.param.voltage_low_cut - tol),
                 pybamm.EventType.SWITCH,
             )
         )
         self.events.append(
             pybamm.Event(
-                "Maximum voltage switch",
+                "Maximum voltage switch [V]",
                 V - (self.param.voltage_high_cut + tol),
                 pybamm.EventType.SWITCH,
             )

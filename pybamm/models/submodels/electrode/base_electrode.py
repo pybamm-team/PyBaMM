@@ -47,11 +47,10 @@ class BaseElectrode(pybamm.BaseSubModel):
         phi_s_av = pybamm.x_average(phi_s)
 
         if self.domain == "negative":
-            delta_phi_s = phi_s
+            delta_phi_s = pybamm.boundary_value(phi_s, "left") - phi_s
 
         elif self.domain == "positive":
-            v = pybamm.boundary_value(phi_s, "right")
-            delta_phi_s = v - phi_s
+            delta_phi_s = pybamm.boundary_value(phi_s, "right") - phi_s
         delta_phi_s_av = pybamm.x_average(delta_phi_s)
 
         variables = {

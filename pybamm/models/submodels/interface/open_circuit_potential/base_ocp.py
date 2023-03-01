@@ -73,6 +73,10 @@ class BaseOpenCircuitPotential(BaseInterface):
         elif ocp_surf.domain == ["current collector"]:
             ocp_surf = pybamm.PrimaryBroadcast(ocp_surf, f"{domain} electrode")
 
+        # Particle overpotential is the difference between the average(U(c_surf)) and
+        # U(c_bulk), i.e. the overpotential due to concentration gradients in the
+        # particle
+        eta_particle = ocp_surf_av - ocp_bulk
         variables.update(
             {
                 f"{Domain} electrode {reaction_name}"
@@ -81,6 +85,8 @@ class BaseOpenCircuitPotential(BaseInterface):
                 "open-circuit potential [V]": ocp_surf_av,
                 f"{Domain} electrode {reaction_name}"
                 "bulk open-circuit potential [V]": ocp_bulk,
+                f"{Domain} {reaction_name}particle concentration "
+                "overpotential [V]": eta_particle,
             }
         )
         if self.reaction in ["lithium-ion main", "lead-acid main"]:
