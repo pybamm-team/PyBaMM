@@ -21,23 +21,11 @@ class BaseMechanics(pybamm.BaseSubModel):
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    References
-    ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-           Cells. Journal of The Electrochemical Society, 167(1), 013512.
-    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
-           Battery cycle life prediction with coupled chemical degradation and
-           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
-
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
-
-        pybamm.citations.register("Ai2019")
-        pybamm.citations.register("Deshpande2012")
 
     def _get_standard_variables(self, l_cr):
         domain, Domain = self.domain_Domain
