@@ -1205,7 +1205,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Current collector current density for working out euiqvalent resistance
         # based on Ohm's Law
         i_cc = self.variables["Current collector current density [A.m-2]"]
-        # ECM overvoltage is OCV minus terminal voltage
+        # ECM overvoltage is OCV minus voltage
         v_ecm = ocv_bulk - V
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc

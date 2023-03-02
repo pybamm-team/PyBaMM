@@ -302,8 +302,8 @@ class Latexify:
         if "Voltage [V]" in self.model.variables:
             voltage = self.model.variables["Voltage [V]"].to_equation()
             voltage_eqn = sympy.Eq(sympy.Symbol("V"), voltage, evaluate=False)
-            # Add terminal voltage to the list
-            eqn_list.append(sympy.Symbol(r"\\ \textbf{Terminal voltage [V]}"))
+            # Add voltage to the list
+            eqn_list.append(sympy.Symbol(r"\\ \textbf{Voltage [V]}"))
             eqn_list.extend([voltage_eqn])
 
         # Remove duplicates from the list whilst preserving order

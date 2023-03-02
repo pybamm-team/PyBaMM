@@ -55,8 +55,10 @@ class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
 
             # Bulk OCP is from the average SOC and temperature
             sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-            T_bulk = pybamm.xyz_average(T)
-            ocp_bulk = self.phase_param.U(sto_bulk, T_bulk)
+            T_bulk = pybamm.xyz_average(pybamm.size_average(T))
+            U_bulk_lith = self.phase_param.U(sto_bulk, T_bulk, "lithiation")
+            U_bulk_delith = self.phase_param.U(sto_bulk, T_bulk, "delithiation")
+            ocp_bulk = m_lith * U_bulk_lith + m_delith * U_bulk_delith
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables

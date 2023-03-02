@@ -243,7 +243,7 @@ class EffectiveResistance(BaseEffectiveResistance):
         R_cc = solution["Effective current collector resistance [Ohm]"]
 
         # Create callable combination of ProcessedVariable objects for potentials
-        # and terminal voltage
+        # and voltage
         def V(t):
             "Account for effective current collector resistance"
             return V_av(t) - I_av(t) * R_cc(t)

@@ -120,7 +120,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
 
-        # Terminal voltage
+        # Voltage
         # Note phi_s_cn is always zero at the negative tab
         V = pybamm.boundary_value(phi_s_cp, "positive tab")
 
