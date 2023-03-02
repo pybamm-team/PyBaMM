@@ -92,7 +92,7 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        self.compare("X-averaged open-circuit voltage [V]")
+        self.compare("Open-circuit voltage [V]")
         # Currents
         self.compare(
             "X-averaged negative electrode volumetric "

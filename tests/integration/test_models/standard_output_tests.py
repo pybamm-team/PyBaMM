@@ -126,20 +126,26 @@ class VoltageTests(BaseOutputTest):
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
+        self.eta_particle_n = solution[
+            f"Negative {self.phase_name_n}particle concentration overpotential [V]"
+        ]
+        self.eta_particle_p = solution[
+            f"Positive {self.phase_name_p}particle concentration overpotential [V]"
+        ]
+        self.eta_particle = solution["Particle concentration overpotential [V]"]
+
         self.eta_sei_av = solution["X-averaged SEI film overpotential [V]"]
 
         self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
 
-        self.ocp_n_av = solution[
-            f"X-averaged negative electrode {self.phase_name_n}"
-            "open-circuit potential [V]"
+        self.ocp_n = solution[
+            f"Negative electrode {self.phase_name_n}bulk open-circuit potential [V]"
         ]
-        self.ocp_p_av = solution[
-            f"X-averaged positive electrode {self.phase_name_p}"
-            "open-circuit potential [V]"
+        self.ocp_p = solution[
+            f"Positive electrode {self.phase_name_p}bulk open-circuit potential [V]"
         ]
-        self.ocv_av = solution["X-averaged open-circuit voltage [V]"]
+        self.ocv = solution["Open-circuit voltage [V]"]
         self.voltage = solution["Voltage [V]"]
 
     def test_each_reaction_overpotential(self):
@@ -189,8 +195,8 @@ class VoltageTests(BaseOutputTest):
         - charge: ocp_n decreases, ocp_p increases
         - off: ocp_n, ocp_p constant
         """
-        neg_end_vs_start = self.ocp_n_av(self.t[-1]) - self.ocp_n_av(self.t[1])
-        pos_end_vs_start = self.ocp_p_av(self.t[-1]) - self.ocp_p_av(self.t[1])
+        neg_end_vs_start = self.ocp_n(self.t[-1]) - self.ocp_n(self.t[1])
+        pos_end_vs_start = self.ocp_p(self.t[-1]) - self.ocp_p(self.t[1])
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(-neg_end_vs_start, 0)
             np.testing.assert_array_less(pos_end_vs_start, 0)
@@ -208,7 +214,7 @@ class VoltageTests(BaseOutputTest):
         - off: ocv constant
         """
 
-        end_vs_start = self.ocv_av(self.t[-1]) - self.ocv_av(self.t[1])
+        end_vs_start = self.ocv(self.t[-1]) - self.ocv(self.t[1])
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -237,20 +243,25 @@ class VoltageTests(BaseOutputTest):
         correctly"""
 
         np.testing.assert_array_almost_equal(
-            self.ocv_av(self.t), self.ocp_p_av(self.t) - self.ocp_n_av(self.t)
+            self.ocv(self.t), self.ocp_p(self.t) - self.ocp_n(self.t)
         )
         np.testing.assert_array_almost_equal(
             self.eta_r_av(self.t), self.eta_r_p_av(self.t) - self.eta_r_n_av(self.t)
         )
+        np.testing.assert_array_almost_equal(
+            self.eta_particle(self.t),
+            self.eta_particle_p(self.t) - self.eta_particle_n(self.t),
+        )
 
         np.testing.assert_array_almost_equal(
             self.voltage(self.t),
-            self.ocv_av(self.t)
+            self.ocv(self.t)
+            + self.eta_particle(self.t)
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
             + self.delta_phi_s_av(self.t)
             + self.eta_sei_av(self.t),
-            decimal=2,
+            decimal=5,
         )
 
     def test_all(self):
