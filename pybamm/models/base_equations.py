@@ -220,9 +220,7 @@ class _BaseEquations:
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
         all_vars_in_keys = all_vars_in_rhs_keys.union(all_vars_in_algebraic_keys)
-        extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
-
-        extra_variables = extra_variables_in_equations.difference(external_vars)
+        extra_variables = all_vars_in_eqns.difference(all_vars_in_keys)
 
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")

@@ -458,7 +458,7 @@ class ParameterValues:
         new_boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
         new_events = []
-        for event in unprocessed_model.events + self.parameter_events:
+        for event in unprocessed_model.events:
             pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
             )
@@ -506,7 +506,7 @@ class ParameterValues:
         # Define events to catch extrapolation. In these events the sign is
         # important: it should be positive inside of the range and negative
         # outside of it
-        interpolants = model._find_symbols(pybamm.Interpolant)
+        interpolants = model._equations._find_symbols(pybamm.Interpolant)
         interpolant_events = []
         for interpolant in interpolants:
             xs = interpolant.x
