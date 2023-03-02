@@ -199,16 +199,16 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             )
         elif self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
-            N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r / R
+            N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r / R**2
         elif self.name == "quartic profile":
             q_s_av = variables[
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * (
-                (-70 * c_s_surf_xav + 20 * q_s_av * R + 70 * c_s_av) * r / R
+                (-70 * c_s_surf_xav + 20 * q_s_av * R + 70 * c_s_av) * r / R**2
                 + (105 * c_s_surf_xav - 28 * q_s_av * R - 105 * c_s_av)
-                * (r**3 / R**3)
+                * (r**3 / R**4)
             )
 
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])

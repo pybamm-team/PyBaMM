@@ -160,8 +160,6 @@ class SEIGrowth(BaseModel):
             j_sei = -param.F * c_0 * k_exp / (1 + L_over_D * k_exp)
             c_ec = c_0 / (1 + L_over_D * k_exp)
 
-            variables.update({})
-
             # Get variables related to the concentration
             c_ec_av = pybamm.x_average(c_ec)
 

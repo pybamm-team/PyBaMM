@@ -199,7 +199,7 @@ class BaseModel(BaseInterface):
             else:
                 L_n = self.param.n.L
 
-            # Multiply delta_n_SEI by V_n to get total moles of SEI formes
+            # Multiply delta_n_SEI by V_n to get total moles of SEI formed
             # multiply by z_sei to get total lithium moles consumed by SEI
             V_n = L_n * self.param.L_y * self.param.L_z
             Q_sei = z_sei * delta_n_SEI * V_n

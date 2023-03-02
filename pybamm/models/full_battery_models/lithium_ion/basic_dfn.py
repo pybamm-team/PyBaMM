@@ -198,6 +198,7 @@ class BasicDFN(BaseModel):
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
+        # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_s_n] = param.L_x**2 * (pybamm.div(i_s_n) + a_j_n)
         self.algebraic[phi_s_p] = param.L_x**2 * (pybamm.div(i_s_p) + a_j_p)
         self.boundary_conditions[phi_s_n] = {
@@ -220,6 +221,7 @@ class BasicDFN(BaseModel):
         i_e = (param.kappa_e(c_e, T) * tor) * (
             param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
+        # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_e] = param.L_x**2 * (pybamm.div(i_e) - a_j)
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),

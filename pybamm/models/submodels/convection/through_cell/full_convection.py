@@ -88,6 +88,7 @@ class Full(BaseThroughCellModel):
         v_box_p = variables["Positive electrode volume-averaged velocity [m.s-1]"]
 
         # Problems in the x-direction for p_n and p_p
+        # multiply by Lx**2 to improve conditioning
         self.algebraic = {
             p_n: self.param.L_x**2
             * (pybamm.div(v_box_n) + self.param.n.DeltaV * a_j_n / self.param.F),

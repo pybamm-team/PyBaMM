@@ -230,15 +230,15 @@ class PolynomialProfile(BaseParticle):
             )
         elif self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
-            N_s = -D_eff * 5 * (c_s_surf - c_s_rav) * r / R
+            N_s = -D_eff * 5 * (c_s_surf - c_s_rav) * r / R**2
         elif self.name == "quartic profile":
             q_s_rav = variables[
                 f"R-averaged {domain} particle concentration gradient [mol.m-4]"
             ]
             # The flux may be computed directly from the polynomial for c
             N_s = -D_eff * (
-                (-70 * c_s_surf + 20 * q_s_rav * R + 70 * c_s_rav) * r / R
-                + (105 * c_s_surf - 28 * q_s_rav * R - 105 * c_s_rav) * r**3 / R**3
+                (-70 * c_s_surf + 20 * q_s_rav * R + 70 * c_s_rav) * r / R**2
+                + (105 * c_s_surf - 28 * q_s_rav * R - 105 * c_s_rav) * r**3 / R**4
             )
 
         variables.update(self._get_standard_flux_variables(N_s))

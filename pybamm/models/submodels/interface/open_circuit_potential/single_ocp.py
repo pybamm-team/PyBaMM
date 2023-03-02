@@ -16,27 +16,29 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             # of c_s_surf that depends on particle size.
             domain_options = getattr(self.options, domain)
             if domain_options["particle size"] == "distribution":
-                sto = variables[
+                sto_surf = variables[
                     f"{Domain} {phase_name}particle surface stoichiometry distribution"
                 ]
                 # If variable was broadcast, take only the orphan
-                if isinstance(sto, pybamm.Broadcast) and isinstance(
+                if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
                     T, pybamm.Broadcast
                 ):
-                    sto = sto.orphans[0]
+                    sto_surf = sto_surf.orphans[0]
                     T = T.orphans[0]
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
             else:
-                sto = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
+                sto_surf = variables[
+                    f"{Domain} {phase_name}particle surface stoichiometry"
+                ]
                 # If variable was broadcast, take only the orphan
-                if isinstance(sto, pybamm.Broadcast) and isinstance(
+                if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
                     T, pybamm.Broadcast
                 ):
-                    sto = sto.orphans[0]
+                    sto_surf = sto_surf.orphans[0]
                     T = T.orphans[0]
 
-            ocp = self.phase_param.U(sto, T)
-            dUdT = self.phase_param.dUdT(sto)
+            ocp = self.phase_param.U(sto_surf, T)
+            dUdT = self.phase_param.dUdT(sto_surf)
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature [K]"]
             ocp = 0 * T

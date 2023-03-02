@@ -175,7 +175,7 @@ class LeadAcidParameters(BaseParameters):
         self.a_j_scale = self.I_typ / self.n.L
 
     def t_plus(self, c_e, T):
-        """Rransference number"""
+        """Transference number"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
@@ -241,6 +241,7 @@ class DomainLeadAcidParameters(BaseParameters):
         self.phase_params = {"primary": self.prim}
 
     def _set_parameters(self):
+        domain = self.domain
         Domain = self.domain.capitalize()
         main = self.main_param
 
@@ -271,7 +272,7 @@ class DomainLeadAcidParameters(BaseParameters):
         self.b_s = self.geo.b_s
         self.xi = pybamm.Parameter(f"{Domain} electrode morphological parameter")
         self.d = pybamm.Parameter(f"{Domain} electrode pore size [m]")
-        self.eps_max = pybamm.Parameter("Maximum porosity of negative electrode")
+        self.eps_max = pybamm.Parameter(f"Maximum porosity of {domain} electrode")
         self.epsilon_init = self.eps_max
         # no binder
         self.epsilon_inactive = pybamm.Scalar(0)

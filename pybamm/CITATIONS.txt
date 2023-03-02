@@ -268,7 +268,7 @@
 
 @phdthesis{Marquis2020,
   title={Long-term degradation of lithium-ion batteries},
-  author={Marquis, SCOTT G},
+  author={Marquis, Scott G.},
   year={2020},
   school={University of Oxford}
 }
