@@ -8,7 +8,8 @@ import numpy as np
 
 class CrackPropagation(BaseMechanics):
     """
-    Cracking behaviour in electrode particles, from [1]_.
+    Cracking behaviour in electrode particles. See [1]_ for mechanical model (thickness
+    change) and [2]_ for cracking model.
 
     Parameters
     ----------

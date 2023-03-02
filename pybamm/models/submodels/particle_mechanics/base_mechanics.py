@@ -6,8 +6,7 @@ import pybamm
 
 class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle mechanics models. See [1]_ for mechanical model (thickness
-    change) and [2]_ for cracking model.
+    Base class for particle mechanics models.
 
     Parameters
     ----------

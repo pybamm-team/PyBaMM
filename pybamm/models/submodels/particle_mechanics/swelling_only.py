@@ -7,7 +7,7 @@ from .base_mechanics import BaseMechanics
 
 class SwellingOnly(BaseMechanics):
     """
-    Class for swelling only (no cracking)
+    Class for swelling only (no cracking), from [1]_
 
     Parameters
     ----------
@@ -26,9 +26,6 @@ class SwellingOnly(BaseMechanics):
     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
            Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
            Cells. Journal of The Electrochemical Society, 167(1), 013512.
-    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
-           Battery cycle life prediction with coupled chemical degradation and
-           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
 
     **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
