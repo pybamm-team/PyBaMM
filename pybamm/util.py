@@ -336,13 +336,13 @@ def install_jax(arguments=None):  # pragma: no cover
     """
     Install compatible versions of jax, jaxlib.
 
-    Command Line Interface:
-    -----------------------
-    >>> pybamm_install_jax
+    Command Line Interface::
 
-    optional arguments:
-    -h, --help   show help message
-    -f, --force  force install compatible versions of jax and jaxlib
+        $ pybamm_install_jax
+
+    |   optional arguments:
+    |    -h, --help   show help message
+    |    -f, --force  force install compatible versions of jax and jaxlib
     """
     parser = argparse.ArgumentParser(description="Install jax and jaxlib")
     parser.add_argument(
