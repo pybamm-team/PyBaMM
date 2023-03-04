@@ -4,15 +4,9 @@
 import re
 
 PRINT_NAME_OVERRIDES = {
-    "potential_scale": r"\frac{RT^{ref}}{F}",
-    "Theta": r"\frac{1}{\hat{T}^{ref}}",
     "current_with_time": "I",
-    "timescale": r"\tau",
-    "dimensional_current_with_time": r"\hat{I}",
     "eps_c_e": r"\epsilon{c_e}",
     "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
-    "negative_particle_concentration_scale": r"c_{n}^{max}",
-    "positive_particle_concentration_scale": r"c_{p}^{max}",
 }
 
 GREEK_LETTERS = [
@@ -85,22 +79,6 @@ def prettify_print_name(name):
         sub_str = r"{" + sub_re.group(1).replace("_", "\,") + r"}"
         name = name.replace(sub_re.group(1), sub_str)
 
-    # Dimensions with comma separated (j0_n_ref_dimensional --> \hat{j0}_{n}^{ref})
-    dim_re = re.search(r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name)
-    if dim_re:
-        if "^" in name:
-            name = (
-                r"\hat{" + dim_re.group(1) + r"}_" + dim_re.group(2).replace("_", "\,")
-            )
-        else:
-            name = (
-                r"\hat{"
-                + dim_re.group(1)
-                + r"}_{"
-                + dim_re.group(2).replace("_", "\,")
-                + r"}"
-            )
-
     # Bar with comma separated (c_s_n_xav --> \bar{c}_{s\,n})
     bar_re = re.search(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)
     if bar_re:
@@ -118,8 +96,5 @@ def prettify_print_name(name):
     # Greek letters (delta --> \delta)
     greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
     name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
-
-    if name.endswith("{"):
-        name += "}"
 
     return name

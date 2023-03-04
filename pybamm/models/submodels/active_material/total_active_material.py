@@ -33,8 +33,9 @@ class Total(pybamm.BaseSubModel):
         for variable_template in [
             f"{Domain} electrode {{}}active material volume fraction",
             f"X-averaged {domain} electrode {{}}active material volume fraction",
-            f"{Domain} electrode {{}}active material volume fraction change",
-            f"X-averaged {domain} electrode {{}}active material volume fraction change",
+            f"{Domain} electrode {{}}active material volume fraction change [s-1]",
+            f"X-averaged {domain} electrode {{}}active material "
+            "volume fraction change [s-1]",
         ]:
             sumvar = sum(
                 variables[variable_template.format(phase + " ")] for phase in phases

@@ -266,6 +266,13 @@
   doi = {10.1149/2.0341915jes},
 }
 
+@phdthesis{Marquis2020,
+  title={Long-term degradation of lithium-ion batteries},
+  author={Marquis, Scott G.},
+  year={2020},
+  school={University of Oxford}
+}
+
 @article{Mohtat2021,
   title={An Algorithmic Safety VEST For Li-ion Batteries During Fast Charging},
   author={Mohtat, Peyman and Pannala, Sravan and Sulzer, Valentin and Siegel, Jason B and Stefanopoulou, Anna G},

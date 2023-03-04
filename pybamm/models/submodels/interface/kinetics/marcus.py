@@ -33,11 +33,12 @@ class Marcus(BaseKinetics):
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
+        RT = self.param.R * T
+        Feta_RT = self.param.F * eta_r / RT
         mhc_lambda = self.phase_param.mhc_lambda
-        kT = 1 + self.param.Theta * T  # dimensionless
 
-        exp_arg_ox = -((mhc_lambda + eta_r) ** 2) / (4 * mhc_lambda * kT)
-        exp_arg_red = -((mhc_lambda - eta_r) ** 2) / (4 * mhc_lambda * kT)
+        exp_arg_ox = -((mhc_lambda + Feta_RT) ** 2) / (4 * mhc_lambda * RT)
+        exp_arg_red = -((mhc_lambda - Feta_RT) ** 2) / (4 * mhc_lambda * RT)
         return u * j0 * (pybamm.exp(exp_arg_ox) - pybamm.exp(exp_arg_red))
 
 
@@ -76,11 +77,12 @@ class MarcusHushChidsey(BaseKinetics):
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         mhc_lambda = self.phase_param.mhc_lambda
-        kT = 1 + self.param.Theta * T  # dimensionless
 
-        lambda_T = mhc_lambda / kT
-        eta = eta_r / kT
+        F_RT = self.param.F / (self.param.R * T)
+        Feta_RT = F_RT * eta_r
+        lambda_T = F_RT * mhc_lambda
         a = 1 + pybamm.sqrt(lambda_T)
-        arg = (lambda_T - pybamm.sqrt(a + eta**2)) / (2 * pybamm.sqrt(lambda_T))
-        pref = pybamm.sqrt(np.pi * lambda_T) * pybamm.tanh(eta / 2)
-        return u * j0 * pref * pybamm.erfc(arg)
+
+        arg = (lambda_T - pybamm.sqrt(a + Feta_RT**2)) / (2 * pybamm.sqrt(lambda_T))
+        pref = pybamm.sqrt(np.pi * lambda_T) * pybamm.tanh(Feta_RT / 2)
+        return j0 * u * pref * pybamm.erfc(arg)

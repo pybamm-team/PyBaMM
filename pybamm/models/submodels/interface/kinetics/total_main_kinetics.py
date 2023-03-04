@@ -32,17 +32,22 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         domain, Domain = self.domain_Domain
 
         phases = self.options.phases[domain]
-        # For each of the variables, the variable name without the phase name
+        # The variable name without the phase name
         # is constructed by summing all of the variable names with the phases
-        for variable_template in [
-            f"{Domain} electrode {{}}volumetric interfacial current density",
-            f"{Domain} electrode {{}}volumetric interfacial current density [A.m-3]",
-            f"X-averaged {domain} electrode {{}}volumetric "
-            "interfacial current density",
-        ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
-            )
-            variables[variable_template.format("")] = sumvar
+        sumvar = sum(
+            variables[
+                f"{Domain} electrode {phase} volumetric "
+                "interfacial current density [A.m-3]"
+            ]
+            for phase in phases
+        )
+        variables.update(
+            {
+                f"{Domain} electrode volumetric "
+                "interfacial current density [A.m-3]": sumvar,
+                f"X-averaged {domain} electrode volumetric "
+                "interfacial current density [A.m-3]": pybamm.x_average(sumvar),
+            }
+        )
 
         return variables

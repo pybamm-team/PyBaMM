@@ -37,8 +37,8 @@ class NoMechanics(BaseMechanics):
         variables = self._get_standard_variables(zero)
         variables.update(
             {
-                f"{Domain} particle cracking rate": zero,
-                f"X-averaged {domain} particle cracking rate": zero_av,
+                f"{Domain} particle cracking rate [m.s-1]": zero,
+                f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
             }
         )
         return variables

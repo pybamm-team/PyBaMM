@@ -268,7 +268,6 @@ def get_parameter_values():
         "Electrode height [m]": 0.01,
         "Electrode width [m]": 0.0154,
         "Nominal cell capacity [A.h]": 0.0024,
-        "Typical current [A]": 0.0024,
         "Current function [A]": 0.0024,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -304,7 +303,6 @@ def get_parameter_values():
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
         "Separator Bruggeman coefficient (electrode)": 1.5,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Valoen2005,

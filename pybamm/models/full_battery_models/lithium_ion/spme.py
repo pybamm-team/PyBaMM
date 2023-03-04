@@ -83,6 +83,6 @@ class SPMe(SPM):
 
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
-                self.submodels[f"{domain} surface potential difference"] = surf_model(
-                    self.param, domain, self.options
-                )
+                self.submodels[
+                    f"{domain} surface potential difference [V]"
+                ] = surf_model(self.param, domain, self.options)

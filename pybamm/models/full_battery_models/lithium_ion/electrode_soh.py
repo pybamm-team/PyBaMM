@@ -48,12 +48,12 @@ class _ElectrodeSOH(pybamm.BaseModel):
             )
 
         # Define parameters and input parameters
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
+        Un = param.n.prim.U
+        Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.voltage_high_cut_dimensional
-        V_min = param.voltage_low_cut_dimensional
+        V_max = param.voltage_high_cut
+        V_min = param.voltage_low_cut
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -380,15 +380,10 @@ class ElectrodeSOHSolver:
             T = self.parameter_values["Reference temperature [K]"]
             x = pybamm.InputParameter("x")
             y = pybamm.InputParameter("y")
-            self.V_max = self.parameter_values.evaluate(
-                self.param.voltage_high_cut_dimensional
-            )
-            self.V_min = self.parameter_values.evaluate(
-                self.param.voltage_low_cut_dimensional
-            )
+            self.V_max = self.parameter_values.evaluate(self.param.voltage_high_cut)
+            self.V_min = self.parameter_values.evaluate(self.param.voltage_low_cut)
             self.OCV_function = self.parameter_values.process_symbol(
-                self.param.p.prim.U_dimensional(y, T)
-                - self.param.n.prim.U_dimensional(x, T)
+                self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
             )
 
         # Check that the min and max achievable voltages span wider than the desired
@@ -443,8 +438,8 @@ class ElectrodeSOHSolver:
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-            V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
+            V_min = parameter_values.evaluate(param.voltage_low_cut)
+            V_max = parameter_values.evaluate(param.voltage_high_cut)
 
             if not V_min < V_init < V_max:
                 raise ValueError(
@@ -455,8 +450,8 @@ class ElectrodeSOHSolver:
             # Solve simple model for initial soc based on target voltage
             soc_model = pybamm.BaseModel()
             soc = pybamm.Variable("soc")
-            Up = param.p.prim.U_dimensional
-            Un = param.n.prim.U_dimensional
+            Up = param.p.prim.U
+            Un = param.n.prim.U
             T_ref = parameter_values["Reference temperature [K]"]
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)

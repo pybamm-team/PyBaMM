@@ -25,8 +25,8 @@ class BaseTransverseModel(BaseModel):
         """Pressure in the separator"""
 
         variables = {
-            "Separator pressure": pybamm.PrimaryBroadcast(p_s, "separator"),
-            "X-averaged separator pressure": p_s,
+            "Separator pressure [Pa]": pybamm.PrimaryBroadcast(p_s, "separator"),
+            "X-averaged separator pressure [Pa]": p_s,
         }
 
         return variables
@@ -34,11 +34,9 @@ class BaseTransverseModel(BaseModel):
     def _get_standard_transverse_velocity_variables(self, var_s_av, typ):
         """Vertical acceleration in the separator"""
         if typ == "velocity":
-            scale = self.param.velocity_scale
-            typ_dim = "velocity [m.s-1]"
+            typ += " [m.s-1]"
         elif typ == "acceleration":
-            scale = self.param.velocity_scale / self.param.L_z
-            typ_dim = "acceleration [m.s-2]"
+            typ += " [m.s-2]"
 
         var_dict = {}
         variables = {}
@@ -53,21 +51,12 @@ class BaseTransverseModel(BaseModel):
             variables.update(
                 {
                     f"{domain} transverse volume-averaged {typ}": var_k,
-                    f"{domain} transverse volume-averaged {typ_dim}": scale * var_k,
-                    f"X-averaged {domain} transverse volume-averaged "
-                    f"{typ}": var_k_av,
-                    f"X-averaged {domain} transverse volume-averaged "
-                    f"{typ_dim}": scale * var_k_av,
+                    f"X-averaged {domain} transverse volume-averaged {typ}": var_k_av,
                 }
             )
 
         var = pybamm.concatenation(*var_dict.values())
 
-        variables.update(
-            {
-                f"Transverse volume-averaged {typ}": var,
-                f"Transverse volume-averaged {typ_dim}": scale * var,
-            }
-        )
+        variables.update({f"Transverse volume-averaged {typ}": var})
 
         return variables

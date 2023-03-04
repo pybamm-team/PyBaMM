@@ -417,7 +417,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 5.0,
-        "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -476,7 +475,6 @@ def get_parameter_values():
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
         "Separator transport efficiency ": 0.25,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
         "1 + dlnf/dlnc": 1.0,

@@ -38,9 +38,6 @@ class ConstantSEI(BaseModel):
         L_outer = self.phase_param.L_outer_0
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
 
-        # Concentrations (derived from thicknesses)
-        variables.update(self._get_standard_concentration_variables(variables))
-
         # Reactions
         if self.reaction_loc == "interface":
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
@@ -49,5 +46,14 @@ class ConstantSEI(BaseModel):
                 pybamm.Scalar(0), "negative electrode", "current collector"
             )
         variables.update(self._get_standard_reaction_variables(zero, zero))
+
+        return variables
+
+    def get_coupled_variables(self, variables):
+        # Concentrations (derived from thicknesses)
+        variables.update(self._get_standard_concentration_variables(variables))
+
+        # Add other standard coupled variables
+        variables.update(super().get_coupled_variables(variables))
 
         return variables
