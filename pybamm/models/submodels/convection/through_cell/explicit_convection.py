@@ -23,22 +23,36 @@ class Explicit(BaseThroughCellModel):
     def get_coupled_variables(self, variables):
         # Set up
         param = self.param
-        p_s = variables["X-averaged separator pressure"]
+        p_s = variables["X-averaged separator pressure [Pa]"]
         for domain in self.options.whole_cell_domains:
             if domain == "separator":
                 continue
-            j_k_av = variables[f"X-averaged {domain} interfacial current density"]
+            a_j_k_av = variables[
+                f"X-averaged {domain} volumetric interfacial current density [A.m-3]"
+            ]
             if domain == "negative electrode":
                 x_n = pybamm.standard_spatial_vars.x_n
-                beta_k = param.n.beta
-                p_k = beta_k * j_k_av * (-(x_n**2) + param.n.l**2) / 2 + p_s
-                v_box_k = beta_k * j_k_av * x_n
+                DeltaV_k = param.n.DeltaV
+                p_k = (
+                    -DeltaV_k * a_j_k_av / param.F * (-(x_n**2) + param.n.L**2) / 2
+                    + p_s
+                )
+                v_box_k = -DeltaV_k * a_j_k_av / param.F * x_n
             elif domain == "positive electrode":
                 x_p = pybamm.standard_spatial_vars.x_p
-                beta_k = param.p.beta
-                p_k = beta_k * j_k_av * ((x_p - 1) ** 2 - param.p.l**2) / 2 + p_s
-                v_box_k = beta_k * j_k_av * (x_p - 1)
-            div_v_box_k = pybamm.PrimaryBroadcast(beta_k * j_k_av, domain)
+                DeltaV_k = param.p.DeltaV
+                p_k = (
+                    -DeltaV_k
+                    * a_j_k_av
+                    / param.F
+                    * ((x_p - 1) ** 2 - param.p.L**2)
+                    / 2
+                    + p_s
+                )
+                v_box_k = -DeltaV_k * a_j_k_av / param.F * (x_p - param.L_x)
+            div_v_box_k = pybamm.PrimaryBroadcast(
+                -DeltaV_k * a_j_k_av / param.F, domain
+            )
 
             variables.update(
                 self._get_standard_convection_variables(
@@ -48,16 +62,16 @@ class Explicit(BaseThroughCellModel):
 
         # Transverse velocity in the separator determines through-cell velocity
         div_Vbox_s = variables[
-            "X-averaged separator transverse volume-averaged acceleration"
+            "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
         ]
-        i_boundary_cc = variables["Current collector current density"]
-        v_box_n_right = param.n.beta * i_boundary_cc
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        v_box_n_right = -param.n.DeltaV * i_boundary_cc / param.F
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
         # Simple formula for velocity in the separator
         x_s = pybamm.standard_spatial_vars.x_s
-        v_box_s = div_v_box_s_av * (x_s - param.n.l) + v_box_n_right
+        v_box_s = div_v_box_s_av * (x_s - param.n.L) + v_box_n_right
 
         variables.update(
             self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)

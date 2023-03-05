@@ -41,11 +41,11 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         if working_electrode == "negative":  # pragma: no cover
             raise NotImplementedError
         elif working_electrode == "positive":
-            U_w = param.p.prim.U_dimensional
+            U_w = param.p.prim.U
             Q = Q_w * (x_100 - x_0)
 
-        V_max = param.voltage_high_cut_dimensional
-        V_min = param.voltage_low_cut_dimensional
+        V_max = param.voltage_high_cut
+        V_min = param.voltage_low_cut
 
         self.algebraic = {
             x_100: U_w(x_100, T_ref) - V_max,

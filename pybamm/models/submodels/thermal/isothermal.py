@@ -24,7 +24,7 @@ class Isothermal(BaseThermal):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-        T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
+        T_amb = self.param.T_amb(pybamm.t)
         T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
 
         T_dict = {
@@ -46,20 +46,20 @@ class Isothermal(BaseThermal):
         else:
             zero = pybamm.Scalar(0)
             for var in [
-                "Ohmic heating",
-                "X-averaged Ohmic heating",
-                "Volume-averaged Ohmic heating",
-                "Irreversible electrochemical heating",
-                "X-averaged irreversible electrochemical heating",
-                "Volume-averaged irreversible electrochemical heating",
-                "Reversible heating",
-                "X-averaged reversible heating",
-                "Volume-averaged reversible heating",
-                "Total heating",
-                "X-averaged total heating",
-                "Volume-averaged total heating",
+                "Ohmic heating [W.m-3]",
+                "X-averaged Ohmic heating [W.m-3]",
+                "Volume-averaged Ohmic heating [W.m-3]",
+                "Irreversible electrochemical heating [W.m-3]",
+                "X-averaged irreversible electrochemical heating [W.m-3]",
+                "Volume-averaged irreversible electrochemical heating [W.m-3]",
+                "Reversible heating [W.m-3]",
+                "X-averaged reversible heating [W.m-3]",
+                "Volume-averaged reversible heating [W.m-3]",
+                "Total heating [W.m-3]",
+                "X-averaged total heating [W.m-3]",
+                "Volume-averaged total heating [W.m-3]",
             ]:
-                # Both dimensionless and dimensional variable are zero
-                variables.update({var: zero, f"{var} [W.m-3]": zero})
+                # All variables are zero
+                variables.update({var: zero})
 
         return variables

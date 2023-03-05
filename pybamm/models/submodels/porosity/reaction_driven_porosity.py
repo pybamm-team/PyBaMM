@@ -30,9 +30,7 @@ class ReactionDriven(BaseModel):
             if domain == "negative electrode":
                 # Only the negative electrode porosity changes
                 L_sei_n = variables["Total SEI thickness [m]"]
-                L_sei_0 = (
-                    self.param.n.prim.L_inner_0_dim + self.param.n.prim.L_outer_0_dim
-                )
+                L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
                 L_pl_n = variables["Lithium plating thickness [m]"]
                 L_dead_n = variables["Dead lithium thickness [m]"]
                 L_sei_cr_n = variables["Total SEI on cracks thickness [m]"]

@@ -31,14 +31,14 @@ class BaseModel(BaseElectrode):
             return
 
         if self.domain == "negative":
-            phi_s_cn = variables["Negative current collector potential"]
+            phi_s_cn = variables["Negative current collector potential [V]"]
             lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
         elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            i_boundary_cc = variables["Current collector current density"]
-            T_p = variables["Positive electrode temperature"]
+            i_boundary_cc = variables["Current collector current density [A.m-2]"]
+            T_p = variables["Positive electrode temperature [K]"]
             sigma_eff = (
                 self.param.p.sigma(T_p)
                 * variables["Positive electrode transport efficiency"]
@@ -48,5 +48,5 @@ class BaseModel(BaseElectrode):
                 "Neumann",
             )
 
-        phi_s = variables[f"{Domain} electrode potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}

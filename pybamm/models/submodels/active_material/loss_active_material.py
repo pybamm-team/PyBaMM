@@ -75,16 +75,18 @@ class LossActiveMaterial(BaseModel):
             # This is loss of active material model by mechanical effects
             if self.x_average is True:
                 stress_t_surf = variables[
-                    f"X-averaged {domain} particle surface tangential stress"
+                    f"X-averaged {domain} particle surface tangential stress [Pa]"
                 ]
                 stress_r_surf = variables[
-                    f"X-averaged {domain} particle surface radial stress"
+                    f"X-averaged {domain} particle surface radial stress [Pa]"
                 ]
             else:
                 stress_t_surf = variables[
-                    f"{Domain} particle surface tangential stress"
+                    f"{Domain} particle surface tangential stress [Pa]"
                 ]
-                stress_r_surf = variables[f"{Domain} particle surface radial stress"]
+                stress_r_surf = variables[
+                    f"{Domain} particle surface radial stress [Pa]"
+                ]
 
             beta_LAM = self.domain_param.beta_LAM
             stress_critical = self.domain_param.stress_critical
@@ -102,25 +104,24 @@ class LossActiveMaterial(BaseModel):
             deps_solid_dt += j_stress_LAM
 
         if "reaction" in lam_option:
-            if self.x_average is True:
-                a = variables[
-                    f"X-averaged {domain} electrode surface area to volume ratio"
-                ]
-            else:
-                a = variables[f"{Domain} electrode surface area to volume ratio"]
-
             beta_LAM_sei = self.domain_param.beta_LAM_sei
             if self.domain == "negative":
                 if self.x_average is True:
-                    j_sei = variables["X-averaged SEI interfacial current density"]
+                    a_j_sei = variables[
+                        "X-averaged negative electrode SEI "
+                        "volumetric interfacial current density [A.m-3]"
+                    ]
                 else:
-                    j_sei = variables["SEI interfacial current density"]
+                    a_j_sei = variables[
+                        "Negative electrode SEI volumetric "
+                        "interfacial current density [A.m-3]"
+                    ]
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM
                 # until other reactions are implemented
-                j_sei = 0
+                a_j_sei = 0
 
-            j_stress_reaction = beta_LAM_sei * a * j_sei
+            j_stress_reaction = beta_LAM_sei * a_j_sei / self.param.F
             deps_solid_dt += j_stress_reaction
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
@@ -135,12 +136,13 @@ class LossActiveMaterial(BaseModel):
                 f"X-averaged {domain} electrode active material volume fraction"
             ]
             deps_solid_dt = variables[
-                f"X-averaged {domain} electrode active material volume fraction change"
+                f"X-averaged {domain} electrode active material "
+                "volume fraction change [s-1]"
             ]
         else:
             eps_solid = variables[f"{Domain} electrode active material volume fraction"]
             deps_solid_dt = variables[
-                f"{Domain} electrode active material volume fraction change"
+                f"{Domain} electrode active material volume fraction change [s-1]"
             ]
 
         # Loss of lithium due to loss of active material

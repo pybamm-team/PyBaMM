@@ -47,8 +47,8 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
 
     """
     j0_ref = 0.06  # srinivasan2003mathematical
-    c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-    j0 = j0_ref * (c_e / c_e_typ)
+    c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
+    j0 = j0_ref * (c_e / c_e_init)
 
     return j0
 
@@ -102,11 +102,11 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     c_hy = 0
     param = pybamm.LeadAcidParameters()
     c_w_dim = (1 - c_e * param.V_e - c_ox * param.V_ox - c_hy * param.V_hy) / param.V_w
-    c_w_ref = (1 - param.c_e_typ * param.V_e) / param.V_w
+    c_w_ref = (1 - param.c_e_init * param.V_e) / param.V_w
     c_w = c_w_dim / c_w_ref
 
     j0_ref = 0.004  # srinivasan2003mathematical
-    j0 = j0_ref * (c_e / param.c_e_typ) ** 2 * c_w
+    j0 = j0_ref * (c_e / param.c_e_init) ** 2 * c_w
 
     return j0
 
@@ -136,8 +136,8 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
 
     """
     j0_ref = 2.5e-23  # srinivasan2003mathematical
-    c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-    j0 = j0_ref * (c_e / c_e_typ)
+    c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
+    j0 = j0_ref * (c_e / c_e_init)
 
     return j0
 
@@ -204,21 +204,6 @@ def diffusivity_Gu1997(c_e):
     return (1.75 + 260e-6 * c_e) * 1e-9
 
 
-def viscosity_Chapman1968(c_e):
-    """
-    Dimensional viscosity of sulfuric acid [kg.m-1.s-1], from data in [1]_, as a
-    function of the electrolyte concentration c_e [mol.m-3].
-
-    References
-    ----------
-    .. [1] TW Chapman and J Newman. Compilation of selected thermodynamic and transport
-           properties of binary electrolytes in aqueous solution. Technical report,
-           California Univ., Berkeley. Lawrence Radiation Lab., 1968.
-
-    """
-    return 0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e**2
-
-
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
@@ -251,7 +236,6 @@ def get_parameter_values():
         "Cell cooling surface area [m2]": 0.154,
         "Cell volume [m3]": 0.00027,
         "Nominal cell capacity [A.h]": 17.0,
-        "Typical current [A]": 1.0,
         "Current function [A]": 1.0,
         "Negative current collector density [kg.m-3]": 11300.0,
         "Positive current collector density [kg.m-3]": 9375.0,
@@ -313,6 +297,7 @@ def get_parameter_values():
         "": lead_dioxide_exchange_current_density_Sulzer2019,
         "Positive electrode oxygen exchange-current density [A.m-2]"
         "": oxygen_exchange_current_density_Sulzer2019,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
         "": 0.0,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
@@ -326,7 +311,7 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.04,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 5650.0,
+        "Initial concentration in electrolyte [mol.m-3]": 5650.0,
         "Cation transference number": 0.7,
         "1 + dlnf/dlnc": 1.0,
         "Partial molar volume of water [m3.mol-1]": 1.75e-05,
@@ -341,7 +326,6 @@ def get_parameter_values():
         "Electrolyte conductivity [S.m-1]": conductivity_Gu1997,
         "Darken thermodynamic factor": darken_thermodynamic_factor_Chapman1968,
         "Electrolyte diffusivity [m2.s-1]": diffusivity_Gu1997,
-        "Electrolyte viscosity [kg.m-1.s-1]": viscosity_Chapman1968,
         "Oxygen diffusivity [m2.s-1]": 2.1e-09,
         "Typical oxygen concentration [mol.m-3]": 1000.0,
         "Hydrogen diffusivity [m2.s-1]": 4.5e-09,

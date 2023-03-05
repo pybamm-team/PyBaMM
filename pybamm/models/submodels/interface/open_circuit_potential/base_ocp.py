@@ -69,30 +69,18 @@ class BaseOpenCircuitPotential(BaseInterface):
         elif ocp.domain == ["current collector"]:
             ocp = pybamm.PrimaryBroadcast(ocp, f"{domain} electrode")
 
-        pot_scale = self.param.potential_scale
-        ocp_dim = self.domain_param.U_ref + pot_scale * ocp
-        ocp_av_dim = self.domain_param.U_ref + pot_scale * ocp_av
-
         variables.update(
             {
-                f"{Domain} electrode {reaction_name}open circuit potential": ocp,
-                f"{Domain} electrode {reaction_name}"
-                "open circuit potential [V]": ocp_dim,
+                f"{Domain} electrode {reaction_name}" "open circuit potential [V]": ocp,
                 f"X-averaged {domain} electrode {reaction_name}"
-                "open circuit potential": ocp_av,
-                f"X-averaged {domain} electrode {reaction_name}"
-                "open circuit potential [V]": ocp_av_dim,
+                "open circuit potential [V]": ocp_av,
             }
         )
         if self.reaction in ["lithium-ion main", "lead-acid main"]:
             variables.update(
                 {
-                    f"{Domain} electrode entropic change": dUdT,
-                    f"{Domain} electrode entropic change [V.K-1]"
-                    "": pot_scale * dUdT / self.param.Delta_T,
-                    f"X-averaged {domain} electrode entropic change": dUdT_av,
-                    f"X-averaged {domain} electrode entropic change [V.K-1]"
-                    "": pot_scale * dUdT_av / self.param.Delta_T,
+                    f"{Domain} electrode entropic change [V.K-1]": dUdT,
+                    f"X-averaged {domain} electrode entropic change [V.K-1]": dUdT_av,
                 }
             )
 
@@ -119,32 +107,19 @@ class BaseOpenCircuitPotential(BaseInterface):
         else:
             dUdT_av = pybamm.x_average(dUdT)
 
-        pot_scale = self.param.potential_scale
-        ocp_dim = self.domain_param.U_ref + pot_scale * ocp
-        ocp_av_dim = self.domain_param.U_ref + pot_scale * ocp_av
-
         variables = {
             f"{Domain} electrode {reaction_name}"
-            "open circuit potential distribution": ocp,
-            f"{Domain} electrode {reaction_name}"
-            "open circuit potential distribution [V]": ocp_dim,
+            "open circuit potential distribution [V]": ocp,
             f"X-averaged {domain} electrode {reaction_name}"
-            "open circuit potential distribution": ocp_av,
-            f"X-averaged {domain} electrode {reaction_name}"
-            "open circuit potential distribution [V]": ocp_av_dim,
+            "open circuit potential distribution [V]": ocp_av,
         }
         if self.reaction_name == "":
             variables.update(
                 {
-                    f"{Domain} electrode entropic change (size-dependent)": dUdT,
                     f"{Domain} electrode entropic change "
-                    "(size-dependent) [V.K-1]": pot_scale * dUdT / self.param.Delta_T,
+                    "(size-dependent) [V.K-1]": dUdT,
                     f"X-averaged {domain} electrode entropic change "
-                    "(size-dependent)": dUdT_av,
-                    f"X-averaged {domain} electrode entropic change "
-                    "(size-dependent) [V.K-1]": pot_scale
-                    * dUdT_av
-                    / self.param.Delta_T,
+                    "(size-dependent) [V.K-1]": dUdT_av,
                 }
             )
 

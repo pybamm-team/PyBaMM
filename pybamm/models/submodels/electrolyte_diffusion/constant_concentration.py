@@ -23,8 +23,9 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         super().__init__(param, options)
 
     def get_fundamental_variables(self):
+        c_e_init = self.param.c_e_init
         eps_c_e_dict = {
-            domain: self.param.domain_params[domain.split()[0]].epsilon_init * 1
+            domain: self.param.domain_params[domain.split()[0]].epsilon_init * c_e_init
             for domain in self.options.whole_cell_domains
         }
         variables = self._get_standard_porosity_times_concentration_variables(
@@ -45,16 +46,18 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
             eps_k = variables[f"{Domain} porosity"]
-            eps_c_e_k = variables[f"{Domain} porosity times concentration"]
+            eps_c_e_k = variables[f"{Domain} porosity times concentration [mol.m-3]"]
             c_e_k = eps_c_e_k / eps_k
             c_e_dict[domain] = c_e_k
 
-        variables["Electrolyte concentration concatenation"] = pybamm.concatenation(
-            *c_e_dict.values()
-        )
+        variables[
+            "Electrolyte concentration concatenation [mol.m-3]"
+        ] = pybamm.concatenation(*c_e_dict.values())
         variables.update(self._get_standard_domain_concentration_variables(c_e_dict))
 
-        c_e = variables["Porosity times concentration"] / variables["Porosity"]
+        c_e = (
+            variables["Porosity times concentration [mol.m-3]"] / variables["Porosity"]
+        )
         variables.update(self._get_standard_whole_cell_concentration_variables(c_e))
 
         return variables
@@ -66,7 +69,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         discretisation.
         """
 
-        c_e = variables["Electrolyte concentration"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
 
         self.boundary_conditions = {
             c_e: {

@@ -40,24 +40,20 @@ class BaseThermal(pybamm.BaseSubModel):
         T = pybamm.concatenation(*T_mid)
 
         # Get the ambient temperature, which can be specified as a function of time
-        T_amb = param.T_amb(pybamm.t * param.timescale)
+        T_amb = param.T_amb(pybamm.t)
 
-        variables = {"Ambient temperature": T_amb, "Cell temperature": T}
+        variables = {"Ambient temperature [K]": T_amb, "Cell temperature [K]": T}
         for name, var in T_dict.items():
             Name = name.capitalize()
-            variables[f"{Name} temperature"] = var
+            variables[f"{Name} temperature [K]"] = var
             if name in ["negative electrode", "separator", "positive electrode"]:
-                variables[f"X-averaged {name} temperature"] = pybamm.x_average(var)
+                variables[f"X-averaged {name} temperature [K]"] = pybamm.x_average(var)
 
-        # Calculate dimensional variables
-        variables_nondim = variables.copy()
-        for name, var in variables_nondim.items():
-            variables.update(
-                {
-                    f"{name} [K]": param.Delta_T * var + param.T_ref,
-                    f"{name} [C]": param.Delta_T * var + param.T_ref - 273.15,
-                }
-            )
+        # Calculate temperatures in Celsius
+        variables_Kelvin = variables.copy()
+        for name_K, var in variables_Kelvin.items():
+            name_C = name_K.replace("[K]", "[C]")
+            variables.update({name_C: var - 273.15})
 
         return variables
 
@@ -65,16 +61,16 @@ class BaseThermal(pybamm.BaseSubModel):
         param = self.param
 
         # Ohmic heating in solid
-        i_s_p = variables["Positive electrode current density"]
-        phi_s_p = variables["Positive electrode potential"]
+        i_s_p = variables["Positive electrode current density [A.m-2]"]
+        phi_s_p = variables["Positive electrode potential [V]"]
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
         if self.options.electrode_types["negative"] == "planar":
-            i_boundary_cc = variables["Current collector current density"]
-            T_n = variables["Negative electrode temperature"]
+            i_boundary_cc = variables["Current collector current density [A.m-2]"]
+            T_n = variables["Negative electrode temperature [K]"]
             Q_ohm_s_n = i_boundary_cc**2 / param.n.sigma(T_n)
         else:
-            i_s_n = variables["Negative electrode current density"]
-            phi_s_n = variables["Negative electrode potential"]
+            i_s_n = variables["Negative electrode current density [A.m-2]"]
+            phi_s_n = variables["Negative electrode potential [V]"]
             Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
@@ -83,12 +79,12 @@ class BaseThermal(pybamm.BaseSubModel):
         # Ohmic heating in electrolyte
         # TODO: change full stefan-maxwell conductivity so that i_e is always
         # a Concatenation
-        i_e = variables["Electrolyte current density"]
-        phi_e = variables["Electrolyte potential"]
+        i_e = variables["Electrolyte current density [A.m-2]"]
+        phi_e = variables["Electrolyte potential [V]"]
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
-            phi_e_s = variables["Separator electrolyte potential"]
-            phi_e_p = variables["Positive electrolyte potential"]
+            phi_e_s = variables["Separator electrolyte potential [V]"]
+            phi_e_p = variables["Positive electrolyte potential [V]"]
             if self.options.electrode_types["negative"] == "planar":
                 i_e_s, i_e_p = i_e.orphans
                 Q_ohm_e_n = pybamm.FullBroadcast(
@@ -96,7 +92,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 )
             else:
                 i_e_n, i_e_s, i_e_p = i_e.orphans
-                phi_e_n = variables["Negative electrolyte potential"]
+                phi_e_n = variables["Negative electrolyte potential [V]"]
                 Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
             Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
             Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
@@ -116,45 +112,39 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_ohm = Q_ohm_s + Q_ohm_e
 
         # Irreversible electrochemical heating
-        a_p = variables["Positive electrode surface area to volume ratio"]
-        j_p = variables["Positive electrode interfacial current density"]
-        eta_r_p = variables["Positive electrode reaction overpotential"]
+        a_j_p = variables[
+            "Positive electrode volumetric interfacial current density [A.m-3]"
+        ]
+        eta_r_p = variables["Positive electrode reaction overpotential [V]"]
         if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
         else:
-            a_n = variables["Negative electrode surface area to volume ratio"]
-            j_n = variables["Negative electrode interfacial current density"]
-            eta_r_n = variables["Negative electrode reaction overpotential"]
-            Q_rxn_n = a_n * j_n * eta_r_n
-        Q_rxn_p = a_p * j_p * eta_r_p
-        Q_rxn = pybamm.concatenation(
-            *[
-                Q_rxn_n,
-                pybamm.FullBroadcast(0, ["separator"], "current collector"),
-                Q_rxn_p,
+            a_j_n = variables[
+                "Negative electrode volumetric interfacial current density [A.m-3]"
             ]
+            eta_r_n = variables["Negative electrode reaction overpotential [V]"]
+            Q_rxn_n = a_j_n * eta_r_n
+        Q_rxn_p = a_j_p * eta_r_p
+        Q_rxn = pybamm.concatenation(
+            Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
         )
 
         # Reversible electrochemical heating
-        T_p = variables["Positive electrode temperature"]
-        dUdT_p = variables["Positive electrode entropic change"]
+        T_p = variables["Positive electrode temperature [K]"]
+        dUdT_p = variables["Positive electrode entropic change [V.K-1]"]
         if self.options.electrode_types["negative"] == "planar":
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
         else:
-            T_n = variables["Negative electrode temperature"]
-            dUdT_n = variables["Negative electrode entropic change"]
-            Q_rev_n = a_n * j_n * (param.Theta ** (-1) + T_n) * dUdT_n
-        Q_rev_p = a_p * j_p * (param.Theta ** (-1) + T_p) * dUdT_p
+            T_n = variables["Negative electrode temperature [K]"]
+            dUdT_n = variables["Negative electrode entropic change [V.K-1]"]
+            Q_rev_n = a_j_n * T_n * dUdT_n
+        Q_rev_p = a_j_p * T_p * dUdT_p
         Q_rev = pybamm.concatenation(
-            *[
-                Q_rev_n,
-                pybamm.FullBroadcast(0, ["separator"], "current collector"),
-                Q_rev_p,
-            ]
+            Q_rev_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rev_p
         )
 
         # Total heating
@@ -172,37 +162,21 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_vol_av = self._yz_average(Q_rev_av)
         Q_vol_av = self._yz_average(Q_av)
 
-        # Dimensional scaling for heat source terms
-        Q_scale = param.i_typ * param.potential_scale / param.L_x
-
         variables.update(
             {
-                "Ohmic heating": Q_ohm,
-                "Ohmic heating [W.m-3]": Q_ohm * Q_scale,
-                "X-averaged Ohmic heating": Q_ohm_av,
-                "X-averaged Ohmic heating [W.m-3]": Q_ohm_av * Q_scale,
-                "Volume-averaged Ohmic heating": Q_ohm_vol_av,
-                "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av * Q_scale,
-                "Irreversible electrochemical heating": Q_rxn,
-                "Irreversible electrochemical heating [W.m-3]": Q_rxn * Q_scale,
-                "X-averaged irreversible electrochemical heating": Q_rxn_av,
-                "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av
-                * Q_scale,
-                "Volume-averaged irreversible electrochemical heating": Q_rxn_vol_av,
+                "Ohmic heating [W.m-3]": Q_ohm,
+                "X-averaged Ohmic heating [W.m-3]": Q_ohm_av,
+                "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av,
+                "Irreversible electrochemical heating [W.m-3]": Q_rxn,
+                "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av,
                 "Volume-averaged irreversible electrochemical heating "
-                + "[W.m-3]": Q_rxn_vol_av * Q_scale,
-                "Reversible heating": Q_rev,
-                "Reversible heating [W.m-3]": Q_rev * Q_scale,
-                "X-averaged reversible heating": Q_rev_av,
-                "X-averaged reversible heating [W.m-3]": Q_rev_av * Q_scale,
-                "Volume-averaged reversible heating": Q_rev_vol_av,
-                "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av * Q_scale,
-                "Total heating": Q,
-                "Total heating [W.m-3]": Q * Q_scale,
-                "X-averaged total heating": Q_av,
-                "X-averaged total heating [W.m-3]": Q_av * Q_scale,
-                "Volume-averaged total heating": Q_vol_av,
-                "Volume-averaged total heating [W.m-3]": Q_vol_av * Q_scale,
+                + "[W.m-3]": Q_rxn_vol_av,
+                "Reversible heating [W.m-3]": Q_rev,
+                "X-averaged reversible heating [W.m-3]": Q_rev_av,
+                "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av,
+                "Total heating [W.m-3]": Q,
+                "X-averaged total heating [W.m-3]": Q_av,
+                "Volume-averaged total heating [W.m-3]": Q_vol_av,
             }
         )
         return variables
@@ -213,28 +187,28 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # Compute the Ohmic heating for 0D current collectors
         if cc_dimension == 0:
-            i_boundary_cc = variables["Current collector current density"]
+            i_boundary_cc = variables["Current collector current density [A.m-2]"]
             Q_s_cn = i_boundary_cc**2 / self.param.n.sigma_cc
             Q_s_cp = i_boundary_cc**2 / self.param.p.sigma_cc
         # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
         # In this limit the current flow is all in the y,z direction in the current
         # collectors
         elif cc_dimension in [1, 2]:
-            phi_s_cn = variables["Negative current collector potential"]
-            phi_s_cp = variables["Positive current collector potential"]
+            phi_s_cn = variables["Negative current collector potential [V]"]
+            phi_s_cp = variables["Positive current collector potential [V]"]
             # TODO: implement grad_squared in other spatial methods so that the
             # if statement can be removed
             if cc_dimension == 1:
-                Q_s_cn = self.param.n.sigma_cc_prime * pybamm.inner(
+                Q_s_cn = self.param.n.sigma_cc * pybamm.inner(
                     pybamm.grad(phi_s_cn), pybamm.grad(phi_s_cn)
                 )
-                Q_s_cp = self.param.p.sigma_cc_prime * pybamm.inner(
+                Q_s_cp = self.param.p.sigma_cc * pybamm.inner(
                     pybamm.grad(phi_s_cp), pybamm.grad(phi_s_cp)
                 )
             elif cc_dimension == 2:
                 # Inner not implemented in 2D -- have to call grad_squared directly
-                Q_s_cn = self.param.n.sigma_cc_prime * pybamm.grad_squared(phi_s_cn)
-                Q_s_cp = self.param.p.sigma_cc_prime * pybamm.grad_squared(phi_s_cp)
+                Q_s_cn = self.param.n.sigma_cc * pybamm.grad_squared(phi_s_cn)
+                Q_s_cp = self.param.p.sigma_cc * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _x_average(self, var, var_cn, var_cp):
@@ -250,10 +224,10 @@ class BaseThermal(pybamm.BaseSubModel):
         and positive current collectors in the geometry).
         """
         out = (
-            self.param.n.l_cc * var_cn
-            + self.param.l_x * pybamm.x_average(var)
-            + self.param.p.l_cc * var_cp
-        ) / self.param.l
+            self.param.n.L_cc * var_cn
+            + self.param.L_x * pybamm.x_average(var)
+            + self.param.p.L_cc * var_cp
+        ) / self.param.L
         return out
 
     def _yz_average(self, var):

@@ -48,6 +48,8 @@ class ReactionDrivenODE(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
+        param = self.param
+
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
             domain_param = self.param.domain_params[domain.split()[0]]
@@ -55,15 +57,18 @@ class ReactionDrivenODE(BaseModel):
                 depsdt_k = pybamm.FullBroadcast(0, domain, "current collector")
             else:
                 if self.x_average is True:
-                    j_k_av = variables[
-                        f"X-averaged {domain} interfacial current density"
+                    a_j_k_av = variables[
+                        f"X-averaged {domain} volumetric "
+                        "interfacial current density [A.m-3]"
                     ]
-                    depsdt_k_av = -domain_param.beta_surf * j_k_av
+                    depsdt_k_av = domain_param.DeltaVsurf * a_j_k_av / param.F
                     depsdt_k = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
                 else:
                     Domain = domain.capitalize()
-                    j_k = variables[f"{Domain} interfacial current density"]
-                    depsdt_k = -domain_param.beta_surf * j_k
+                    a_j_k = variables[
+                        f"{Domain} volumetric interfacial current density [A.m-3]"
+                    ]
+                    depsdt_k = domain_param.DeltaVsurf * a_j_k / param.F
 
             depsdt_dict[domain] = depsdt_k
         variables.update(self._get_standard_porosity_change_variables(depsdt_dict))
@@ -74,7 +79,7 @@ class ReactionDrivenODE(BaseModel):
         if self.x_average is True:
             for domain in self.options.whole_cell_domains:
                 eps_av = variables[f"X-averaged {domain} porosity"]
-                deps_dt_av = variables[f"X-averaged {domain} porosity change"]
+                deps_dt_av = variables[f"X-averaged {domain} porosity change [s-1]"]
                 self.rhs.update({eps_av: deps_dt_av})
         else:
             eps = variables["Porosity"]

@@ -34,7 +34,9 @@ class Lumped(BaseThermal):
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
-        T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
+        T_vol_av = pybamm.Variable(
+            "Volume-averaged cell temperature [K]", scale=self.param.T_ref
+        )
         T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
         T_dict = {
             "negative current collector": T_x_av,
@@ -54,42 +56,37 @@ class Lumped(BaseThermal):
         return variables
 
     def set_rhs(self, variables):
-        T_vol_av = variables["Volume-averaged cell temperature"]
-        Q_vol_av = variables["Volume-averaged total heating"]
-        T_amb = variables["Ambient temperature"]
+        T_vol_av = variables["Volume-averaged cell temperature [K]"]
+        Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
+        T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio in cooling coefficient
         # The factor 1/delta^2 comes from the choice of non-dimensionalisation.
         if self.options["cell geometry"] == "pouch":
-            cell_volume = self.param.l * self.param.l_y * self.param.l_z
+            cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
-            yz_cell_surface_area = self.param.l_y * self.param.l_z
-            yz_surface_cooling_coefficient = (
-                -(self.param.n.h_cc + self.param.p.h_cc)
-                * yz_cell_surface_area
-                / cell_volume
-                / (self.param.delta**2)
-            )
+            yz_cell_surface_area = self.param.L_y * self.param.L_z
+            yz_surface_cooling_coefficient = -(
+                self.param.n.h_cc + self.param.p.h_cc
+            ) * (yz_cell_surface_area / cell_volume)
 
-            negative_tab_area = self.param.n.l_tab * self.param.n.l_cc
+            negative_tab_area = self.param.n.L_tab * self.param.n.L_cc
             negative_tab_cooling_coefficient = (
-                -self.param.n.h_tab * negative_tab_area / cell_volume / self.param.delta
+                -self.param.n.h_tab * negative_tab_area / cell_volume
             )
 
-            positive_tab_area = self.param.p.l_tab * self.param.p.l_cc
+            positive_tab_area = self.param.p.L_tab * self.param.p.L_cc
             positive_tab_cooling_coefficient = (
-                -self.param.p.h_tab * positive_tab_area / cell_volume / self.param.delta
+                -self.param.p.h_tab * positive_tab_area / cell_volume
             )
 
             edge_area = (
-                2 * self.param.l_y * self.param.l
-                + 2 * self.param.l_z * self.param.l
+                2 * self.param.L_y * self.param.L
+                + 2 * self.param.L_z * self.param.L
                 - negative_tab_area
                 - positive_tab_area
             )
-            edge_cooling_coefficient = (
-                -self.param.h_edge * edge_area / cell_volume / self.param.delta
-            )
+            edge_cooling_coefficient = -self.param.h_edge * edge_area / cell_volume
 
             total_cooling_coefficient = (
                 yz_surface_cooling_coefficient
@@ -98,22 +95,17 @@ class Lumped(BaseThermal):
                 + edge_cooling_coefficient
             )
         elif self.options["cell geometry"] == "arbitrary":
-            cell_surface_area = self.param.a_cooling
-            cell_volume = self.param.v_cell
+            cell_surface_area = self.param.A_cooling
+            cell_volume = self.param.V_cell
             total_cooling_coefficient = (
-                -self.param.h_total
-                * cell_surface_area
-                / cell_volume
-                / (self.param.delta**2)
+                -self.param.h_total * cell_surface_area / cell_volume
             )
 
         self.rhs = {
-            T_vol_av: (
-                self.param.B * Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb)
-            )
-            / (self.param.C_th * self.param.rho(T_vol_av))
+            T_vol_av: (Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb))
+            / self.param.rho_c_p_eff(T_vol_av)
         }
 
     def set_initial_conditions(self, variables):
-        T_vol_av = variables["Volume-averaged cell temperature"]
+        T_vol_av = variables["Volume-averaged cell temperature [K]"]
         self.initial_conditions = {T_vol_av: self.param.T_init}

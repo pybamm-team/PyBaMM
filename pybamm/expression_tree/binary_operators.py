@@ -1115,7 +1115,8 @@ def simplified_division(left, right):
     # Cancelling out common terms
     if isinstance(left, Multiplication):
         if left.left == right:
-            return left.right
+            # Make sure shape is preserved
+            return left.right * pybamm.ones_like(left.left)
         elif left.right == right:
             return left.left
         elif isinstance(right, Multiplication):
