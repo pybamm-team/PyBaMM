@@ -5,7 +5,7 @@ on:
   pull_request:
   schedule:
     # Run everyday at 3 am UTC
-    - cron: 0 3 * * *
+    - cron: "0 3 * * *"
 
 jobs:
   linkChecker:
@@ -32,4 +32,4 @@ jobs:
         # to be used in case rate limits are surpassed
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           # arguments with file types to check
-          args: --no-progress --cache --max-cache-age 2d './**/*.rst' './**/*.md' './**/*.py' './**/*.ipynb' --timeout 10 --max-retries 5 --skip-missing --exclude-path ./CHANGELOG.md --accept 429 
+          args: --no-progress --cache --max-cache-age 2d './**/*.rst' './**/*.md' './**/*.py' './**/*.ipynb' --timeout 10 --max-retries 5 --skip-missing --exclude-path ./CHANGELOG.md --accept 200,429 
