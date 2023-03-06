@@ -3,7 +3,7 @@
 ## Features
 
 - Renamed "Terminal voltage [V]" to just "Voltage [V]". "Terminal voltage [V]" can still be used and will return the same value as "Voltage [V]".
-- Added "Anode potential [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Cathode potential [V]", which is the value of the surface potential difference at the cathode/separator interface. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Added "Negative electrode surface potential difference at separator interface [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Positive electrode surface potential difference at separator interface [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added "Open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added an example for `plot_voltage_components`, explaining what the different voltage components are. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 

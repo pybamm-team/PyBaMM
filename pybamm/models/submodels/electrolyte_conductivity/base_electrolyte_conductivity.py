@@ -189,11 +189,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         }
 
         if Domain == "Negative":
-            variables["Anode potential [V]"] = pybamm.boundary_value(delta_phi, "right")
+            variables[
+                "Negative electrode surface potential difference "
+                "at separator interface [V]"
+            ] = pybamm.boundary_value(delta_phi, "right")
         elif Domain == "Positive":
-            variables["Cathode potential [V]"] = pybamm.boundary_value(
-                delta_phi, "left"
-            )
+            variables[
+                "Positive electrode surface potential difference "
+                "at separator interface [V]"
+            ] = pybamm.boundary_value(delta_phi, "left")
 
         return variables
 
