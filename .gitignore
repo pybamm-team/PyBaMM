@@ -12,7 +12,7 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!pybamm/CITATIONS.txt
+!pybamm/refs.bib
 !pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png

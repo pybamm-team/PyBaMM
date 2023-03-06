@@ -343,7 +343,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.txt](pybamm/CITATIONS.txt). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [refs.bib](pybamm/refs.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")

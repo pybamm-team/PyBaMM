@@ -142,7 +142,7 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     pybamm_data.extend(
         [os.path.join(*Path(filename).parts[1:]) for filename in list_of_files]
     )
-pybamm_data.append("./CITATIONS.txt")
+pybamm_data.append("./refs.bib")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
 

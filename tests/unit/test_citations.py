@@ -62,7 +62,7 @@ class TestCitations(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
-            pybamm.print_citations("test_citations.txt", "bad format")
+            pybamm.print_citations("test_refs.bib", "bad format")
 
         pybamm.citations._citation_err_msg = "Error"
         with self.assertRaisesRegex(ImportError, "Error"):

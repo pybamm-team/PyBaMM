@@ -17,7 +17,7 @@ class Citations:
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
 
-    Citations listed in `pybamm/CITATIONS.txt` can be registered with their citation
+    Citations listed in `pybamm/refs.bib` can be registered with their citation
     key. For all other works provide a BibTeX Citation to :meth:`register`.
 
     Examples
@@ -25,7 +25,7 @@ class Citations:
     >>> import pybamm
     >>> pybamm.citations.register("Sulzer2021")
     >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
-    >>> pybamm.print_citations("citations.txt")
+    >>> pybamm.print_citations("refs.bib")
     """
 
     def __init__(self):
@@ -53,10 +53,10 @@ class Citations:
         self.register("Harris2020")
 
     def read_citations(self):
-        """Reads the citations in `pybamm.CITATIONS.txt`. Other works can be cited
+        """Reads the citations in `pybamm.refs.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
+        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "refs.bib")
         bib_data = parse_file(citations_file, bib_format="bibtex")
         for key, entry in bib_data.entries.items():
             self._add_citation(key, entry)
@@ -94,7 +94,7 @@ class Citations:
         Parameters
         ----------
         key : str
-            - The citation key for an entry in `pybamm/CITATIONS.txt` or
+            - The citation key for an entry in `pybamm/refs.bib` or
             - One or more BibTeX formatted citations
         """
         if self._citation_err_msg is None:
