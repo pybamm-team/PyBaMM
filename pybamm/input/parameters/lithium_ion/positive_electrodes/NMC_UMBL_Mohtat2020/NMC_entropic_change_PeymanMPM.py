@@ -35,5 +35,5 @@ def NMC_entropic_change_PeymanMPM(sto, c_s_max):
     du_dT = (
         -800 + 779 * u_eq - 284 * u_eq ** 2 + 46 * u_eq ** 3 - 2.8 * u_eq ** 4
     ) * 10 ** (-3)
-
+    # du_dT = 0
     return du_dT

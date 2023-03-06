@@ -514,7 +514,14 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
     irrev_exp = []
     dfe["Capacity [A.h]"]=dfe["Cap"]
     dfe["n_Li"]= 3600/param.F.value*(dfe["y_100"]*dfe["C_p"]+dfe["x_100"]*dfe["C_n"])
+    # dfe["Total lithium in particles [mol]"]= 3600/param.F.value*(dfe["y_100"]*dfe["C_p"]+dfe["x_100"]*dfe["C_n"])
     dfe["Loss of lithium inventory [%]"]=(1-dfe["n_Li"]/dfe["n_Li"][0])*100
+    dfe["Capacity Retention [%]"]=(dfe["Capacity [A.h]"]/dfe["Capacity [A.h]"][0])*100
+    dfe_0["Capacity [A.h]"]=dfe_0["Cap"]
+    dfe_0["n_Li"]= 3600/param.F.value*(dfe_0["y_100"]*dfe_0["C_p"]+dfe_0["x_100"]*dfe_0["C_n"])
+    # dfe_0["Total lithium in particles [mol]"]= 3600/param.F.value*(dfe_0["y_100"]*dfe_0["C_p"]+dfe_0["x_100"]*dfe_0["C_n"])
+    dfe_0["Loss of lithium inventory [%]"]=(1-dfe_0["n_Li"]/dfe_0["n_Li"][0])*100
+    dfe_0["Capacity Retention [%]"]=(dfe_0["Capacity [A.h]"]/dfe_0["Capacity [A.h]"][0])*100
 
     for i in range(len(N_0)-1):
         # print(i)
@@ -522,7 +529,13 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
         # print(max(dfo['E'])-min(dfo['E']))
         rev_exp.append(max(dfo['E'])-min(dfo['E']))
     dfe['rev_exp']=rev_exp
-    # print('Reversible Expansion')
+    rev_exp = []
+    for i in range(len(N_0)):
+        # print(i)
+        dfo = dfo_0[dfo_0['N']==N_0[i]]
+        # print(max(dfo['E'])-min(dfo['E']))
+        rev_exp.append(max(dfo['E'])-min(dfo['E']))
+    dfe_0['rev_exp']=rev_exp
 
     dfo_1 = dfo_0[dfo_0['N']==N_0[1]]
     for i in range(len(N_0)-1):
@@ -530,7 +543,21 @@ def load_data(cell,eSOH_DIR,oCV_DIR):
         dfo = dfo_0[dfo_0['N']==N_0[i+1]]
         # print(max(dfo['E'])-min(dfo['E']))
         irrev_exp.append(min(dfo['E'])-min(dfo_1['E']))
+    # if cell == 12:
+    #     for ii in range(1,len(irrev_exp)):
+    #         irrev_exp[ii]=irrev_exp[ii]+36
     dfe['irrev_exp']=irrev_exp
+    irrev_exp = []
+    dfo_1 = dfo_0[dfo_0['N']==N_0[0]]
+    for i in range(len(N_0)):
+        # print(i)
+        dfo = dfo_0[dfo_0['N']==N_0[i]]
+        # print(max(dfo['E'])-min(dfo['E']))
+        irrev_exp.append(min(dfo['E'])-min(dfo_1['E']))
+    # if cell == 12:
+    #     for ii in range(2,len(irrev_exp)):
+    #         irrev_exp[ii]=irrev_exp[ii]+36
+    dfe_0['irrev_exp']=irrev_exp
     # print('Irreversible Expansion')
     return cell_no,dfe,dfe_0,dfo_0,N,N_0
 

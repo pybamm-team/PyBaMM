@@ -22,9 +22,10 @@ def NMC_diffusivity_PeymanMPM(sto, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-    D_ref =  Parameter("Positive electrode diffusion coefficient [m2.s-1]")
     # D_ref = 8 * 10 ** (-15)
-    E_D_s = 18550
+    # E_D_s = 18550
+    D_ref =  Parameter("Positive electrode diffusion coefficient [m2.s-1]")
+    E_D_s = Parameter("Positive electrode diffusion coefficient activation energy [J.mol-1]")
     arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
