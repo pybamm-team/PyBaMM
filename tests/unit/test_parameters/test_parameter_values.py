@@ -129,8 +129,10 @@ class TestParameterValues(unittest.TestCase):
         ):
             param.update({"a": 4}, check_conflict=True)
         # with parameter not existing yet
-        with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
+        with self.assertRaisesRegex(ValueError, "Cannot update parameter"):
             param.update({"b": 1})
+        with self.assertRaisesRegex(ValueError, "Thermodynamic"):
+            param.update({"1 + dlnf/dlnc": 1})
 
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")

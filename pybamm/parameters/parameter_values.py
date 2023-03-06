@@ -295,6 +295,12 @@ class ParameterValues:
         self.check_parameter_values(values)
         # update
         for name, value in values.items():
+            # specific check for depreciated parameter "1 + dlnf/dlnc"
+            if name == "1 + dlnf/dlnc":
+                raise ValueError(
+                    "parameter '1 + dlnf/dlnc' has been renamed to "
+                    "'Thermodynamic factor'"
+                )
             # check for conflicts
             if (
                 check_conflict is True
@@ -311,18 +317,12 @@ class ParameterValues:
                 try:
                     self._dict_items[name]
                 except KeyError as err:
-                    raise KeyError(
+                    raise ValueError(
                         "Cannot update parameter '{}' as it does not ".format(name)
                         + "have a default value. ({}). If you are ".format(err.args[0])
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
-            # specific check for depreciated parameter "1 + dlnf/dlnc"
-            if name in self.keys() == "1 + dlnf/dlnc":
-                raise ValueError(
-                    "parameter '{}' is depreciated"
-                    + "and has been changed to `Thermodynamic factor`"
-                )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
