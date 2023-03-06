@@ -69,16 +69,18 @@ class BaseMechanics(pybamm.BaseSubModel):
         # Averages
         stress_r_surf_av = pybamm.x_average(stress_r_surf)
         stress_t_surf_av = pybamm.x_average(stress_t_surf)
+        disp_surf_av = pybamm.x_average(disp_surf)
 
         variables.update(
             {
-                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
                 f"{Domain} particle surface radial stress [Pa]": stress_r_surf,
+                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
                 f"{Domain} particle surface displacement [m]": disp_surf,
                 f"X-averaged {domain} particle surface "
                 "radial stress [Pa]": stress_r_surf_av,
                 f"X-averaged {domain} particle surface "
                 "tangential stress [Pa]": stress_t_surf_av,
+                f"X-averaged {domain} particle surface displacement [m]": disp_surf_av,
                 f"{Domain} electrode thickness change [m]": electrode_thickness_change,
             }
         )
