@@ -33,6 +33,14 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
       - name: Install SuiteSparse and Sundials
         run: python scripts/install_KLU_Sundials.py
+          cache: 'pip'
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
+      - name: Install tox and asv
+        run: pip install -U pip "tox<4" asv
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
@@ -55,6 +63,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+          cache: 'pip'
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
       - name: Install asv
         run: pip install asv
       - name: Checkout pybamm-bench repo

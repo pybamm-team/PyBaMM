@@ -11,6 +11,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+          cache: 'pip'
+
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
+
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
