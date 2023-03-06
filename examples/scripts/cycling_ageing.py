@@ -62,7 +62,7 @@ sim.plot(
     [
         "Current [A]",
         "Total current density [A.m-2]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Discharge capacity [A.h]",
         "Electrolyte potential [V]",
         "Electrolyte concentration [mol.m-3]",

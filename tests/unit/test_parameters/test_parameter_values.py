@@ -947,10 +947,10 @@ class TestParameterValues(unittest.TestCase):
         param = model.default_parameter_values
         new_model = param.process_model(model, inplace=False)
 
-        V = model.variables["Terminal voltage [V]"]
+        V = model.variables["Voltage [V]"]
         self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
 
-        V = new_model.variables["Terminal voltage [V]"]
+        V = new_model.variables["Voltage [V]"]
         self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
 
     def test_process_empty_model(self):

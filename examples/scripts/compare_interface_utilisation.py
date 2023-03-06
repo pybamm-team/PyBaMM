@@ -51,6 +51,6 @@ pybamm.dynamic_plot(
         "Negative electrode interface utilisation",
         "Positive electrode interface utilisation",
         "Electrolyte potential [V]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
     ],
 )

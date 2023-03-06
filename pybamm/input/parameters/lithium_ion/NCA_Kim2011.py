@@ -35,7 +35,7 @@ def graphite_diffusivity_Kim2011(sto, T):
 
 def graphite_ocp_Kim2011(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open-circuit Potential (OCP) as a function of the stochiometry [1].
 
     References
     ----------

@@ -58,7 +58,7 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "Terminal voltage [V]",
+    "Voltage [V]",
     "X-averaged cell temperature [K]",
     "Cell temperature [K]",
 ]

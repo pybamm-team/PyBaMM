@@ -33,7 +33,7 @@ class InverseButlerVolmer(BaseInterface):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
-        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential [V]"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
