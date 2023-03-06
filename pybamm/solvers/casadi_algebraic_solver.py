@@ -30,7 +30,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         self.name = "CasADi algebraic solver"
         self.algebraic_solver = True
         self.extra_options = extra_options or {}
-        pybamm.citations.register("Andersson2019")
+        pybamm.citations.register("2019:Andersson2019")
 
     @property
     def tol(self):

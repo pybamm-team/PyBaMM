@@ -501,5 +501,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 30730.7554385565,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Marquis2019"],
+        "citations": ["2019:Marquis2019"],
     }

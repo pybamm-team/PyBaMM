@@ -27,12 +27,12 @@ class TestCitations(unittest.TestCase):
     def test_citations(self):
         citations = pybamm.citations
         # Default papers should be in both _all_citations dict and in the papers to cite
-        self.assertIn("Sulzer2021", citations._all_citations.keys())
-        self.assertIn("Sulzer2021", citations._papers_to_cite)
-        self.assertIn("Harris2020", citations._papers_to_cite)
+        self.assertIn("2021:Sulzer2021", citations._all_citations.keys())
+        self.assertIn("2021:Sulzer2021", citations._papers_to_cite)
+        self.assertIn("2020:Harris2020", citations._papers_to_cite)
         # Non-default papers should only be in the _all_citations dict
-        self.assertIn("Sulzer2019physical", citations._all_citations.keys())
-        self.assertNotIn("Sulzer2019physical", citations._papers_to_cite)
+        self.assertIn("2019:Sulzer2019physical", citations._all_citations.keys())
+        self.assertNotIn("2019:Sulzer2019physical", citations._papers_to_cite)
 
         # test key error
         with self.assertRaises(KeyError):
@@ -104,9 +104,9 @@ class TestCitations(unittest.TestCase):
     def test_andersson_2019(self):
         citations = pybamm.citations
         citations._reset()
-        self.assertNotIn("Andersson2019", citations._papers_to_cite)
+        self.assertNotIn("2019:Andersson2019", citations._papers_to_cite)
         pybamm.CasadiConverter()
-        self.assertIn("Andersson2019", citations._papers_to_cite)
+        self.assertIn("2019:Andersson2019", citations._papers_to_cite)
 
     def test_marquis_2019(self):
         # Test that calling relevant bits of code adds the right paper to citations
@@ -139,7 +139,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         pybamm.lead_acid.Full(build=False)
-        self.assertIn("Sulzer2019physical", citations._papers_to_cite)
+        self.assertIn("2019:Sulzer2019physical", citations._papers_to_cite)
 
     def test_timms_2021(self):
         # Test that calling relevant bits of code adds the right paper to citations
@@ -185,18 +185,18 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Subramanian2005", citations._papers_to_cite)
+        self.assertNotIn("2005:Subramanian", citations._papers_to_cite)
         pybamm.particle.XAveragedPolynomialProfile(
             None, "negative", {"particle": "quadratic profile"}, "primary"
         )
-        self.assertIn("Subramanian2005", citations._papers_to_cite)
+        self.assertIn("2005:Subramanian", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Subramanian2005", citations._papers_to_cite)
+        self.assertNotIn("2005:Subramanian", citations._papers_to_cite)
         pybamm.particle.PolynomialProfile(
             None, "negative", {"particle": "quadratic profile"}, "primary"
         )
-        self.assertIn("Subramanian2005", citations._papers_to_cite)
+        self.assertIn("2005:Subramanian", citations._papers_to_cite)
 
     def test_brosaplanella_2021(self):
         # Test that calling relevant bits of code adds the right paper to citations
@@ -313,7 +313,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         pybamm.ParameterValues("Sulzer2019")
-        self.assertIn("Sulzer2019physical", citations._papers_to_cite)
+        self.assertIn("2019:Sulzer2019physical", citations._papers_to_cite)
 
         citations._reset()
         pybamm.ParameterValues("Ecker2015")

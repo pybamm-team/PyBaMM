@@ -369,5 +369,5 @@ def get_parameter_values():
         "Initial oxygen concentration [mol.m-3]": 0.0,
         "Initial temperature [K]": 294.85,
         # citations
-        "citations": ["Sulzer2019physical"],
+        "citations": ["2019:Sulzer2019physical"],
     }

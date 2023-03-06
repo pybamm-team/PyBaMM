@@ -36,7 +36,7 @@ class BaseMechanics(pybamm.BaseSubModel):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
 
-        pybamm.citations.register("Ai2019")
+        pybamm.citations.register("2019:Ai2019")
         pybamm.citations.register("Deshpande2012")
 
     def _get_standard_variables(self, l_cr):

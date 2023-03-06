@@ -45,7 +45,7 @@ class Full(BaseModel):
         if build:
             self.build_model()
 
-        pybamm.citations.register("Sulzer2019physical")
+        pybamm.citations.register("2019:Sulzer2019physical")
 
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.ReactionDrivenODE(

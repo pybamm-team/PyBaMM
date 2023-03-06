@@ -11,7 +11,7 @@ class CasadiConverter(object):
     def __init__(self, casadi_symbols=None):
         self._casadi_symbols = casadi_symbols or {}
 
-        pybamm.citations.register("Andersson2019")
+        pybamm.citations.register("2019:Andersson2019")
 
     def convert(self, symbol, t, y, y_dot, inputs):
         """

@@ -146,7 +146,7 @@ class Solution(object):
         self._summary_variables = None
 
         # Solution now uses CasADi
-        pybamm.citations.register("Andersson2019")
+        pybamm.citations.register("2019:Andersson2019")
 
     def extract_explicit_sensitivities(self):
         # if we got here, we haven't set y yet

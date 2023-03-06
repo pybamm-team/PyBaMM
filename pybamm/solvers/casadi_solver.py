@@ -130,7 +130,7 @@ class CasadiSolver(pybamm.BaseSolver):
         self.integrator_specs = {}
         self.y_sols = {}
 
-        pybamm.citations.register("Andersson2019")
+        pybamm.citations.register("2019:Andersson2019")
 
     def _integrate(self, model, t_eval, inputs_dict=None):
         """

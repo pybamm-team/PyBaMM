@@ -23,7 +23,7 @@ class Citations:
     Examples
     --------
     >>> import pybamm
-    >>> pybamm.citations.register("Sulzer2021")
+    >>> pybamm.citations.register("2021:Sulzer2021")
     >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
     >>> pybamm.print_citations("refs.bib")
     """
@@ -49,8 +49,8 @@ class Citations:
         # Initialize empty papers to cite
         self._papers_to_cite = set()
         # Register the PyBaMM paper and the numpy paper
-        self.register("Sulzer2021")
-        self.register("Harris2020")
+        self.register("2021:Sulzer2021")
+        self.register("2020:Harris2020")
 
     def read_citations(self):
         """Reads the citations in `pybamm.refs.bib`. Other works can be cited

@@ -57,7 +57,7 @@ class TestAi2020(unittest.TestCase):
                 "electrolyte": "lipf6_Enertech_Ai2020",
                 "experiment": "1C_discharge_from_full_Ai2020",
                 "sei": "example",
-                "citation": "Ai2019",
+                "citation": "2019:Ai2019",
             }
         )
         options = {"particle mechanics": "swelling and cracking"}
