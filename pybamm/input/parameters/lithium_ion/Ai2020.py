@@ -75,7 +75,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
@@ -278,7 +278,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
 def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.

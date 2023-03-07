@@ -81,7 +81,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Current [A]",
                 "Electrolyte potential [V]",
                 "Positive electrode potential [V]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ]
         else:
             return [
@@ -92,7 +92,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Negative electrode potential [V]",
                 "Electrolyte potential [V]",
                 "Positive electrode potential [V]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ]
 
     def set_standard_output_variables(self):
@@ -235,13 +235,13 @@ class BaseModel(pybamm.BaseBatteryModel):
                 reaction = "lithium metal plating"
             domain_options = getattr(self.options, domain)
             for phase in self.options.phases[domain]:
-                ocp_option = getattr(domain_options, phase)["open circuit potential"]
+                ocp_option = getattr(domain_options, phase)["open-circuit potential"]
                 ocp_submodels = pybamm.open_circuit_potential
                 if ocp_option == "single":
                     ocp_model = ocp_submodels.SingleOpenCircuitPotential
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
-                self.submodels[f"{domain} {phase} open circuit potential"] = ocp_model(
+                self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
                     self.param, domain, reaction, self.options, phase
                 )
 

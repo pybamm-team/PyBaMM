@@ -8,19 +8,23 @@ pybamm.set_logging_level("NOTICE")
 experiment = pybamm.Experiment(
     [
         (
-            "Discharge at C/5 for 10 hours or until 3.3 V",
+            "Discharge at 1C until 2.5 V",
             "Rest for 1 hour",
-            "Charge at 1 A until 4.1 V",
-            "Hold at 4.1 V until 10 mA",
+            "Charge at 5 A until 4.2 V",
+            "Hold at 4.2 V until 10 mA",
             "Rest for 1 hour",
         ),
     ]
     * 3
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.DFN({"SEI": "ec reaction limited"})
+parameter_values = pybamm.ParameterValues("Chen2020")
 
 sim = pybamm.Simulation(
-    model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+    model,
+    experiment=experiment,
+    parameter_values=parameter_values,
+    solver=pybamm.CasadiSolver("fast with events"),
 )
 sim.solve()
 
@@ -31,12 +35,12 @@ for i in range(3):
     sol = sim.solution.cycles[i]
     # Extract variables
     t = sol["Time [h]"].entries
-    V = sol["Terminal voltage [V]"].entries
+    V = sol["Voltage [V]"].entries
     # Plot
     ax.plot(t - t[0], V, label="Discharge {}".format(i + 1))
     ax.set_xlabel("Time [h]")
     ax.set_ylabel("Voltage [V]")
-    ax.set_xlim([0, 10])
+    ax.set_xlim([0, t[-1] - t[0]])
 ax.legend(loc="lower left")
 
 # Save time, voltage, current, discharge capacity, temperature, and electrolyte
@@ -46,7 +50,7 @@ sim.solution.save_data(
     [
         "Time [h]",
         "Current [A]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Discharge capacity [A.h]",
         "X-averaged cell temperature [K]",
         "Electrolyte concentration [mol.m-3]",
@@ -55,7 +59,7 @@ sim.solution.save_data(
     short_names={
         "Time [h]": "t",
         "Current [A]": "I",
-        "Terminal voltage [V]": "V",
+        "Voltage [V]": "V",
         "Discharge capacity [A.h]": "Q",
         "X-averaged cell temperature [K]": "T",
         "Electrolyte concentration [mol.m-3]": "c_e",
@@ -67,7 +71,7 @@ sim.solution.save_data(
     [
         "Time [h]",
         "Current [A]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Discharge capacity [A.h]",
         "X-averaged cell temperature [K]",
     ],

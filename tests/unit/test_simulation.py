@@ -26,19 +26,19 @@ class TestSimulation(unittest.TestCase):
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        V = sim.model.variables["Terminal voltage [V]"]
+        V = sim.model.variables["Voltage [V]"]
         self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
         self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
 
         sim.set_parameters()
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        V = sim.model_with_set_params.variables["Terminal voltage [V]"]
+        V = sim.model_with_set_params.variables["Voltage [V]"]
         self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
         self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
         # Make sure model is unchanged
         self.assertNotEqual(sim.model, model)
-        V = model.variables["Terminal voltage [V]"]
+        V = model.variables["Voltage [V]"]
         self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
         self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
 
@@ -54,7 +54,7 @@ class TestSimulation(unittest.TestCase):
         sim.build()
         self.assertFalse(sim._mesh is None)
         self.assertFalse(sim._disc is None)
-        V = sim.built_model.variables["Terminal voltage [V]"]
+        V = sim.built_model.variables["Voltage [V]"]
         self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
         self.assertTrue(V.has_symbol_of_classes(pybamm.Matrix))
 

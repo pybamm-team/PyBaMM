@@ -59,7 +59,7 @@ class BaseModel(pybamm.BaseSubModel):
             Q_Wh = variables["Discharge energy [W.h]"]
             Qt_Wh = variables["Throughput energy [W.h]"]
             Qt_Ah = variables["Throughput capacity [A.h]"]
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             self.rhs[Q_Wh] = I * V / 3600
             self.rhs[Qt_Wh] = abs(I * V) / 3600
             self.rhs[Qt_Ah] = abs(I) / 3600

@@ -188,6 +188,17 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             f"{Domain} electrode surface potential difference [V]": delta_phi,
         }
 
+        if Domain == "Negative":
+            variables[
+                "Negative electrode surface potential difference "
+                "at separator interface [V]"
+            ] = pybamm.boundary_value(delta_phi, "right")
+        elif Domain == "Positive":
+            variables[
+                "Positive electrode surface potential difference "
+                "at separator interface [V]"
+            ] = pybamm.boundary_value(delta_phi, "left")
+
         return variables
 
     def _get_electrolyte_overpotentials(self, variables):

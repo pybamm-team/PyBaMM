@@ -92,7 +92,7 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        self.compare("X-averaged open circuit voltage [V]")
+        self.compare("Open-circuit voltage [V]")
         # Currents
         self.compare(
             "X-averaged negative electrode volumetric "
@@ -124,9 +124,9 @@ class VariablesComparison(BaseOutputComparison):
         # Some of these are 'average' but aren't expected to be the same across all
         # models
         self.compare("X-averaged reaction overpotential [V]")
-        self.compare("X-averaged negative electrode open circuit potential [V]")
-        self.compare("X-averaged positive electrode open circuit potential [V]")
-        self.compare("Terminal voltage [V]")
+        self.compare("X-averaged negative electrode open-circuit potential [V]")
+        self.compare("X-averaged positive electrode open-circuit potential [V]")
+        self.compare("Voltage [V]")
         self.compare("X-averaged solid phase ohmic losses [V]")
         self.compare("Negative electrode reaction overpotential [V]")
         self.compare("Positive electrode reaction overpotential [V]")

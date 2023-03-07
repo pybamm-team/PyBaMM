@@ -99,7 +99,7 @@ class VoltageFunctionControl(FunctionControl):
         )
 
     def constant_voltage(self, variables):
-        V = variables["Terminal voltage [V]"] * self.param.n_cells
+        V = variables["Voltage [V]"] * self.param.n_cells
         return V - pybamm.FunctionParameter(
             "Voltage function [V]", {"Time [s]": pybamm.t}
         )
@@ -113,7 +113,7 @@ class PowerFunctionControl(FunctionControl):
 
     def constant_power(self, variables):
         I = variables["Current [A]"]
-        V = variables["Terminal voltage [V]"] * self.param.n_cells
+        V = variables["Voltage [V]"] * self.param.n_cells
         P = V * I
         P_applied = pybamm.FunctionParameter(
             "Power function [W]", {"Time [s]": pybamm.t}
@@ -139,7 +139,7 @@ class ResistanceFunctionControl(FunctionControl):
 
     def constant_resistance(self, variables):
         I = variables["Current [A]"]
-        V = variables["Terminal voltage [V]"] * self.param.n_cells
+        V = variables["Voltage [V]"] * self.param.n_cells
         R = V / I
         R_applied = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t}
@@ -183,7 +183,7 @@ class CCCVFunctionControl(FunctionControl):
         I = variables["Current [A]"]
 
         K_V = 1
-        V = variables["Terminal voltage [V]"] * self.param.n_cells
+        V = variables["Voltage [V]"] * self.param.n_cells
         V_CCCV = pybamm.Parameter("Voltage function [V]")
 
         return -K_aw / Q * (I_var - I) + K_V * (V - V_CCCV)
