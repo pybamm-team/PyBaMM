@@ -1,5 +1,4 @@
 import pybamm
-import os
 
 
 def graphite_diffusivity_Kim2011(sto, T):
