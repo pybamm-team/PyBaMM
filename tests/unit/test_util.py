@@ -76,6 +76,9 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "dimensional version"):
             d.__getitem__("A dimensional variable")
 
+        with self.assertRaisesRegex(KeyError, "open circuit voltage"):
+            d.__getitem__("Measured open circuit voltage [V]")
+
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
         self.assertTrue(

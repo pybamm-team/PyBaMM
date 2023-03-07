@@ -9,10 +9,13 @@ class TestPlotVoltageComponents(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 3600])
-        _, ax = pybamm.plot_voltage_components(sol, show_legend=True, testing=True)
-        t, V = ax.get_lines()[0].get_data()
-        np.testing.assert_array_equal(t, sol["Time [h]"].data)
-        np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
+        for split in [True, False]:
+            _, ax = pybamm.plot_voltage_components(
+                sol, testing=True, split_by_electrode=split
+            )
+            t, V = ax.get_lines()[0].get_data()
+            np.testing.assert_array_equal(t, sol["Time [h]"].data)
+            np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
 
         _, ax = plt.subplots()
         _, ax_out = pybamm.plot_voltage_components(sol, ax=ax, show_legend=True)

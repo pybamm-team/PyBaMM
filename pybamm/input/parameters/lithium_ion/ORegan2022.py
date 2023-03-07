@@ -441,7 +441,7 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
 
 def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
-    LG M50 Graphite entropic change in open circuit potential (OCP) at a temperature of
+    LG M50 Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry. The fit is taken from [1].
 
     References
@@ -715,7 +715,7 @@ def nmc_LGM50_thermal_conductivity_ORegan2022(T):
 
 def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
-    LG M50 NMC 811 entropic change in open circuit potential (OCP) at a temperature of
+    LG M50 NMC 811 entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry. The fit is taken from [1].
 
     References

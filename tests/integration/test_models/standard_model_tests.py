@@ -97,9 +97,7 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-    def test_sensitivities(
-        self, param_name, param_value, output_name="Terminal voltage [V]"
-    ):
+    def test_sensitivities(self, param_name, param_value, output_name="Voltage [V]"):
         self.parameter_values.update({param_name: param_value})
         Crate = abs(
             self.parameter_values["Current function [A]"]

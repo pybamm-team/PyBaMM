@@ -1,6 +1,6 @@
 def graphite_ocp_Enertech_Ai2020_function(sto):
     """
-    Graphite  Open Circuit Potential (OCP) as a a function of the
+    Graphite  Open-circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
     for 0.0065 < sto < 0.84.
 

@@ -24,7 +24,7 @@ values = {
     "C1 [F]": 30 / 0.6e-3,
     "Entropic change [V/K]": 0,
     "RCR lookup limit [A]": 340,
-    "Open circuit voltage [V]": 3.4,
+    "Open-circuit voltage [V]": 3.4,
 }
 
 parameter_values = pybamm.ParameterValues(values)
@@ -75,7 +75,7 @@ class TestEcmParameters(unittest.TestCase):
         sym = pybamm.Scalar(1)
 
         mapped_functions = [
-            (param.ocv(sym), "Open circuit voltage [V]"),
+            (param.ocv(sym), "Open-circuit voltage [V]"),
             (param.rcr_element("R0 [Ohm]", sym, sym, sym), "R0 [Ohm]"),
             (param.rcr_element("R1 [Ohm]", sym, sym, sym), "R1 [Ohm]"),
             (param.rcr_element("C1 [F]", sym, sym, sym), "C1 [F]"),
