@@ -22,14 +22,27 @@ jobs:
 
       # check URLs with Lychee
       - uses: actions/checkout@v3
-      - name: Lychee URL checker
+
       # use stable version for now to avoid breaking changes
+      - name: Lychee URL checker
         uses: lycheeverse/lychee-action@v1.6.1
         with:
+          # arguments with file types to check
+          args: >-
+            --cache
+            --no-progress
+            --max-cache-age 2d
+            --timeout 10
+            --max-retries 5
+            --skip-missing
+            --accept 200,429
+            --exclude-path ./CHANGELOG.md
+            './**/*.rst'
+            './**/*.md'
+            './**/*.py'
+            './**/*.ipynb'
           # fail the action on broken links
           fail: true
         env:
-        # to be used in case rate limits are surpassed
+          # to be used in case rate limits are surpassed
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          # arguments with file types to check
-          args: --no-progress --cache --max-cache-age 2d './**/*.rst' './**/*.md' './**/*.py' './**/*.ipynb' --timeout 10 --max-retries 5 --skip-missing --exclude-path ./CHANGELOG.md --accept [200,429] 
