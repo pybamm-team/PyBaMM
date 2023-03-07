@@ -261,7 +261,6 @@ def electrolyte_conductivity_Kim2011(c_e, T):
 
 
 def nca_ocp_Kim2011(sto):
-    
     """
     References
     ----------
@@ -272,20 +271,20 @@ def nca_ocp_Kim2011(sto):
     multi-physics in varied length scales. Journal of The Electrochemical
     Society, 158(8), A955-A969.
     """
-    
+
     U_posi = (
-        1.638 * sto ** 10
-        - 2.222 * sto ** 9
-        + 15.056 * sto ** 8
-        - 23.488 * sto ** 7
-        + 81.246 * sto ** 6
-        - 344.566 * sto ** 5
-        + 621.3475 * sto ** 4
-        - 554.774 * sto ** 3
-        + 264.427 * sto ** 2
+        1.638 * sto**10
+        - 2.222 * sto**9
+        + 15.056 * sto**8
+        - 23.488 * sto**7
+        + 81.246 * sto**6
+        - 344.566 * sto**5
+        + 621.3475 * sto**4
+        - 554.774 * sto**3
+        + 264.427 * sto**2
         - 66.3691 * sto
         + 11.8058
-        - 0.61386 * pybamm.exp(5.8201*sto**136.4)
+        - 0.61386 * pybamm.exp(5.8201 * sto**136.4)
     )
 
     return U_posi
