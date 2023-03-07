@@ -38,6 +38,8 @@ jobs:
             --timeout 10
             --max-retries 5
             --skip-missing
+            --exclude-loopback
+            --exclude https://twitter.com/pybamm_
             --accept 200,429
             --exclude-path ./CHANGELOG.md
             './**/*.rst'
