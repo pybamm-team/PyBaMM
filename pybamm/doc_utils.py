@@ -20,6 +20,8 @@ def copy_parameter_doc_from_parent(cls):
     return cls
 
 
+# also implemented as a Sphinx extension in docs/sphinx_extend_parent.py, but this is
+# not automatic, so we need to use the decorator manually in the class definition
 def doc_extend_parent(cls):
     """
     Add a link to the base class in the docstring (Sphinx documentation) via the
