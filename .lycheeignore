@@ -1,0 +1,17 @@
+# a list of links/files to be ignored by lychee link checker (see workflow file)
+
+# Errors in docs/source/user_guide/getting_started.md
+file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/api_docs
+
+# Errors in docs/source/user_guide/fundamentals/index.md
+file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/base_battery_model
+file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/parameter_sets
+file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/quick_plot
+file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/plot_voltage_components
+
+# Errors in docs/source/user_guide/index.md
+file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/api_docs
+
+# Errors in examples/notebooks/README.md
+file:///home/runner/work/PyBaMM/PyBaMM/examples/notebooks/using-submodels.ipynb
+file:///home/runner/work/PyBaMM/PyBaMM/examples/notebooks/create-model.ipynb
