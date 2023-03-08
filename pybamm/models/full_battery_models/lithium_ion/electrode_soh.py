@@ -167,7 +167,7 @@ class ElectrodeSOHSolver:
         OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
         OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
 
-        # Calculate stoich limits for the open circuit potentials
+        # Calculate stoich limits for the open-circuit potentials
         if OCPp_data:
             Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
             y100_min = max(np.min(Up_sto), 0) + 1e-6

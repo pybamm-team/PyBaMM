@@ -56,8 +56,8 @@ class TestButlerVolmer(unittest.TestCase):
             "X-averaged positive electrode surface area to volume ratio [m-1]": 1,
             "Negative electrode interface utilisation": 1,
             "Positive electrode interface utilisation": 1,
-            "Negative electrode open circuit potential [V]": pybamm.Scalar(0),
-            "Positive electrode open circuit potential [V]": pybamm.Scalar(0),
+            "Negative electrode open-circuit potential [V]": pybamm.Scalar(0),
+            "Positive electrode open-circuit potential [V]": pybamm.Scalar(0),
             "Sum of electrolyte reaction source terms [A.m-3]": pybamm.Scalar(1),
             "Sum of interfacial current densities [A.m-3]": pybamm.Scalar(1),
             "Sum of negative electrode volumetric"

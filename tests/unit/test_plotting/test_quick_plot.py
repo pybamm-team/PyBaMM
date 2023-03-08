@@ -436,7 +436,7 @@ class TestQuickPlot(unittest.TestCase):
             [
                 "Negative current collector potential [V]",
                 "Positive current collector potential [V]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ],
         )
         quick_plot.dynamic_plot(testing=True)
@@ -487,7 +487,7 @@ class TestQuickPlot(unittest.TestCase):
         inputs2 = {"Electrode height [m]": 2.00}
         sol2 = sim2.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs2)
         output_variables = [
-            "Terminal voltage [V]",
+            "Voltage [V]",
             "Current [A]",
             "Negative electrode potential [V]",
             "Positive electrode potential [V]",

@@ -256,7 +256,7 @@ class BasicDFN(BaseModel):
             "Negative electrode potential [V]": phi_s_n,
             "Electrolyte potential [V]": phi_e,
             "Positive electrode potential [V]": phi_s_p,
-            "Terminal voltage [V]": voltage,
+            "Voltage [V]": voltage,
             "Time [s]": pybamm.t,
         }
         # Events specify points at which a solution should terminate

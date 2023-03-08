@@ -21,7 +21,7 @@ class VoltageModel(pybamm.BaseSubModel):
         self.model_options = options
 
     def get_coupled_variables(self, variables):
-        ocv = variables["Open circuit voltage [V]"]
+        ocv = variables["Open-circuit voltage [V]"]
 
         number_of_rc_elements = self.model_options["number of rc elements"]
         number_of_elements = number_of_rc_elements + 1
@@ -42,7 +42,7 @@ class VoltageModel(pybamm.BaseSubModel):
 
         variables.update(
             {
-                "Terminal voltage [V]": voltage,
+                "Voltage [V]": voltage,
                 "Overpotential [V]": overpotential,
                 "Battery voltage [V]": voltage,
                 "Power [W]": voltage * current,
@@ -53,7 +53,7 @@ class VoltageModel(pybamm.BaseSubModel):
         return variables
 
     def set_events(self, variables):
-        voltage = variables["Terminal voltage [V]"]
+        voltage = variables["Voltage [V]"]
 
         # Add voltage events
         maximum_voltage = pybamm.Event(

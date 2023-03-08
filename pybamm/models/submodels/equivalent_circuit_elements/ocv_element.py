@@ -3,7 +3,7 @@ import pybamm
 
 class OCVElement(pybamm.BaseSubModel):
     """
-    Open Circuit Voltage (OCV) element for
+    Open-circuit Voltage (OCV) element for
     equivalent circuits.
 
     Parameters
@@ -21,13 +21,13 @@ class OCVElement(pybamm.BaseSubModel):
     def get_fundamental_variables(self):
         soc = pybamm.Variable("SoC")
         ocv = self.param.ocv(soc)
-        variables = {"SoC": soc, "Open circuit voltage [V]": ocv}
+        variables = {"SoC": soc, "Open-circuit voltage [V]": ocv}
         return variables
 
     def get_coupled_variables(self, variables):
         current = variables["Current [A]"]
 
-        ocv = variables["Open circuit voltage [V]"]
+        ocv = variables["Open-circuit voltage [V]"]
         T_cell = variables["Cell temperature [degC]"]
 
         dUdT = self.param.dUdT(ocv, T_cell)

@@ -34,7 +34,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
 
 def nmc_ocp_Xu2019(sto):
     """
-    Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
+    Nickel Managanese Cobalt Oxide (NMC) Open-circuit Potential (OCP) as a
     function of the stochiometry, from [1].
 
     References

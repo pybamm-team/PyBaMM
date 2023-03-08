@@ -88,11 +88,11 @@ class BaseKinetics(BaseInterface):
         ):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}"
-                "open circuit potential distribution [V]"
+                "open-circuit potential distribution [V]"
             ]
         else:
             ocp = variables[
-                f"{Domain} electrode {reaction_name}open circuit potential [V]"
+                f"{Domain} electrode {reaction_name}open-circuit potential [V]"
             ]
         # If ocp was broadcast, take only the orphan.
         if isinstance(ocp, pybamm.Broadcast):

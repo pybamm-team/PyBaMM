@@ -44,9 +44,14 @@ for domain in ["negative", "positive"]:
         options={**model.options, "particle": "uniform profile"},
         phase="primary",
     )
+    model.submodels[
+        f"{domain} total particle concentration"
+    ] = pybamm.particle.TotalConcentration(
+        model.param, domain, model.options, phase="primary"
+    )
 
     model.submodels[
-        f"{domain} open circuit potential"
+        f"{domain} open-circuit potential"
     ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
         model.param,
         domain,

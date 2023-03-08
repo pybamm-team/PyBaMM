@@ -216,30 +216,23 @@ class FickianDiffusion(BaseParticle):
         )
 
         if self.size_distribution is True:
-            R = variables[f"{Domain} {phase_name}particle sizes [m]"]
             # Size-dependent flux variables
-            variables.update(self._get_standard_flux_distribution_variables(N_s))
-            f_a_dist = self.phase_param.f_a_dist(R)
-            # Size-averaged flux variables (perform area-weighted avg manually as flux
-            # evals on edges)
-            N_s = pybamm.Integral(f_a_dist * N_s, R)
-
-            # Volume-weighted average for effective diffusivity
             variables.update(
                 self._get_standard_diffusivity_distribution_variables(D_eff)
             )
+            variables.update(self._get_standard_flux_distribution_variables(N_s))
+            # Size-averaged flux variables
+            R = variables[f"{Domain} {phase_name}particle sizes [m]"]
+            f_a_dist = self.phase_param.f_a_dist(R)
+            D_eff = pybamm.Integral(f_a_dist * D_eff, R)
+            N_s = pybamm.Integral(f_a_dist * N_s, R)
 
         if self.x_average is True:
             D_eff = pybamm.SecondaryBroadcast(D_eff, [f"{domain} electrode"])
             N_s = pybamm.SecondaryBroadcast(N_s, [f"{domain} electrode"])
 
-        if self.size_distribution is False:
-            # Save diffusivity variables for the no-size-distrbution case
-            # (they were saved earlier for the size-distribution case)
-            variables.update(self._get_standard_diffusivity_variables(D_eff))
-
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_standard_flux_variables(N_s))
-        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 

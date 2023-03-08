@@ -8,7 +8,8 @@ import numpy as np
 
 class CrackPropagation(BaseMechanics):
     """
-    Cracking behaviour in electrode particles, from [1]_.
+    Cracking behaviour in electrode particles. See [1]_ for mechanical model (thickness
+    change) and [2]_ for cracking model.
 
     **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
 
@@ -28,7 +29,10 @@ class CrackPropagation(BaseMechanics):
 
     References
     ----------
-    .. [1] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
+           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
+           Cells. Journal of The Electrochemical Society, 167(1), 013512.
+    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
            Battery cycle life prediction with coupled chemical degradation and
            fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
     """
@@ -36,6 +40,9 @@ class CrackPropagation(BaseMechanics):
     def __init__(self, param, domain, x_average, options, phase="primary"):
         super().__init__(param, domain, options, phase)
         self.x_average = x_average
+
+        pybamm.citations.register("Ai2019")
+        pybamm.citations.register("Deshpande2012")
 
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
