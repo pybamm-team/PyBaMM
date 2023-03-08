@@ -10,8 +10,6 @@ class TotalSEI(pybamm.BaseSubModel):
     Class summing up contributions to the SEI reaction
     for cases with primary, secondary, ... reactions e.g. silicon-graphite
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param :

@@ -12,8 +12,6 @@ class ForwardTafel(BaseKinetics):
     .. math::
         j = u * j_0(c) * \\exp((ne * alpha * F * \\eta_r(c) / RT)
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
-
     Parameters
     ----------
     param :

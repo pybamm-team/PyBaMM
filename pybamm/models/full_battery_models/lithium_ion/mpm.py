@@ -18,8 +18,6 @@ class MPM(SPM):
     >>> model.name
     'Many-Particle Model'
 
-    **Extends:** :class:`pybamm.lithium_ion.SPM`
-
     References
     ----------
     .. [1] TL Kirk, J Evans, CP Please and SJ Chapman. “Modelling electrode

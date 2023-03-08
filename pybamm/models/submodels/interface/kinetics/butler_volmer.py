@@ -13,8 +13,6 @@ class SymmetricButlerVolmer(BaseKinetics):
     .. math::
         j = 2 * j_0(c) * \\sinh(ne * F * \\eta_r(c) / RT)
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
-
     Parameters
     ----------
     param : parameter class
@@ -41,8 +39,6 @@ class SymmetricButlerVolmer(BaseKinetics):
 class AsymmetricButlerVolmer(BaseKinetics):
     """
     Submodel which implements the asymmetric forward Butler-Volmer equation
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
 
     Parameters
     ----------

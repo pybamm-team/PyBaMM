@@ -10,8 +10,6 @@ class DiffusionLimited(BaseInterface):
     """
     Submodel for diffusion-limited kinetics
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param :

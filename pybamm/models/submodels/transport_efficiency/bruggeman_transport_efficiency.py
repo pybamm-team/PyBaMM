@@ -8,8 +8,6 @@ from .base_transport_efficiency import BaseModel
 class Bruggeman(BaseModel):
     """Submodel for Bruggeman transport_efficiency
 
-    **Extends:** :class:`pybamm.transport_efficiency.BaseModel`
-
     Parameters
     ----------
     param : parameter class

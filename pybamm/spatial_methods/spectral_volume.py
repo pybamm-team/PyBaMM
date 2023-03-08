@@ -34,8 +34,6 @@ class SpectralVolume(pybamm.FiniteVolume):
     boundary_value_or_flux might not benefit from the reconstruction
     approach at all, as it seems to only preprocess symbols.
 
-    **Extends:** :class:`pybamm.FiniteVolume`
-
     Parameters
     ----------
     mesh : :class:`pybamm.Mesh`

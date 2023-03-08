@@ -8,8 +8,6 @@ from .base_porosity import BaseModel
 class ReactionDrivenODE(BaseModel):
     """Reaction-driven porosity changes as an ODE
 
-    **Extends:** :class:`pybamm.porosity.BaseModel`
-
     Parameters
     ----------
     param : parameter class

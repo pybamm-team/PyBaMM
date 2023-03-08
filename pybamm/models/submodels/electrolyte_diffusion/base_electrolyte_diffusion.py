@@ -7,8 +7,6 @@ import pybamm
 class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     """Base class for conservation of mass in the electrolyte.
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

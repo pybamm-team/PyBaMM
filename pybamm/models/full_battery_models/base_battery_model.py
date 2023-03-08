@@ -177,8 +177,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
-
-    **Extends:** :class:`dict`
     """
 
     def __init__(self, extra_options):
@@ -685,8 +683,6 @@ class BatteryModelPhaseOptions(dict):
 class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
-
-    **Extends:** :class:`pybamm.BaseModel`
 
     Parameters
     ----------

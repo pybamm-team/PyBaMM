@@ -10,8 +10,6 @@ class BaseModel(BaseElectrolyteConductivity):
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class
@@ -220,8 +218,6 @@ class FullAlgebraic(BaseModel):
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by
     asymptotic methods)
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
-
     Parameters
     ----------
     param : parameter class
@@ -255,8 +251,6 @@ class FullDifferential(BaseModel):
     """Full model for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations and where capacitance is present.
     (Full refers to unreduced by asymptotic methods)
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
 
     Parameters
     ----------

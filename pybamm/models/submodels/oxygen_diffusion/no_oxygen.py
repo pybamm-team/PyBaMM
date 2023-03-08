@@ -9,8 +9,6 @@ from .base_oxygen_diffusion import BaseModel
 class NoOxygen(BaseModel):
     """Class for when there is no oxygen
 
-    **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
-
     Parameters
     ----------
     param : parameter class

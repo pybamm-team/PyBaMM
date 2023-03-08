@@ -9,8 +9,6 @@ class NoMechanics(BaseMechanics):
     """
     Class for no particle mechanics.
 
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
-
     Parameters
     ----------
     param : parameter class

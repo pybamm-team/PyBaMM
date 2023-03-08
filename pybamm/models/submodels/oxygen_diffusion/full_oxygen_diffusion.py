@@ -14,8 +14,6 @@ class Full(BaseModel):
     separator and positive electrode. The boundary condition at the negative electrode/
     separator interface is homogeneous Dirichlet.
 
-    **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
-
     Parameters
     ----------
     param : parameter class

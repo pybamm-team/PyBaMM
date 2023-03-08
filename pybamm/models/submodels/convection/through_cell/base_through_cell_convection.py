@@ -8,8 +8,6 @@ from ..base_convection import BaseModel
 class BaseThroughCellModel(BaseModel):
     """Base class for convection submodels in the through-cell direction.
 
-    **Extends:** :class:`pybamm.convection.BaseModel`
-
     Parameters
     ----------
     param : parameter class

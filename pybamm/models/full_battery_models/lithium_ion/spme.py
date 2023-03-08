@@ -18,8 +18,6 @@ class SPMe(SPM):
     >>> model.name
     'Single Particle Model with electrolyte'
 
-    **Extends:** :class:`pybamm.lithium_ion.SPM`
-
     References
     ----------
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic

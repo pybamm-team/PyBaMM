@@ -13,8 +13,6 @@ class ConstantSEI(BaseModel):
     interfacial current densities" variables from
     :class:`pybamm.interface.BaseInterface`
 
-    **Extends:** :class:`pybamm.sei.BaseModel`
-
     Parameters
     ----------
     param : parameter class

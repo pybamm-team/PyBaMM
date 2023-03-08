@@ -9,8 +9,6 @@ from .base_active_material import BaseModel
 class Constant(BaseModel):
     """Submodel for constant active material
 
-    **Extends:** :class:`pybamm.active_material.BaseModel`
-
     Parameters
     ----------
     param : parameter class

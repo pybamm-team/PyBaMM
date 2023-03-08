@@ -9,8 +9,6 @@ class Explicit(BaseElectrolyteConductivity):
     """Class for deriving surface potential difference variables from the electrode
     and electrolyte potentials
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class

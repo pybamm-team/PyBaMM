@@ -11,8 +11,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     the Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation. (Leading refers to leading order in asymptotics)
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class
@@ -73,8 +71,6 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation and where capacitance is present.
 
-    **Extends:** :class:`BaseLeadingOrderSurfaceForm`
-
     Parameters
     ----------
     param : parameter class
@@ -110,8 +106,6 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     """Leading-order model for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
-
-    **Extends:** :class:`BaseLeadingOrderSurfaceForm`
 
     Parameters
     ----------

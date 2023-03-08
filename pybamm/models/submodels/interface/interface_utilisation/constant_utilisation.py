@@ -9,8 +9,6 @@ from .base_utilisation import BaseModel
 class Constant(BaseModel):
     """Submodel for constant interface utilisation
 
-    **Extends:** :class:`pybamm.interface_utilisation.BaseModel`
-
     Parameters
     ----------
     param : parameter class

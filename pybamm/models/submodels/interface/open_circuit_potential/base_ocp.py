@@ -9,8 +9,6 @@ class BaseOpenCircuitPotential(BaseInterface):
     """
     Base class for open-circuit potentials
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

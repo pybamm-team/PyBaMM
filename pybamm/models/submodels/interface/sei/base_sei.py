@@ -8,8 +8,6 @@ from ..base_interface import BaseInterface
 class BaseModel(BaseInterface):
     """Base class for SEI models.
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param : parameter class

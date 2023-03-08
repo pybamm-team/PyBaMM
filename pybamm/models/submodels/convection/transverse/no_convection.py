@@ -9,8 +9,6 @@ class NoConvection(BaseTransverseModel):
     """
     Submodel for no convection in transverse directions
 
-    **Extends:** :class:`pybamm.convection.through_cell.BaseTransverseModel`
-
     Parameters
     ----------
     param : parameter class

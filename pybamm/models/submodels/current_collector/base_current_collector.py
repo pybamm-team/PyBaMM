@@ -7,8 +7,6 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Base class for current collector submodels
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

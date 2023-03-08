@@ -21,8 +21,6 @@ class BasicDFNHalfCell(BaseModel):
     electrode" are used to define the "positive electrode".
     This facilitates compatibility with the full-cell models.
 
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
-
     Parameters
     ----------
     options : dict

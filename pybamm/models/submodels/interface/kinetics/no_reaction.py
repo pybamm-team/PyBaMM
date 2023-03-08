@@ -10,8 +10,6 @@ class NoReaction(BaseInterface):
     """
     Base submodel for when no reaction occurs
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
-
     Parameters
     ----------
     param :

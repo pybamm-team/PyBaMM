@@ -11,8 +11,6 @@ class Marcus(BaseKinetics):
     """
     Submodel which implements Marcus kinetics.
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
-
     Parameters
     ----------
     param : parameter class
@@ -46,8 +44,6 @@ class MarcusHushChidsey(BaseKinetics):
     """
     Submodel which implements asymptotic Marcus-Hush-Chidsey kinetics, as derived in
     [1]_.
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
 
     References
     ----------

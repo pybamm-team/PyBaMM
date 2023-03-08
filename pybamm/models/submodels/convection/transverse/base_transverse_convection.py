@@ -8,8 +8,6 @@ from ..base_convection import BaseModel
 class BaseTransverseModel(BaseModel):
     """Base class for convection submodels in transverse directions.
 
-    **Extends:** :class:`pybamm.convection.BaseModel`
-
     Parameters
     ----------
     param : parameter class

@@ -12,8 +12,6 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     Stefan-Maxwell constitutive equations. (Leading refers to leading order
     of asymptotic reduction)
 
-    **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
-
     Parameters
     ----------
     param : parameter class

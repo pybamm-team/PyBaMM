@@ -11,8 +11,6 @@ class CrackPropagation(BaseMechanics):
     Cracking behaviour in electrode particles. See [1]_ for mechanical model (thickness
     change) and [2]_ for cracking model.
 
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
-
     Parameters
     ----------
     param : parameter class

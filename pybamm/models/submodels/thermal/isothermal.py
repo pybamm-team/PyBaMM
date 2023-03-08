@@ -10,8 +10,6 @@ class Isothermal(BaseThermal):
     """
     Class for isothermal submodel.
 
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
-
     Parameters
     ----------
     param : parameter class

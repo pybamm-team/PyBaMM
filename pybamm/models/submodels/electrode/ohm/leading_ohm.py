@@ -10,8 +10,6 @@ class LeadingOrder(BaseModel):
     """An electrode submodel that employs Ohm's law the leading-order approximation to
     governing equations.
 
-    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
-
     Parameters
     ----------
     param : parameter class

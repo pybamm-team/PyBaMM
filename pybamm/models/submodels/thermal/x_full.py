@@ -15,8 +15,6 @@ class OneDimensionalX(BaseThermal):
     at the edges of the electrodes (at x=0 and x=1, in non-dimensional coordinates).
     For more information see [1]_ and [2]_.
 
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
-
     Parameters
     ----------
     param : parameter class

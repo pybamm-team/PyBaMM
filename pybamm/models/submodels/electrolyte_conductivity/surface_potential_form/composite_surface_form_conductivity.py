@@ -12,8 +12,6 @@ class BaseModel(Composite):
     the Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.Composite`
-
     Parameters
     ----------
     param : parameter class
@@ -83,8 +81,6 @@ class CompositeDifferential(BaseModel):
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation and where capacitance is present.
 
-    **Extends:** :class:`BaseModel`
-
     Parameters
     ----------
     param : parameter class
@@ -124,8 +120,6 @@ class CompositeAlgebraic(BaseModel):
     Composite model for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
-
-    **Extends:** :class:`BaseModel`
 
     Parameters
     ----------

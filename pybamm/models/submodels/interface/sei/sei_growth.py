@@ -17,8 +17,6 @@ class SEIGrowth(BaseModel):
     plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
     aging." Journal of Power Sources 360 (2017): 28-40.
 
-    **Extends:** :class:`pybamm.sei.BaseModel`
-
     Parameters
     ----------
     param : parameter class

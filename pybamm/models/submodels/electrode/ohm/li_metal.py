@@ -24,8 +24,6 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """Model for potential drop across a lithium metal electrode, with a
     differential or algebraic equation for the surface potential difference
 
-    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
-
     Parameters
     ----------
     param : parameter class
@@ -108,8 +106,6 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
 
 class LithiumMetalExplicit(LithiumMetalBaseModel):
     """Explicit model for potential drop across a lithium metal electrode.
-
-    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
 
     Parameters
     ----------

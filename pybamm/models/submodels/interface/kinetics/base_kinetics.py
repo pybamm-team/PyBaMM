@@ -9,8 +9,6 @@ class BaseKinetics(BaseInterface):
     """
     Base submodel for kinetics
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param :

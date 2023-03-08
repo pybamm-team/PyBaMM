@@ -8,8 +8,6 @@ from .base_porosity import BaseModel
 class ReactionDriven(BaseModel):
     """Reaction-driven porosity changes as a multiple of SEI/plating thicknesses
 
-    **Extends:** :class:`pybamm.porosity.BaseModel`
-
     Parameters
     ----------
     param : parameter class

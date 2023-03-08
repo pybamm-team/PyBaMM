@@ -9,8 +9,6 @@ class Linear(BaseKinetics):
     """
     Submodel which implements linear kinetics. Valid for small overpotentials/currents.
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
-
     Parameters
     ----------
     param : parameter class

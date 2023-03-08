@@ -9,8 +9,6 @@ class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
     """
     A discretisation class for the zero dimensional mesh
 
-    **Extends** : :class:`pybamm.SpatialMethod`
-
     Parameters
     ----------
     mesh : :class: `pybamm.Mesh`

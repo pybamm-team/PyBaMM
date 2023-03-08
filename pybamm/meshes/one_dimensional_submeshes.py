@@ -13,8 +13,6 @@ class SubMesh1D(SubMesh):
     Contains the position of the nodes, the number of mesh points, and
     (optionally) information about the tab locations.
 
-    **Extends:** :class:`pybamm.SubMesh`
-
     Parameters
     ----------
     edges : array_like
@@ -77,8 +75,6 @@ class Uniform1DSubMesh(SubMesh1D):
     """
     A class to generate a uniform submesh on a 1D domain
 
-    **Extends:** :class:`pybamm.SubMesh1D`
-
     Parameters
     ----------
     lims : dict
@@ -134,8 +130,6 @@ class Exponential1DSubMesh(SubMesh1D):
 
     In the above, alpha is a stretching factor. As the number of gridpoints tends
     to infinity, the ratio of the largest and smallest grid cells tends to exp(alpha).
-
-    **Extends:** :class:`pybamm.SubMesh1D`
 
     Parameters
     ----------
@@ -219,8 +213,6 @@ class Chebyshev1DSubMesh(SubMesh1D):
     .. math::
         a < x_{1} < ... < x_{N} < b.
 
-    **Extends:** :class:`pybamm.SubMesh1D`
-
     Parameters
     ----------
     lims : dict
@@ -257,8 +249,6 @@ class UserSupplied1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain from a user supplied array of
     edges.
-
-    **Extends:** :class:`pybamm.SubMesh1D`
 
     Parameters
     ----------
@@ -319,8 +309,6 @@ class SpectralVolume1DSubMesh(SubMesh1D):
     to only work with this submesh. The underlying theory could use any
     mesh with the right number of nodes, but in 1D the only sensible
     choice are the Chebyshev collocation points.
-
-    **Extends:** :class:`pybamm.SubMesh1D`
 
     Parameters
     ----------

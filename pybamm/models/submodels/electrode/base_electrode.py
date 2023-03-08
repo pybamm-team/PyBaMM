@@ -7,8 +7,6 @@ import pybamm
 class BaseElectrode(pybamm.BaseSubModel):
     """Base class for electrode submodels.
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

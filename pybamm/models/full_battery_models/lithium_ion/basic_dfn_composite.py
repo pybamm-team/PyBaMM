@@ -14,8 +14,6 @@ class BasicDFNComposite(BaseModel):
     comparing different physical effects, and in general the main DFN class should be
     used instead.
 
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
-
     Parameters
     ----------
     name : str, optional

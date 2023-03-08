@@ -8,8 +8,6 @@ from ..base_interface import BaseInterface
 class BasePlating(BaseInterface):
     """Base class for lithium plating models.
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param : parameter class

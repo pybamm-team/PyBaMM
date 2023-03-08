@@ -9,8 +9,6 @@ class BaseModel(pybamm.BaseBatteryModel):
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models
 
-    **Extends:** :class:`pybamm.BaseBatteryModel`
-
     Parameters
     ----------
     options : dict-like, optional

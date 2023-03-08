@@ -23,8 +23,6 @@ class _ElectrodeSOH(pybamm.BaseModel):
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
 
-    **Extends:** :class:`pybamm.BaseModel`
-
     References
     ----------
     .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards

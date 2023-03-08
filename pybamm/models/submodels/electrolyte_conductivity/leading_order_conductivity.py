@@ -10,8 +10,6 @@ class LeadingOrder(BaseElectrolyteConductivity):
     employing the Stefan-Maxwell constitutive equations. (Leading refers
     to leading-order in the asymptotic reduction)
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class

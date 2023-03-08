@@ -11,8 +11,6 @@ class Full(BaseElectrolyteDiffusion):
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by
     asymptotic methods)
 
-    **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
-
     Parameters
     ----------
     param : parameter class

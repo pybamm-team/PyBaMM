@@ -10,8 +10,6 @@ class Lumped(BaseThermal):
     """
     Class for lumped thermal submodel. For more information see [1]_ and [2]_.
 
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
-
     Parameters
     ----------
     param : parameter class

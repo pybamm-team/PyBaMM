@@ -8,8 +8,6 @@ from .base_utilisation import BaseModel
 class CurrentDriven(BaseModel):
     """Current-driven ODE for interface utilisation
 
-    **Extends:** :class:`pybamm.interface utilisation.BaseModel`
-
     Parameters
     ----------
     param : parameter class

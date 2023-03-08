@@ -13,8 +13,6 @@ class BasicSPM(BaseModel):
     combining different physical effects, and in general the main SPM class should be
     used instead.
 
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
-
     Parameters
     ----------
     name : str, optional

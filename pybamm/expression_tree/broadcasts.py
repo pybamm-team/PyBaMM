@@ -19,8 +19,6 @@ class Broadcast(pybamm.SpatialOperator):
     `this example notebook
     <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
-    **Extends:** :class:`SpatialOperator`
-
     Parameters
     ----------
     child : :class:`Symbol`
@@ -56,8 +54,6 @@ class PrimaryBroadcast(Broadcast):
     broadcasting from a "larger" scale to a "smaller" scale, for example broadcasting
     temperature T(x) from the electrode to the particles, or broadcasting current
     collector current i(y, z) from the current collector to the electrodes.
-
-    **Extends:** :class:`Broadcast`
 
     Parameters
     ----------
@@ -176,8 +172,6 @@ class SecondaryBroadcast(Broadcast):
     SPM particle concentrations c_s(r) from the particles to the electrodes. Note that
     this wouldn't be used to broadcast particle concentrations in the DFN, since these
     already depend on both x and r.
-
-    **Extends:** :class:`Broadcast`
 
     Parameters
     ----------
@@ -302,8 +296,6 @@ class TertiaryBroadcast(Broadcast):
     and `secondary` domain, to the electrode x, which is added as a `tertiary`
     domain. Note: the symbol for broadcast must already have a non-empty `secondary`
     domain.
-
-    **Extends:** :class:`Broadcast`
 
     Parameters
     ----------

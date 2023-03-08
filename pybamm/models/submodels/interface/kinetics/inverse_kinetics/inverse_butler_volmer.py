@@ -10,8 +10,6 @@ class InverseButlerVolmer(BaseInterface):
     A submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param
@@ -122,8 +120,6 @@ class CurrentForInverseButlerVolmer(BaseInterface):
     form" model solves a differential or algebraic equation for delta_phi, which gives
     the exact right answer. Comparing the two approaches shows almost no difference.
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param
@@ -166,8 +162,6 @@ class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
     """
     Submodel for the current associated with the inverse Butler-Volmer formulation in
     a lithium metal cell. This is simply equal to the current collector current density.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
 
     Parameters
     ----------

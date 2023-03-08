@@ -12,8 +12,6 @@ class PolynomialProfile(BaseParticle):
     law, assuming a polynomial concentration profile in r, and allowing variation
     in the electrode domain. Model equations from [1]_.
 
-    **Extends:** :class:`pybamm.particle.BaseParticle`
-
     Parameters
     ----------
     param : parameter class

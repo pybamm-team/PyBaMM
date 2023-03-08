@@ -9,8 +9,6 @@ class SwellingOnly(BaseMechanics):
     """
     Class for swelling only (no cracking), from [1]_
 
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
-
     Parameters
     ----------
     param : parameter class

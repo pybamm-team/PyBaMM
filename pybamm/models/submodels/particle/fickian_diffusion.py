@@ -9,8 +9,6 @@ class FickianDiffusion(BaseParticle):
     """
     Class for molar conservation in particles, employing Fick's law
 
-    **Extends:** :class:`pybamm.particle.BaseParticle`
-
     Parameters
     ----------
     param : parameter class

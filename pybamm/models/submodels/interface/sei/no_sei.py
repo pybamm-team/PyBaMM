@@ -9,8 +9,6 @@ class NoSEI(BaseModel):
     """
     Class for no SEI.
 
-    **Extends:** :class:`pybamm.sei.BaseModel`
-
     Parameters
     ----------
     param : parameter class

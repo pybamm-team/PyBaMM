@@ -12,8 +12,6 @@ class CurrentCollector1D(BaseThermal):
     model. The thermal model is averaged in the x-direction and is therefore referred
     to as 'x-lumped'. For more information see [1]_ and [2]_.
 
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
-
     Parameters
     ----------
     param : parameter class

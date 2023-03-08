@@ -8,8 +8,6 @@ class BaseParticle(pybamm.BaseSubModel):
     """
     Base class for molar conservation in particles.
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

@@ -10,8 +10,6 @@ class Integrated(BaseElectrolyteConductivity):
     Integrated model for conservation of charge in the electrolyte derived from
     integrating the Stefan-Maxwell constitutive equations, from [1]_.
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class

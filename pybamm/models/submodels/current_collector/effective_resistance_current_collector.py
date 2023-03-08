@@ -99,8 +99,6 @@ class EffectiveResistance(BaseEffectiveResistance):
     assumes a uniform *current density* at the tabs (in 1D the two formulations
     are equivalent).
 
-    **Extends:** :class:`BaseEffectiveResistance`
-
     Parameters
     ----------
     options: dict
@@ -272,8 +270,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
     collectors in the limit of large electrical conductivity. This model assumes
     a uniform *current density* at the tabs and the solution is computed by first
     solving and auxilliary problem which is the related to the resistances.
-
-    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(self):

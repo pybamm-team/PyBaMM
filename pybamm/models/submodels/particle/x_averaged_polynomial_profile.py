@@ -11,8 +11,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     Class for molar conservation in a single x-averaged particle employing Fick's law,
     with an assumed polynomial concentration profile in r. Model equations from [1]_.
 
-    **Extends:** :class:`pybamm.particle.PolynomialProfile`
-
     Parameters
     ----------
     param : parameter class

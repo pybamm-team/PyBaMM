@@ -13,8 +13,6 @@ class Interpolant(pybamm.Function):
     Interpolate data in 1D, 2D, or 3D. Interpolation in 3D requires the input data to be
     on a regular grid (as per scipy.interpolate.RegularGridInterpolator).
 
-    **Extends**: :class:`pybamm.Function`
-
     Parameters
     ----------
     x : iterable of :class:`numpy.ndarray`

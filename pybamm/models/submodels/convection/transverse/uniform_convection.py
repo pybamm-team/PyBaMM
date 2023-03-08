@@ -9,8 +9,6 @@ class Uniform(BaseTransverseModel):
     """
     Submodel for uniform convection in transverse directions
 
-    **Extends:** :class:`pybamm.convection.through_cell.BaseTransverseModel`
-
     Parameters
     ----------
     param : parameter class

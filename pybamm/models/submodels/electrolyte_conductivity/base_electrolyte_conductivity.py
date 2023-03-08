@@ -8,8 +8,6 @@ import pybamm
 class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     """Base class for conservation of charge in the electrolyte.
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

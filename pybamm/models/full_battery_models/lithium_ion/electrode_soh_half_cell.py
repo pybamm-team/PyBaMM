@@ -18,8 +18,6 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     Subscript w indicates working electrode and subscript c indicates counter electrode.
 
-    **Extends:** :class:`pybamm.BaseModel`
-
     References
     ----------
     .. [2] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards

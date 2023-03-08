@@ -11,8 +11,6 @@ class Composite(BaseModel):
     current conservation with ohm's law. Note that the returned current density is
     only the leading order approximation.
 
-    **Extends:** :class:`pybamm.BaseOhm`
-
     Parameters
     ----------
     param : parameter class

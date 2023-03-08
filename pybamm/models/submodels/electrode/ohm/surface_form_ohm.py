@@ -10,8 +10,6 @@ class SurfaceForm(BaseModel):
     """A submodel for the electrode with Ohm's law in the surface potential
     formulation.
 
-    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
-
     Parameters
     ----------
     param : parameter class

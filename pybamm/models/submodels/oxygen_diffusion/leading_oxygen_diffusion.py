@@ -10,8 +10,6 @@ class LeadingOrder(BaseModel):
     """Class for conservation of mass of oxygen. (Leading refers to leading order
     of asymptotic reduction)
 
-    **Extends:** :class:`pybamm.oxgen_diffusion.BaseModel`
-
     Parameters
     ----------
     param : parameter class

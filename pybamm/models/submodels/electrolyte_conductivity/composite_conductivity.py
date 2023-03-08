@@ -9,8 +9,6 @@ class Composite(BaseElectrolyteConductivity):
     """Base class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations.
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class

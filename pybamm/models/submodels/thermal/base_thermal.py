@@ -8,8 +8,6 @@ class BaseThermal(pybamm.BaseSubModel):
     """
     Base class for thermal effects
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

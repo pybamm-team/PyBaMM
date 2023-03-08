@@ -8,8 +8,6 @@ from .base_plating import BasePlating
 class NoPlating(BasePlating):
     """Base class for no lithium plating/stripping.
 
-    **Extends:** :class:`pybamm.lithium_plating.BasePlating`
-
     Parameters
     ----------
     param : parameter class

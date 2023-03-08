@@ -11,8 +11,6 @@ class Scalar(pybamm.Symbol):
     """
     A node in the expression tree representing a scalar value.
 
-    **Extends:** :class:`Symbol`
-
     Parameters
     ----------
     value : numeric

@@ -8,8 +8,6 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
     """
     Total interfacial current, summing up contributions from all reactions
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     Parameters
     ----------
     param :

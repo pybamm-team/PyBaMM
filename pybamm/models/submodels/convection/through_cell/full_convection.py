@@ -8,8 +8,6 @@ from .base_through_cell_convection import BaseThroughCellModel
 class Full(BaseThroughCellModel):
     """Submodel for the full model of pressure-driven convection
 
-    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
-
     Parameters
     ----------
     param : parameter class

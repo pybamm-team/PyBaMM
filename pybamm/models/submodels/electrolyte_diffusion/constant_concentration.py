@@ -9,8 +9,6 @@ from .base_electrolyte_diffusion import BaseElectrolyteDiffusion
 class ConstantConcentration(BaseElectrolyteDiffusion):
     """Class for constant concentration of electrolyte
 
-    **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
-
     Parameters
     ----------
     param : parameter class

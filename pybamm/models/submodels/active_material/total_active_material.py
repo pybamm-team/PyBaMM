@@ -7,8 +7,6 @@ import pybamm
 class Total(pybamm.BaseSubModel):
     """Class for total active material volume fraction, for models with multiple phases
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

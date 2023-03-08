@@ -11,8 +11,6 @@ class Full(BaseElectrolyteConductivity):
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by
     asymptotic methods)
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     Parameters
     ----------
     param : parameter class

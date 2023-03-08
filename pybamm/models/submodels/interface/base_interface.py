@@ -9,8 +9,6 @@ class BaseInterface(pybamm.BaseSubModel):
     """
     Base class for interfacial currents
 
-    **Extends:** :class:`pybamm.BaseSubModel`
-
     Parameters
     ----------
     param : parameter class

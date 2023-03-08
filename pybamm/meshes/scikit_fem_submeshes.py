@@ -15,8 +15,6 @@ class ScikitSubMesh2D(SubMesh):
     Note: This class only allows for the use of piecewise-linear triangular
     finite elements.
 
-    **Extends:** :class:`pybamm.SubMesh`
-
     Parameters
     ----------
     edges : array_like
@@ -151,8 +149,6 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     Note: This class only allows for the use of piecewise-linear triangular
     finite elements.
 
-    **Extends:** :class:`pybamm.ScikitSubMesh2D`
-
     Parameters
     ----------
     lims : dict
@@ -199,8 +195,6 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
 
     Note: in the future this will be extended to allow points to be clustered near
     any of the boundaries.
-
-    **Extends:** :class:`pybamm.ScikitSubMesh2D`
 
     Parameters
     ----------
@@ -267,8 +261,6 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
     Note: This class only allows for the use of piecewise-linear triangular
     finite elements.
 
-    **Extends:** :class:`pybamm.ScikitSubMesh2D`
-
     Parameters
     ----------
     lims : dict
@@ -312,8 +304,6 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     A class to generate a tensor product submesh on a 2D domain by using two user
     supplied vectors of edges: one for the y-direction and one for the z-direction.
     Note: this mesh should be created using :class:`UserSupplied2DSubMeshGenerator`.
-
-    **Extends:** :class:`pybamm.ScikitSubMesh2D`
 
     Parameters
     ----------

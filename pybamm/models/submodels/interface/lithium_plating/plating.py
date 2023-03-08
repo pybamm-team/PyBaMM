@@ -8,8 +8,6 @@ from .base_plating import BasePlating
 class Plating(BasePlating):
     """Class for lithium plating.
 
-    **Extends:** :class:`pybamm.lithium_plating.BasePlating`
-
     Parameters
     ----------
     param : parameter class

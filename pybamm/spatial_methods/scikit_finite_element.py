@@ -19,8 +19,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
     For broadcast we follow the default behaviour from SpatialMethod.
 
-    **Extends:** :class:`pybamm.SpatialMethod`
-
     Parameters
     ----------
     mesh : :class:`pybamm.Mesh`
