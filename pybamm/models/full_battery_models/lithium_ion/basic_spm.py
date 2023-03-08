@@ -173,7 +173,7 @@ class BasicSPM(BaseModel):
             "Positive electrode potential [V]": pybamm.PrimaryBroadcast(
                 phi_s_p, "positive electrode"
             ),
-            "Terminal voltage [V]": V,
+            "Voltage [V]": V,
         }
         self.events += [
             pybamm.Event("Minimum voltage [V]", V - param.voltage_low_cut),

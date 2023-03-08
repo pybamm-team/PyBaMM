@@ -32,7 +32,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
 def graphite_ocp_PeymanMPM(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the
+    Graphite Open-circuit Potential (OCP) as a function of the
     stochiometry. The fit is taken from Peyman MPM [1].
 
     References
@@ -92,7 +92,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
 
 def graphite_entropic_change_PeymanMPM(sto, c_s_max):
     """
-    Graphite entropic change in open circuit potential (OCP) at a temperature of
+    Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from [1]
 
     References
@@ -151,7 +151,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 
 def NMC_ocp_PeymanMPM(sto):
     """
-    Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
+    Nickel Managanese Cobalt Oxide (NMC) Open-circuit Potential (OCP) as a
     function of the stochiometry. The fit is taken from Peyman MPM.
 
     References
@@ -214,7 +214,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
 
 def NMC_entropic_change_PeymanMPM(sto, c_s_max):
     """
-    Nickel Manganese Cobalt (NMC) entropic change in open circuit potential (OCP) at
+    Nickel Manganese Cobalt (NMC) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the OCP. The fit is taken from [1].
 
     References

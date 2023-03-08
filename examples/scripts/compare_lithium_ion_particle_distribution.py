@@ -49,7 +49,7 @@ output_variables = [
     "Negative electrode potential [V]",
     "Electrolyte potential [V]",
     "Positive electrode potential [V]",
-    "Terminal voltage [V]",
+    "Voltage [V]",
     "Negative particle radius",
     "Positive particle radius",
 ]

@@ -244,7 +244,7 @@ class BasicFull(BaseModel):
             "Negative electrode potential [V]": phi_s_n,
             "Electrolyte potential [V]": phi_e,
             "Positive electrode potential [V]": phi_s_p,
-            "Terminal voltage [V]": voltage,
+            "Voltage [V]": voltage,
             "Porosity": eps,
         }
         self.events.extend(

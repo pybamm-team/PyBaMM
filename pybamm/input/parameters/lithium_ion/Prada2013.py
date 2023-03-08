@@ -21,7 +21,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Open circuit potential
+        Open-circuit potential
     """
 
     u_eq = (

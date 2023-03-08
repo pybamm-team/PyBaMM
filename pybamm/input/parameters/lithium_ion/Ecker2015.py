@@ -63,7 +63,7 @@ def graphite_ocp_Ecker2015(sto):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Open circuit potential
+        Open-circuit potential
     """
 
     # Graphite negative electrode from Ecker, Kabitz, Laresgoiti et al.

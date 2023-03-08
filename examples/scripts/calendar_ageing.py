@@ -41,7 +41,7 @@ for model in models:
 pb.dynamic_plot(
     sims,
     [
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Negative particle surface concentration",
         "X-averaged negative particle surface concentration",
         "Electrolyte concentration [mol.m-3]",

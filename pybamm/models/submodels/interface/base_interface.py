@@ -327,11 +327,10 @@ class BaseInterface(pybamm.BaseSubModel):
         if eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, f"{domain} electrode")
 
-        domain_reaction = f"{Domain} electrode {reaction_name}reaction overpotential"
-
         variables = {
-            f"{domain_reaction} [V]": eta_r,
-            f"X-averaged {domain_reaction.lower()} [V]": eta_r_av,
+            f"{Domain} electrode {reaction_name}reaction overpotential [V]": eta_r,
+            f"X-averaged {domain} electrode {reaction_name}reaction "
+            "overpotential [V]": eta_r_av,
         }
 
         return variables

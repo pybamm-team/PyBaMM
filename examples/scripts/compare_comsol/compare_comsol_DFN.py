@@ -110,7 +110,7 @@ comsol_model.variables = {
     "Negative electrode potential [V]": comsol_phi_n,
     "Electrolyte potential [V]": comsol_phi_e,
     "Positive electrode potential [V]": comsol_phi_p,
-    "Terminal voltage [V]": comsol_voltage,
+    "Voltage [V]": comsol_voltage,
 }
 
 # Make new solution with same t and y
@@ -128,7 +128,7 @@ output_variables = [
     "Negative electrode potential [V]",
     "Electrolyte potential [V]",
     "Positive electrode potential [V]",
-    "Terminal voltage [V]",
+    "Voltage [V]",
 ]
 plot = pybamm.QuickPlot(
     [pybamm_solution, comsol_solution],

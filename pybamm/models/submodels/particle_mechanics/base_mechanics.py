@@ -6,8 +6,7 @@ import pybamm
 
 class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle mechanics models. See [1]_ for mechanical model (thickness
-    change) and [2]_ for cracking model.
+    Base class for particle mechanics models.
 
     **Extends:** :class:`pybamm.BaseSubModel`
 
@@ -35,9 +34,6 @@ class BaseMechanics(pybamm.BaseSubModel):
 
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
-
-        pybamm.citations.register("Ai2019")
-        pybamm.citations.register("Deshpande2012")
 
     def _get_standard_variables(self, l_cr):
         domain, Domain = self.domain_Domain
@@ -82,16 +78,18 @@ class BaseMechanics(pybamm.BaseSubModel):
         # Averages
         stress_r_surf_av = pybamm.x_average(stress_r_surf)
         stress_t_surf_av = pybamm.x_average(stress_t_surf)
+        disp_surf_av = pybamm.x_average(disp_surf)
 
         variables.update(
             {
-                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
                 f"{Domain} particle surface radial stress [Pa]": stress_r_surf,
+                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
                 f"{Domain} particle surface displacement [m]": disp_surf,
                 f"X-averaged {domain} particle surface "
                 "radial stress [Pa]": stress_r_surf_av,
                 f"X-averaged {domain} particle surface "
                 "tangential stress [Pa]": stress_t_surf_av,
+                f"X-averaged {domain} particle surface displacement [m]": disp_surf_av,
                 f"{Domain} electrode thickness change [m]": electrode_thickness_change,
             }
         )

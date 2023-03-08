@@ -39,7 +39,7 @@ class ExplicitPowerControl(BaseModel):
         param = self.param
 
         # Current is given as applied power divided by voltage
-        V = variables["Terminal voltage [V]"]
+        V = variables["Voltage [V]"]
         P = pybamm.FunctionParameter("Power function [W]", {"Time [s]": pybamm.t})
         I = P / V
 
@@ -65,7 +65,7 @@ class ExplicitResistanceControl(BaseModel):
         param = self.param
 
         # Current is given as applied voltage divided by resistance
-        V = variables["Terminal voltage [V]"]
+        V = variables["Voltage [V]"]
         R = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t}
         )

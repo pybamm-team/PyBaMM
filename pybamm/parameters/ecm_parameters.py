@@ -48,7 +48,7 @@ class EcmParameters:
         return ambient_temperature_K - 273.15
 
     def ocv(self, soc):
-        return pybamm.FunctionParameter("Open circuit voltage [V]", {"SoC": soc})
+        return pybamm.FunctionParameter("Open-circuit voltage [V]", {"SoC": soc})
 
     def rcr_element(self, name, T_cell, current, soc):
         inputs = {"Cell temperature [degC]": T_cell, "Current [A]": current, "SoC": soc}
@@ -59,5 +59,5 @@ class EcmParameters:
         return pybamm.Parameter(f"Element-{element_number} initial overpotential [V]")
 
     def dUdT(self, ocv, T_cell):
-        inputs = {"Open circuit voltage [V]": ocv, "Cell temperature [degC]": T_cell}
+        inputs = {"Open-circuit voltage [V]": ocv, "Cell temperature [degC]": T_cell}
         return pybamm.FunctionParameter("Entropic change [V/K]", inputs)

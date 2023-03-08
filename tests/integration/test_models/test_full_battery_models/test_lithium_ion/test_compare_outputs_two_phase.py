@@ -71,7 +71,7 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
                 "X-averaged negative electrode active material volume fraction",
                 "X-averaged negative electrode volumetric "
                 "interfacial current density [A.m-3]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ]:
                 np.testing.assert_allclose(
                     sol[variable].entries, sol_two_phase[variable].entries, rtol=1e-2
@@ -128,7 +128,7 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
         # Check that increasing silicon content has the expected effect
         options = {
             "particle phases": ("2", "1"),
-            "open circuit potential": (("single", "current sigmoid"), "single"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
         }
         model = model_class(options)
 
@@ -150,7 +150,7 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
 
         # Starting values should be close
         for var in [
-            "Terminal voltage [V]",
+            "Voltage [V]",
             "Average negative primary particle concentration",
             "Average negative secondary particle concentration",
         ]:

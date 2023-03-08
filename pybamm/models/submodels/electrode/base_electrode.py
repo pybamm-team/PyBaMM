@@ -47,11 +47,10 @@ class BaseElectrode(pybamm.BaseSubModel):
         phi_s_av = pybamm.x_average(phi_s)
 
         if self.domain == "negative":
-            delta_phi_s = phi_s
+            delta_phi_s = pybamm.boundary_value(phi_s, "left") - phi_s
 
         elif self.domain == "positive":
-            v = pybamm.boundary_value(phi_s, "right")
-            delta_phi_s = v - phi_s
+            delta_phi_s = pybamm.boundary_value(phi_s, "right") - phi_s
         delta_phi_s_av = pybamm.x_average(delta_phi_s)
 
         variables = {
@@ -121,7 +120,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
 
-        # Terminal voltage
+        # Voltage
         # Note phi_s_cn is always zero at the negative tab
         V = pybamm.boundary_value(phi_s_cp, "positive tab")
 
@@ -132,6 +131,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential [V]": phi_s_cp,
             "Local voltage [V]": V_cc,
             "Terminal voltage [V]": V - delta_phi_contact,
+            "Voltage [V]": V - delta_phi_contact,
             "Contact overpotential [V]": delta_phi_contact,
         }
 

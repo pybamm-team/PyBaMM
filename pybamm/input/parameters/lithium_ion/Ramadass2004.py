@@ -32,7 +32,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
 def graphite_ocp_Ramadass2004(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the
+    Graphite Open-circuit Potential (OCP) as a function of the
     stochiometry (theta?). The fit is taken from Ramadass 2004.
 
     References
@@ -95,7 +95,7 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
 
 def graphite_entropic_change_Moura2016(sto, c_s_max):
     """
-    Graphite entropic change in open circuit potential (OCP) at a temperature of
+    Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from Scott Moura's FastDFN code
     [1].
 
@@ -156,7 +156,7 @@ def lico2_diffusivity_Ramadass2004(sto, T):
 
 def lico2_ocp_Ramadass2004(sto):
     """
-    Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
+    Lithium Cobalt Oxide (LiCO2) Open-circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from Ramadass 2004. Stretch is considered the
     overhang area negative electrode / area positive electrode, in Ramadass 2002.
 
@@ -233,7 +233,7 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
 
 def lico2_entropic_change_Moura2016(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Scott Moura's FastDFN code [1].
 

@@ -74,6 +74,11 @@ class DFN(BaseModel):
                         self.param, domain, self.options, phase=phase
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
+                self.submodels[
+                    f"{domain} {phase} total particle concentration"
+                ] = pybamm.particle.TotalConcentration(
+                    self.param, domain, self.options, phase
+                )
 
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
