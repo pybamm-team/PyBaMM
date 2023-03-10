@@ -152,7 +152,7 @@ class Latexify:
                 rng_min = get_rng_min_max_name(rng, "min")
 
                 bcs_left = sympy.latex(bcs["left"][0].to_equation())
-                bcs_left_latex = bcs_left + f"\quad {name} = {rng_min}"
+                bcs_left_latex = bcs_left + f"\\quad  \\text{{at }} {name} = {rng_min}"
                 bcs_eqn = sympy.Eq(lhs_dr, sympy.Symbol(bcs_left_latex), evaluate=False)
                 bcs_eqn_list.append(bcs_eqn)
 
@@ -163,7 +163,7 @@ class Latexify:
                 rng_max = get_rng_min_max_name(rng, "max")
 
                 bcs_right = sympy.latex(bcs["right"][0].to_equation())
-                bcs_right_latex = bcs_right + f"\quad {name} = {rng_max}"
+                bcs_right_latex = bcs_right + f"\\quad \\text{{at }} {name} = {rng_max}"
                 bcs_eqn = sympy.Eq(
                     lhs_dr, sympy.Symbol(bcs_right_latex), evaluate=False
                 )
@@ -263,7 +263,9 @@ class Latexify:
                 if not eqn_type == "algebraic":
                     init = self.model.initial_conditions.get(var, None)
                     init_eqn = sympy.Eq(var_symbol, init.to_equation(), evaluate=False)
-                    init_eqn = sympy.Symbol(sympy.latex(init_eqn) + r"\quad at\; t=0")
+                    init_eqn = sympy.Symbol(
+                        sympy.latex(init_eqn) + r"\quad \text{at}\; t=0"
+                    )
 
                 # Make equation from lhs and rhs
                 lhs_rhs = sympy.Eq(lhs, rhs, evaluate=False)

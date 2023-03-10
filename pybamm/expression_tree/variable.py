@@ -72,6 +72,8 @@ class VariableBase(pybamm.Symbol):
         )
         self.bounds = bounds
 
+        if print_name is None:
+            print_name = name  # use name by default
         self.print_name = print_name
 
     @property

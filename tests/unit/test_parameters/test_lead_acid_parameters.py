@@ -9,9 +9,9 @@ import unittest
 
 class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_scipy_constants(self):
-        param = pybamm.LeadAcidParameters()
-        self.assertAlmostEqual(param.R.evaluate(), 8.314, places=3)
-        self.assertAlmostEqual(param.F.evaluate(), 96485, places=0)
+        constants = pybamm.constants
+        self.assertAlmostEqual(constants.R.evaluate(), 8.314, places=3)
+        self.assertAlmostEqual(constants.F.evaluate(), 96485, places=0)
 
     def test_print_parameters(self):
         parameters = pybamm.LeadAcidParameters()

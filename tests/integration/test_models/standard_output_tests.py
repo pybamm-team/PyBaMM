@@ -839,7 +839,7 @@ class VelocityTests(BaseOutputTest):
         DeltaV_n = self.param.evaluate(DeltaV_n)
         DeltaV_p = self.model.param.p.DeltaV
         DeltaV_p = self.param.evaluate(DeltaV_p)
-        F = self.model.param.F.value
+        F = pybamm.constants.F.value
 
         np.testing.assert_array_almost_equal(
             self.v_box(t, x_n), DeltaV_n * self.i_e(t, x_n) / F
