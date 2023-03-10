@@ -3,22 +3,13 @@
 #
 import pybamm
 from .base_ohm import BaseModel
+from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
 
 
+@copy_parameter_doc_from_parent
+@doc_extend_parent
 class Full(BaseModel):
-    """Full model of electrode employing Ohm's law.
-
-    Parameters
-    ----------
-    param : parameter class
-        The parameters to use for this submodel
-    domain : str
-        Either 'negative' or 'positive'
-    options : dict, optional
-        A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
-    """
+    """Full model of electrode employing Ohm's law."""
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options=options)

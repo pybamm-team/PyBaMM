@@ -26,8 +26,6 @@ class SwellingOnly(BaseMechanics):
     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
            Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
            Cells. Journal of The Electrochemical Society, 167(1), 013512.
-
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
     def __init__(self, param, domain, options, phase="primary"):

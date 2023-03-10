@@ -7,6 +7,7 @@ from ..base_interface import BaseInterface
 
 class BasePlating(BaseInterface):
     """Base class for lithium plating models.
+
     Parameters
     ----------
     param : parameter class
@@ -23,8 +24,6 @@ class BasePlating(BaseInterface):
     .. [2] SEJ O'Kane, W Ai, G Madabattula, D Alonso-Alvarez, R Timms, V Sulzer,
            JS Edge, B Wu, GJ Offer and M Marinescu. "Lithium-ion battery degradation:
            how to model it". Physical Chemistry: Chemical Physics, 24:7909, 2022
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, options=None):

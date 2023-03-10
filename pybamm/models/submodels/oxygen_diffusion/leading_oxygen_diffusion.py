@@ -14,9 +14,6 @@ class LeadingOrder(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
-
-    **Extends:** :class:`pybamm.oxgen_diffusion.BaseModel`
     """
 
     def __init__(self, param):

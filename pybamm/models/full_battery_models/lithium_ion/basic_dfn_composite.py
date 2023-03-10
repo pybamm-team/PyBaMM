@@ -24,8 +24,6 @@ class BasicDFNComposite(BaseModel):
     ..  W. Ai, N. Kirkaldy, Y. Jiang, G. Offer, H. Wang, B. Wu (2022).
         A composite electrode model for lithium-ion battery with a
         silicon/graphite negative electrode. Journal of Power Sources. 527, 231142.
-
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Composite graphite/silicon Doyle-Fuller-Newman model"):
