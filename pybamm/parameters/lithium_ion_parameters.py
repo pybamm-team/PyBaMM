@@ -51,8 +51,8 @@ class LithiumIonParameters(BaseParameters):
     def _set_parameters(self):
         """Defines the dimensional parameters"""
         # Physical constants
-        self.R = pybamm.Parameter("Ideal gas constant [J.kg-1.K-1]")
-        self.F = pybamm.Parameter("Faraday's constant [C.mol-1]")
+        self.R = pybamm.Parameter("Ideal gas constant [J.K-1.mol-1]")
+        self.F = pybamm.Parameter("Faraday constant [C.mol-1]")
         self.k_b = pybamm.Parameter("Boltzmann constant [J.K-1]")
         self.q_e = pybamm.Parameter("Elementary charge [C]")
 

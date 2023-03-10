@@ -54,7 +54,7 @@ class ParameterValues:
         self._dict_items = pybamm.FuzzyDict(
             {
                 "Ideal gas constant [J.K-1.mol-1]": pybamm.constants.R.value,
-                "Faraday's constant [C.mol-1]": pybamm.constants.F.value,
+                "Faraday constant [C.mol-1]": pybamm.constants.F.value,
                 "Boltzmann constant [J.K-1]": pybamm.constants.k_b.value,
                 "Electron charge [C]": pybamm.constants.q_e.value,
             }
