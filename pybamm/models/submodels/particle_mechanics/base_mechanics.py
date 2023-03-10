@@ -6,14 +6,14 @@ import pybamm
 
 class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle mechanics models.
+    Base class for particle mechanics models, referenced from [1]_ and [2]_.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : dict, optional
-        Dictionary of either the electrode for "positive" or "Nagative"
+        Dictionary of either the electrode for "positive" or "Negative"
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
