@@ -1086,16 +1086,25 @@ class BaseSolver(object):
                 )
 
         # Make sure dt is positive
-        if dt <= 0:
-            raise pybamm.SolverError("Step time must be positive")
+        if dt <= 1e-6:
+            raise pybamm.SolverError("Step time must be at least 1 us")
+
+        t_start = old_solution.t[-1]
+        t_end = t_start + dt
+
+        if t_start == 0:
+            t_start_shifted = t_start
+        else:
+            # offset t_start by 1 us to avoid repeated times in the solution
+            # from having the same time at the end of the previous step and
+            # the start of the next step
+            t_start_shifted = t_start + 1e-6
 
         # Set timer
         timer = pybamm.Timer()
 
         # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
-
-        t = old_solution.t[-1]
 
         first_step_this_model = False
         if model not in self._model_set_up:
@@ -1139,16 +1148,20 @@ class BaseSolver(object):
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(model, t, model_inputs, update_rhs=False)
+        self._set_initial_conditions(
+            model, t_start_shifted, model_inputs, update_rhs=False
+        )
 
         # Calculate t_eval
-        t_eval = np.linspace(t, t + dt, npts)
+        t_eval = np.linspace(t_start_shifted, t_end, npts)
 
         # Check initial conditions don't violate events
         self._check_events_with_initial_conditions(t_eval, model, model_inputs)
 
         # Step
-        pybamm.logger.verbose("Stepping for {:.0f} < t < {:.0f}".format(t, (t + dt)))
+        pybamm.logger.verbose(
+            "Stepping for {:.0f} < t < {:.0f}".format(t_start_shifted, t_end)
+        )
         timer.reset()
         solution = self._integrate(model, t_eval, model_inputs)
         solution.solve_time = timer.time()
