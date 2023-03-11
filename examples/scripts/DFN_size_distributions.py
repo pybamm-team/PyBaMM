@@ -22,7 +22,7 @@ params = pybamm.get_size_distribution_parameters(params, sd_n=0.2, sd_p=0.4)
 # discharge and relaxation: define current function
 t_cutoff = 3450  # [s]
 t_rest = 3600  # [s]
-I_typ = params["Typical current [A]"]  # current for 1C
+I_typ = params["Nominal cell capacity [A.h]"]  # cell capacity gives current for 1C
 
 
 def current(t):
@@ -44,20 +44,20 @@ for sim in sims:
 
 # plot MP-DFN variables
 output_variables = [
-    "Negative particle surface concentration distribution",
-    "Positive particle surface concentration distribution",
+    "Negative particle surface concentration distribution [mol.m-3]",
+    "Positive particle surface concentration distribution [mol.m-3]",
     "Current [A]",
-    "X-averaged negative area-weighted particle-size distribution",
-    "X-averaged positive area-weighted particle-size distribution",
-    "Terminal voltage [V]",
+    "X-averaged negative area-weighted particle-size distribution [m-1]",
+    "X-averaged positive area-weighted particle-size distribution [m-1]",
+    "Voltage [V]",
 ]
 sims[0].plot(output_variables)
 
 # compare models (size-averaged concentrations)
 output_variables = [
-    "Negative particle surface concentration",
-    "Positive particle surface concentration",
+    "Negative particle surface concentration [mol.m-3]",
+    "Positive particle surface concentration [mol.m-3]",
     "Current [A]",
-    "Terminal voltage [V]",
+    "Voltage [V]",
 ]
 pybamm.dynamic_plot(sims, output_variables=output_variables)

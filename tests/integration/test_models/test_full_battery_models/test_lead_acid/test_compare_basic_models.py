@@ -10,7 +10,7 @@ import unittest
 class TestCompareBasicModels(unittest.TestCase):
     def test_compare_full(self):
         basic_full = pybamm.lead_acid.BasicFull()
-        full = pybamm.lead_acid.Full({"convection": "uniform transverse"})
+        full = pybamm.lead_acid.Full()
 
         parameter_values = pybamm.ParameterValues("Sulzer2019")
         parameter_values["Current function [A]"] = 10
@@ -32,12 +32,11 @@ class TestCompareBasicModels(unittest.TestCase):
         sol = sim.solution
 
         # Compare solution data
-        # np.testing.assert_array_almost_equal(basic_sol.y, sol.y, decimal=4)
-        np.testing.assert_array_almost_equal(basic_sol.t, sol.t, decimal=4)
+        np.testing.assert_allclose(basic_sol.t, sol.t, rtol=1e-4)
         # Compare variables
         for name in basic_full.variables:
-            np.testing.assert_array_almost_equal(
-                basic_sol[name].entries, sol[name].entries, decimal=4
+            np.testing.assert_allclose(
+                basic_sol[name].entries, sol[name].entries, rtol=1e-4, atol=1e-8
             )
 
 

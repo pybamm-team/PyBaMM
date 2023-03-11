@@ -25,43 +25,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
-
-    **Extends:** :class:`pybamm.BaseBatteryModel`
-
     """
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(self.options)
-
-        # Default timescale
-        self._timescale = self.param.timescale
-
-        # Set default length scales
-        self._length_scales = {
-            "negative electrode": self.param.L_x,
-            "separator": self.param.L_x,
-            "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
-
-        for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "porous":
-                domain_param = self.param.domain_params[domain]
-                self.length_scales.update(
-                    {
-                        f"{domain} particle": domain_param.prim.R_typ,
-                        f"{domain} primary particle": domain_param.prim.R_typ,
-                        f"{domain} particle size": domain_param.prim.R_typ,
-                    }
-                )
-
-                # Add relevant secondary length scales
-                if len(self.options.phases[domain]) >= 2:
-                    self._length_scales[
-                        f"{domain} secondary particle"
-                    ] = domain_param.sec.R_typ
 
         self.set_standard_output_variables()
 
@@ -110,7 +78,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Current [A]",
                 "Electrolyte potential [V]",
                 "Positive electrode potential [V]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ]
         else:
             return [
@@ -121,7 +89,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Negative electrode potential [V]",
                 "Electrolyte potential [V]",
                 "Positive electrode potential [V]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ]
 
     def set_standard_output_variables(self):
@@ -130,13 +98,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Particle concentration position
         var = pybamm.standard_spatial_vars
         if self.options.electrode_types["negative"] == "porous":
-            self.variables.update(
-                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.n.prim.R_typ}
-            )
+            self.variables.update({"r_n [m]": var.r_n})
         if self.options.electrode_types["positive"] == "porous":
-            self.variables.update(
-                {"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.prim.R_typ}
-            )
+            self.variables.update({"r_p [m]": var.r_p})
 
     def set_degradation_variables(self):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""
@@ -268,13 +232,13 @@ class BaseModel(pybamm.BaseBatteryModel):
                 reaction = "lithium metal plating"
             domain_options = getattr(self.options, domain)
             for phase in self.options.phases[domain]:
-                ocp_option = getattr(domain_options, phase)["open circuit potential"]
+                ocp_option = getattr(domain_options, phase)["open-circuit potential"]
                 ocp_submodels = pybamm.open_circuit_potential
                 if ocp_option == "single":
                     ocp_model = ocp_submodels.SingleOpenCircuitPotential
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
-                self.submodels[f"{domain} {phase} open circuit potential"] = ocp_model(
+                self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
                     self.param, domain, reaction, self.options, phase
                 )
 

@@ -43,13 +43,13 @@ for model, param in zip(models, params):
 
 output_variables = [
     "Negative particle surface concentration",
-    "Electrolyte concentration",
+    "Electrolyte concentration [Molar]",
     "Positive particle surface concentration",
     "Current [A]",
     "Negative electrode potential [V]",
     "Electrolyte potential [V]",
     "Positive electrode potential [V]",
-    "Terminal voltage [V]",
+    "Voltage [V]",
     "Negative particle radius",
     "Positive particle radius",
 ]

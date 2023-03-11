@@ -157,7 +157,7 @@ class Thevenin(pybamm.BaseModel):
 
     def set_ocv_submodel(self):
         self.submodels[
-            "Open circuit voltage"
+            "Open-circuit voltage"
         ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
 
     def set_resistor_submodel(self):
@@ -215,7 +215,7 @@ class Thevenin(pybamm.BaseModel):
     def default_quick_plot_variables(self):
         return [
             "Current [A]",
-            ["Terminal voltage [V]", "Open circuit voltage [V]"],
+            ["Voltage [V]", "Open-circuit voltage [V]"],
             "SoC",
             "Power [W]",
             [

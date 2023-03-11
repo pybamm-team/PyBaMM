@@ -33,8 +33,7 @@ solution = solver.solve(model, t_eval)
 # step model
 dt = 500
 time = 0
-timescale = model.timescale_eval
-end_time = solution.t[-1] * timescale
+end_time = solution.t[-1]
 step_solver = pybamm.CasadiSolver()
 step_solution = None
 while time < end_time:
@@ -44,11 +43,11 @@ while time < end_time:
 # plot
 time_in_seconds = solution["Time [s]"].entries
 step_time_in_seconds = step_solution["Time [s]"].entries
-voltage = solution["Terminal voltage [V]"].entries
-step_voltage = step_solution["Terminal voltage [V]"].entries
+voltage = solution["Voltage [V]"].entries
+step_voltage = step_solution["Voltage [V]"].entries
 plt.plot(time_in_seconds, voltage, "b-", label="SPMe (continuous solve)")
 plt.plot(step_time_in_seconds, step_voltage, "ro", label="SPMe (stepped solve)")
 plt.xlabel(r"$t$")
-plt.ylabel("Terminal voltage [V]")
+plt.ylabel("Voltage [V]")
 plt.legend()
 plt.show()

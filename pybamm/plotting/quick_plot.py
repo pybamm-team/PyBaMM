@@ -173,9 +173,7 @@ class QuickPlot(object):
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
         # Time parameters
-        self.ts_seconds = [
-            solution.t * solution.timescale_eval for solution in solutions
-        ]
+        self.ts_seconds = [solution.t for solution in solutions]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
 
@@ -244,8 +242,8 @@ class QuickPlot(object):
         # Set up output variables
         self.variables = {}
         self.spatial_variable_dict = {}
-        self.first_dimensional_spatial_variable = {}
-        self.second_dimensional_spatial_variable = {}
+        self.first_spatial_variable = {}
+        self.second_spatial_variable = {}
         self.x_first_and_y_second = {}
         self.is_y_z = {}
 
@@ -296,7 +294,7 @@ class QuickPlot(object):
                 self.spatial_variable_dict[variable_tuple] = {
                     spatial_var_name: spatial_var_value
                 }
-                self.first_dimensional_spatial_variable[variable_tuple] = (
+                self.first_spatial_variable[variable_tuple] = (
                     spatial_var_value * self.spatial_factor
                 )
 
@@ -322,10 +320,10 @@ class QuickPlot(object):
                         first_spatial_var_name: first_spatial_var_value,
                         second_spatial_var_name: second_spatial_var_value,
                     }
-                    self.first_dimensional_spatial_variable[variable_tuple] = (
+                    self.first_spatial_variable[variable_tuple] = (
                         first_spatial_var_value * self.spatial_factor
                     )
-                    self.second_dimensional_spatial_variable[variable_tuple] = (
+                    self.second_spatial_variable[variable_tuple] = (
                         second_spatial_var_value * self.spatial_factor
                     )
                     # different order based on whether the domains
@@ -352,7 +350,7 @@ class QuickPlot(object):
     def get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
 
-        # Extract name and dimensionless value
+        # Extract name and value
         # Special case for current collector, which is 2D but in a weird way (both
         # first and second variables are in the same domain, not auxiliary domain)
         if dimension == "first":
@@ -384,20 +382,20 @@ class QuickPlot(object):
                 x_min = self.min_t
                 x_max = self.max_t
             elif variable_lists[0][0].dimensions == 1:
-                x_min = self.first_dimensional_spatial_variable[key][0]
-                x_max = self.first_dimensional_spatial_variable[key][-1]
+                x_min = self.first_spatial_variable[key][0]
+                x_max = self.first_spatial_variable[key][-1]
             elif variable_lists[0][0].dimensions == 2:
                 # different order based on whether the domains are x-r, x-z or y-z, etc
                 if self.x_first_and_y_second[key] is False:
-                    x_min = self.second_dimensional_spatial_variable[key][0]
-                    x_max = self.second_dimensional_spatial_variable[key][-1]
-                    y_min = self.first_dimensional_spatial_variable[key][0]
-                    y_max = self.first_dimensional_spatial_variable[key][-1]
+                    x_min = self.second_spatial_variable[key][0]
+                    x_max = self.second_spatial_variable[key][-1]
+                    y_min = self.first_spatial_variable[key][0]
+                    y_max = self.first_spatial_variable[key][-1]
                 else:
-                    x_min = self.first_dimensional_spatial_variable[key][0]
-                    x_max = self.first_dimensional_spatial_variable[key][-1]
-                    y_min = self.second_dimensional_spatial_variable[key][0]
-                    y_max = self.second_dimensional_spatial_variable[key][-1]
+                    x_min = self.first_spatial_variable[key][0]
+                    x_max = self.first_spatial_variable[key][-1]
+                    y_min = self.second_spatial_variable[key][0]
+                    y_max = self.second_spatial_variable[key][-1]
 
                 # Create axis for contour plot
                 self.axis_limits[key] = [x_min, x_max, y_min, y_max]
@@ -532,7 +530,7 @@ class QuickPlot(object):
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
                         (self.plots[key][i][j],) = ax.plot(
-                            self.first_dimensional_spatial_variable[key],
+                            self.first_spatial_variable[key],
                             variable(t_in_seconds, **spatial_vars, warn=False),
                             color=self.colors[i],
                             linestyle=linestyle,
@@ -553,14 +551,14 @@ class QuickPlot(object):
                 if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
                     y_name = list(spatial_vars.keys())[0][0]
-                    x = self.second_dimensional_spatial_variable[key]
-                    y = self.first_dimensional_spatial_variable[key]
+                    x = self.second_spatial_variable[key]
+                    y = self.first_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
                     x_name = list(spatial_vars.keys())[0][0]
                     y_name = list(spatial_vars.keys())[1][0]
-                    x = self.first_dimensional_spatial_variable[key]
-                    y = self.second_dimensional_spatial_variable[key]
+                    x = self.first_spatial_variable[key]
+                    y = self.second_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False).T
                 ax.set_xlabel("{} [{}]".format(x_name, self.spatial_unit))
                 ax.set_ylabel("{} [{}]".format(y_name, self.spatial_unit))
@@ -711,12 +709,12 @@ class QuickPlot(object):
                 variable = self.variables[key][0][0]
                 vmin, vmax = self.variable_limits[key]
                 if self.x_first_and_y_second[key] is False:
-                    x = self.second_dimensional_spatial_variable[key]
-                    y = self.first_dimensional_spatial_variable[key]
+                    x = self.second_spatial_variable[key]
+                    y = self.first_spatial_variable[key]
                     var = variable(time_in_seconds, **spatial_vars, warn=False)
                 else:
-                    x = self.first_dimensional_spatial_variable[key]
-                    y = self.second_dimensional_spatial_variable[key]
+                    x = self.first_spatial_variable[key]
+                    y = self.second_spatial_variable[key]
                     var = variable(time_in_seconds, **spatial_vars, warn=False).T
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object

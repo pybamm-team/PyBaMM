@@ -545,9 +545,8 @@ class TestProcessedVariable(unittest.TestCase):
             warn=False,
         )
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
-        np.testing.assert_array_almost_equal(
-            processed_r_n(0, r=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
-        )
+        r_test = np.linspace(0, 0.5)
+        np.testing.assert_array_almost_equal(processed_r_n(0, r=r_test)[:, 0], r_test)
 
         # On size domain
         R_n = pybamm.Matrix(
@@ -562,9 +561,8 @@ class TestProcessedVariable(unittest.TestCase):
             warn=False,
         )
         np.testing.assert_array_equal(R_n.entries[:, 0], processed_R_n.entries[:, 0])
-        np.testing.assert_array_almost_equal(
-            processed_R_n(0, R=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
-        )
+        R_test = np.linspace(0, 1)
+        np.testing.assert_array_almost_equal(processed_R_n(0, R=R_test)[:, 0], R_test)
 
     def test_processed_var_1D_fixed_t_interpolation(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])

@@ -37,8 +37,6 @@ class Interpolant(pybamm.Function):
         range, or return NaN (following default behaviour from scipy). Default is True.
         Generally, it is best to set this to be False for 3D interpolation due to
         the higher potential for errors in extrapolation.
-
-    **Extends**: :class:`pybamm.Function`
     """
 
     def __init__(

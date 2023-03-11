@@ -60,13 +60,8 @@ class ProcessedVariable(object):
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
 
-        # Set timescale
-        self.timescale = solution.timescale_eval
-        self.t_pts_nondim = solution.t
-        self.t_pts = solution.t * self.timescale
-
-        # Store length scales
-        self.length_scales = solution.length_scales_eval
+        # Store time
+        self.t_pts = solution.t
 
         # Evaluate base variable at initial time
         self.base_eval = self.base_variables_casadi[0](
@@ -132,7 +127,7 @@ class ProcessedVariable(object):
 
         if self.cumtrapz_ic is not None:
             entries = cumulative_trapezoid(
-                entries, self.t_pts_nondim, initial=float(self.cumtrapz_ic)
+                entries, self.t_pts, initial=float(self.cumtrapz_ic)
             )
 
         # set up interpolation
@@ -209,14 +204,11 @@ class ProcessedVariable(object):
             self.x_sol = space
 
         # assign attributes for reference
-        length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
-        pts_for_interp = space * length_scale
-        self.internal_boundaries = [
-            bnd * length_scale for bnd in self.mesh.internal_boundaries
-        ]
+        pts_for_interp = space
+        self.internal_boundaries = self.mesh.internal_boundaries
 
         # Set first_dim_pts to edges for nicer plotting
-        self.first_dim_pts = edges * length_scale
+        self.first_dim_pts = edges
 
         # set up interpolation
         if len(self.t_pts) == 1:
@@ -362,19 +354,12 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        first_length_scale = self.get_spatial_scale(
-            self.first_dimension, self.domain[0]
-        )
-        first_dim_pts_for_interp = first_dim_pts * first_length_scale
-
-        second_length_scale = self.get_spatial_scale(
-            self.second_dimension, self.domains["secondary"][0]
-        )
-        second_dim_pts_for_interp = second_dim_pts * second_length_scale
+        first_dim_pts_for_interp = first_dim_pts
+        second_dim_pts_for_interp = second_dim_pts
 
         # Set pts to edges for nicer plotting
-        self.first_dim_pts = first_dim_edges * first_length_scale
-        self.second_dim_pts = second_dim_edges * second_length_scale
+        self.first_dim_pts = first_dim_edges
+        self.second_dim_pts = second_dim_edges
 
         # set up interpolation
         if len(self.t_pts) == 1:
@@ -422,8 +407,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol * self.get_spatial_scale("y", "current collector")
-        self.second_dim_pts = z_sol * self.get_spatial_scale("z", "current collector")
+        self.first_dim_pts = y_sol
+        self.second_dim_pts = z_sol
 
         # set up interpolation
         if len(self.t_pts) == 1:
@@ -494,23 +479,6 @@ class ProcessedVariable(object):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
-
-    def get_spatial_scale(self, name, domain):
-        """Returns the spatial scale for a named spatial variable"""
-        try:
-            if name == "y" and domain == "current collector":
-                return self.length_scales["current collector y"]
-            elif name == "z" and domain == "current collector":
-                return self.length_scales["current collector z"]
-            else:
-                return self.length_scales[domain]
-        except KeyError:
-            if self.warn:  # pragma: no cover
-                pybamm.logger.warning(
-                    "No length scale set for {}. "
-                    "Using default of 1 [m].".format(domain)
-                )
-            return 1
 
     @property
     def data(self):

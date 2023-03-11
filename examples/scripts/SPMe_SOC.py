@@ -69,8 +69,8 @@ for l_n in thicknesses:
         sol = model.default_solver.solve(model, t_eval)
         xpext = sol["X-averaged positive electrode extent of lithiation"]
         xnext = sol["X-averaged negative electrode extent of lithiation"]
-        xpsurf = sol["X-averaged positive particle surface concentration"]
-        xnsurf = sol["X-averaged negative particle surface concentration"]
+        xpsurf = sol["X-averaged positive particle surface concentration [mol.m-3]"]
+        xnsurf = sol["X-averaged negative particle surface concentration [mol.m-3]"]
         time = sol["Time [h]"]
         # Coulomb counting
         time_secs = sol["Time [s]"].entries

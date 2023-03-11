@@ -27,8 +27,6 @@ class Broadcast(pybamm.SpatialOperator):
         Domain(s) of the symbol after broadcasting
     name : str
         name of the node
-
-    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child, domains, name=None):
@@ -65,8 +63,6 @@ class PrimaryBroadcast(Broadcast):
         Primary domain for broadcast. This will become the domain of the symbol
     name : str
         name of the node
-
-    **Extends:** :class:`Broadcast`
     """
 
     def __init__(self, child, broadcast_domain, name=None):
@@ -187,8 +183,6 @@ class SecondaryBroadcast(Broadcast):
         one position.
     name : str
         name of the node
-
-    **Extends:** :class:`Broadcast`
     """
 
     def __init__(self, child, broadcast_domain, name=None):
@@ -313,8 +307,6 @@ class TertiaryBroadcast(Broadcast):
         `quaternary` domain of the symbol.
     name : str
         name of the node
-
-    **Extends:** :class:`Broadcast`
     """
 
     def __init__(self, child, broadcast_domain, name=None):

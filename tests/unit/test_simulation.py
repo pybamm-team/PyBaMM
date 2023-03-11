@@ -26,21 +26,21 @@ class TestSimulation(unittest.TestCase):
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        for val in list(sim.model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        V = sim.model.variables["Voltage [V]"]
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
 
         sim.set_parameters()
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        for val in list(sim.model_with_set_params.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        V = sim.model_with_set_params.variables["Voltage [V]"]
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
         # Make sure model is unchanged
         self.assertNotEqual(sim.model, model)
-        for val in list(model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        V = model.variables["Voltage [V]"]
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
 
         self.assertEqual(sim.submesh_types, model.default_submesh_types)
         self.assertEqual(sim.var_pts, model.default_var_pts)
@@ -54,11 +54,9 @@ class TestSimulation(unittest.TestCase):
         sim.build()
         self.assertFalse(sim._mesh is None)
         self.assertFalse(sim._disc is None)
-        for val in list(sim.built_model.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            # skip test for scalar variables (e.g. discharge capacity)
-            if val.size > 1:
-                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+        V = sim.built_model.variables["Voltage [V]"]
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Matrix))
 
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -150,25 +148,24 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         sim.step(dt)  # 1 step stores first two points
-        tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[1], dt)
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt / tau)
-        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[2], 2 * dt)
 
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
-        self.assertEqual(sim.solution.t[0], 2 * dt / tau)
-        self.assertEqual(sim.solution.t[1], 3 * dt / tau)
+        self.assertEqual(sim.solution.t[0], 2 * dt)
+        self.assertEqual(sim.solution.t[1], 3 * dt)
 
         # Start from saved solution
         sim.step(
@@ -177,8 +174,8 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt / tau)
-        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[2], 2 * dt)
 
     def test_solve_with_initial_soc(self):
         model = pybamm.lithium_ion.SPM()
@@ -199,9 +196,8 @@ class TestSimulation(unittest.TestCase):
             comment="#",
             header=None,
         ).to_numpy()
-        timescale = param.evaluate(model.timescale)
         current_interpolant = pybamm.Interpolant(
-            drive_cycle[:, 0], drive_cycle[:, 1], timescale * pybamm.t
+            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
         param["Current function [A]"] = current_interpolant
         sim = pybamm.Simulation(model, parameter_values=param)
@@ -232,11 +228,10 @@ class TestSimulation(unittest.TestCase):
         sim.step(
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first two points
-        tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[1], dt)
         np.testing.assert_array_equal(
             sim.solution.all_inputs[0]["Current function [A]"], 1
         )
@@ -246,8 +241,8 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt / tau)
-        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[2], 2 * dt)
         np.testing.assert_array_equal(
             sim.solution.all_inputs[1]["Current function [A]"], 2
         )
@@ -366,10 +361,8 @@ class TestSimulation(unittest.TestCase):
             header=None,
         ).to_numpy()
 
-        timescale = param.evaluate(model.timescale)
-
         current_interpolant = pybamm.Interpolant(
-            drive_cycle[:, 0], drive_cycle[:, 1], timescale * pybamm.t
+            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
 
         param["Current function [A]"] = current_interpolant
@@ -380,8 +373,7 @@ class TestSimulation(unittest.TestCase):
 
         # check solution is returned at the times in the data
         sim.solve()
-        tau = sim.model.timescale.evaluate()
-        np.testing.assert_array_almost_equal(sim.solution.t, time_data / tau)
+        np.testing.assert_array_almost_equal(sim.solution.t, time_data)
 
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
@@ -430,15 +422,11 @@ class TestSimulation(unittest.TestCase):
 
         # tets list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
-        np.testing.assert_array_almost_equal(
-            sim.solution.t * sim.solution.timescale_eval, np.linspace(0, 10, 100)
-        )
+        np.testing.assert_array_almost_equal(sim.solution.t, np.linspace(0, 10, 100))
 
     def test_battery_model_with_input_height(self):
         parameter_values = pybamm.ParameterValues("Marquis2019")
-        # Pass the "timescale" option since we are making electrode height an input
-        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
-        model = pybamm.lithium_ion.SPM({"timescale": timescale})
+        model = pybamm.lithium_ion.SPM()
         parameter_values.update({"Electrode height [m]": "[input]"})
         # solve model for 1 minute
         t_eval = np.linspace(0, 60, 11)

@@ -22,13 +22,11 @@ class Linear(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        prefactor = ne / (2 * (1 + self.param.Theta * T))
-        return 2 * u * j0 * prefactor * eta_r
+        Feta_RT = self.param.F * eta_r / (self.param.R * T)
+        return 2 * u * j0 * (ne * 0.5 * Feta_RT)

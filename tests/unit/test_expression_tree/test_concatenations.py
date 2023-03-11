@@ -125,6 +125,16 @@ class TestConcatenations(TestCase):
         conc = pybamm.concatenation(a, b)
         self.assertEqual(conc.reference, 3)
 
+        a.bounds = (0, 1)
+        with self.assertRaisesRegex(
+            ValueError, "Cannot concatenate symbols with different bounds"
+        ):
+            pybamm.concatenation(a, b)
+
+        b.bounds = (0, 1)
+        conc = pybamm.concatenation(a, b)
+        self.assertEqual(conc.bounds, (0, 1))
+
     def test_concatenation_simplify(self):
         # Primary broadcast
         var = pybamm.Variable("var", "current collector")

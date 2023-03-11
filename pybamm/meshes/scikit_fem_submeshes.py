@@ -24,8 +24,6 @@ class ScikitSubMesh2D(SubMesh):
     tabs : dict, optional
         A dictionary that contains information about the size and location of
         the tabs
-
-    **Extends:"": :class:`pybamm.SubMesh`
     """
 
     def __init__(self, edges, coord_sys, tabs):
@@ -159,8 +157,6 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     npts : dict
         A dictionary that contains the number of points to be used on each
         spatial variable
-
-    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts):
@@ -213,8 +209,6 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         can only be "top". Default is "top".
     stretch : float, optional
         The factor (alpha) which appears in the exponential. Default is 2.3.
-
-    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts, side="top", stretch=2.3):
@@ -275,8 +269,6 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
     npts : dict
         A dictionary that contains the number of points to be used on each
         spatial variable
-
-    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts):
@@ -327,8 +319,6 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     z_edges : array_like
         The array of points which correspond to the edges in the z direction
         of the mesh.
-
-    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts, y_edges=None, z_edges=None):

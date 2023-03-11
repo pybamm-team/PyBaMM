@@ -75,7 +75,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
@@ -278,7 +278,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
 def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
@@ -606,7 +606,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 2.28,
-        "Typical current [A]": 2.28,
         "Current function [A]": 2.28,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -691,7 +690,6 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 1080.2,
         "Separator thermal conductivity [W.m-1.K-1]": 0.334,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
         "Thermodynamic factor": dlnf_dlnc_Ai2020,

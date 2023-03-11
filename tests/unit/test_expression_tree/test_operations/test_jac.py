@@ -283,7 +283,9 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
 
-        phi_s = pybamm.standard_variables.phi_s_n
+        phi_s = pybamm.Variable(
+            "Negative electrode potential [V]", domain="negative electrode"
+        )
         i = pybamm.grad(phi_s)
 
         inner = pybamm.inner(2, i)

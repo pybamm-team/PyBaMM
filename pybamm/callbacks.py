@@ -146,8 +146,6 @@ class LoggingCallback(Callback):
     ----------
     logfile : str, optional
         Where to send the log output. If None, uses pybamm's logger.
-
-    **Extends:** :class:`pybamm.callbacks.Callback`
     """
 
     def __init__(self, logfile=None):
