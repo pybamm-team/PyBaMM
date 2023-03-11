@@ -164,10 +164,8 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             if name == "1 + dlnf/dlnc":
                 raise ValueError(
-                    "parameter '1 + dlnf/dlnc' is depreciated"
-                    + " and has been changed to "
-                    + "Thermodynamic factor"
-                    ""
+                    "parameter '1 + dlnf/dlnc' has been renamed to "
+                    "'Thermodynamic factor'"
                 )
         self.assertEqual(
             str(context.exception),
