@@ -159,6 +159,22 @@ class TestParameterValues(unittest.TestCase):
                 {"Negative electrode LAM constant propotional term": 1}
             )
 
+    def test_parameter_deprecation(self):
+        name = "1 + dlnf/dlnc"
+        with self.assertRaises(ValueError) as context:
+            if name == "1 + dlnf/dlnc":
+                raise ValueError(
+                    "parameter '1 + dlnf/dlnc' is depreciated"
+                    + " and has been changed to "
+                    + "Thermodynamic factor"
+                    ""
+                )
+        self.assertEqual(
+            str(context.exception),
+            "parameter '1 + dlnf/dlnc' is depreciated"
+            + "and has been changed to Thermodynamic factor",
+        )
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
         # process parameter

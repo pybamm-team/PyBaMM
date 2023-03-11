@@ -320,9 +320,9 @@ class ParameterValues:
             # specific check for depreciated parameter "1 + dlnf/dlnc"
             if name == "1 + dlnf/dlnc":
                 raise ValueError(
-                    "parameter '1 + dlnf/dlnc' is depreciated"
+                    "parameter '1 + dlnf/dlnc' is depreciated "
                     + "and has been changed to "
-                    "Thermodynamic factor"
+                    + "Thermodynamic factor"
                     ""
                 )
             # if no conflicts, update, loading functions and data if they are specified
