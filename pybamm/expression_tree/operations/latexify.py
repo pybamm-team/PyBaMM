@@ -276,9 +276,8 @@ class Latexify:
         param_list = list(dict.fromkeys(param_list))
         var_list = list(dict.fromkeys(var_list))
         # Add Parameters and Variables to the list
-        eqn_list.append(sympy.Symbol(r"\\ \textbf{Variables}"))
+        eqn_list.append(sympy.Symbol(r"\\ \textbf{Parameters and Variables}"))
         eqn_list.extend(var_list)
-        eqn_list.append(sympy.Symbol(r"\\ \textbf{Parameters}"))
         eqn_list.extend(param_list)
 
         # Split list with new lines

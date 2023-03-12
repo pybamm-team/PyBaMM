@@ -34,7 +34,7 @@ class TestBaseParameters(unittest.TestCase):
     def test__setattr__(self):
         # domain gets added as a subscript
         param = pybamm.GeometricParameters()
-        self.assertEqual(param.n.L.print_name, r"L_n")
+        self.assertEqual(param.n.L.print_name, r"L_{\mathrm{n}}")
 
 
 if __name__ == "__main__":

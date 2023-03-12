@@ -30,17 +30,17 @@ class TestLatexify(unittest.TestCase):
         # Test voltage equation name
         self.assertIn("Voltage [V]", func_spme)
 
-        # Test partial derivative in boundary conditions
-        self.assertIn("partial r}", func_spme)
+        # Test derivative in boundary conditions
+        self.assertIn(r"\nabla", func_spme)
 
         # Test boundary conditions range
-        self.assertIn("quad r =", func_spme)
+        self.assertIn("r =", func_spme)
 
         # Test derivative in equations
         self.assertIn("frac{d}{d t}", func_spme)
 
         # Test rhs geometry ranges
-        self.assertIn("quad 0 < r < ", func_spme)
+        self.assertIn("0 < r < ", func_spme)
 
         # Test initial conditions
         self.assertIn("; t=0", func_spme)
