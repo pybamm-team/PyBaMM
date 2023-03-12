@@ -1,0 +1,120 @@
+[
+    {
+        "name": "latest",
+        "version": "latest",
+        "url": "https://pybamm.readthedocs.io/en/latest/"
+    },
+    {
+        "name": "stable",
+        "version": "stable",
+        "url": "https://pybamm.readthedocs.io/en/stable/"
+    },
+    {
+        "version": "v23.2",
+        "url": "https://pybamm.readthedocs.io/en/v23.2/"
+    },
+    {
+        "version": "v23.1",
+        "url": "https://pybamm.readthedocs.io/en/v23.1/"
+    },
+    {
+        "version": "v22.12",
+        "url": "https://pybamm.readthedocs.io/en/v22.12/"
+    },
+    {
+        "version": "v22.11.1",
+        "url": "https://pybamm.readthedocs.io/en/v22.11.1/"
+    },
+    {
+        "version": "v22.11",
+        "url": "https://pybamm.readthedocs.io/en/v22.11/"
+    },
+    {
+        "version": "v22.10",
+        "url": "https://pybamm.readthedocs.io/en/v22.10/"
+    },
+    {
+        "version": "v22.9",
+        "url": "https://pybamm.readthedocs.io/en/v22.9/"
+    },
+    {
+        "version": "v22.8",
+        "url": "https://pybamm.readthedocs.io/en/v22.8/"
+    },
+    {
+        "version": "v22.7",
+        "url": "https://pybamm.readthedocs.io/en/v22.7/"
+    },
+    {
+        "version": "v22.6",
+        "url": "https://pybamm.readthedocs.io/en/v22.6/"
+    },
+    {
+        "version": "v22.5",
+        "url": "https://pybamm.readthedocs.io/en/v22.5/"
+    },
+    {
+        "version": "v22.4",
+        "url": "https://pybamm.readthedocs.io/en/v22.4/"
+    },
+    {
+        "version": "v22.3",
+        "url": "https://pybamm.readthedocs.io/en/v22.3/"
+    },
+    {
+        "version": "v22.2",
+        "url": "https://pybamm.readthedocs.io/en/v22.3/"
+    },
+    {
+        "version": "v22.1",
+        "url": "https://pybamm.readthedocs.io/en/v22.1/"
+    },
+    {
+        "version": "v21.12",
+        "url": "https://pybamm.readthedocs.io/en/v21.12/"
+    },
+    {
+        "version": "v21.11",
+        "url": "https://pybamm.readthedocs.io/en/v21.11/"
+    },
+    {
+        "version": "v21.10",
+        "url": "https://pybamm.readthedocs.io/en/v21.10/"
+    },
+    {
+        "version": "v21.9",
+        "url": "https://pybamm.readthedocs.io/en/v21.9/"
+    },
+    {
+        "version": "v21.08",
+        "url": "https://pybamm.readthedocs.io/en/v21.08/"
+    },
+    {
+        "version": "v0.4.0",
+        "url": "https://pybamm.readthedocs.io/en/v0.4.0/"
+    },
+    {
+        "version": "v0.3.0",
+        "url": "https://pybamm.readthedocs.io/en/v0.3.0/"
+    },
+    {
+        "version": "v0.2.3",
+        "url": "https://pybamm.readthedocs.io/en/v0.2.3/"
+    },
+    {
+        "version": "v0.2.2",
+        "url": "https://pybamm.readthedocs.io/en/v0.2.2/"
+    },
+    {
+        "version": "v0.2.1",
+        "url": "https://pybamm.readthedocs.io/en/v0.2.1/"
+    },
+    {
+        "version": "v0.2.0",
+        "url": "https://pybamm.readthedocs.io/en/v0.2.0/"
+    },
+    {
+        "version": "v0.1.0",
+        "url": "https://pybamm.readthedocs.io/en/v0.1.0/"
+    }
+]
