@@ -579,7 +579,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/83979298?v=4",
       "profile": "https://github.com/jeromtom",
       "contributions": [
-        "doc"
+        "doc",
+        "code",
+        "test"
       ]
     },
     {
