@@ -148,7 +148,7 @@ class LithiumIonParameters(BaseParameters):
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        return (2 * (1 - self.t_plus(c_e, T))) * (self.one_plus_dlnf_dlnc(c_e, T))
+        return (2 * (1 - self.t_plus(c_e, T))) * (self.thermodynamic_factor(c_e, T))
 
     def chiRT_over_Fc(self, c_e, T):
         """
@@ -164,10 +164,10 @@ class LithiumIonParameters(BaseParameters):
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
-    def one_plus_dlnf_dlnc(self, c_e, T):
+    def thermodynamic_factor(self, c_e, T):
         """Thermodynamic factor"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
-        return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
+        return pybamm.FunctionParameter("Thermodynamic factor", inputs)
 
     def D_e(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
