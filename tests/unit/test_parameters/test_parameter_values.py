@@ -165,7 +165,7 @@ class TestParameterValues(unittest.TestCase):
     def test_parameter_rename(self):
         with self.assertRaisesRegex(
             ValueError,
-            "parameter '1 \+ dlnf/dlnc' has been renamed" " to 'Thermodynamic factor'",
+            "parameter '1 \+ dlnf/dlnc' has been renamed to 'Thermodynamic factor'",
         ):
             name = "1 + dlnf/dlnc"
             if name == "1 + dlnf/dlnc":

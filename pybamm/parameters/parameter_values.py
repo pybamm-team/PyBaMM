@@ -317,7 +317,7 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
-            # specific check for depreciated parameter "1 + dlnf/dlnc"
+            # specific check for renamed parameter "1 + dlnf/dlnc"
             if name == "1 + dlnf/dlnc":
                 raise ValueError(
                     "parameter '1 + dlnf/dlnc' has been renamed to "
