@@ -159,20 +159,10 @@ class TestParameterValues(unittest.TestCase):
             pybamm.ParameterValues(
                 {"Negative electrode LAM constant propotional term": 1}
             )
-
-    # The + character in "1 + dlnf/dlnc" is appended with a backslash (\+),
-    # since + has other meanings in regex
-    def test_parameter_rename(self):
-        with self.assertRaisesRegex(
-            ValueError,
-            "parameter '1 \+ dlnf/dlnc' has been renamed to 'Thermodynamic factor'",
-        ):
-            name = "1 + dlnf/dlnc"
-            if name == "1 + dlnf/dlnc":
-                raise ValueError(
-                    "parameter '1 + dlnf/dlnc' has been renamed to "
-                    "'Thermodynamic factor'"
-                )
+            # The + character in "1 + dlnf/dlnc" is appended with a backslash (\+),
+            # since + has other meanings in regex
+        with self.assertRaisesRegex(ValueError, "Thermodynamic factor"):
+            pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})

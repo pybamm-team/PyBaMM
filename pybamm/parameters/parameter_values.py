@@ -317,12 +317,6 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
-            # specific check for renamed parameter "1 + dlnf/dlnc"
-            if name == "1 + dlnf/dlnc":
-                raise ValueError(
-                    "parameter '1 + dlnf/dlnc' has been renamed to "
-                    "'Thermodynamic factor'"
-                )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
@@ -400,6 +394,11 @@ class ParameterValues:
                     f"The parameter '{param}' has been renamed to "
                     "'... proportional term [s-1]', and its value should now be divided"
                     "by 3600 to get the same results as before."
+                )
+            # specific check for renamed parameter "1 + dlnf/dlnc"
+            if "1 + dlnf/dlnc" in param:
+                raise ValueError(
+                    f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
                 )
 
     def process_model(self, unprocessed_model, inplace=True):
