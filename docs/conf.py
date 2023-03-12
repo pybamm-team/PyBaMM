@@ -138,7 +138,6 @@ html_theme_options = {
     ],
     "switcher": {
         "version_match": release,
-        # make sure to update this file when releasing a new version
         "json_url": "source/_static/versions.json",
     },
     # turn to False to not fail build if json_url is not found
