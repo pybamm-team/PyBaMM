@@ -164,8 +164,8 @@ class LithiumIonParameters(BaseParameters):
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
-    def one_plus_dlnf_dlnc_dimensional(self, c_e, T):
-        """Thermodynamic factor (dimensionless)"""
+    def thermodynamic_factor(self, c_e, T):
+        """Thermodynamic factor"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("thermodynamic_factor", inputs)
 
