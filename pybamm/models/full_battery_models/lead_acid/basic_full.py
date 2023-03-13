@@ -24,9 +24,6 @@ class BasicFull(BaseModel):
     .. [2] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
            battery simulations from porous-electrode theory: Part II. Asymptotic
            analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382..
-
-
-    **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, name="Basic full model"):

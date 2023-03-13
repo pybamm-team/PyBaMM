@@ -19,8 +19,6 @@ class Geometry(dict):
 
        {"negative electrode": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}}
 
-    **Extends**: :class:`dict`
-
     Parameters
     ----------
 

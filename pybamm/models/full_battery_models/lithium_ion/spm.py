@@ -22,8 +22,6 @@ class SPM(BaseModel):
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
            derivation of a single particle model with electrolyte”. Journal of The
            Electrochemical Society, 166(15):A3693–A3706, 2019
-
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, options=None, name="Single Particle Model", build=True):

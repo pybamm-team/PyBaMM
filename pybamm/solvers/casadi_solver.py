@@ -11,8 +11,6 @@ from scipy.interpolate import interp1d
 class CasadiSolver(pybamm.BaseSolver):
     """Solve a discretised model, using CasADi.
 
-    **Extends**: :class:`pybamm.BaseSolver`
-
     Parameters
     ----------
     mode : str

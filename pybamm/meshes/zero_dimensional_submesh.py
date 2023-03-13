@@ -20,8 +20,6 @@ class SubMesh0D(SubMesh):
     npts : dict, optional
         Number of points to be used. Included for compatibility with other meshes,
         but ignored by this mesh class
-
-    **Extends:"": :class:`pybamm.SubMesh`
     """
 
     def __init__(self, position, npts=None):

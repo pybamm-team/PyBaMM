@@ -18,9 +18,6 @@ class BaseModel(BaseElectrolyteConductivity):
         The domain in which the model holds
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param, domain, options=None):
@@ -227,8 +224,6 @@ class FullAlgebraic(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
     def __init__(self, param, domain, options=None):
@@ -263,8 +258,6 @@ class FullDifferential(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
     def __init__(self, param, domain, options=None):

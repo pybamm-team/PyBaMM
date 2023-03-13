@@ -24,9 +24,6 @@ class Integrated(BaseElectrolyteConductivity):
     .. [1] F. Brosa Planella, M. Sheikh, and W. D. Widanage, “Systematic derivation and
            validation of reduced thermal-electrochemical models for lithium-ion
            batteries using asymptotic methods.” arXiv preprint, 2020.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
-
     """
 
     def __init__(self, param, domain=None, options=None):

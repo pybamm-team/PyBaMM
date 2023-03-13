@@ -50,6 +50,7 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "myst_parser",
+    "sphinx_extend_parent",
 ]
 
 

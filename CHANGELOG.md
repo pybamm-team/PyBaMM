@@ -11,6 +11,10 @@
 
 - Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 
+## Optimizations
+
+- Migrated to [Lychee](https://github.com/lycheeverse/lychee-action) workflow for checking URLs [#2734](https://github.com/pybamm-team/PyBaMM/pull/2734)
+
 ## Breaking changes
 
 - Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Open-circuit voltage [V]" is calculated from bulk particle concentrations instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))

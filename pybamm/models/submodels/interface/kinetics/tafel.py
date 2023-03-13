@@ -25,8 +25,6 @@ class ForwardTafel(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):

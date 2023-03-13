@@ -22,7 +22,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     Returns
     -------
     :class:`pybamm.Symbol`
-        1 + dlnf/dlnc
+        Thermodynamic factor
     """
     T_ref = Parameter("Reference temperature [K]")
     t_plus = Parameter("Cation transference number")

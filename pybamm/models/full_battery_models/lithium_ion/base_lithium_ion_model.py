@@ -25,9 +25,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
-
-    **Extends:** :class:`pybamm.BaseBatteryModel`
-
     """
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
