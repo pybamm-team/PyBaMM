@@ -60,6 +60,11 @@ class TestMPM(unittest.TestCase):
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
+    def test_current_sigmoid(self):
+        options = {"open circuit potential": "current sigmoid"}
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
     def test_necessary_options(self):
         options = {"particle size": "single"}
         with self.assertRaises(pybamm.OptionError):

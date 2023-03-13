@@ -849,14 +849,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Derivation of extrapolation formula can be found at:
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
-
             if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Dirichlet"):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child][symbol.side][0]
 
             elif symbol.side == "left":
-
                 if extrap_order == "linear":
                     # to find value at x* use formula:
                     # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
@@ -876,7 +874,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive = pybamm.Scalar(0)
 
                 elif extrap_order == "quadratic":
-
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
@@ -903,9 +900,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif symbol.side == "right":
-
                 if extrap_order == "linear":
-
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
@@ -928,7 +923,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
                         additive = pybamm.Scalar(0)
                 elif extrap_order == "quadratic":
-
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
@@ -963,14 +957,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
-
             if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Neumann"):
                 # just use the value from the bc: f'(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child][symbol.side][0]
 
             elif symbol.side == "left":
-
                 if extrap_order == "linear":
                     # f'(x*) = (f_2 - f_1) / dx1
                     sub_matrix = (1 / dx1) * csr_matrix(
@@ -979,7 +971,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
 
                 elif extrap_order == "quadratic":
-
                     a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
                     b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
                     c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
@@ -992,7 +983,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif symbol.side == "right":
-
                 if extrap_order == "linear":
                     # use formula:
                     # f'(x*) = (f_N - f_Nm1) / dxNm1

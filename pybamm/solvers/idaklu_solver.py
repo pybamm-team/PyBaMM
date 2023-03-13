@@ -52,11 +52,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # print statistics of the solver after every solve
                 "print_stats": False,
 
-                # jacobian form, can be "none", "dense", "sparse", "matrix-free"
+                # jacobian form, can be "none", "dense",
+                # "banded", "sparse", "matrix-free"
                 "jacobian": "sparse",
 
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
-                # "SUNLinSol_Dense", "SUNLinSol_SPBCGS",
+                # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
                 # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
                 "linear_solver": "SUNLinSol_KLU",
 
@@ -89,7 +90,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         extrap_tol=None,
         options=None,
     ):
-
         # set default options,
         # (only if user does not supply)
         default_options = {
@@ -275,7 +275,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     - cj_casadi * mass_matrix
                 ],
             )
+
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
+            jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
+            jac_bw_upper = jac_times_cjmass_sparsity.bw_upper()
             jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
             jac_times_cjmass_colptrs = np.array(
                 jac_times_cjmass_sparsity.colind(), dtype=np.int64
@@ -448,6 +451,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             sensfn = idaklu.generate_function(sensfn.serialize())
 
             self._setup = {
+                "jac_bandwidth_upper": jac_bw_upper,
+                "jac_bandwidth_lower": jac_bw_lower,
                 "rhs_algebraic": rhs_algebraic,
                 "jac_times_cjmass": jac_times_cjmass,
                 "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,
@@ -471,6 +476,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup["jac_times_cjmass_colptrs"],
                 self._setup["jac_times_cjmass_rowvals"],
                 self._setup["jac_times_cjmass_nnz"],
+                jac_bw_lower,
+                jac_bw_upper,
                 self._setup["jac_rhs_algebraic_action"],
                 self._setup["mass_action"],
                 self._setup["sensfn"],

@@ -21,7 +21,6 @@ class SpatialMethod:
     """
 
     def __init__(self, options=None):
-
         self.options = {"extrapolation": {"order": "linear", "use bcs": False}}
 
         # update double-layered dict

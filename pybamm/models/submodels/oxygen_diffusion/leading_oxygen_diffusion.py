@@ -33,7 +33,6 @@ class LeadingOrder(BaseModel):
         return self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
 
     def get_coupled_variables(self, variables):
-
         N_ox = pybamm.FullBroadcast(
             0,
             ["negative electrode", "separator", "positive electrode"],
@@ -45,7 +44,6 @@ class LeadingOrder(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-
         param = self.param
 
         c_ox_av = variables["X-averaged oxygen concentration"]

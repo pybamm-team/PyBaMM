@@ -65,7 +65,6 @@ class TestElectrodeSOH(unittest.TestCase):
         self.assertAlmostEqual(sol["Q"].data[0], Q, places=5)
 
     def test_error(self):
-
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Ai2020")
 
@@ -212,7 +211,6 @@ class TestGetInitialSOC(unittest.TestCase):
         self.assertAlmostEqual(V, 4.2)
 
     def test_error(self):
-
         parameter_values = pybamm.ParameterValues("Chen2020")
 
         with self.assertRaisesRegex(
