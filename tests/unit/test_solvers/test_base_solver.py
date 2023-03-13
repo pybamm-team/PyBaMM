@@ -70,7 +70,7 @@ class TestBaseSolver(unittest.TestCase):
         # Check stepping with step size too small
         dt = 1e-9
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Step time must be at least 1 us"
+            pybamm.SolverError, "Step time must be at least 1.000 us"
         ):
             solver.step(None, model, dt)
 

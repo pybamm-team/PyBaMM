@@ -1085,9 +1085,12 @@ class BaseSolver(object):
                     "Cannot step empty model, use `pybamm.DummySolver` instead"
                 )
 
-        # Make sure dt is positive
-        if dt <= 1e-6:
-            raise pybamm.SolverError("Step time must be at least 1 us")
+        # Make sure dt is greater than the offset
+        t_start_offset = pybamm.settings.t_start_offset
+        if dt <= t_start_offset:
+            raise pybamm.SolverError(
+                f"Step time must be at least {pybamm.TimerTime(t_start_offset)}"
+            )
 
         t_start = old_solution.t[-1]
         t_end = t_start + dt
@@ -1101,7 +1104,7 @@ class BaseSolver(object):
             # to avoid repeated times in the solution
             # from having the same time at the end of the previous step and
             # the start of the next step
-            t_start_shifted = t_start + pybamm.settings.t_start_offset
+            t_start_shifted = t_start + t_start_offset
             t_eval[0] = t_start_shifted
 
         # Set timer
