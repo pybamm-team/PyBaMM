@@ -138,7 +138,7 @@ html_theme_options = {
     ],
     "switcher": {
         "version_match": release,
-        "json_url": "source/_static/versions.json",
+        "json_url": "https://pybamm.readthedocs.io/en/latest/_static/versions.json",  # noqa: E501
     },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
