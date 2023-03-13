@@ -38,7 +38,7 @@ h3 {
 
 /* Style the active version button.
 
-- dev: orange
+- latest: orange
 - stable: green
 - old, PR: red
 
@@ -48,24 +48,23 @@ Wong, B. Points of view: Color blindness.
 Nat Methods 8, 441 (2011). https://doi.org/10.1038/nmeth.1618
 */
 
-/* If the active version has the name "dev", style it orange */
-#version_switcher_button[data-active-version-name*="dev"] {
+/* If the active version has the name "latest", style it orange */
+.version-switcher__button[data-active-version-name*="latest"] {
   background-color: #e69f00;
   border-color: #e69f00;
   color: #000000;
 }
 
 /* green for `stable` */
-#version_switcher_button[data-active-version-name*="stable"] {
+.version-switcher__button[data-active-version-name*="stable"] {
   background-color: #009e73;
   border-color: #009e73;
 }
 
 /* red for `old` */
-#version_switcher_button:not(
-    [data-active-version-name*="stable"],
-    [data-active-version-name*="dev"],
-    [data-active-version-name=""]
+.version-switcher__button:not(
+    [data-active-version-name*="latest"],
+    [data-active-version-name*="stable"]
   ) {
   background-color: #980f0f;
   border-color: #980f0f;
