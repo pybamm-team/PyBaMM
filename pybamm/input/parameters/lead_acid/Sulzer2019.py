@@ -313,7 +313,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 5650.0,
         "Cation transference number": 0.7,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Partial molar volume of water [m3.mol-1]": 1.75e-05,
         "Partial molar volume of anions [m3.mol-1]": 3.15e-05,
         "Partial molar volume of cations [m3.mol-1]": 1.35e-05,

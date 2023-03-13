@@ -16,7 +16,7 @@ class TestPrintName(unittest.TestCase):
 
         # Test superscripts
         self.assertEqual(
-            param.n.prim.U_init.print_name, r"U_{\mathrm{n}}^{\mathrm{init}}"
+            param.n.prim.c_init.print_name, r"c_{\mathrm{n}}^{\mathrm{init}}"
         )
 
         # Test subscripts

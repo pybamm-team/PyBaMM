@@ -413,7 +413,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     Returns
     -------
     :class:`pybamm.Symbol`
-        1 + dlnf/dlnc
+        Thermodynamic factor
     """
     T_ref = 298.15
     t_plus = pybamm.Parameter("Cation transference number")
@@ -692,7 +692,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
-        "1 + dlnf/dlnc": dlnf_dlnc_Ai2020,
+        "Thermodynamic factor": dlnf_dlnc_Ai2020,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ai2020,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ai2020,
         # experiment

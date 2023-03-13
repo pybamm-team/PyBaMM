@@ -4,7 +4,7 @@
 PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "current_density_with_time": r"i_{\mathrm{cell}}",
-    "one_plus_dlnf_dlnc": r"\left(1+\frac{dlnf}{dlnc}\right)",
+    "thermodynamic_factor": r"\left(1+\frac{dlnf}{dlnc}\right)",
     "t_plus": r"t_{\mathrm{+}}",
 }
 
