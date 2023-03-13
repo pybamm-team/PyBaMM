@@ -142,7 +142,8 @@ html_theme_options = {
     },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
-    "navbar_end": ["version-switcher"],
+    # for dark mode toggle, version switcher, and social media links
+    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
     "use_edit_page_button": True,
 }
 
