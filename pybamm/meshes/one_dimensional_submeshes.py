@@ -22,8 +22,6 @@ class SubMesh1D(SubMesh):
     tabs : dict, optional
         A dictionary that contains information about the size and location of
         the tabs
-
-    **Extends:"": :class:`pybamm.SubMesh`
     """
 
     def __init__(self, edges, coord_sys, tabs=None):
@@ -85,8 +83,6 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-
-    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts):
@@ -151,8 +147,6 @@ class Exponential1DSubMesh(SubMesh1D):
         The factor (alpha) which appears in the exponential. If side is "symmetric"
         then the default stretch is 1.15. If side is "left" or "right" then the
         default stretch is 2.3.
-
-    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, side="symmetric", stretch=None):
@@ -230,8 +224,6 @@ class Chebyshev1DSubMesh(SubMesh1D):
     tabs : dict, optional
         A dictionary that contains information about the size and location of
         the tabs
-
-    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, tabs=None):
@@ -268,8 +260,6 @@ class UserSupplied1DSubMesh(SubMesh1D):
         is npts, and the number of edges is npts+1.
     edges : array_like
         The array of points which correspond to the edges of the mesh.
-
-    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, edges=None):
@@ -333,7 +323,6 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         this submesh. The default is 2, the same as the default for the
         SpectralVolume class. If the orders of the submesh and the
         Spectral Volume method don't match, the method will fail.
-    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, edges=None, order=2):

@@ -395,6 +395,11 @@ class ParameterValues:
                     "'... proportional term [s-1]', and its value should now be divided"
                     "by 3600 to get the same results as before."
                 )
+            # specific check for renamed parameter "1 + dlnf/dlnc"
+            if "1 + dlnf/dlnc" in param:
+                raise ValueError(
+                    f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.

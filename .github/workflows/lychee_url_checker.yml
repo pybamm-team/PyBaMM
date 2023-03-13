@@ -1,0 +1,55 @@
+name: Check URLs with Lychee
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+  schedule:
+    # Run everyday at 3 am UTC
+    - cron: "0 3 * * *"
+
+jobs:
+  linkChecker:
+    runs-on: ubuntu-latest
+    steps:
+
+      # cache Lychee results to avoid hitting rate limits  
+      - name: Restore lychee cache
+        uses: actions/cache@v3
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: cache-lychee-
+
+      # check URLs with Lychee
+      - uses: actions/checkout@v3
+
+      # use stable version for now to avoid breaking changes
+      - name: Lychee URL checker
+        uses: lycheeverse/lychee-action@v1.6.1
+        with:
+          # arguments with file types to check
+          args: >-
+            --cache
+            --no-progress
+            --max-cache-age 2d
+            --timeout 10
+            --max-retries 5
+            --skip-missing
+            --exclude-loopback
+            --exclude https://twitter.com/pybamm_
+            --exclude "https://doi\.org|www.sciencedirect\.com/*"
+            --accept 200,429
+            --exclude-path ./CHANGELOG.md 
+            --exclude-path ./scripts/update_version.py
+            './**/*.rst'
+            './**/*.md'
+            './**/*.py'
+            './**/*.ipynb'
+          # fail the action on broken links
+          fail: true
+        env:
+          # to be used in case rate limits are surpassed
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

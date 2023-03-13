@@ -26,8 +26,6 @@ class Plating(BasePlating):
     .. [2] SEJ O'Kane, W Ai, G Madabattula, D Alonso-Alvarez, R Timms, V Sulzer,
            JS Edge, B Wu, GJ Offer and M Marinescu. "Lithium-ion battery degradation:
            how to model it". Physical Chemistry: Chemical Physics, 24:7909, 2022
-
-    **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 
     def __init__(self, param, x_average, options):

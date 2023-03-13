@@ -33,8 +33,6 @@ class CrackPropagation(BaseMechanics):
     .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
            Battery cycle life prediction with coupled chemical degradation and
            fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
-
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
     def __init__(self, param, domain, x_average, options, phase="primary"):

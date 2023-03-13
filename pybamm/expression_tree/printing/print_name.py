@@ -6,7 +6,9 @@ import re
 PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "eps_c_e": r"\epsilon{c_e}",
-    "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
+    "thermodynamic_factor": r"1+\frac{dlnf}{dlnc}",
+    "negative_particle_concentration_scale": r"c_{n}^{max}",
+    "positive_particle_concentration_scale": r"c_{p}^{max}",
 }
 
 GREEK_LETTERS = [

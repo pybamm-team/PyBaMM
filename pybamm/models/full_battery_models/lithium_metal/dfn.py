@@ -23,8 +23,6 @@ class DFN(LithiumIonDFN):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
-
-    **Extends:** :class:`pybamm.lithium_ion.DFN`
     """
 
     def __init__(

@@ -6,21 +6,28 @@ import pybamm
 
 class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle mechanics models.
+    Base class for particle mechanics models, referenced from [1]_ and [2]_.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : dict, optional
-        Dictionary of either the electrode for "positive" or "Nagative"
+        Dictionary of either the electrode for "positive" or "Negative"
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    **Extends:** :class:`pybamm.BaseSubModel`
+    References
+    ----------
+    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
+           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
+           Cells. Journal of The Electrochemical Society, 167(1), 013512.
+    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+           Battery cycle life prediction with coupled chemical degradation and
+           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
     """
 
     def __init__(self, param, domain, options, phase="primary"):
@@ -69,16 +76,18 @@ class BaseMechanics(pybamm.BaseSubModel):
         # Averages
         stress_r_surf_av = pybamm.x_average(stress_r_surf)
         stress_t_surf_av = pybamm.x_average(stress_t_surf)
+        disp_surf_av = pybamm.x_average(disp_surf)
 
         variables.update(
             {
-                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
                 f"{Domain} particle surface radial stress [Pa]": stress_r_surf,
+                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
                 f"{Domain} particle surface displacement [m]": disp_surf,
                 f"X-averaged {domain} particle surface "
                 "radial stress [Pa]": stress_r_surf_av,
                 f"X-averaged {domain} particle surface "
                 "tangential stress [Pa]": stress_t_surf_av,
+                f"X-averaged {domain} particle surface displacement [m]": disp_surf_av,
                 f"{Domain} electrode thickness change [m]": electrode_thickness_change,
             }
         )

@@ -17,8 +17,6 @@ class Full(BaseModel):
         Either 'negative' or 'positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface_utilisation.BaseModel`
     """
 
     def get_fundamental_variables(self):

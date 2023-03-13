@@ -30,8 +30,6 @@ class OneDimensionalX(BaseThermal):
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
            Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
            of The Electrochemical Society, 167(14):140513, 2020
-
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
     def __init__(self, param, options=None):

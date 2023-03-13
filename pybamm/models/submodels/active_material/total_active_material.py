@@ -15,8 +15,6 @@ class Total(pybamm.BaseSubModel):
         The domain of the model either 'Negative' or 'Positive'
     options : dict
         Additional options to pass to the model
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options):

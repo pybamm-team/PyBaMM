@@ -1023,7 +1023,7 @@ def get_parameter_values():
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number"
         "": electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019,
-        "1 + dlnf/dlnc": electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
+        "Thermodynamic factor": electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
         "Electrolyte diffusivity [m2.s-1]"
         "": electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019,
         "Electrolyte conductivity [S.m-1]"

@@ -32,8 +32,6 @@ class Array(pybamm.Symbol):
         deprecated.
     entries_string : str
         String representing the entries (slow to recalculate when copying)
-
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(

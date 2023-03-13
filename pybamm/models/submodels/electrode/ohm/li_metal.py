@@ -32,8 +32,6 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         The domain of the submodel, can be "negative" or "positive"
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
     """
 
     def get_fundamental_variables(self):
@@ -115,8 +113,6 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
     """
 
     def get_coupled_variables(self, variables):

@@ -50,6 +50,7 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "myst_parser",
+    "sphinx_extend_parent",
 ]
 
 
@@ -135,12 +136,14 @@ html_theme_options = {
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
     ],
-    # Add light/dark mode and documentation version switcher:
-    # "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
-    # "switcher": {
-    #     "version_match": switcher_version,
-    #     "json_url": "https://numpy.org/doc/_static/versions.json",
-    # },
+    "switcher": {
+        "version_match": release,
+        "json_url": "https://pybamm.readthedocs.io/en/latest/_static/versions.json",  # noqa: E501
+    },
+    # turn to False to not fail build if json_url is not found
+    "check_switcher": True,
+    # for dark mode toggle, version switcher, and social media links
+    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
     "use_edit_page_button": True,
 }
 

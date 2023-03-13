@@ -477,7 +477,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Typical lithium ion diffusivity [m2.s-1]": 5.34e-10,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_PeymanMPM,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_PeymanMPM,
