@@ -9,15 +9,15 @@ import uuid
 import pybamm
 from pybamm.expression_tree.operations.latexify import Latexify
 
-model_dfn = pybamm.lithium_ion.DFN()
-func_dfn = str(model_dfn.latexify())
-
-model_spme = pybamm.lithium_ion.SPMe()
-func_spme = str(model_spme.latexify())
-
 
 class TestLatexify(unittest.TestCase):
     def test_latexify(self):
+        model_dfn = pybamm.lithium_ion.DFN()
+        func_dfn = str(model_dfn.latexify())
+
+        model_spme = pybamm.lithium_ion.SPMe()
+        func_spme = str(model_spme.latexify())
+
         # Test docstring
         self.assertEqual(pybamm.BaseModel.latexify.__doc__, Latexify.__doc__)
 
@@ -66,9 +66,20 @@ class TestLatexify(unittest.TestCase):
         self.assertIn("coefficient", func_spme)
         self.assertIn("diffusivity", func_spme)
 
+    def test_latexify_other_variables(self):
+        model_spme = pybamm.lithium_ion.SPMe()
+        func_spme = str(
+            model_spme.latexify(
+                output_variables=["Electrolyte concentration [mol.m-3]"]
+            )
+        )
+        self.assertIn("Electrolyte concentration [mol.m-3]", func_spme)
+
     @unittest.skipIf(platform.system() in ["Windows", "Darwin"], "Only run for Linux")
     def test_sympy_preview(self):
         # Test sympy preview
+        model_spme = pybamm.lithium_ion.SPMe()
+
         for ext in ["png", "jpg", "pdf"]:
             filename = f"{uuid.uuid4()}.{ext}"
             model_spme.latexify(filename)

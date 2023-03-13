@@ -75,6 +75,12 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertEqual(param["Positive electrode porosity"], 0.32)
 
+        # chemistry kwarg removed
+        with self.assertRaisesRegex(
+            ValueError, "'chemistry' keyword argument has been deprecated"
+        ):
+            pybamm.ParameterValues(None, chemistry="lithium-ion")
+
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(
