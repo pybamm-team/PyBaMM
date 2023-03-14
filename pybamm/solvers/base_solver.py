@@ -1086,10 +1086,10 @@ class BaseSolver(object):
                 )
 
         # Make sure dt is greater than the offset
-        t_start_offset = pybamm.settings.t_start_offset
-        if dt <= t_start_offset:
+        step_start_offset = pybamm.settings.step_start_offset
+        if dt <= step_start_offset:
             raise pybamm.SolverError(
-                f"Step time must be at least {pybamm.TimerTime(t_start_offset)}"
+                f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
             )
 
         t_start = old_solution.t[-1]
@@ -1104,7 +1104,7 @@ class BaseSolver(object):
             # to avoid repeated times in the solution
             # from having the same time at the end of the previous step and
             # the start of the next step
-            t_start_shifted = t_start + t_start_offset
+            t_start_shifted = t_start + step_start_offset
             t_eval[0] = t_start_shifted
 
         # Set timer

@@ -512,12 +512,13 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         sol2 = sim2.solve()
         np.testing.assert_array_almost_equal(
-            sol["Voltage [V]"].data, sol2["Voltage [V]"].data
+            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, decimal=5
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
             np.testing.assert_array_almost_equal(
                 sol.cycles[0].steps[idx1]["Voltage [V]"].data,
                 sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
+                decimal=5,
             )
 
     def test_all_empty_solution_errors(self):
