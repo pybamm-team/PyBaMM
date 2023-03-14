@@ -150,19 +150,25 @@ class Experiment:
         ]
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
-        self.operating_conditions = self._set_next_timestamp([
-            self.read_string(cond, drive_cycles) for cond in operating_conditions
-            # for cond, next_step in zip(
-            #     operating_conditions, operating_conditions[1:] + [None]
-            # )
-        ])
+        self.operating_conditions = self._set_next_timestamp(
+            [
+                self.read_string(cond, drive_cycles)
+                for cond in operating_conditions
+                # for cond, next_step in zip(
+                #     operating_conditions, operating_conditions[1:] + [None]
+                # )
+            ]
+        )
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
         self.initial_timestamp = self.operating_conditions[0]["current timestamp"]
 
-        if self.operating_conditions[0]["next timestamp"] is not None and self.initial_timestamp is None:
+        if (
+            self.operating_conditions[0]["next timestamp"] is not None
+            and self.initial_timestamp is None
+        ):
             raise ValueError(
                 "When using timestamped experiments, the first step must have a "
                 "timestamp to define the initial time."
@@ -587,7 +593,7 @@ class Experiment:
             op["next timestamp"] = next_timestamp
             if op["current timestamp"]:
                 next_timestamp = op["current timestamp"]
-        
+
         operating_conditions.reverse()
 
         return operating_conditions
