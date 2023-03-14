@@ -160,6 +160,9 @@ class Experiment:
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
+        self.initial_timestamp = self.operating_conditions[0]["current timestamp"]
+        # TODO raise error if there is a timestamp later on but no initial timestamp (remind me if I forget)
+
     def __str__(self):
         return str(self.operating_conditions_cycles)
 
@@ -203,8 +206,8 @@ class Experiment:
             if len(tags) == 0:
                 tags = None
 
-            current_timestamp = self._process_timestamp(cond)
-            next_timestamp = self._process_timestamp(next_step)
+            current_timestamp, cond = self._process_timestamp(cond)
+            next_timestamp, _ = self._process_timestamp(next_step)
 
             outputs = {
                 "type": "CCCV",
@@ -226,8 +229,8 @@ class Experiment:
             return outputs
 
         # Read time stamp
-        current_timestamp = self._process_timestamp(cond)
-        next_timestamp = self._process_timestamp(next_step)
+        current_timestamp, cond = self._process_timestamp(cond)
+        next_timestamp, _ = self._process_timestamp(next_step)
 
         # Read tags
         if " [" in cond:
@@ -550,14 +553,17 @@ class Experiment:
 
     def _process_timestamp(self, cond):
         if cond is None:
-            return None
+            return None, None
         elif cond[0] != "[":
-            return None
+            return None, cond
         else:
-            timestamp = cond[cond.find("[") + 1 : cond.find("]")]
+            idx_start = cond.find("[")
+            idx_end = cond.find("]")
+            timestamp = cond[idx_start + 1 : idx_end]
+            cond = cond[idx_end + 2:]
             for format in self.datetime_formats:
                 try:
-                    return datetime.strptime(timestamp, format)
+                    return datetime.strptime(timestamp, format), cond
                 except ValueError:
                     pass
 
