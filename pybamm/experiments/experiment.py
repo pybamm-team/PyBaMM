@@ -150,17 +150,23 @@ class Experiment:
         ]
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
-        self.operating_conditions = [
-            self.read_string(cond, drive_cycles, next_step)
-            for cond, next_step in zip(
-                operating_conditions, operating_conditions[1:] + [None]
-            )
-        ]
+        self.operating_conditions = self._set_next_timestamp([
+            self.read_string(cond, drive_cycles) for cond in operating_conditions
+            # for cond, next_step in zip(
+            #     operating_conditions, operating_conditions[1:] + [None]
+            # )
+        ])
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
         self.initial_timestamp = self.operating_conditions[0]["current timestamp"]
+
+        if self.operating_conditions[0]["next timestamp"] is not None and self.initial_timestamp is None:
+            raise ValueError(
+                "When using timestamped experiments, the first step must have a "
+                "timestamp to define the initial time."
+            )
         # TODO raise error if there is a timestamp later on but no initial timestamp
         # (remind me if I forget)
 
@@ -173,7 +179,7 @@ class Experiment:
     def __repr__(self):
         return "pybamm.Experiment({!s})".format(self)
 
-    def read_string(self, cond, drive_cycles, next_step):
+    def read_string(self, cond, drive_cycles):
         """
         Convert a string to a dictionary of the right format
 
@@ -191,8 +197,8 @@ class Experiment:
             # If the string contains " then ", then this is a two-step CCCV experiment
             # and we need to split it into two strings
             cond_CC, cond_CV = cond.split(" then ")
-            op_CC = self.read_string(cond_CC, drive_cycles, None)
-            op_CV = self.read_string(cond_CV, drive_cycles, next_step)
+            op_CC = self.read_string(cond_CC, drive_cycles)
+            op_CV = self.read_string(cond_CV, drive_cycles)
 
             if op_CC["temperature"] != op_CV["temperature"]:
                 raise ValueError(
@@ -208,7 +214,7 @@ class Experiment:
                 tags = None
 
             current_timestamp, cond = self._process_timestamp(cond)
-            next_timestamp, _ = self._process_timestamp(next_step)
+            # next_timestamp, _ = self._process_timestamp(next_step)
 
             outputs = {
                 "type": "CCCV",
@@ -220,7 +226,7 @@ class Experiment:
                 "string": cond,
                 "events": op_CV["events"],
                 "current timestamp": current_timestamp,
-                "next timestamp": next_timestamp,
+                "next timestamp": None,
                 "tags": tags,
             }
             if "Current input [A]" in op_CC:
@@ -231,7 +237,7 @@ class Experiment:
 
         # Read time stamp
         current_timestamp, cond = self._process_timestamp(cond)
-        next_timestamp, _ = self._process_timestamp(next_step)
+        # next_timestamp, _ = self._process_timestamp(next_step)
 
         # Read tags
         if " [" in cond:
@@ -327,7 +333,7 @@ class Experiment:
             "string": unprocessed_cond,
             "events": events,
             "current timestamp": current_timestamp,
-            "next timestamp": next_timestamp,
+            "next timestamp": None,
             "tags": tags,
         }
 
@@ -572,3 +578,16 @@ class Experiment:
                 f"The timestamp [{timestamp}] does not match any "
                 "of the supported formats."
             )
+
+    def _set_next_timestamp(self, operating_conditions):
+        operating_conditions.reverse()
+        next_timestamp = None
+
+        for op in operating_conditions:
+            op["next timestamp"] = next_timestamp
+            if op["current timestamp"]:
+                next_timestamp = op["current timestamp"]
+        
+        operating_conditions.reverse()
+
+        return operating_conditions
