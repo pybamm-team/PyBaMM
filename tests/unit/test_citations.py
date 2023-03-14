@@ -146,39 +146,39 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
         pybamm.current_collector.BasePotentialPair(param=None)
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
         pybamm.current_collector.EffectiveResistance()
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
         pybamm.current_collector.AlternativeEffectiveResistance2D()
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
         pybamm.thermal.pouch_cell.CurrentCollector1D(param=None)
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
         pybamm.thermal.pouch_cell.CurrentCollector2D(param=None)
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.thermal.Lumped(param=None)
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.thermal.OneDimensionalX(param=None)
-        self.assertIn("Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
     def test_subramanian_2005(self):
         # Test that calling relevant bits of code adds the right paper to citations
@@ -287,14 +287,14 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        self.assertNotIn("2020:Sripad", citations._papers_to_cite)
         pybamm.kinetics.Marcus(None, None, None, None, None)
-        self.assertIn("Sripad2020", citations._papers_to_cite)
+        self.assertIn("2020:Sripad", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        self.assertNotIn("2020:Sripad", citations._papers_to_cite)
         pybamm.kinetics.MarcusHushChidsey(None, None, None, None, None)
-        self.assertIn("Sripad2020", citations._papers_to_cite)
+        self.assertIn("2020:Sripad", citations._papers_to_cite)
 
     def test_parameter_citations(self):
         citations = pybamm.citations

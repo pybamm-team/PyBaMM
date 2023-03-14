@@ -25,10 +25,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
     References
     ----------
-    .. [1] VR Subramanian, VD Diwakar and D Tapriyal. “Efficient Macro-Micro Scale
-           Coupled Modeling of Batteries”. Journal of The Electrochemical Society,
-           152(10):A2002-A2008, 2005
-
+    :cite:t:`2005:Subramanian`
+    .. bibliography::
     **Extends:** :class:`pybamm.particle.PolynomialProfile`
     """
 

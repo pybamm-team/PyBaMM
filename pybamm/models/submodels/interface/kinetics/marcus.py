@@ -30,7 +30,7 @@ class Marcus(BaseKinetics):
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options, phase)
-        pybamm.citations.register("Sripad2020")
+        pybamm.citations.register("2020:Sripad")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         mhc_lambda = self.phase_param.mhc_lambda
@@ -48,10 +48,8 @@ class MarcusHushChidsey(BaseKinetics):
 
     References
     ----------
-    .. [1] Sripad, S., Korff, D., DeCaluwe, S. C., & Viswanathan, V. (2020). "Kinetics
-           of lithium electrodeposition and stripping".
-           [The Journal of Chemical Physics](https://doi.org/10.1063/5.0023771),
-           153(19), 194701.
+    :cite:t:`2020:Sripad`
+    .. bibliography::
 
     Parameters
     ----------
@@ -72,7 +70,7 @@ class MarcusHushChidsey(BaseKinetics):
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options, phase)
-        pybamm.citations.register("Sripad2020")
+        pybamm.citations.register("2020:Sripad")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         mhc_lambda = self.phase_param.mhc_lambda
