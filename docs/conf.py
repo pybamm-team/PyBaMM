@@ -26,7 +26,7 @@ copyright = "2018-2023, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "23.1"
+version = "23.2"
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -50,6 +50,7 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "myst_parser",
+    "sphinx_extend_parent",
     "sphinxcontrib.bibtex",
 ]
 bibtex_bibfiles = ["refs.bib"]
@@ -109,8 +110,23 @@ html_theme_options = {
         "image_light": "pybamm_logo.png",
         "image_dark": "pybamm_logo.png",
     },
-    "github_url": "https://github.com/pybamm-team/pybamm",
-    "twitter_url": "https://twitter.com/pybamm_",
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pybamm-team/pybamm",
+            "icon": "fa-brands fa-square-github",
+        },
+        {
+            "name": "Twitter",
+            "url": "https://twitter.com/pybamm_",
+            "icon": "fa-brands fa-square-twitter",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/pybamm/",
+            "icon": "fa-solid fa-box",
+        },
+    ],
     "collapse_navigation": True,
     "external_links": [
         {
@@ -122,12 +138,14 @@ html_theme_options = {
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
     ],
-    # Add light/dark mode and documentation version switcher:
-    # "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
-    # "switcher": {
-    #     "version_match": switcher_version,
-    #     "json_url": "https://numpy.org/doc/_static/versions.json",
-    # },
+    "switcher": {
+        "version_match": release,
+        "json_url": "https://pybamm.readthedocs.io/en/latest/_static/versions.json",  # noqa: E501
+    },
+    # turn to False to not fail build if json_url is not found
+    "check_switcher": True,
+    # for dark mode toggle, version switcher, and social media links
+    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
     "use_edit_page_button": True,
 }
 

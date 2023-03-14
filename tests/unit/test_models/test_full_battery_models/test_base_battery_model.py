@@ -28,7 +28,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
-'open circuit potential': 'single' (possible: ['single', 'current sigmoid'])
+'open-circuit potential': 'single' (possible: ['single', 'current sigmoid'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -45,7 +45,6 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
-'timescale': 'default'
 """  # noqa: E501
 
 
@@ -60,10 +59,9 @@ class TestBaseBatteryModel(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         # Process expression
-        c = pybamm.Parameter("Negative electrode thickness [m]") * pybamm.Variable(
-            "X-averaged negative particle concentration",
-            domain="negative particle",
-            auxiliary_domains={"secondary": "current collector"},
+        c = (
+            pybamm.Parameter("Negative electrode thickness [m]")
+            * model.variables["X-averaged negative particle concentration [mol.m-3]"]
         )
         processed_c = model.process_parameters_and_discretise(c, parameter_values, disc)
         self.assertIsInstance(processed_c, pybamm.Multiplication)
@@ -71,16 +69,16 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertIsInstance(processed_c.right, pybamm.StateVector)
         # Process flux manually and check result against flux computed in particle
         # submodel
-        c_n = model.variables["X-averaged negative particle concentration"]
+        c_n = model.variables["X-averaged negative particle concentration [mol.m-3]"]
         T = pybamm.PrimaryBroadcast(
-            model.variables["X-averaged negative electrode temperature"],
+            model.variables["X-averaged negative electrode temperature [K]"],
             ["negative particle"],
         )
         D = model.param.n.prim.D(c_n, T)
         N = -D * pybamm.grad(c_n)
 
         flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
-        flux_2 = model.variables["X-averaged negative particle flux"]
+        flux_2 = model.variables["X-averaged negative particle flux [mol.m-2.s-1]"]
         param_flux_2 = parameter_values.process_symbol(flux_2)
         disc_flux_2 = disc.process_symbol(param_flux_2)
         self.assertEqual(flux_1, disc_flux_2)
@@ -92,13 +90,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(model.summary_variables, ["var"])
         with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
             model.summary_variables = ["bad var"]
-
-    def test_timescale_lengthscale_errors(self):
-        model = pybamm.BaseBatteryModel()
-        with self.assertRaisesRegex(NotImplementedError, "Timescale cannot be"):
-            model.timescale = 1
-        with self.assertRaisesRegex(NotImplementedError, "Length scales cannot be"):
-            model.length_scales = {}
 
     def test_default_geometry(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
@@ -401,10 +392,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         a = pybamm.Variable("a")
         model.algebraic = {a: a - 1}
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
-
-    def test_timescale(self):
-        model = pybamm.BaseModel()
-        self.assertEqual(model.timescale.evaluate(), 1)
 
     def test_option_type(self):
         # no entry gets default options

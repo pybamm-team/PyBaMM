@@ -2,7 +2,6 @@
 # Tests for the standard parameters
 #
 import pybamm
-
 import unittest
 
 
@@ -13,9 +12,6 @@ class TestGeometricParameters(unittest.TestCase):
         L_s = geo.s.L
         L_p = geo.p.L
         L_x = geo.L_x
-        l_n = geo.n.l
-        l_s = geo.s.l
-        l_p = geo.p.l
 
         parameter_values = pybamm.ParameterValues(
             values={
@@ -32,10 +28,6 @@ class TestGeometricParameters(unittest.TestCase):
         self.assertEqual(
             (L_n_eval + L_s_eval + L_p_eval).evaluate(), L_x_eval.evaluate()
         )
-        l_n_eval = parameter_values.process_symbol(l_n)
-        l_s_eval = parameter_values.process_symbol(l_s)
-        l_p_eval = parameter_values.process_symbol(l_p)
-        self.assertAlmostEqual((l_n_eval + l_s_eval + l_p_eval).evaluate(), 1)
 
 
 if __name__ == "__main__":

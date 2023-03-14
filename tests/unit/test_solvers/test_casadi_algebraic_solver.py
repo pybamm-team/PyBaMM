@@ -56,7 +56,6 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
-            length_scales = {}
             rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y**2 + 1])
             bounds = (np.array([-np.inf]), np.array([np.inf]))
@@ -204,7 +203,6 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var", domain="negative electrode")
         model = pybamm.BaseModel()
-        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
         model.algebraic = {var: (var - p)}
@@ -244,7 +242,6 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input_1D_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         param = pybamm.InputParameter("param")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
@@ -270,7 +267,6 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input_1D_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         param = pybamm.InputParameter("param", "negative electrode")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
@@ -329,7 +325,6 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var", domain="negative electrode")
         model = pybamm.BaseModel()
-        model._length_scales = {"negative electrode": pybamm.Scalar(1)}
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
         model.algebraic = {var: (var - p)}

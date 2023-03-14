@@ -62,7 +62,7 @@ dist/
 coverage.xml
 htmlcov/
 
-# virtual enviroment
+# virtual environment
 env/
 venv/
 venv3.5/
@@ -74,6 +74,7 @@ lib64
 share/
 pyvenv.cfg
 .vscode
+.ruff_cache/
 
 # sundials
 sundials

@@ -23,9 +23,6 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     .. [2] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
            better estimability of electrode-specific state of health: Decoding the cell
            expansion. Journal of Power Sources, 427, 101-111.
-
-
-    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(self, working_electrode, name="Electrode-specific SOH model"):
@@ -41,11 +38,11 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         if working_electrode == "negative":  # pragma: no cover
             raise NotImplementedError
         elif working_electrode == "positive":
-            U_w = param.p.prim.U_dimensional
+            U_w = param.p.prim.U
             Q = Q_w * (x_100 - x_0)
 
-        V_max = param.voltage_high_cut_dimensional
-        V_min = param.voltage_low_cut_dimensional
+        V_max = param.voltage_high_cut
+        V_min = param.voltage_low_cut
 
         self.algebraic = {
             x_100: U_w(x_100, T_ref) - V_max,

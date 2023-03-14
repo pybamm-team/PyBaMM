@@ -32,10 +32,7 @@ class StandardOutputComparison(object):
         for solution in self.solutions:
             np.testing.assert_array_equal(t_common, solution.t[:max_index])
 
-        # Get timescale
-        timescale = self.solutions[0].timescale_eval
-
-        return t_common * timescale
+        return t_common
 
     def run_test_class(self, ClassName, skip_first_timestep=False):
         """Run all tests from a class 'ClassName'"""
@@ -64,7 +61,7 @@ class BaseOutputComparison(object):
         self.t = time
         self.solutions = solutions
 
-    def compare(self, var, tol=1e-2):
+    def compare(self, var, atol=0, rtol=0.02):
         """Compare variables from different models"""
         # Get variable for each model
         model_variables = [solution[var] for solution in self.solutions]
@@ -76,17 +73,14 @@ class BaseOutputComparison(object):
         if var0.dimensions >= 2:
             spatial_pts[var0.second_dimension] = var0.second_dim_pts
 
-        # Calculate tolerance based on the value of var0
-        maxvar0 = np.max(abs(var0(self.t, **spatial_pts)))
-        if maxvar0 < 1e-14:
-            decimal = -int(np.log10(tol))
-        else:
-            decimal = -int(np.log10(tol * maxvar0))
         # Check outputs are close to each other
         for model_var in model_variables[1:]:
             np.testing.assert_equal(var0.dimensions, model_var.dimensions)
-            np.testing.assert_array_almost_equal(
-                model_var(self.t, **spatial_pts), var0(self.t, **spatial_pts), decimal
+            np.testing.assert_allclose(
+                model_var(self.t, **spatial_pts),
+                var0(self.t, **spatial_pts),
+                atol=atol,
+                rtol=rtol,
             )
 
 
@@ -98,12 +92,18 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        self.compare("X-averaged open circuit voltage")
+        self.compare("Open-circuit voltage [V]")
         # Currents
-        self.compare("X-averaged negative electrode interfacial current density")
-        self.compare("X-averaged positive electrode interfacial current density")
+        self.compare(
+            "X-averaged negative electrode volumetric "
+            "interfacial current density [A.m-3]"
+        )
+        self.compare(
+            "X-averaged positive electrode volumetric "
+            "interfacial current density [A.m-3]"
+        )
         # Concentration
-        self.compare("X-averaged electrolyte concentration")
+        self.compare("X-averaged electrolyte concentration [mol.m-3]")
         # Porosity
         self.compare("X-averaged negative electrode porosity")
         self.compare("X-averaged separator porosity")
@@ -118,25 +118,25 @@ class VariablesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Concentrations
-        self.compare("Electrolyte concentration")
+        self.compare("Electrolyte concentration [mol.m-3]")
         # self.compare("Reduced cation flux")
         # Potentials
         # Some of these are 'average' but aren't expected to be the same across all
         # models
-        self.compare("X-averaged reaction overpotential")
-        self.compare("X-averaged negative electrode open circuit potential")
-        self.compare("X-averaged positive electrode open circuit potential")
-        self.compare("Terminal voltage")
-        self.compare("X-averaged solid phase ohmic losses")
-        self.compare("Negative electrode reaction overpotential")
-        self.compare("Positive electrode reaction overpotential")
-        self.compare("Negative electrode potential")
-        self.compare("Positive electrode potential")
-        self.compare("Electrolyte potential")
+        self.compare("X-averaged reaction overpotential [V]")
+        self.compare("X-averaged negative electrode open-circuit potential [V]")
+        self.compare("X-averaged positive electrode open-circuit potential [V]")
+        self.compare("Voltage [V]")
+        self.compare("X-averaged solid phase ohmic losses [V]")
+        self.compare("Negative electrode reaction overpotential [V]")
+        self.compare("Positive electrode reaction overpotential [V]")
+        self.compare("Negative electrode potential [V]", atol=1e-5)
+        self.compare("Positive electrode potential [V]")
+        self.compare("Electrolyte potential [V]")
         # Currents
-        self.compare("Exchange current density")
-        self.compare("Negative electrode current density")
-        self.compare("Positive electrode current density")
+        self.compare("Exchange current density [A.m-2]")
+        self.compare("Negative electrode current density [A.m-2]", atol=1e-10)
+        self.compare("Positive electrode current density [A.m-2]", atol=1e-10)
 
 
 class ParticleConcentrationComparison(BaseOutputComparison):
@@ -144,10 +144,10 @@ class ParticleConcentrationComparison(BaseOutputComparison):
         super().__init__(time, solutions)
 
     def test_all(self):
-        self.compare("Negative particle concentration")
-        self.compare("Positive particle concentration")
-        self.compare("Negative particle flux")
-        self.compare("Positive particle flux")
+        self.compare("Negative particle concentration [mol.m-3]")
+        self.compare("Positive particle concentration [mol.m-3]")
+        self.compare("Negative particle flux [mol.m-2.s-1]", rtol=0.05)
+        self.compare("Positive particle flux [mol.m-2.s-1]", rtol=0.05)
 
 
 class PorosityComparison(BaseOutputComparison):

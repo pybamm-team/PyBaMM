@@ -90,7 +90,7 @@ def get_parameter_values():
         "Cell-jig heat transfer coefficient [W/K]": 10,
         "Jig thermal mass [J/K]": 500,
         "Jig-air heat transfer coefficient [W/K]": 10,
-        "Open circuit voltage [V]": ocv,
+        "Open-circuit voltage [V]": ocv,
         "R0 [Ohm]": r0,
         "Element-1 initial overpotential [V]": 0,
         "R1 [Ohm]": r1,

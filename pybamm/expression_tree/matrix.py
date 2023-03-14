@@ -10,8 +10,6 @@ import pybamm
 class Matrix(pybamm.Array):
     """
     Node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
-
-    **Extends:** :class:`Array`
     """
 
     def __init__(

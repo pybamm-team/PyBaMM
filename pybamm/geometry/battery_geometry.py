@@ -30,29 +30,31 @@ def battery_geometry(
     """
     if options is None or type(options) == dict:
         options = pybamm.BatteryModelOptions(options)
-
-    geo = pybamm.geometric_parameters
-    l_n = geo.n.l
-    l_s = geo.s.l
-    l_n_l_s = l_n + l_s
+    geo = pybamm.GeometricParameters(options)
+    L_n = geo.n.L
+    L_s = geo.s.L
+    L_n_L_s = L_n + L_s
     # Override print_name
-    l_n_l_s.print_name = "l_n + l_s"
+    L_n_L_s.print_name = "L_n + L_s"
 
     # Set up electrode/separator/electrode geometry
     geometry = {
-        "negative electrode": {"x_n": {"min": 0, "max": l_n}},
-        "separator": {"x_s": {"min": l_n, "max": l_n_l_s}},
-        "positive electrode": {"x_p": {"min": l_n_l_s, "max": 1}},
+        "negative electrode": {"x_n": {"min": 0, "max": L_n}},
+        "separator": {"x_s": {"min": L_n, "max": L_n_L_s}},
+        "positive electrode": {"x_p": {"min": L_n_L_s, "max": geo.L_x}},
     }
 
     # Add particle domains
     if include_particles is True:
-        zero_one = {"min": 0, "max": 1}
         for domain in ["negative", "positive"]:
             if options.electrode_types[domain] == "porous":
+                geo_domain = geo.domain_params[domain]
+                d = domain[0]
                 geometry.update(
                     {
-                        f"{domain} particle": {f"r_{domain[0]}": zero_one},
+                        f"{domain} particle": {
+                            f"r_{d}": {"min": 0, "max": geo_domain.prim.R_typ}
+                        },
                     }
                 )
                 phases = int(getattr(options, domain)["particle phases"])
@@ -60,10 +62,10 @@ def battery_geometry(
                     geometry.update(
                         {
                             f"{domain} primary particle": {
-                                f"r_{domain[0]}_prim": zero_one
+                                f"r_{d}_prim": {"min": 0, "max": geo_domain.prim.R_typ}
                             },
                             f"{domain} secondary particle": {
-                                f"r_{domain[0]}_sec": zero_one
+                                f"r_{d}_sec": {"min": 0, "max": geo_domain.sec.R_typ}
                             },
                         }
                     )
@@ -101,7 +103,7 @@ def battery_geometry(
             geometry["current collector"] = {"z": {"position": 1}}
         elif current_collector_dimension == 1:
             geometry["current collector"] = {
-                "z": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": geo.L_z},
                 "tabs": {
                     "negative": {"z_centre": geo.n.centre_z_tab},
                     "positive": {"z_centre": geo.p.centre_z_tab},
@@ -109,18 +111,18 @@ def battery_geometry(
             }
         elif current_collector_dimension == 2:
             geometry["current collector"] = {
-                "y": {"min": 0, "max": geo.l_y},
-                "z": {"min": 0, "max": geo.l_z},
+                "y": {"min": 0, "max": geo.L_y},
+                "z": {"min": 0, "max": geo.L_z},
                 "tabs": {
                     "negative": {
                         "y_centre": geo.n.centre_y_tab,
                         "z_centre": geo.n.centre_z_tab,
-                        "width": geo.n.l_tab,
+                        "width": geo.n.L_tab,
                     },
                     "positive": {
                         "y_centre": geo.p.centre_y_tab,
                         "z_centre": geo.p.centre_z_tab,
-                        "width": geo.p.l_tab,
+                        "width": geo.p.L_tab,
                     },
                 },
             }

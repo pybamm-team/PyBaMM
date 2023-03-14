@@ -33,7 +33,7 @@ def graphite_diffusivity_Kim2011(sto, T):
 
 def graphite_ocp_Kim2011(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open-circuit Potential (OCP) as a function of the stochiometry [1].
 
     References
     ----------
@@ -92,7 +92,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     i0_ref = 36  # reference exchange current density at 100% SOC
     sto = 0.36  # stochiometry at 100% SOC
     c_s_n_ref = sto * c_s_max  # reference electrode concentration
-    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
@@ -172,7 +172,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     i0_ref = 4  # reference exchange current density at 100% SOC
     sto = 0.41  # stochiometry at 100% SOC
     c_s_ref = sto * c_s_max  # reference electrode concentration
-    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
@@ -365,7 +365,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 267.467,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 158.079,
         "Nominal cell capacity [A.h]": 0.43,
-        "Typical current [A]": 0.43,
         "Current function [A]": 0.43,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -415,10 +414,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.10672,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1200.0,
         "Initial concentration in electrolyte [mol.m-3]": 1200.0,
         "Cation transference number": 0.4,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Kim2011,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Kim2011,
         # experiment

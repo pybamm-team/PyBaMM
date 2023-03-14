@@ -49,7 +49,7 @@ class TestMPM(unittest.TestCase):
         modeltest.test_all()
 
     def test_current_sigmoid_ocp(self):
-        options = {"open circuit potential": ("current sigmoid", "single")}
+        options = {"open-circuit potential": ("current sigmoid", "single")}
         model = pybamm.lithium_ion.MPM(options)
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)

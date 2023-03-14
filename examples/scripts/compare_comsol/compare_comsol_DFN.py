@@ -78,14 +78,10 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x"]
 
     # Make sure to use dimensional space
-    pybamm_x = mesh[domain].nodes * L_x
+    pybamm_x = mesh[domain].nodes
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
-    fun = pybamm.Interpolant(
-        comsol_t,
-        variable.T,
-        pybamm.t * pybamm_model.timescale.evaluate(),
-    )
+    fun = pybamm.Interpolant(comsol_t, variable.T, pybamm.t)
 
     fun.domains = {"primary": domain}
     fun.mesh = mesh[domain]
@@ -99,11 +95,7 @@ comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
 comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
 comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
-comsol_voltage = pybamm.Interpolant(
-    comsol_t,
-    comsol_variables["voltage"],
-    pybamm.t * pybamm_model.timescale.evaluate(),
-)
+comsol_voltage = pybamm.Interpolant(comsol_t, comsol_variables["voltage"], pybamm.t)
 
 comsol_voltage.mesh = None
 comsol_voltage.secondary_mesh = None
@@ -118,13 +110,11 @@ comsol_model.variables = {
     "Negative electrode potential [V]": comsol_phi_n,
     "Electrolyte potential [V]": comsol_phi_e,
     "Positive electrode potential [V]": comsol_phi_p,
-    "Terminal voltage [V]": comsol_voltage,
+    "Voltage [V]": comsol_voltage,
 }
 
 # Make new solution with same t and y
 # Update solution scales to match the pybamm model
-comsol_model.timescale_eval = pybamm_model.timescale_eval
-comsol_model.length_scales_eval = pybamm_model.length_scales_eval
 comsol_solution = pybamm.Solution(
     pybamm_solution.t, pybamm_solution.y, comsol_model, {}
 )
@@ -138,7 +128,7 @@ output_variables = [
     "Negative electrode potential [V]",
     "Electrolyte potential [V]",
     "Positive electrode potential [V]",
-    "Terminal voltage [V]",
+    "Voltage [V]",
 ]
 plot = pybamm.QuickPlot(
     [pybamm_solution, comsol_solution],

@@ -28,7 +28,6 @@ class Function(pybamm.Symbol):
         Default is "autograd".
     differentiated_function : method, optional
         The function which was differentiated to obtain this one. Default is None.
-    **Extends:** :class:`pybamm.Symbol`
     """
 
     def __init__(

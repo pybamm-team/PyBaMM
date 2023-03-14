@@ -579,7 +579,18 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/83979298?v=4",
       "profile": "https://github.com/jeromtom",
       "contributions": [
-        "doc"
+        "doc",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "BradyPlanden",
+      "name": "Brady Planden",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55357039?v=4",
+      "profile": "http://bradyplanden.github.io",
+      "contributions": [
+        "example"
       ]
     }
   ],

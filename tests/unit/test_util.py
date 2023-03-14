@@ -63,6 +63,7 @@ class TestUtil(unittest.TestCase):
                 "test2": 2,
                 "SEI current": 3,
                 "Lithium plating current": 4,
+                "A dimensional variable [m]": 5,
             }
         )
         self.assertEqual(d["test"], 1)
@@ -71,6 +72,12 @@ class TestUtil(unittest.TestCase):
 
         with self.assertRaisesRegex(KeyError, "stoichiometry"):
             d.__getitem__("Negative electrode SOC")
+
+        with self.assertRaisesRegex(KeyError, "dimensional version"):
+            d.__getitem__("A dimensional variable")
+
+        with self.assertRaisesRegex(KeyError, "open circuit voltage"):
+            d.__getitem__("Measured open circuit voltage [V]")
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
