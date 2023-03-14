@@ -161,7 +161,8 @@ class Experiment:
         self.termination = self.read_termination(termination)
 
         self.initial_timestamp = self.operating_conditions[0]["current timestamp"]
-        # TODO raise error if there is a timestamp later on but no initial timestamp (remind me if I forget)
+        # TODO raise error if there is a timestamp later on but no initial timestamp
+        # (remind me if I forget)
 
     def __str__(self):
         return str(self.operating_conditions_cycles)
