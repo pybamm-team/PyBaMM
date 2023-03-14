@@ -572,17 +572,23 @@ class TestExperiment(unittest.TestCase):
 
     def test_process_timestamp(self):
         experiment = pybamm.Experiment(["Rest for 1 hour"])
-        self.assertIsNone(experiment._process_timestamp(None))
-        self.assertIsNone(experiment._process_timestamp("No timestamp here"))
-        self.assertEqual(
-            experiment._process_timestamp("[Day 1 08:01:05] Timestamp"),
-            datetime(1900, 1, 1, 8, 1, 5),
-        )
-        self.assertEqual(
-            experiment._process_timestamp("[2019-10-08 09:43:23] Timestamp"),
-            datetime(2019, 10, 8, 9, 43, 23),
-        )
 
+        # No timestamp
+        timestamp, cond = experiment._process_timestamp("No timestamp here")
+        self.assertIsNone(timestamp)
+        self.assertEqual(cond, "No timestamp here")
+
+        # Timestamp format "Day %j %H:%M:%S"
+        timestamp, cond = experiment._process_timestamp("[Day 1 08:01:05] Timestamp")
+        self.assertEqual(timestamp, datetime(1900, 1, 1, 8, 1, 5))
+        self.assertEqual(cond, "Timestamp")
+
+        # Timestamp format "%Y-%m-%d %H:%M:%S"
+        timestamp, cond = experiment._process_timestamp("[2019-10-08 09:43:23] Timestamp")
+        self.assertEqual(timestamp, datetime(2019, 10, 8, 9, 43, 23))
+        self.assertEqual(cond, "Timestamp")
+
+        # Bad timestamp        
         with self.assertRaisesRegex(ValueError, "The timestamp"):
             experiment._process_timestamp("[bad 2019-10-08 09:43:23] Timestamp")
 
