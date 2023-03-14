@@ -17,8 +17,6 @@ class TotalSEI(pybamm.BaseSubModel):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, options, cracks=False):
@@ -34,11 +32,9 @@ class TotalSEI(pybamm.BaseSubModel):
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
             f"Negative electrode {{}}{self.reaction} volumetric "
-            "interfacial current density",
-            f"Negative electrode {{}}{self.reaction} volumetric "
             "interfacial current density [A.m-3]",
             f"X-averaged negative electrode {{}}{self.reaction} volumetric "
-            "interfacial current density",
+            "interfacial current density [A.m-3]",
             f"Loss of lithium to {{}}{self.reaction} [mol]",
             f"Loss of capacity to {{}}{self.reaction} [A.h]",
         ]:

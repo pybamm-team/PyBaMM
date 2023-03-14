@@ -52,11 +52,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # print statistics of the solver after every solve
                 "print_stats": False,
 
-                # jacobian form, can be "none", "dense", "sparse", "matrix-free"
+                # jacobian form, can be "none", "dense",
+                # "banded", "sparse", "matrix-free"
                 "jacobian": "sparse",
 
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
-                # "SUNLinSol_Dense", "SUNLinSol_SPBCGS",
+                # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
                 # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
                 "linear_solver": "SUNLinSol_KLU",
 
@@ -89,7 +90,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         extrap_tol=None,
         options=None,
     ):
-
         # set default options,
         # (only if user does not supply)
         default_options = {
@@ -125,47 +125,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
 
-    def set_atol_by_variable(self, variables_with_tols, model):
-        """
-        A method to set the absolute tolerances in the solver by state variable.
-        This method attaches a vector of tolerance to the model. (i.e. model.atol)
-
-        Parameters
-        ----------
-        variables_with_tols : dict
-            A dictionary with keys that are strings indicating the variable you
-            wish to set the tolerance of and values that are the tolerances.
-        model : :class:`pybamm.BaseModel`
-            The model that is going to be solved.
-        """
-
-        size = model.concatenated_initial_conditions.size
-        atol = self._check_atol_type(self.atol, size)
-        for var, tol in variables_with_tols.items():
-            variable = model.variables[var]
-            if isinstance(variable, pybamm.StateVector):
-                atol = self.set_state_vec_tol(atol, variable, tol)
-            else:
-                raise pybamm.SolverError("Can only set tolerances for state variables")
-
-        model.atol = atol
-
-    def set_state_vec_tol(self, atol, state_vec, tol):
-        """
-        A method to set the tolerances in the atol vector of a specific
-        state variable. This method modifies self.atol
-
-        Parameters
-        ----------
-        state_vec : :class:`pybamm.StateVector`
-            The state vector to apply to the tolerance to
-        tol: float
-            The tolerance value
-        """
-        slices = state_vec.y_slices[0]
-        atol[slices] = tol
-        return atol
-
     def _check_atol_type(self, atol, size):
         """
         This method checks that the atol vector is of the right shape and
@@ -182,21 +141,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if isinstance(atol, float):
             atol = atol * np.ones(size)
-        elif isinstance(atol, list):
-            atol = np.array(atol)
-        elif isinstance(atol, np.ndarray):
-            pass
-        else:
+        elif not isinstance(atol, np.ndarray):
             raise pybamm.SolverError(
-                "Absolute tolerances must be a numpy array, float, or list"
-            )
-
-        if atol.size != size:
-            raise pybamm.SolverError(
-                """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape as y0 ({})""".format(
-                    size
-                )
+                "Absolute tolerances must be a numpy array or float"
             )
 
         return atol
@@ -275,7 +222,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     - cj_casadi * mass_matrix
                 ],
             )
+
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
+            jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
+            jac_bw_upper = jac_times_cjmass_sparsity.bw_upper()
             jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
             jac_times_cjmass_colptrs = np.array(
                 jac_times_cjmass_sparsity.colind(), dtype=np.int64
@@ -448,6 +398,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             sensfn = idaklu.generate_function(sensfn.serialize())
 
             self._setup = {
+                "jac_bandwidth_upper": jac_bw_upper,
+                "jac_bandwidth_lower": jac_bw_lower,
                 "rhs_algebraic": rhs_algebraic,
                 "jac_times_cjmass": jac_times_cjmass,
                 "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,
@@ -471,6 +423,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup["jac_times_cjmass_colptrs"],
                 self._setup["jac_times_cjmass_rowvals"],
                 self._setup["jac_times_cjmass_nnz"],
+                jac_bw_lower,
+                jac_bw_upper,
                 self._setup["jac_rhs_algebraic_action"],
                 self._setup["mass_action"],
                 self._setup["sensfn"],

@@ -27,8 +27,8 @@ class TestLatexify(unittest.TestCase):
         # Test newline=False
         self.assertIn(r"\\", str(model_spme.latexify(newline=False)))
 
-        # Test terminal voltage equation name
-        self.assertIn("Terminal voltage [V]", func_spme)
+        # Test voltage equation name
+        self.assertIn("Voltage [V]", func_spme)
 
         # Test partial derivative in boundary conditions
         self.assertIn("partial r}", func_spme)
@@ -40,7 +40,7 @@ class TestLatexify(unittest.TestCase):
         self.assertIn("frac{d}{d t}", func_spme)
 
         # Test rhs geometry ranges
-        self.assertIn("quad 0 < r < 1", func_spme)
+        self.assertIn("quad 0 < r < ", func_spme)
 
         # Test initial conditions
         self.assertIn("; t=0", func_spme)

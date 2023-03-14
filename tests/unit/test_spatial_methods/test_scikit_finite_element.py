@@ -443,10 +443,10 @@ class TestScikitFiniteElement(unittest.TestCase):
         neg_disc = disc.process_symbol(neg)
         pos_disc = disc.process_symbol(pos)
 
-        # check integrating 1 gives correct *dimensionless* region lengths
-        perimeter = 2 * (1 + 0.8)
-        l_tab_n = 0.1 / 0.5
-        l_tab_p = 0.1 / 0.5
+        # check integrating 1 gives correct region lengths
+        perimeter = 0.4 + 0.4 + 0.5 + 0.5
+        l_tab_n = 0.1
+        l_tab_p = 0.1
         constant_y = np.ones(mesh["current collector"].npts)
         # Integral around boundary is exact
         np.testing.assert_array_almost_equal(

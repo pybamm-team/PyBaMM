@@ -22,7 +22,7 @@ class ThermalSubModel(pybamm.BaseSubModel):
         T_cell = pybamm.Variable("Cell temperature [degC]")
         T_jig = pybamm.Variable("Jig temperature [degC]")
 
-        T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
+        T_amb = self.param.T_amb(pybamm.t)
 
         Q_cell_cool = -self.param.k_cell_jig * (T_cell - T_jig)
         Q_jig_cool = -self.param.k_jig_air * (T_jig - T_amb)
@@ -42,7 +42,6 @@ class ThermalSubModel(pybamm.BaseSubModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         number_of_rc_elements = self.model_options["number of rc elements"]
         number_of_elements = number_of_rc_elements + 1
 

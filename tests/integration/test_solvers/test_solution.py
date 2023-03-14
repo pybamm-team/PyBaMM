@@ -34,19 +34,18 @@ class TestSolution(unittest.TestCase):
         step_solver = model.default_solver
         step_solution = None
         # dt should be dimensional
-        solution_times_dimensional = solution.t * model.timescale_eval
-        for t in solution_times_dimensional[1:]:
+        for t in solution.t[1:]:
             dt = t - old_t
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
-            if t == solution_times_dimensional[1]:
+            if t == solution.t[1]:
                 # Create voltage variable
-                step_solution.update("Terminal voltage")
+                step_solution.update("Voltage [V]")
             old_t = t
 
         # Check both give the same answer
         np.testing.assert_array_almost_equal(
-            solution["Terminal voltage"](solution.t[:-1] * model.timescale_eval),
-            step_solution["Terminal voltage"](solution.t[:-1] * model.timescale_eval),
+            solution["Voltage [V]"](solution.t[:-1]),
+            step_solution["Voltage [V]"](solution.t[:-1]),
             decimal=4,
         )
 

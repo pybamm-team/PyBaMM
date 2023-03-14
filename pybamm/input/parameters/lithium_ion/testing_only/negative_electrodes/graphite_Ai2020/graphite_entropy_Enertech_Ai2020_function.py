@@ -1,6 +1,6 @@
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
@@ -8,8 +8,9 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     References
     ----------
     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
-    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. # noqa
-    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES # noqa
+    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+    Lithium-Ion Pouch Cells.
+    Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES
 
     Parameters
     ----------

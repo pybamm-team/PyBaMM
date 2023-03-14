@@ -28,7 +28,6 @@ class RCElement(pybamm.BaseSubModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         T_cell = variables["Cell temperature [degC]"]
         current = variables["Current [A]"]
         soc = variables["SoC"]

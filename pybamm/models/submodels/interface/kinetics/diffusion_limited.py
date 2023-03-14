@@ -23,8 +23,6 @@ class DiffusionLimited(BaseInterface):
         :class:`pybamm.BaseBatteryModel`
     order : str
         The order of the model ("leading" or "full")
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options, order):
@@ -35,7 +33,7 @@ class DiffusionLimited(BaseInterface):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
-        delta_phi_s = variables[f"{Domain} electrode surface potential difference"]
+        delta_phi_s = variables[f"{Domain} electrode surface potential difference [V]"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
             delta_phi_s = delta_phi_s.orphans[0]
@@ -43,7 +41,7 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
@@ -75,19 +73,18 @@ class DiffusionLimited(BaseInterface):
             if self.order == "leading":
                 j_p = variables[
                     f"X-averaged positive electrode {self.reaction_name}"
-                    "interfacial current density"
+                    "interfacial current density [A.m-2]"
                 ]
-                j = -self.param.p.l * j_p / self.param.n.l
-            elif self.order in ["composite", "full"]:
+                j = -self.param.p.L * j_p / self.param.n.L
+            elif self.order == "full":
                 tor_s = variables["Separator electrolyte transport efficiency"]
-                c_ox_s = variables["Separator oxygen concentration"]
+                c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
-                    * param.curlyD_ox
+                    * param.D_ox
                     * pybamm.boundary_gradient(c_ox_s, "left")
                 )
-                N_ox_neg_sep_interface.domains = {"primary": "current collector"}
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
+                j = -N_ox_neg_sep_interface / -param.s_ox_Ox / param.n.L
 
         return j

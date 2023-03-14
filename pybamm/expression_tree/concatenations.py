@@ -15,8 +15,6 @@ class Concatenation(pybamm.Symbol):
     """
     A node in the expression tree representing a concatenation of symbols.
 
-    **Extends**: :class:`pybamm.Symbol`
-
     Parameters
     ----------
     children : iterable of :class:`pybamm.Symbol`
@@ -164,8 +162,6 @@ class NumpyConcatenation(Concatenation):
 
     Upon evaluation, equations are concatenated using numpy concatenation.
 
-    **Extends**: :class:`Concatenation`
-
     Parameters
     ----------
     children : iterable of :class:`pybamm.Symbol`
@@ -206,8 +202,6 @@ class DomainConcatenation(Concatenation):
 
     It is assumed that each child has a domain, and the final concatenated vector will
     respect the sizes and ordering of domains established in mesh keys
-
-    **Extends**: :class:`pybamm.Concatenation`
 
     Parameters
     ----------
@@ -330,8 +324,6 @@ class SparseStack(Concatenation):
     domains and uses broadcasting where appropriate, should be used whenever
     possible instead.
 
-    **Extends**: :class:`Concatenation`
-
     Parameters
     ----------
     children : iterable of :class:`Concatenation`
@@ -380,13 +372,13 @@ class ConcatenationVariable(Concatenation):
                 self._reference = children[0].reference
             else:
                 raise ValueError("Cannot concatenate symbols with different references")
-
+            if all(
+                child.bounds[0] == children[0].bounds[0] for child in children
+            ) and all(child.bounds[1] == children[0].bounds[1] for child in children):
+                self.bounds = children[0].bounds
+            else:
+                raise ValueError("Cannot concatenate symbols with different bounds")
         super().__init__(*children, name=name)
-        # Overly tight bounds, can edit later if required
-        self.bounds = (
-            np.max([child.bounds[0] for child in children]),
-            np.min([child.bounds[1] for child in children]),
-        )
 
         if not any(c._raw_print_name is None for c in children):
             print_name = intersect(

@@ -15,8 +15,6 @@ class Total(pybamm.BaseSubModel):
         The domain of the model either 'Negative' or 'Positive'
     options : dict
         Additional options to pass to the model
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options):
@@ -33,8 +31,9 @@ class Total(pybamm.BaseSubModel):
         for variable_template in [
             f"{Domain} electrode {{}}active material volume fraction",
             f"X-averaged {domain} electrode {{}}active material volume fraction",
-            f"{Domain} electrode {{}}active material volume fraction change",
-            f"X-averaged {domain} electrode {{}}active material volume fraction change",
+            f"{Domain} electrode {{}}active material volume fraction change [s-1]",
+            f"X-averaged {domain} electrode {{}}active material "
+            "volume fraction change [s-1]",
         ]:
             sumvar = sum(
                 variables[variable_template.format(phase + " ")] for phase in phases

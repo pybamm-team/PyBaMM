@@ -9,7 +9,6 @@ from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
-
     if symbol in bcs:
         if bcs[symbol][side][1] == form:
             return True
@@ -242,16 +241,6 @@ class Discretisation(object):
             model_disc
         )
 
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            if isinstance(new_scale, pybamm.Array):
-                # Convert possible arrays of length 1 to scalars
-                new_scale = pybamm.Scalar(float(new_scale.evaluate()))
-            new_length_scales[domain] = new_scale
-        model_disc._length_scales = new_length_scales
-
         # Check that resulting model makes sense
         if check_model:
             pybamm.logger.verbose("Performing model checks for {}".format(model.name))
@@ -309,8 +298,8 @@ class Discretisation(object):
             y_slices[variable].append(slice(start, end))
             y_slices_explicit[variable].append(slice(start, end))
             # Add to bounds
-            lower_bounds.extend([variable.bounds[0]] * (end - start))
-            upper_bounds.extend([variable.bounds[1]] * (end - start))
+            lower_bounds.extend([variable.bounds[0].evaluate()] * (end - start))
+            upper_bounds.extend([variable.bounds[1].evaluate()] * (end - start))
             # Increment start
             start = end
 
@@ -346,7 +335,6 @@ class Discretisation(object):
         """
 
         def boundary_gradient(left_symbol, right_symbol):
-
             pybamm.logger.debug(
                 "Calculate boundary gradient ({} and {})".format(
                     left_symbol, right_symbol
@@ -908,12 +896,15 @@ class Discretisation(object):
             # create new children without scale and reference
             # the scale and reference will be applied to the concatenation instead
             new_children = []
+            old_y_slices = self.y_slices.copy()
             for child in symbol.children:
-                child = child.create_copy()
-                child._scale = 1
-                child._reference = 0
-                child.set_id()
-                new_children.append(self.process_symbol(child))
+                child_no_scale = child.create_copy()
+                child_no_scale._scale = 1
+                child_no_scale._reference = 0
+                child_no_scale.set_id()
+                self.y_slices[child_no_scale] = self.y_slices[child]
+                new_children.append(self.process_symbol(child_no_scale))
+            self.y_slices = old_y_slices
             new_symbol = spatial_method.concatenation(new_children)
             # apply scale to the whole concatenation
             return symbol.reference + symbol.scale * new_symbol
@@ -1001,7 +992,6 @@ class Discretisation(object):
         self.check_variables(model)
 
     def check_initial_conditions(self, model):
-
         # Check initial conditions are a numpy array
         # Individual
         for var, eqn in model.initial_conditions.items():
@@ -1016,7 +1006,7 @@ class Discretisation(object):
             # Skip this check if there are input parameters in the initial conditions
             bounds = var.bounds
             if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
-                all(bounds[0] <= ic_eval) and all(ic_eval <= bounds[1])
+                all(bounds[0].value <= ic_eval) and all(ic_eval <= bounds[1].value)
             ):
                 raise pybamm.ModelError(
                     "initial condition is outside of variable bounds "
@@ -1087,9 +1077,9 @@ class Discretisation(object):
         if not isinstance(var, pybamm.Variable):
             return False
 
-        this_var_is_independent = not (var.name in all_vars_in_eqns)
-        not_in_y_slices = not (var in list(self.y_slices.keys()))
-        not_in_discretised = not (var in list(self._discretised_symbols.keys()))
+        this_var_is_independent = var.name not in all_vars_in_eqns
+        not_in_y_slices = var not in list(self.y_slices.keys())
+        not_in_discretised = var not in list(self._discretised_symbols.keys())
         is_0D = len(var.domain) == 0
         this_var_is_independent = (
             this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D

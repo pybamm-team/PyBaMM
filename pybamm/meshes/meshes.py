@@ -10,8 +10,6 @@ class Mesh(dict):
     """
     Mesh contains a list of submeshes on each subdomain.
 
-    **Extends**: dict
-
     Parameters
     ----------
 

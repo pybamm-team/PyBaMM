@@ -34,7 +34,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
 
 def nmc_ocp_Xu2019(sto):
     """
-    Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
+    Nickel Managanese Cobalt Oxide (NMC) Open-circuit Potential (OCP) as a
     function of the stochiometry, from [1].
 
     References
@@ -268,8 +268,8 @@ def get_parameter_values():
         "Electrode height [m]": 0.01,
         "Electrode width [m]": 0.0154,
         "Nominal cell capacity [A.h]": 0.0024,
-        "Typical current [A]": 0.0024,
         "Current function [A]": 0.0024,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode OCP [V]": 0.0,
         "Negative electrode conductivity [S.m-1]": 10776000.0,
@@ -303,12 +303,11 @@ def get_parameter_values():
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
         "Separator Bruggeman coefficient (electrode)": 1.5,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Valoen2005,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Valoen2005,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         # experiment
         "Ambient temperature [K]": 298.15,
         "Reference temperature [K]": 298.15,

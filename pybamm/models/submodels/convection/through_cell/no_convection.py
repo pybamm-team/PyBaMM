@@ -14,8 +14,6 @@ class NoConvection(BaseThroughCellModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
     """
 
     def __init__(self, param, options=None):
@@ -38,7 +36,6 @@ class NoConvection(BaseThroughCellModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         # Simple formula for velocity in the separator
         v_box_s = pybamm.FullBroadcast(0, "separator", "current collector")
         div_v_box_s = pybamm.FullBroadcast(0, "separator", "current collector")

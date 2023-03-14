@@ -48,6 +48,23 @@ class TestMPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_current_sigmoid_ocp(self):
+        options = {"open-circuit potential": ("current sigmoid", "single")}
+        model = pybamm.lithium_ion.MPM(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Negative electrode lithiation OCP [V]"
+                "": parameter_values["Negative electrode OCP [V]"],
+                "Negative electrode delithiation OCP [V]"
+                "": parameter_values["Negative electrode OCP [V]"],
+            },
+            check_already_exists=False,
+        )
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
+
     def test_voltage_control(self):
         options = {"operating mode": "voltage"}
         model = pybamm.lithium_ion.MPM(options)

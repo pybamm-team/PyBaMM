@@ -69,7 +69,6 @@ class TestFunctionParameter(unittest.TestCase):
             pybamm.FunctionParameter("a", {"var": var, "var 2": var_2})
 
     def test_set_input_names(self):
-
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("a", {"var": var})
 
@@ -90,19 +89,11 @@ class TestFunctionParameter(unittest.TestCase):
         def myfun(x):
             return pybamm.FunctionParameter("my function", {"x": x})
 
-        def myfun_dim(x):
-            return pybamm.FunctionParameter("my function", {"x": x})
-
-        def myfun_dimensional(x):
-            return pybamm.FunctionParameter("my function", {"x": x})
-
         def _myfun(x):
             return pybamm.FunctionParameter("my function", {"x": x})
 
         x = pybamm.Scalar(1)
         self.assertEqual(myfun(x).print_name, "myfun")
-        self.assertEqual(myfun_dim(x).print_name, "myfun")
-        self.assertEqual(myfun_dimensional(x).print_name, "myfun")
         self.assertEqual(_myfun(x).print_name, None)
 
     def test_function_parameter_to_equation(self):

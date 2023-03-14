@@ -22,8 +22,6 @@ class InverseButlerVolmer(BaseInterface):
         A dictionary of options to be passed to the model. In this case "SEI film
         resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     """
 
     def __init__(self, param, domain, reaction, options=None):
@@ -33,7 +31,7 @@ class InverseButlerVolmer(BaseInterface):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
-        ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
+        ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
@@ -52,13 +50,13 @@ class InverseButlerVolmer(BaseInterface):
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
-            T = variables["X-averaged cell temperature"]
+            T = variables["X-averaged cell temperature [K]"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature"]
+            T = variables["X-averaged cell temperature [K]"]
             u = variables[f"X-averaged {domain} electrode interface utilisation"]
         else:
-            T = variables[f"{Domain} electrode temperature"]
+            T = variables[f"{Domain} electrode temperature [K]"]
             u = variables[f"{Domain} electrode interface utilisation"]
 
         # eta_r is the overpotential from inverting Butler-Volmer, regardless of any
@@ -74,9 +72,9 @@ class InverseButlerVolmer(BaseInterface):
             if self.options["SEI film resistance"] != "none":
                 R_sei = self.phase_param.R_sei
                 if self.options.electrode_types["negative"] == "planar":
-                    L_sei = variables["Total SEI thickness"]
+                    L_sei = variables["Total SEI thickness [m]"]
                 else:
-                    L_sei = variables["X-averaged total SEI thickness"]
+                    L_sei = variables["X-averaged total SEI thickness [m]"]
                 eta_sei = -j_tot * L_sei * R_sei
             # Without SEI resistance
             else:
@@ -100,7 +98,8 @@ class InverseButlerVolmer(BaseInterface):
         return variables
 
     def _get_overpotential(self, j, j0, ne, T, u):
-        return (2 * (1 + self.param.Theta * T) / ne) * pybamm.arcsinh(j / (2 * j0 * u))
+        param = self.param
+        return (2 * (param.R * T) / param.F / ne) * pybamm.arcsinh(j / (2 * j0 * u))
 
 
 class CurrentForInverseButlerVolmer(BaseInterface):
@@ -131,9 +130,6 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         The name of the reaction being implemented
     options: dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
-
     """
 
     def __init__(self, param, domain, reaction, options=None):
@@ -143,11 +139,13 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         domain = self.domain
 
         j_tot = variables[
-            f"X-averaged {domain} electrode " "total interfacial current density"
+            f"X-averaged {domain} electrode total interfacial current density [A.m-2]"
         ]
         if self.domain == "negative":
-            j_sei = variables["SEI interfacial current density"]
-            j_stripping = variables["Lithium plating interfacial current density"]
+            j_sei = variables["SEI interfacial current density [A.m-2]"]
+            j_stripping = variables[
+                "Lithium plating interfacial current density [A.m-2]"
+            ]
             j = j_tot - j_sei - j_stripping
         else:
             j = j_tot
@@ -175,15 +173,13 @@ class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
         The name of the reaction being implemented
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc = variables["Current collector current density [A.m-2]"]
         j = i_boundary_cc
 
         variables.update(self._get_standard_interfacial_current_variables(j))

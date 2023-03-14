@@ -37,7 +37,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 1. Create an [issue](https://guides.github.com/features/issues/) where new proposals can be discussed before any coding is done.
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
-4. [Install](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html) PyBaMM with the developer options.
+4. [Install](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
 5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
 
 You now have everything you need to start making changes!
@@ -61,19 +61,20 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Coding style guidelines
 
-PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#installing-and-using-pre-commit) section for more details.
+PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](#installing-and-using-pre-commit) section for more details.
 
-### Flake8
+### Ruff
 
-We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
+We use [ruff](https://github.com/charliermarsh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
-flake8
+python -m pip install pre-commit
+pre-commit run ruff
 ```
 
-Flake8 is configured inside the file `tox.ini`, under the section `[flake8]`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
-When you commit your changes they will be checked against flake8 automatically (see [infrastructure](#infrastructure)).
+When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
 
 ### Black
 
@@ -89,7 +90,7 @@ black {source_file_or_directory}
 
 If you want to use black in your editor, you may need to change the max line length in your editor settings.
 
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [Flake8](#flake8).
+Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [ruff](#ruff).
 
 ### Naming
 
@@ -111,7 +112,7 @@ On the other hand... We _do_ want to compare several tools, to generate document
 1. Core PyBaMM: A minimal set, including things like NumPy, SciPy, etc. All infrastructure should run against this set of dependencies, as well as any numerical methods we implement ourselves.
 2. Extras: Other inference packages and their dependencies. Methods we don't want to implement ourselves, but do want to provide an interface to can have their dependencies added here.
 3. Documentation generating code: Everything you need to generate and work on the docs.
-4. Development code: Everything you need to do PyBaMM development (so all of the above packages, plus flake8 and other testing tools).
+4. Development code: Everything you need to do PyBaMM development (so all of the above packages, plus ruff and other testing tools).
 
 Only 'core pybamm' is installed by default. The others have to be specified explicitly when running the installation command.
 
@@ -306,7 +307,7 @@ PyBaMM is documented in several ways.
 
 First and foremost, every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
 
-These docstrings can be fairly simple, but can also make use of [reStructuredText](http://docutils.sourceforge.net/docs/user/rst/quickref.html), a markup language designed specifically for writing [technical documentation](https://en.wikipedia.org/wiki/ReStructuredText). For example, you can link to other classes and methods by writing ``:class:`pybamm.Model` `` and ``:meth:`run()` ``.
+These docstrings can be fairly simple, but can also make use of [reStructuredText](http://docutils.sourceforge.net/docs/user/rst/quickref.html), a markup language designed specifically for writing [technical documentation](https://en.wikipedia.org/wiki/ReStructuredText). For example, you can link to other classes and methods by writing `` :class:`pybamm.Model`  `` and `` :meth:`run()`  ``.
 
 In addition, we write a (very) small bit of documentation in separate reStructuredText files in the `docs` directory. Most of what these files do is simply import docstrings from the source code. But they also do things like add tables and indexes. If you've added a new class to a module, search the `docs` directory for that module's `.rst` file and add your class (in alphabetical order) to its index. If you've added a whole new module, copy-paste another module's file and add a link to your new file in the appropriate `index.rst` file.
 
@@ -399,7 +400,7 @@ Editable notebooks are made available using [Google Colab](https://colab.researc
 GitHub does some magic with particular filenames. In particular:
 
 - The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
-- The license for using PyBaMM is stored in [LICENSE](LICENSE), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
+- The license for using PyBaMM is stored in [LICENSE](LICENSE.txt), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
 - This file, [CONTRIBUTING.md](CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
 
 ## Acknowledgements

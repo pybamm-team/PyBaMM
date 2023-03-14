@@ -22,8 +22,6 @@ class SPM(BaseModel):
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
            derivation of a single particle model with electrolyte”. Journal of The
            Electrochemical Society, 166(15):A3693–A3706, 2019
-
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
@@ -60,7 +58,6 @@ class SPM(BaseModel):
             pybamm.citations.register("BrosaPlanella2022")
 
     def set_intercalation_kinetics_submodel(self):
-
         for domain in ["negative", "positive"]:
             electrode_type = self.options.electrode_types[domain]
             if electrode_type == "planar":
@@ -113,6 +110,11 @@ class SPM(BaseModel):
                         self.param, domain, self.options, phase=phase
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
+                self.submodels[
+                    f"{domain} {phase} total particle concentration"
+                ] = pybamm.particle.TotalConcentration(
+                    self.param, domain, self.options, phase
+                )
 
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
@@ -128,7 +130,6 @@ class SPM(BaseModel):
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)
 
     def set_electrolyte_potential_submodel(self):
-
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if self.options["electrolyte conductivity"] not in ["default", "leading order"]:

@@ -73,24 +73,22 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # set a default current function and typical current based on the nominal capacity
     # i.e. a default C-rate of 1
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
-    pybamm_dict["Typical current [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
 
     # number of electrons in reaction (1 for li-ion)
     for domain in [negative_electrode, positive_electrode]:
         pybamm_dict[domain.pre_name + "electrons in reaction"] = 1.0
 
     # activity
-    pybamm_dict["1 + dlnf/dlnc"] = 1.0
+    pybamm_dict["Thermodynamic factor"] = 1.0
 
-    # typical electrolyte concentration
-    pybamm_dict["Typical electrolyte concentration [mol.m-3]"] = pybamm_dict[
-        "Initial concentration in electrolyte [mol.m-3]"
-    ]
-
-    # assume Bruggeman relation
+    # assume Bruggeman relation for effection electrolyte properties
     for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
-        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrode)"] = 1.5
+
+    # solid phase properties reported in BPX are already "effective",
+    # so no correction is applied
+    for domain in [negative_electrode, positive_electrode]:
+        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrode)"] = 0
 
     # BPX is for single cell in series, user can change this later
     pybamm_dict["Number of cells connected in series to make a battery"] = 1
@@ -181,7 +179,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
-    c_e = pybamm_dict["Typical electrolyte concentration [mol.m-3]"]
+    c_e = pybamm_dict["Initial concentration in electrolyte [mol.m-3]"]
     F = 96485
 
     # negative electrode
@@ -194,6 +192,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     E_a_n = pybamm_dict.get(
         negative_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
+    # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
+    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
     k_n = k_n_norm * F / (c_n_max * c_e**0.5)
 
     def _negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
@@ -222,6 +222,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     E_a_p = pybamm_dict.get(
         positive_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
+    # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
+    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
     k_p = k_p_norm * F / (c_p_max * c_e**0.5)
 
     def _positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
@@ -348,12 +350,11 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
         elif isinstance(value, Function):
             value = value.to_python_function(preamble=preamble)
         elif isinstance(value, InterpolatedTable):
-            timescale = 1
             x = np.array(value.x)
             y = np.array(value.y)
             interpolator = "linear"
             value = pybamm.Interpolant(
-                [x], y, pybamm.t * timescale, name=name, interpolator=interpolator
+                [x], y, pybamm.t, name=name, interpolator=interpolator
             )
 
         pybamm_name = field.field_info.alias

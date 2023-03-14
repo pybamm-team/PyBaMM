@@ -38,8 +38,6 @@ class SpectralVolume(pybamm.FiniteVolume):
     ----------
     mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
-
-    **Extends:"": :class:`pybamm.FiniteVolume`
     """
 
     def __init__(self, options=None, order=2):

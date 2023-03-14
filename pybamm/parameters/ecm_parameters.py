@@ -3,9 +3,6 @@ import pybamm
 
 class EcmParameters:
     def __init__(self):
-
-        self.timescale = pybamm.Scalar(1)
-
         self.cell_capacity = pybamm.Parameter("Cell capacity [A.h]")
 
         self._set_current_parameters()
@@ -15,8 +12,8 @@ class EcmParameters:
         self._set_compatibility_parameters()
 
     def _set_current_parameters(self):
-        self.dimensional_current_with_time = pybamm.FunctionParameter(
-            "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
+        self.current_with_time = pybamm.FunctionParameter(
+            "Current function [A]", {"Time [s]": pybamm.t}
         )
 
     def _set_voltage_parameters(self):
@@ -34,23 +31,24 @@ class EcmParameters:
         # These are parameters that for compatibility with
         # external circuits submodels
         self.Q = self.cell_capacity
-        self.current_with_time = self.dimensional_current_with_time
-        self.dimensional_current_density_with_time = self.dimensional_current_with_time
-        self.I_typ = pybamm.Scalar(1)
+        self.current_density_with_time = self.current_with_time
         self.n_electrodes_parallel = pybamm.Scalar(1)
         self.A_cc = pybamm.Scalar(1)
         self.n_cells = pybamm.Scalar(1)
 
     def _set_initial_condition_parameters(self):
         self.initial_soc = pybamm.Parameter("Initial SoC")
-        self.initial_T_cell = pybamm.Parameter("Initial cell temperature [degC]")
-        self.initial_T_jig = pybamm.Parameter("Initial jig temperature [degC]")
+        self.initial_T_cell = pybamm.Parameter("Initial temperature [K]") - 273.15
+        self.initial_T_jig = pybamm.Parameter("Initial temperature [K]") - 273.15
 
     def T_amb(self, t):
-        return pybamm.FunctionParameter("Ambient temperature [degC]", {"Time [s]": t})
+        ambient_temperature_K = pybamm.FunctionParameter(
+            "Ambient temperature [K]", {"Time [s]": t}
+        )
+        return ambient_temperature_K - 273.15
 
     def ocv(self, soc):
-        return pybamm.FunctionParameter("Open circuit voltage [V]", {"SoC": soc})
+        return pybamm.FunctionParameter("Open-circuit voltage [V]", {"SoC": soc})
 
     def rcr_element(self, name, T_cell, current, soc):
         inputs = {"Cell temperature [degC]": T_cell, "Current [A]": current, "SoC": soc}
@@ -61,5 +59,5 @@ class EcmParameters:
         return pybamm.Parameter(f"Element-{element_number} initial overpotential [V]")
 
     def dUdT(self, ocv, T_cell):
-        inputs = {"Open circuit voltage [V]": ocv, "Cell temperature [degC]": T_cell}
+        inputs = {"Open-circuit voltage [V]": ocv, "Cell temperature [degC]": T_cell}
         return pybamm.FunctionParameter("Entropic change [V/K]", inputs)

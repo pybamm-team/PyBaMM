@@ -43,7 +43,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
 def silicon_ocp_lithiation_Mark2016(sto):
     """
-    silicon Open Circuit Potential (OCP) as a a function of the
+    silicon Open-circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
     for 0 < sto < 1.
 
@@ -87,7 +87,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
 
 def silicon_ocp_delithiation_Mark2016(sto):
     """
-    silicon Open Circuit Potential (OCP) as a a function of the
+    silicon Open-circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
     for 0 < sto < 1.
 
@@ -173,7 +173,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 NMC open circuit potential as a function of stochiometry, fit taken
+    LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
     from [1].
 
     References
@@ -191,7 +191,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Open circuit potential
+        Open-circuit potential
     """
 
     u_eq = (
@@ -393,8 +393,8 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 5.0,
-        "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
+        "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Primary: Maximum concentration in negative electrode [mol.m-3]": 28700.0,
@@ -405,7 +405,7 @@ def get_parameter_values():
         "Primary: Negative electrode active material volume fraction": 0.735,
         "Primary: Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Negative electrode Bruggeman coefficient (electrode)": 1.5,
+        "Negative electrode Bruggeman coefficient (electrode)": 0,
         "Negative electrode cation signed stoichiometry": -1.0,
         "Primary: Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
@@ -439,7 +439,7 @@ def get_parameter_values():
         "Positive electrode active material volume fraction": 0.665,
         "Positive particle radius [m]": 5.22e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Positive electrode Bruggeman coefficient (electrode)": 1.5,
+        "Positive electrode Bruggeman coefficient (electrode)": 0,
         "Positive electrode cation signed stoichiometry": -1.0,
         "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
@@ -457,10 +457,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
         # experiment

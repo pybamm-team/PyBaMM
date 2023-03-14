@@ -15,9 +15,6 @@ class LOQS(BaseModel):
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
            battery simulations from porous-electrode theory: Part II. Asymptotic
            analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
-
-
-    **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, options=None, name="LOQS model", build=True):
@@ -73,7 +70,6 @@ class LOQS(BaseModel):
             )
 
     def set_current_collector_submodel(self):
-
         if self.options["current collector"] in [
             "uniform",
             "potential pair quite conductive",
@@ -87,13 +83,11 @@ class LOQS(BaseModel):
         self.submodels["leading-order current collector"] = submodel
 
     def set_porosity_submodel(self):
-
         self.submodels["leading-order porosity"] = pybamm.porosity.ReactionDrivenODE(
             self.param, self.options, True
         )
 
     def set_convection_submodel(self):
-
         if self.options["convection"] == "none":
             self.submodels[
                 "leading-order transverse convection"
@@ -115,7 +109,6 @@ class LOQS(BaseModel):
             ] = pybamm.convection.through_cell.Explicit(self.param)
 
     def set_intercalation_kinetics_submodel(self):
-
         if self.options["surface form"] == "false":
             self.submodels[
                 "leading-order negative interface"
@@ -165,7 +158,6 @@ class LOQS(BaseModel):
         }
 
     def set_electrode_submodels(self):
-
         self.submodels[
             "leading-order negative electrode potential"
         ] = pybamm.electrode.ohm.LeadingOrder(self.param, "negative")
@@ -174,7 +166,6 @@ class LOQS(BaseModel):
         ] = pybamm.electrode.ohm.LeadingOrder(self.param, "positive")
 
     def set_electrolyte_submodel(self):
-
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if self.options["surface form"] == "false":

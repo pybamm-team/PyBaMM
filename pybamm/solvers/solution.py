@@ -107,20 +107,6 @@ class Solution(object):
         if check_solution:
             self.check_ys_are_not_too_large()
 
-        # Copy the timescale_eval and lengthscale_evals if they exist
-        if hasattr(all_models[0], "timescale_eval"):
-            self.timescale_eval = all_models[0].timescale_eval
-        else:
-            self.timescale_eval = all_models[0].timescale.evaluate()
-
-        if hasattr(all_models[0], "length_scales_eval"):
-            self.length_scales_eval = all_models[0].length_scales_eval
-        else:
-            self.length_scales_eval = {
-                domain: scale.evaluate()
-                for domain, scale in all_models[0].length_scales.items()
-            }
-
         # Events
         self._t_event = t_event
         self._y_event = y_event
@@ -327,7 +313,7 @@ class Solution(object):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
                         f"of `{pybamm.settings.max_y_value}. This could be due to "
-                        "incorrect nondimensionalisation, model formulation, or "
+                        "incorrect scaling, model formulation, or "
                         "parameter values. The maximum allowed value is set by "
                         "'pybammm.settings.max_y_value'."
                     )
@@ -383,7 +369,7 @@ class Solution(object):
             self.all_inputs[:1],
             None,
             None,
-            "success",
+            "final time",
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
@@ -465,7 +451,7 @@ class Solution(object):
             # Iterate through all models, some may be in the list several times and
             # therefore only get set up once
             vars_casadi = []
-            for (i, (model, ys, inputs, var_pybamm)) in enumerate(
+            for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
                 if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):

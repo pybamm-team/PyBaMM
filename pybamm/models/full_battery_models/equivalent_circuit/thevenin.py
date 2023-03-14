@@ -79,7 +79,6 @@ class Thevenin(pybamm.BaseModel):
         self.set_submodels(build)
 
     def set_options(self, extra_options=None):
-
         possible_options = {
             "calculate discharge energy": ["false", "true"],
             "operating mode": OperatingModes("current"),
@@ -158,11 +157,10 @@ class Thevenin(pybamm.BaseModel):
 
     def set_ocv_submodel(self):
         self.submodels[
-            "Open circuit voltage"
+            "Open-circuit voltage"
         ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
 
     def set_resistor_submodel(self):
-
         name = "Element-0 (Resistor)"
         self.submodels[name] = pybamm.equivalent_circuit_elements.ResistorElement(
             self.param, self.options
@@ -203,7 +201,6 @@ class Thevenin(pybamm.BaseModel):
             self.build_model()
 
     def build_model(self):
-
         # Build model variables and equations
         self._build_model()
 
@@ -218,7 +215,7 @@ class Thevenin(pybamm.BaseModel):
     def default_quick_plot_variables(self):
         return [
             "Current [A]",
-            ["Terminal voltage [V]", "Open circuit voltage [V]"],
+            ["Voltage [V]", "Open-circuit voltage [V]"],
             "SoC",
             "Power [W]",
             [

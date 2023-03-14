@@ -60,6 +60,11 @@ class TestMPM(unittest.TestCase):
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
+    def test_current_sigmoid(self):
+        options = {"open-circuit potential": "current sigmoid"}
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
     def test_necessary_options(self):
         options = {"particle size": "single"}
         with self.assertRaises(pybamm.OptionError):
@@ -117,7 +122,7 @@ class TestMPMExternalCircuits(unittest.TestCase):
     def test_well_posed_function(self):
         def external_circuit_function(variables):
             I = variables["Current [A]"]
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
 
         options = {"operating mode": external_circuit_function}

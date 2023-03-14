@@ -58,30 +58,6 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         sys.exit(ret)
 
 
-def run_flake8():
-    """
-    Runs flake8 in a subprocess, exits if it doesn't finish.
-    """
-    print("Running flake8 ... ")
-    sys.stdout.flush()
-    p = subprocess.Popen(["flake8"], stderr=subprocess.PIPE)
-    try:
-        ret = p.wait()
-    except KeyboardInterrupt:
-        try:
-            p.terminate()
-        except OSError:
-            pass
-        p.wait()
-        print("")
-        sys.exit(1)
-    if ret == 0:
-        print("ok")
-    else:
-        print("FAILED")
-        sys.exit(ret)
-
-
 def run_doc_tests():
     """
     Checks if the documentation can be built, runs any doctests (currently not
@@ -315,24 +291,27 @@ if __name__ == "__main__":
         description="Run unit tests for PyBaMM.",
         epilog="To run individual unit tests, use e.g. '$ tests/unit/test_timer.py'",
     )
+
     # Unit tests
+    parser.add_argument(
+        "--integration",
+        action="store_true",
+        help="Run integration tests using the python interpreter.",
+    )
     parser.add_argument(
         "--unit",
         action="store_true",
         help="Run unit tests using the `python` interpreter.",
     )
     parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run all tests (unit and integration) using the `python` interpreter.",
+    )
+    parser.add_argument(
         "--nosub",
         action="store_true",
         help="Run unit tests without starting a subprocess.",
-    )
-    # Daily tests vs unit tests
-    parser.add_argument(
-        "--folder",
-        nargs=1,
-        default=["unit"],
-        choices=["unit", "integration", "all"],
-        help="Which folder to run the tests from.",
     )
     # Notebook tests
     parser.add_argument(
@@ -346,9 +325,11 @@ if __name__ == "__main__":
         metavar=("in", "out"),
         help="Export a Jupyter notebook to a Python file for manual testing.",
     )
-    # Doctests
+    # Flake8 (deprecated)
     parser.add_argument(
-        "--flake8", action="store_true", help="Run flake8 to check for style issues"
+        "--flake8",
+        action="store_true",
+        help="Run flake8 to check for style issues (deprecated, use pre-commit)",
     )
     # Doctests
     parser.add_argument(
@@ -360,7 +341,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="Run quick checks (unit tests, flake8, docs)",
+        help="Run quick checks (code tests, docs)",
     )
     # Non-standard Python interpreter name for subprocesses
     parser.add_argument(
@@ -377,19 +358,23 @@ if __name__ == "__main__":
     # Run tests
     has_run = False
     # Unit vs integration
-    folder = args.folder[0]
     interpreter = args.interpreter
     # Unit tests
+    if args.integration:
+        has_run = True
+        run_code_tests(True, "integration", interpreter)
     if args.unit:
         has_run = True
-        run_code_tests(True, folder, interpreter)
+        run_code_tests(True, "unit", interpreter)
+    if args.all:
+        has_run = True
+        run_code_tests(True, "all", interpreter)
     if args.nosub:
         has_run = True
-        run_code_tests(folder=folder, interpreter=interpreter)
+        run_code_tests(folder="unit", interpreter=interpreter)
     # Flake8
     if args.flake8:
-        has_run = True
-        run_flake8()
+        raise NotImplementedError("flake8 is no longer used. Use pre-commit instead.")
     # Doctests
     if args.doctest:
         has_run = True
@@ -404,8 +389,7 @@ if __name__ == "__main__":
     # Combined test sets
     if args.quick:
         has_run = True
-        run_flake8()
-        run_code_tests(folder, interpreter=interpreter)
+        run_code_tests("all", interpreter=interpreter)
         run_doc_tests()
     # Help
     if not has_run:

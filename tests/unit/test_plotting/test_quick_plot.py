@@ -45,7 +45,6 @@ class TestQuickPlot(unittest.TestCase):
             ),
             "NaN variable": pybamm.Scalar(np.nan),
         }
-        model._timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use Jacobian)
         model.use_jacobian = False
@@ -303,7 +302,7 @@ class TestQuickPlot(unittest.TestCase):
         for model in [
             pybamm.lithium_ion.SPMe(),
             pybamm.lead_acid.LOQS(),
-            pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+            pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
         ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
@@ -321,8 +320,7 @@ class TestQuickPlot(unittest.TestCase):
             t = solution["Time [s]"].entries
             c_e_var = solution["Electrolyte concentration [mol.m-3]"]
             # 1D variables should be evaluated on edges
-            L_x = param.evaluate(model.param.L_x)
-            c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges * L_x)
+            c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges)
 
             for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                 quick_plot = pybamm.QuickPlot(
@@ -346,7 +344,10 @@ class TestQuickPlot(unittest.TestCase):
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
 
             # test quick plot of particle for spme
-            if model.name == "Single Particle Model with electrolyte":
+            if (
+                model.name == "Single Particle Model with electrolyte"
+                and model.options["working electrode"] != "positive"
+            ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",
                     "X-averaged positive particle concentration [mol.m-3]",
@@ -435,7 +436,7 @@ class TestQuickPlot(unittest.TestCase):
             [
                 "Negative current collector potential [V]",
                 "Positive current collector potential [V]",
-                "Terminal voltage [V]",
+                "Voltage [V]",
             ],
         )
         quick_plot.dynamic_plot(testing=True)
@@ -471,9 +472,7 @@ class TestQuickPlot(unittest.TestCase):
 
     def test_model_with_inputs(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
-        # Pass the "timescale" option since we are making electrode height an input
-        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
-        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
+        model = pybamm.lithium_ion.SPMe()
         parameter_values.update({"Electrode height [m]": "[input]"})
         solver1 = pybamm.CasadiSolver(mode="safe")
         sim1 = pybamm.Simulation(
@@ -488,12 +487,12 @@ class TestQuickPlot(unittest.TestCase):
         inputs2 = {"Electrode height [m]": 2.00}
         sol2 = sim2.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs2)
         output_variables = [
-            "Terminal voltage [V]",
+            "Voltage [V]",
             "Current [A]",
             "Negative electrode potential [V]",
             "Positive electrode potential [V]",
             "Electrolyte potential [V]",
-            "Electrolyte concentration",
+            "Electrolyte concentration [Molar]",
             "Negative particle surface concentration",
             "Positive particle surface concentration",
         ]

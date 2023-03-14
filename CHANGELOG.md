@@ -2,7 +2,52 @@
 
 ## Features
 
+- Renamed "Terminal voltage [V]" to just "Voltage [V]". "Terminal voltage [V]" can still be used and will return the same value as "Voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Added "Negative electrode surface potential difference at separator interface [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Positive electrode surface potential difference at separator interface [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Added "Open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Added an example for `plot_voltage_components`, explaining what the different voltage components are. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+
+## Bug fixes
+
+- Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+
+## Optimizations
+
+- Migrated to [Lychee](https://github.com/lycheeverse/lychee-action) workflow for checking URLs ([#2734](https://github.com/pybamm-team/PyBaMM/pull/2734))
+
+## Breaking changes
+
+- Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Open-circuit voltage [V]" is calculated from bulk particle concentrations instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Renamed all references to "open circuit" to be "open-circuit" instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Renamed parameter "1 + dlnf/dlnc" to "Thermodynamic factor". ([#2727](https://github.com/pybamm-team/PyBaMM/pull/2727))
+- All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
+
+# [v23.2](https://github.com/pybamm-team/PyBaMM/tree/v23.2) - 2023-02-28
+
+## Features
+
+- Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve ([#2677](https://github.com/pybamm-team/PyBaMM/pull/2677))
+- The "particle size" option can now be a tuple to allow different behaviour in each electrode ([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
+- Added temperature control to experiment class. ([#2518](https://github.com/pybamm-team/PyBaMM/pull/2518))
+
+## Bug fixes
+
+- Fixed current_sigmoid_ocp to be valid for both electrodes ([#2719](https://github.com/pybamm-team/PyBaMM/pull/2719)).
+- Fixed the length scaling for the first dimension of r-R plots ([#2663](https://github.com/pybamm-team/PyBaMM/pull/2663)).
+
+# [v23.1](https://github.com/pybamm-team/PyBaMM/tree/v23.1) - 2023-01-31
+
+## Features
+
+- Changed linting from `flake8` to `ruff` ([#2630](https://github.com/pybamm-team/PyBaMM/pull/2630)).
+- Changed docs theme to pydata theme and start to improve docs in general ([#2618](https://github.com/pybamm-team/PyBaMM/pull/2618)).
+- New `contact resistance` option, new parameter `Contact resistance [Ohm]` and new variable `Contact overpotential [V]` ([#2598](https://github.com/pybamm-team/PyBaMM/pull/2598)).
 - Steps in `Experiment` can now be tagged and cycle numbers be searched based on those tags ([#2593](https://github.com/pybamm-team/PyBaMM/pull/2593)).
+
+## Bug fixes
+
+- Fixed a bug where the solid phase conductivity was double-corrected for tortuosity when loading parameters from a BPX file ([#2638](https://github.com/pybamm-team/PyBaMM/pull/2638)).
+- Changed termination from "success" to "final time" for algebraic solvers to match ODE/DAE solvers ([#2613](https://github.com/pybamm-team/PyBaMM/pull/2613)).
 
 # [v22.12](https://github.com/pybamm-team/PyBaMM/tree/v22.12) - 2022-12-31
 

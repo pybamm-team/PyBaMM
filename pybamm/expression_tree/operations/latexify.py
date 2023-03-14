@@ -12,6 +12,13 @@ import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 
 
+def get_rng_min_max_name(rng, min_or_max):
+    if getattr(rng[min_or_max], "print_name", None) is None:
+        return rng[min_or_max]
+    else:
+        return rng[min_or_max].print_name
+
+
 class Latexify:
     """
     Converts all model equations in latex.
@@ -91,15 +98,8 @@ class Latexify:
         for domain in var.domain:
             for var_name, rng in self.model.default_geometry[domain].items():
                 if "min" in rng and "max" in rng:
-                    if getattr(rng["min"], "print_name", None) is None:
-                        rng_min = rng["min"]
-                    else:
-                        rng_min = rng["min"].print_name
-
-                    if getattr(rng["max"], "print_name", None) is None:
-                        rng_max = rng["max"]
-                    else:
-                        rng_max = rng["max"].print_name
+                    rng_min = get_rng_min_max_name(rng, "min")
+                    rng_max = get_rng_min_max_name(rng, "max")
 
                     name = sympy.latex(var_name)
                     geo_latex = f"& {rng_min} < {name} < {rng_max}"
@@ -125,17 +125,11 @@ class Latexify:
         for var_name, rng in self.model.default_geometry[var.domain[0]].items():
             # Trim name (r_n --> r)
             name = re.findall(r"(.)_*.*", str(var_name))[0]
-            if getattr(rng["min"], "print_name", None) is None:
-                rng_min = rng["min"]
-            else:
-                rng_min = rng["min"].print_name
+            rng_min = get_rng_min_max_name(rng, "min")
 
         # Take range maximum from the last domain
         for var_name, rng in self.model.default_geometry[var.domain[-1]].items():
-            if getattr(rng["max"], "print_name", None) is None:
-                rng_max = rng["max"]
-            else:
-                rng_max = rng["max"].print_name
+            rng_max = get_rng_min_max_name(rng, "max")
 
         geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)
@@ -155,11 +149,7 @@ class Latexify:
             for var_name, rng in self.model.default_geometry[var.domain[0]].items():
                 # Trim name (r_n --> r)
                 name = re.findall(r"(.)_*.*", str(var_name))[0]
-
-                if getattr(rng["min"], "print_name", None) is None:
-                    rng_min = rng["min"]
-                else:
-                    rng_min = rng["min"].print_name
+                rng_min = get_rng_min_max_name(rng, "min")
 
                 bcs_left = sympy.latex(bcs["left"][0].to_equation())
                 bcs_left_latex = bcs_left + f"\quad {name} = {rng_min}"
@@ -170,11 +160,7 @@ class Latexify:
             for var_name, rng in self.model.default_geometry[var.domain[-1]].items():
                 # Trim name (r_n --> r)
                 name = re.findall(r"(.)_*.*", str(var_name))[0]
-
-                if getattr(rng["max"], "print_name", None) is None:
-                    rng_max = rng["max"]
-                else:
-                    rng_max = rng["max"].print_name
+                rng_max = get_rng_min_max_name(rng, "max")
 
                 bcs_right = sympy.latex(bcs["right"][0].to_equation())
                 bcs_right_latex = bcs_right + f"\quad {name} = {rng_max}"
@@ -313,11 +299,11 @@ class Latexify:
                 var_list.extend(list2)
 
         # Add voltage expression to the list
-        if "Terminal voltage [V]" in self.model.variables:
-            voltage = self.model.variables["Terminal voltage [V]"].to_equation()
+        if "Voltage [V]" in self.model.variables:
+            voltage = self.model.variables["Voltage [V]"].to_equation()
             voltage_eqn = sympy.Eq(sympy.Symbol("V"), voltage, evaluate=False)
-            # Add terminal voltage to the list
-            eqn_list.append(sympy.Symbol(r"\\ \textbf{Terminal voltage [V]}"))
+            # Add voltage to the list
+            eqn_list.append(sympy.Symbol(r"\\ \textbf{Voltage [V]}"))
             eqn_list.extend([voltage_eqn])
 
         # Remove duplicates from the list whilst preserving order

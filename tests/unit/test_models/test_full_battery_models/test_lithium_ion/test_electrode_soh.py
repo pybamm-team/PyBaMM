@@ -65,7 +65,6 @@ class TestElectrodeSOH(unittest.TestCase):
         self.assertAlmostEqual(sol["Q"].data[0], Q, places=5)
 
     def test_error(self):
-
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Ai2020")
 
@@ -153,17 +152,13 @@ class TestGetInitialSOC(unittest.TestCase):
         x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
             1, parameter_values, param
         )
-        V = parameter_values.evaluate(
-            param.p.prim.U_dimensional(y100, T) - param.n.prim.U_dimensional(x100, T)
-        )
+        V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         self.assertAlmostEqual(V, 4.2)
 
         x0, y0 = pybamm.lithium_ion.get_initial_stoichiometries(
             0, parameter_values, param
         )
-        V = parameter_values.evaluate(
-            param.p.prim.U_dimensional(y0, T) - param.n.prim.U_dimensional(x0, T)
-        )
+        V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         self.assertAlmostEqual(V, 2.8)
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
@@ -176,9 +171,7 @@ class TestGetInitialSOC(unittest.TestCase):
             "4 V", parameter_values, param
         )
         T = parameter_values.evaluate(param.T_ref)
-        V = parameter_values.evaluate(
-            param.p.prim.U_dimensional(y, T) - param.n.prim.U_dimensional(x, T)
-        )
+        V = parameter_values.evaluate(param.p.prim.U(y, T) - param.n.prim.U(x, T))
         self.assertAlmostEqual(V, 4)
 
     def test_min_max_stoich(self):
@@ -189,13 +182,9 @@ class TestGetInitialSOC(unittest.TestCase):
         x0, x100, y100, y0 = pybamm.lithium_ion.get_min_max_stoichiometries(
             parameter_values, param
         )
-        V = parameter_values.evaluate(
-            param.p.prim.U_dimensional(y100, T) - param.n.prim.U_dimensional(x100, T)
-        )
+        V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         self.assertAlmostEqual(V, 4.2)
-        V = parameter_values.evaluate(
-            param.p.prim.U_dimensional(y0, T) - param.n.prim.U_dimensional(x0, T)
-        )
+        V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         self.assertAlmostEqual(V, 2.8)
 
     def test_initial_soc_cell_capacity(self):
@@ -206,13 +195,10 @@ class TestGetInitialSOC(unittest.TestCase):
         x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
             1, parameter_values, param, known_value="cell capacity"
         )
-        V = parameter_values.evaluate(
-            param.p.prim.U_dimensional(y100, T) - param.n.prim.U_dimensional(x100, T)
-        )
+        V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         self.assertAlmostEqual(V, 4.2)
 
     def test_error(self):
-
         parameter_values = pybamm.ParameterValues("Chen2020")
 
         with self.assertRaisesRegex(

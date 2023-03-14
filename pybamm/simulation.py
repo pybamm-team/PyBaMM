@@ -138,19 +138,16 @@ class Simulation:
         This needs to be done here and not in the Experiment class because the nominal
         cell capacity (from the parameters) is used to convert C-rate to current.
         """
-        experiment = self.experiment
-        model = self.model
-        # Update experiment using parameters such as timescale and capacity
-        timescale = self._parameter_values.evaluate(model.timescale)
+        # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-        for op_conds in experiment.operating_conditions:
+        for op_conds in self.experiment.operating_conditions:
             op_type = op_conds["type"]
             if op_conds["dc_data"] is not None:
                 # If operating condition includes a drive cycle, define the interpolant
                 drive_cycle_interpolant = pybamm.Interpolant(
                     op_conds["dc_data"][:, 0],
                     op_conds["dc_data"][:, 1],
-                    timescale * (pybamm.t - pybamm.InputParameter("start time")),
+                    pybamm.t - pybamm.InputParameter("start time"),
                 )
                 if op_type == "current":
                     op_conds["Current input [A]"] = drive_cycle_interpolant
@@ -211,7 +208,7 @@ class Simulation:
         """
         self.op_type_to_model = {}
         self.op_string_to_model = {}
-        for op in self.experiment.operating_conditions:
+        for op_number, op in enumerate(self.experiment.operating_conditions):
             # Create model for this operating condition type (current/voltage/power)
             # if it has not already been seen before
             if op["type"] not in self.op_type_to_model:
@@ -258,15 +255,20 @@ class Simulation:
                 self.update_new_model_events(new_model, op)
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
-                experiment_parameter_values = self.get_experiment_parameter_values(op)
+                self._original_temperature = new_parameter_values[
+                    "Ambient temperature [K]"
+                ]
+                experiment_parameter_values = self.get_experiment_parameter_values(
+                    op, op_number
+                )
                 new_parameter_values.update(
                     experiment_parameter_values, check_already_exists=False
                 )
-                # Set the "current function" to be the variable defined in the
+                # Set the "current function" to be the variable defined in the submodel
                 if submodel is not None:
                     new_parameter_values["Current function [A]"] = submodel.variables[
-                        "Current density variable"
-                    ] * abs(model.param.I_typ)
+                        "Current [A]"
+                    ]
                 parameterised_model = new_parameter_values.process_model(
                     new_model, inplace=False
                 )
@@ -337,12 +339,12 @@ class Simulation:
         # so that they are not triggered before the voltage limits in the
         # experiment
         for i, event in enumerate(new_model.events):
-            if event.name in ["Minimum voltage", "Maximum voltage"]:
+            if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )
 
-    def get_experiment_parameter_values(self, op):
+    def get_experiment_parameter_values(self, op, op_number):
         experiment_parameter_values = {}
         if op["type"] == "current":
             experiment_parameter_values.update(
@@ -360,6 +362,26 @@ class Simulation:
             experiment_parameter_values.update(
                 {"Power function [W]": op["Power input [W]"]}
             )
+
+        if op["temperature"] is not None:
+            ambient_temperature = op["temperature"] + 273.15
+            experiment_parameter_values.update(
+                {"Ambient temperature [K]": ambient_temperature}
+            )
+
+            # If at the first operation, then the intial temperature
+            # should be the ambient temperature.
+            if op_number == 0:
+                experiment_parameter_values.update(
+                    {
+                        "Initial temperature [K]": ambient_temperature,
+                    }
+                )
+        else:
+            experiment_parameter_values.update(
+                {"Ambient temperature [K]": self._original_temperature}
+            )
+
         return experiment_parameter_values
 
     def set_parameters(self):

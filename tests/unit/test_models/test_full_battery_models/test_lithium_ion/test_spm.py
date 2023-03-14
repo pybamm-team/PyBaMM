@@ -40,19 +40,22 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
             pybamm.lithium_ion.SPM(options)
 
     def test_distribution_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "particle size"):
+        with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.lithium_ion.SPM({"particle size": "distribution"})
+
+    def test_particle_size_distribution(self):
+        options = {"surface form": "algebraic", "particle size": "distribution"}
+        self.check_well_posedness(options)
 
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
-        model_T_eqn = model.rhs[model.variables["Cell temperature"]]
-        new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature"]]
+        model_T_eqn = model.rhs[model.variables["Cell temperature [K]"]]
+        new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature [K]"]]
         self.assertEqual(new_model_T_eqn, model_T_eqn)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale, model.timescale)
 
         # with custom submodels
         options = {"stress-induced diffusion": "false", "thermal": "x-full"}

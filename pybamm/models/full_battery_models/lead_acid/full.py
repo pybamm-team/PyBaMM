@@ -11,15 +11,11 @@ class Full(BaseModel):
     model.
     See :class:`pybamm.lead_acid.BaseModel` for more details.
 
-
     References
     ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
            battery simulations from porous-electrode theory: Part II. Asymptotic
            analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
-
-
-    **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, options=None, name="Full model", build=True):
@@ -92,7 +88,6 @@ class Full(BaseModel):
         self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
-
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
