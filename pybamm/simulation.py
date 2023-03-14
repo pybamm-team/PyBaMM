@@ -8,6 +8,7 @@ import copy
 import warnings
 import sys
 from functools import lru_cache
+from datetime import timedelta
 
 
 def is_notebook():
@@ -718,7 +719,23 @@ class Simulation:
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions[idx]
-                    dt = op_conds["time"]
+
+                    start_time = current_solution.t[-1]
+
+                    # If next step has a timestamp, dt must take that into account
+                    if op_conds["next timestamp"]:
+                        dt = min(
+                            op_conds["time"],
+                            (
+                                op_conds["next timestamp"]
+                                - (
+                                    self.experiment.initial_timestamp
+                                    + timedelta(seconds=float(start_time))
+                                )
+                            ).total_seconds(),
+                        )
+                    else:
+                        dt = op_conds["time"]
                     op_conds_str = op_conds["string"]
                     model = self.op_conds_to_built_models[op_conds_str]
                     solver = self.op_conds_to_built_solvers[op_conds_str]
@@ -727,7 +744,6 @@ class Simulation:
                     logs["step operating conditions"] = op_conds_str
                     callbacks.on_step_start(logs)
 
-                    start_time = current_solution.t[-1]
                     kwargs["inputs"] = {
                         **user_inputs,
                         **op_conds,
@@ -761,6 +777,8 @@ class Simulation:
                                 raise error
                             # Otherwise, just stop this cycle
                             break
+
+                    # TODO: add rest step if needed!
 
                     steps.append(step_solution)
 

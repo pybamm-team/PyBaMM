@@ -569,6 +569,29 @@ class TestSimulationExperiment(unittest.TestCase):
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
 
+    def test_run_time_stamped_experiment(self):
+        # experiment = pybamm.Experiment(
+        #     [
+        #         "[2023-01-01 08:00:00] Rest for 1 minute",
+        #         "[2023-01-01 12:00:00] Discharge at 0.5C for 1 hour",
+        #         "[2023-01-01 12:30:00] Charge at 0.1C for 1 hour",
+        #     ]
+        # )
+        experiment = pybamm.Experiment(
+            [
+                "[2023-01-01 08:00:00] Rest for 10 hours",
+                "[2023-01-01 12:00:00] Discharge at 0.5C for 1 hour",
+                "[2023-01-01 12:30:00] Charge at 0.1C for 1 hour",
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve()
+        sol.plot()
+
+        # TODO: what if a later (beyond next) timestamp should kill current step?
+
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
