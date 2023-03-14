@@ -9,7 +9,7 @@ repos:
       - id: black
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.0.254"
+    rev: "v0.0.255"
     hooks:
       - id: ruff
         args: [--ignore=E741, --exclude=__init__.py]
