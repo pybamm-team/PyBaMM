@@ -160,7 +160,7 @@ class Experiment:
         self.initial_timestamp = self.operating_conditions[0]["current timestamp"]
 
         if (
-            self.operating_conditions[0]["next timestamp"] is not None
+            self.operating_conditions[0]["end timestamp"] is not None
             and self.initial_timestamp is None
         ):
             raise ValueError(
