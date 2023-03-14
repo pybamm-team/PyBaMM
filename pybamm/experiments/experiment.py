@@ -189,7 +189,7 @@ class Experiment:
             cond_CC, cond_CV = cond.split(" then ")
             op_CC = self.read_string(cond_CC, drive_cycles, None)
             op_CV = self.read_string(cond_CV, drive_cycles, next_step)
-            
+
             if op_CC["temperature"] != op_CV["temperature"]:
                 raise ValueError(
                     "The temperature for the CC and CV steps must be the same."
