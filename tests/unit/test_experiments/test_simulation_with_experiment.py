@@ -592,7 +592,6 @@ class TestSimulationExperiment(unittest.TestCase):
         # TODO: what if a later (beyond next) timestamp should kill current step?
 
 
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

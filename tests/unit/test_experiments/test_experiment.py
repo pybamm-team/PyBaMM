@@ -584,11 +584,13 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(cond, "Timestamp")
 
         # Timestamp format "%Y-%m-%d %H:%M:%S"
-        timestamp, cond = experiment._process_timestamp("[2019-10-08 09:43:23] Timestamp")
+        timestamp, cond = experiment._process_timestamp(
+            "[2019-10-08 09:43:23] Timestamp"
+        )
         self.assertEqual(timestamp, datetime(2019, 10, 8, 9, 43, 23))
         self.assertEqual(cond, "Timestamp")
 
-        # Bad timestamp        
+        # Bad timestamp
         with self.assertRaisesRegex(ValueError, "The timestamp"):
             experiment._process_timestamp("[bad 2019-10-08 09:43:23] Timestamp")
 

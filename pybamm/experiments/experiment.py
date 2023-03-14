@@ -560,7 +560,7 @@ class Experiment:
             idx_start = cond.find("[")
             idx_end = cond.find("]")
             timestamp = cond[idx_start + 1 : idx_end]
-            cond = cond[idx_end + 2:]
+            cond = cond[idx_end + 2 :]
             for format in self.datetime_formats:
                 try:
                     return datetime.strptime(timestamp, format), cond
