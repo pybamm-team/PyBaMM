@@ -585,7 +585,7 @@ class Experiment:
         for op in operating_conditions:
             op["next timestamp"] = next_timestamp
             op["end timestamp"] = end_timestamp
-            
+
             next_timestamp = op["current timestamp"]
             if next_timestamp:
                 end_timestamp = next_timestamp
