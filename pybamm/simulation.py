@@ -722,12 +722,12 @@ class Simulation:
 
                     start_time = current_solution.t[-1]
 
-                    # If next step has a timestamp, dt must take that into account
-                    if op_conds["next timestamp"]:
+                    # If step has an end timestamp, dt must take that into account
+                    if op_conds["end timestamp"]:
                         dt = min(
                             op_conds["time"],
                             (
-                                op_conds["next timestamp"]
+                                op_conds["end timestamp"]
                                 - (
                                     self.experiment.initial_timestamp
                                     + timedelta(seconds=float(start_time))

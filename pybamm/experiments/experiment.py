@@ -151,13 +151,7 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions = self._set_next_timestamp(
-            [
-                self.read_string(cond, drive_cycles)
-                for cond in operating_conditions
-                # for cond, next_step in zip(
-                #     operating_conditions, operating_conditions[1:] + [None]
-                # )
-            ]
+            [self.read_string(cond, drive_cycles) for cond in operating_conditions]
         )
 
         self.termination_string = termination
@@ -173,8 +167,6 @@ class Experiment:
                 "When using timestamped experiments, the first step must have a "
                 "timestamp to define the initial time."
             )
-        # TODO raise error if there is a timestamp later on but no initial timestamp
-        # (remind me if I forget)
 
     def __str__(self):
         return str(self.operating_conditions_cycles)
@@ -544,8 +536,8 @@ class Experiment:
             and "Hold at " in next_step
             and "V until" in next_step
         ):
-            op = self.read_string(step, None, None)
-            next_op = self.read_string(next_step, None, None)
+            op = self.read_string(step, None)
+            next_op = self.read_string(next_step, None)
             # Check that the event conditions are the same as the hold conditions
             if op["events"] == {k: v for k, v in next_op.items() if k in op["events"]}:
                 return True
@@ -587,12 +579,16 @@ class Experiment:
 
     def _set_next_timestamp(self, operating_conditions):
         operating_conditions.reverse()
+        end_timestamp = None
         next_timestamp = None
 
         for op in operating_conditions:
             op["next timestamp"] = next_timestamp
-            if op["current timestamp"]:
-                next_timestamp = op["current timestamp"]
+            op["end timestamp"] = end_timestamp
+            
+            next_timestamp = op["current timestamp"]
+            if next_timestamp:
+                end_timestamp = next_timestamp
 
         operating_conditions.reverse()
 
