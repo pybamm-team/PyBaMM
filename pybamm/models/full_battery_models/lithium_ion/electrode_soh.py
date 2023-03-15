@@ -588,23 +588,16 @@ def calculate_theoretical_energy(
     n_vals = np.linspace(n_i, n_f, num=points)
     p_vals = np.linspace(p_i, p_f, num=points)
     # Calculate OCV at each stoichiometry
+    param = pybamm.LithiumIonParameters()
+    T = param.T_amb(0)
     Vs = np.empty(n_vals.shape)
     for i in range(n_vals.size):
-        V_pos = parameter_values["Positive electrode OCP [V]"](p_vals[i]).value
-        V_neg = parameter_values["Negative electrode OCP [V]"](n_vals[i]).value
-        Vs[i] = V_pos - V_neg
-        Q_max_pos = parameter_values[
-            "Maximum concentration in positive electrode [mol.m-3]"
-        ]
-    # Get electrode properties to convert stoich range to moles Li
-    W = parameter_values["Electrode width [m]"]
-    H = parameter_values["Electrode height [m]"]
-    T_pos = parameter_values["Positive electrode thickness [m]"]
-    eps_s_pos = parameter_values["Positive electrode active material volume fraction"]
-    vol_pos = W * H * T_pos * eps_s_pos
+        Vs[i] = parameter_values.evaluate(
+            param.p.prim.U(p_vals[i], T)
+        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
     # Calculate dQ
-    Q_p = vol_pos * Q_max_pos * (p_f - p_i)
+    Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
     dQ = Q_p / (points - 1)
     # Integrate and convert to W-h
-    E = np.trapz(Vs, dx=dQ) * 26.8
+    E = np.trapz(Vs, dx=dQ)
     return E
