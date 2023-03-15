@@ -142,6 +142,23 @@ class TestElectrodeSOHHalfCell(unittest.TestCase):
         self.assertAlmostEqual(sol["Uw(x_100)"].data[0], V_max, places=5)
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
 
+class TestCalculateTheoreticalEnergy(unittest.TestCase):
+    def test_efficiency(self):
+        model = pybamm.lithium_ion.DFN(
+            options = {"calculate discharge energy" : True}
+        )
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0,3600], initial_soc = 1.0)
+        discharge_energy = sol["Discharge energy [W.h]"].entries[-1]
+        theoretical_energy = pybamm.lithium_ion.electrode_soh.calculate_theoretical_energy(parameter_values)
+        # Real energy should be less than discharge energy, and both should be greater than 1
+        self.assertLess(discharge_energy, theoretical_energy)
+        self.assertLess(0, discharge_energy)
+        self.assertLess(0, theoretical_energy)
+
+        
+
 
 class TestGetInitialSOC(unittest.TestCase):
     def test_initial_soc(self):
