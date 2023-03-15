@@ -54,23 +54,6 @@ class Latexify:
         self.filename = filename
         self.newline = newline
 
-    def _get_concat_geometry_displays(self, var):
-        """Returns a list of min/max ranges of all concatenation nodes in latex."""
-        geo = []
-
-        # Loop through all subdomains for concatenations
-        for domain in var.domain:
-            for var_name, rng in self.model.default_geometry[domain].items():
-                if "min" in rng and "max" in rng:
-                    rng_min = get_rng_min_max_name(rng, "min")
-                    rng_max = get_rng_min_max_name(rng, "max")
-
-                    name = sympy.latex(var_name)[0]
-                    geo_latex = f"& {rng_min} < {name} < {rng_max}"
-                    geo.append(geo_latex)
-
-        return geo
-
     def _get_geometry_displays(self, var):
         """
         Returns min range from the first domain and max range from the last domain of
