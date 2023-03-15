@@ -157,7 +157,6 @@ class TestCalculateTheoreticalEnergy(unittest.TestCase):
         )
         # Real energy should be less than discharge energy,
         #  and both should be greater than 0
-        print(discharge_energy / theoretical_energy)
         self.assertLess(discharge_energy, theoretical_energy)
         self.assertLess(0, discharge_energy)
         self.assertLess(0, theoretical_energy)
