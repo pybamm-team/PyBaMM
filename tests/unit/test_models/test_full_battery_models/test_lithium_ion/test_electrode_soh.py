@@ -152,10 +152,11 @@ class TestCalculateTheoreticalEnergy(unittest.TestCase):
         sol = sim.solve([0,3600], initial_soc = 1.0)
         discharge_energy = sol["Discharge energy [W.h]"].entries[-1]
         theoretical_energy = pybamm.lithium_ion.electrode_soh.calculate_theoretical_energy(parameter_values)
-        # Real energy should be less than discharge energy, and both should be greater than 1
+        # Real energy should be less than discharge energy, and both should be greater than 0
         self.assertLess(discharge_energy, theoretical_energy)
         self.assertLess(0, discharge_energy)
         self.assertLess(0, theoretical_energy)
+        self.assertEqual(0, 1)
 
         
 
