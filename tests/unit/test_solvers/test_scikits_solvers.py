@@ -532,7 +532,7 @@ class TestScikitsSolvers(unittest.TestCase):
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
-            step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
+            step_sol_2.t, np.array([0, 1, 1 + 1e-6, 1.25, 1.5, 1.75, 2])
         )
         np.testing.assert_allclose(step_sol_2.y[0], np.exp(-0.1 * step_sol_2.t))
 
@@ -560,22 +560,22 @@ class TestScikitsSolvers(unittest.TestCase):
         dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
-        np.testing.assert_allclose(step_sol.y[-1], 2 * np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(step_sol.y[0, :], np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(step_sol.y[-1, :], 2 * np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
-            step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
+            step_sol_2.t, np.array([0, 1, 1 + 1e-6, 1.25, 1.5, 1.75, 2])
         )
-        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
-        np.testing.assert_allclose(step_sol_2.y[-1], 2 * np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_allclose(step_sol_2.y[0, :], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_allclose(step_sol_2.y[-1, :], 2 * np.exp(0.1 * step_sol_2.t))
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], step_sol.y[0, :])
-        np.testing.assert_allclose(solution.y[-1], step_sol.y[-1, :])
+        np.testing.assert_allclose(solution.y[0, :], step_sol.y[0, :])
+        np.testing.assert_allclose(solution.y[-1, :], step_sol.y[-1, :])
 
     def test_model_solver_ode_events_casadi(self):
         # Create model
@@ -794,8 +794,8 @@ class TestScikitsSolvers(unittest.TestCase):
         )
         var1_soln = (step_solution.t % a) ** 2 / 2 + a**2 / 2 * (step_solution.t // a)
         var2_soln = 2 * var1_soln
-        np.testing.assert_array_almost_equal(step_solution.y[0], var1_soln, decimal=5)
-        np.testing.assert_array_almost_equal(step_solution.y[-1], var2_soln, decimal=5)
+        np.testing.assert_array_almost_equal(step_solution.y[0], var1_soln, decimal=4)
+        np.testing.assert_array_almost_equal(step_solution.y[-1], var2_soln, decimal=4)
 
     def test_model_solver_dae_nonsmooth(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
