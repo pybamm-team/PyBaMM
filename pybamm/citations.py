@@ -14,11 +14,12 @@ from pybtex.scanner import PybtexError
 class Citations:
 
     """Entry point to citations management.
-    This object may be used to record BibTeX citation information and then register that
-    a particular citation is relevant for a particular simulation.
+    This object may be used to record sphinxcontrib-bibtex citation information
+    & then register that a particular citation is relevant for a particular simulation.
 
     Citations listed in `pybamm/refs.bib` can be registered with their citation
-    key. For all other works provide a BibTeX Citation to :meth:`register`.
+    key.
+    For all other works provide a sphinxcontrib-bibtex Citation to :meth:`register`.
 
     Examples
     --------
@@ -54,10 +55,10 @@ class Citations:
 
     def read_citations(self):
         """Reads the citations in `pybamm.refs.bib`. Other works can be cited
-        by passing a BibTeX citation to :meth:`register`.
+        by passing a sphinxcontrib-bibtex citation to :meth:`register`.
         """
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "refs.bib")
-        bib_data = parse_file(citations_file, bib_format="bibtex")
+        bib_data = parse_file(citations_file, bib_format="sphinxcontrib-bibtex")
         for key, entry in bib_data.entries.items():
             self._add_citation(key, entry)
 
@@ -71,7 +72,7 @@ class Citations:
             raise TypeError()
 
         # Warn if overwriting an previous citation
-        new_citation = entry.to_string("bibtex")
+        new_citation = entry.to_string("sphinxcontrib-bibtex")
         if key in self._all_citations and new_citation != self._all_citations[key]:
             warnings.warn(f"Replacing citation for {key}")
 
@@ -80,7 +81,7 @@ class Citations:
 
     @property
     def _cited(self):
-        """Return a list of the BibTeX entries that have been cited"""
+        """Return a list of the sphinxcontrib-bibtex entries that have been cited"""
         return [self._all_citations[key] for key in self._papers_to_cite]
 
     def register(self, key):
@@ -88,14 +89,14 @@ class Citations:
         should be called only when the referenced functionality is actually being used.
 
         .. warning::
-            Registering a BibTeX citation, with the same key as an existing citation,
-            will overwrite the current citation.
+            Registering a sphinxcontrib-bibtex citation, with the same key
+            as an existing citation, will overwrite the current citation.
 
         Parameters
         ----------
         key : str
             - The citation key for an entry in `pybamm/refs.bib` or
-            - One or more BibTeX formatted citations
+            - One or more sphinxcontrib-bibtex formatted citations
         """
         if self._citation_err_msg is None:
             # Check if citation is a known key
@@ -105,8 +106,9 @@ class Citations:
 
             # Try to parse the citation using pybtex
             try:
-                # Parse string as a bibtex citation, and check that a citation was found
-                bib_data = parse_string(key, bib_format="bibtex")
+                # Parse string as a sphinxcontrib-bibtex citation,
+                # and check that a citation was found
+                bib_data = parse_string(key, bib_format="sphinxcontrib-bibtex")
                 if not bib_data.entries:
                     raise PybtexError("no entries found")
 
@@ -117,7 +119,9 @@ class Citations:
                     return
             except PybtexError:
                 # Unable to parse / unknown key
-                raise KeyError(f"Not a bibtex citation or known citation: {key}")
+                raise KeyError(
+                    f"Not a sphinxcontrib-bibtex citation or known citation: {key}"
+                )
 
     def print(self, filename=None, output_format="text"):
         """Print all citations that were used for running simulations.
@@ -132,12 +136,12 @@ class Citations:
             citations = pybtex.format_from_strings(
                 self._cited, style="plain", output_backend="plaintext"
             )
-        elif output_format == "bibtex":
+        elif output_format == "sphinxcontrib-bibtex":
             citations = "\n".join(self._cited)
         else:
             raise pybamm.OptionError(
                 "Output format {} not recognised."
-                "It should be 'text' or 'bibtex'.".format(output_format)
+                "It should be 'text' or 'sphinxcontrib-bibtex'.".format(output_format)
             )
 
         if filename is None:

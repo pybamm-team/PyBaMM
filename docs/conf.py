@@ -51,7 +51,7 @@ extensions = [
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_extend_parent",
-    "sphinxcontrib.bibtex",
+    "sphinxcontrib.sphinxcontrib-bibtex",
 ]
 bibtex_bibfiles = ["refs.bib"]
 

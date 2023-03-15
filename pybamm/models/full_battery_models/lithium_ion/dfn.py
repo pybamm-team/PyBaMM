@@ -31,7 +31,7 @@ class DFN(BaseModel):
 
         self.set_submodels(build)
 
-        pybamm.citations.register("Doyle1993")
+        pybamm.citations.register("1993:Doyle1993")
 
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:

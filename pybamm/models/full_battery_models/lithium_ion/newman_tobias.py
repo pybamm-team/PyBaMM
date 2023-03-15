@@ -40,7 +40,7 @@ class NewmanTobias(DFN):
 
         super().__init__(options, name, build)
 
-        pybamm.citations.register("Newman1962")
+        pybamm.citations.register("1962:Newman1962")
         pybamm.citations.register("Chu2020")
 
     def set_particle_submodel(self):

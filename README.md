@@ -135,7 +135,7 @@ If you use PyBaMM in your work, please cite our paper
 
 > Sulzer, V., Marquis, S. G., Timms, R., Robinson, M., & Chapman, S. J. (2021). Python Battery Mathematical Modelling (PyBaMM). _Journal of Open Research Software, 9(1)_.
 
-You can use the BibTeX
+You can use the sphinxcontrib-bibtex
 
 ```
 @article{2021:Sulzer2021,
@@ -157,7 +157,7 @@ We would be grateful if you could also cite the relevant papers. These will chan
 pybamm.print_citations()
 ```
 
-to the end of your script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/refs.bib). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+to the end of your script. This will print sphinxcontrib-bibtex information to the terminal; passing a filename to `print_citations` will print the sphinxcontrib-bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/refs.bib). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
 See [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## 🛠️ Contributing to PyBaMM

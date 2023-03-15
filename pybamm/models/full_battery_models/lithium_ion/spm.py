@@ -49,13 +49,13 @@ class SPM(BaseModel):
         self.set_submodels(build)
 
         if self.__class__ != "MPM":
-            pybamm.citations.register("Marquis2019")
+            pybamm.citations.register("2019:Marquis2019")
 
         if (
             self.options["SEI"] not in ["none", "constant"]
             or self.options["lithium plating"] != "none"
         ):
-            pybamm.citations.register("BrosaPlanella2022")
+            pybamm.citations.register("2022:BrosaPlanella2022")
 
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:

@@ -341,12 +341,12 @@ Adding the command
 pybamm.print_citations()
 ```
 
-to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
+to the end of a script will print all citations that were used by that script. This will print sphinxcontrib-bibtex information to the terminal; passing a filename to `print_citations` will print the sphinxcontrib-bibtex information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [refs.bib](pybamm/refs.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the sphinxcontrib-bibtex for your paper to [refs.bib](pybamm/refs.bib). Then, add the line
 
 ```python3
-pybamm.citations.register("your_paper_bibtex_identifier")
+pybamm.citations.register("your_paper_sphinxcontrib-bibtex_identifier")
 ```
 
 wherever code is called that uses that citation (for example, in functions or in the `__init__` method of a class such as a model or solver).

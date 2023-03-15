@@ -33,7 +33,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
     def __init__(
         self, param=None, solve_for=None, known_value="cyclable lithium capacity"
     ):
-        pybamm.citations.register("Mohtat2019")
+        pybamm.citations.register("2019:Mohtat2019")
         name = "ElectrodeSOH model"
         super().__init__(name)
 

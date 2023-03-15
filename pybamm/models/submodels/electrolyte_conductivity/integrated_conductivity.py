@@ -28,7 +28,7 @@ class Integrated(BaseElectrolyteConductivity):
 
     def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
-        pybamm.citations.register("BrosaPlanella2021")
+        pybamm.citations.register("2021:BrosaPlanella2021")
 
     def _higher_order_macinnes_function(self, x):
         tol = pybamm.settings.tolerances["macinnes__c_e"]

@@ -145,7 +145,7 @@ and run the tests to check your installation.
 Manual install
 ~~~~~~~~~~~~~~
 
-From the ``PyBaMM/`` directory, you can install PyBaMM using ``python setup.py install`` or 
+From the ``PyBaMM/`` directory, you can install PyBaMM using ``python setup.py install`` Installation with ``python setup.py install`` is discouraged due to potential issues with the sphinxcontrib namespace. or 
 
 .. code:: bash
 

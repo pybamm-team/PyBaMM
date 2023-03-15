@@ -32,7 +32,7 @@ class LossActiveMaterial(BaseModel):
 
     def __init__(self, param, domain, options, x_average):
         super().__init__(param, domain, options=options)
-        pybamm.citations.register("Reniers2019")
+        pybamm.citations.register("2019:Reniers2019")
         self.x_average = x_average
 
     def get_fundamental_variables(self):

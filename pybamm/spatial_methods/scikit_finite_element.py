@@ -27,7 +27,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
     def __init__(self, options=None):
         super().__init__(options)
-        pybamm.citations.register("Gustafsson2020")
+        pybamm.citations.register("2020:Gustafsson2020")
 
     def build(self, mesh):
         super().build(mesh)

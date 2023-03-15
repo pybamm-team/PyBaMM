@@ -27,7 +27,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     def __init__(self, working_electrode, name="Electrode-specific SOH model"):
         self.working_electrode = working_electrode
-        pybamm.citations.register("Mohtat2019")
+        pybamm.citations.register("2019:Mohtat2019")
         super().__init__(name)
         param = pybamm.LithiumIonParameters({"working electrode": working_electrode})
 

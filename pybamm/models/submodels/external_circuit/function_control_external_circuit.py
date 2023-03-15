@@ -151,7 +151,7 @@ class CCCVFunctionControl(FunctionControl):
 
     def __init__(self, param, options):
         super().__init__(param, self.cccv, options, control="differential with max")
-        pybamm.citations.register("Mohtat2021")
+        pybamm.citations.register("2021:Mohtat2021")
 
     def cccv(self, variables):
         # Multiply by the time scale so that the votage overshoot only lasts a few

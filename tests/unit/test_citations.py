@@ -47,9 +47,9 @@ class TestCitations(unittest.TestCase):
             with open(filename, "r") as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
-        # Bibtext Style
+        # sphinxcontrib-bibtext Style
         with temporary_filename() as filename:
-            pybamm.print_citations(filename, "bibtex")
+            pybamm.print_citations(filename, "sphinxcontrib-bibtex")
             with open(filename, "r") as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
@@ -61,8 +61,10 @@ class TestCitations(unittest.TestCase):
             "Python Battery Mathematical Modelling (PyBaMM)." in f.getvalue()
         )
 
-        with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
-            pybamm.print_citations("test_refs.bib", "bad format")
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "'text' or 'sphinxcontrib-bibtex'"
+        ):
+            pybamm.print_citations("test_citations.py", "bad format")
 
         pybamm.citations._citation_err_msg = "Error"
         with self.assertRaisesRegex(ImportError, "Error"):
@@ -113,29 +115,29 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Marquis2019", citations._papers_to_cite)
+        self.assertNotIn("2019:Marquis2019", citations._papers_to_cite)
         pybamm.lithium_ion.SPM(build=False)
-        self.assertIn("Marquis2019", citations._papers_to_cite)
+        self.assertIn("2019:Marquis2019", citations._papers_to_cite)
 
         citations._reset()
         pybamm.lithium_ion.SPMe(build=False)
-        self.assertIn("Marquis2019", citations._papers_to_cite)
+        self.assertIn("2019:Marquis2019", citations._papers_to_cite)
 
     def test_doyle_1993(self):
         citations = pybamm.citations
         citations._reset()
-        self.assertNotIn("Doyle1993", citations._papers_to_cite)
+        self.assertNotIn("1993:Doyle1993", citations._papers_to_cite)
         pybamm.lithium_ion.DFN(build=False)
-        self.assertIn("Doyle1993", citations._papers_to_cite)
+        self.assertIn("1993:Doyle1993", citations._papers_to_cite)
 
     def test_sulzer_2019(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Sulzer2019asymptotic", citations._papers_to_cite)
+        self.assertNotIn("2019:Sulzer2019asymptotic", citations._papers_to_cite)
         pybamm.lead_acid.LOQS(build=False)
-        self.assertIn("Sulzer2019asymptotic", citations._papers_to_cite)
+        self.assertIn("2019:Sulzer2019asymptotic", citations._papers_to_cite)
 
         citations._reset()
         pybamm.lead_acid.Full(build=False)
@@ -146,27 +148,27 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.current_collector.BasePotentialPair(param=None)
-        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.current_collector.EffectiveResistance()
-        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.current_collector.AlternativeEffectiveResistance2D()
-        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.thermal.pouch_cell.CurrentCollector1D(param=None)
-        self.assertIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
         citations._reset()
-        self.assertNotIn("2021:2021:Timms2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Timms2021", citations._papers_to_cite)
         pybamm.thermal.pouch_cell.CurrentCollector2D(param=None)
         self.assertIn("2021:Timms2021", citations._papers_to_cite)
 
@@ -203,38 +205,38 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("BrosaPlanella2021", citations._papers_to_cite)
+        self.assertNotIn("2021:BrosaPlanella2021", citations._papers_to_cite)
         pybamm.electrolyte_conductivity.Integrated(None)
-        self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
+        self.assertIn("2021:BrosaPlanella2021", citations._papers_to_cite)
 
     def test_brosaplanella_2022(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
+        self.assertNotIn("2022:BrosaPlanella2022", citations._papers_to_cite)
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "none"})
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "constant"})
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "none"})
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
-        self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
+        self.assertNotIn("2022:BrosaPlanella2022", citations._papers_to_cite)
 
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
-        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        self.assertIn("2022:BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "ec reaction limited"})
-        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        self.assertIn("2022:BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
         pybamm.lithium_ion.SPM(build=False, options={"lithium plating": "irreversible"})
-        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        self.assertIn("2022:BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
         pybamm.lithium_ion.SPMe(
             build=False, options={"lithium plating": "irreversible"}
         )
-        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        self.assertIn("2022:BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
     def test_newman_tobias(self):
@@ -242,46 +244,46 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Newman1962", citations._papers_to_cite)
+        self.assertNotIn("1962:Newman1962", citations._papers_to_cite)
         self.assertNotIn("Chu2020", citations._papers_to_cite)
         pybamm.lithium_ion.NewmanTobias()
-        self.assertIn("Newman1962", citations._papers_to_cite)
+        self.assertIn("1962:Newman1962", citations._papers_to_cite)
         self.assertIn("Chu2020", citations._papers_to_cite)
 
     def test_scikit_fem(self):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Gustafsson2020", citations._papers_to_cite)
+        self.assertNotIn("2020:Gustafsson2020", citations._papers_to_cite)
         pybamm.ScikitFiniteElement()
-        self.assertIn("Gustafsson2020", citations._papers_to_cite)
+        self.assertIn("2020:Gustafsson2020", citations._papers_to_cite)
 
     def test_reniers_2019(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Reniers2019", citations._papers_to_cite)
+        self.assertNotIn("2019:Reniers2019", citations._papers_to_cite)
         pybamm.active_material.LossActiveMaterial(None, "negative", None, True)
-        self.assertIn("Reniers2019", citations._papers_to_cite)
+        self.assertIn("2019:Reniers2019", citations._papers_to_cite)
 
     def test_mohtat_2019(self):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Mohtat2019", citations._papers_to_cite)
+        self.assertNotIn("2019:Mohtat2019", citations._papers_to_cite)
         pybamm.lithium_ion.ElectrodeSOHSolver(
             pybamm.ParameterValues("Marquis2019")
         )._get_electrode_soh_sims_full()
-        self.assertIn("Mohtat2019", citations._papers_to_cite)
+        self.assertIn("2019:Mohtat2019", citations._papers_to_cite)
 
     def test_mohtat_2021(self):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("Mohtat2021", citations._papers_to_cite)
+        self.assertNotIn("2021:Mohtat2021", citations._papers_to_cite)
         pybamm.external_circuit.CCCVFunctionControl(None, None)
-        self.assertIn("Mohtat2021", citations._papers_to_cite)
+        self.assertIn("2021:Mohtat2021", citations._papers_to_cite)
 
     def test_sripad_2020(self):
         citations = pybamm.citations
