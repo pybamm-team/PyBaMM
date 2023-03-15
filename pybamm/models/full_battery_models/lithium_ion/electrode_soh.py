@@ -558,7 +558,10 @@ def get_min_max_stoichiometries(
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value)
     return esoh_solver.get_min_max_stoichiometries()
 
-def calculate_theoretical_energy(parameter_values, initial_soc=1.0, final_soc=0.0, points=100):
+
+def calculate_theoretical_energy(
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
+):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
     given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -579,28 +582,29 @@ def calculate_theoretical_energy(parameter_values, initial_soc=1.0, final_soc=0.
     E
         The total energy of the cell in Wh
     """
-    #Get initial and final stoichiometric values
+    # Get initial and final stoichiometric values.
     n_i, p_i = get_initial_stoichiometries(initial_soc, parameter_values)
     n_f, p_f = get_initial_stoichiometries(final_soc, parameter_values)
     n_vals = np.linspace(n_i, n_f, num=points)
     p_vals = np.linspace(p_i, p_f, num=points)
-    #Calculate OCV at each stoichiometry
+    # Calculate OCV at each stoichiometry
     Vs = np.empty(n_vals.shape)
     for i in range(n_vals.size):
         V_pos = parameter_values["Positive electrode OCP [V]"](p_vals[i]).value
         V_neg = parameter_values["Negative electrode OCP [V]"](n_vals[i]).value
         Vs[i] = V_pos - V_neg
-        Q_max_pos = parameter_values["Maximum concentration in positive electrode [mol.m-3]"]
-    #Get electrode properties to convert stoich range to moles Li
+        Q_max_pos = parameter_values[
+            "Maximum concentration in positive electrode [mol.m-3]"
+        ]
+    # Get electrode properties to convert stoich range to moles Li
     W = parameter_values["Electrode width [m]"]
     H = parameter_values["Electrode height [m]"]
     T_pos = parameter_values["Positive electrode thickness [m]"]
     eps_s_pos = parameter_values["Positive electrode active material volume fraction"]
-    vol_pos = W*H*T_pos*eps_s_pos
-    #Calculate dQ
-    Q_p = vol_pos*Q_max_pos*(p_f - p_i)
-    dQ = Q_p/(points - 1)
-    #Integrate and convert to W-h
-    E = np.trapz(Vs, dx=dQ)*26.8
+    vol_pos = W * H * T_pos * eps_s_pos
+    # Calculate dQ
+    Q_p = vol_pos * Q_max_pos * (p_f - p_i)
+    dQ = Q_p / (points - 1)
+    # Integrate and convert to W-h
+    E = np.trapz(Vs, dx=dQ) * 26.8
     return E
-    
