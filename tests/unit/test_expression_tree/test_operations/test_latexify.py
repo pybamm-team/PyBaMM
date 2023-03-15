@@ -75,6 +75,14 @@ class TestLatexify(unittest.TestCase):
         )
         self.assertIn("Electrolyte concentration [mol.m-3]", func_spme)
 
+        # Default behavior when voltage is not in the model variables
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0}
+        model.initial_conditions = {var: 0}
+        func = str(model.latexify())
+        self.assertNotIn("Voltage [V]", func)
+
     @unittest.skipIf(platform.system() in ["Windows", "Darwin"], "Only run for Linux")
     def test_sympy_preview(self):
         # Test sympy preview
