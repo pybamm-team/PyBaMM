@@ -29,6 +29,7 @@
 - Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve ([#2677](https://github.com/pybamm-team/PyBaMM/pull/2677))
 - The "particle size" option can now be a tuple to allow different behaviour in each electrode ([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
 - Added temperature control to experiment class. ([#2518](https://github.com/pybamm-team/PyBaMM/pull/2518))
+- Added method to calculate maximum theoretical energy. ([#2777](https://github.com/pybamm-team/PyBaMM/pull/2777))
 
 ## Bug fixes
 
