@@ -243,7 +243,8 @@ class ElectrodeSOHSolver:
                 # if that didn't raise an error, raise the original error instead
                 raise split_error
 
-        return sol
+        sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
+        return sol_dict
 
     def _set_up_solve(self, inputs):
         # Try with full sim
@@ -501,7 +502,7 @@ class ElectrodeSOHSolver:
             inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
         sol = self.solve(inputs)
-        return [sol[var].data[0] for var in ["x_0", "x_100", "y_100", "y_0"]]
+        return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
 
 def get_initial_stoichiometries(
