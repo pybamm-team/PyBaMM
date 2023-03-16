@@ -23,7 +23,7 @@ class TestExperiments(unittest.TestCase):
         sim.solve()
         np.testing.assert_array_almost_equal(
             sim._solution["Time [h]"].entries,
-            np.array([0, 0.5, 1, 1 + 1e-6, 1.5, 2, 2 + 1e-6, 2.5, 3]),
+            np.array([0, 0.5, 1, 1 + 1e-9, 1.5, 2, 2 + 1e-9, 2.5, 3]),
         )
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
         np.testing.assert_array_almost_equal(
