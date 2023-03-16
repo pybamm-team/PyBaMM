@@ -598,7 +598,7 @@ def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100
 
 
 def calculate_theoretical_energy(
-    parameter_values, initial_soc=1.0, final_soc=0.0, points=100, initial_stoichs=None
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
 ):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
@@ -611,7 +611,7 @@ def calculate_theoretical_energy(
     initial_soc : float
         The soc at begining of discharge, default 1.0
     final_soc : float
-        The soc at end of discharge, default 1.0
+        The soc at end of discharge, default 0.0
     points : int
         The number of points at which to calculate voltage.
 
