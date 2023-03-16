@@ -559,8 +559,46 @@ def get_min_max_stoichiometries(
     return esoh_solver.get_min_max_stoichiometries()
 
 
+def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100):
+    """
+    Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
+    given voltage limits, open-circuit potentials, etc defined by parameter_values
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues`
+        The parameter values class that will be used for the simulation.
+    n_i, n_f, p_i, p_f : float
+        initial and final stoichiometries for the positive and negative
+        electrodes, respectively
+    points : int
+        The number of points at which to calculate voltage.
+
+    Returns
+    -------
+    E
+        The total energy of the cell in Wh
+    """
+    n_vals = np.linspace(n_i, n_f, num=points)
+    p_vals = np.linspace(p_i, p_f, num=points)
+    # Calculate OCV at each stoichiometry
+    param = pybamm.LithiumIonParameters()
+    T = param.T_amb(0)
+    Vs = np.empty(n_vals.shape)
+    for i in range(n_vals.size):
+        Vs[i] = parameter_values.evaluate(
+            param.p.prim.U(p_vals[i], T)
+        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
+    # Calculate dQ
+    Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
+    dQ = Q_p / (points - 1)
+    # Integrate and convert to W-h
+    E = np.trapz(Vs, dx=dQ)
+    return E
+
+
 def calculate_theoretical_energy(
-    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100, initial_stoichs=None
 ):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
@@ -585,19 +623,5 @@ def calculate_theoretical_energy(
     # Get initial and final stoichiometric values.
     n_i, p_i = get_initial_stoichiometries(initial_soc, parameter_values)
     n_f, p_f = get_initial_stoichiometries(final_soc, parameter_values)
-    n_vals = np.linspace(n_i, n_f, num=points)
-    p_vals = np.linspace(p_i, p_f, num=points)
-    # Calculate OCV at each stoichiometry
-    param = pybamm.LithiumIonParameters()
-    T = param.T_amb(0)
-    Vs = np.empty(n_vals.shape)
-    for i in range(n_vals.size):
-        Vs[i] = parameter_values.evaluate(
-            param.p.prim.U(p_vals[i], T)
-        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
-    # Calculate dQ
-    Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
-    dQ = Q_p / (points - 1)
-    # Integrate and convert to W-h
-    E = np.trapz(Vs, dx=dQ)
+    E = theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=points)
     return E

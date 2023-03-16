@@ -880,4 +880,14 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
         for var in esoh_sol.all_models[0].variables:
             cycle_summary_variables[var] = esoh_sol[var].data[0]
 
+        # Calculate theoretical energy
+        n_i = cycle_summary_variables["x_0"]
+        p_i = cycle_summary_variables["y_0"]
+        n_f = n_i + cycle_summary_variables["x_100 - x_0"]
+        p_f = p_i - cycle_summary_variables["y_0 - y_100"]
+        energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+            esoh_solver.parameter_values, n_i, n_f, p_i, p_f
+        )
+        cycle_summary_variables["Maximum theoretical energy [W.h]"] = energy
+
     return cycle_summary_variables
