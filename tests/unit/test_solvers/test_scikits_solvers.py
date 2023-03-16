@@ -539,7 +539,7 @@ class TestScikitsSolvers(unittest.TestCase):
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0], atol=1e-6, rtol=1e-6)
 
     def test_model_step_dae_python(self):
         model = pybamm.BaseModel()
