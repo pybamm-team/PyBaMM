@@ -52,6 +52,8 @@ class TestParameterValues(unittest.TestCase):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
+        self.assertIn("a", param.keys())
+        self.assertIn(1, param.values())
 
         # from file
         param = pybamm.ParameterValues(

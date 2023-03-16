@@ -206,15 +206,7 @@ class ParameterValues:
                 component_groups = [extra_group] + component_groups
 
         for component_group in component_groups:
-            # Make sure component is provided
-            try:
-                component = chemistry[component_group]
-            except KeyError:
-                raise KeyError(
-                    "must provide '{}' parameters for {} chemistry".format(
-                        component_group, base_chemistry
-                    )
-                )
+            component = chemistry[component_group]
             # Create path to component and load values
             component_path = os.path.join(
                 base_chemistry,
