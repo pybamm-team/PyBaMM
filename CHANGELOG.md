@@ -19,6 +19,8 @@
 
 ## Breaking changes
 
+- `ElectrodeSOH.solve` now returns a `{str: float}` dict instead of a `pybamm.Solution` object (to avoid having to do `.data[0]` every time). In any code that uses `sol = ElectrodeSOH.solve()`, `sol[key].data[0]` should be replaced with `sol[key]`. ([#2779](https://github.com/pybamm-team/PyBaMM/pull/2779))
+- Removed "... cation signed stoichiometry" and "... electrons in reaction" parameters, they are now hardcoded. ([#2778](https://github.com/pybamm-team/PyBaMM/pull/2778))
 - When using `solver.step()`, the first time point in the step is shifted by `pybamm.settings.step_start_offset` (default 1 ns) to avoid having duplicate times in the solution steps from the end of one step and the start of the next. ([#2773](https://github.com/pybamm-team/PyBaMM/pull/2773))
 - Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Open-circuit voltage [V]" is calculated from bulk particle concentrations instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Renamed all references to "open circuit" to be "open-circuit" instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))

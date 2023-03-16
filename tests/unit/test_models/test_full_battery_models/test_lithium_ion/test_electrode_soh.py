@@ -23,15 +23,15 @@ class TestElectrodeSOH(unittest.TestCase):
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
 
-        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
-        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
-        self.assertAlmostEqual(sol["Q_Li"].data[0], Q_Li, places=5)
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
         # Solve with split esoh and check outputs
         ics = esoh_solver._set_up_solve(inputs)
         sol_split = esoh_solver._solve_split(inputs, ics)
-        for key in sol.all_models[0].variables:
-            self.assertAlmostEqual(sol[key].data[0], sol_split[key].data[0], places=5)
+        for key in sol:
+            self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
 
         # should still work with old inputs
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
@@ -39,7 +39,7 @@ class TestElectrodeSOH(unittest.TestCase):
 
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
-        self.assertAlmostEqual(sol["Q_Li"].data[0], Q_Li, places=5)
+        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
     def test_known_solution_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
@@ -60,9 +60,9 @@ class TestElectrodeSOH(unittest.TestCase):
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
 
-        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
-        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
-        self.assertAlmostEqual(sol["Q"].data[0], Q, places=5)
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q"], Q, places=5)
 
     def test_error(self):
         param = pybamm.LithiumIonParameters()

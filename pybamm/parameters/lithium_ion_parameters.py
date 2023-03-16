@@ -377,7 +377,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         pref = self.phase_prefactor
 
         # Electrochemical reactions
-        self.ne = pybamm.Parameter(f"{pref}{Domain} electrode electrons in reaction")
+        self.ne = pybamm.Scalar(1)
 
         # Intercalation kinetics
         self.mhc_lambda = pybamm.Parameter(
