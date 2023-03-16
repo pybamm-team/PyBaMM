@@ -67,9 +67,11 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
-        # Check stepping with negative step size
-        dt = -1
-        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be positive"):
+        # Check stepping with step size too small
+        dt = 1e-9
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Step time must be at least 1.000 ns"
+        ):
             solver.step(None, model, dt)
 
     def test_solution_time_length_fail(self):
