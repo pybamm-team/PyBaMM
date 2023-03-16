@@ -545,7 +545,10 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         diff = (
             self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
         ) / self.c_e_tot(self.solution.t[:-1])
-        if self.model.options["surface form"] == "differential":
+        if self.model.options["surface form"] == "differential" or (
+            isinstance(self.model, pybamm.lithium_ion.DFN)
+            and self.model.options["surface form"] == "algebraic"
+        ):
             np.testing.assert_allclose(0, diff, atol=1e-4, rtol=1e-6)
         else:
             np.testing.assert_allclose(0, diff, atol=1e-14, rtol=1e-14)
