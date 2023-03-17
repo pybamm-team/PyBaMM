@@ -244,6 +244,16 @@ class ElectrodeSOHSolver:
                 raise split_error
 
         sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
+
+        # Calculate theoretical energy
+        x_0 = sol_dict["x_0"]
+        y_0 = sol_dict["y_0"]
+        x_100 = sol_dict["x_100"]
+        y_100 = sol_dict["y_100"]
+        energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+            self.parameter_values, x_100, x_0, y_100, y_0
+        )
+        sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
     def _set_up_solve(self, inputs):
@@ -622,7 +632,9 @@ def calculate_theoretical_energy(
         The total energy of the cell in Wh
     """
     # Get initial and final stoichiometric values.
-    n_i, p_i = get_initial_stoichiometries(initial_soc, parameter_values)
-    n_f, p_f = get_initial_stoichiometries(final_soc, parameter_values)
-    E = theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=points)
+    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values)
+    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values)
+    E = theoretical_energy_integral(
+        parameter_values, x_100, x_0, y_100, y_0, points=points
+    )
     return E
