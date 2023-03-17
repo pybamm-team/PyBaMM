@@ -244,6 +244,16 @@ class ElectrodeSOHSolver:
                 raise split_error
 
         sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
+
+        # Calculate theoretical energy
+        x_0 = sol_dict["x_0"]
+        y_0 = sol_dict["y_0"]
+        x_100 = sol_dict["x_100"]
+        y_100 = sol_dict["y_100"]
+        energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+            self.parameter_values, x_100, x_0, y_100, y_0
+        )
+        sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
     def _set_up_solve(self, inputs):
@@ -560,9 +570,7 @@ def get_min_max_stoichiometries(
     return esoh_solver.get_min_max_stoichiometries()
 
 
-def calculate_theoretical_energy(
-    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
-):
+def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
     given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -571,10 +579,9 @@ def calculate_theoretical_energy(
     ----------
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation.
-    initial_soc : float
-        The soc at begining of discharge, default 1.0
-    final_soc : float
-        The soc at end of discharge, default 1.0
+    n_i, n_f, p_i, p_f : float
+        initial and final stoichiometries for the positive and negative
+        electrodes, respectively
     points : int
         The number of points at which to calculate voltage.
 
@@ -583,9 +590,6 @@ def calculate_theoretical_energy(
     E
         The total energy of the cell in Wh
     """
-    # Get initial and final stoichiometric values.
-    n_i, p_i = get_initial_stoichiometries(initial_soc, parameter_values)
-    n_f, p_f = get_initial_stoichiometries(final_soc, parameter_values)
     n_vals = np.linspace(n_i, n_f, num=points)
     p_vals = np.linspace(p_i, p_f, num=points)
     # Calculate OCV at each stoichiometry
@@ -601,4 +605,36 @@ def calculate_theoretical_energy(
     dQ = Q_p / (points - 1)
     # Integrate and convert to W-h
     E = np.trapz(Vs, dx=dQ)
+    return E
+
+
+def calculate_theoretical_energy(
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
+):
+    """
+    Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
+    given voltage limits, open-circuit potentials, etc defined by parameter_values
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues`
+        The parameter values class that will be used for the simulation.
+    initial_soc : float
+        The soc at begining of discharge, default 1.0
+    final_soc : float
+        The soc at end of discharge, default 0.0
+    points : int
+        The number of points at which to calculate voltage.
+
+    Returns
+    -------
+    E
+        The total energy of the cell in Wh
+    """
+    # Get initial and final stoichiometric values.
+    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values)
+    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values)
+    E = theoretical_energy_integral(
+        parameter_values, x_100, x_0, y_100, y_0, points=points
+    )
     return E

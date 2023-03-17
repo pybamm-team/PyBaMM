@@ -31,7 +31,18 @@ class TestElectrodeSOH(unittest.TestCase):
         ics = esoh_solver._set_up_solve(inputs)
         sol_split = esoh_solver._solve_split(inputs, ics)
         for key in sol:
-            self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
+            if key != "Maximum theoretical energy [W.h]":
+                self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
+            else:
+                # theoretical_energy is not present in sol_split
+                x_0 = sol_split["x_0"].data[0]
+                y_0 = sol_split["y_0"].data[0]
+                x_100 = sol_split["x_100"].data[0]
+                y_100 = sol_split["y_100"].data[0]
+                energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+                    parameter_values, x_100, x_0, y_100, y_0
+                )
+                self.assertAlmostEqual(sol[key], energy, places=5)
 
         # should still work with old inputs
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
