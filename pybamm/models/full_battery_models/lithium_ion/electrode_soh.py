@@ -255,7 +255,7 @@ class ElectrodeSOHSolver:
                 self.parameter_values, x_100, x_0, y_100, y_0
             )
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
-        except pybamm.ValueError as my_err:
+        except:
             warnings.warn("couldn't calculate theoretical energy")
     
                 
