@@ -6,6 +6,7 @@
 - Added "Negative electrode surface potential difference at separator interface [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Positive electrode surface potential difference at separator interface [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added "Open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added an example for `plot_voltage_components`, explaining what the different voltage components are. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Added method to calculate maximum theoretical energy. ([#2777](https://github.com/pybamm-team/PyBaMM/pull/2777)) and add to summary variables ([#2781](https://github.com/pybamm-team/PyBaMM/pull/2781))
 
 ## Bug fixes
 
@@ -18,6 +19,9 @@
 
 ## Breaking changes
 
+- `ElectrodeSOH.solve` now returns a `{str: float}` dict instead of a `pybamm.Solution` object (to avoid having to do `.data[0]` every time). In any code that uses `sol = ElectrodeSOH.solve()`, `sol[key].data[0]` should be replaced with `sol[key]`. ([#2779](https://github.com/pybamm-team/PyBaMM/pull/2779))
+- Removed "... cation signed stoichiometry" and "... electrons in reaction" parameters, they are now hardcoded. ([#2778](https://github.com/pybamm-team/PyBaMM/pull/2778))
+- When using `solver.step()`, the first time point in the step is shifted by `pybamm.settings.step_start_offset` (default 1 ns) to avoid having duplicate times in the solution steps from the end of one step and the start of the next. ([#2773](https://github.com/pybamm-team/PyBaMM/pull/2773))
 - Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Open-circuit voltage [V]" is calculated from bulk particle concentrations instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Renamed all references to "open circuit" to be "open-circuit" instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Renamed parameter "1 + dlnf/dlnc" to "Thermodynamic factor". ([#2727](https://github.com/pybamm-team/PyBaMM/pull/2727))
@@ -30,7 +34,6 @@
 - Added an option for using a banded jacobian and sundials banded solvers for the IDAKLU solve ([#2677](https://github.com/pybamm-team/PyBaMM/pull/2677))
 - The "particle size" option can now be a tuple to allow different behaviour in each electrode ([#2672](https://github.com/pybamm-team/PyBaMM/pull/2672)).
 - Added temperature control to experiment class. ([#2518](https://github.com/pybamm-team/PyBaMM/pull/2518))
-- Added method to calculate maximum theoretical energy. ([#2777](https://github.com/pybamm-team/PyBaMM/pull/2777))
 
 ## Bug fixes
 

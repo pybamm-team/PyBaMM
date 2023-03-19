@@ -148,34 +148,27 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         sim.step(dt)  # 1 step stores first two points
-        self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
-        self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
+        np.testing.assert_array_almost_equal(sim.solution.t, np.array([0, dt]))
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
-        self.assertEqual(sim.solution.t.size, 3)
-        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
-        self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 4)
+        np.testing.assert_array_almost_equal(
+            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
+        )
 
         sim.step(dt, save=False)  # now only store the two end step points
-        self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
-        self.assertEqual(sim.solution.t[0], 2 * dt)
-        self.assertEqual(sim.solution.t[1], 3 * dt)
-
+        np.testing.assert_array_almost_equal(
+            sim.solution.t, np.array([2 * dt + 1e-9, 3 * dt])
+        )
         # Start from saved solution
-        sim.step(
-            dt, starting_solution=saved_sol
-        )  # now only store the two end step points
-        self.assertEqual(sim.solution.t.size, 3)
-        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
-        self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        sim.step(dt, starting_solution=saved_sol)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 4)
+        np.testing.assert_array_almost_equal(
+            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
+        )
 
     def test_solve_with_initial_soc(self):
         model = pybamm.lithium_ion.SPM()
@@ -238,11 +231,10 @@ class TestSimulation(unittest.TestCase):
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
-        self.assertEqual(sim.solution.t.size, 3)
-        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
-        self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 4)
+        np.testing.assert_array_almost_equal(
+            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
+        )
         np.testing.assert_array_equal(
             sim.solution.all_inputs[1]["Current function [A]"], 2
         )
