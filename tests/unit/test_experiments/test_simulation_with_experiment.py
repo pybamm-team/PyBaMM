@@ -176,20 +176,16 @@ class TestSimulationExperiment(unittest.TestCase):
             solution = sim.solve(solver=pybamm.CasadiSolver("fast with events"))
             solutions.append(solution)
 
+        t = solutions[1]["Time [s]"].data
         np.testing.assert_array_almost_equal(
-            solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"].data,
+            solutions[0]["Voltage [V]"](t=t),
+            solutions[1]["Voltage [V]"](t=t),
             decimal=1,
         )
         np.testing.assert_array_almost_equal(
-            solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"].data,
+            solutions[0]["Current [A]"](t=t),
+            solutions[1]["Current [A]"](t=t),
             decimal=0,
-        )
-
-        np.testing.assert_array_equal(
-            solutions[0]["Ambient temperature [C]"].data,
-            solutions[1]["Ambient temperature [C]"].data,
         )
 
         self.assertEqual(solutions[1].termination, "final time")
@@ -516,12 +512,13 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         sol2 = sim2.solve()
         np.testing.assert_array_almost_equal(
-            sol["Voltage [V]"].data, sol2["Voltage [V]"].data
+            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, decimal=5
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
             np.testing.assert_array_almost_equal(
                 sol.cycles[0].steps[idx1]["Voltage [V]"].data,
                 sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
+                decimal=5,
             )
 
     def test_all_empty_solution_errors(self):

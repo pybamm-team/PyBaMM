@@ -274,8 +274,6 @@ def get_parameter_values():
         "Negative electrode OCP [V]": 0.0,
         "Negative electrode conductivity [S.m-1]": 10776000.0,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Typical plated lithium concentration [mol.m-3]": 76900.0,
         "Exchange-current density for plating [A.m-2]"
         "": li_metal_electrolyte_exchange_current_density_Xu2019,
@@ -292,8 +290,6 @@ def get_parameter_values():
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
         "Positive electrode OCP entropic change [V.K-1]": 0.0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode exchange-current density [A.m-2]"
         "": nmc_electrolyte_exchange_current_density_Xu2019,
@@ -307,7 +303,7 @@ def get_parameter_values():
         "Cation transference number": 0.38,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Valoen2005,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Valoen2005,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         # experiment
         "Ambient temperature [K]": 298.15,
         "Reference temperature [K]": 298.15,

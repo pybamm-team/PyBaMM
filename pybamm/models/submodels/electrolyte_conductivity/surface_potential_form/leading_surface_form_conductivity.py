@@ -19,9 +19,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         The domain in which the model holds
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param, domain, options=None):
@@ -80,9 +77,6 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`BaseLeadingOrderSurfaceForm`
-
     """
 
     def __init__(self, param, domain, options=None):
@@ -119,9 +113,6 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-
-    **Extends:** :class:`BaseLeadingOrderSurfaceForm`
     """
 
     def __init__(self, param, domain, options=None):

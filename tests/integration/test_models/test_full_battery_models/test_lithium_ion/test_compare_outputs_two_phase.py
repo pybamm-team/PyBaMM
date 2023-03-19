@@ -32,7 +32,6 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             "Negative particle radius [m]",
             "Negative electrode diffusivity [m2.s-1]",
             "Negative electrode exchange-current density [A.m-2]",
-            "Negative electrode electrons in reaction",
         ]:
             parameter_values_two_phase.update(
                 {

@@ -20,8 +20,6 @@ class LossActiveMaterial(BaseModel):
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
 
-    **Extends:** :class:`pybamm.active_material.BaseModel`
-
     References
     ----------
     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical

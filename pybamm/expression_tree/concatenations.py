@@ -15,8 +15,6 @@ class Concatenation(pybamm.Symbol):
     """
     A node in the expression tree representing a concatenation of symbols.
 
-    **Extends**: :class:`pybamm.Symbol`
-
     Parameters
     ----------
     children : iterable of :class:`pybamm.Symbol`
@@ -164,8 +162,6 @@ class NumpyConcatenation(Concatenation):
 
     Upon evaluation, equations are concatenated using numpy concatenation.
 
-    **Extends**: :class:`Concatenation`
-
     Parameters
     ----------
     children : iterable of :class:`pybamm.Symbol`
@@ -206,8 +202,6 @@ class DomainConcatenation(Concatenation):
 
     It is assumed that each child has a domain, and the final concatenated vector will
     respect the sizes and ordering of domains established in mesh keys
-
-    **Extends**: :class:`pybamm.Concatenation`
 
     Parameters
     ----------
@@ -329,8 +323,6 @@ class SparseStack(Concatenation):
     The class :class:`pybamm.DomainConcatenation`, which *is* careful about
     domains and uses broadcasting where appropriate, should be used whenever
     possible instead.
-
-    **Extends**: :class:`Concatenation`
 
     Parameters
     ----------

@@ -74,12 +74,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # i.e. a default C-rate of 1
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
 
-    # number of electrons in reaction (1 for li-ion)
-    for domain in [negative_electrode, positive_electrode]:
-        pybamm_dict[domain.pre_name + "electrons in reaction"] = 1.0
-
     # activity
-    pybamm_dict["1 + dlnf/dlnc"] = 1.0
+    pybamm_dict["Thermodynamic factor"] = 1.0
 
     # assume Bruggeman relation for effection electrolyte properties
     for domain in [negative_electrode, separator, positive_electrode]:

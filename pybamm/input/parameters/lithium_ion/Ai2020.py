@@ -413,7 +413,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     Returns
     -------
     :class:`pybamm.Symbol`
-        1 + dlnf/dlnc
+        Thermodynamic factor
     """
     T_ref = 298.15
     t_plus = pybamm.Parameter("Cation transference number")
@@ -618,8 +618,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 5e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 2.914,
         "Negative electrode Bruggeman coefficient (electrode)": 0.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -656,8 +654,6 @@ def get_parameter_values():
         "Positive electrode surface area to volume ratio [m-1]": 620000.0,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.83,
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
@@ -692,7 +688,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
-        "1 + dlnf/dlnc": dlnf_dlnc_Ai2020,
+        "Thermodynamic factor": dlnf_dlnc_Ai2020,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ai2020,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ai2020,
         # experiment

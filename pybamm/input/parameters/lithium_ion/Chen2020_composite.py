@@ -406,8 +406,6 @@ def get_parameter_values():
         "Primary: Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Primary: Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Primary: Negative electrode exchange-current density [A.m-2]"
@@ -425,7 +423,6 @@ def get_parameter_values():
         "": silicon_ocp_delithiation_Mark2016,
         "Secondary: Negative electrode active material volume fraction": 0.015,
         "Secondary: Negative particle radius [m]": 1.52e-06,
-        "Secondary: Negative electrode electrons in reaction": 1.0,
         "Secondary: Negative electrode exchange-current density [A.m-2]"
         "": silicon_LGM50_electrolyte_exchange_current_density_Chen2020,
         "Secondary: Negative electrode density [kg.m-3]": 2650.0,
@@ -440,8 +437,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 5.22e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
@@ -459,7 +454,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
         # experiment

@@ -278,8 +278,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 1.5,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -298,8 +296,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 1e-08,
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode density [kg.m-3]": 2341.17,
@@ -317,7 +313,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
         # experiment

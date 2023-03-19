@@ -23,8 +23,6 @@ class SPMe(SPM):
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
            derivation of a single particle model with electrolyte”. Journal of The
            Electrochemical Society, 166(15):A3693–A3706, 2019
-
-    **Extends:** :class:`pybamm.lithium_ion.SPM`
     """
 
     def __init__(

@@ -27,8 +27,6 @@ class IndependentVariable(pybamm.Symbol):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
-
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, name, domain=None, auxiliary_domains=None, domains=None):
@@ -55,8 +53,6 @@ class IndependentVariable(pybamm.Symbol):
 class Time(IndependentVariable):
     """
     A node in the expression tree representing time.
-
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(self):
@@ -102,8 +98,6 @@ class SpatialVariable(IndependentVariable):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
-
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(
@@ -162,8 +156,6 @@ class SpatialVariableEdge(SpatialVariable):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
-
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(

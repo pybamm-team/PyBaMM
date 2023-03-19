@@ -508,8 +508,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 1.37e-05,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.6372789338386007,
         "Negative electrode Bruggeman coefficient (electrode)": 0.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode exchange-current density [A.m-2]"
         "": graphite_electrolyte_exchange_current_density_Ecker2015,
         "Negative electrode density [kg.m-3]": 1555.0,
@@ -528,8 +526,6 @@ def get_parameter_values():
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
         "Positive electrode exchange-current density [A.m-2]"
         "": nco_electrolyte_exchange_current_density_Ecker2015,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode density [kg.m-3]": 2895.0,
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 1270.0,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 1.04,
@@ -543,7 +539,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.26,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ecker2015,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ecker2015,
         # experiment

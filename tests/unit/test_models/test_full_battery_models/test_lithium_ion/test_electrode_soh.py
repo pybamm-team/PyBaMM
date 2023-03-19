@@ -23,15 +23,26 @@ class TestElectrodeSOH(unittest.TestCase):
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
 
-        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
-        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
-        self.assertAlmostEqual(sol["Q_Li"].data[0], Q_Li, places=5)
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
         # Solve with split esoh and check outputs
         ics = esoh_solver._set_up_solve(inputs)
         sol_split = esoh_solver._solve_split(inputs, ics)
-        for key in sol.all_models[0].variables:
-            self.assertAlmostEqual(sol[key].data[0], sol_split[key].data[0], places=5)
+        for key in sol:
+            if key != "Maximum theoretical energy [W.h]":
+                self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
+            else:
+                # theoretical_energy is not present in sol_split
+                x_0 = sol_split["x_0"].data[0]
+                y_0 = sol_split["y_0"].data[0]
+                x_100 = sol_split["x_100"].data[0]
+                y_100 = sol_split["y_100"].data[0]
+                energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+                    parameter_values, x_100, x_0, y_100, y_0
+                )
+                self.assertAlmostEqual(sol[key], energy, places=5)
 
         # should still work with old inputs
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
@@ -39,7 +50,7 @@ class TestElectrodeSOH(unittest.TestCase):
 
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
-        self.assertAlmostEqual(sol["Q_Li"].data[0], Q_Li, places=5)
+        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
     def test_known_solution_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
@@ -60,9 +71,9 @@ class TestElectrodeSOH(unittest.TestCase):
         # Solve the model and check outputs
         sol = esoh_solver.solve(inputs)
 
-        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
-        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
-        self.assertAlmostEqual(sol["Q"].data[0], Q, places=5)
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q"], Q, places=5)
 
     def test_error(self):
         param = pybamm.LithiumIonParameters()
@@ -141,6 +152,25 @@ class TestElectrodeSOHHalfCell(unittest.TestCase):
         sol = sim.solve([0], inputs={"Q_w": Q_w})
         self.assertAlmostEqual(sol["Uw(x_100)"].data[0], V_max, places=5)
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
+
+
+class TestCalculateTheoreticalEnergy(unittest.TestCase):
+    def test_efficiency(self):
+        model = pybamm.lithium_ion.DFN(options={"calculate discharge energy": "true"})
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 3600], initial_soc=1.0)
+        discharge_energy = sol["Discharge energy [W.h]"].entries[-1]
+        theoretical_energy = (
+            pybamm.lithium_ion.electrode_soh.calculate_theoretical_energy(
+                parameter_values
+            )
+        )
+        # Real energy should be less than discharge energy,
+        #  and both should be greater than 0
+        self.assertLess(discharge_energy, theoretical_energy)
+        self.assertLess(0, discharge_energy)
+        self.assertLess(0, theoretical_energy)
 
 
 class TestGetInitialSOC(unittest.TestCase):

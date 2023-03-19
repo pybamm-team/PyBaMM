@@ -45,8 +45,6 @@ class VariableBase(pybamm.Symbol):
         The reference value of the variable, used for scaling the model when solving.
         This value will be added to the state vector representing this variable.
         Default is 0.
-
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(
@@ -168,8 +166,6 @@ class Variable(VariableBase):
         The reference value of the variable, used for scaling the model when solving.
         This value will be added to the state vector representing this variable.
         Default is 0.
-
-    *Extends:* :class:`VariableBase`
     """
 
     def diff(self, variable):
@@ -224,8 +220,6 @@ class VariableDot(VariableBase):
         The reference value of the variable, used for scaling the model when solving.
         This value will be added to the state vector representing this variable.
         Default is 0.
-
-    *Extends:* :class:`VariableBase`
     """
 
     def get_variable(self):

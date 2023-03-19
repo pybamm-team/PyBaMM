@@ -430,8 +430,6 @@ def get_parameter_values():
         "Negative electrode Bruggeman coefficient (electrode)": 1.5,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode transport efficiency": 0.16,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
         "": 1.061e-06,
         "Negative electrode charge transfer coefficient": 0.5,
@@ -454,8 +452,6 @@ def get_parameter_values():
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode transport efficiency": 0.16,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
         "": 4.824e-06,
         "Positive electrode charge transfer coefficient": 0.5,
@@ -477,7 +473,7 @@ def get_parameter_values():
         # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Typical lithium ion diffusivity [m2.s-1]": 5.34e-10,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_PeymanMPM,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_PeymanMPM,

@@ -20,8 +20,6 @@ class TotalConcentration(BaseParticle):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def get_coupled_variables(self, variables):

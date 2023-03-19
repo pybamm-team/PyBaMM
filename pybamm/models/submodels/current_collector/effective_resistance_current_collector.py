@@ -116,8 +116,6 @@ class EffectiveResistance(BaseEffectiveResistance):
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
            Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
            Mathematics, 81(3), 765--788, 2021
-
-    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(
@@ -272,8 +270,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
     collectors in the limit of large electrical conductivity. This model assumes
     a uniform *current density* at the tabs and the solution is computed by first
     solving and auxilliary problem which is the related to the resistances.
-
-    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(self):

@@ -17,8 +17,6 @@ class Full(BaseElectrolyteDiffusion):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
 
     def __init__(self, param, options=None):
@@ -91,17 +89,12 @@ class Full(BaseElectrolyteDiffusion):
     def set_rhs(self, variables):
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
         c_e = variables["Electrolyte concentration [mol.m-3]"]
-        T = variables["Cell temperature [K]"]
-        N_e_diffusion = variables["Electrolyte diffusion flux [mol.m-2.s-1]"]
-        N_e_convection = variables["Electrolyte convection flux [mol.m-2.s-1]"]
+        N_e = variables["Electrolyte flux [mol.m-2.s-1]"]
         div_Vbox = variables["Transverse volume-averaged acceleration [m.s-2]"]
 
         sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
-        sum_a_j = variables["Sum of volumetric interfacial current densities [A.m-3]"]
         sum_s_a_j.print_name = "aj"
-        source_terms = (sum_s_a_j - self.param.t_plus(c_e, T) * sum_a_j) / self.param.F
-
-        N_e = N_e_diffusion + N_e_convection
+        source_terms = sum_s_a_j / self.param.F
 
         self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
