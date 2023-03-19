@@ -261,9 +261,9 @@ def electrolyte_conductivity_Kim2011(c_e, T):
 
 def nca_ocp_Kim2011(sto):
     """
-    References
-    ----------
     Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+
+    References
     ----------
     .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
     (2011). Multi-domain modeling of lithium-ion batteries encompassing
