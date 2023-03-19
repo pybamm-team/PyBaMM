@@ -10,6 +10,7 @@
 
 ## Bug fixes
 
+- Improved `model.latexify()` to have a cleaner and more readable output ([#2764](https://github.com/pybamm-team/PyBaMM/pull/2764))
 - Fixed electrolyte conservation in the case of concentration-dependent transference number ([#2758](https://github.com/pybamm-team/PyBaMM/pull/2758))
 - Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 

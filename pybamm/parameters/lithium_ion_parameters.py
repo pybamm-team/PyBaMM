@@ -51,10 +51,10 @@ class LithiumIonParameters(BaseParameters):
     def _set_parameters(self):
         """Defines the dimensional parameters"""
         # Physical constants
-        self.R = pybamm.constants.R
-        self.F = pybamm.constants.F
-        self.k_b = pybamm.constants.k_b
-        self.q_e = pybamm.constants.q_e
+        self.R = pybamm.Parameter("Ideal gas constant [J.K-1.mol-1]")
+        self.F = pybamm.Parameter("Faraday constant [C.mol-1]")
+        self.k_b = pybamm.Parameter("Boltzmann constant [J.K-1]")
+        self.q_e = pybamm.Parameter("Elementary charge [C]")
 
         # Thermal parameters
         self.T_ref = self.therm.T_ref
@@ -583,9 +583,13 @@ class ParticleLithiumIonParameters(BaseParameters):
         # see #1435
         u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
         dudt_func = self.dUdT(sto)
-        d = self.domain[0]
-        dudt_func.print_name = r"\frac{dU_{" + d + r"}}{dT}"
-        return u_ref + (T - self.main_param.T_ref) * dudt_func
+        out = u_ref + (T - self.main_param.T_ref) * dudt_func
+
+        if self.domain == "negative":
+            out.print_name = r"U_\mathrm{n}(c^\mathrm{surf}_\mathrm{s,n}, T)"
+        elif self.domain == "positive":
+            out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
+        return out
 
     def dUdT(self, sto):
         """

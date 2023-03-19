@@ -1049,9 +1049,11 @@ class BaseModel:
         C.add(variables_fn)
         C.generate()
 
-    def latexify(self, filename=None, newline=True):
+    def latexify(self, filename=None, newline=True, output_variables=None):
         # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
-        return Latexify(self, filename, newline).latexify()
+        return Latexify(self, filename, newline).latexify(
+            output_variables=output_variables
+        )
 
     # Set :meth:`latexify` docstring from :class:`Latexify`
     latexify.__doc__ = Latexify.__doc__

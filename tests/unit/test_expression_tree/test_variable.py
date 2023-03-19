@@ -60,7 +60,7 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test name
-        self.assertEqual(pybamm.Variable("name").to_equation(), "name")
+        self.assertEqual(pybamm.Variable("name").to_equation(), sympy.Symbol("name"))
 
 
 class TestVariableDot(unittest.TestCase):
