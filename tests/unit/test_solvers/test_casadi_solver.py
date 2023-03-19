@@ -491,27 +491,27 @@ class TestCasadiSolver(unittest.TestCase):
             solver.solve(model, t_eval)
 
     def test_interpolant_extrapolate(self):
-        model = pybamm.lithium_ion.DFN()
-        param = pybamm.ParameterValues("NCA_Kim2011")
-        experiment = pybamm.Experiment(
-            ["Charge at 1C until 4.2 V"], period="10 seconds"
-        )
+        x = np.linspace(0, 2)
+        var = pybamm.Variable("var")
+        rhs = pybamm.FunctionParameter("func", {"var": var})
 
-        param["Upper voltage cut-off [V]"] = 4.8
+        model = pybamm.BaseModel()
+        model.rhs[var] = rhs
+        model.initial_conditions[var] = pybamm.Scalar(1)
 
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=param,
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(
-                mode="safe",
-                dt_max=0.001,
-                extrap_tol=1e-3,
-                extra_options_setup={"max_num_steps": 500},
-            ),
-        )
+        # Bug: we need to set the interpolant via parameter values for the extrapolation
+        # to be detected
+        def func(var):
+            return pybamm.Interpolant(x, x, var, interpolator="linear")
+
+        parameter_values = pybamm.ParameterValues({"func": func})
+        parameter_values.process_model(model)
+
+        solver = pybamm.CasadiSolver()
+        t_eval = [0, 5]
+
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
-            sim.solve()
+            solver.solve(model, t_eval)
 
     def test_casadi_safe_no_termination(self):
         model = pybamm.BaseModel()
