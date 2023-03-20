@@ -36,7 +36,7 @@ jobs:
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run --machine "GitHubRunner" NEW
+          asv run --machine "GitHubRunner" NEW --show-stderr --strict -v
         env:
           SUNDIALS_INST: $HOME/.local
           LD_LIBRARY_PATH: $HOME/.local/lib
