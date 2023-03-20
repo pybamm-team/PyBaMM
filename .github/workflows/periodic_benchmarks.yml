@@ -24,6 +24,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc libopenblas-dev
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy "tox<4" build
