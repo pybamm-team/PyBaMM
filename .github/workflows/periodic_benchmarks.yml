@@ -30,6 +30,9 @@ jobs:
         run: |
           asv machine --machine "GitHubRunner"
           asv run --machine "GitHubRunner" NEW
+        env:
+          SUNDIALS_INST: $HOME/.local
+          LD_LIBRARY_PATH: $HOME/.local/lib
       - name: Upload results as artifact
         uses: actions/upload-artifact@v2
         with:
