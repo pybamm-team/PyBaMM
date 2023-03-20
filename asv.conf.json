@@ -25,7 +25,7 @@
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
     "/usr/bin/git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git",
-    "python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy",
+    "python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi nump build",
     "python scripts/install_KLU_Sundials.py",
     "python -m build",
     "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
