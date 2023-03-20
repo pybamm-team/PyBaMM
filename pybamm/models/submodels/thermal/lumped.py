@@ -33,7 +33,9 @@ class Lumped(BaseThermal):
 
     def get_fundamental_variables(self):
         T_vol_av = pybamm.Variable(
-            "Volume-averaged cell temperature [K]", scale=self.param.T_ref
+            "Volume-averaged cell temperature [K]",
+            scale=self.param.T_ref,
+            print_name="T_av",
         )
         T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
         T_dict = {

@@ -211,7 +211,7 @@ class ElectrodeSOHSolver:
                 DeprecationWarning,
             )
             n_Li = inputs.pop("n_Li")
-            inputs["Q_Li"] = n_Li * self.param.F.value / 3600
+            inputs["Q_Li"] = n_Li * pybamm.constants.F.value / 3600
         if "C_n" in inputs:
             warnings.warn("Input 'C_n' has been renamed to 'Q_n'", DeprecationWarning)
             inputs["Q_n"] = inputs.pop("C_n")

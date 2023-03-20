@@ -1,14 +1,11 @@
 #
 # Prettify print_name
 #
-import re
-
 PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
-    "eps_c_e": r"\epsilon{c_e}",
-    "thermodynamic_factor": r"1+\frac{dlnf}{dlnc}",
-    "negative_particle_concentration_scale": r"c_{n}^{max}",
-    "positive_particle_concentration_scale": r"c_{p}^{max}",
+    "current_density_with_time": r"i_{\mathrm{cell}}",
+    "thermodynamic_factor": r"\left(1+\frac{dlnf}{dlnc}\right)",
+    "t_plus": r"t_{\mathrm{+}}",
 }
 
 GREEK_LETTERS = [
@@ -45,58 +42,64 @@ def prettify_print_name(name):
     if name is None or "{" in name or "\\" in name:
         return name
 
-    # Return print_name if name exists in the dictionary
+    # Find subscripts, superscripts, and averaging
+    # Remove them from the name one by one and add them later in processed form
+    subscripts = []
+    superscripts = []
+    average = False
+
+    processing = True
+    while processing:
+        # Set processing to False. If any of the following conditions are met,
+        # it will be set to True again
+        processing = False
+        for superscript in ["init", "ref", "typ", "max", "0", "surf"]:
+            if f"_{superscript}_" in name or name.endswith(f"_{superscript}"):
+                superscripts.append(superscript)
+                name = name.replace(f"_{superscript}", "")
+                processing = True
+                break
+        # "0" might also appear without a preceding underscore
+        for superscript in ["0"]:
+            if superscript in name:
+                superscripts.append(superscript)
+                name = name.replace(superscript, "")
+                processing = True
+                break
+        for subscript in ["cc", "dl", "R", "e", "s", "n", "p", "amb"]:
+            if f"_{subscript}_" in name or name.endswith(f"_{subscript}"):
+                subscripts.append(subscript)
+                name = name.replace(f"_{subscript}", "")
+                processing = True
+                break
+        for av in ["av", "xav"]:
+            if f"_{av}_" in name or name.endswith(f"_{av}"):
+                average = True
+                name = name.replace(f"_{av}", "")
+                processing = True
+                break
+
+    # Process name
+    # Override print_name if name exists in the dictionary
     if name in PRINT_NAME_OVERRIDES:
-        return PRINT_NAME_OVERRIDES[name]
+        name = PRINT_NAME_OVERRIDES[name]
 
-    # Superscripts with comma separated (U_ref_n --> U_{n}^{ref})
-    sup_re1 = re.search(r"^[\da-zA-Z]+_?((?:init|ref|typ|max|0))_?(.*)", name)
-    if sup_re1:
-        sup_str = (
-            r"{"
-            + sup_re1.group(2).replace("_", "\,")
-            + r"}^{"
-            + sup_re1.group(1)
-            + r"}"
-        )
-        sup_var = sup_re1.group(1) + "_" + sup_re1.group(2)
-        name = name.replace(sup_var, sup_str)
-
-    # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
-    sup_re2 = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
-    if sup_re2:
-        sup_str = (
-            r"{"
-            + sup_re2.group(1).replace("_", "\,")
-            + r"}^{"
-            + sup_re2.group(2)
-            + r"}"
-        )
-        sup_var = sup_re2.group(1) + "_" + sup_re2.group(2)
-        name = name.replace(sup_var, sup_str)
-
-    # Subscripts with comma separated (a_R_p --> a_{R\,p})
-    sub_re = re.search(r"^a_+(\w+)", name)
-    if sub_re:
-        sub_str = r"{" + sub_re.group(1).replace("_", "\,") + r"}"
-        name = name.replace(sub_re.group(1), sub_str)
-
-    # Bar with comma separated (c_s_n_xav --> \bar{c}_{s\,n})
-    bar_re = re.search(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)
-    if bar_re:
-        name = (
-            r"\bar{"
-            + bar_re.group(1)
-            + r"}_{"
-            + bar_re.group(2).replace("_", "\,")
-            + r"}"
-        )
-
-    # Replace eps with epsilon (eps_n --> epsilon_n)
-    name = re.sub(r"(eps)(?![0-9a-zA-Z])", "epsilon", name)
+    # Replace eps with epsilon (e.g. eps_n --> epsilon_n)
+    if name == "eps":
+        name = r"\epsilon"
+    if name == "eps_c":
+        name = r"(\epsilon c)"
 
     # Greek letters (delta --> \delta)
-    greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
-    name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
+    if name.lower() in GREEK_LETTERS:
+        name = "\\" + name
+
+    # Add subscripts and superscripts
+    if average:
+        name = r"\overline{" + name + "}"
+    if subscripts:
+        name += r"_{\mathrm{" + ",".join(subscripts) + "}}"
+    if superscripts:
+        name += r"^{\mathrm{" + ",".join(superscripts) + "}}"
 
     return name

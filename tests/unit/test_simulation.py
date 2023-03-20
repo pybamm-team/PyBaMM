@@ -11,11 +11,9 @@ class TestSimulation(unittest.TestCase):
     def test_simple_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
-        a = pybamm.Parameter("a")
-        model.rhs = {v: -a * v}
+        model.rhs = {v: -v}
         model.initial_conditions = {v: 1}
-        param = pybamm.ParameterValues({"a": 1})
-        sim = pybamm.Simulation(model, parameter_values=param)
+        sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
         np.testing.assert_array_almost_equal(sol.y.full()[0], np.exp(-sol.t), decimal=5)
 

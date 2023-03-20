@@ -94,6 +94,9 @@ class BaseModel(pybamm.BaseSubModel):
                 a = 3 * eps_solid / R
                 a_av = pybamm.x_average(a)
 
+            a.print_name = f"a_{domain[0]}"
+            a_av.print_name = f"a_av_{domain[0]}"
+
             variables.update(
                 {
                     f"{Domain} {phase_name}particle radius": R / self.phase_param.R_typ,
