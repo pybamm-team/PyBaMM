@@ -18,8 +18,10 @@ class TestLRUDict(unittest.TestCase):
                 # LRU will reorder list, but not remove entries
                 d.get(count - 2)
                 dd.get(count - 2)
-            assert set(d.keys()) == set(dd.keys())
-            assert set(d.values()) == set(dd.values())
+            # assertCountEqual checks that the same elements are present in
+            # both lists, not just that the lists are of equal count
+            self.assertCountEqual(set(d.keys()), set(dd.keys()))
+            self.assertCountEqual(set(d.values()), set(dd.values()))
 
     def test_lrudict_noitems(self):
         """Edge case: no items in LRU, raises KeyError on assignment"""
@@ -28,16 +30,17 @@ class TestLRUDict(unittest.TestCase):
             d["a"] = 1
 
     def test_lrudict_singleitem(self):
-        """Only the last added element should be present"""
+        """Only the last added element should ever be present"""
         d = LRUDict(maxsize=1)
         item_list = range(1, 100)
-        assert len(d) == 0
+        self.assertEqual(len(d), 0)
         for item in item_list:
             d[item] = item
-            assert len(d) == 1
-            assert d[item]
+            self.assertEqual(len(d), 1)
+            self.assertIsNotNone(d[item])
+        # Finally, pop the only item and check that the dictionary is empty
         d.popitem()
-        assert len(d) == 0
+        self.assertEqual(len(d), 0)
 
     def test_lrudict_multiitem(self):
         """Check that the correctly ordered items are always present"""
@@ -56,5 +59,17 @@ class TestLRUDict(unittest.TestCase):
                 expected = OrderedDict(
                     (k, expected[k]) for k in list(expected.keys())[-maxsize:]
                 )
-                assert list(d.keys()) == list(expected.keys())
-                assert list(d.values()) == list(expected.values())
+                self.assertListEqual(list(d.keys()), list(expected.keys()))
+                self.assertListEqual(list(d.values()), list(expected.values()))
+
+    def test_lrudict_invalidkey(self):
+        d = LRUDict()
+        value = 1
+        d["a"] = value
+        # Access with valid key
+        self.assertEqual(d["a"], value)  # checks getitem()
+        self.assertEqual(d.get("a"), value)  # checks get()
+        # Access with invalid key
+        with self.assertRaises(KeyError):
+            _ = d["b"]  # checks getitem()
+        self.assertIsNone(d.get("b"))  # checks get()

@@ -21,12 +21,12 @@ class LRUDict(OrderedDict):
         try:
             self.move_to_end(key, last=True)
         except KeyError:
-            pass
+            pass  # Allow parent to handle exception
         return super().__getitem__(key)
 
     def get(self, key):
         try:
             self.move_to_end(key, last=True)
         except KeyError:
-            pass
+            pass  # Allow parent to handle exception
         return super().get(key)
