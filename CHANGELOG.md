@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.3](https://github.com/pybamm-team/PyBaMM/tree/v23.3) - 2023-03-31
+
 ## Features
 
 - Added new variables, related to electrode balance, for the `ElectrodeSOH` model ([#2807](https://github.com/pybamm-team/PyBaMM/pull/2807))
