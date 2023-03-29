@@ -3,6 +3,7 @@
 #
 
 from collections import UserDict
+import pathlib
 import pandas as pd
 
 
@@ -16,6 +17,7 @@ class ExperimentalData(UserDict):
         Location of data container
     format: string
         currently "csv"
+    Notes: example usage, how the data should look.
     """
 
     allowed = ["csv"]
@@ -29,10 +31,18 @@ class ExperimentalData(UserDict):
                 f"format '{format}' not allowed, only"
                 "supported formats are {self.allowed}"
             )
+
+        if not pathlib.Path(filename).is_file():
+            raise ValueError(f"'{filename}' not found")
+
         self.format = format.lower()
         self.filename = filename
         self._data = None
         self._load()
+
+    def __str__(self):
+        txt = f"{self.filename}\n {self._data.head()}"
+        return txt
 
     def _load(self):
         if self.format == "csv":
@@ -64,4 +74,4 @@ class ExperimentalData(UserDict):
 
 if __name__ == "__main__":
     d = ExperimentalData("test_data.csv")
-    print(d._data.head())
+    print(d)
