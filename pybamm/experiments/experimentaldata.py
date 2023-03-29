@@ -37,7 +37,7 @@ class ExperimentalData(UserDict):
 
         if not pathlib.Path(filename).is_file():
             raise ValueError(f"'{filename}' not found")
-        
+
         self.loader_kwargs = loader_kwargs or {}
         self.format = format.lower()
         self.filename = filename
