@@ -98,7 +98,12 @@ class Experiment:
         for cycle in operating_conditions:
             # Check types and convert strings to 1-tuples
             if (isinstance(cycle, tuple) or isinstance(cycle, str)) and all(
-                [isinstance(cond, str) for cond in cycle]
+                [
+                (
+                isinstance(cond, str) 
+                or 
+                isinstance(cond, pybamm.CC)
+                ) for cond in cycle]
             ):
                 if isinstance(cycle, str):
                     processed_cycle = (cycle,)
@@ -181,7 +186,7 @@ class Experiment:
                it contains C_rate,temperature,duration,upper_cutoff
         """
         return {
-            'C-rate input [-]': cond.C_rate,
+            'C-rate input [-]': cond.c_rate,
             'type': 'C-rate',
             "time": cond.duration,
             "period": self.period,
