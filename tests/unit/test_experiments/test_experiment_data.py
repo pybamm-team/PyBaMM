@@ -45,7 +45,12 @@ class TestExperimentData(unittest.TestCase):
         self.assertIn('Time [s]', data.columns)
         self.assertIn('Voltage [V]', data.columns)
         self.assertIn('Step', data.columns)
-        
+    
+
+    def test_quickplot(self):
+        data = pd.read_csv(self.filename)
+        pass
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
