@@ -185,12 +185,18 @@ class Experiment:
         cond : dict, CC or CV, or rest
                it contains C_rate,temperature,duration,upper_cutoff
         """
+        if cond.temperature == None:
+            temperature = self.temperature
+        else:
+            temperature = cond.temperature
+
+            
         return {
             'C-rate input [-]': cond.c_rate,
             'type': 'C-rate',
             "time": cond.duration,
             "period": self.period,
-            "temperature": cond.temperature,
+            "temperature": temperature,
             "dc_data": None,
             "string": None,
             "events": {'Voltage input [V]': cond.upper_cutoff, 'type': 'voltage'},
