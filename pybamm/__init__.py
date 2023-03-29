@@ -221,6 +221,7 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 # Experiments
 #
 from .experiments.experiment import Experiment
+from .experiments.experimentalData import ExperimentalData
 from . import experiments
 
 #

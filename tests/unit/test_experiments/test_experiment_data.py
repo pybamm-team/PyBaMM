@@ -49,10 +49,14 @@ class TestExperimentData(unittest.TestCase):
 
     def test_set_up(self):
         data = pd.read_csv(self.filename)
-        self.assertIn("Time [s]", data.columns)
-        self.assertIn("Voltage [V]", data.columns)
-        self.assertIn("Step", data.columns)
+        self.assertIn('Time [s]', data.columns)
+        self.assertIn('Voltage [V]', data.columns)
+        self.assertIn('Step', data.columns)
 
+    def test_quickplot(self):
+        exd = ExperimentData(self.filename)
+        QuickPlot(self.sol, exd).plot()
+        self.assert(True, True)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
