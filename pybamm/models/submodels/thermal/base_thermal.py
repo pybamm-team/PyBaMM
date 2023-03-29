@@ -2,6 +2,7 @@
 # Base class for thermal effects
 #
 import pybamm
+import numpy as np
 
 
 class BaseThermal(pybamm.BaseSubModel):
@@ -146,15 +147,24 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         # Heat of mixing
-        if self.options.electrode_types["negative"] == "planar" or not self.options["heat of mixing"]:
-            # make 0
-            asdfasfd
+        if self.options["heat of mixing"] == "true":
+            F = pybamm.constants.F.value
+            pi = np.pi
+            a_n = variables["Negative electrode surface area to volume ratio [m-1]"]
+            a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
+            R_n = variables["Negative particle radius [m]"]
+            R_p = variables["Positive particle radius [m]"]
+            c_n = variables["Negative particle concentration [mol.m-3]"]
+            c_p = variables["Positive particle concentration [mol.m-3]"]
+            dc_ndr = pybamm.grad_squared(c_n)
+            dc_pdr = pybamm.grad_squared(c_p)
+            D_n = variables["Negative particle effective diffusivity [m2.s-1]"]
+            D_p = variables["Positive particle effective diffusivity [m2.s-1]"]
         else:
-            # write equation
-            asdfasdf
+            Q_mix = 0
 
         # Total heating
-        Q = Q_ohm + Q_rxn + Q_rev
+        Q = Q_ohm + Q_rxn + Q_rev + Q_mix
 
         # Compute the X-average over the entire cell, including current collectors
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
