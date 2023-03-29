@@ -297,9 +297,23 @@ class Discretisation(object):
             # Add to slices
             y_slices[variable].append(slice(start, end))
             y_slices_explicit[variable].append(slice(start, end))
+
             # Add to bounds
-            lower_bounds.extend([variable.bounds[0].evaluate()] * (end - start))
-            upper_bounds.extend([variable.bounds[1].evaluate()] * (end - start))
+            def evaluate_bound(bound, side):
+                if bound.has_symbol_of_classes(pybamm.InputParameter):
+                    if side == "lower":
+                        return -np.inf
+                    elif side == "upper":
+                        return np.inf
+                else:
+                    return bound.evaluate()
+
+            lower_bounds.extend(
+                [evaluate_bound(variable.bounds[0], "lower")] * (end - start)
+            )
+            upper_bounds.extend(
+                [evaluate_bound(variable.bounds[1], "upper")] * (end - start)
+            )
             # Increment start
             start = end
 

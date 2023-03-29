@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added new variables, related to electrode balance, for the `ElectrodeSOH` model ([#2807](https://github.com/pybamm-team/PyBaMM/pull/2807))
 - Renamed "Terminal voltage [V]" to just "Voltage [V]". "Terminal voltage [V]" can still be used and will return the same value as "Voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added "Negative electrode surface potential difference at separator interface [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Positive electrode surface potential difference at separator interface [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added "Open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
@@ -10,9 +11,11 @@
 
 ## Bug fixes
 
+- Fixed a bug where variable bounds could not contain `InputParameters` ([#2795](https://github.com/pybamm-team/PyBaMM/pull/2795))
 - Improved `model.latexify()` to have a cleaner and more readable output ([#2764](https://github.com/pybamm-team/PyBaMM/pull/2764))
 - Fixed electrolyte conservation in the case of concentration-dependent transference number ([#2758](https://github.com/pybamm-team/PyBaMM/pull/2758))
 - Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 
 ## Optimizations
 
