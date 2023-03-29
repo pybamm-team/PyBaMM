@@ -9,6 +9,59 @@ import os
 
 
 class TestExperiment(unittest.TestCase):
+    def test_read_class(self):    
+
+        experiment = pybamm.Experiment(
+            [
+               pybamm.CC(C_rate=1.5,
+                         temperature=27,
+                         duration=20.0,
+                         upper_cutoff=4.1),
+                pybamm.CC(C_rate=1.53,
+                         duration=180.0,
+                         upper_cutoff=4.0)
+            ],
+            temperature=43,
+            drive_cycles=None,
+            period="20 seconds",
+        )
+        expected_result = [
+            {
+                "C-rate input [-]": 1.5,
+                "type": "C-rate",
+                "time": 20.0,
+                "period": 20.0,
+                "temperature": 27.0,
+                "dc_data": None,
+                "string": None,
+                "events": {'Voltage input [V]': 4.1, 'type': 'voltage'},
+                "tags": None
+            },    
+             {
+                "C-rate input [-]": 1.53,
+                "type": "C-rate",
+                "time": 180.0,
+                "period": 20.0,
+                "temperature": 43.0,
+                "dc_data": None,
+                "string": None,
+                "events": {'Voltage input [V]': 4.0, 'type': 'voltage'},
+                "tags": None
+            },    
+        ]
+
+        for expected, actual in zip(expected_result, experiment.operating_conditions):
+            for k in expected.keys():
+                # useful form for debugging
+                self.assertEqual([k, expected[k]], [k, actual[k]])
+
+    
+        
+
+
+
+
+
     def test_read_strings(self):
         # Import drive cycle from file
         drive_cycle = pd.read_csv(
