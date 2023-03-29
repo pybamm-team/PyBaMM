@@ -124,6 +124,9 @@ class Experiment:
                         if idx >= len(cycle):
                             finished = True
                 operating_conditions_cycles.append(tuple(processed_cycle))
+            
+            elif isinstance(cycle, Class_exp_step): # ExpStep is a new class for expeirment steps
+
             else:
                 try:
                     # Condition is not a string
@@ -138,6 +141,7 @@ class Experiment:
                     "Operating conditions should be strings or tuples of strings, not "
                     f"{type(badly_typed_conditions[0])}. For example: {examples}"
                 )
+            
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
         operating_conditions = [
             cond for cycle in operating_conditions_cycles for cond in cycle
