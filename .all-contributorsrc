@@ -592,6 +592,16 @@
       "contributions": [
         "example"
       ]
+    },
+    {
+      "login": "jsbrittain",
+      "name": "jsbrittain",
+      "avatar_url": "https://avatars.githubusercontent.com/u/98161205?v=4",
+      "profile": "http://www.jsbrittain.com/",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
