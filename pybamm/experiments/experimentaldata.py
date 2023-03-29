@@ -7,7 +7,7 @@ import pandas as pd
 # import pybamm
 
 
-class ExperimentalData:
+class ExperimentalData():
     """
     This is a base class for experimental data.
 
@@ -29,6 +29,16 @@ class ExperimentalData:
             )
         self.format = format.lower()
         self.filename = filename
+        self.data = None
+        self._load()
+
+
+    def _load(self):
+
+        if self.format == "csv":
+            self._load_csv()
+
+    def _load_csv(self):
         self.data = pd.read_csv(self.filename)
 
 
