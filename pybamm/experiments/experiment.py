@@ -97,16 +97,15 @@ class Experiment:
         operating_conditions_cycles = []
         for cycle in operating_conditions:
             # Check types and convert strings to 1-tuples
-            if (
-                (isinstance(cycle, str) or isinstance(cycle, pybamm.CC)) 
-                or
-                (
-                    isinstance(cycle, tuple)
-                    and 
-                    all([(
-                        isinstance(cond, str) or 
-                        isinstance(cond, pybamm.CC)) for cond in cycle] ))):
-                
+            if (isinstance(cycle, str) or isinstance(cycle, pybamm.CC)) or (
+                isinstance(cycle, tuple)
+                and all(
+                    [
+                        (isinstance(cond, str) or isinstance(cond, pybamm.CC))
+                        for cond in cycle
+                    ]
+                )
+            ):
                 if isinstance(cycle, str) or isinstance(cycle, pybamm.CC):
                     processed_cycle = (cycle,)
                 else:
@@ -130,7 +129,7 @@ class Experiment:
                             idx += 1
                         if idx >= len(cycle):
                             finished = True
-                
+
                 operating_conditions_cycles.append(tuple(processed_cycle))
             else:
                 try:
@@ -146,7 +145,7 @@ class Experiment:
                     "Operating conditions should be strings or tuples of strings, not "
                     f"{type(badly_typed_conditions[0])}. For example: {examples}"
                 )
-            
+
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
         # key clause, how to understand these two "for ... in "
         # a bit confusing because operating_conditions is being overwritten
@@ -155,10 +154,10 @@ class Experiment:
         ]
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
-        # 
+        #
         self.operating_conditions = [
             self.read_string_Class(cond, drive_cycles) for cond in operating_conditions
-        ] 
+        ]
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
@@ -173,11 +172,11 @@ class Experiment:
         return "pybamm.Experiment({!s})".format(self)
 
     def read_string_Class(self, cond, drive_cycles):
-        if isinstance(cond,str):
+        if isinstance(cond, str):
             return self.read_string(cond, drive_cycles)
-        elif isinstance(cond,pybamm.CC):
+        elif isinstance(cond, pybamm.CC):
             return self.read_class(cond, drive_cycles)
-        
+
     def read_class(self, cond, drive_cycles):
         """
         Convert a CC description to a dictionary of the right format
@@ -192,19 +191,17 @@ class Experiment:
         else:
             temperature = cond.temperature
 
-
         return {
-            'C-rate input [-]': cond.c_rate,
-            'type': 'C-rate',
+            "C-rate input [-]": cond.c_rate,
+            "type": "C-rate",
             "time": cond.duration,
             "period": self.period,
             "temperature": temperature,
             "dc_data": None,
             "string": None,
-            "events": {'Voltage input [V]': cond.upper_cutoff, 'type': 'voltage'},
+            "events": {"Voltage input [V]": cond.upper_cutoff, "type": "voltage"},
             "tags": None,
         }
-
 
     def read_string(self, cond, drive_cycles):
         """
