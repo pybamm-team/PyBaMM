@@ -1,3 +1,4 @@
 from .base_transport_efficiency import BaseModel
 from .bruggeman_transport_efficiency import Bruggeman
 from .linear_transport_efficiency import Linear
+from .log_transport_efficiency import LogTransport
