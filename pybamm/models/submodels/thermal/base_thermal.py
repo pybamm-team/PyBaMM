@@ -164,8 +164,9 @@ class BaseThermal(pybamm.BaseSubModel):
             D_p = variables["Positive particle effective diffusivity [m2.s-1]"]
             Ueq_n = variables["Negative electrode open-circuit potential [V]"]
             Ueq_p = variables["Positive electrode open-circuit potential [V]"]
-            dUeq_n = Ueq_n.diff(c_n)
-            dUeq_p = Ueq_p.diff(c_p)
+            # Drop the blow-up term as it has spatial operators and diff doesn't work
+            dUeq_n = Ueq_n.children[0].diff(c_n)
+            dUeq_p = Ueq_p.children[0].diff(c_p)
             integrand_r_n = D_n * dc_n_dr**2 * dUeq_n
             integrand_r_p = D_p * dc_p_dr**2 * dUeq_p
             integration_variable_r_n = [pybamm.SpatialVariable("r", integrand_r_n)]
