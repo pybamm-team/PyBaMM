@@ -6,8 +6,10 @@ import pybamm
 pybamm.set_logging_level("INFO")
 # load models
 models = [
-    pybamm.lithium_ion.DFN({"heat of mixing": "true","thermal": "x-lumped"},name="hom"),
-    pybamm.lithium_ion.DFN({"thermal": "x-lumped"},name="nhom")
+    pybamm.lithium_ion.DFN(
+        {"heat of mixing": "true", "thermal": "x-lumped"}, name="hom"
+    ),
+    pybamm.lithium_ion.DFN({"thermal": "x-lumped"}, name="nhom"),
 ]
 
 parameter_values = pybamm.ParameterValues("Chen2020")

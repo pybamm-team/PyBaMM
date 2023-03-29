@@ -278,8 +278,7 @@ class ElectrodeSOHSolver:
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         except:
             warnings.warn("couldn't calculate theoretical energy")
-    
-                
+
         return sol_dict
 
     def _set_up_solve(self, inputs):
