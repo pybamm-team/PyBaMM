@@ -44,6 +44,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(exprestall.duration, 3600)
         self.assertEqual(exprestall.temperature, 298)
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

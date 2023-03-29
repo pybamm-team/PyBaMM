@@ -5,6 +5,7 @@
 import numpy as np
 import re
 
+
 class CC:
     """
     Class for constant current experimental steps conditions under which to run the model. In general, a
@@ -24,17 +25,19 @@ class CC:
     upper_cutoff : float, optional
         The upper cutoff voltage which is 4.2V here.
     """
+
     def __init__(
-            self,
-            C_rate="",
-            temperature=None,
-            duration=None,
-            upper_cutoff=None,
-                 ):
+        self,
+        C_rate="",
+        temperature=None,
+        duration=None,
+        upper_cutoff=None,
+    ):
         self.c_rate = C_rate
         self.temperature = temperature
         self.duration = duration
         self.upper_cutoff = upper_cutoff
+
 
 class CV:
     """
@@ -54,17 +57,19 @@ class CV:
     lower_cutoff : float, optional
         The lower cutoff value of current which is 50mA here
     """
+
     def __init__(
-            self,
-            voltage="",
-            temperature=None,
-            duration=None,
-            lower_cutoff=None,
-                 ):
+        self,
+        voltage="",
+        temperature=None,
+        duration=None,
+        lower_cutoff=None,
+    ):
         self.voltage = voltage
         self.temperature = temperature
         self.duration = duration
         self.lower_cutoff = lower_cutoff
+
 
 class Rest:
     """
@@ -80,13 +85,11 @@ class Rest:
         Default is None whereby the ambient temperature is taken from the parameter set.
         This value is overwritten if the temperature is specified in a step..
     """
+
     def __init__(
-            self,
-            duration="",
-            temperature=None,
-                 ):
+        self,
+        duration="",
+        temperature=None,
+    ):
         self.duration = duration
         self.temperature = temperature
-
-
-
