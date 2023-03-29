@@ -20,6 +20,8 @@ class ExperimentalData(UserDict):
 
     allowed = ["csv"]
     mandatory_columns = ["Voltage [V]", "Time [s]", "Current [A]"]
+    cycle_index_column = "Cycle"
+    step_index_column = "Step"
 
     def __init__(self, filename, format="csv"):
         if format.lower() not in self.allowed:
@@ -47,9 +49,19 @@ class ExperimentalData(UserDict):
             if col not in cols:
                 raise ValueError(f"Mandatory column '{col}' not found")
 
+        if self.cycle_index_column not in cols:
+            self._data[self.cycle_index_column] = 0
+
+        if self.step_index_column not in cols:
+            self._data[self.step_index_column] = 0
 
     def __setitem__(self, key, value):
         raise ValueError("Not allowed to set values in ExperimentalData")
 
     def __getitem__(self, key):
         return self._data[key].values
+
+
+if __name__ == "__main__":
+    d = ExperimentalData("test_data.csv")
+    print(d._data.head())
