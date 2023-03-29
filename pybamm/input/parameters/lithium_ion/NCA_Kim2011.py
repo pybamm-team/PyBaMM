@@ -1,5 +1,4 @@
 import pybamm
-import os
 
 
 def graphite_diffusivity_Kim2011(sto, T):
@@ -260,16 +259,34 @@ def electrolyte_conductivity_Kim2011(c_e, T):
     return sigma_e
 
 
-# Load data in the appropriate format
-path, _ = os.path.split(os.path.abspath(__file__))
-nca_ocp_Kim2011_data = pybamm.parameters.process_1D_data(
-    "nca_ocp_Kim2011_data.csv", path=path
-)
-
-
 def nca_ocp_Kim2011(sto):
-    name, (x, y) = nca_ocp_Kim2011_data
-    return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
+    """
+    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+
+    References
+    ----------
+    .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
+    (2011). Multi-domain modeling of lithium-ion batteries encompassing
+    multi-physics in varied length scales. Journal of The Electrochemical
+    Society, 158(8), A955-A969.
+    """
+
+    U_posi = (
+        1.638 * sto**10
+        - 2.222 * sto**9
+        + 15.056 * sto**8
+        - 23.488 * sto**7
+        + 81.246 * sto**6
+        - 344.566 * sto**5
+        + 621.3475 * sto**4
+        - 554.774 * sto**3
+        + 264.427 * sto**2
+        - 66.3691 * sto
+        + 11.8058
+        - 0.61386 * pybamm.exp(5.8201 * sto**136.4)
+    )
+
+    return U_posi
 
 
 # Call dict via a function to avoid errors when editing in place

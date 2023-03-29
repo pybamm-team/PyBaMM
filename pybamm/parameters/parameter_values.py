@@ -41,54 +41,49 @@ class ParameterValues:
 
     """
 
-    def __init__(self, values=None, chemistry=None):
-        self._dict_items = pybamm.FuzzyDict()
-        # Must provide either values or chemistry, not both (nor neither)
-        if values is not None and chemistry is not None:
-            raise ValueError(
-                "Only one of values and chemistry can be provided. To change parameters"
-                " slightly from a chemistry, first load parameters with the chemistry"
-                " (param = pybamm.ParameterValues(...)) and then update with"
-                " param.update({dict of values})."
-            )
-        if values is None and chemistry is None:
-            raise ValueError("values and chemistry cannot both be None")
-        # First load chemistry
+    def __init__(self, values, chemistry=None):
         if chemistry is not None:
-            warnings.warn(
-                "The 'chemistry' keyword argument has been deprecated and will be "
-                "removed in a future release. Call `ParameterValues` with a "
-                "parameter set dictionary, or the name of a parameter set (string), "
+            raise ValueError(
+                "The 'chemistry' keyword argument has been deprecated. "
+                "Call `ParameterValues` with a dictionary dictionary of "
+                "parameter values, or the name of a parameter set (string), "
                 "as the single argument, e.g. `ParameterValues('Chen2020')`.",
-                DeprecationWarning,
             )
-            self.update_from_chemistry(chemistry)
-        # Then update with values dictionary or file
-        if values is not None:
-            if isinstance(values, dict):
-                if "negative electrode" in values:
-                    warnings.warn(
-                        "Creating a parameter set from a dictionary of components has "
-                        "been deprecated and will be removed in a future release. "
-                        "Define the parameter set in a python script instead.",
-                        DeprecationWarning,
-                    )
-                    self.update_from_chemistry(values)
-                else:
-                    self.update(values, check_already_exists=False)
-            else:
-                # Check if values is a named parameter set
-                if isinstance(values, str) and values in pybamm.parameter_sets:
-                    values = pybamm.parameter_sets[values]
-                    values.pop("chemistry")
-                    self.update(values, check_already_exists=False)
 
-                else:
-                    # In this case it might be a filename, load from that filename
-                    file_path = self.find_parameter(values)
-                    path = os.path.split(file_path)[0]
-                    values = self.read_parameters_csv(file_path)
-                    self.update(values, check_already_exists=False, path=path)
+        # add physical constants as default values
+        self._dict_items = pybamm.FuzzyDict(
+            {
+                "Ideal gas constant [J.K-1.mol-1]": pybamm.constants.R.value,
+                "Faraday constant [C.mol-1]": pybamm.constants.F.value,
+                "Boltzmann constant [J.K-1]": pybamm.constants.k_b.value,
+                "Electron charge [C]": pybamm.constants.q_e.value,
+            }
+        )
+
+        if isinstance(values, dict):
+            if "negative electrode" in values:
+                warnings.warn(
+                    "Creating a parameter set from a dictionary of components has "
+                    "been deprecated and will be removed in a future release. "
+                    "Define the parameter set in a python script instead.",
+                    DeprecationWarning,
+                )
+                self.update_from_chemistry(values)
+            else:
+                self.update(values, check_already_exists=False)
+        else:
+            # Check if values is a named parameter set
+            if isinstance(values, str) and values in pybamm.parameter_sets:
+                values = pybamm.parameter_sets[values]
+                values.pop("chemistry")
+                self.update(values, check_already_exists=False)
+
+            else:
+                # In this case it might be a filename, load from that filename
+                file_path = self.find_parameter(values)
+                path = os.path.split(file_path)[0]
+                values = self.read_parameters_csv(file_path)
+                self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -211,15 +206,7 @@ class ParameterValues:
                 component_groups = [extra_group] + component_groups
 
         for component_group in component_groups:
-            # Make sure component is provided
-            try:
-                component = chemistry[component_group]
-            except KeyError:
-                raise KeyError(
-                    "must provide '{}' parameters for {} chemistry".format(
-                        component_group, base_chemistry
-                    )
-                )
+            component = chemistry[component_group]
             # Create path to component and load values
             component_path = os.path.join(
                 base_chemistry,

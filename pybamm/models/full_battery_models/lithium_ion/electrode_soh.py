@@ -11,6 +11,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
+    Some of the output variables are defined in [2]_.
 
     .. math::
         Q_{Li} = y_{100}Q_p + x_{100}Q_n,
@@ -34,6 +35,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
         self, param=None, solve_for=None, known_value="cyclable lithium capacity"
     ):
         pybamm.citations.register("Mohtat2019")
+        pybamm.citations.register("Weng2023")
         name = "ElectrodeSOH model"
         super().__init__(name)
 
@@ -80,6 +82,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
             self.initial_conditions[x_100] = pybamm.Scalar(0.9)
 
         # These variables are defined in all cases
+        Acc_cm2 = param.A_cc * 1e4
         self.variables = {
             "x_100": x_100,
             "y_100": y_100,
@@ -90,6 +93,18 @@ class _ElectrodeSOH(pybamm.BaseModel):
             "n_Li": Q_Li * 3600 / param.F,
             "Q_n": Q_n,
             "Q_p": Q_p,
+            "Cyclable lithium capacity [A.h]": Q_Li,
+            "Negative electrode capacity [A.h]": Q_n,
+            "Positive electrode capacity [A.h]": Q_p,
+            "Cyclable lithium capacity [mA.h.cm-2]": Q_Li * 1e3 / Acc_cm2,
+            "Negative electrode capacity [mA.h.cm-2]": Q_n * 1e3 / Acc_cm2,
+            "Positive electrode capacity [mA.h.cm-2]": Q_p * 1e3 / Acc_cm2,
+            # eq 33 of Weng2023
+            "Formation capacity loss [A.h]": Q_p - Q_Li,
+            "Formation capacity loss [mA.h.cm-2]": (Q_p - Q_Li) * 1e3 / Acc_cm2,
+            # eq 26 of Weng2024
+            "Negative positive ratio": Q_n / Q_p,
+            "NPR": Q_n / Q_p,
         }
 
         # Define variables and equations for 0% state of charge
@@ -113,10 +128,14 @@ class _ElectrodeSOH(pybamm.BaseModel):
             self.initial_conditions[var] = pybamm.Scalar(0.1)
 
             # These variables are only defined if x_0 is solved for
+            # eq 27 of Weng2023
+            Q_n_excess = Q_n * (1 - x_100)
+            NPR_practical = 1 + Q_n_excess / Q
             self.variables.update(
                 {
                     "Q": Q,
                     "Capacity [A.h]": Q,
+                    "Capacity [mA.h.cm-2]": Q * 1e3 / Acc_cm2,
                     "x_0": x_0,
                     "y_0": y_0,
                     "Un(x_0)": Un_0,
@@ -128,6 +147,8 @@ class _ElectrodeSOH(pybamm.BaseModel):
                     "Q_p * (y_0 - y_100)": Q_p * (y_0 - y_100),
                     "Negative electrode excess capacity ratio": Q_n / Q,
                     "Positive electrode excess capacity ratio": Q_p / Q,
+                    "Practical negative positive ratio": NPR_practical,
+                    "Practical NPR": NPR_practical,
                 }
             )
 
@@ -211,7 +232,7 @@ class ElectrodeSOHSolver:
                 DeprecationWarning,
             )
             n_Li = inputs.pop("n_Li")
-            inputs["Q_Li"] = n_Li * self.param.F.value / 3600
+            inputs["Q_Li"] = n_Li * pybamm.constants.F.value / 3600
         if "C_n" in inputs:
             warnings.warn("Input 'C_n' has been renamed to 'Q_n'", DeprecationWarning)
             inputs["Q_n"] = inputs.pop("C_n")
