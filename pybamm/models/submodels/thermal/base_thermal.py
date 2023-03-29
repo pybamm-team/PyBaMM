@@ -178,7 +178,10 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_mix_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
             Q_mix = pybamm.concatenation(Q_mix_s_n, Q_mix_s_s, Q_mix_s_p)
         else:
-            Q_mix = 0
+            Q_mix_s_n = pybamm.FullBroadcast(0, ["negative"], "current collector")
+            Q_mix_s_p = pybamm.FullBroadcast(0, ["positive"], "current collector")
+            Q_mix_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
+            Q_mix = pybamm.concatenation(Q_mix_s_n, Q_mix_s_s, Q_mix_s_p)
 
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev + Q_mix
