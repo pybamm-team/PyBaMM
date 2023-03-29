@@ -1,6 +1,3 @@
 from .base_transport_efficiency import BaseModel
 from .bruggeman_transport_efficiency import Bruggeman
-from .half_transport_efficiency import HalfTransfer
-from .linear_transport_efficiency import Linear
-from .log_transport_efficiency import LogTransport
-from .tortuosity_factor import TortuosityFactor
+from .general_transport_efficiency import GeneralTransportEfficiency
