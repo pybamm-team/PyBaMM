@@ -22,9 +22,27 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(expccall.duration, 3600)
         self.assertEqual(expccall.upper_cutoff, 4.2)
 
+    def test_cv(self):
+        expcv = pybamm.CV(4.2)
+        self.assertEqual(expcv.voltage, 4.2)
+        self.assertEqual(expcv.temperature, None)
+        self.assertEqual(expcv.duration, None)
+        self.assertEqual(expcv.lower_cutoff, None)
 
+        expcvall = pybamm.CV(4.2, 298, 3600, 0.005)
+        self.assertEqual(expcvall.voltage, 4.2)
+        self.assertEqual(expcvall.temperature, 298)
+        self.assertEqual(expcvall.duration, 3600)
+        self.assertEqual(expcvall.lower_cutoff, 0.005)
 
+    def test_rest(self):
+        exprest = pybamm.Rest(3600)
+        self.assertEqual(exprest.duration, 3600)
+        self.assertEqual(exprest.temperature, None)
 
+        exprestall = pybamm.Rest(3600, 298)
+        self.assertEqual(exprestall.duration, 3600)
+        self.assertEqual(exprestall.temperature, 298)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
