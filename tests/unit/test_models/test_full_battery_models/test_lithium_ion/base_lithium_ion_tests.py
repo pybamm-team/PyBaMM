@@ -67,6 +67,13 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_heat_of_mixing(self):
+        options = {
+            "heat of mixing": "true",
+            "thermal": "x-lumped",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_contact_resistance(self):
         options = {"contact resistance": "true"}
         self.check_well_posedness(options)
