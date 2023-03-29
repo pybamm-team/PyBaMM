@@ -652,7 +652,7 @@ class Simulation:
                     cycle_sum_vars,
                     cycle_first_state,
                 ) = pybamm.make_cycle_solution(
-                    starting_solution.steps,
+                    [starting_solution],
                     esoh_solver=esoh_solver,
                     save_this_cycle=True,
                 )
