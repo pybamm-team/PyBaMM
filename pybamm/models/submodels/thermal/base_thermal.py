@@ -169,8 +169,8 @@ class BaseThermal(pybamm.BaseSubModel):
             dUeq_p = Ueq_p.children[0].diff(c_p)
             integrand_r_n = D_n * dc_n_dr**2 * dUeq_n
             integrand_r_p = D_p * dc_p_dr**2 * dUeq_p
-            integration_variable_r_n = [pybamm.SpatialVariable("r", integrand_r_n)]
-            integration_variable_r_p = [pybamm.SpatialVariable("r", integrand_r_p)]
+            integration_variable_r_n = [pybamm.SpatialVariable("r", domain=integrand_r_n.domain)]
+            integration_variable_r_p = [pybamm.SpatialVariable("r", domain=integrand_r_p.domain)]
             integral_r_n = pybamm.Integral(integrand_r_n, integration_variable_r_n)
             integral_r_p = pybamm.Integral(integrand_r_p, integration_variable_r_p)
             Q_mix_s_n = F * N_n * integral_r_n
