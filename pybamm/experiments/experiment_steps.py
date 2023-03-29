@@ -78,7 +78,7 @@ class Rest:
     temperature : float, optional
         The ambient air temperature in degrees Celsius at which to run the experiment.
         Default is None whereby the ambient temperature is taken from the parameter set.
-        This value is overwritten if the temperature is specified in a step.
+        This value is overwritten if the temperature is specified in a step..
     """
     def __init__(
             self,
