@@ -4,7 +4,7 @@
 
 import numpy as np
 import re
-
+import pybamm
 
 examples = """
 
@@ -123,10 +123,8 @@ class Experiment:
                             idx += 1
                         if idx >= len(cycle):
                             finished = True
+                
                 operating_conditions_cycles.append(tuple(processed_cycle))
-            
-            elif isinstance(cycle, Class_exp_step): # ExpStep is a new class for expeirment steps
-
             else:
                 try:
                     # Condition is not a string
@@ -143,14 +141,17 @@ class Experiment:
                 )
             
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
+        # key clause, how to understand these two "for ... in "
+        # a bit confusing because operating_conditions is being overwritten
         operating_conditions = [
             cond for cycle in operating_conditions_cycles for cond in cycle
         ]
         self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
+        # 
         self.operating_conditions = [
-            self.read_string(cond, drive_cycles) for cond in operating_conditions
-        ]
+            self.read_string_Class(cond, drive_cycles) for cond in operating_conditions
+        ] 
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
@@ -163,6 +164,34 @@ class Experiment:
 
     def __repr__(self):
         return "pybamm.Experiment({!s})".format(self)
+
+    def read_string_Class(self, cond, drive_cycles):
+        if isinstance(cond,str):
+            return self.read_string(cond, drive_cycles)
+        elif isinstance(cond,pybamm.CC):
+            return self.read_class(cond, drive_cycles)
+        
+    def read_class(self, cond, drive_cycles):
+        """
+        Convert a CC description to a dictionary of the right format
+
+        Parameters
+        ----------
+        cond : dict, CC or CV, or rest
+               it contains C_rate,temperature,duration,upper_cutoff
+        """
+        return {
+            'C-rate input [-]': cond.C_rate,
+            'type': 'C-rate',
+            "time": cond.duration,
+            "period": self.period,
+            "temperature": cond.temperature,
+            "dc_data": None,
+            "string": None,
+            "events": {'Voltage input [V]': cond.upper_cutoff, 'type': 'voltage'},
+            "tags": None,
+        }
+
 
     def read_string(self, cond, drive_cycles):
         """
