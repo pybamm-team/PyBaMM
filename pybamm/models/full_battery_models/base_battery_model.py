@@ -199,6 +199,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "composite",
                 "integrated",
             ],
+            "heat of mixing": ["false", "true"],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -414,6 +415,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
+            if options["heat of mixing"] != "false":
+                raise NotImplementedError(
+                    "Heat of mixing submodels do not yet support particle-size "
+                    "distributions."
+                )
             if options["lithium plating"] != "none":
                 raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
