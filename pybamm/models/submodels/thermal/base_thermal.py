@@ -145,6 +145,14 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_rev_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rev_p
         )
 
+        # Heat of mixing
+        if self.options.electrode_types["negative"] == "planar" or not self.options["heat of mixing"]:
+            # make 0
+            asdfasfd
+        else:
+            # write equation
+            asdfasdf
+
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev
 
