@@ -98,18 +98,16 @@ class Experiment:
         for cycle in operating_conditions:
             # Check types and convert strings to 1-tuples
             if (
-                isinstance(cycle, tuple) or 
-                isinstance(cycle, str) or 
-                isinstance(cycle, pybamm.CC)
-                ) and all(
-                [
+                (isinstance(cycle, str) or isinstance(cycle, pybamm.CC)) 
+                or
                 (
-                isinstance(cond, str) 
-                or 
-                isinstance(cond, pybamm.CC)
-                ) for cond in cycle]
-            ):
-                if isinstance(cycle, str):
+                    isinstance(cycle, tuple)
+                    and 
+                    all([(
+                        isinstance(cond, str) or 
+                        isinstance(cond, pybamm.CC)) for cond in cycle] ))):
+                
+                if isinstance(cycle, str) or isinstance(cycle, pybamm.CC):
                     processed_cycle = (cycle,)
                 else:
                     processed_cycle = []
