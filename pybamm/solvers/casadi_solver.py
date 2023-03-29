@@ -71,7 +71,7 @@ class CasadiSolver(pybamm.BaseSolver):
     integrators_maxcount : int, optional
         The maximum number of integrators that the solver will retain before
         ejecting past integrators using an LRU methodology. A value of 0 or
-        None (default) leaves the number of integrators unbound.
+        None leaves the number of integrators unbound. Default is 100.
     """
 
     def __init__(
@@ -88,7 +88,7 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_call=None,
         return_solution_if_failed_early=False,
         perturb_algebraic_initial_conditions=None,
-        integrators_maxcount=None,
+        integrators_maxcount=100,
     ):
         super().__init__(
             "problem dependent",
