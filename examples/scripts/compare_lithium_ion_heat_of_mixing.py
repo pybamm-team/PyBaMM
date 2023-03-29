@@ -10,7 +10,7 @@ models = [
     pybamm.lithium_ion.DFN({"thermal": "x-lumped"},name="nhom")
 ]
 
-parameter_values = pybamm.ParameterValues("Chen2020_composite")
+parameter_values = pybamm.ParameterValues("Chen2020")
 
 # create and run simulations
 sims = []
@@ -20,24 +20,4 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(
-    sims,
-    [
-        [
-            "Average negative primary particle concentration",
-            "Average negative secondary particle concentration",
-        ],
-        [
-            "X-averaged negative electrode primary volumetric "
-            "interfacial current density [A.m-3]",
-            "X-averaged negative electrode secondary volumetric "
-            "interfacial current density [A.m-3]",
-            "X-averaged negative electrode volumetric "
-            "interfacial current density [A.m-3]",
-        ],
-        "X-averaged negative electrode primary open-circuit potential [V]",
-        "X-averaged negative electrode secondary open-circuit potential [V]",
-        "Average positive particle concentration [mol.m-3]",
-        "Voltage [V]",
-    ],
-)
+pybamm.dynamic_plot(sims)
