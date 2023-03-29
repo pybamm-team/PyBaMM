@@ -19,6 +19,7 @@ class ExperimentalData(UserDict):
     """
 
     allowed = ["csv"]
+    mandatory_columns = ["Voltage [V]", "Time [s]", "Current [A]"]
 
     def __init__(self, filename, format="csv"):
         if format.lower() not in self.allowed:
@@ -35,8 +36,17 @@ class ExperimentalData(UserDict):
         if self.format == "csv":
             self._load_csv()
 
+        self._validate()
+
     def _load_csv(self):
         self._data = pd.read_csv(self.filename)
+
+    def _validate(self):
+        cols = self._data.columns
+        for col in self.mandatory_columns:
+            if col not in cols:
+                raise ValueError(f"Mandatory column '{col}' not found")
+
 
     def __setitem__(self, key, value):
         raise ValueError("Not allowed to set values in ExperimentalData")
