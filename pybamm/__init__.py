@@ -222,7 +222,8 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .experiments.experiment import Experiment
 from . import experiments
-from .experiments.experiment_steps import CC
+from .experiments.experiment_steps import CC, CV, Rest
+
 
 #
 # Plotting
