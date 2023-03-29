@@ -23,9 +23,6 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(expccall.upper_cutoff, 4.2)
 
 
-
-
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
