@@ -17,6 +17,9 @@ class ExperimentalData(UserDict):
         Location of data container
     format: string
         currently "csv"
+    loader_kwargs: dict
+        keyword arguments passed to the loader
+
     Notes: example usage, how the data should look.
     """
 
@@ -25,7 +28,7 @@ class ExperimentalData(UserDict):
     cycle_index_column = "Cycle"
     step_index_column = "Step"
 
-    def __init__(self, filename, format="csv"):
+    def __init__(self, filename, format="csv", loader_kwargs=None):
         if format.lower() not in self.allowed:
             raise ValueError(
                 f"format '{format}' not allowed, only"
@@ -34,7 +37,8 @@ class ExperimentalData(UserDict):
 
         if not pathlib.Path(filename).is_file():
             raise ValueError(f"'{filename}' not found")
-
+        
+        self.loader_kwargs = loader_kwargs or {}
         self.format = format.lower()
         self.filename = filename
         self._data = None
@@ -51,7 +55,7 @@ class ExperimentalData(UserDict):
         self._validate()
 
     def _load_csv(self):
-        self._data = pd.read_csv(self.filename)
+        self._data = pd.read_csv(self.filename, **self.loader_kwargs)
 
     def _validate(self):
         cols = self._data.columns
