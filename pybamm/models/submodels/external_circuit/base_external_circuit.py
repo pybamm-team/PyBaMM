@@ -11,13 +11,16 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-        Q_Ah = pybamm.standard_variables.Q_Ah
+        Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
+        Q_Ah.print_name = "Q_Ah"
 
         variables = {"Discharge capacity [A.h]": Q_Ah}
         if self.options["calculate discharge energy"] == "true":
-            Q_Wh = pybamm.standard_variables.Q_Wh
-            Qt_Wh = pybamm.standard_variables.Qt_Wh
-            Qt_Ah = pybamm.standard_variables.Qt_Ah
+            Q_Wh = pybamm.Variable("Discharge energy [W.h]")
+
+            # Throughput capacity and energy (cumulative)
+            Qt_Ah = pybamm.Variable("Throughput capacity [A.h]")
+            Qt_Wh = pybamm.Variable("Throughput energy [W.h]")
             variables.update(
                 {
                     "Discharge energy [W.h]": Q_Wh,
@@ -51,12 +54,12 @@ class BaseModel(pybamm.BaseSubModel):
         Q_Ah = variables["Discharge capacity [A.h]"]
         I = variables["Current [A]"]
 
-        self.rhs[Q_Ah] = I * self.param.timescale / 3600
+        self.rhs[Q_Ah] = I / 3600
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = variables["Discharge energy [W.h]"]
             Qt_Wh = variables["Throughput energy [W.h]"]
             Qt_Ah = variables["Throughput capacity [A.h]"]
-            V = variables["Terminal voltage [V]"]
-            self.rhs[Q_Wh] = I * V * self.param.timescale / 3600
-            self.rhs[Qt_Wh] = abs(I * V) * self.param.timescale / 3600
-            self.rhs[Qt_Ah] = abs(I) * self.param.timescale / 3600
+            V = variables["Voltage [V]"]
+            self.rhs[Q_Wh] = I * V / 3600
+            self.rhs[Qt_Wh] = abs(I * V) / 3600
+            self.rhs[Qt_Ah] = abs(I) / 3600

@@ -17,8 +17,6 @@ class Explicit(BaseElectrolyteConductivity):
         The domain in which the model holds
     options : dict
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param, domain, options):
@@ -30,8 +28,8 @@ class Explicit(BaseElectrolyteConductivity):
             return variables
 
         Domain = self.domain.capitalize()
-        phi_s = variables[f"{Domain} electrode potential"]
-        phi_e = variables[f"{Domain} electrolyte potential"]
+        phi_s = variables[f"{Domain} electrode potential [V]"]
+        phi_e = variables[f"{Domain} electrolyte potential [V]"]
         delta_phi = phi_s - phi_e
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)

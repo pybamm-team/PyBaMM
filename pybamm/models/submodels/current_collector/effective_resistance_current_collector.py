@@ -15,7 +15,7 @@ class BaseEffectiveResistance(pybamm.BaseModel):
         param = self.param
         if self.options["dimensionality"] == 1:
             geometry["current collector"] = {
-                "z": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": param.L_z},
                 "tabs": {
                     "negative": {"z_centre": param.n.centre_z_tab},
                     "positive": {"z_centre": param.p.centre_z_tab},
@@ -23,18 +23,18 @@ class BaseEffectiveResistance(pybamm.BaseModel):
             }
         elif self.options["dimensionality"] == 2:
             geometry["current collector"] = {
-                "y": {"min": 0, "max": param.l_y},
-                "z": {"min": 0, "max": param.l_z},
+                "y": {"min": 0, "max": param.L_y},
+                "z": {"min": 0, "max": param.L_z},
                 "tabs": {
                     "negative": {
                         "y_centre": param.n.centre_y_tab,
                         "z_centre": param.n.centre_z_tab,
-                        "width": param.n.l_tab,
+                        "width": param.n.L_tab,
                     },
                     "positive": {
                         "y_centre": param.p.centre_y_tab,
                         "z_centre": param.p.centre_z_tab,
-                        "width": param.p.l_tab,
+                        "width": param.p.L_tab,
                     },
                 },
             }
@@ -116,8 +116,6 @@ class EffectiveResistance(BaseEffectiveResistance):
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
            Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
            Mathematics, 81(3), 765--788, 2021
-
-    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(
@@ -130,12 +128,6 @@ class EffectiveResistance(BaseEffectiveResistance):
         self.options = options
         self.param = pybamm.LithiumIonParameters()
 
-        # Set default length scales
-        self.length_scales = {
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
-
         self.variables = self.get_fundamental_variables()
         self.set_algebraic(self.variables)
         self.set_boundary_conditions(self.variables)
@@ -146,22 +138,23 @@ class EffectiveResistance(BaseEffectiveResistance):
     def get_fundamental_variables(self):
         # Get necessary parameters
         param = self.param
-        l_cn = param.n.l_cc
-        l_cp = param.p.l_cc
-        sigma_cn_dbl_prime = param.n.sigma_cc_dbl_prime
-        sigma_cp_dbl_prime = param.p.sigma_cc_dbl_prime
-        delta = param.delta  # aspect ratio
+        L_cn = param.n.L_cc
+        L_cp = param.p.L_cc
+        sigma_cn = param.n.sigma_cc
+        sigma_cp = param.p.sigma_cc
 
         # Set model variables: Note: we solve using a scaled version that is
         # better conditioned
         R_cn_scaled = pybamm.Variable(
-            "Scaled negative current collector resistance", domain="current collector"
+            "Scaled negative current collector resistance [Ohm]",
+            domain="current collector",
         )
         R_cp_scaled = pybamm.Variable(
-            "Scaled positive current collector resistance", domain="current collector"
+            "Scaled positive current collector resistance [Ohm]",
+            domain="current collector",
         )
-        R_cn = delta * R_cn_scaled / (l_cn * sigma_cn_dbl_prime)
-        R_cp = delta * R_cp_scaled / (l_cp * sigma_cp_dbl_prime)
+        R_cn = R_cn_scaled / (L_cn * sigma_cn)
+        R_cp = R_cp_scaled / (L_cp * sigma_cp)
 
         # Define effective current collector resistance
         if self.options["dimensionality"] == 1:
@@ -171,47 +164,37 @@ class EffectiveResistance(BaseEffectiveResistance):
             R_cc_n = -pybamm.yz_average(R_cn)
             R_cc_p = -pybamm.yz_average(R_cp)
         R_cc = R_cc_n + R_cc_p
-        R_scale = param.potential_scale / param.I_typ
 
         variables = {
-            "Scaled negative current collector resistance": R_cn_scaled,
-            "Negative current collector resistance": R_cn,
-            "Negative current collector resistance [Ohm]": R_cn * R_scale,
-            "Scaled positive current collector resistance": R_cp_scaled,
-            "Positive current collector resistance": R_cp,
-            "Positive current collector resistance [Ohm]": R_cp * R_scale,
-            "Effective current collector resistance": R_cc,
-            "Effective current collector resistance [Ohm]": R_cc * R_scale,
-            "Effective negative current collector resistance": R_cc_n,
-            "Effective negative current collector resistance [Ohm]": R_cc_n * R_scale,
-            "Effective positive current collector resistance": R_cc_p,
-            "Effective positive current collector resistance [Ohm]": R_cc_p * R_scale,
+            "Scaled negative current collector resistance [Ohm]": R_cn_scaled,
+            "Negative current collector resistance [Ohm]": R_cn,
+            "Scaled positive current collector resistance [Ohm]": R_cp_scaled,
+            "Positive current collector resistance [Ohm]": R_cp,
+            "Effective current collector resistance [Ohm]": R_cc,
+            "Effective negative current collector resistance [Ohm]": R_cc_n,
+            "Effective positive current collector resistance [Ohm]": R_cc_p,
         }
 
         # Add spatial variables
         var = pybamm.standard_spatial_vars
-        L_y = param.L_y
-        L_z = param.L_z
         if self.options["dimensionality"] == 1:
-            variables.update({"z": var.z, "z [m]": var.z * L_z})
+            variables.update({"z [m]": var.z})
         elif self.options["dimensionality"] == 2:
-            variables.update(
-                {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
-            )
+            variables.update({"y [m]": var.y, "z [m]": var.z})
 
         return variables
 
     def set_algebraic(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance"]
-        R_cp_scaled = variables["Scaled positive current collector resistance"]
+        R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
+        R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
         self.algebraic = {
             R_cn_scaled: pybamm.laplacian(R_cn_scaled) - pybamm.source(1, R_cn_scaled),
             R_cp_scaled: pybamm.laplacian(R_cp_scaled) - pybamm.source(1, R_cp_scaled),
         }
 
     def set_boundary_conditions(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance"]
-        R_cp_scaled = variables["Scaled positive current collector resistance"]
+        R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
+        R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
 
         if self.options["dimensionality"] == 1:
             self.boundary_conditions = {
@@ -237,8 +220,8 @@ class EffectiveResistance(BaseEffectiveResistance):
             }
 
     def set_initial_conditions(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance"]
-        R_cp_scaled = variables["Scaled positive current collector resistance"]
+        R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
+        R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
         self.initial_conditions = {
             R_cn_scaled: pybamm.Scalar(0),
             R_cp_scaled: pybamm.Scalar(0),
@@ -252,17 +235,13 @@ class EffectiveResistance(BaseEffectiveResistance):
         representing the average cell behaviour and returns a dictionary of
         processed potentials.
         """
-        param = self.param
-        pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.ocv_ref)
-
         # Process resistances
-        R_cn = solution["Negative current collector resistance"]
-        R_cp = solution["Positive current collector resistance"]
-        R_cc = solution["Effective current collector resistance"]
+        R_cn = solution["Negative current collector resistance [Ohm]"]
+        R_cp = solution["Positive current collector resistance [Ohm]"]
+        R_cc = solution["Effective current collector resistance [Ohm]"]
 
         # Create callable combination of ProcessedVariable objects for potentials
-        # and terminal voltage
+        # and voltage
         def V(t):
             "Account for effective current collector resistance"
             return V_av(t) - I_av(t) * R_cc(t)
@@ -276,27 +255,11 @@ class EffectiveResistance(BaseEffectiveResistance):
         def V_cc(t, z, y=None):
             return phi_s_cp(t, z, y=y) - phi_s_cn(t, z, y=y)
 
-        def V_dim(t):
-            return U_ref + V(t) * pot_scale
-
-        def phi_s_cn_dim(t, z, y=None):
-            return phi_s_cn(t, z, y=y) * pot_scale
-
-        def phi_s_cp_dim(t, z, y=None):
-            return U_ref + phi_s_cp(t, z, y=y) * pot_scale
-
-        def V_cc_dim(t, z, y=None):
-            return U_ref + V_cc(t, z, y=y) * pot_scale
-
         processed_vars = {
-            "Negative current collector potential": phi_s_cn,
-            "Negative current collector potential [V]": phi_s_cn_dim,
-            "Positive current collector potential": phi_s_cp,
-            "Positive current collector potential [V]": phi_s_cp_dim,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": V_cc_dim,
-            "Terminal voltage": V,
-            "Terminal voltage [V]": V_dim,
+            "Negative current collector potential [V]": phi_s_cn,
+            "Positive current collector potential [V]": phi_s_cp,
+            "Local current collector potential difference [V]": V_cc,
+            "Voltage [V]": V,
         }
         return processed_vars
 
@@ -307,8 +270,6 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
     collectors in the limit of large electrical conductivity. This model assumes
     a uniform *current density* at the tabs and the solution is computed by first
     solving and auxilliary problem which is the related to the resistances.
-
-    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(self):
@@ -317,21 +278,14 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         self.name = "Effective resistance in current collector model (2D)"
         self.param = pybamm.LithiumIonParameters()
 
-        # Set default length scales
-        self.length_scales = {
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
-
         # Get necessary parameters
         param = self.param
-        l_cn = param.n.l_cc
-        l_cp = param.p.l_cc
-        l_tab_p = param.p.l_tab
-        A_tab_p = l_cp * l_tab_p
-        sigma_cn_dbl_prime = param.n.sigma_cc_dbl_prime
-        sigma_cp_dbl_prime = param.p.sigma_cc_dbl_prime
-        delta = param.delta
+        L_cn = param.n.L_cc
+        L_cp = param.p.L_cc
+        L_tab_p = param.p.L_tab
+        A_tab_p = L_cp * L_tab_p
+        sigma_cn = param.n.sigma_cc
+        sigma_cp = param.p.sigma_cc
 
         # Set model variables -- we solve a auxilliary problem in each current collector
         # then relate this to the potentials and resistances later
@@ -355,7 +309,7 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         }
 
         # Boundary conditons
-        pos_tab_bc = l_cp / A_tab_p
+        pos_tab_bc = L_cp / A_tab_p
         self.boundary_conditions = {
             f_n: {"negative tab": (0, "Dirichlet"), "positive tab": (0, "Neumann")},
             f_p: {
@@ -372,33 +326,21 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         }
 
         # Define effective current collector resistance
-        R_cc_n = delta * pybamm.yz_average(f_n) / (l_cn * sigma_cn_dbl_prime)
-        R_cc_p = (
-            delta
-            * pybamm.BoundaryIntegral(f_p, "positive tab")
-            / (l_cp * sigma_cp_dbl_prime)
-        )
+        R_cc_n = pybamm.yz_average(f_n) / (L_cn * sigma_cn)
+        R_cc_p = pybamm.BoundaryIntegral(f_p, "positive tab") / (L_cp * sigma_cp)
         R_cc = R_cc_n + R_cc_p
-        R_scale = param.potential_scale / param.I_typ
 
         self.variables = {
             "Unit solution in negative current collector": f_n,
             "Unit solution in positive current collector": f_p,
-            "Effective current collector resistance": R_cc,
-            "Effective current collector resistance [Ohm]": R_cc * R_scale,
-            "Effective negative current collector resistance": R_cc_n,
-            "Effective negative current collector resistance [Ohm]": R_cc_n * R_scale,
-            "Effective positive current collector resistance": R_cc_p,
-            "Effective positive current collector resistance [Ohm]": R_cc_p * R_scale,
+            "Effective current collector resistance [Ohm]": R_cc,
+            "Effective negative current collector resistance [Ohm]": R_cc_n,
+            "Effective positive current collector resistance [Ohm]": R_cc_p,
         }
 
         # Add spatial variables
         var = pybamm.standard_spatial_vars
-        L_y = param.L_y
-        L_z = param.L_z
-        self.variables.update(
-            {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
-        )
+        self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
         pybamm.citations.register("Timms2021")
 
@@ -412,20 +354,17 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         """
         # Get evaluated parameters
         param = self.param
-        delta = param_values.evaluate(param.delta)
-        l_cn = param_values.evaluate(param.n.l_cc)
-        l_cp = param_values.evaluate(param.p.l_cc)
-        sigma_cn_dbl_prime = param_values.evaluate(param.n.sigma_cc_dbl_prime)
-        sigma_cp_dbl_prime = param_values.evaluate(param.p.sigma_cc_dbl_prime)
-        pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.ocv_ref)
+        L_cn = param_values.evaluate(param.n.L_cc)
+        L_cp = param_values.evaluate(param.p.L_cc)
+        sigma_cn = param_values.evaluate(param.n.sigma_cc)
+        sigma_cp = param_values.evaluate(param.p.sigma_cc)
 
         # Process unit solutions
         f_n = solution["Unit solution in negative current collector"]
         f_p = solution["Unit solution in positive current collector"]
 
         # Get effective resistance
-        R_cc = solution["Effective current collector resistance"]
+        R_cc = solution["Effective current collector resistance [Ohm]"]
 
         # Create callable combination of ProcessedVariable objects for potentials
         def V(t):
@@ -433,36 +372,18 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
             return V_av(t) - I_av(t) * R_cc(t)
 
         def phi_s_cn(t, y, z):
-            return -(delta * I_av(t=t) / l_cn / sigma_cn_dbl_prime) * f_n(y=y, z=z)
+            return -(I_av(t=t) / L_cn / sigma_cn) * f_n(y=y, z=z)
 
         def phi_s_cp(t, y, z):
-            return V(t) + (delta * I_av(t=t) / l_cp / sigma_cp_dbl_prime) * f_p(
-                y=y, z=z
-            )
+            return V(t) + (I_av(t=t) / L_cp / sigma_cp) * f_p(y=y, z=z)
 
         def V_cc(t, y, z):
             return phi_s_cp(t, y, z) - phi_s_cn(t, y, z)
 
-        def V_dim(t):
-            return U_ref + V(t) * pot_scale
-
-        def phi_s_cn_dim(t, y, z):
-            return phi_s_cn(t, y, z) * pot_scale
-
-        def phi_s_cp_dim(t, y, z):
-            return U_ref + phi_s_cp(t, y, z) * pot_scale
-
-        def V_cc_dim(t, y, z):
-            return U_ref + V_cc(t, y, z) * pot_scale
-
         processed_vars = {
-            "Negative current collector potential": phi_s_cn,
-            "Negative current collector potential [V]": phi_s_cn_dim,
-            "Positive current collector potential": phi_s_cp,
-            "Positive current collector potential [V]": phi_s_cp_dim,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": V_cc_dim,
-            "Terminal voltage": V,
-            "Terminal voltage [V]": V_dim,
+            "Negative current collector potential [V]": phi_s_cn,
+            "Positive current collector potential [V]": phi_s_cp,
+            "Local current collector potential difference [V]": V_cc,
+            "Voltage [V]": V,
         }
         return processed_vars

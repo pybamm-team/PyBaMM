@@ -107,20 +107,6 @@ class Solution(object):
         if check_solution:
             self.check_ys_are_not_too_large()
 
-        # Copy the timescale_eval and lengthscale_evals if they exist
-        if hasattr(all_models[0], "timescale_eval"):
-            self.timescale_eval = all_models[0].timescale_eval
-        else:
-            self.timescale_eval = all_models[0].timescale.evaluate()
-
-        if hasattr(all_models[0], "length_scales_eval"):
-            self.length_scales_eval = all_models[0].length_scales_eval
-        else:
-            self.length_scales_eval = {
-                domain: scale.evaluate()
-                for domain, scale in all_models[0].length_scales.items()
-            }
-
         # Events
         self._t_event = t_event
         self._y_event = y_event
@@ -327,7 +313,7 @@ class Solution(object):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
                         f"of `{pybamm.settings.max_y_value}. This could be due to "
-                        "incorrect nondimensionalisation, model formulation, or "
+                        "incorrect scaling, model formulation, or "
                         "parameter values. The maximum allowed value is set by "
                         "'pybammm.settings.max_y_value'."
                     )
@@ -891,7 +877,6 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
                 "`sim.solve(calc_esoh=False)` to skip this step"
             )
 
-        for var in esoh_sol.all_models[0].variables:
-            cycle_summary_variables[var] = esoh_sol[var].data[0]
+        cycle_summary_variables.update(esoh_sol)
 
     return cycle_summary_variables

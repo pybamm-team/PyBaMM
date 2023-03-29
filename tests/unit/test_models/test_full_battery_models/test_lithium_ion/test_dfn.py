@@ -29,7 +29,7 @@ class TestDFN(BaseUnitTestLithiumIon, unittest.TestCase):
 
     def test_well_posed_current_sigmoid_ocp_with_psd(self):
         options = {
-            "open circuit potential": "current sigmoid",
+            "open-circuit potential": "current sigmoid",
             "particle size": "distribution",
         }
         self.check_well_posedness(options)

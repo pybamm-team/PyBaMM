@@ -8,7 +8,6 @@ from .base_utilisation import BaseModel
 class CurrentDriven(BaseModel):
     """Current-driven ODE for interface utilisation
 
-
     Parameters
     ----------
     param : parameter class
@@ -20,8 +19,6 @@ class CurrentDriven(BaseModel):
     reaction_loc : str
         Where the reaction happens: "x-average" (SPM, SPMe, etc),
         "full electrode" (full DFN), or "interface" (half-cell model)
-
-    **Extends:** :class:`pybamm.interface utilisation.BaseModel`
     """
 
     def __init__(self, param, domain, options, reaction_loc):
@@ -57,22 +54,24 @@ class CurrentDriven(BaseModel):
 
         if self.reaction_loc == "full electrode":
             u = variables[f"{Domain} electrode interface utilisation variable"]
-            a = variables[f"{Domain} electrode surface area to volume ratio"]
-            j = variables[f"{Domain} electrode interfacial current density"]
+            a_j = variables[
+                f"{Domain} electrode volumetric interfacial current density [A.m-3]"
+            ]
         elif self.reaction_loc == "x-average":
             u = variables[
                 f"X-averaged {domain} electrode interface utilisation variable"
             ]
-            a = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
-            j = variables[f"X-averaged {domain} electrode interfacial current density"]
+            a_j = variables[
+                f"X-averaged {domain} electrode volumetric "
+                "interfacial current density [A.m-3]"
+            ]
         else:
             u = variables["Lithium metal interface utilisation variable"]
-            a = 1
-            j = variables["Lithium metal total interfacial current density"]
+            a_j = variables["Lithium metal total interfacial current density [A.m-2]"]
 
         beta = self.domain_param.beta_utilisation
 
-        self.rhs = {u: beta * a * u * j}
+        self.rhs = {u: beta * u * a_j / self.param.F}
 
     def set_initial_conditions(self, variables):
         domain, Domain = self.domain_Domain

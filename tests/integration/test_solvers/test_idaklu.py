@@ -20,11 +20,10 @@ class TestIDAKLUSolver(unittest.TestCase):
         np.testing.assert_array_less(1, solution.t.size)
 
     def test_on_spme_sensitivities(self):
-        param_name = "Typical current [A]"
+        param_name = "Current function [A]"
         param_value = 0.15652
         param = pybamm.ParameterValues("Marquis2019")
-        timescale = param.evaluate(pybamm.LithiumIonParameters().timescale)
-        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
+        model = pybamm.lithium_ion.SPMe()
         geometry = model.default_geometry
         param.update({param_name: "[input]"})
         inputs = {param_name: param_value}
@@ -63,23 +62,6 @@ class TestIDAKLUSolver(unittest.TestCase):
             rtol=1e-2,
             atol=1e-3,
         )
-
-    def test_set_tol_by_variable(self):
-        model = pybamm.lithium_ion.SPMe()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
-        param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        t_eval = np.linspace(0, 3600, 100)
-        solver = pybamm.IDAKLUSolver()
-
-        variable_tols = {"Porosity times concentration": 1e-3}
-        solver.set_atol_by_variable(variable_tols, model)
-
-        solver.solve(model, t_eval)
 
     def test_changing_grid(self):
         model = pybamm.lithium_ion.SPM()

@@ -20,8 +20,6 @@ class NoMechanics(BaseMechanics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
     def __init__(self, param, domain, options, phase="primary"):
@@ -37,8 +35,8 @@ class NoMechanics(BaseMechanics):
         variables = self._get_standard_variables(zero)
         variables.update(
             {
-                f"{Domain} particle cracking rate": zero,
-                f"X-averaged {domain} particle cracking rate": zero_av,
+                f"{Domain} particle cracking rate [m.s-1]": zero,
+                f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
             }
         )
         return variables

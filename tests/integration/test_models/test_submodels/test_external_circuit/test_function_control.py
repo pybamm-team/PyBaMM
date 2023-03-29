@@ -47,14 +47,14 @@ class TestFunctionControl(unittest.TestCase):
             solutions[0]["Current [A]"].entries * solutions[0]["Time [h]"].entries,
         )
         np.testing.assert_array_almost_equal(
-            solutions[0]["Terminal voltage [V]"](solutions[0].t),
-            solutions[1]["Terminal voltage [V]"](solutions[0].t),
+            solutions[0]["Voltage [V]"](solutions[0].t),
+            solutions[1]["Voltage [V]"](solutions[0].t),
             decimal=5,
         )
 
     def test_constant_voltage(self):
         def constant_voltage(variables):
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             return V - 4.08
 
         # load models
@@ -86,8 +86,8 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        V0 = solutions[0]["Terminal voltage [V]"].entries
-        V1 = solutions[1]["Terminal voltage [V]"].entries
+        V0 = solutions[0]["Voltage [V]"].entries
+        V1 = solutions[1]["Voltage [V]"].entries
         np.testing.assert_array_almost_equal(V0, V1)
 
         I0 = solutions[0]["Current [A]"].entries
@@ -97,7 +97,7 @@ class TestFunctionControl(unittest.TestCase):
     def test_constant_power(self):
         def constant_power(variables):
             I = variables["Current [A]"]
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             return I * V - 4
 
         # load models
@@ -125,7 +125,7 @@ class TestFunctionControl(unittest.TestCase):
             disc.process_model(model)
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        for var in ["Terminal voltage [V]", "Current [A]"]:
+        for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
                 np.testing.assert_array_almost_equal(
                     solutions[0][var].data, sol[var].data
@@ -134,7 +134,7 @@ class TestFunctionControl(unittest.TestCase):
     def test_constant_resistance(self):
         def constant_resistance(variables):
             I = variables["Current [A]"]
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             return V / I - 2
 
         # load models
@@ -162,7 +162,7 @@ class TestFunctionControl(unittest.TestCase):
             disc.process_model(model)
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        for var in ["Terminal voltage [V]", "Current [A]"]:
+        for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
                 np.testing.assert_array_almost_equal(
                     solutions[0][var].data, sol[var].data

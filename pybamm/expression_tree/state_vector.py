@@ -30,8 +30,6 @@ class StateVectorBase(pybamm.Symbol):
     evaluation_array : list, optional
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
-
-    *Extends:* :class:`pybamm.Symbol`
     """
 
     def __init__(
@@ -220,8 +218,6 @@ class StateVector(StateVectorBase):
     evaluation_array : list, optional
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
-
-    *Extends:* :class:`pybamm.StateVectorBase`
     """
 
     def __init__(
@@ -300,8 +296,6 @@ class StateVectorDot(StateVectorBase):
     evaluation_array : list, optional
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
-
-    *Extends:* :class:`Array`
     """
 
     def __init__(

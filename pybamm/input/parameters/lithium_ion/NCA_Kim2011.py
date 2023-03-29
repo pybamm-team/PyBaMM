@@ -1,5 +1,4 @@
 import pybamm
-import os
 
 
 def graphite_diffusivity_Kim2011(sto, T):
@@ -35,7 +34,7 @@ def graphite_diffusivity_Kim2011(sto, T):
 
 def graphite_ocp_Kim2011(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open-circuit Potential (OCP) as a function of the stochiometry [1].
 
     References
     ----------
@@ -94,7 +93,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     i0_ref = 36  # reference exchange current density at 100% SOC
     sto = 0.36  # stochiometry at 100% SOC
     c_s_n_ref = sto * c_s_max  # reference electrode concentration
-    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
@@ -174,7 +173,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     i0_ref = 4  # reference exchange current density at 100% SOC
     sto = 0.41  # stochiometry at 100% SOC
     c_s_ref = sto * c_s_max  # reference electrode concentration
-    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
@@ -260,16 +259,34 @@ def electrolyte_conductivity_Kim2011(c_e, T):
     return sigma_e
 
 
-# Load data in the appropriate format
-path, _ = os.path.split(os.path.abspath(__file__))
-nca_ocp_Kim2011_data = pybamm.parameters.process_1D_data(
-    "nca_ocp_Kim2011_data.csv", path=path
-)
-
-
 def nca_ocp_Kim2011(sto):
-    name, (x, y) = nca_ocp_Kim2011_data
-    return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
+    """
+    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+
+    References
+    ----------
+    .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
+    (2011). Multi-domain modeling of lithium-ion batteries encompassing
+    multi-physics in varied length scales. Journal of The Electrochemical
+    Society, 158(8), A955-A969.
+    """
+
+    U_posi = (
+        1.638 * sto**10
+        - 2.222 * sto**9
+        + 15.056 * sto**8
+        - 23.488 * sto**7
+        + 81.246 * sto**6
+        - 344.566 * sto**5
+        + 621.3475 * sto**4
+        - 554.774 * sto**3
+        + 264.427 * sto**2
+        - 66.3691 * sto
+        + 11.8058
+        - 0.61386 * pybamm.exp(5.8201 * sto**136.4)
+    )
+
+    return U_posi
 
 
 # Call dict via a function to avoid errors when editing in place
@@ -367,7 +384,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 267.467,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 158.079,
         "Nominal cell capacity [A.h]": 0.43,
-        "Typical current [A]": 0.43,
         "Current function [A]": 0.43,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -380,8 +396,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 5.083e-07,
         "Negative electrode Bruggeman coefficient (electrolyte)": 2.0,
         "Negative electrode Bruggeman coefficient (electrode)": 2.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -400,8 +414,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 1.633e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 2.0,
         "Positive electrode Bruggeman coefficient (electrode)": 2.0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
@@ -417,10 +429,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.10672,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1200.0,
         "Initial concentration in electrolyte [mol.m-3]": 1200.0,
         "Cation transference number": 0.4,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Kim2011,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Kim2011,
         # experiment

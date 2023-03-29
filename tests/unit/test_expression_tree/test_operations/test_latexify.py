@@ -9,15 +9,15 @@ import uuid
 import pybamm
 from pybamm.expression_tree.operations.latexify import Latexify
 
-model_dfn = pybamm.lithium_ion.DFN()
-func_dfn = str(model_dfn.latexify())
-
-model_spme = pybamm.lithium_ion.SPMe()
-func_spme = str(model_spme.latexify())
-
 
 class TestLatexify(unittest.TestCase):
     def test_latexify(self):
+        model_dfn = pybamm.lithium_ion.DFN()
+        func_dfn = str(model_dfn.latexify())
+
+        model_spme = pybamm.lithium_ion.SPMe()
+        func_spme = str(model_spme.latexify())
+
         # Test docstring
         self.assertEqual(pybamm.BaseModel.latexify.__doc__, Latexify.__doc__)
 
@@ -27,20 +27,20 @@ class TestLatexify(unittest.TestCase):
         # Test newline=False
         self.assertIn(r"\\", str(model_spme.latexify(newline=False)))
 
-        # Test terminal voltage equation name
-        self.assertIn("Terminal voltage [V]", func_spme)
+        # Test voltage equation name
+        self.assertIn("Voltage [V]", func_spme)
 
-        # Test partial derivative in boundary conditions
-        self.assertIn("partial r}", func_spme)
+        # Test derivative in boundary conditions
+        self.assertIn(r"\nabla", func_spme)
 
         # Test boundary conditions range
-        self.assertIn("quad r =", func_spme)
+        self.assertIn("r =", func_spme)
 
         # Test derivative in equations
         self.assertIn("frac{d}{d t}", func_spme)
 
         # Test rhs geometry ranges
-        self.assertIn("quad 0 < r < 1", func_spme)
+        self.assertIn("0 < r < ", func_spme)
 
         # Test initial conditions
         self.assertIn("; t=0", func_spme)
@@ -66,9 +66,28 @@ class TestLatexify(unittest.TestCase):
         self.assertIn("coefficient", func_spme)
         self.assertIn("diffusivity", func_spme)
 
+    def test_latexify_other_variables(self):
+        model_spme = pybamm.lithium_ion.SPMe()
+        func_spme = str(
+            model_spme.latexify(
+                output_variables=["Electrolyte concentration [mol.m-3]"]
+            )
+        )
+        self.assertIn("Electrolyte concentration [mol.m-3]", func_spme)
+
+        # Default behavior when voltage is not in the model variables
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0}
+        model.initial_conditions = {var: 0}
+        func = str(model.latexify())
+        self.assertNotIn("Voltage [V]", func)
+
     @unittest.skipIf(platform.system() in ["Windows", "Darwin"], "Only run for Linux")
     def test_sympy_preview(self):
         # Test sympy preview
+        model_spme = pybamm.lithium_ion.SPMe()
+
         for ext in ["png", "jpg", "pdf"]:
             filename = f"{uuid.uuid4()}.{ext}"
             model_spme.latexify(filename)

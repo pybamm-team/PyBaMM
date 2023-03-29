@@ -57,19 +57,19 @@ experiment = pb.Experiment(
 )
 
 sim = pb.Simulation(model, experiment=experiment, parameter_values=param)
-sim.solve(solver=pb.CasadiSolver(mode="safe"))
+sim.solve(solver=pb.CasadiSolver(mode="fast with events"))
 sim.plot(
     [
         "Current [A]",
         "Total current density [A.m-2]",
-        "Terminal voltage [V]",
+        "Voltage [V]",
         "Discharge capacity [A.h]",
         "Electrolyte potential [V]",
         "Electrolyte concentration [mol.m-3]",
-        "Total SEI thickness",
+        "X-averaged total SEI thickness [m]",
         "Negative electrode porosity",
         "X-averaged negative electrode porosity",
-        "SEI interfacial current density [A.m-2]",
+        "X-averaged SEI interfacial current density [A.m-2]",
         "X-averaged total SEI thickness [m]",
         [
             "Total lithium lost [mol]",
