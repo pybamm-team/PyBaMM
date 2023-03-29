@@ -154,12 +154,28 @@ class BaseThermal(pybamm.BaseSubModel):
             a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
             R_n = variables["Negative particle radius [m]"]
             R_p = variables["Positive particle radius [m]"]
+            N_n = a_n / (4 * pi * R_n**2)
+            N_p = a_p / (4 * pi * R_p**2)
             c_n = variables["Negative particle concentration [mol.m-3]"]
             c_p = variables["Positive particle concentration [mol.m-3]"]
-            dc_ndr = pybamm.grad_squared(c_n)
-            dc_pdr = pybamm.grad_squared(c_p)
+            dc_n_dr = pybamm.grad_squared(c_n)
+            dc_p_dr = pybamm.grad_squared(c_p)
             D_n = variables["Negative particle effective diffusivity [m2.s-1]"]
             D_p = variables["Positive particle effective diffusivity [m2.s-1]"]
+            Ueq_n = variables["Negative electrode open-circuit potential [V]"]
+            Ueq_p = variables["Positive electrode open-circuit potential [V]"]
+            dUeq_n = Ueq_n.diff(c_n)
+            dUeq_p = Ueq_p.diff(c_p)
+            integrand_r_n = D_n * dc_n_dr**2 * dUeq_n
+            integrand_r_p = D_p * dc_p_dr**2 * dUeq_p
+            integration_variable_r_n = [pybamm.SpatialVariable("r", integrand_r_n)]
+            integration_variable_r_p = [pybamm.SpatialVariable("r", integrand_r_p)]
+            integral_r_n = pybamm.Integral(integrand_r_n, integration_variable_r_n)
+            integral_r_p = pybamm.Integral(integrand_r_p, integration_variable_r_p)
+            Q_mix_s_n = F * N_n * integral_r_n
+            Q_mix_s_p = F * N_p * integral_r_p
+            Q_mix_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
+            Q_mix = pybamm.concatenation(Q_mix_s_n, Q_mix_s_s, Q_mix_s_p)
         else:
             Q_mix = 0
 
@@ -171,18 +187,23 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
+        Q_mix_av = self._x_average(Q_mix, 0, 0)
 
         # Compute volume-averaged heat source terms
         Q_ohm_vol_av = self._yz_average(Q_ohm_av)
         Q_rxn_vol_av = self._yz_average(Q_rxn_av)
         Q_rev_vol_av = self._yz_average(Q_rev_av)
         Q_vol_av = self._yz_average(Q_av)
+        Q_mix_vol_av = self._yz_average(Q_mix_av)
 
         variables.update(
             {
                 "Ohmic heating [W.m-3]": Q_ohm,
                 "X-averaged Ohmic heating [W.m-3]": Q_ohm_av,
                 "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av,
+                "Heat of mixing [W.m-3]": Q_mix,
+                "X-averaged heat of mixing [W.m-3]": Q_mix_av,
+                "Volume-averaged heat of mixing [W.m-3]": Q_mix_vol_av,
                 "Irreversible electrochemical heating [W.m-3]": Q_rxn,
                 "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av,
                 "Volume-averaged irreversible electrochemical heating "
