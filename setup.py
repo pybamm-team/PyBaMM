@@ -197,6 +197,7 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "imageio>=2.9.0",
+        "importlib-metadata",
         "pybtex>=0.24.0",
         "sympy>=1.8",
         "bpx",
