@@ -197,7 +197,6 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "imageio>=2.9.0",
-        "jupyter",  # For example notebooks
         "pybtex>=0.24.0",
         "sympy>=1.8",
         "bpx",
@@ -218,6 +217,7 @@ setup(
         "dev": [
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
+            "jupyter",  # For example notebooks
         ],
     },
     entry_points={
