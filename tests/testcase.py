@@ -24,7 +24,7 @@ def FixRandomSeed(method):
     @wraps(method)
     def wrapped(*args, **kwargs):
         np.random.seed(
-            int(hashlib.sha1(method.__name__.encode()).hexdigest(), 16) % (2**32)
+            int(hashlib.sha256(method.__name__.encode()).hexdigest(), 16) % (2**32)
         )
         return method(*args, **kwargs)
 
