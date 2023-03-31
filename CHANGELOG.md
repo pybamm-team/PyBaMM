@@ -14,12 +14,13 @@
 
 ## Bug fixes
 
+- Fix non-deteministic outcome of some tests in the test suite ([#2844](https://github.com/pybamm-team/PyBaMM/pull/2844))
 - Fixed excessive RAM consumption when running multiple simulations ([#2823](https://github.com/pybamm-team/PyBaMM/pull/2823))
+- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 - Fixed a bug where variable bounds could not contain `InputParameters` ([#2795](https://github.com/pybamm-team/PyBaMM/pull/2795))
 - Improved `model.latexify()` to have a cleaner and more readable output ([#2764](https://github.com/pybamm-team/PyBaMM/pull/2764))
 - Fixed electrolyte conservation in the case of concentration-dependent transference number ([#2758](https://github.com/pybamm-team/PyBaMM/pull/2758))
 - Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
-- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 
 ## Optimizations
 
