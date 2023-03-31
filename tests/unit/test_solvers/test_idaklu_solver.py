@@ -1,6 +1,7 @@
 #
 # Tests for the KLU Solver class
 #
+from tests import TestCase
 from contextlib import redirect_stdout
 import io
 import unittest
@@ -12,7 +13,7 @@ from tests import get_discretisation_for_testing
 
 
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
-class TestIDAKLUSolver(unittest.TestCase):
+class TestIDAKLUSolver(TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials

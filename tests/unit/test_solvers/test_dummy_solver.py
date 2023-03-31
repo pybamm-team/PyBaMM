@@ -1,13 +1,14 @@
 #
 # Tests for the Dummy Solver class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
 import sys
 
 
-class TestDummySolver(unittest.TestCase):
+class TestDummySolver(TestCase):
     def test_dummy_solver(self):
         model = pybamm.BaseModel()
         v = pybamm.Scalar(1)

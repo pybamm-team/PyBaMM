@@ -1,6 +1,7 @@
 #
 # Tests for the lead-acid Full model
 #
+from tests import TestCase
 import pybamm
 import tests
 
@@ -8,7 +9,7 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidFullSideReactions(unittest.TestCase):
+class TestLeadAcidFullSideReactions(TestCase):
     def test_basic_processing(self):
         options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)

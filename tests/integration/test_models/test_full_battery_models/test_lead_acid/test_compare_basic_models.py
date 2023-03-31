@@ -1,13 +1,14 @@
 #
 # Compare basic models with full models
 #
+from tests import TestCase
 import pybamm
 
 import numpy as np
 import unittest
 
 
-class TestCompareBasicModels(unittest.TestCase):
+class TestCompareBasicModels(TestCase):
     def test_compare_full(self):
         basic_full = pybamm.lead_acid.BasicFull()
         full = pybamm.lead_acid.Full()

@@ -1,6 +1,7 @@
 #
 # Test for the operator class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
@@ -86,7 +87,7 @@ def get_1p1d_mesh_for_testing(
     )
 
 
-class TestSpectralVolume(unittest.TestCase):
+class TestSpectralVolume(TestCase):
     def test_exceptions(self):
         sp_meth = pybamm.SpectralVolume()
         with self.assertRaises(ValueError):

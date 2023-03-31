@@ -1,12 +1,13 @@
 #
 # Tests for the lithium-ion half-cell SPM model
 #
+from tests import TestCase
 import pybamm
 import unittest
 from tests import BaseUnitTestLithiumIonHalfCell
 
 
-class TestSPMHalfCell(BaseUnitTestLithiumIonHalfCell, unittest.TestCase):
+class TestSPMHalfCell(BaseUnitTestLithiumIonHalfCell, TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPM
 

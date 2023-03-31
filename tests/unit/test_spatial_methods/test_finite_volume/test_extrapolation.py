@@ -1,6 +1,7 @@
 #
 # Test for the extrapolations in the finite volume class
 #
+from tests import TestCase
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -55,7 +56,7 @@ def get_errors(function, method_options, pts, bcs=None):
     return l_errors, r_errors
 
 
-class TestExtrapolation(unittest.TestCase):
+class TestExtrapolation(TestCase):
     def test_convergence_without_bcs(self):
         # all tests are performed on x in [0, 1]
         linear = {"extrapolation": {"order": "linear"}}

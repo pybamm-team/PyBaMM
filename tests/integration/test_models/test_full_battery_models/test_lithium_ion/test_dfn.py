@@ -1,6 +1,7 @@
 #
 # Tests for the lithium-ion DFN model
 #
+from tests import TestCase
 import pybamm
 import tests
 import numpy as np
@@ -8,7 +9,7 @@ import unittest
 from tests import BaseIntegrationTestLithiumIon
 
 
-class TestDFN(BaseIntegrationTestLithiumIon, unittest.TestCase):
+class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN
 
@@ -34,7 +35,7 @@ class TestDFN(BaseIntegrationTestLithiumIon, unittest.TestCase):
         self.run_basic_processing_test({}, parameter_values=param)
 
 
-class TestDFNWithSizeDistribution(unittest.TestCase):
+class TestDFNWithSizeDistribution(TestCase):
     def setUp(self):
         params = pybamm.ParameterValues("Marquis2019")
         self.params = pybamm.get_size_distribution_parameters(params)
