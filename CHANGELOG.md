@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.3](https://github.com/pybamm-team/PyBaMM/tree/v23.3) - 2023-03-31
+
 ## Features
 
 - Added option to limit the number of integrators stored in CasadiSolver, which is particularly relevant when running simulations back-to-back [#2823](https://github.com/pybamm-team/PyBaMM/pull/2823)
