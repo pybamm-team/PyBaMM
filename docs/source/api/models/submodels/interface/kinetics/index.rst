@@ -10,5 +10,5 @@ Kinetics
   marcus
   no_reaction
   tafel
-  otal_main_kinetics
+  total_main_kinetics
   inverse_kinetics/index

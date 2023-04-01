@@ -5,4 +5,4 @@ Open circuit potential models
 
   base_ocp
   current_sigmoid_ocp
-  platingsingle_ocp
+  single_ocp

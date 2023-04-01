@@ -6,3 +6,4 @@ Interface Utilisation
  base_utilisation
  constant_utilisation
  current_driven_utilisation
+ full_utlisiation

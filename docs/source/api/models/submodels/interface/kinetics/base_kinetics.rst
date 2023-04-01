@@ -1,5 +1,5 @@
-Interface Base Model
-====================
+Base Kinetics
+=============
 
-.. autoclass:: pybamm.interface.BaseInterface
+.. autoclass:: pybamm.interface.BaseKinetics
     :members:
