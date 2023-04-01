@@ -21,7 +21,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Open circuit potential
+        Open-circuit potential
     """
 
     u_eq = (
@@ -267,7 +267,6 @@ def get_parameter_values():
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 1.1,
         "Current function [A]": 1.1,
-        "Typical current [A]": 1.1,
         "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
@@ -279,8 +278,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 1.5,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -299,8 +296,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 1e-08,
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode density [kg.m-3]": 2341.17,
@@ -316,10 +311,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
         # experiment

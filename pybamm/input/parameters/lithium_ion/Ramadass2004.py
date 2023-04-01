@@ -32,7 +32,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
 def graphite_ocp_Ramadass2004(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the
+    Graphite Open-circuit Potential (OCP) as a function of the
     stochiometry (theta?). The fit is taken from Ramadass 2004.
 
     References
@@ -95,7 +95,7 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
 
 def graphite_entropic_change_Moura2016(sto, c_s_max):
     """
-    Graphite entropic change in open circuit potential (OCP) at a temperature of
+    Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from Scott Moura's FastDFN code
     [1].
 
@@ -156,7 +156,7 @@ def lico2_diffusivity_Ramadass2004(sto, T):
 
 def lico2_ocp_Ramadass2004(sto):
     """
-    Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
+    Lithium Cobalt Oxide (LiCO2) Open-circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from Ramadass 2004. Stretch is considered the
     overhang area negative electrode / area positive electrode, in Ramadass 2002.
 
@@ -233,7 +233,7 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
 
 def lico2_entropic_change_Moura2016(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Scott Moura's FastDFN code [1].
 
@@ -436,7 +436,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 1.0,
-        "Typical current [A]": 1.0,
         "Current function [A]": 1.0,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -450,8 +449,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 2e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 4.0,
         "Negative electrode Bruggeman coefficient (electrode)": 4.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -471,8 +468,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 2e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 4.0,
         "Positive electrode Bruggeman coefficient (electrode)": 4.0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
@@ -489,10 +484,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 1978.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.34,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.363,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ramadass2004,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ramadass2004,
         # experiment

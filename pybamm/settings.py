@@ -12,11 +12,13 @@ class Settings(object):
     _abs_smoothing = "exact"
     max_words_in_line = 4
     max_y_value = 1e5
+    step_start_offset = 1e-9
     tolerances = {
         "D_e__c_e": 10,  # dimensional
         "kappa_e__c_e": 10,  # dimensional
         "chi__c_e": 1e-2,  # dimensionless
-        "U__c_s": 1e-10,  # dimensional
+        "D__c_s": 1e-10,  # dimensionless
+        "U__c_s": 1e-10,  # dimensionless
         "j0__c_e": 1e-8,  # dimensionless
         "j0__c_s": 1e-8,  # dimensionless
         "macinnes__c_e": 1e-15,  # dimensionless

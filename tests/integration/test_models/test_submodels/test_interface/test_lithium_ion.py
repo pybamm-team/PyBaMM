@@ -21,12 +21,12 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             pybamm.Variable("particle conc", domain=["positive particle"])
         )
         self.variables = {
-            "Negative electrolyte concentration": c_e_n,
-            "Positive electrolyte concentration": c_e_p,
-            "Negative particle surface concentration": self.c_s_n_surf,
-            "Positive particle surface concentration": self.c_s_p_surf,
-            "Negative electrode temperature": 0,
-            "Positive electrode temperature": 0,
+            "Negative electrolyte concentration [mol.m-3]": c_e_n,
+            "Positive electrolyte concentration [mol.m-3]": c_e_p,
+            "Negative particle surface concentration [mol.m-3]": self.c_s_n_surf,
+            "Positive particle surface concentration [mol.m-3]": self.c_s_p_surf,
+            "Negative electrode temperature [K]": 300,
+            "Positive electrode temperature [K]": 300,
         }
         self.options = pybamm.BatteryModelOptions({"particle size": "single"})
 

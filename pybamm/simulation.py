@@ -128,6 +128,23 @@ class Simulation:
 
             warnings.filterwarnings("ignore")
 
+        self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    def __getstate__(self):
+        """
+        Return dictionary of picklable items
+        """
+        result = self.__dict__.copy()
+        result["get_esoh_solver"] = None  # Exclude LRU cache
+        return result
+
+    def __setstate__(self, state):
+        """
+        Unpickle, restoring unpicklable relationships
+        """
+        self.__dict__ = state
+        self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
     def set_up_and_parameterise_experiment(self):
         """
         Set up a simulation to run with an experiment. This creates a dictionary of
@@ -138,20 +155,16 @@ class Simulation:
         This needs to be done here and not in the Experiment class because the nominal
         cell capacity (from the parameters) is used to convert C-rate to current.
         """
-        experiment = self.experiment
-        model = self.model
-        # Update experiment using parameters such as timescale and capacity
-        timescale = self._parameter_values.evaluate(model.timescale)
+        # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-
-        for op_conds in experiment.operating_conditions:
+        for op_conds in self.experiment.operating_conditions:
             op_type = op_conds["type"]
             if op_conds["dc_data"] is not None:
                 # If operating condition includes a drive cycle, define the interpolant
                 drive_cycle_interpolant = pybamm.Interpolant(
                     op_conds["dc_data"][:, 0],
                     op_conds["dc_data"][:, 1],
-                    timescale * (pybamm.t - pybamm.InputParameter("start time")),
+                    pybamm.t - pybamm.InputParameter("start time"),
                 )
                 if op_type == "current":
                     op_conds["Current input [A]"] = drive_cycle_interpolant
@@ -268,11 +281,11 @@ class Simulation:
                 new_parameter_values.update(
                     experiment_parameter_values, check_already_exists=False
                 )
-                # Set the "current function" to be the variable defined in the
+                # Set the "current function" to be the variable defined in the submodel
                 if submodel is not None:
                     new_parameter_values["Current function [A]"] = submodel.variables[
-                        "Current density variable"
-                    ] * abs(model.param.I_typ)
+                        "Current [A]"
+                    ]
                 parameterised_model = new_parameter_values.process_model(
                     new_model, inplace=False
                 )
@@ -343,7 +356,7 @@ class Simulation:
         # so that they are not triggered before the voltage limits in the
         # experiment
         for i, event in enumerate(new_model.events):
-            if event.name in ["Minimum voltage", "Maximum voltage"]:
+            if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )
@@ -396,14 +409,10 @@ class Simulation:
         if self.model_with_set_params:
             return
 
-        if self._parameter_values._dict_items == {}:
-            # Don't process if parameter values is empty
-            self._model_with_set_params = self._unprocessed_model
-        else:
-            self._model_with_set_params = self._parameter_values.process_model(
-                self._unprocessed_model, inplace=False
-            )
-            self._parameter_values.process_geometry(self.geometry)
+        self._model_with_set_params = self._parameter_values.process_model(
+            self._unprocessed_model, inplace=False
+        )
+        self._parameter_values.process_geometry(self.geometry)
         self.model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):
@@ -660,7 +669,7 @@ class Simulation:
                     cycle_sum_vars,
                     cycle_first_state,
                 ) = pybamm.make_cycle_solution(
-                    starting_solution.steps,
+                    [starting_solution],
                     esoh_solver=esoh_solver,
                     save_this_cycle=True,
                 )
@@ -908,8 +917,7 @@ class Simulation:
 
         return self.solution
 
-    @lru_cache
-    def get_esoh_solver(self, calc_esoh):
+    def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
             or isinstance(self.model, pybamm.lead_acid.BaseModel)

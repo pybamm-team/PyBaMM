@@ -26,9 +26,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
-
-    **Extends:** :class:`pybamm.BaseBatteryModel`
-
     """
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
@@ -37,18 +34,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         options["particle shape"] = "no particles"
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
-
-        # Default timescale
-        self._timescale = self.param.timescale
-
-        # Set default length scales
-        self._length_scales = {
-            "negative electrode": self.param.L_x,
-            "separator": self.param.L_x,
-            "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_z,
-            "current collector z": self.param.L_z,
-        }
 
         self.set_standard_output_variables()
 
@@ -73,35 +58,32 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Current [A]",
             "Porosity",
             "Electrolyte potential [V]",
-            "Terminal voltage [V]",
+            "Voltage [V]",
         ]
 
     def set_soc_variables(self):
         """Set variables relating to the state of charge."""
-        # State of Charge defined as function of dimensionless electrolyte concentration
+        # State of Charge defined as function of electrolyte concentration
         z = pybamm.standard_spatial_vars.z
         soc = (
-            pybamm.Integral(self.variables["X-averaged electrolyte concentration"], z)
+            pybamm.Integral(
+                self.variables["X-averaged electrolyte concentration [mol.m-3]"]
+                / self.param.c_e_init,
+                z,
+            )
             * 100
         )
         self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
 
-        # Fractional charge input
-        if "Fractional Charge Input" not in self.variables:
-            fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
-            self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.variables["Total current density"] * 100
-            self.initial_conditions[fci] = self.param.q_init * 100
-
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
             self.submodels[
-                f"{domain} open circuit potential"
+                f"{domain} open-circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
                 self.param, domain, "lead-acid main", self.options, "primary"
             )
             self.submodels[
-                f"{domain} oxygen open circuit potential"
+                f"{domain} oxygen open-circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
                 self.param, domain, "lead-acid oxygen", self.options, "primary"
             )

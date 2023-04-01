@@ -1,4 +1,4 @@
-Open circuit potential models
+Open-circuit potential models
 =============================
 
 .. autoclass:: pybamm.open_circuit_potential.BaseOpenCircuitPotential

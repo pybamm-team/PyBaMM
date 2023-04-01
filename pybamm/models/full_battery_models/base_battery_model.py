@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import numbers
 from functools import cached_property
 
 
@@ -164,9 +163,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
-            * "timescale" : str or number
-                Sets the timescale of the model. If "default", the discharge timescale,
-                as defined by other parameters, is used. Otherwise, the number is used.
             * "total interfacial current density as a state" : str
                 Whether to make a state for the total interfacial current density and
                 solve an algebraic equation for it. Default is "false", unless "SEI film
@@ -181,8 +177,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
-
-    **Extends:** :class:`dict`
     """
 
     def __init__(self, extra_options):
@@ -227,7 +221,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
-            "open circuit potential": ["single", "current sigmoid"],
+            "open-circuit potential": ["single", "current sigmoid"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -275,7 +269,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         default_options = {
             name: options[0] for name, options in self.possible_options.items()
         }
-        default_options["timescale"] = "default"
 
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -543,7 +536,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 if isinstance(value, str) or option in [
                     "dimensionality",
                     "operating mode",
-                    "timescale",
                 ]:  # some options accept non-strings
                     value = (value,)
                 else:
@@ -554,7 +546,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",
-                                "open circuit potential",
+                                "open-circuit potential",
                                 "particle",
                                 "particle mechanics",
                                 "particle phases",
@@ -580,13 +572,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     else:
                         value_list.append(val)
                 for val in value_list:
-                    if option == "timescale":
-                        if not (val == "default" or isinstance(val, numbers.Number)):
-                            raise pybamm.OptionError(
-                                "'timescale' option must be either 'default' "
-                                "or a number"
-                            )
-                    elif val not in self.possible_options[option]:
+                    if val not in self.possible_options[option]:
                         if not (option == "operating mode" and callable(val)):
                             raise pybamm.OptionError(
                                 f"\n'{val}' is not recognized in option '{option}'. "
@@ -636,10 +622,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the possible options with the ones currently selected
         """
         for key, value in self.items():
-            if key in self.possible_options.keys():
-                print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
-            else:
-                print(f"{key!r}: {value!r}")
+            print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
 
     def print_detailed_options(self):
         """
@@ -712,28 +695,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         :class:`pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model. The default is "Unnamed battery model".
-
-    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
-
-    @pybamm.BaseModel.timescale.setter
-    def timescale(self, value):
-        """Set the timescale"""
-        raise NotImplementedError(
-            "Timescale cannot be directly overwritten for this model. "
-            "Pass a timescale to the 'timescale' option instead."
-        )
-
-    @pybamm.BaseModel.length_scales.setter
-    def length_scales(self, value):
-        """Set the length scales"""
-        raise NotImplementedError(
-            "Length scales cannot be directly overwritten for this model. "
-        )
 
     @property
     def default_geometry(self):
@@ -885,36 +851,21 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Time
         self.variables.update(
             {
-                "Time": pybamm.t,
-                "Time [s]": pybamm.t * self.timescale,
-                "Time [min]": pybamm.t * self.timescale / 60,
-                "Time [h]": pybamm.t * self.timescale / 3600,
+                "Time [s]": pybamm.t,
+                "Time [min]": pybamm.t / 60,
+                "Time [h]": pybamm.t / 3600,
             }
         )
 
         # Spatial
         var = pybamm.standard_spatial_vars
-        L_x = self.param.L_x
-        L_z = self.param.L_z
         self.variables.update(
-            {
-                "x": var.x,
-                "x [m]": var.x * L_x,
-                "x_n": var.x_n,
-                "x_n [m]": var.x_n * L_x,
-                "x_s": var.x_s,
-                "x_s [m]": var.x_s * L_x,
-                "x_p": var.x_p,
-                "x_p [m]": var.x_p * L_x,
-            }
+            {"x [m]": var.x, "x_n [m]": var.x_n, "x_s [m]": var.x_s, "x_p [m]": var.x_p}
         )
         if self.options["dimensionality"] == 1:
-            self.variables.update({"z": var.z, "z [m]": var.z * L_z})
+            self.variables.update({"z [m]": var.z})
         elif self.options["dimensionality"] == 2:
-            # Note: both y and z are scaled with L_z
-            self.variables.update(
-                {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
-            )
+            self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
     def build_model_equations(self):
         # Set model equations
@@ -1138,82 +1089,58 @@ class BaseBatteryModel(pybamm.BaseModel):
             phase_p = ""
         else:
             phase_p = "primary "
-        ocp_n = self.variables[f"Negative electrode {phase_n}open circuit potential"]
-        ocp_p = self.variables[f"Positive electrode {phase_p}open circuit potential"]
-        ocp_n_av = self.variables[
-            f"X-averaged negative electrode {phase_n}open circuit potential"
+
+        ocp_surf_n_av = self.variables[
+            f"X-averaged negative electrode {phase_n}open-circuit potential [V]"
         ]
-        ocp_p_av = self.variables[
-            f"X-averaged positive electrode {phase_p}open circuit potential"
+        ocp_surf_p_av = self.variables[
+            f"X-averaged positive electrode {phase_p}open-circuit potential [V]"
+        ]
+        ocp_n_bulk = self.variables[
+            f"Negative electrode {phase_n}bulk open-circuit potential [V]"
+        ]
+        ocp_p_bulk = self.variables[
+            f"Positive electrode {phase_p}bulk open-circuit potential [V]"
+        ]
+        eta_particle_n = self.variables[
+            f"Negative {phase_n}particle concentration overpotential [V]"
+        ]
+        eta_particle_p = self.variables[
+            f"Positive {phase_p}particle concentration overpotential [V]"
         ]
 
-        ocp_n_dim = self.variables[
-            f"Negative electrode {phase_n}open circuit potential [V]"
-        ]
-        ocp_p_dim = self.variables[
-            f"Positive electrode {phase_p}open circuit potential [V]"
-        ]
-        ocp_n_av_dim = self.variables[
-            f"X-averaged negative electrode {phase_n}open circuit potential [V]"
-        ]
-        ocp_p_av_dim = self.variables[
-            f"X-averaged positive electrode {phase_p}open circuit potential [V]"
-        ]
+        ocv_surf = ocp_surf_p_av - ocp_surf_n_av
+        ocv_bulk = ocp_p_bulk - ocp_n_bulk
 
-        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
-        ocp_n_left_dim = pybamm.boundary_value(ocp_n_dim, "left")
-        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
-        ocp_p_right_dim = pybamm.boundary_value(ocp_p_dim, "right")
-
-        ocv_av = ocp_p_av - ocp_n_av
-        ocv_av_dim = ocp_p_av_dim - ocp_n_av_dim
-        ocv = ocp_p_right - ocp_n_left
-        ocv_dim = ocp_p_right_dim - ocp_n_left_dim
+        eta_particle = eta_particle_p - eta_particle_n
 
         # overpotentials
         if self.options.electrode_types["negative"] == "planar":
             eta_r_n_av = self.variables[
-                "Lithium metal interface reaction overpotential"
-            ]
-            eta_r_n_av_dim = self.variables[
                 "Lithium metal interface reaction overpotential [V]"
             ]
         else:
             eta_r_n_av = self.variables[
-                f"X-averaged negative electrode {phase_n}reaction overpotential"
-            ]
-            eta_r_n_av_dim = self.variables[
                 f"X-averaged negative electrode {phase_n}reaction overpotential [V]"
             ]
         eta_r_p_av = self.variables[
-            f"X-averaged positive electrode {phase_p}reaction overpotential"
-        ]
-        eta_r_p_av_dim = self.variables[
             f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
         ]
+        eta_r_av = eta_r_p_av - eta_r_n_av
 
-        delta_phi_s_n_av = self.variables["X-averaged negative electrode ohmic losses"]
-        delta_phi_s_n_av_dim = self.variables[
+        delta_phi_s_n_av = self.variables[
             "X-averaged negative electrode ohmic losses [V]"
         ]
-        delta_phi_s_p_av = self.variables["X-averaged positive electrode ohmic losses"]
-        delta_phi_s_p_av_dim = self.variables[
+        delta_phi_s_p_av = self.variables[
             "X-averaged positive electrode ohmic losses [V]"
         ]
-
         delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
-        delta_phi_s_av_dim = delta_phi_s_p_av_dim - delta_phi_s_n_av_dim
-
-        eta_r_av = eta_r_p_av - eta_r_n_av
-        eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
         if self.options.electrode_types["negative"] == "planar":
-            eta_sei_av = self.variables["SEI film overpotential"]
-            eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
+            eta_sei_av = self.variables["SEI film overpotential [V]"]
         else:
-            eta_sei_av = self.variables[f"X-averaged {phase_n}SEI film overpotential"]
-            eta_sei_av_dim = self.variables[
+            eta_sei_av = self.variables[
                 f"X-averaged {phase_n}SEI film overpotential [V]"
             ]
 
@@ -1221,55 +1148,61 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.variables.update(
             {
-                "X-averaged open circuit voltage": ocv_av,
-                "Measured open circuit voltage": ocv,
-                "X-averaged open circuit voltage [V]": ocv_av_dim,
-                "Measured open circuit voltage [V]": ocv_dim,
-                "X-averaged reaction overpotential": eta_r_av,
-                "X-averaged reaction overpotential [V]": eta_r_av_dim,
-                "X-averaged SEI film overpotential": eta_sei_av,
-                "X-averaged SEI film overpotential [V]": eta_sei_av_dim,
-                "X-averaged solid phase ohmic losses": delta_phi_s_av,
-                "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
+                "Surface open-circuit voltage [V]": ocv_surf,
+                "Bulk open-circuit voltage [V]": ocv_bulk,
+                "Particle concentration overpotential [V]": eta_particle,
+                "X-averaged reaction overpotential [V]": eta_r_av,
+                "X-averaged SEI film overpotential [V]": eta_sei_av,
+                "X-averaged solid phase ohmic losses [V]": delta_phi_s_av,
             }
         )
 
         # Battery-wide variables
-        V = self.variables["Terminal voltage"]
-        V_dim = self.variables["Terminal voltage [V]"]
-        eta_e_av_dim = self.variables["X-averaged electrolyte ohmic losses [V]"]
-        eta_c_av_dim = self.variables["X-averaged concentration overpotential [V]"]
+        V = self.variables["Voltage [V]"]
+        eta_e_av = self.variables["X-averaged electrolyte ohmic losses [V]"]
+        eta_c_av = self.variables["X-averaged concentration overpotential [V]"]
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
         self.variables.update(
             {
-                "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
-                "Measured battery open circuit voltage [V]": ocv_dim * num_cells,
-                "X-averaged battery reaction overpotential [V]": eta_r_av_dim
+                "Battery open-circuit voltage [V]": ocv_bulk * num_cells,
+                "Battery negative electrode bulk open-circuit potential [V]": ocp_n_bulk
                 * num_cells,
-                "X-averaged battery solid phase ohmic losses [V]": delta_phi_s_av_dim
+                "Battery positive electrode bulk open-circuit potential [V]": ocp_p_bulk
                 * num_cells,
-                "X-averaged battery electrolyte ohmic losses [V]": eta_e_av_dim
+                "Battery particle concentration overpotential [V]": eta_particle
                 * num_cells,
-                "X-averaged battery concentration overpotential [V]": eta_c_av_dim
+                "Battery negative particle concentration overpotential [V]"
+                "": eta_particle_n * num_cells,
+                "Battery positive particle concentration overpotential [V]"
+                "": eta_particle_p * num_cells,
+                "X-averaged battery reaction overpotential [V]": eta_r_av * num_cells,
+                "X-averaged battery negative reaction overpotential [V]": eta_r_n_av
                 * num_cells,
-                "Battery voltage [V]": V_dim * num_cells,
+                "X-averaged battery positive reaction overpotential [V]": eta_r_p_av
+                * num_cells,
+                "X-averaged battery solid phase ohmic losses [V]": delta_phi_s_av
+                * num_cells,
+                "X-averaged battery negative solid phase ohmic losses [V]"
+                "": delta_phi_s_n_av * num_cells,
+                "X-averaged battery positive solid phase ohmic losses [V]"
+                "": delta_phi_s_p_av * num_cells,
+                "X-averaged battery electrolyte ohmic losses [V]": eta_e_av * num_cells,
+                "X-averaged battery concentration overpotential [V]": eta_c_av
+                * num_cells,
+                "Battery voltage [V]": V * num_cells,
             }
         )
         # Variables for calculating the equivalent circuit model (ECM) resistance
         # Need to compare OCV to initial value to capture this as an overpotential
         ocv_init = self.param.ocv_init
-        ocv_init_dim = self.param.ocv_ref + self.param.potential_scale * ocv_init
-        eta_ocv = ocv - ocv_init
-        eta_ocv_dim = ocv_dim - ocv_init_dim
+        eta_ocv = ocv_bulk - ocv_init
         # Current collector current density for working out euiqvalent resistance
         # based on Ohm's Law
-        i_cc = self.variables["Current collector current density"]
-        i_cc_dim = self.variables["Current collector current density [A.m-2]"]
-        # ECM overvoltage is OCV minus terminal voltage
-        v_ecm = ocv - V
-        v_ecm_dim = ocv_dim - V_dim
+        i_cc = self.variables["Current collector current density [A.m-2]"]
+        # ECM overvoltage is OCV minus voltage
+        v_ecm = ocv_bulk - V
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
 
@@ -1280,32 +1213,27 @@ class BaseBatteryModel(pybamm.BaseModel):
             return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
 
         i_cc_not_zero = x_not_zero(i_cc)
-        i_cc_dim_not_zero = x_not_zero(i_cc_dim)
 
         self.variables.update(
             {
-                "Change in measured open circuit voltage": eta_ocv,
-                "Change in measured open circuit voltage [V]": eta_ocv_dim,
-                "Local ECM resistance": pybamm.sign(i_cc)
+                "Change in open-circuit voltage [V]": eta_ocv,
+                "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
                 * v_ecm
                 / (i_cc_not_zero * A_cc),
-                "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
-                * v_ecm_dim
-                / (i_cc_dim_not_zero * A_cc),
             }
         )
 
         # Cut-off voltage
         self.events.append(
             pybamm.Event(
-                "Minimum voltage",
+                "Minimum voltage [V]",
                 V - self.param.voltage_low_cut,
                 pybamm.EventType.TERMINATION,
             )
         )
         self.events.append(
             pybamm.Event(
-                "Maximum voltage",
+                "Maximum voltage [V]",
                 self.param.voltage_high_cut - V,
                 pybamm.EventType.TERMINATION,
             )
@@ -1313,32 +1241,30 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
         # mode)
-        # A tolerance of ~1 is sufficiently small since the dimensionless voltage is
-        # scaled with the thermal voltage (0.025V) and hence has a range of around 60
-        tol = 5
+        tol = 0.1
         self.events.append(
             pybamm.Event(
-                "Minimum voltage switch",
+                "Minimum voltage switch [V]",
                 V - (self.param.voltage_low_cut - tol),
                 pybamm.EventType.SWITCH,
             )
         )
         self.events.append(
             pybamm.Event(
-                "Maximum voltage switch",
+                "Maximum voltage switch [V]",
                 V - (self.param.voltage_high_cut + tol),
                 pybamm.EventType.SWITCH,
             )
         )
 
         # Power and resistance
-        I_dim = self.variables["Current [A]"]
-        I_dim_not_zero = x_not_zero(I_dim)
+        I = self.variables["Current [A]"]
+        I_not_zero = x_not_zero(I)
         self.variables.update(
             {
-                "Terminal power [W]": I_dim * V_dim,
-                "Power [W]": I_dim * V_dim,
-                "Resistance [Ohm]": pybamm.sign(I_dim) * V_dim / I_dim_not_zero,
+                "Terminal power [W]": I * V,
+                "Power [W]": I * V,
+                "Resistance [Ohm]": pybamm.sign(I) * V / I_not_zero,
             }
         )
 

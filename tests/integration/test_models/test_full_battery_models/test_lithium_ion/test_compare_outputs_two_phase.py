@@ -32,7 +32,6 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             "Negative particle radius [m]",
             "Negative electrode diffusivity [m2.s-1]",
             "Negative electrode exchange-current density [A.m-2]",
-            "Negative electrode electrons in reaction",
         ]:
             parameter_values_two_phase.update(
                 {
@@ -69,31 +68,38 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
             # Compare two phase model to standard model
             for variable in [
                 "X-averaged negative electrode active material volume fraction",
-                "X-averaged negative electrode volumetric interfacial current density",
-                "Terminal voltage [V]",
+                "X-averaged negative electrode volumetric "
+                "interfacial current density [A.m-3]",
+                "Voltage [V]",
             ]:
-                np.testing.assert_array_almost_equal(
-                    sol[variable].entries, sol_two_phase[variable].entries, decimal=2
+                np.testing.assert_allclose(
+                    sol[variable].entries, sol_two_phase[variable].entries, rtol=1e-2
                 )
 
             # Compare each phase in the two-phase model
-            np.testing.assert_array_almost_equal(
-                sol_two_phase["Negative primary particle concentration"].entries,
-                sol_two_phase["Negative secondary particle concentration"].entries,
-                decimal=6,
-            )
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 sol_two_phase[
-                    "Negative electrode primary interfacial current density"
+                    "Negative primary particle concentration [mol.m-3]"
+                ].entries,
+                sol_two_phase[
+                    "Negative secondary particle concentration [mol.m-3]"
+                ].entries,
+                rtol=1e-6,
+            )
+            np.testing.assert_allclose(
+                sol_two_phase[
+                    "Negative electrode primary volumetric "
+                    "interfacial current density [A.m-3]"
                 ].entries
                 / x,
                 sol_two_phase[
-                    "Negative electrode secondary interfacial current density"
+                    "Negative electrode secondary volumetric "
+                    "interfacial current density [A.m-3]"
                 ].entries
                 / (1 - x),
-                decimal=6,
+                rtol=1e-6,
             )
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 sol_two_phase[
                     "Negative electrode primary active material volume fraction"
                 ].entries
@@ -102,7 +108,7 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
                     "Negative electrode secondary active material volume fraction"
                 ].entries
                 / (1 - x),
-                decimal=6,
+                rtol=1e-6,
             )
 
     def test_compare_SPM_graphite_graphite(self):
@@ -121,7 +127,7 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
         # Check that increasing silicon content has the expected effect
         options = {
             "particle phases": ("2", "1"),
-            "open circuit potential": (("single", "current sigmoid"), "single"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
         }
         model = model_class(options)
 
@@ -143,12 +149,12 @@ class TestCompareOutputsTwoPhase(unittest.TestCase):
 
         # Starting values should be close
         for var in [
-            "Terminal voltage [V]",
+            "Voltage [V]",
             "Average negative primary particle concentration",
             "Average negative secondary particle concentration",
         ]:
-            np.testing.assert_array_almost_equal(
-                sol1[var].data[:20], sol2[var].data[:20], decimal=2
+            np.testing.assert_allclose(
+                sol1[var].data[:20], sol2[var].data[:20], rtol=1e-2
             )
 
         # More silicon means longer sim

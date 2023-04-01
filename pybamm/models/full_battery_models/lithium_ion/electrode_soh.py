@@ -11,6 +11,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
+    Some of the output variables are defined in [2]_.
 
     .. math::
         Q_{Li} = y_{100}Q_p + x_{100}Q_n,
@@ -28,14 +29,13 @@ class _ElectrodeSOH(pybamm.BaseModel):
     .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
            better estimability of electrode-specific state of health: Decoding the cell
            expansion. Journal of Power Sources, 427, 101-111.
-
-    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(
         self, param=None, solve_for=None, known_value="cyclable lithium capacity"
     ):
         pybamm.citations.register("Mohtat2019")
+        pybamm.citations.register("Weng2023")
         name = "ElectrodeSOH model"
         super().__init__(name)
 
@@ -48,12 +48,12 @@ class _ElectrodeSOH(pybamm.BaseModel):
             )
 
         # Define parameters and input parameters
-        Un = param.n.prim.U_dimensional
-        Up = param.p.prim.U_dimensional
+        Un = param.n.prim.U
+        Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.voltage_high_cut_dimensional
-        V_min = param.voltage_low_cut_dimensional
+        V_max = param.voltage_high_cut
+        V_min = param.voltage_low_cut
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -82,6 +82,7 @@ class _ElectrodeSOH(pybamm.BaseModel):
             self.initial_conditions[x_100] = pybamm.Scalar(0.9)
 
         # These variables are defined in all cases
+        Acc_cm2 = param.A_cc * 1e4
         self.variables = {
             "x_100": x_100,
             "y_100": y_100,
@@ -92,6 +93,18 @@ class _ElectrodeSOH(pybamm.BaseModel):
             "n_Li": Q_Li * 3600 / param.F,
             "Q_n": Q_n,
             "Q_p": Q_p,
+            "Cyclable lithium capacity [A.h]": Q_Li,
+            "Negative electrode capacity [A.h]": Q_n,
+            "Positive electrode capacity [A.h]": Q_p,
+            "Cyclable lithium capacity [mA.h.cm-2]": Q_Li * 1e3 / Acc_cm2,
+            "Negative electrode capacity [mA.h.cm-2]": Q_n * 1e3 / Acc_cm2,
+            "Positive electrode capacity [mA.h.cm-2]": Q_p * 1e3 / Acc_cm2,
+            # eq 33 of Weng2023
+            "Formation capacity loss [A.h]": Q_p - Q_Li,
+            "Formation capacity loss [mA.h.cm-2]": (Q_p - Q_Li) * 1e3 / Acc_cm2,
+            # eq 26 of Weng2024
+            "Negative positive ratio": Q_n / Q_p,
+            "NPR": Q_n / Q_p,
         }
 
         # Define variables and equations for 0% state of charge
@@ -115,10 +128,14 @@ class _ElectrodeSOH(pybamm.BaseModel):
             self.initial_conditions[var] = pybamm.Scalar(0.1)
 
             # These variables are only defined if x_0 is solved for
+            # eq 27 of Weng2023
+            Q_n_excess = Q_n * (1 - x_100)
+            NPR_practical = 1 + Q_n_excess / Q
             self.variables.update(
                 {
                     "Q": Q,
                     "Capacity [A.h]": Q,
+                    "Capacity [mA.h.cm-2]": Q * 1e3 / Acc_cm2,
                     "x_0": x_0,
                     "y_0": y_0,
                     "Un(x_0)": Un_0,
@@ -130,6 +147,8 @@ class _ElectrodeSOH(pybamm.BaseModel):
                     "Q_p * (y_0 - y_100)": Q_p * (y_0 - y_100),
                     "Negative electrode excess capacity ratio": Q_n / Q,
                     "Positive electrode excess capacity ratio": Q_p / Q,
+                    "Practical negative positive ratio": NPR_practical,
+                    "Practical NPR": NPR_practical,
                 }
             )
 
@@ -167,7 +186,7 @@ class ElectrodeSOHSolver:
         OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
         OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
 
-        # Calculate stoich limits for the open circuit potentials
+        # Calculate stoich limits for the open-circuit potentials
         if OCPp_data:
             Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
             y100_min = max(np.min(Up_sto), 0) + 1e-6
@@ -186,14 +205,18 @@ class ElectrodeSOHSolver:
 
         self.lims_ocp = (x0_min, x100_max, y100_min, y0_max)
         self.OCV_function = None
+        self._get_electrode_soh_sims_full = lru_cache()(
+            self.__get_electrode_soh_sims_full
+        )
+        self._get_electrode_soh_sims_split = lru_cache()(
+            self.__get_electrode_soh_sims_split
+        )
 
-    @lru_cache
-    def _get_electrode_soh_sims_full(self):
+    def __get_electrode_soh_sims_full(self):
         full_model = _ElectrodeSOH(param=self.param, known_value=self.known_value)
         return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
-    @lru_cache
-    def _get_electrode_soh_sims_split(self):
+    def __get_electrode_soh_sims_split(self):
         x100_model = _ElectrodeSOH(
             param=self.param, solve_for=["x_100"], known_value=self.known_value
         )
@@ -213,7 +236,7 @@ class ElectrodeSOHSolver:
                 DeprecationWarning,
             )
             n_Li = inputs.pop("n_Li")
-            inputs["Q_Li"] = n_Li * self.param.F.value / 3600
+            inputs["Q_Li"] = n_Li * pybamm.constants.F.value / 3600
         if "C_n" in inputs:
             warnings.warn("Input 'C_n' has been renamed to 'Q_n'", DeprecationWarning)
             inputs["Q_n"] = inputs.pop("C_n")
@@ -245,7 +268,18 @@ class ElectrodeSOHSolver:
                 # if that didn't raise an error, raise the original error instead
                 raise split_error
 
-        return sol
+        sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
+
+        # Calculate theoretical energy
+        x_0 = sol_dict["x_0"]
+        y_0 = sol_dict["y_0"]
+        x_100 = sol_dict["x_100"]
+        y_100 = sol_dict["y_100"]
+        energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+            self.parameter_values, x_100, x_0, y_100, y_0
+        )
+        sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+        return sol_dict
 
     def _set_up_solve(self, inputs):
         # Try with full sim
@@ -380,15 +414,10 @@ class ElectrodeSOHSolver:
             T = self.parameter_values["Reference temperature [K]"]
             x = pybamm.InputParameter("x")
             y = pybamm.InputParameter("y")
-            self.V_max = self.parameter_values.evaluate(
-                self.param.voltage_high_cut_dimensional
-            )
-            self.V_min = self.parameter_values.evaluate(
-                self.param.voltage_low_cut_dimensional
-            )
+            self.V_max = self.parameter_values.evaluate(self.param.voltage_high_cut)
+            self.V_min = self.parameter_values.evaluate(self.param.voltage_low_cut)
             self.OCV_function = self.parameter_values.process_symbol(
-                self.param.p.prim.U_dimensional(y, T)
-                - self.param.n.prim.U_dimensional(x, T)
+                self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
             )
 
         # Check that the min and max achievable voltages span wider than the desired
@@ -443,8 +472,8 @@ class ElectrodeSOHSolver:
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
-            V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
+            V_min = parameter_values.evaluate(param.voltage_low_cut)
+            V_max = parameter_values.evaluate(param.voltage_high_cut)
 
             if not V_min < V_init < V_max:
                 raise ValueError(
@@ -455,8 +484,8 @@ class ElectrodeSOHSolver:
             # Solve simple model for initial soc based on target voltage
             soc_model = pybamm.BaseModel()
             soc = pybamm.Variable("soc")
-            Up = param.p.prim.U_dimensional
-            Un = param.n.prim.U_dimensional
+            Up = param.p.prim.U
+            Un = param.n.prim.U
             T_ref = parameter_values["Reference temperature [K]"]
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
@@ -508,7 +537,7 @@ class ElectrodeSOHSolver:
             inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
         sol = self.solve(inputs)
-        return [sol[var].data[0] for var in ["x_0", "x_100", "y_100", "y_0"]]
+        return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
 
 def get_initial_stoichiometries(
@@ -564,3 +593,73 @@ def get_min_max_stoichiometries(
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value)
     return esoh_solver.get_min_max_stoichiometries()
+
+
+def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100):
+    """
+    Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
+    given voltage limits, open-circuit potentials, etc defined by parameter_values
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues`
+        The parameter values class that will be used for the simulation.
+    n_i, n_f, p_i, p_f : float
+        initial and final stoichiometries for the positive and negative
+        electrodes, respectively
+    points : int
+        The number of points at which to calculate voltage.
+
+    Returns
+    -------
+    E
+        The total energy of the cell in Wh
+    """
+    n_vals = np.linspace(n_i, n_f, num=points)
+    p_vals = np.linspace(p_i, p_f, num=points)
+    # Calculate OCV at each stoichiometry
+    param = pybamm.LithiumIonParameters()
+    T = param.T_amb(0)
+    Vs = np.empty(n_vals.shape)
+    for i in range(n_vals.size):
+        Vs[i] = parameter_values.evaluate(
+            param.p.prim.U(p_vals[i], T)
+        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
+    # Calculate dQ
+    Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
+    dQ = Q_p / (points - 1)
+    # Integrate and convert to W-h
+    E = np.trapz(Vs, dx=dQ)
+    return E
+
+
+def calculate_theoretical_energy(
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
+):
+    """
+    Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
+    given voltage limits, open-circuit potentials, etc defined by parameter_values
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues`
+        The parameter values class that will be used for the simulation.
+    initial_soc : float
+        The soc at begining of discharge, default 1.0
+    final_soc : float
+        The soc at end of discharge, default 0.0
+    points : int
+        The number of points at which to calculate voltage.
+
+    Returns
+    -------
+    E
+        The total energy of the cell in Wh
+    """
+    # Get initial and final stoichiometric values.
+    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values)
+    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values)
+    E = theoretical_energy_integral(
+        parameter_values, x_100, x_0, y_100, y_0, points=points
+    )
+    return E

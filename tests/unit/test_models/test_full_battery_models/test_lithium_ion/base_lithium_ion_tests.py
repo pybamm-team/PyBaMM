@@ -330,7 +330,7 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_external_circuit_function(self):
         def external_circuit_function(variables):
             I = variables["Current [A]"]
-            V = variables["Terminal voltage [V]"]
+            V = variables["Voltage [V]"]
             return (
                 V
                 + I
@@ -357,5 +357,5 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_current_sigmoid_ocp(self):
-        options = {"open circuit potential": "current sigmoid"}
+        options = {"open-circuit potential": "current sigmoid"}
         self.check_well_posedness(options)

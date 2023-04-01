@@ -77,7 +77,7 @@ for key, C_rate in C_rates.items():
     comsol_discharge_capacity = comsol_time * current / 3600
 
     # extract the voltage
-    voltage = solution["Terminal voltage [V]"]
+    voltage = solution["Voltage [V]"]
     voltage_sol = voltage(time_in_seconds)
 
     # calculate the difference between the two solution methods

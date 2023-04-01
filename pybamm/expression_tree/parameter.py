@@ -108,10 +108,6 @@ class FunctionParameter(pybamm.Symbol):
             if print_name.startswith("_"):
                 self.print_name = None
             else:
-                if print_name.endswith("_dimensional"):
-                    print_name = print_name[: -len("_dimensional")]
-                elif print_name.endswith("_dim"):
-                    print_name = print_name[: -len("_dim")]
                 try:
                     parent_param = frame.f_locals["self"]
                 except KeyError:
@@ -216,7 +212,8 @@ class FunctionParameter(pybamm.Symbol):
         Returns the sum of the evaluated children
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return sum(child.evaluate_for_shape() for child in self.children)
+        # add 1e-16 to avoid division by zero
+        return sum(child.evaluate_for_shape() for child in self.children) + 1e-16
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""

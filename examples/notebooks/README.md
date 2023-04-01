@@ -27,18 +27,11 @@ The easiest way to start with PyBaMM is by running and comparing some of the inb
 
 It is also easy to add new models or change the setting that are used:
 
-- [Add a model (documentation)](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
 - [Add a model (example)](./create-model.ipynb)
 - [Change model options](./models/using-model-options_thermal-example.ipynb)
 - [Using submodels](./using-submodels.ipynb)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
 - [Change the applied current](./parameterization/change-input-current.ipynb)
-
-For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
-
-- [Add parameters](https://pybamm.readthedocs.io/en/latest/tutorials/add-parameter-values.html)
-- [Add a spatial method](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html)
-- [Add a solver](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html)
 
 ## Expression tree structure
 
@@ -51,7 +44,7 @@ The following notebooks are specific to different stages of the PyBaMM pipeline,
 
 ### Models
 
-Several battery models are implemented and can easily be used or [compared](./models/lead-acid.ipynb). The notebooks below show the solution of each individual model. We always welcome [new models](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)!
+Several battery models are implemented and can easily be used or [compared](./models/lead-acid.ipynb). The notebooks below show the solution of each individual model.
 
 Once you are comfortable with the expression tree structure, a good starting point to understand the models in PyBaMM is to take a look at the [basic SPM](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/models/full_battery_models/lithium_ion/basic_spm.py) and [basic DFN](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/models/full_battery_models/lithium_ion/basic_dfn.py), since these define the entire model (variables, equations, initial and boundary conditions, events) in a single class and so are easier to understand. However, we recommend that you subsequently use the full models as they offer much greater flexibility for coupling different physical effects and visualising a greater range of variables.
 
@@ -74,13 +67,9 @@ The following spatial methods are implemented
 - Spectral Volumes (1D only)
 - Finite Elements (only for 2D current collector domains)
 
-See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html) for instructions on adding new spatial methods.
-
 ### Solvers
 
 The following notebooks show examples for generic ODE and DAE solvers. Several solvers are implemented in PyBaMM and we encourage users to try different ones to find the most appropriate one for their models.
 
 - [ODE solver](./solvers/ode-solver.ipynb)
 - [DAE solver](./solvers/dae-solver.ipynb)
-
-See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html) for instructions on adding new solvers.

@@ -75,7 +75,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
@@ -278,7 +278,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
 def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     """
-    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
@@ -413,7 +413,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     Returns
     -------
     :class:`pybamm.Symbol`
-        1 + dlnf/dlnc
+        Thermodynamic factor
     """
     T_ref = 298.15
     t_plus = pybamm.Parameter("Cation transference number")
@@ -606,7 +606,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 2.28,
-        "Typical current [A]": 2.28,
         "Current function [A]": 2.28,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -619,8 +618,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 5e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 2.914,
         "Negative electrode Bruggeman coefficient (electrode)": 0.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -657,8 +654,6 @@ def get_parameter_values():
         "Positive electrode surface area to volume ratio [m-1]": 620000.0,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.83,
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
@@ -691,10 +686,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 1080.2,
         "Separator thermal conductivity [W.m-1.K-1]": 0.334,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
-        "1 + dlnf/dlnc": dlnf_dlnc_Ai2020,
+        "Thermodynamic factor": dlnf_dlnc_Ai2020,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ai2020,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ai2020,
         # experiment

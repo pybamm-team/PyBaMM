@@ -22,9 +22,6 @@ class DFN(BaseModel):
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
            derivation of a single particle model with electrolyte”. Journal of The
            Electrochemical Society, 166(15):A3693–A3706, 2019
-
-
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
@@ -74,6 +71,11 @@ class DFN(BaseModel):
                         self.param, domain, self.options, phase=phase
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
+                self.submodels[
+                    f"{domain} {phase} total particle concentration"
+                ] = pybamm.particle.TotalConcentration(
+                    self.param, domain, self.options, phase
+                )
 
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:

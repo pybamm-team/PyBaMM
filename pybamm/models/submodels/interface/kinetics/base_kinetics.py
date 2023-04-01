@@ -22,8 +22,6 @@ class BaseKinetics(BaseInterface):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
@@ -39,18 +37,16 @@ class BaseKinetics(BaseInterface):
         ):
             j = pybamm.Variable(
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable",
+                "interfacial current density variable [A.m-2]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
 
             variables = {
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable": j,
-                f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable": j,
+                "interfacial current density variable [A.m-2]": j,
                 f"X-averaged total {domain} electrode {phase_name}"
-                "interfacial current density variable": pybamm.x_average(j),
+                "interfacial current density variable [A.m-2]": pybamm.x_average(j),
             }
             return variables
         else:
@@ -63,10 +59,12 @@ class BaseKinetics(BaseInterface):
 
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
-                "Lithium metal interface surface potential difference"
+                "Lithium metal interface surface potential difference [V]"
             ]
         else:
-            delta_phi = variables[f"{Domain} electrode surface potential difference"]
+            delta_phi = variables[
+                f"{Domain} electrode surface potential difference [V]"
+            ]
             # If delta_phi was broadcast, take only the orphan.
             if isinstance(delta_phi, pybamm.Broadcast):
                 delta_phi = delta_phi.orphans[0]
@@ -87,10 +85,13 @@ class BaseKinetics(BaseInterface):
             and self.options.electrode_types[domain] == "porous"
         ):
             ocp = variables[
-                f"{Domain} electrode {reaction_name}open circuit potential distribution"
+                f"{Domain} electrode {reaction_name}"
+                "open-circuit potential distribution [V]"
             ]
         else:
-            ocp = variables[f"{Domain} electrode {reaction_name}open circuit potential"]
+            ocp = variables[
+                f"{Domain} electrode {reaction_name}open-circuit potential [V]"
+            ]
         # If ocp was broadcast, take only the orphan.
         if isinstance(ocp, pybamm.Broadcast):
             ocp = ocp.orphans[0]
@@ -104,18 +105,20 @@ class BaseKinetics(BaseInterface):
         if self.domain == "negative":
             if self.options.electrode_types["negative"] == "planar":
                 R_sei = self.phase_param.R_sei
-                L_sei = variables[f"Total {phase_name}SEI thickness"]  # on interface
+                L_sei = variables[
+                    f"Total {phase_name}SEI thickness [m]"
+                ]  # on interface
                 eta_sei = -j_tot_av * L_sei * R_sei
             elif self.options["SEI film resistance"] == "average":
                 R_sei = self.phase_param.R_sei
-                L_sei_av = variables[f"X-averaged total {phase_name}SEI thickness"]
+                L_sei_av = variables[f"X-averaged total {phase_name}SEI thickness [m]"]
                 eta_sei = -j_tot_av * L_sei_av * R_sei
             elif self.options["SEI film resistance"] == "distributed":
                 R_sei = self.phase_param.R_sei
-                L_sei = variables[f"Total {phase_name}SEI thickness"]
+                L_sei = variables[f"Total {phase_name}SEI thickness [m]"]
                 j_tot = variables[
                     f"Total negative electrode {phase_name}"
-                    "interfacial current density variable"
+                    "interfacial current density variable [A.m-2]"
                 ]
 
                 # Override print_name
@@ -130,23 +133,23 @@ class BaseKinetics(BaseInterface):
         ne = self._get_number_of_electrons_in_reaction()
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
-            T = variables["X-averaged cell temperature"]
+            T = variables["X-averaged cell temperature [K]"]
             u = variables["Lithium metal interface utilisation"]
         elif j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature"]
+            T = variables["X-averaged cell temperature [K]"]
             u = variables[f"X-averaged {domain} electrode interface utilisation"]
         elif j0.domain == [f"{domain} particle size"]:
             if j0.domains["secondary"] != [f"{domain} electrode"]:
-                T = variables["X-averaged cell temperature"]
+                T = variables["X-averaged cell temperature [K]"]
                 u = variables[f"X-averaged {domain} electrode interface utilisation"]
             else:
-                T = variables[f"{Domain} electrode temperature"]
+                T = variables[f"{Domain} electrode temperature [K]"]
                 u = variables[f"{Domain} electrode interface utilisation"]
 
             # Broadcast T onto "particle size" domain
             T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
         else:
-            T = variables[f"{Domain} electrode temperature"]
+            T = variables[f"{Domain} electrode temperature [K]"]
             u = variables[f"{Domain} electrode interface utilisation"]
 
         # Update j, except in the "distributed SEI resistance" model, where j will be
@@ -200,7 +203,7 @@ class BaseKinetics(BaseInterface):
         ):
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable"
+                "interfacial current density variable [A.m-2]"
             ]
 
             # Override print_name
@@ -208,10 +211,10 @@ class BaseKinetics(BaseInterface):
 
             a_j_tot = variables[
                 f"Sum of {domain} electrode {phase_name}"
-                "volumetric interfacial current densities"
+                "volumetric interfacial current densities [A.m-3]"
             ]
             a = variables[
-                f"{Domain} electrode {phase_name}surface area to volume ratio"
+                f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
             ]
 
             # Algebraic equation to set the variable j_tot_var
@@ -228,11 +231,7 @@ class BaseKinetics(BaseInterface):
         ):
             j_tot_var = variables[
                 f"Total {domain} electrode {phase_name}"
-                "interfacial current density variable"
+                "interfacial current density variable [A.m-2]"
             ]
-            current_at_0 = pybamm.Scalar(1)  # dimensionless current initially
-            sgn = 1 if self.domain == "negative" else -1
-            # i / (a*l), assuming a=1 initially
-            j_tot_av_init = sgn * current_at_0 / self.domain_param.l
-
-            self.initial_conditions[j_tot_var] = j_tot_av_init
+            # Set initial guess to zero
+            self.initial_conditions[j_tot_var] = pybamm.Scalar(0)

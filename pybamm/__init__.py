@@ -99,7 +99,6 @@ from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 # Model classes
 #
 from .models.base_model import BaseModel
-from .models.standard_variables import standard_variables
 from .models.event import Event
 from .models.event import EventType
 

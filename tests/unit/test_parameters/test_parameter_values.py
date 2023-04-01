@@ -52,9 +52,8 @@ class TestParameterValues(unittest.TestCase):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
-        self.assertEqual(list(param.keys())[0], "a")
-        self.assertEqual(list(param.values())[0], 1)
-        self.assertEqual(list(param.items())[0], ("a", 1))
+        self.assertIn("a", param.keys())
+        self.assertIn(1, param.values())
 
         # from file
         param = pybamm.ParameterValues(
@@ -78,30 +77,37 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertEqual(param["Positive electrode porosity"], 0.32)
 
-        # values vs chemistry
+        # chemistry kwarg removed
         with self.assertRaisesRegex(
-            ValueError, "values and chemistry cannot both be None"
+            ValueError, "'chemistry' keyword argument has been deprecated"
         ):
-            pybamm.ParameterValues()
-        with self.assertRaisesRegex(
-            ValueError, "Only one of values and chemistry can be provided."
-        ):
-            pybamm.ParameterValues(values=1, chemistry={})
+            pybamm.ParameterValues(None, chemistry="lithium-ion")
 
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
-        self.assertEqual(repr(param), "{'a': 1}")
-        self.assertEqual(param._ipython_key_completions_(), ["a"])
+        self.assertEqual(
+            repr(param),
+            "{'Boltzmann constant [J.K-1]': 1.380649e-23,\n"
+            " 'Electron charge [C]': 1.602176634e-19,\n"
+            " 'Faraday constant [C.mol-1]': 96485.33212,\n"
+            " 'Ideal gas constant [J.K-1.mol-1]': 8.314462618,\n"
+            " 'a': 1}",
+        )
+        self.assertEqual(
+            param._ipython_key_completions_(),
+            [
+                "Ideal gas constant [J.K-1.mol-1]",
+                "Faraday constant [C.mol-1]",
+                "Boltzmann constant [J.K-1]",
+                "Electron charge [C]",
+                "a",
+            ],
+        )
 
     def test_eq(self):
         self.assertEqual(
             pybamm.ParameterValues({"a": 1}), pybamm.ParameterValues({"a": 1})
         )
-
-    def test_update_from_chemistry(self):
-        # incomplete chemistry
-        with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
         # converts to dict if not
@@ -132,6 +138,10 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
 
+        # test deleting a parameter
+        del param["a"]
+        self.assertNotIn("a", param.keys())
+
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")
         param.set_initial_stoichiometries(0.4)
@@ -151,13 +161,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
 
     def test_check_parameter_values(self):
-        # Can't provide a current density of 0, as this will cause a ZeroDivision error
-        with self.assertRaisesRegex(ValueError, "Typical current"):
-            pybamm.ParameterValues({"Typical current [A]": 0})
         with self.assertRaisesRegex(ValueError, "propotional term"):
             pybamm.ParameterValues(
                 {"Negative electrode LAM constant propotional term": 1}
             )
+            # The + character in "1 + dlnf/dlnc" is appended with a backslash (\+),
+            # since + has other meanings in regex
+        with self.assertRaisesRegex(ValueError, "Thermodynamic factor"):
+            pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
@@ -856,7 +867,7 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertIsInstance(var_av_proc, pybamm.SizeAverage)
         R = pybamm.SpatialVariable("R", "negative particle size")
-        self.assertEqual(var_av_proc.f_a_dist, ((R * 2) ** 2 * 2))
+        self.assertEqual(var_av_proc.f_a_dist, R**2)
 
     def test_process_not_constant(self):
         param = pybamm.ParameterValues({"a": 4})
@@ -875,6 +886,12 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues({"par1": 2, "par2": 4})
         exp_param = param.process_symbol(expression)
         self.assertEqual(exp_param, 3.0 * (2.0**var2) / ((-4.0 + var1) + var2))
+
+    def test_process_geometry(self):
+        var = pybamm.Variable("var")
+        geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}
+        with self.assertRaisesRegex(ValueError, "Geometry parameters must be Scalars"):
+            pybamm.ParameterValues({}).process_geometry(geometry)
 
     def test_process_model(self):
         model = pybamm.BaseModel()
@@ -896,8 +913,6 @@ class TestParameterValues(unittest.TestCase):
             "grad_var1": pybamm.grad(var1),
             "d_var1": d * var1,
         }
-        model.timescale = b
-        model.length_scales = {"test": c}
 
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
@@ -928,9 +943,6 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
-        # timescale and length scales
-        self.assertEqual(model.timescale.evaluate(), 2)
-        self.assertEqual(model.length_scales["test"].evaluate(), 3)
 
         # bad boundary conditions
         model = pybamm.BaseModel()
@@ -940,43 +952,16 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(KeyError):
             parameter_values.process_model(model)
 
-    def test_process_model_timescale_lengthscale_not_inputs(self):
-        model = pybamm.BaseModel()
-
-        v = pybamm.Variable("v")
-        model.rhs = {v: 1}
-        model.initial_conditions = {v: 0}
-
-        # Model defined with timescale as an input parameter
-        model.timescale = pybamm.InputParameter("a")
-        param = pybamm.ParameterValues({})
-        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
-            param.process_model(model)
-
-        # Input parameter in parameter values
-        model.timescale = pybamm.Parameter("a")
-        param = pybamm.ParameterValues({"a": "[input]"})
-        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
-            param.process_model(model)
-
-        # Geometry
-        geometry = geometry = {
-            "negative electrode": {"x_n": {"min": 0, "max": pybamm.Parameter("a")}}
-        }
-        parameter_values = pybamm.ParameterValues({"a": "[input]"})
-        with self.assertRaisesRegex(ValueError, "Geometry parameters must be Scalars"):
-            parameter_values.process_geometry(geometry)
-
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         new_model = param.process_model(model, inplace=False)
 
-        for val in list(model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
+        V = model.variables["Voltage [V]"]
+        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
 
-        for val in list(new_model.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
+        V = new_model.variables["Voltage [V]"]
+        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()

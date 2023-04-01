@@ -579,7 +579,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/83979298?v=4",
       "profile": "https://github.com/jeromtom",
       "contributions": [
-        "doc"
+        "doc",
+        "code",
+        "test"
       ]
     },
     {
@@ -589,6 +591,25 @@
       "profile": "http://bradyplanden.github.io",
       "contributions": [
         "example"
+      ]
+    },
+    {
+      "login": "jsbrittain",
+      "name": "jsbrittain",
+      "avatar_url": "https://avatars.githubusercontent.com/u/98161205?v=4",
+      "profile": "http://www.jsbrittain.com/",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "arjxn-py",
+      "name": "Arjun",
+      "avatar_url": "https://avatars.githubusercontent.com/u/104268427?v=4",
+      "profile": "https://github.com/arjxn-py",
+      "contributions": [
+        "infra"
       ]
     }
   ],

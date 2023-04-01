@@ -28,8 +28,6 @@ class NewmanTobias(DFN):
            thermal/electrochemical model". Journal of Power Sources, 453, p.227787,
            2020
 
-
-    **Extends:** :class:`pybamm.lithium_ion.DFN`
     """
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
@@ -62,6 +60,11 @@ class NewmanTobias(DFN):
                         self.param, domain, self.options, phase=phase
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
+                self.submodels[
+                    f"{domain} {phase} total particle concentration"
+                ] = pybamm.particle.TotalConcentration(
+                    self.param, domain, self.options, phase
+                )
 
     def set_electrolyte_concentration_submodel(self):
         self.submodels[

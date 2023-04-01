@@ -16,8 +16,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         The domain in which the model holds
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain=None, options=None):
@@ -40,10 +38,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             electrolyte.
         """
 
-        param = self.param
-        pot_scale = param.potential_scale
-        U_ref = param.n.U_ref
-
         phi_e = pybamm.concatenation(*phi_e_dict.values())
 
         # Case where negative electrode is not included (half-cell)
@@ -57,13 +51,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e_av = pybamm.x_average(phi_e)
 
         variables = {
-            "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -U_ref + pot_scale * phi_e,
-            "X-averaged electrolyte potential": phi_e_av,
-            "X-averaged electrolyte potential [V]": -U_ref + pot_scale * phi_e_av,
-            "X-averaged electrolyte overpotential": eta_e_av,
-            "X-averaged electrolyte overpotential [V]": pot_scale * eta_e_av,
-            "Gradient of electrolyte potential": pybamm.grad(phi_e),
+            "Electrolyte potential [V]": phi_e,
+            "X-averaged electrolyte potential [V]": phi_e_av,
+            "X-averaged electrolyte overpotential [V]": eta_e_av,
+            "Gradient of electrolyte potential [V.m-1]": pybamm.grad(phi_e),
         }
 
         for domain, phi_e_k in phi_e_dict.items():
@@ -71,15 +62,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             Name = name.capitalize()
             phi_e_k_av = pybamm.x_average(phi_e_k)
             variables.update(
-                {
-                    f"{Name}": phi_e_k,
-                    f"{Name} [V]": -U_ref + pot_scale * phi_e_k,
-                    f"X-averaged {name}": phi_e_k_av,
-                    f"X-averaged {name} [V]": -U_ref + pot_scale * phi_e_k_av,
-                }
+                {f"{Name} [V]": phi_e_k, f"X-averaged {name} [V]": phi_e_k_av}
             )
             if domain in self.options.whole_cell_domains:
-                variables[f"Gradient of {name}"] = pybamm.grad(phi_e_k)
+                variables[f"Gradient of {name} [V.m-1]"] = pybamm.grad(phi_e_k)
 
         return variables
 
@@ -100,11 +86,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             electrolyte.
         """
 
-        i_typ = self.param.i_typ
-        variables = {
-            "Electrolyte current density": i_e,
-            "Electrolyte current density [A.m-2]": i_typ * i_e,
-        }
+        variables = {"Electrolyte current density [A.m-2]": i_e}
 
         if isinstance(i_e, pybamm.Concatenation):
             if self.options.whole_cell_domains == [
@@ -119,17 +101,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
             if i_e_n is not None:
                 variables.update(
-                    {
-                        "Negative electrolyte current density": i_e_n,
-                        "Negative electrolyte current density [A.m-2]": i_e_n * i_typ,
-                    }
+                    {"Negative electrolyte current density [A.m-2]": i_e_n}
                 )
             if i_e_p is not None:
                 variables.update(
-                    {
-                        "Positive electrolyte current density": i_e_p,
-                        "Positive electrolyte current density [A.m-2]": i_e_p * i_typ,
-                    }
+                    {"Positive electrolyte current density [A.m-2]": i_e_p}
                 )
 
         return variables
@@ -154,15 +130,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             concentration overpotential and Ohmic losses in the electrolyte
             electrolyte.
         """
-
-        param = self.param
-        pot_scale = param.potential_scale
-
         variables = {
-            "X-averaged concentration overpotential": eta_c_av,
-            "X-averaged electrolyte ohmic losses": delta_phi_e_av,
-            "X-averaged concentration overpotential [V]": pot_scale * eta_c_av,
-            "X-averaged electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
+            "X-averaged concentration overpotential [V]": eta_c_av,
+            "X-averaged electrolyte ohmic losses [V]": delta_phi_e_av,
         }
 
         return variables
@@ -185,14 +155,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the surface potential difference.
         """
         domain = self.domain
-        ocp_ref = self.domain_param.U_ref
-
         variables = {
-            f"X-averaged {domain} electrode surface potential difference": delta_phi_av,
-            f"X-averaged {domain} electrode surface potential difference [V]": ocp_ref
-            + delta_phi_av * self.param.potential_scale,
+            f"X-averaged {domain} electrode "
+            "surface potential difference [V]": delta_phi_av,
         }
-
         return variables
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
@@ -212,17 +178,24 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         """
         domain, Domain = self.domain_Domain
 
-        ocp_ref = self.domain_param.U_ref
-
         # Broadcast if necessary
         if delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, f"{domain} electrode")
 
         variables = {
-            f"{Domain} electrode surface potential difference": delta_phi,
-            f"{Domain} electrode surface potential difference [V]": ocp_ref
-            + delta_phi * self.param.potential_scale,
+            f"{Domain} electrode surface potential difference [V]": delta_phi,
         }
+
+        if Domain == "Negative":
+            variables[
+                "Negative electrode surface potential difference "
+                "at separator interface [V]"
+            ] = pybamm.boundary_value(delta_phi, "right")
+        elif Domain == "Positive":
+            variables[
+                "Positive electrode surface potential difference "
+                "at separator interface [V]"
+            ] = pybamm.boundary_value(delta_phi, "left")
 
         return variables
 
@@ -251,22 +224,22 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             phi_e_n = pybamm.Scalar(0)
             indef_integral_n = pybamm.Scalar(0)
         else:
-            phi_e_n = variables["Negative electrolyte potential"]
+            phi_e_n = variables["Negative electrolyte potential [V]"]
             # concentration overpotential
-            c_e_n = variables["Negative electrolyte concentration"]
-            T_n = variables["Negative electrode temperature"]
+            c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
+            T_n = variables["Negative electrode temperature [K]"]
             indef_integral_n = pybamm.IndefiniteIntegral(
                 param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n),
                 pybamm.standard_spatial_vars.x_n,
             )
 
-        phi_e_p = variables["Positive electrolyte potential"]
+        phi_e_p = variables["Positive electrolyte potential [V]"]
 
-        c_e_s = variables["Separator electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
+        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
+        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
 
-        T_s = variables["Separator temperature"]
-        T_p = variables["Positive electrode temperature"]
+        T_s = variables["Separator temperature [K]"]
+        T_p = variables["Positive electrode temperature [K]"]
 
         # concentration overpotential
         indef_integral_s = pybamm.IndefiniteIntegral(
@@ -293,10 +266,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def set_boundary_conditions(self, variables):
-        phi_e = variables["Electrolyte potential"]
+        phi_e = variables["Electrolyte potential [V]"]
 
         if self.options.electrode_types["negative"] == "planar":
-            phi_e_ref = variables["Lithium metal interface electrolyte potential"]
+            phi_e_ref = variables["Lithium metal interface electrolyte potential [V]"]
             lbc = (phi_e_ref, "Dirichlet")
         else:
             lbc = (pybamm.Scalar(0), "Neumann")

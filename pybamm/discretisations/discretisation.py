@@ -241,16 +241,6 @@ class Discretisation(object):
             model_disc
         )
 
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            if isinstance(new_scale, pybamm.Array):
-                # Convert possible arrays of length 1 to scalars
-                new_scale = pybamm.Scalar(float(new_scale.evaluate()))
-            new_length_scales[domain] = new_scale
-        model_disc._length_scales = new_length_scales
-
         # Check that resulting model makes sense
         if check_model:
             pybamm.logger.verbose("Performing model checks for {}".format(model.name))
@@ -307,9 +297,23 @@ class Discretisation(object):
             # Add to slices
             y_slices[variable].append(slice(start, end))
             y_slices_explicit[variable].append(slice(start, end))
+
             # Add to bounds
-            lower_bounds.extend([variable.bounds[0]] * (end - start))
-            upper_bounds.extend([variable.bounds[1]] * (end - start))
+            def evaluate_bound(bound, side):
+                if bound.has_symbol_of_classes(pybamm.InputParameter):
+                    if side == "lower":
+                        return -np.inf
+                    elif side == "upper":
+                        return np.inf
+                else:
+                    return bound.evaluate()
+
+            lower_bounds.extend(
+                [evaluate_bound(variable.bounds[0], "lower")] * (end - start)
+            )
+            upper_bounds.extend(
+                [evaluate_bound(variable.bounds[1], "upper")] * (end - start)
+            )
             # Increment start
             start = end
 
@@ -906,12 +910,15 @@ class Discretisation(object):
             # create new children without scale and reference
             # the scale and reference will be applied to the concatenation instead
             new_children = []
+            old_y_slices = self.y_slices.copy()
             for child in symbol.children:
-                child = child.create_copy()
-                child._scale = 1
-                child._reference = 0
-                child.set_id()
-                new_children.append(self.process_symbol(child))
+                child_no_scale = child.create_copy()
+                child_no_scale._scale = 1
+                child_no_scale._reference = 0
+                child_no_scale.set_id()
+                self.y_slices[child_no_scale] = self.y_slices[child]
+                new_children.append(self.process_symbol(child_no_scale))
+            self.y_slices = old_y_slices
             new_symbol = spatial_method.concatenation(new_children)
             # apply scale to the whole concatenation
             return symbol.reference + symbol.scale * new_symbol
@@ -1013,7 +1020,7 @@ class Discretisation(object):
             # Skip this check if there are input parameters in the initial conditions
             bounds = var.bounds
             if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
-                all(bounds[0] <= ic_eval) and all(ic_eval <= bounds[1])
+                all(bounds[0].value <= ic_eval) and all(ic_eval <= bounds[1].value)
             ):
                 raise pybamm.ModelError(
                     "initial condition is outside of variable bounds "

@@ -1,5 +1,5 @@
 #
-# Dimensional and dimensionless parameter values, and scales
+# Parameter values for a simulation
 #
 import numpy as np
 import pybamm
@@ -41,54 +41,49 @@ class ParameterValues:
 
     """
 
-    def __init__(self, values=None, chemistry=None):
-        self._dict_items = pybamm.FuzzyDict()
-        # Must provide either values or chemistry, not both (nor neither)
-        if values is not None and chemistry is not None:
-            raise ValueError(
-                "Only one of values and chemistry can be provided. To change parameters"
-                " slightly from a chemistry, first load parameters with the chemistry"
-                " (param = pybamm.ParameterValues(...)) and then update with"
-                " param.update({dict of values})."
-            )
-        if values is None and chemistry is None:
-            raise ValueError("values and chemistry cannot both be None")
-        # First load chemistry
+    def __init__(self, values, chemistry=None):
         if chemistry is not None:
-            warnings.warn(
-                "The 'chemistry' keyword argument has been deprecated and will be "
-                "removed in a future release. Call `ParameterValues` with a "
-                "parameter set dictionary, or the name of a parameter set (string), "
+            raise ValueError(
+                "The 'chemistry' keyword argument has been deprecated. "
+                "Call `ParameterValues` with a dictionary dictionary of "
+                "parameter values, or the name of a parameter set (string), "
                 "as the single argument, e.g. `ParameterValues('Chen2020')`.",
-                DeprecationWarning,
             )
-            self.update_from_chemistry(chemistry)
-        # Then update with values dictionary or file
-        if values is not None:
-            if isinstance(values, dict):
-                if "negative electrode" in values:
-                    warnings.warn(
-                        "Creating a parameter set from a dictionary of components has "
-                        "been deprecated and will be removed in a future release. "
-                        "Define the parameter set in a python script instead.",
-                        DeprecationWarning,
-                    )
-                    self.update_from_chemistry(values)
-                else:
-                    self.update(values, check_already_exists=False)
-            else:
-                # Check if values is a named parameter set
-                if isinstance(values, str) and values in pybamm.parameter_sets:
-                    values = pybamm.parameter_sets[values]
-                    values.pop("chemistry")
-                    self.update(values, check_already_exists=False)
 
-                else:
-                    # In this case it might be a filename, load from that filename
-                    file_path = self.find_parameter(values)
-                    path = os.path.split(file_path)[0]
-                    values = self.read_parameters_csv(file_path)
-                    self.update(values, check_already_exists=False, path=path)
+        # add physical constants as default values
+        self._dict_items = pybamm.FuzzyDict(
+            {
+                "Ideal gas constant [J.K-1.mol-1]": pybamm.constants.R.value,
+                "Faraday constant [C.mol-1]": pybamm.constants.F.value,
+                "Boltzmann constant [J.K-1]": pybamm.constants.k_b.value,
+                "Electron charge [C]": pybamm.constants.q_e.value,
+            }
+        )
+
+        if isinstance(values, dict):
+            if "negative electrode" in values:
+                warnings.warn(
+                    "Creating a parameter set from a dictionary of components has "
+                    "been deprecated and will be removed in a future release. "
+                    "Define the parameter set in a python script instead.",
+                    DeprecationWarning,
+                )
+                self.update_from_chemistry(values)
+            else:
+                self.update(values, check_already_exists=False)
+        else:
+            # Check if values is a named parameter set
+            if isinstance(values, str) and values in pybamm.parameter_sets:
+                values = pybamm.parameter_sets[values]
+                values.pop("chemistry")
+                self.update(values, check_already_exists=False)
+
+            else:
+                # In this case it might be a filename, load from that filename
+                file_path = self.find_parameter(values)
+                path = os.path.split(file_path)[0]
+                values = self.read_parameters_csv(file_path)
+                self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -139,7 +134,7 @@ class ParameterValues:
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        """Return item correspoonding to key if it exists, otherwise return default"""
+        """Return item corresponding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
@@ -211,15 +206,7 @@ class ParameterValues:
                 component_groups = [extra_group] + component_groups
 
         for component_group in component_groups:
-            # Make sure component is provided
-            try:
-                component = chemistry[component_group]
-            except KeyError:
-                raise KeyError(
-                    "must provide '{}' parameters for {} chemistry".format(
-                        component_group, base_chemistry
-                    )
-                )
+            component = chemistry[component_group]
             # Create path to component and load values
             component_path = os.path.join(
                 base_chemistry,
@@ -388,19 +375,17 @@ class ParameterValues:
         return parameter_values
 
     def check_parameter_values(self, values):
-        # Make sure typical current is non-zero
-        if "Typical current [A]" in values and values["Typical current [A]"] == 0:
-            raise ValueError(
-                "'Typical current [A]' cannot be zero. A possible alternative is to "
-                "set 'Current function [A]' to `0` instead."
-            )
-
         for param in values:
             if "propotional term" in param:
                 raise ValueError(
                     f"The parameter '{param}' has been renamed to "
                     "'... proportional term [s-1]', and its value should now be divided"
                     "by 3600 to get the same results as before."
+                )
+            # specific check for renamed parameter "1 + dlnf/dlnc"
+            if "1 + dlnf/dlnc" in param:
+                raise ValueError(
+                    f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
                 )
 
     def process_model(self, unprocessed_model, inplace=True):
@@ -503,27 +488,6 @@ class ParameterValues:
 
         model.events = new_events
 
-        # Process timescale
-        new_timescale = self.process_symbol(unprocessed_model.timescale)
-        if isinstance(new_timescale, pybamm.Scalar):
-            model._timescale = new_timescale
-        else:
-            raise ValueError(
-                "model.timescale must be a Scalar after parameter processing "
-                "(cannot contain 'InputParameter's). "
-                "You have probably set one of the parameters used to calculate the "
-                "timescale to an InputParameter. To avoid this error, hardcode "
-                "model.timescale to a constant value by passing the option "
-                "{'timescale': value} to the model."
-            )
-
-        # Process length scales
-        new_length_scales = {}
-        for domain, scale in unprocessed_model.length_scales.items():
-            new_scale = self.process_symbol(scale)
-            new_length_scales[domain] = new_scale
-        model._length_scales = new_length_scales
-
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model
@@ -598,8 +562,6 @@ class ParameterValues:
         """
 
         def process_and_check(sym):
-            if isinstance(sym, numbers.Number):
-                return pybamm.Scalar(sym)
             new_sym = self.process_symbol(sym)
             if not isinstance(new_sym, pybamm.Scalar):
                 raise ValueError(
@@ -787,8 +749,15 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
             new_symbol._scale = self.process_symbol(symbol.scale)
-            new_symbol._reference = self.process_symbol(symbol.reference)
+            reference = self.process_symbol(symbol.reference)
+            if isinstance(reference, pybamm.Vector):
+                reference = pybamm.Scalar(float(reference.evaluate()))
+            new_symbol._reference = reference
+            new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
+
+        elif isinstance(symbol, numbers.Number):
+            return pybamm.Scalar(symbol)
 
         else:
             # Backup option: return the object
@@ -836,9 +805,6 @@ class ParameterValues:
         """
         Return dictionary of evaluated parameters, and optionally print these evaluated
         parameters to an output file.
-        For dimensionless parameters that depend on the C-rate, the value is given as a
-        function of the C-rate (either x * Crate or x / Crate depending on the
-        dependence)
 
         Parameters
         ----------

@@ -18,8 +18,6 @@ class BaseElectrode(pybamm.BaseSubModel):
     set_positive_potential :  bool, optional
         If True the battery model sets the positive potential based on the current.
         If False, the potential is specified by the user. Default is True.
-
-    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain, options=None, set_positive_potential=True):
@@ -44,40 +42,28 @@ class BaseElectrode(pybamm.BaseSubModel):
         """
         domain, Domain = self.domain_Domain
 
-        param = self.param
-        pot = param.potential_scale
         phi_s_av = pybamm.x_average(phi_s)
 
         if self.domain == "negative":
-            phi_s_dim = pot * phi_s
-            phi_s_av_dim = pot * phi_s_av
-            delta_phi_s = phi_s
+            delta_phi_s = pybamm.boundary_value(phi_s, "left") - phi_s
 
         elif self.domain == "positive":
-            phi_s_dim = param.ocv_ref + pot * phi_s
-            phi_s_av_dim = param.ocv_ref + pot * phi_s_av
-
-            v = pybamm.boundary_value(phi_s, "right")
-            delta_phi_s = v - phi_s
+            delta_phi_s = pybamm.boundary_value(phi_s, "right") - phi_s
         delta_phi_s_av = pybamm.x_average(delta_phi_s)
-        delta_phi_s_dim = delta_phi_s * pot
-        delta_phi_s_av_dim = delta_phi_s_av * pot
 
         variables = {
-            f"{Domain} electrode potential": phi_s,
-            f"{Domain} electrode potential [V]": phi_s_dim,
-            f"X-averaged {domain} electrode potential": phi_s_av,
-            f"X-averaged {domain} electrode potential [V]": phi_s_av_dim,
-            f"{Domain} electrode ohmic losses": delta_phi_s,
-            f"{Domain} electrode ohmic losses [V]": delta_phi_s_dim,
-            f"X-averaged {domain} electrode ohmic losses": delta_phi_s_av,
-            f"X-averaged {domain} electrode ohmic losses [V]": delta_phi_s_av_dim,
+            f"{Domain} electrode potential [V]": phi_s,
+            f"X-averaged {domain} electrode potential [V]": phi_s_av,
+            f"{Domain} electrode ohmic losses [V]": delta_phi_s,
+            f"X-averaged {domain} electrode ohmic losses [V]": delta_phi_s_av,
         }
 
         if self.options.electrode_types[self.domain] == "porous":
             variables.update(
                 {
-                    f"Gradient of {domain} electrode potential": pybamm.grad(phi_s),
+                    f"Gradient of {domain} electrode potential [V.m-1]": pybamm.grad(
+                        phi_s
+                    ),
                 }
             )
 
@@ -100,13 +86,9 @@ class BaseElectrode(pybamm.BaseSubModel):
             electrode.
         """
         Domain = self.domain.capitalize()
-        param = self.param
-
-        i_s_dim = param.i_typ * i_s
 
         variables = {
-            f"{Domain} electrode current density": i_s,
-            f"{Domain} electrode current density [A.m-2]": i_s_dim,
+            f"{Domain} electrode current density [A.m-2]": i_s,
         }
 
         return variables
@@ -133,33 +115,22 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             current collector.
         """
-
-        pot_scale = self.param.potential_scale
-        phi_s_cp_dim = self.param.ocv_ref + phi_s_cp * pot_scale
-
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
 
-        # Terminal voltage
+        # Voltage
         # Note phi_s_cn is always zero at the negative tab
         V = pybamm.boundary_value(phi_s_cp, "positive tab")
-        V_dim = pybamm.boundary_value(phi_s_cp_dim, "positive tab")
 
-        # Voltage is local current collector potential difference at the tabs.
-        # In 1D this will be equal to the local current collector potential difference.
-        # The potential drop due to contact resistance (if any) is subtracted.
-
+        # Voltage is local current collector potential difference at the tabs, in 1D
+        # this will be equal to the local current collector potential difference
         variables = {
-            "Negative current collector potential": phi_s_cn,
-            "Negative current collector potential [V]": phi_s_cn * pot_scale,
-            "Positive current collector potential": phi_s_cp,
-            "Positive current collector potential [V]": phi_s_cp_dim,
-            "Local voltage": V_cc,
-            "Local voltage [V]": self.param.ocv_ref + V_cc * pot_scale,
-            "Contact overpotential": delta_phi_contact,
-            "Contact overpotential [V]": delta_phi_contact * pot_scale,
-            "Terminal voltage": V - delta_phi_contact,
-            "Terminal voltage [V]": V_dim - delta_phi_contact * pot_scale,
+            "Negative current collector potential [V]": phi_s_cn,
+            "Positive current collector potential [V]": phi_s_cp,
+            "Local voltage [V]": V_cc,
+            "Terminal voltage [V]": V - delta_phi_contact,
+            "Voltage [V]": V - delta_phi_contact,
+            "Contact overpotential [V]": delta_phi_contact,
         }
 
         return variables
@@ -184,24 +155,24 @@ class BaseElectrode(pybamm.BaseSubModel):
         if "negative electrode" not in self.options.whole_cell_domains:
             i_s_n = None
         else:
-            i_s_n = variables["Negative electrode current density"]
+            i_s_n = variables["Negative electrode current density [A.m-2]"]
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
-        i_s_p = variables["Positive electrode current density"]
+        i_s_p = variables["Positive electrode current density [A.m-2]"]
 
         i_s = pybamm.concatenation(i_s_n, i_s_s, i_s_p)
 
-        variables.update({"Electrode current density": i_s})
+        variables.update({"Electrode current density [A.m-2]": i_s})
 
         if self.set_positive_potential:
             # Get phi_s_cn from the current collector submodel and phi_s_p from the
             # electrode submodel
-            phi_s_cn = variables["Negative current collector potential"]
-            phi_s_p = variables["Positive electrode potential"]
+            phi_s_cn = variables["Negative current collector potential [V]"]
+            phi_s_p = variables["Positive electrode potential [V]"]
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             if self.options["contact resistance"] == "true":
                 param = self.param
                 I = variables["Current [A]"]
-                delta_phi_contact = I * param.R_contact / param.potential_scale
+                delta_phi_contact = I * param.R_contact
             else:
                 delta_phi_contact = pybamm.Scalar(0)
             variables.update(

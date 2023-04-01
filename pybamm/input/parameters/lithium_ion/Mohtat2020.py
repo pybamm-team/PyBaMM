@@ -32,7 +32,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
 def graphite_ocp_PeymanMPM(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the
+    Graphite Open-circuit Potential (OCP) as a function of the
     stochiometry. The fit is taken from Peyman MPM [1].
 
     References
@@ -92,7 +92,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
 
 def graphite_entropic_change_PeymanMPM(sto, c_s_max):
     """
-    Graphite entropic change in open circuit potential (OCP) at a temperature of
+    Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from [1]
 
     References
@@ -151,7 +151,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 
 def NMC_ocp_PeymanMPM(sto):
     """
-    Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
+    Nickel Managanese Cobalt Oxide (NMC) Open-circuit Potential (OCP) as a
     function of the stochiometry. The fit is taken from Peyman MPM.
 
     References
@@ -214,7 +214,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
 
 def NMC_entropic_change_PeymanMPM(sto, c_s_max):
     """
-    Nickel Manganese Cobalt (NMC) entropic change in open circuit potential (OCP) at
+    Nickel Manganese Cobalt (NMC) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the OCP. The fit is taken from [1].
 
     References
@@ -417,7 +417,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 5.0,
-        "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -431,8 +430,6 @@ def get_parameter_values():
         "Negative electrode Bruggeman coefficient (electrode)": 1.5,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode transport efficiency": 0.16,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
         "": 1.061e-06,
         "Negative electrode charge transfer coefficient": 0.5,
@@ -455,8 +452,6 @@ def get_parameter_values():
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode transport efficiency": 0.16,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
         "": 4.824e-06,
         "Positive electrode charge transfer coefficient": 0.5,
@@ -476,10 +471,9 @@ def get_parameter_values():
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
         "Separator transport efficiency ": 0.25,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.38,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Typical lithium ion diffusivity [m2.s-1]": 5.34e-10,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_PeymanMPM,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_PeymanMPM,

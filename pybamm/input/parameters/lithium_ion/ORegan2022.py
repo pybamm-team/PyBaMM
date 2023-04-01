@@ -359,7 +359,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
     E_r = 4e4
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
 
     return (
         i_ref
@@ -441,7 +441,7 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
 
 def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
-    LG M50 Graphite entropic change in open circuit potential (OCP) at a temperature of
+    LG M50 Graphite entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry. The fit is taken from [1].
 
     References
@@ -633,7 +633,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     E_r = 2.401e4
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    c_e_ref = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
+    c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
 
     return (
         i_ref
@@ -715,7 +715,7 @@ def nmc_LGM50_thermal_conductivity_ORegan2022(T):
 
 def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
-    LG M50 NMC 811 entropic change in open circuit potential (OCP) at a temperature of
+    LG M50 NMC 811 entropic change in open-circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry. The fit is taken from [1].
 
     References
@@ -961,7 +961,6 @@ def get_parameter_values():
         "": copper_thermal_conductivity_CRC,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
         "Nominal cell capacity [A.h]": 5.0,
-        "Typical current [A]": 5.0,
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -975,8 +974,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0.0,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -999,8 +996,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 5.22e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
@@ -1021,11 +1016,10 @@ def get_parameter_values():
         "": separator_LGM50_heat_capacity_ORegan2022,
         "Separator thermal conductivity [W.m-1.K-1]": 0.3344,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number"
         "": electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019,
-        "1 + dlnf/dlnc": electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
+        "Thermodynamic factor": electrolyte_TDF_EC_EMC_3_7_Landesfeind2019,
         "Electrolyte diffusivity [m2.s-1]"
         "": electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019,
         "Electrolyte conductivity [S.m-1]"

@@ -1,6 +1,6 @@
 def lico2_ocp_Ai2020_function(sto):
     """
-     Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
+     Lithium Cobalt Oxide (LiCO2) Open-circuit Potential (OCP) as a a function of the
      stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
         for 0.435 < sto < 0.9651.
 

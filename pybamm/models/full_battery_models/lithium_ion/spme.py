@@ -23,8 +23,6 @@ class SPMe(SPM):
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
            derivation of a single particle model with electrolyte”. Journal of The
            Electrochemical Society, 166(15):A3693–A3706, 2019
-
-    **Extends:** :class:`pybamm.lithium_ion.SPM`
     """
 
     def __init__(
@@ -83,6 +81,6 @@ class SPMe(SPM):
 
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
-                self.submodels[f"{domain} surface potential difference"] = surf_model(
-                    self.param, domain, self.options
-                )
+                self.submodels[
+                    f"{domain} surface potential difference [V]"
+                ] = surf_model(self.param, domain, self.options)
