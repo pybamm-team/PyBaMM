@@ -219,7 +219,6 @@ setup(
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
             "jupyter",  # For example notebooks
-            "nbconvert",  # For example notebooks
         ],
     },
     entry_points={
