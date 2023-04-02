@@ -198,7 +198,6 @@ setup(
         "casadi>=3.5.0",
         "imageio>=2.9.0",
         "importlib-metadata",
-        "nbconvert",
         "pybtex>=0.24.0",
         "sympy>=1.8",
         "bpx",
@@ -220,6 +219,7 @@ setup(
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
             "jupyter",  # For example notebooks
+            "nbconvert", # For example notebooks
         ],
     },
     entry_points={
