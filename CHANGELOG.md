@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# Breaking changes
+
+- Made `Jupyter` a development only dependency. Now `Jupyter` would not be a required dependency for users while installing `PyBaMM`. ([#2457](https://github.com/pybamm-team/PyBaMM/pull/2846))
+
 # [v23.3](https://github.com/pybamm-team/PyBaMM/tree/v23.3) - 2023-03-31
 
 ## Features
