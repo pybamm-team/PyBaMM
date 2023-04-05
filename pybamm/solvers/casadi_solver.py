@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import warnings
 from scipy.interpolate import interp1d
+from .lrudict import LRUDict
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -67,6 +68,10 @@ class CasadiSolver(pybamm.BaseSolver):
         Whether to perturb algebraic initial conditions to avoid a singularity. This
         can sometimes slow down the solver, but is kept True as default for "safe" mode
         as it seems to be more robust (False by default for other modes).
+    integrators_maxcount : int, optional
+        The maximum number of integrators that the solver will retain before
+        ejecting past integrators using an LRU methodology. A value of 0 or
+        None leaves the number of integrators unbound. Default is 100.
     """
 
     def __init__(
@@ -83,6 +88,7 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_call=None,
         return_solution_if_failed_early=False,
         perturb_algebraic_initial_conditions=None,
+        integrators_maxcount=100,
     ):
         super().__init__(
             "problem dependent",
@@ -123,8 +129,9 @@ class CasadiSolver(pybamm.BaseSolver):
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
-        self.integrators = {}
-        self.integrator_specs = {}
+        self.integrators_maxcount = integrators_maxcount
+        self.integrators = LRUDict(maxsize=self.integrators_maxcount)
+        self.integrator_specs = LRUDict(maxsize=self.integrators_maxcount)
         self.y_sols = {}
 
         pybamm.citations.register("Andersson2019")
