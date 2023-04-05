@@ -1,7 +1,6 @@
 #
 # Base integration tests for lithium-ion models
 #
-import unittest
 import pybamm
 import tests
 
@@ -18,18 +17,11 @@ class BaseIntegrationTestLithiumIon:
         options = {}
         self.run_basic_processing_test(options)
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
-        solver = pybamm.IDAKLUSolver()
-        modeltest = tests.StandardModelTest(
-            model, parameter_values=param, solver=solver
-        )
-        modeltest.test_sensitivities(
-            "Current function [A]",
-            0.15652,
-        )
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_sensitivities("Current function [A]", 0.15652)
 
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
