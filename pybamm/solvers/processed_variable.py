@@ -222,7 +222,7 @@ class ProcessedVariable(object):
             self._interpolation_function = interp.RegularGridInterpolator(
                 (self.t_pts,
                 pts_for_interp),
-                entries_for_interp,
+                entries_for_interp.T,
                 method="linear",
                 fill_value=np.nan,
                 bounds_error=False,
