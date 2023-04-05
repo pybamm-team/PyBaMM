@@ -221,8 +221,8 @@ class ProcessedVariable(object):
             # is the reverse of what you'd expect
             self._interpolation_function = interp.RegularGridInterpolator(
                 (self.t_pts,
-                pts_for_interp,
-                entries_for_interp),
+                pts_for_interp),
+                entries_for_interp,
                 method="linear",
                 fill_value=np.nan,
                 bounds_error=False,
@@ -597,8 +597,8 @@ class Interpolant2D:
     ):
         self.interpolant = interp.RegularGridInterpolator(
             (second_dim_pts_for_interp,
-            first_dim_pts_for_interp,
-            entries_for_interp[:, :, 0]),
+            first_dim_pts_for_interp),
+            entries_for_interp[:, :, 0],
             method="linear",
             fill_value=np.nan,
             bounds_error=False,
