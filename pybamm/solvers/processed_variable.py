@@ -5,7 +5,7 @@ import casadi
 import numbers
 import numpy as np
 import pybamm
-from scipy.interpolate import RegularGridInterpolator
+import scipy.interpolate as interp
 from scipy.integrate import cumulative_trapezoid
 
 
@@ -219,11 +219,11 @@ class ProcessedVariable(object):
         else:
             # function of space and time. Note that the order of 't' and 'space'
             # is the reverse of what you'd expect
-            self._interpolation_function = RegularGridInterpolator(
-                self.t_pts,
+            self._interpolation_function = interp.RegularGridInterpolator(
+                (self.t_pts,
                 pts_for_interp,
-                entries_for_interp,
-                kind="linear",
+                entries_for_interp),
+                method="linear",
                 fill_value=np.nan,
                 bounds_error=False,
             )
@@ -595,11 +595,11 @@ class Interpolant2D:
     def __init__(
         self, first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
     ):
-        self.interpolant = RegularGridInterpolator(
-            second_dim_pts_for_interp,
+        self.interpolant = interp.RegularGridInterpolator(
+            (second_dim_pts_for_interp,
             first_dim_pts_for_interp,
-            entries_for_interp[:, :, 0],
-            kind="linear",
+            entries_for_interp[:, :, 0]),
+            method="linear",
             fill_value=np.nan,
             bounds_error=False,
         )
