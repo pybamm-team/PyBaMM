@@ -7,6 +7,9 @@ import pybamm
 import os
 import warnings
 import pybtex
+
+# from collections import OrderedDict
+from inspect import stack
 from pybtex.database import parse_file, parse_string, Entry
 from pybtex.scanner import PybtexError
 
@@ -35,6 +38,9 @@ class Citations:
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
 
+        # Ordered dict mapping citation tags for use when registering citations
+        self.citation_tags = dict()
+
         # store citation error
         self._citation_err_msg = None
 
@@ -51,6 +57,13 @@ class Citations:
         # Register the PyBaMM paper and the numpy paper
         self.register("Sulzer2021")
         self.register("Harris2020")
+
+    def _get_caller_name(self):
+        """Returns the name of the class that calls :meth:`register` internally. This
+        is used for tagging citations only for verbose output."""
+        # get the name of the class the register function was called from
+        caller_name = stack()[2][0].f_locals["self"].__class__.__name__
+        return caller_name
 
     def read_citations(self):
         """Reads the citations in `pybamm.CITATIONS.txt`. Other works can be cited
@@ -77,6 +90,17 @@ class Citations:
 
         # Add to database
         self._all_citations[key] = new_citation
+
+    def _update_citation_tags(self, key, entry):
+        """Updates the citation tags dictionary with the name of the class that called
+        :meth:`register`"""
+        # todo check input types are correct
+        # todo check if key is in self._all_citations
+
+        # Add a citation tag to the citation_tags ordered dictionary with
+        # the key being the citation itself
+        for key in self._all_citations:
+            self.citation_tags[key] = entry
 
     @property
     def _cited(self):
@@ -110,16 +134,18 @@ class Citations:
                 if not bib_data.entries:
                     raise PybtexError("no entries found")
 
-                # Add and register all citations
+                # Add and register all citations and citation tags
                 for key, entry in bib_data.entries.items():
                     self._add_citation(key, entry)
                     self.register(key)
+                    self._update_citation_tags(key, entry=self._get_caller_name())
                     return
             except PybtexError:
                 # Unable to parse / unknown key
                 raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
-    def print(self, filename=None, output_format="text"):
+    # todo verbose
+    def print(self, filename=None, output_format="text", verbose=False):
         """Print all citations that were used for running simulations.
 
         Parameters
@@ -147,7 +173,8 @@ class Citations:
                 f.write(citations)
 
 
-def print_citations(filename=None, output_format="text"):
+# todo: implement the verbose functionality
+def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
     if citations._citation_err_msg is not None:
         raise ImportError(
