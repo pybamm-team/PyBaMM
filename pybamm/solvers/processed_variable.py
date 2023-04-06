@@ -596,7 +596,7 @@ class Interpolant2D:
     ):
         self.interpolant = interp.RegularGridInterpolator(
             (second_dim_pts_for_interp, first_dim_pts_for_interp),
-            entries_for_interp[:, :, 0],
+            entries_for_interp.T[:, :, 0],
             method="linear",
             fill_value=np.nan,
             bounds_error=False,
