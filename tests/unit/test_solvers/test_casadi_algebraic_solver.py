@@ -69,7 +69,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
 
         solver = pybamm.CasadiAlgebraicSolver()
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: .../casadi"
+            pybamm.SolverError, "Could not find acceptable solution: Error in Function"
         ):
             solver._integrate(model, np.array([0]), {})
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
