@@ -159,13 +159,25 @@ class Citations:
         all citations and enable verbose output with :meth:`print_citations`
         or :meth:`print`.
 
+        .. note::
+            If a citation is registered manually, it will not be tagged.
+
         Examples
         --------
-        >>> pybamm.citations.register("Doyle1993")
-        >>> pybamm.citations.print() or pybamm.print_citations()
-        >>> Citations registered:
-        >>> Sulzer2021 was cited due to the use of
-        >>> pybamm.models.full_battery_models.lithium_ion.dfn
+        .. code-block:: python
+            :linenos:
+
+            pybamm.citations.register("Doyle1993")
+            pybamm.citations.print() or pybamm.print_citations()
+
+        will print the following:
+
+        .. code-block::
+
+            Citations registered:
+            Sulzer2021 was cited due to the use of
+            pybamm.models.full_battery_models.lithium_ion.dfn
+
         """
         if self._citation_tags:
             print("Citations registered:")
