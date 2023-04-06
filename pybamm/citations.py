@@ -38,8 +38,8 @@ class Citations:
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
 
-        # Ordered dict mapping citation tags for use when registering citations
-        self.citation_tags = dict()
+        # Dict mapping citation tags for use when registering citations
+        self._citation_tags = dict()
 
         # store citation error
         self._citation_err_msg = None
@@ -54,15 +54,19 @@ class Citations:
         """Reset citations to default only (only for testing purposes)"""
         # Initialize empty papers to cite
         self._papers_to_cite = set()
+        # Initialize empty citation tags
+        self._citation_tags = dict()
         # Register the PyBaMM paper and the numpy paper
         self.register("Sulzer2021")
         self.register("Harris2020")
 
-    def _get_caller_name(self):
-        """Returns the name of the class that calls :meth:`register` internally. This
-        is used for tagging citations only for verbose output."""
-        # get the name of the class the register function was called from
-        caller_name = stack()[2][0].f_locals["self"].__class__.__name__
+    def _caller_name():
+        """
+        Returns the qualified name of classes that call :meth:`register` internally.
+        This is used for tagging citations but only for verbose output
+        """
+        # Attributed to https://stackoverflow.com/a/17065634
+        caller_name = stack()[2][0].f_locals["self"].__class__.__qualname__
         return caller_name
 
     def read_citations(self):
@@ -91,16 +95,13 @@ class Citations:
         # Add to database
         self._all_citations[key] = new_citation
 
-    def _update_citation_tags(self, key, entry):
-        """Updates the citation tags dictionary with the name of the class that called
-        :meth:`register`"""
-        # todo check input types are correct
-        # todo check if key is in self._all_citations
+    def _add_citation_tag(self, key, entry):
+        """Adds a tag for a citation key which represents the name of the class that
+        called :meth:`register`"""
 
         # Add a citation tag to the citation_tags ordered dictionary with
-        # the key being the citation itself
-        for key in self._all_citations:
-            self.citation_tags[key] = entry
+        # the key being the citation itself and the value being the name of the class
+        self._citation_tags[key] = entry
 
     @property
     def _cited(self):
@@ -125,6 +126,14 @@ class Citations:
             # Check if citation is a known key
             if key in self._all_citations:
                 self._papers_to_cite.add(key)
+                # Add citation tags for the key
+                # This is used for verbose output
+                try:
+                    caller = Citations._caller_name()
+                    self._add_citation_tag(key, entry=caller)
+                # Don't add citation tags if the citation is registered manually
+                except KeyError:
+                    pass
                 return
 
             # Try to parse the citation using pybtex
@@ -134,25 +143,52 @@ class Citations:
                 if not bib_data.entries:
                     raise PybtexError("no entries found")
 
-                # Add and register all citations and citation tags
+                # Add and register all citations
                 for key, entry in bib_data.entries.items():
                     self._add_citation(key, entry)
                     self.register(key)
-                    self._update_citation_tags(key, entry=self._get_caller_name())
                     return
             except PybtexError:
                 # Unable to parse / unknown key
                 raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
-    # todo verbose
+    def tag_citations(self):
+        """Prints the citations tags for the citations that have been registered
+        (non-manually). This is used for verbose output when printing citations
+        such that it can be seen which citations were registered by PyBaMM classes.
+
+        To use, call :meth:`tag_citations` after calling :meth:`register` for
+        all citations and enable verbose output with :meth:`print_citations`
+        or :meth:`print`.
+
+        Examples
+        --------
+        >>> pybamm.citations.register("Doyle1993")
+        >>> pybamm.citations.print() or pybamm.print_citations()
+
+        Citations registered:
+        Sulzer2021 was cited due to the use of
+        pybamm.models.full_battery_models.lithium_ion.dfn
+        """
+        if self._citation_tags:
+            print("Citations registered:")
+            for key, entry in self._citation_tags.items():
+                print(f"{key} was cited due to the use of {entry}")
+
     def print(self, filename=None, output_format="text", verbose=False):
-        """Print all citations that were used for running simulations.
+        """Print all citations that were used for running simulations. The verbose
+        option is provided to print the citation tags for the citations that have
+        been registered non-manually. This is available only upon printing
+        to the terminal.
 
         Parameters
         ----------
         filename : str, optional
-            Filename to which to print citations. If None, citations are printed to the
-            terminal.
+            Filename to which to print citations. If None, citations are printed
+            to the terminal.
+        verbose: bool, optional
+            If True, prints the citation tags for the citations that have been
+            registered
         """
         if output_format == "text":
             citations = pybtex.format_from_strings(
@@ -168,6 +204,8 @@ class Citations:
 
         if filename is None:
             print(citations)
+            if verbose:
+                self.tag_citations()
         else:
             with open(filename, "w") as f:
                 f.write(citations)
@@ -186,7 +224,13 @@ def print_citations(filename=None, output_format="text", verbose=False):
             f"{citations._citation_err_msg}"
         )
     else:
-        pybamm.citations.print(filename, output_format)
+        if verbose:
+            warnings.warn(
+                "Verbose output is not available for printing to files, only to the terminal"  # noqa: E501
+            )
+            pybamm.citations.print(filename, output_format, verbose=True)
+        else:
+            pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()
