@@ -130,7 +130,7 @@ class Citations:
                     caller = Citations._caller_name()
                     self._add_citation_tag(key, entry=caller)
                 # Don't add citation tags if the citation is registered manually
-                except KeyError:
+                except KeyError:  # pragma: no cover
                     pass
                 return
 
@@ -150,7 +150,7 @@ class Citations:
                 # Unable to parse / unknown key
                 raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
-    def tag_citations(self):
+    def tag_citations(self):  # pragma: no cover
         """Prints the citations tags for the citations that have been registered
         (non-manually). This is used for verbose output when printing citations
         such that it can be seen which citations were registered by PyBaMM classes.
@@ -232,7 +232,7 @@ def print_citations(filename=None, output_format="text", verbose=False):
             f"{citations._citation_err_msg}"
         )
     else:
-        if verbose:
+        if verbose:  # pragma: no cover
             warnings.warn(
                 "Verbose output is not available for printing to files, only to the terminal"  # noqa: E501
             )
