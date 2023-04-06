@@ -7,8 +7,6 @@ import pybamm
 import os
 import warnings
 import pybtex
-
-# from collections import OrderedDict
 from inspect import stack
 from pybtex.database import parse_file, parse_string, Entry
 from pybtex.scanner import PybtexError
@@ -211,7 +209,6 @@ class Citations:
                 f.write(citations)
 
 
-# todo: implement the verbose functionality
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
     if citations._citation_err_msg is not None:
