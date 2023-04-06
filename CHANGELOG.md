@@ -1,8 +1,16 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# Features
+
+- Updated to casadi 3.6, which required some changes to the casadi integrator. ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
+
+## Bug fixes
+
+- Fixed a bug in the discretisation of initial conditions of a scaled variable ([#2856](https://github.com/pybamm-team/PyBaMM/pull/2856))
+
 # Breaking changes
 
-- Made `Jupyter` a development only dependency. Now `Jupyter` would not be a required dependency for users while installing `PyBaMM`. ([#2457](https://github.com/pybamm-team/PyBaMM/pull/2846))
+- Made `Jupyter` a development only dependency. Now `Jupyter` would not be a required dependency for users while installing `PyBaMM`. ([#2846](https://github.com/pybamm-team/PyBaMM/pull/2846))
 
 # [v23.3](https://github.com/pybamm-team/PyBaMM/tree/v23.3) - 2023-03-31
 

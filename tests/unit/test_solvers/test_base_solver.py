@@ -228,7 +228,7 @@ class TestBaseSolver(unittest.TestCase):
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: .../casadi"
+            pybamm.SolverError, "Could not find acceptable solution: Error in Function"
         ):
             solver.calculate_consistent_state(Model())
 
