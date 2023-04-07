@@ -124,7 +124,7 @@ class TimeSolveLithiumPlating:
 
     def setup(self, model, params, solver_class):
         SolveModel.solve_setup(
-            self, "OKane2020", model, "lithium plating", params, solver_class
+            self, "OKane2022", model, "lithium plating", params, solver_class
         )
 
     def time_solve_model(self, model, params, solver_class):
