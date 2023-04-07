@@ -7,7 +7,7 @@
 Prerequisites
 =============
 
-To use and/or contribute to PyBaMM, you must have Python 3.8 or 3.9 installed.
+To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
 To install Python 3 on Debian-based distribution (Debian, Ubuntu, Linux
 mint), open a terminal and run
@@ -46,7 +46,7 @@ User install
 
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution Python files.
-First, make sure you are using Python 3.8 or 3.9.
+First, make sure you are using Python 3.8, 3.9, 3.10, or 3.11.
 To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash
