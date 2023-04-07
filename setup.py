@@ -209,7 +209,7 @@ setup(
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
-        "casadi>=3.5.0",
+        "casadi>=3.6.0",
         "imageio>=2.9.0",
         "importlib-metadata",
         "pybtex>=0.24.0",
