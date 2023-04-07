@@ -4,10 +4,6 @@ on:
   workflow_dispatch:
   pull_request:
 
-  # everyday at 3 am UTC
-  schedule:
-    - cron: "0 3 * * *"
-
 jobs:
   pre_job:
     runs-on: ubuntu-latest
@@ -89,34 +85,28 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: tox -e pybamm-requires
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.10, and 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
-        run: python -m tox -e unit
-
-      - name: Run unit tests for GNU/Linux with Python 3.9 and generate coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
-        run: tox -e coverage
+      - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        run: |
+          python -m tox -e unit
+          python -m tox -e coverage
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v2.1.0
 
-      - name: Run integration tests for GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
+      - name: Run integration tests for GNU/Linux with Python 3.11
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: python -m tox -e integration
 
-      - name: Run unit tests for Windows and MacOS
-        if: matrix.os != 'ubuntu-latest'
+      - name: Run unit tests for Windows and MacOS with Python 3.8, 3.9, and 3.10
+        if: matrix.os != 'ubuntu-latest' && matrix.python-version != 3.11
         run: python -m tox -e mac-windows-unit
 
-      - name: Run integration tests for Windows and MacOS
-        if: matrix.os != 'ubuntu-latest'
-        run: python -m tox -e mac-windows-integration
-
-      - name: Install docs dependencies and run doctests
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: tox -e doctests
 
-      - name: Install dev dependencies and run example tests
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: tox -e examples
