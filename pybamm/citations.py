@@ -155,8 +155,8 @@ class Citations:
         (non-manually). This is used for verbose output when printing citations
         such that it can be seen which citations were registered by PyBaMM classes.
 
-        To use, call :meth:`tag_citations` after calling :meth:`register` for
-        all citations and enable verbose output with :meth:`print_citations`
+        To use, either call :meth:`tag_citations` after calling :meth:`register`
+        for all citations, or enable verbose output with :meth:`print_citations`
         or :meth:`print`.
 
         .. note::
@@ -180,7 +180,7 @@ class Citations:
 
         """
         if self._citation_tags:
-            print("Citations registered:")
+            print("\n Citations registered: \n")
             for key, entry in self._citation_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
 
@@ -214,7 +214,7 @@ class Citations:
         if filename is None:
             print(citations)
             if verbose:
-                self.tag_citations()
+                self.tag_citations()  # pragma: no cover
         else:
             with open(filename, "w") as f:
                 f.write(citations)
