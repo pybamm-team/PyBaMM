@@ -102,8 +102,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: python -m tox -e integration
 
-      - name: Run unit tests for Windows and MacOS with Python 3.8, 3.9, and 3.10
-        if: matrix.os != 'ubuntu-latest' && matrix.python-version != 3.11
+      - name: Run unit tests for Windows and MacOS with Python 3.8, 3.9, 3.10, and 3.11
+        if: matrix.os != 'ubuntu-latest'
         run: python -m tox -e mac-windows-unit
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
