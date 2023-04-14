@@ -99,8 +99,7 @@ jobs:
 
       - name: Run unit tests for GNU/Linux with Python 3.9 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
-        run: | 
-          python -m tox -e coverage
+        run: python -m tox -e coverage
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
