@@ -263,10 +263,10 @@ class TimeSolveSurfaceForm:
     )
 
     def setup(self, model, params, solver_class):
-        if (
-            model == pybamm.lithium_ion.SPM
-            and params == "differential"
-            and solver_class == pybamm.IDAKLUSolver
+        if (model, params, solver_class) == (
+            pybamm.lithium_ion.SPM,
+            "differential",
+            pybamm.IDAKLUSolver,
         ):
             raise NotImplementedError
         SolveModel.solve_setup(
