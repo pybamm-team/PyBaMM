@@ -21,6 +21,13 @@ class TimeSimulation:
     }
 
     def setup(self, experiment, parameters, model_class, solver_class):
+        if (experiment, parameters, model_class, solver_class) == (
+            "GITT",
+            "Marquis2019",
+            pybamm.lithium_ion.DFN,
+            pybamm.CasadiSolver,
+        ):
+            raise NotImplementedError
         self.param = pybamm.ParameterValues(parameters)
         self.model = model_class()
         self.solver = solver_class()
