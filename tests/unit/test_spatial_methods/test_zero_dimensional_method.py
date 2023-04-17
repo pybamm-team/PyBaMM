@@ -1,13 +1,14 @@
 #
 # Test for the base Spatial Method class
 #
+from tests import TestCase
 import numpy as np
 import pybamm
 import unittest
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
-class TestZeroDimensionalSpatialMethod(unittest.TestCase):
+class TestZeroDimensionalSpatialMethod(TestCase):
     def test_identity_ops(self):
         test_mesh = np.array([1, 2, 3])
         spatial_method = pybamm.ZeroDimensionalSpatialMethod()

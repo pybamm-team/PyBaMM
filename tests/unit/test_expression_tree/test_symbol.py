@@ -1,6 +1,7 @@
 #
 # Test for the Symbol class
 #
+from tests import TestCase
 import os
 import unittest
 
@@ -12,7 +13,7 @@ import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 
 
-class TestSymbol(unittest.TestCase):
+class TestSymbol(TestCase):
     def test_symbol_init(self):
         sym = pybamm.Symbol("a symbol")
         self.assertEqual(sym.name, "a symbol")
@@ -482,7 +483,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
 
-class TestIsZero(unittest.TestCase):
+class TestIsZero(TestCase):
     def test_is_scalar_zero(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(2)

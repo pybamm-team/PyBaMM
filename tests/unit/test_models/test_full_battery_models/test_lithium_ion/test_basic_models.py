@@ -1,11 +1,12 @@
 #
 # Tests for the basic lithium-ion models
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestBasicModels(unittest.TestCase):
+class TestBasicModels(TestCase):
     def test_dfn_well_posed(self):
         model = pybamm.lithium_ion.BasicDFN()
         model.check_well_posedness()

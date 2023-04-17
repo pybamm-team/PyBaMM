@@ -1,6 +1,7 @@
 #
 # Tests the citations class.
 #
+from tests import TestCase
 import pybamm
 import os
 import io
@@ -23,7 +24,7 @@ def temporary_filename():
         os.remove(f.name)
 
 
-class TestCitations(unittest.TestCase):
+class TestCitations(TestCase):
     def test_citations(self):
         citations = pybamm.citations
         # Default papers should be in both _all_citations dict and in the papers to cite

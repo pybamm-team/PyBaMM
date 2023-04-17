@@ -1,13 +1,14 @@
 #
 # Tests for the ParameterSets class
 #
+from tests import TestCase
 
 import pybamm
 import pkg_resources
 import unittest
 
 
-class TestParameterSets(unittest.TestCase):
+class TestParameterSets(TestCase):
     def test_name_interface(self):
         """Test that pybamm.parameters_sets.<ParameterSetName> returns
         the name of the parameter set and a depreciation warning
