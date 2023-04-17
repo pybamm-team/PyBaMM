@@ -1,6 +1,7 @@
 #
 # Test setting up a simulation with an experiment
 #
+from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -8,7 +9,7 @@ import os
 import unittest
 
 
-class TestSimulationExperiment(unittest.TestCase):
+class TestSimulationExperiment(TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [

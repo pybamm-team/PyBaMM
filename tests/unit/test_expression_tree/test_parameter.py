@@ -1,6 +1,7 @@
 #
 # Tests for the Parameter class
 #
+from tests import TestCase
 import numbers
 import unittest
 
@@ -9,7 +10,7 @@ import sympy
 import pybamm
 
 
-class TestParameter(unittest.TestCase):
+class TestParameter(TestCase):
     def test_parameter_init(self):
         a = pybamm.Parameter("a")
         self.assertEqual(a.name, "a")
@@ -31,7 +32,7 @@ class TestParameter(unittest.TestCase):
         self.assertEqual(func1.to_equation(), sympy.Symbol("test_name"))
 
 
-class TestFunctionParameter(unittest.TestCase):
+class TestFunctionParameter(TestCase):
     def test_function_parameter_init(self):
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("func", {"var": var})

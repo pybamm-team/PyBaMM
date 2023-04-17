@@ -1,6 +1,7 @@
 #
 # Tests for the Parameter class
 #
+from tests import TestCase
 import unittest
 
 import sympy
@@ -8,7 +9,7 @@ import sympy
 import pybamm
 
 
-class TestIndependentVariable(unittest.TestCase):
+class TestIndependentVariable(TestCase):
     def test_variable_init(self):
         a = pybamm.IndependentVariable("a")
         self.assertEqual(a.name, "a")

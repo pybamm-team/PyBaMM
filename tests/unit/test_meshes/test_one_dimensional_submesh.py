@@ -1,9 +1,10 @@
 import pybamm
 import unittest
 import numpy as np
+from tests import TestCase
 
 
-class TestSubMesh1D(unittest.TestCase):
+class TestSubMesh1D(TestCase):
     def test_tabs(self):
         edges = np.linspace(0, 1, 10)
         tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
@@ -18,7 +19,7 @@ class TestSubMesh1D(unittest.TestCase):
             pybamm.SubMesh1D(edges, None, tabs=tabs)
 
 
-class TestUniform1DSubMesh(unittest.TestCase):
+class TestUniform1DSubMesh(TestCase):
     def test_exceptions(self):
         lims = {"a": 1, "b": 2}
         with self.assertRaises(pybamm.GeometryError):
@@ -51,7 +52,7 @@ class TestUniform1DSubMesh(unittest.TestCase):
         )
 
 
-class TestExponential1DSubMesh(unittest.TestCase):
+class TestExponential1DSubMesh(TestCase):
     def test_symmetric_mesh_creation_no_parameters_even(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
@@ -177,7 +178,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         )
 
 
-class TestChebyshev1DSubMesh(unittest.TestCase):
+class TestChebyshev1DSubMesh(TestCase):
     def test_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
@@ -205,7 +206,7 @@ class TestChebyshev1DSubMesh(unittest.TestCase):
         )
 
 
-class TestUser1DSubMesh(unittest.TestCase):
+class TestUser1DSubMesh(TestCase):
     def test_exceptions(self):
         edges = np.array([0, 0.3, 1])
         submesh_params = {"edges": edges}
@@ -267,7 +268,7 @@ class TestUser1DSubMesh(unittest.TestCase):
         )
 
 
-class TestSpectralVolume1DSubMesh(unittest.TestCase):
+class TestSpectralVolume1DSubMesh(TestCase):
     def test_exceptions(self):
         edges = np.array([0, 0.3, 1])
         submesh_params = {"edges": edges}

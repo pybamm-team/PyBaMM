@@ -26,7 +26,7 @@ copyright = "2018-2023, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "23.2"
+version = "23.3"
 # The full version, including alpha/beta/rc tags
 release = version
 

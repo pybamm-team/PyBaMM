@@ -1,6 +1,7 @@
 #
 # Tests for the Finite Volume Method
 #
+from tests import TestCase
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -12,7 +13,7 @@ from scipy.sparse import kron, eye
 import unittest
 
 
-class TestFiniteVolume(unittest.TestCase):
+class TestFiniteVolume(TestCase):
     def test_node_to_edge_to_node(self):
         # Create discretisation
         mesh = get_mesh_for_testing()
@@ -528,6 +529,27 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertEqual(disc.bcs[var]["left"][1], "Dirichlet")
         self.assertEqual(disc.bcs[var]["right"][0], pybamm.Scalar(0))
         self.assertEqual(disc.bcs[var]["right"][1], "Neumann")
+
+    def test_full_broadcast_domains(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator"], scale=100
+        )
+        model.rhs = {var: 0}
+        a = pybamm.InputParameter("a")
+        ic = pybamm.concatenation(
+            pybamm.FullBroadcast(a * 100, "negative electrode"),
+            pybamm.FullBroadcast(100, "separator"),
+        )
+        model.initial_conditions = {var: ic}
+
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume(),
+            "separator": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 #
 # Test for the Simplify class
 #
+from tests import TestCase
 import casadi
 import numpy as np
 import pybamm
@@ -9,7 +10,7 @@ from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 from scipy import special
 
 
-class TestCasadiConverter(unittest.TestCase):
+class TestCasadiConverter(TestCase):
     def assert_casadi_equal(self, a, b, evalf=False):
         if evalf is True:
             self.assertTrue((casadi.evalf(a) - casadi.evalf(b)).is_zero())

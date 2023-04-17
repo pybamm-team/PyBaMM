@@ -1,11 +1,12 @@
 #
 # Tests for the lead-acid Full model
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestLeadAcidFull(unittest.TestCase):
+class TestLeadAcidFull(TestCase):
     def test_well_posed(self):
         model = pybamm.lead_acid.Full()
         model.check_well_posedness()
@@ -20,7 +21,7 @@ class TestLeadAcidFull(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestLeadAcidFullSurfaceForm(unittest.TestCase):
+class TestLeadAcidFullSurfaceForm(TestCase):
     def test_well_posed_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
@@ -37,7 +38,7 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestLeadAcidFullSideReactions(unittest.TestCase):
+class TestLeadAcidFullSideReactions(TestCase):
     def test_well_posed(self):
         options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)
