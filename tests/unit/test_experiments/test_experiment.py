@@ -581,6 +581,10 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(experiment.search_tag("tag5"), [3])
         self.assertEqual(experiment.search_tag("no_tag"), [])
 
+    def test_no_initial_timestamp(self):
+        with self.assertRaisesRegex(ValueError, "first step must have a timestamp"):
+            pybamm.Experiment(["Rest for 1 hour", "[Day 1 08:01:05] Rest for 1 hour"])
+
     def test_process_timestamp(self):
         experiment = pybamm.Experiment(["Rest for 1 hour"])
 
