@@ -584,6 +584,11 @@ class TestExperiment(unittest.TestCase):
     def test_process_timestamp(self):
         experiment = pybamm.Experiment(["Rest for 1 hour"])
 
+        # No condition
+        timestamp, cond = experiment._process_timestamp(None)
+        self.assertIsNone(timestamp)
+        self.assertIsNone(cond)
+
         # No timestamp
         timestamp, cond = experiment._process_timestamp("No timestamp here")
         self.assertIsNone(timestamp)
@@ -606,16 +611,59 @@ class TestExperiment(unittest.TestCase):
             experiment._process_timestamp("[bad 2019-10-08 09:43:23] Timestamp")
 
     def test_set_next_timestamp(self):
-        experiment = pybamm.Experiment(
-            [
-                "[2023-01-01 08:00:00] Rest for 10 hours",
-                "[2023-01-01 12:00:00] Discharge at 0.5C for 1 hour",
-                "Discharge at 0.1C for 1 hour",
-                "[2023-01-01 15:00:00] Charge at 0.1C for 1 hour",
-            ]
-        )
+        # Defined dummy experiment to access _set_next_timestamp
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        raw_op = [
+            {
+                "current timestamp": datetime(2023, 1, 1, 8, 0),
+                "next timestamp": None,
+                "end timestamp": None,
+            },
+            {
+                "current timestamp": datetime(2023, 1, 1, 12, 0),
+                "next timestamp": None,
+                "end timestamp": None,
+            },
+            {
+                "current timestamp": None,
+                "next timestamp": None,
+                "end timestamp": None,
+            },
+            {
+                "current timestamp": datetime(2023, 1, 1, 15, 0),
+                "next timestamp": None,
+                "end timestamp": None,
+            },
+        ]
+        processed_op = experiment._set_next_timestamp(raw_op)
 
-        2 + 2
+        expected_result = [
+            {
+                "current timestamp": datetime(2023, 1, 1, 8, 0),
+                "next timestamp": datetime(2023, 1, 1, 12, 0),
+                "end timestamp": datetime(2023, 1, 1, 12, 0),
+            },
+            {
+                "current timestamp": datetime(2023, 1, 1, 12, 0),
+                "next timestamp": None,
+                "end timestamp": datetime(2023, 1, 1, 15, 0),
+            },
+            {
+                "current timestamp": None,
+                "next timestamp": datetime(2023, 1, 1, 15, 0),
+                "end timestamp": datetime(2023, 1, 1, 15, 0),
+            },
+            {
+                "current timestamp": datetime(2023, 1, 1, 15, 0),
+                "next timestamp": None,
+                "end timestamp": None,
+            },
+        ]
+
+        for expected, actual in zip(expected_result, processed_op):
+            for k in expected.keys():
+                # useful form for debugging
+                self.assertEqual([k, expected[k]], [k, actual[k]])
 
 
 if __name__ == "__main__":
