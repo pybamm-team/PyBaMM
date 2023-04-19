@@ -275,6 +275,25 @@ class Simulation:
                 )
                 self.op_string_to_model[op["string"]] = parameterised_model
 
+        # Set up rest model if experiment has timestamps
+        if self.experiment.initial_timestamp:
+            # Create a new model for this operating condition, since we will update
+            # the events differently (based on parameter values and inputs) for
+            # different models of the same type (current/voltage/power)
+            new_model = self.model.new_copy()
+            self.update_new_model_events(new_model, op)
+            # Update parameter values
+            new_parameter_values = self.parameter_values.copy()
+            self._original_temperature = new_parameter_values["Ambient temperature [K]"]
+            new_parameter_values.update(
+                {"Current function [A]": 0, "Ambient temperature [K]": "[input]"},
+                check_already_exists=False,
+            )
+            parameterised_model = new_parameter_values.process_model(
+                new_model, inplace=False
+            )
+            self.op_string_to_model["Rest for padding"] = parameterised_model
+
     def update_new_model_events(self, new_model, op):
         if "Current cut-off [A]" in op:
             if op["type"] == "CCCV":
@@ -778,7 +797,73 @@ class Simulation:
                             # Otherwise, just stop this cycle
                             break
 
-                    # TODO: add rest step if needed!
+                    step_termination = step_solution.termination
+
+                    # Add a padding rest step if necessary
+                    if op_conds["next timestamp"] is not None:
+                        rest_time = (
+                            op_conds["next timestamp"]
+                            - (
+                                self.experiment.initial_timestamp
+                                + timedelta(seconds=float(step_solution.t[-1]))
+                            )
+                        ).total_seconds()
+                        if rest_time > 0:
+                            start_time = step_solution.t[-1]
+                            # Let me know if you have a better name
+                            op_conds_str = "Rest for padding"
+                            model = self.op_conds_to_built_models[op_conds_str]
+                            solver = self.op_conds_to_built_solvers[op_conds_str]
+
+                            logs["step number"] = (step_num, cycle_length)
+                            logs["step operating conditions"] = op_conds_str
+                            callbacks.on_step_start(logs)
+
+                            ambient_temp = (
+                                op_conds["temperature"] or self._original_temperature
+                            )
+                            kwargs["inputs"] = {
+                                **user_inputs,
+                                **op_conds,
+                                "Ambient temperature [K]": ambient_temp,
+                                "start time": start_time,
+                            }
+                            # Make sure we take at least 2 timesteps
+                            # The period is hardcoded to 10 minutes, the user can
+                            # always override it by adding a rest step
+                            npts = max(int(round(rest_time / 600)) + 1, 2)
+
+                            try:
+                                step_solution_with_rest = solver.step(
+                                    step_solution,
+                                    model,
+                                    rest_time,
+                                    npts=npts,
+                                    save=False,
+                                    **kwargs,
+                                )
+                                step_solution += step_solution_with_rest
+                            # Keeping the exceptions for consistency but might not
+                            # be applicable here
+                            except pybamm.SolverError as error:
+                                if (
+                                    "non-positive at initial conditions"
+                                    in error.message
+                                    and "[experiment]" in error.message
+                                ):
+                                    step_solution = pybamm.EmptySolution(
+                                        "Event exceeded in initial conditions",
+                                        t=start_time,
+                                    )
+                                else:
+                                    logs["error"] = error
+                                    callbacks.on_experiment_error(logs)
+                                    feasible = False
+                                    # If none of the cycles worked, raise an error
+                                    if cycle_num == 1 and step_num == 1:
+                                        raise error
+                                    # Otherwise, just stop this cycle
+                                    break
 
                     steps.append(step_solution)
 
@@ -791,8 +876,8 @@ class Simulation:
                     # Only allow events specified by experiment
                     if not (
                         isinstance(step_solution, pybamm.EmptySolution)
-                        or step_solution.termination == "final time"
-                        or "[experiment]" in step_solution.termination
+                        or step_termination == "final time"
+                        or "[experiment]" in step_termination
                     ):
                         callbacks.on_experiment_infeasible(logs)
                         feasible = False
