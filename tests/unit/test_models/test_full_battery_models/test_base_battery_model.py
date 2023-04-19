@@ -1,6 +1,7 @@
 #
 # Tests for the base battery model class
 #
+from tests import TestCase
 from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
 import pybamm
 import unittest
@@ -48,7 +49,7 @@ PRINT_OPTIONS_OUTPUT = """\
 """  # noqa: E501
 
 
-class TestBaseBatteryModel(unittest.TestCase):
+class TestBaseBatteryModel(TestCase):
     def test_process_parameters_and_discretise(self):
         model = pybamm.lithium_ion.SPM()
         # Set up geometry and parameters
@@ -408,7 +409,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(model.options, options)
 
 
-class TestOptions(unittest.TestCase):
+class TestOptions(TestCase):
     def test_print_options(self):
         with io.StringIO() as buffer, redirect_stdout(buffer):
             BatteryModelOptions(OPTIONS_DICT).print_options()

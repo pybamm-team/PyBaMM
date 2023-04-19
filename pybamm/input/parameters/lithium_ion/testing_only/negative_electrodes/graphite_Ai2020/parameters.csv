@@ -15,8 +15,6 @@ Negative electrode Bruggeman coefficient (electrolyte),2.914,Ai 2020,theoretical
 Negative electrode Bruggeman coefficient (electrode),0,default,
 ,,,
 # Interfacial reactions,,,
-Negative electrode cation signed stoichiometry,-1,,
-Negative electrode electrons in reaction,1,,
 Negative electrode charge transfer coefficient,0.5,Ai 2020,
 Negative electrode double-layer capacity [F.m-2],0.2,,guess
 Negative electrode exchange-current density [A.m-2],[function]graphite_electrolyte_exchange_current_density_Dualfoil1998,,

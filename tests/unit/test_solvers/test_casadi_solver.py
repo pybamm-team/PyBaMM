@@ -1,6 +1,7 @@
 #
 # Tests for the Casadi Solver class
 #
+from tests import TestCase
 import pybamm
 import unittest
 import numpy as np
@@ -8,7 +9,7 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
 
 
-class TestCasadiSolver(unittest.TestCase):
+class TestCasadiSolver(TestCase):
     def test_bad_mode(self):
         with self.assertRaisesRegex(ValueError, "invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
@@ -292,7 +293,7 @@ class TestCasadiSolver(unittest.TestCase):
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
-            step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
+            step_sol_2.t, np.array([0, 1, 1 + 1e-9, 1.25, 1.5, 1.75, 2])
         )
         np.testing.assert_array_almost_equal(
             step_sol_2.y.full()[0], np.exp(0.1 * step_sol_2.t)
@@ -322,16 +323,21 @@ class TestCasadiSolver(unittest.TestCase):
 
         # Step again with different inputs
         step_sol_2 = solver.step(step_sol, model, dt, npts=5, inputs={"a": -1})
-        np.testing.assert_array_equal(step_sol_2.t, np.linspace(0, 2 * dt, 9))
+        np.testing.assert_array_almost_equal(
+            step_sol_2.t,
+            np.array([0, 0.025, 0.05, 0.075, 0.1, 0.1 + 1e-9, 0.125, 0.15, 0.175, 0.2]),
+        )
         np.testing.assert_array_equal(
-            step_sol_2["a"].entries, np.array([0.1, 0.1, 0.1, 0.1, 0.1, -1, -1, -1, -1])
+            step_sol_2["a"].entries,
+            np.array([0.1, 0.1, 0.1, 0.1, 0.1, -1, -1, -1, -1, -1]),
         )
         np.testing.assert_allclose(
             step_sol_2.y.full()[0],
             np.concatenate(
                 [
                     np.exp(0.1 * step_sol_2.t[:5]),
-                    np.exp(0.1 * step_sol_2.t[4]) * np.exp(-(step_sol_2.t[5:] - dt)),
+                    np.exp(0.1 * step_sol_2.t[4])
+                    * np.exp(-(step_sol_2.t[5:] - step_sol_2.t[5])),
                 ]
             ),
         )
@@ -486,27 +492,27 @@ class TestCasadiSolver(unittest.TestCase):
             solver.solve(model, t_eval)
 
     def test_interpolant_extrapolate(self):
-        model = pybamm.lithium_ion.DFN()
-        param = pybamm.ParameterValues("NCA_Kim2011")
-        experiment = pybamm.Experiment(
-            ["Charge at 1C until 4.2 V"], period="10 seconds"
-        )
+        x = np.linspace(0, 2)
+        var = pybamm.Variable("var")
+        rhs = pybamm.FunctionParameter("func", {"var": var})
 
-        param["Upper voltage cut-off [V]"] = 4.8
+        model = pybamm.BaseModel()
+        model.rhs[var] = rhs
+        model.initial_conditions[var] = pybamm.Scalar(1)
 
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=param,
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(
-                mode="safe",
-                dt_max=0.001,
-                extrap_tol=1e-3,
-                extra_options_setup={"max_num_steps": 500},
-            ),
-        )
+        # Bug: we need to set the interpolant via parameter values for the extrapolation
+        # to be detected
+        def func(var):
+            return pybamm.Interpolant(x, x, var, interpolator="linear")
+
+        parameter_values = pybamm.ParameterValues({"func": func})
+        parameter_values.process_model(model)
+
+        solver = pybamm.CasadiSolver()
+        t_eval = [0, 5]
+
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
-            sim.solve()
+            solver.solve(model, t_eval)
 
     def test_casadi_safe_no_termination(self):
         model = pybamm.BaseModel()
@@ -534,7 +540,7 @@ class TestCasadiSolver(unittest.TestCase):
             solver.solve(model, t_eval=[0, 1])
 
 
-class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
+class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -915,7 +921,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         )
 
 
-class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
+class TestCasadiSolverDAEsWithForwardSensitivityEquations(TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()

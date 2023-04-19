@@ -1,6 +1,7 @@
 #
 # Tests for the Solution class
 #
+from tests import TestCase
 import json
 import pybamm
 import unittest
@@ -10,7 +11,7 @@ from scipy.io import loadmat
 from tests import get_discretisation_for_testing
 
 
-class TestSolution(unittest.TestCase):
+class TestSolution(TestCase):
     def test_init(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
@@ -188,8 +189,8 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol.cycles[0].y, sol.y[:, :len_cycle_1])
 
         self.assertIsInstance(sol.cycles[1], pybamm.Solution)
-        np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1 - 1 :])
-        np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1 - 1 :])
+        np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
+        np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})

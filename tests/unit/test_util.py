@@ -1,6 +1,7 @@
 #
 # Tests the utility functions.
 #
+from tests import TestCase
 import numpy as np
 import os
 import sys
@@ -11,7 +12,7 @@ from unittest.mock import patch
 from io import StringIO
 
 
-class TestUtil(unittest.TestCase):
+class TestUtil(TestCase):
     """
     Test the functionality in util.py
     """
@@ -103,12 +104,12 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
 
-class TestSearch(unittest.TestCase):
+class TestSearch(TestCase):
     def test_url_gets_to_stdout(self):
         model = pybamm.BaseModel()
         model.variables = {"Electrolyte concentration": 1, "Electrode potential": 0}
 
-        param = pybamm.ParameterValues({"a": 10, "b": 2})
+        param = pybamm.ParameterValues({"test": 10, "b": 2})
 
         # Test variables search (default returns key)
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -127,8 +128,8 @@ class TestSearch(unittest.TestCase):
 
         # Test param search (default returns key, value)
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            param.search("a")
-            self.assertEqual(fake_out.getvalue(), "a\t10\n")
+            param.search("test")
+            self.assertEqual(fake_out.getvalue(), "test\t10\n")
 
 
 if __name__ == "__main__":

@@ -877,7 +877,6 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
                 "`sim.solve(calc_esoh=False)` to skip this step"
             )
 
-        for var in esoh_sol.all_models[0].variables:
-            cycle_summary_variables[var] = esoh_sol[var].data[0]
+        cycle_summary_variables.update(esoh_sol)
 
     return cycle_summary_variables

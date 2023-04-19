@@ -1,12 +1,13 @@
 #
 # Tests for inputting a temperature profile
 #
+from tests import TestCase
 import pybamm
 import unittest
 import numpy as np
 
 
-class TestInputLumpedTemperature(unittest.TestCase):
+class TestInputLumpedTemperature(TestCase):
     def test_input_lumped_temperature(self):
         model = pybamm.lithium_ion.SPMe()
         parameter_values = model.default_parameter_values

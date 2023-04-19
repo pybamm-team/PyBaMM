@@ -71,6 +71,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_whole_cell_concentration_variables(self, c_e):
+        c_e.print_name = "c_e"
         variables = {
             "Electrolyte concentration [mol.m-3]": c_e,
             "X-averaged electrolyte concentration [mol.m-3]": pybamm.x_average(c_e),

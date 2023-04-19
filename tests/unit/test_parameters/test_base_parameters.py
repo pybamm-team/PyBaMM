@@ -1,11 +1,12 @@
 """
 Tests for the base_parameters.py
 """
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestBaseParameters(unittest.TestCase):
+class TestBaseParameters(TestCase):
     def test_getattr__(self):
         param = pybamm.LithiumIonParameters()
         # ending in _n / _s / _p
@@ -34,7 +35,7 @@ class TestBaseParameters(unittest.TestCase):
     def test__setattr__(self):
         # domain gets added as a subscript
         param = pybamm.GeometricParameters()
-        self.assertEqual(param.n.L.print_name, r"L_n")
+        self.assertEqual(param.n.L.print_name, r"L_{\mathrm{n}}")
 
 
 if __name__ == "__main__":

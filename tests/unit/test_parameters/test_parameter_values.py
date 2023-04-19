@@ -1,6 +1,7 @@
 #
 # Tests for the Base Parameter Values class
 #
+from tests import TestCase
 
 import os
 import tempfile
@@ -21,7 +22,7 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
 import casadi
 
 
-class TestParameterValues(unittest.TestCase):
+class TestParameterValues(TestCase):
     def test_find_parameter(self):
         f = tempfile.NamedTemporaryFile()
         pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
@@ -52,9 +53,8 @@ class TestParameterValues(unittest.TestCase):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
-        self.assertEqual(list(param.keys())[0], "a")
-        self.assertEqual(list(param.values())[0], 1)
-        self.assertEqual(list(param.items())[0], ("a", 1))
+        self.assertIn("a", param.keys())
+        self.assertIn(1, param.values())
 
         # from file
         param = pybamm.ParameterValues(
@@ -78,30 +78,37 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertEqual(param["Positive electrode porosity"], 0.32)
 
-        # values vs chemistry
+        # chemistry kwarg removed
         with self.assertRaisesRegex(
-            ValueError, "values and chemistry cannot both be None"
+            ValueError, "'chemistry' keyword argument has been deprecated"
         ):
-            pybamm.ParameterValues()
-        with self.assertRaisesRegex(
-            ValueError, "Only one of values and chemistry can be provided."
-        ):
-            pybamm.ParameterValues(values=1, chemistry={})
+            pybamm.ParameterValues(None, chemistry="lithium-ion")
 
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
-        self.assertEqual(repr(param), "{'a': 1}")
-        self.assertEqual(param._ipython_key_completions_(), ["a"])
+        self.assertEqual(
+            repr(param),
+            "{'Boltzmann constant [J.K-1]': 1.380649e-23,\n"
+            " 'Electron charge [C]': 1.602176634e-19,\n"
+            " 'Faraday constant [C.mol-1]': 96485.33212,\n"
+            " 'Ideal gas constant [J.K-1.mol-1]': 8.314462618,\n"
+            " 'a': 1}",
+        )
+        self.assertEqual(
+            param._ipython_key_completions_(),
+            [
+                "Ideal gas constant [J.K-1.mol-1]",
+                "Faraday constant [C.mol-1]",
+                "Boltzmann constant [J.K-1]",
+                "Electron charge [C]",
+                "a",
+            ],
+        )
 
     def test_eq(self):
         self.assertEqual(
             pybamm.ParameterValues({"a": 1}), pybamm.ParameterValues({"a": 1})
         )
-
-    def test_update_from_chemistry(self):
-        # incomplete chemistry
-        with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
         # converts to dict if not

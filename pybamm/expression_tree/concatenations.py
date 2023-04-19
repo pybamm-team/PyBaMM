@@ -380,16 +380,12 @@ class ConcatenationVariable(Concatenation):
                 raise ValueError("Cannot concatenate symbols with different bounds")
         super().__init__(*children, name=name)
 
-        if not any(c._raw_print_name is None for c in children):
-            print_name = intersect(
-                children[0]._raw_print_name, children[1]._raw_print_name
-            )
-            for child in children[2:]:
-                print_name = intersect(print_name, child._raw_print_name)
-            if print_name.endswith("_"):
-                print_name = print_name[:-1]
-        else:
-            print_name = None
+        print_name = intersect(children[0]._raw_print_name, children[1]._raw_print_name)
+        for child in children[2:]:
+            print_name = intersect(print_name, child._raw_print_name)
+        if print_name.endswith("_"):
+            print_name = print_name[:-1]
+
         self.print_name = print_name
 
 

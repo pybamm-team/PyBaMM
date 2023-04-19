@@ -1,11 +1,12 @@
 #
 # Tests for the polynomial profile submodel
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestParticlePolynomialProfile(unittest.TestCase):
+class TestParticlePolynomialProfile(TestCase):
     def test_errors(self):
         with self.assertRaisesRegex(ValueError, "Particle type must be"):
             pybamm.particle.PolynomialProfile(None, "negative", {})

@@ -526,6 +526,13 @@
   doi = {10.1006/jcph.2002.7041},
 }
 
+@article{Weng2023,
+  title={Differential voltage analysis for battery manufacturing process control},
+  author={Weng, Andrew and Siegel, Jason B and Stefanopoulou, Anna},
+  journal={arXiv preprint arXiv:2303.07088},
+  year={2023}
+}
+
 @article{Xu2019,
   title={Evolution of Dead Lithium Growth in Lithium Metal Batteries: Experimentally Validated Model of the Apparent Capacity Loss},
   author={Xu, Shanshan and Chen, Kuan-Hung and Dasgupta, Neil P and Siegel, Jason B and Stefanopoulou, Anna G},

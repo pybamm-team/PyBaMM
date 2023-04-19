@@ -188,7 +188,8 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_interfacial_current_variables(self, j):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
-        reaction_name = self.reaction_name
+
+        j.print_name = f"j_{domain[0]}"
 
         if self.reaction == "lithium metal plating":
             # Half-cell domain, j should not be broadcast
@@ -385,7 +386,6 @@ class BaseInterface(pybamm.BaseSubModel):
         relevant if "particle size" option is "distribution".
         """
         domain, Domain = self.domain_Domain
-        reaction_name = self.reaction_name
         reaction_name = self.reaction_name
 
         # X-average and broadcast if necessary

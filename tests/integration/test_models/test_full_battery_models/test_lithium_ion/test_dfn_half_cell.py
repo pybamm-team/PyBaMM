@@ -1,12 +1,13 @@
 #
 # Tests for the lithium-ion DFN half-cell model
 #
+from tests import TestCase
 import pybamm
 import unittest
 from tests import BaseIntegrationTestLithiumIonHalfCell
 
 
-class TestDFNHalfCell(BaseIntegrationTestLithiumIonHalfCell, unittest.TestCase):
+class TestDFNHalfCell(BaseIntegrationTestLithiumIonHalfCell, TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN
 

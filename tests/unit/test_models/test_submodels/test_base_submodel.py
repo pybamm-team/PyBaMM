@@ -1,12 +1,13 @@
 #
 # Test base submodel
 #
+from tests import TestCase
 
 import pybamm
 import unittest
 
 
-class TestBaseSubModel(unittest.TestCase):
+class TestBaseSubModel(TestCase):
     def test_domain(self):
         # Accepted string
         submodel = pybamm.BaseSubModel(None, "negative", phase="primary")

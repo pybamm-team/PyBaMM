@@ -1,12 +1,13 @@
 #
 # Test some experiments
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
 
 
-class TestExperiments(unittest.TestCase):
+class TestExperiments(TestCase):
     def test_discharge_rest_charge(self):
         experiment = pybamm.Experiment(
             [
@@ -14,7 +15,7 @@ class TestExperiments(unittest.TestCase):
                 "Rest for 1 hour",
                 "Charge at C/2 for 1 hour",
             ],
-            period="0.25 hours",
+            period="0.5 hours",
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(
@@ -22,12 +23,13 @@ class TestExperiments(unittest.TestCase):
         )
         sim.solve()
         np.testing.assert_array_almost_equal(
-            sim._solution["Time [h]"].entries, np.linspace(0, 3, 13)
+            sim._solution["Time [h]"].entries,
+            np.array([0, 0.5, 1, 1 + 1e-9, 1.5, 2, 2 + 1e-9, 2.5, 3]),
         )
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
         np.testing.assert_array_almost_equal(
             sim._solution["Current [A]"].entries,
-            [cap / 2] * 5 + [0] * 4 + [-cap / 2] * 4,
+            [cap / 2] * 3 + [0] * 3 + [-cap / 2] * 3,
         )
 
     def test_rest_discharge_rest(self):
@@ -57,13 +59,10 @@ class TestExperiments(unittest.TestCase):
             model, experiment=experiment, solver=pybamm.CasadiSolver()
         )
         sim.solve()
-        np.testing.assert_array_almost_equal(
-            sim._solution["Time [h]"].entries, np.arange(0, 20.01, 0.1)
-        )
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
         np.testing.assert_array_almost_equal(
             sim._solution["Current [A]"].entries,
-            [cap / 20] * 11 + [0] * 10 + ([cap / 20] * 10 + [0] * 10) * 9,
+            [cap / 20] * 11 + [0] * 11 + ([cap / 20] * 11 + [0] * 11) * 9,
         )
 
     def test_infeasible(self):

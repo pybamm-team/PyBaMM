@@ -1,6 +1,7 @@
 #
 # Tests for the base model class
 #
+from tests import TestCase
 import pybamm
 
 import numpy as np
@@ -17,7 +18,7 @@ from scipy.sparse import block_diag, csc_matrix
 from scipy.sparse.linalg import inv
 
 
-class TestDiscretise(unittest.TestCase):
+class TestDiscretise(TestCase):
     def test_concatenate_in_order(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
@@ -141,6 +142,14 @@ class TestDiscretise(unittest.TestCase):
 
         with self.assertRaisesRegex(TypeError, "y_slices should be"):
             disc.y_slices = 1
+
+        # bounds with an InputParameter
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        v = pybamm.Variable("v", domain=whole_cell, bounds=(a, b))
+        disc.set_variable_slices([v])
+        np.testing.assert_array_equal(disc.bounds[0], [-np.inf] * 100)
+        np.testing.assert_array_equal(disc.bounds[1], [np.inf] * 100)
 
     def test_process_symbol_base(self):
         # create discretisation
