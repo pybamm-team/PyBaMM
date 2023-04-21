@@ -584,36 +584,53 @@ class TestSimulationExperiment(TestCase):
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
 
-    # def test_run_time_stamped_experiment(self):
-    #     # experiment = pybamm.Experiment(
-    #     #     [
-    #     #         (
-    #     #             "[2023-01-01 08:00:00] Rest for 1 minute",
-    #     #             "Rest for 1 minute",
-    #     #         ),
-    #     #         "[2023-01-01 12:00:00] Discharge at 0.5C for 1 hour",
-    #     #         "[2023-01-01 12:30:00] Charge at 0.1C for 1 hour",
-    #     #     ]
-    #     # )
-    #     experiment = pybamm.Experiment(
-    #         [
-    #             "[2023-01-01 08:00:00] Discharge at 0.5C for 1 hour",
-    #             "[2023-01-01 09:00:00] Rest for 1 hour",
-    #             "[2023-01-01 12:00:00] Discharge at 0.5C for 1 hour",
-    #             "[2023-01-01 12:30:00] Charge at 0.1C for 1 hour",
-    #         ]
-    #     )
-    #     # experiment = pybamm.Experiment(
-    #     #     [
-    #     #         "[2023-01-01 08:00:00] Rest for 10 hours",
-    #     #         "[2023-01-01 12:00:00] Discharge at 0.5C for 1 hour",
-    #     #         "[2023-01-01 12:30:00] Charge at 0.1C for 1 hour",
-    #     #     ]
-    #     # )
-    #     model = pybamm.lithium_ion.SPM()
-    #     sim = pybamm.Simulation(model, experiment=experiment)
-    #     # sol = sim.solve()
-    #     # sol.plot()
+    def test_padding_rest_model(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # Test no padding rest model if there are no timestamps
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.build_for_experiment()
+        self.assertNotIn("Rest for padding", sim.op_string_to_model.keys())
+
+        # Test padding rest model exists if there are timestamps
+        experiment = pybamm.Experiment(["[Day 1 08:00:00] Rest for 1 hour"])
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.build_for_experiment()
+        self.assertIn("Rest for padding", sim.op_string_to_model.keys())
+        # Check at least there is an input parameter (temperature)
+        self.assertGreater(
+            len(sim.op_string_to_model["Rest for padding"].parameters), 0
+        )
+        # Check the model is the same
+        self.assertIsInstance(
+            sim.op_string_to_model["Rest for padding"], pybamm.lithium_ion.SPM
+        )
+
+    def test_run_time_stamped_experiment(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # Test experiment is cut short if time stamp is early
+        experiment = pybamm.Experiment(
+            [
+                "[2023-01-01 08:00:00] Discharge at 0.5C for 1 hour",
+                "[2023-01-01 08:30:00] Rest for 1 hour",
+            ]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve(calc_esoh=False)
+        self.assertEqual(sol["Time [s]"].entries[-1], 5400)
+
+        # Test padding rest is added if time stamp is late
+        experiment = pybamm.Experiment(
+            [
+                "[2023-01-01 08:00:00] Discharge at 0.5C for 1 hour",
+                "[2023-01-01 10:00:00] Rest for 1 hour",
+            ]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve(calc_esoh=False)
+        self.assertEqual(sol["Time [s]"].entries[-1], 10800)
 
 
 if __name__ == "__main__":

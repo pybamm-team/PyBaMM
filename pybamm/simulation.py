@@ -846,37 +846,15 @@ class Simulation:
                             # always override it by adding a rest step
                             npts = max(int(round(rest_time / 600)) + 1, 2)
 
-                            try:
-                                step_solution_with_rest = solver.step(
-                                    step_solution,
-                                    model,
-                                    rest_time,
-                                    npts=npts,
-                                    save=False,
-                                    **kwargs,
-                                )
-                                step_solution += step_solution_with_rest
-                            # Keeping the exceptions for consistency but might not
-                            # be applicable here
-                            except pybamm.SolverError as error:
-                                if (
-                                    "non-positive at initial conditions"
-                                    in error.message
-                                    and "[experiment]" in error.message
-                                ):
-                                    step_solution = pybamm.EmptySolution(
-                                        "Event exceeded in initial conditions",
-                                        t=start_time,
-                                    )
-                                else:
-                                    logs["error"] = error
-                                    callbacks.on_experiment_error(logs)
-                                    feasible = False
-                                    # If none of the cycles worked, raise an error
-                                    if cycle_num == 1 and step_num == 1:
-                                        raise error
-                                    # Otherwise, just stop this cycle
-                                    break
+                            step_solution_with_rest = solver.step(
+                                step_solution,
+                                model,
+                                rest_time,
+                                npts=npts,
+                                save=False,
+                                **kwargs,
+                            )
+                            step_solution += step_solution_with_rest
 
                     steps.append(step_solution)
 
