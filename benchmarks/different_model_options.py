@@ -124,7 +124,7 @@ class TimeSolveLithiumPlating:
 
     def setup(self, model, params, solver_class):
         SolveModel.solve_setup(
-            self, "OKane2020", model, "lithium plating", params, solver_class
+            self, "OKane2022", model, "lithium plating", params, solver_class
         )
 
     def time_solve_model(self, model, params, solver_class):
@@ -139,12 +139,10 @@ class TimeBuildModelSEI:
             "none",
             "constant",
             "reaction limited",
-            "reaction limited (asymmetric)",
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
-            "ec reaction limited (asymmetric)",
         ],
     )
 
@@ -160,12 +158,10 @@ class TimeSolveSEI:
             "none",
             "constant",
             "reaction limited",
-            "reaction limited (asymmetric)",
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
-            "ec reaction limited (asymmetric)",
         ],
         [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
@@ -263,6 +259,12 @@ class TimeSolveSurfaceForm:
     )
 
     def setup(self, model, params, solver_class):
+        if (model, params, solver_class) == (
+            pybamm.lithium_ion.SPM,
+            "differential",
+            pybamm.IDAKLUSolver,
+        ):
+            raise NotImplementedError
         SolveModel.solve_setup(
             self, "Marquis2019", model, "surface form", params, solver_class
         )
