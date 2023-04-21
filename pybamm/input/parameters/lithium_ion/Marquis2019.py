@@ -380,6 +380,7 @@ def get_parameter_values():
         "Inner SEI reaction proportion": 0.5,
         "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI growth transfer coefficient": 0.5,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
         "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
