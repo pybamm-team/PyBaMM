@@ -145,6 +145,12 @@ class TimeSolveDFN:
     )
 
     def setup(self, solve_first, parameters, solver_class):
+        if (solve_first, parameters, solver_class) == (
+            True,
+            "ORegan2022",
+            pybamm.CasadiSolver,
+        ):
+            raise NotImplementedError
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.DFN()
         c_rate = 1

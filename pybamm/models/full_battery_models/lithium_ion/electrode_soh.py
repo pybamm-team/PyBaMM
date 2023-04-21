@@ -205,14 +205,18 @@ class ElectrodeSOHSolver:
 
         self.lims_ocp = (x0_min, x100_max, y100_min, y0_max)
         self.OCV_function = None
+        self._get_electrode_soh_sims_full = lru_cache()(
+            self.__get_electrode_soh_sims_full
+        )
+        self._get_electrode_soh_sims_split = lru_cache()(
+            self.__get_electrode_soh_sims_split
+        )
 
-    @lru_cache
-    def _get_electrode_soh_sims_full(self):
+    def __get_electrode_soh_sims_full(self):
         full_model = _ElectrodeSOH(param=self.param, known_value=self.known_value)
         return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
-    @lru_cache
-    def _get_electrode_soh_sims_split(self):
+    def __get_electrode_soh_sims_split(self):
         x100_model = _ElectrodeSOH(
             param=self.param, solve_for=["x_100"], known_value=self.known_value
         )

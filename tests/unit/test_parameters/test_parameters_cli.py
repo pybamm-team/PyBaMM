@@ -5,9 +5,10 @@
 
 import pybamm
 import unittest
+from tests import TestCase
 
 
-class TestParametersCLI(unittest.TestCase):
+class TestParametersCLI(TestCase):
     def test_error(self):
         with self.assertRaisesRegex(NotImplementedError, "deprecated"):
             pybamm.add_parameter()

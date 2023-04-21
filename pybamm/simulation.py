@@ -128,6 +128,23 @@ class Simulation:
 
             warnings.filterwarnings("ignore")
 
+        self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    def __getstate__(self):
+        """
+        Return dictionary of picklable items
+        """
+        result = self.__dict__.copy()
+        result["get_esoh_solver"] = None  # Exclude LRU cache
+        return result
+
+    def __setstate__(self, state):
+        """
+        Unpickle, restoring unpicklable relationships
+        """
+        self.__dict__ = state
+        self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
     def set_up_and_parameterise_experiment(self):
         """
         Set up a simulation to run with an experiment. This creates a dictionary of
@@ -900,8 +917,7 @@ class Simulation:
 
         return self.solution
 
-    @lru_cache
-    def get_esoh_solver(self, calc_esoh):
+    def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
             or isinstance(self.model, pybamm.lead_acid.BaseModel)

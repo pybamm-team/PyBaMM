@@ -1,6 +1,7 @@
 #
 # Tests the citations class.
 #
+from tests import TestCase
 import pybamm
 import unittest
 import os
@@ -17,7 +18,7 @@ class DummyCallback(callbacks.Callback):
             print(self.name, file=f)
 
 
-class TestCallbacks(unittest.TestCase):
+class TestCallbacks(TestCase):
     def tearDown(self):
         # Remove any test log files that were created, even if the test fails
         for logfile in ["test_callback.log", "test_callback_2.log"]:

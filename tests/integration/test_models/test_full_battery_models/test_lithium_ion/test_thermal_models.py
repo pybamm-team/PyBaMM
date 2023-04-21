@@ -5,9 +5,10 @@
 import pybamm
 import numpy as np
 import unittest
+from tests import TestCase
 
 
-class TestThermal(unittest.TestCase):
+class TestThermal(TestCase):
     def test_consistent_cooling(self):
         # use spme for comparison instead of spm as
         # much larger realistic temperature rises

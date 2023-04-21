@@ -38,7 +38,7 @@ jobs:
           HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
-          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr -v
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr --strict -v
       - name: Compare commits' benchmark results
         run: |
           BASE_COMMIT=$(head -1 commits_to_compare.txt)

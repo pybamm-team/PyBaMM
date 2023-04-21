@@ -1,12 +1,13 @@
 #
 # Tests for the half-cell lithium-ion SPMe model
 #
+from tests import TestCase
 import pybamm
 import unittest
 from tests import BaseIntegrationTestLithiumIonHalfCell
 
 
-class TestSPMeHalfCell(BaseIntegrationTestLithiumIonHalfCell, unittest.TestCase):
+class TestSPMeHalfCell(BaseIntegrationTestLithiumIonHalfCell, TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPMe
 

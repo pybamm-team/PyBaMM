@@ -21,10 +21,7 @@ class BaseIntegrationTestLithiumIon:
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
         modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_sensitivities(
-            "Current function [A]",
-            0.15652,
-        )
+        modeltest.test_sensitivities("Current function [A]", 0.15652)
 
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}

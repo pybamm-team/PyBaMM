@@ -1,12 +1,13 @@
 #
 # Test function control submodel
 #
+from tests import TestCase
 import numpy as np
 import pybamm
 import unittest
 
 
-class TestFunctionControl(unittest.TestCase):
+class TestFunctionControl(TestCase):
     def test_constant_current(self):
         def constant_current(variables):
             I = variables["Current [A]"]
