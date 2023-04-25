@@ -1,12 +1,13 @@
 #
 # Tests for Landesfeind (2019) electrolytes parameter set loads
 #
+from tests import TestCase
 import pybamm
 import unittest
 import os
 
 
-class TestLandesfeind(unittest.TestCase):
+class TestLandesfeind(TestCase):
     def test_load_params(self):
         data_D_e = {
             "EC_DMC_1_1": [1.94664e-10, 1.94233e-10],

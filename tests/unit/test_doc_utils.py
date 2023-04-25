@@ -5,11 +5,12 @@
 
 import pybamm
 import unittest
+from tests import TestCase
 from inspect import getmro
 from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
 
 
-class TestDocUtils(unittest.TestCase):
+class TestDocUtils(TestCase):
     def test_copy_parameter_doc_from_parent(self):
         """Test if parameters from the parent class are copied to
         child class docstring"""

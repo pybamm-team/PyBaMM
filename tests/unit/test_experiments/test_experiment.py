@@ -1,11 +1,12 @@
 #
 # Test the base experiment class
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestExperiment(unittest.TestCase):
+class TestExperiment(TestCase):
     def test_cycle_unpacking(self):
         experiment = pybamm.Experiment(
             [

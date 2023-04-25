@@ -1149,7 +1149,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.variables.update(
             {
                 "Surface open-circuit voltage [V]": ocv_surf,
-                "Open-circuit voltage [V]": ocv_bulk,
+                "Bulk open-circuit voltage [V]": ocv_bulk,
                 "Particle concentration overpotential [V]": eta_particle,
                 "X-averaged reaction overpotential [V]": eta_r_av,
                 "X-averaged SEI film overpotential [V]": eta_sei_av,

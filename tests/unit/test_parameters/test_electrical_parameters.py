@@ -1,12 +1,13 @@
 #
 # Tests for the electrical parameters
 #
+from tests import TestCase
 import pybamm
 
 import unittest
 
 
-class TestElectricalParameters(unittest.TestCase):
+class TestElectricalParameters(TestCase):
     def test_current_functions(self):
         # create current functions
         param = pybamm.electrical_parameters

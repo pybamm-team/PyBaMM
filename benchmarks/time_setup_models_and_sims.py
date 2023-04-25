@@ -9,7 +9,7 @@ parameters = [
     "Ramadass2004",
     "Mohtat2020",
     "Chen2020",
-    "Chen2020_plating",
+    "OKane2022",
     "Ecker2015",
 ]
 
