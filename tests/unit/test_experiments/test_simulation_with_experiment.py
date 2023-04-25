@@ -228,12 +228,11 @@ class TestSimulationExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    "Run drive_cycle (A) at 35oC",
-                    "Run drive_cycle (V)",
-                    "Run drive_cycle (W)",
+                    pybamm.experiment.current(drive_cycle),
+                    pybamm.experiment.voltage(drive_cycle),
+                    pybamm.experiment.power(drive_cycle),
                 )
             ],
-            drive_cycles={"drive_cycle": drive_cycle},
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)

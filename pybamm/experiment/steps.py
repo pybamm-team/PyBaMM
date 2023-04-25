@@ -1,6 +1,7 @@
 #
 # Classes for experimental steps
 #
+import numpy as np
 
 examples = """
 
@@ -49,16 +50,18 @@ class _Step:
         period=None,
         temperature=None,
         tags=None,
+        description=None,
     ):
-        self.typ = typ
+        self.type = typ
         self.value = value
         self.duration = _convert_time_to_seconds(duration)
+        self.description = description
 
-        if termination is not None:
-            termination = _convert_electric(termination)
-            self.termination = {"type": termination[0], "value": termination[1]}
-        else:
-            self.termination = None
+        if termination is None:
+            termination = []
+        elif not isinstance(termination, list):
+            termination = [termination]
+        self.termination = [_Termination(t) for t in termination]
 
         self.period = _convert_time_to_seconds(period)
         self.temperature = _convert_temperature_to_kelvin(temperature)
@@ -69,8 +72,31 @@ class _Step:
             tags = [tags]
         self.tags = tags
 
+        # Check if drive cycle
+        self.is_drive_cycle = isinstance(value, np.ndarray)
+
+    def __str__(self):
+        if self.description is not None:
+            return self.description
+        else:
+            return f"{self.type} step of {self.value} for {self.duration} seconds"
+
     def __repr__(self):
-        return f"Step({self.typ}, {self.value}, {self.duration})"
+        out = f"Step({self.type}, {self.value}"
+        if self.duration is not None:
+            out += f", duration={self.duration}"
+        if self.termination is not None:
+            out += f", termination={self.termination}"
+        if self.period is not None:
+            out += f", period={self.period}"
+        if self.temperature is not None:
+            out += f", temperature={self.temperature}"
+        if self.tags is not None:
+            out += f", tags={self.tags}"
+        if self.description is not None:
+            out += f", description={self.description}"
+        out += ")"
+        return out
 
     def to_dict(self):
         """
@@ -82,7 +108,7 @@ class _Step:
             A dictionary containing the step information.
         """
         return {
-            "type": self.typ,
+            "type": self.type,
             "value": self.value,
             "duration": self.duration,
             "termination": self.termination,
@@ -92,102 +118,21 @@ class _Step:
         }
 
 
-def _convert_time_to_seconds(time_and_units):
-    """Convert a time in seconds, minutes or hours to a time in seconds"""
-    # If the time is a number, assume it is in seconds
-    if isinstance(time_and_units, (int, float)) or time_and_units is None:
-        return time_and_units
+class _Termination:
+    def __init__(self, termination):
+        self.termination_str = termination
+        self.type, self.value = _convert_electric(termination)
 
-    # Split number and units
-    units = time_and_units.lstrip("0123456789.- ")
-    time = time_and_units[: -len(units)]
-    if units in ["second", "seconds", "s", "sec"]:
-        time_in_seconds = float(time)
-    elif units in ["minute", "minutes", "m", "min"]:
-        time_in_seconds = float(time) * 60
-    elif units in ["hour", "hours", "h", "hr"]:
-        time_in_seconds = float(time) * 3600
-    else:
-        raise ValueError(
-            "time units must be 'seconds', 'minutes' or 'hours'. "
-            f"For example: {examples}"
-        )
-    return time_in_seconds
+    def __str__(self):
+        return self.termination_str
 
 
-def _convert_temperature_to_kelvin(temperature_and_units):
-    """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
-    # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, (int, float)) or temperature_and_units is None:
-        return temperature_and_units
-
-    # Split number and units
-    units = temperature_and_units.lstrip("0123456789. ")
-    temperature = temperature_and_units[: -len(units)]
-    if units in ["K"]:
-        temperature_in_kelvin = float(temperature)
-    elif units in ["oC"]:
-        temperature_in_kelvin = float(temperature) + 273.15
-    else:
-        raise ValueError("temperature units must be 'K' or 'oC'. ")
-    return temperature_in_kelvin
-
-
-def _convert_electric(value_string):
-    """Convert electrical instructions to consistent output"""
-    if value_string is None:
-        return None
-    # Special case for C-rate e.g. C/2
-    if value_string[0] == "C":
-        unit = "C"
-        value = 1 / float(value_string[2:])
-    else:
-        # All other cases e.g. 4 A, 2.5 V, 1.5 Ohm
-        unit = value_string.lstrip("0123456789.- ")
-        value = float(value_string[: -len(unit)])
-        # Catch milli- prefix
-        if unit.startswith("m"):
-            unit = unit[1:]
-            value /= 1000
-
-    # Convert units to type
-    units_to_type = {
-        "C": "C-rate",
-        "A": "current",
-        "V": "voltage",
-        "W": "power",
-        "Ohm": "resistance",
-    }
-    try:
-        typ = units_to_type[unit]
-    except KeyError:
-        raise ValueError(
-            f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {examples}"
-        )
-    return typ, value
-
-
-def _read_instruction_value(instruction_value):
-    if instruction_value.startswith("Rest"):
-        return ("current", 0)
-    else:
-        # split by what is before and after "at"
-        # e.g. "Charge at 4 A" -> ["Charge", "4 A"]
-        # e.g. "Discharge at C/2" -> ["Discharge", "C/2"]
-        instruction, value_string = instruction_value.split(" at ")
-        if instruction == "Charge":
-            sign = -1
-        elif instruction in ["Discharge", "Hold"]:
-            sign = 1
-        else:
-            raise ValueError(
-                "Instruction must be 'discharge', 'charge', 'rest', or 'hold'. "
-                f"For example: {examples}"
-                f"The following instruction does not comply: {instruction}"
-            )
-        # extract units (type) and convert value to float
-        typ, value = _convert_electric(value_string)
-        return typ, sign * value
+_type_to_units = {
+    "current": "[A]",
+    "voltage": "[V]",
+    "power": "[W]",
+    "resistance": "[Ohm]",
+}
 
 
 def string(string, **kwargs):
@@ -238,7 +183,14 @@ def string(string, **kwargs):
     # read remaining instruction
     typ, value = _read_instruction_value(string)
 
-    return _Step(typ, value, duration=duration, termination=termination, **kwargs)
+    return _Step(
+        typ,
+        value,
+        duration=duration,
+        termination=termination,
+        description=string,
+        **kwargs,
+    )
 
 
 def current(value, **kwargs):
@@ -376,3 +328,101 @@ def cccv_ode(current, voltage, **kwargs):
         A constant current constant voltage step.
     """
     return _Step("cccv_ode", (current, voltage), **kwargs)
+
+
+def _convert_time_to_seconds(time_and_units):
+    """Convert a time in seconds, minutes or hours to a time in seconds"""
+    # If the time is a number, assume it is in seconds
+    if isinstance(time_and_units, (int, float)) or time_and_units is None:
+        return time_and_units
+
+    # Split number and units
+    units = time_and_units.lstrip("0123456789.- ")
+    time = time_and_units[: -len(units)]
+    if units in ["second", "seconds", "s", "sec"]:
+        time_in_seconds = float(time)
+    elif units in ["minute", "minutes", "m", "min"]:
+        time_in_seconds = float(time) * 60
+    elif units in ["hour", "hours", "h", "hr"]:
+        time_in_seconds = float(time) * 3600
+    else:
+        raise ValueError(
+            "time units must be 'seconds', 'minutes' or 'hours'. "
+            f"For example: {examples}"
+        )
+    return time_in_seconds
+
+
+def _convert_temperature_to_kelvin(temperature_and_units):
+    """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
+    # If the temperature is a number, assume it is in Kelvin
+    if isinstance(temperature_and_units, (int, float)) or temperature_and_units is None:
+        return temperature_and_units
+
+    # Split number and units
+    units = temperature_and_units.lstrip("0123456789. ")
+    temperature = temperature_and_units[: -len(units)]
+    if units in ["K"]:
+        temperature_in_kelvin = float(temperature)
+    elif units in ["oC"]:
+        temperature_in_kelvin = float(temperature) + 273.15
+    else:
+        raise ValueError("temperature units must be 'K' or 'oC'. ")
+    return temperature_in_kelvin
+
+
+def _convert_electric(value_string):
+    """Convert electrical instructions to consistent output"""
+    if value_string is None:
+        return None
+    # Special case for C-rate e.g. C/2
+    if value_string[0] == "C":
+        unit = "C"
+        value = 1 / float(value_string[2:])
+    else:
+        # All other cases e.g. 4 A, 2.5 V, 1.5 Ohm
+        unit = value_string.lstrip("0123456789.- ")
+        value = float(value_string[: -len(unit)])
+        # Catch milli- prefix
+        if unit.startswith("m"):
+            unit = unit[1:]
+            value /= 1000
+
+    # Convert units to type
+    units_to_type = {
+        "C": "C-rate",
+        "A": "current",
+        "V": "voltage",
+        "W": "power",
+        "Ohm": "resistance",
+    }
+    try:
+        typ = units_to_type[unit]
+    except KeyError:
+        raise ValueError(
+            f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {examples}"
+        )
+    return typ, value
+
+
+def _read_instruction_value(instruction_value):
+    if instruction_value.startswith("Rest"):
+        return ("current", 0)
+    else:
+        # split by what is before and after "at"
+        # e.g. "Charge at 4 A" -> ["Charge", "4 A"]
+        # e.g. "Discharge at C/2" -> ["Discharge", "C/2"]
+        instruction, value_string = instruction_value.split(" at ")
+        if instruction == "Charge":
+            sign = -1
+        elif instruction in ["Discharge", "Hold"]:
+            sign = 1
+        else:
+            raise ValueError(
+                "Instruction must be 'discharge', 'charge', 'rest', or 'hold'. "
+                f"For example: {examples}"
+                f"The following instruction does not comply: {instruction}"
+            )
+        # extract units (type) and convert value to float
+        typ, value = _convert_electric(value_string)
+        return typ, sign * value
