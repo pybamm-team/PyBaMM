@@ -3,7 +3,7 @@
 #
 
 import pybamm
-from .steps import _convert_time_to_seconds
+from .steps import _convert_time_to_seconds, _convert_temperature_to_kelvin
 
 
 class Experiment:
@@ -65,30 +65,40 @@ class Experiment:
         for cycle in operating_conditions:
             # Check types and convert to list
             if not isinstance(cycle, tuple):
-                cycle = [cycle]
-            # Convert strings to pybamm.experiment._Step objects
-            processed_cycle = []
-            for step in cycle:
-                if isinstance(step, str):
-                    processed_cycle.append(pybamm.experiment.string(step))
-                else:
-                    processed_cycle.append(step)
-            operating_conditions_cycles.append(tuple(processed_cycle))
+                cycle = (cycle,)
+            operating_conditions_cycles.append(cycle)
 
         self.operating_conditions_cycles = operating_conditions_cycles
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
 
-        operating_conditions_steps = [
+        operating_conditions_steps_unprocessed = [
             cond for cycle in operating_conditions_cycles for cond in cycle
         ]
-        self.operating_conditions_steps = operating_conditions_steps
+
+        # Convert strings to pybamm.experiment._Step objects
+        # We only do this once per unique step, do avoid unnecessary conversions
+        unique_steps_unprocessed = set(operating_conditions_steps_unprocessed)
+        processed_steps = {}
+        for step in unique_steps_unprocessed:
+            if isinstance(step, str):
+                processed_steps[step] = pybamm.experiment.string(step)
+            else:
+                processed_steps[step] = step
+
+        # Save the processed unique steps and the processed operating conditions
+        # for every step
+        self.unique_steps = set(processed_steps.values())
+        self.operating_conditions_steps = [
+            processed_steps[step] for step in operating_conditions_steps_unprocessed
+        ]
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
+        # Modify steps with period and temperature in place
         self.period = _convert_time_to_seconds(period)
-        self.temperature = temperature
-        for step in self.operating_conditions_steps:
+        self.temperature = _convert_temperature_to_kelvin(temperature)
+        for step in self.unique_steps:
             if step.period is None:
                 step.period = self.period
             if step.temperature is None:

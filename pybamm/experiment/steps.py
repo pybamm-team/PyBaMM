@@ -83,17 +83,17 @@ class _Step:
 
     def __repr__(self):
         out = f"Step({self.type}, {self.value}"
-        if self.duration is not None:
+        if self.duration:
             out += f", duration={self.duration}"
-        if self.termination is not None:
+        if self.termination:
             out += f", termination={self.termination}"
-        if self.period is not None:
+        if self.period:
             out += f", period={self.period}"
-        if self.temperature is not None:
+        if self.temperature:
             out += f", temperature={self.temperature}"
-        if self.tags is not None:
+        if self.tags:
             out += f", tags={self.tags}"
-        if self.description is not None:
+        if self.description:
             out += f", description={self.description}"
         out += ")"
         return out
@@ -115,7 +115,21 @@ class _Step:
             "period": self.period,
             "temperature": self.temperature,
             "tags": self.tags,
+            "description": self.description,
         }
+
+    def __eq__(self, other):
+        if not isinstance(other, _Step):
+            return False
+        else:
+            return self.to_dict() == other.to_dict()
+
+    def __hash__(self):
+        return hash(repr(self))
+
+    @property
+    def unit(self):
+        return _type_to_units[self.type]
 
 
 class _Termination:
@@ -158,6 +172,10 @@ def string(string, **kwargs):
     """
     if not isinstance(string, str):
         raise TypeError("Input to experiment.string() must be a string")
+
+    # Save the original string
+    description = string
+
     # extract termination condition based on "until" keyword
     if "until" in string:
         # e.g. "Charge at 4 A until 3.8 V"
@@ -188,7 +206,7 @@ def string(string, **kwargs):
         value,
         duration=duration,
         termination=termination,
-        description=string,
+        description=description,
         **kwargs,
     )
 
@@ -298,12 +316,12 @@ def resistance(value, **kwargs):
     return _Step("resistance", value, **kwargs)
 
 
-def rest(**kwargs):
+def rest(duration=None, **kwargs):
     """
     Create a rest step, equivalent to a constant current step with value 0
     (see :meth:`pybamm.experiment.current`).
     """
-    return current(0, **kwargs)
+    return current(0, duration=duration, **kwargs)
 
 
 def cccv_ode(current, voltage, **kwargs):

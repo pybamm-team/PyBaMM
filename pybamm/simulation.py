@@ -195,73 +195,55 @@ class Simulation:
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
-        self.op_type_to_model = {}
-        self.op_repr_to_model = {}
-        for op_number, op in enumerate(self.experiment.operating_conditions_steps):
-            # Create model for this operating condition type (current/voltage/power)
-            # if it has not already been seen before
-            if op.type not in self.op_type_to_model:
-                if op.type == "current":
-                    new_model, submodel = self.model, None
-                else:
-                    # Voltage or power control
-                    # Create a new model where the current density is now a variable
-                    # To do so, we replace all instances of the current density in the
-                    # model with a current density variable, which is obtained from the
-                    # FunctionControl submodel
-                    # check which kind of external circuit model we need (differential
-                    # or algebraic)
-                    if op.type == "voltage":
-                        submodel_class = pybamm.external_circuit.VoltageFunctionControl
-                    elif op.type == "power":
-                        submodel_class = pybamm.external_circuit.PowerFunctionControl
-                    elif op.type == "CCCV":
-                        submodel_class = pybamm.external_circuit.CCCVFunctionControl
+        self.experiment_unique_steps_to_model = {}
+        for op_number, op in enumerate(self.experiment.unique_steps):
+            new_model = self.model.new_copy()
+            new_parameter_values = self.parameter_values.copy()
 
-                    new_model = self.model.new_copy()
-                    # Build the new submodel and update the model with it
-                    submodel = submodel_class(new_model.param, new_model.options)
-                    variables = new_model.variables
-                    submodel.variables = submodel.get_fundamental_variables()
-                    variables.update(submodel.variables)
-                    submodel.variables.update(submodel.get_coupled_variables(variables))
-                    variables.update(submodel.variables)
-                    submodel.set_rhs(variables)
-                    submodel.set_algebraic(variables)
-                    submodel.set_initial_conditions(variables)
-                    new_model.rhs.update(submodel.rhs)
-                    new_model.algebraic.update(submodel.algebraic)
-                    new_model.initial_conditions.update(submodel.initial_conditions)
+            if op.type != "current":
+                # Voltage or power control
+                # Create a new model where the current density is now a variable
+                # To do so, we replace all instances of the current density in the
+                # model with a current density variable, which is obtained from the
+                # FunctionControl submodel
+                # check which kind of external circuit model we need (differential
+                # or algebraic)
+                if op.type == "voltage":
+                    submodel_class = pybamm.external_circuit.VoltageFunctionControl
+                elif op.type == "power":
+                    submodel_class = pybamm.external_circuit.PowerFunctionControl
 
-                self.op_type_to_model[op.type] = (new_model, submodel)
+                # Build the new submodel and update the model with it
+                submodel = submodel_class(new_model.param, new_model.options)
+                variables = new_model.variables
+                submodel.variables = submodel.get_fundamental_variables()
+                variables.update(submodel.variables)
+                submodel.variables.update(submodel.get_coupled_variables(variables))
+                variables.update(submodel.variables)
+                submodel.set_rhs(variables)
+                submodel.set_algebraic(variables)
+                submodel.set_initial_conditions(variables)
+                new_model.rhs.update(submodel.rhs)
+                new_model.algebraic.update(submodel.algebraic)
+                new_model.initial_conditions.update(submodel.initial_conditions)
 
-            if repr(op) not in self.op_repr_to_model:
-                model, submodel = self.op_type_to_model[op.type]
-                # Create a new model for this operating condition, since we will update
-                # the events differently (based on parameter values and inputs) for
-                # different models of the same type (current/voltage/power)
-                new_model = model.new_copy()
-                self.update_new_model_events(new_model, op)
-                # Update parameter values
-                new_parameter_values = self.parameter_values.copy()
-                self._original_temperature = new_parameter_values[
-                    "Ambient temperature [K]"
-                ]
-                experiment_parameter_values = self.get_experiment_parameter_values(
-                    op, op_number
-                )
-                new_parameter_values.update(
-                    experiment_parameter_values, check_already_exists=False
-                )
                 # Set the "current function" to be the variable defined in the submodel
-                if submodel is not None:
-                    new_parameter_values["Current function [A]"] = submodel.variables[
-                        "Current [A]"
-                    ]
-                parameterised_model = new_parameter_values.process_model(
-                    new_model, inplace=False
-                )
-                self.op_repr_to_model[repr(op)] = parameterised_model
+                new_parameter_values["Current function [A]"] = submodel.variables[
+                    "Current [A]"
+                ]
+            self.update_new_model_events(new_model, op)
+            # Update parameter values
+            self._original_temperature = new_parameter_values["Ambient temperature [K]"]
+            experiment_parameter_values = self.get_experiment_parameter_values(
+                op, op_number
+            )
+            new_parameter_values.update(
+                experiment_parameter_values, check_already_exists=False
+            )
+            parameterised_model = new_parameter_values.process_model(
+                new_model, inplace=False
+            )
+            self.experiment_unique_steps_to_model[repr(op)] = parameterised_model
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
@@ -306,15 +288,9 @@ class Simulation:
                 )
 
     def get_experiment_parameter_values(self, op, op_number):
-        experiment_parameter_values = {}
-        if op.type == "current":
-            experiment_parameter_values.update({"Current function [A]": op.value})
-        if op.type == "CCCV":
-            experiment_parameter_values.update({"CCCV current function [A]": op.value})
-        if op.type in ["voltage", "CCCV"]:
-            experiment_parameter_values.update({"Voltage function [V]": op.value})
-        if op.type == "power":
-            experiment_parameter_values.update({"Power function [W]": op.value})
+        experiment_parameter_values = {
+            f"{op.type.capitalize()} function {op.unit}": op.value
+        }
 
         if op.temperature is not None:
             ambient_temperature = op.temperature
@@ -424,7 +400,10 @@ class Simulation:
             # Process all the different models
             self.op_conds_to_built_models = {}
             self.op_conds_to_built_solvers = {}
-            for op_cond, model_with_set_params in self.op_repr_to_model.items():
+            for (
+                op_cond,
+                model_with_set_params,
+            ) in self.experiment_unique_steps_to_model.items():
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
