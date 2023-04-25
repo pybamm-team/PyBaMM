@@ -8,6 +8,7 @@ import copy
 import warnings
 import sys
 from functools import lru_cache
+import tqdm
 
 
 def is_notebook():
@@ -510,6 +511,7 @@ class Simulation:
         starting_solution=None,
         initial_soc=None,
         callbacks=None,
+        showprogress=False,
         **kwargs,
     ):
         """
@@ -557,6 +559,10 @@ class Simulation:
         callbacks : list of callbacks, optional
             A list of callbacks to be called at each time step. Each callback must
             implement all the methods defined in :class:`pybamm.callbacks.BaseCallback`.
+        showprogress : bool, optional
+            Whether to show a progress bar for cycling. If true, shows a progress bar
+            for cycles. Has no effect when not used with an experiment.
+            Default is False.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -698,7 +704,13 @@ class Simulation:
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
             for cycle_num, cycle_length in enumerate(
-                self.experiment.cycle_lengths, start=1
+                # tqdm is the progress bar.
+                tqdm.tqdm(
+                    self.experiment.cycle_lengths,
+                    disable=(not showprogress),
+                    desc="Cycling",
+                ),
+                start=1,
             ):
                 logs["cycle number"] = (
                     cycle_num + cycle_offset,
