@@ -70,6 +70,8 @@ class ParameterValues:
                 )
                 self.update_from_chemistry(values)
             else:
+                # Remove chemistry if present
+                values.pop("chemistry")
                 self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
