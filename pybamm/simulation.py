@@ -165,20 +165,20 @@ class Simulation:
             # Update terminations
             termination = op_conds.termination
             for term in termination:
-                term_type = term.type
+                term_type = term["type"]
                 if term_type == "C-rate":
                     # Change type to current
-                    term.type = "current"
+                    term["type"] = "current"
                     # Scale C-rate with capacity to obtain current
-                    term.value = term.value * capacity
+                    term["value"] = term["value"] * capacity
 
             # Add time to the experiment times
             dt = op_conds.duration
             if dt is None:
                 if op_conds.type == "current":
-                    # Current control: max simulation time: 1.5h / C-rate
+                    # Current control: max simulation time: 3h / C-rate
                     Crate = op_conds.value / capacity
-                    dt = 1.5 / abs(Crate) * 3600  # seconds
+                    dt = 3 / abs(Crate) * 3600  # seconds
                 else:
                     # max simulation time: 1 day
                     dt = 24 * 3600  # seconds
@@ -247,16 +247,16 @@ class Simulation:
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
-            if term.type == "current":
+            if term["type"] == "current":
                 new_model.events.append(
                     pybamm.Event(
                         "Current cut-off [A] [experiment]",
-                        abs(new_model.variables["Current [A]"]) - term.value,
+                        abs(new_model.variables["Current [A]"]) - term["value"],
                     )
                 )
 
             # add voltage events to the model
-            if term.type == "voltage":
+            if term["type"] == "voltage":
                 # The voltage event should be positive at the start of charge/
                 # discharge. We use the sign of the current or power input to
                 # figure out whether the voltage event is greater than the starting
@@ -274,7 +274,10 @@ class Simulation:
                         pybamm.Event(
                             f"{name} voltage cut-off [V] [experiment]",
                             sign
-                            * (new_model.variables["Battery voltage [V]"] - term.value),
+                            * (
+                                new_model.variables["Battery voltage [V]"]
+                                - term["value"]
+                            ),
                         )
                     )
 

@@ -12,7 +12,7 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
             "Charge at 5 A until 4.2 V",
             "Hold at 4.2 V until 10 mA",
-            pybamm.experiment.rest("1 hour"),
+            "Rest for 1 hour",
         ),
     ]
     * 3

@@ -1,5 +1,5 @@
-Experiment Steps Class and methods
-==================================
+Experiment step functions
+=========================
 
 .. autofunction:: pybamm.experiment.string
 
@@ -10,5 +10,3 @@ Experiment Steps Class and methods
 .. autofunction:: pybamm.experiment.power
 
 .. autofunction:: pybamm.experiment.resistance
-
-.. autofunction:: pybamm.experiment.cccv_ode

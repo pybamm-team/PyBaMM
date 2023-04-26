@@ -3,7 +3,7 @@
 #
 
 import pybamm
-from .steps import _convert_time_to_seconds, _convert_temperature_to_kelvin
+from ._steps_util import _convert_time_to_seconds, _convert_temperature_to_kelvin
 
 
 class Experiment:
@@ -82,6 +82,10 @@ class Experiment:
         for step in unique_steps_unprocessed:
             if isinstance(step, str):
                 processed_steps[step] = pybamm.experiment.string(step)
+            elif not isinstance(step, pybamm.experiment._Step):
+                raise TypeError(
+                    "Operating conditions should be strings or _Step objects"
+                )
             else:
                 processed_steps[step] = step
 
@@ -127,7 +131,7 @@ class Experiment:
             term_list = term.split()
             if term_list[-1] == "capacity":
                 end_discharge = "".join(term_list[:-1])
-                end_discharge.replace("A.h", "Ah")
+                end_discharge = end_discharge.replace("A.h", "Ah")
                 if end_discharge.endswith("%"):
                     end_discharge_percent = end_discharge.split("%")[0]
                     termination_dict["capacity"] = (float(end_discharge_percent), "%")
@@ -165,12 +169,9 @@ class Experiment:
         """
         cycles = []
         for i, cycle in enumerate(self.operating_conditions_cycles):
-            for cond in cycle:
-                if " [" in cond:
-                    cond, tag_str = cond.split(" [")
-                    tags = tag_str[0:-1].split(",")
-                    if tag in tags:
-                        cycles.append(i)
-                        break
+            for step in cycle:
+                if tag in step.tags:
+                    cycles.append(i)
+                    break
 
         return cycles

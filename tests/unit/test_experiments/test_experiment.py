@@ -16,51 +16,47 @@ class TestExperiment(TestCase):
             ]
         )
         self.assertEqual(
-            experiment.operating_conditions,
+            [step.to_dict() for step in experiment.operating_conditions_steps],
             [
                 {
-                    "C-rate input [-]": 0.05,
+                    "value": 0.05,
                     "type": "C-rate",
-                    "time": 1800.0,
+                    "duration": 1800.0,
                     "period": 60.0,
                     "temperature": None,
-                    "dc_data": None,
-                    "string": "Discharge at C/20 for 0.5 hours",
-                    "events": None,
-                    "tags": None,
+                    "description": "Discharge at C/20 for 0.5 hours",
+                    "termination": [],
+                    "tags": [],
                 },
                 {
-                    "C-rate input [-]": -0.2,
+                    "value": -0.2,
                     "type": "C-rate",
-                    "time": 2700.0,
+                    "duration": 2700.0,
                     "period": 60.0,
                     "temperature": None,
-                    "dc_data": None,
-                    "string": "Charge at C/5 for 45 minutes",
-                    "events": None,
-                    "tags": None,
+                    "description": "Charge at C/5 for 45 minutes",
+                    "termination": [],
+                    "tags": [],
                 },
                 {
-                    "C-rate input [-]": 0.05,
+                    "value": 0.05,
                     "type": "C-rate",
-                    "time": 1800.0,
+                    "duration": 1800.0,
                     "period": 60.0,
                     "temperature": None,
-                    "dc_data": None,
-                    "string": "Discharge at C/20 for 0.5 hours",
-                    "events": None,
-                    "tags": None,
+                    "description": "Discharge at C/20 for 0.5 hours",
+                    "termination": [],
+                    "tags": [],
                 },
                 {
-                    "C-rate input [-]": -0.2,
+                    "value": -0.2,
                     "type": "C-rate",
-                    "time": 2700.0,
+                    "duration": 2700.0,
                     "period": 60.0,
                     "temperature": None,
-                    "dc_data": None,
-                    "string": "Charge at C/5 for 45 minutes",
-                    "events": None,
-                    "tags": None,
+                    "description": "Charge at C/5 for 45 minutes",
+                    "termination": [],
+                    "tags": [],
                 },
             ],
         )
@@ -82,11 +78,11 @@ class TestExperiment(TestCase):
 
     def test_bad_strings(self):
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings or tuples of strings"
+            TypeError, "Operating conditions should be strings or _Step objects"
         ):
             pybamm.Experiment([1, 2, 3])
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings or tuples of strings"
+            TypeError, "Operating conditions should be strings or _Step objects"
         ):
             pybamm.Experiment([(1, 2, 3)])
 
@@ -140,20 +136,21 @@ class TestExperiment(TestCase):
             )
 
     def test_search_tag(self):
+        s = pybamm.experiment.string
         experiment = pybamm.Experiment(
             [
-                ("Discharge at 1C for 0.5 hours [tag1]",),
-                "Discharge at C/20 for 0.5 hours [tag2,tag3]",
+                (s("Discharge at 1C for 0.5 hours", tags=["tag1"]),),
+                s("Discharge at C/20 for 0.5 hours", tags=["tag2", "tag3"]),
                 (
-                    "Charge at 0.5 C for 45 minutes [tag2]",
-                    "Discharge at 1 A for 0.5 hours [tag3]",
+                    s("Charge at 0.5 C for 45 minutes", tags=["tag2"]),
+                    s("Discharge at 1 A for 0.5 hours", tags=["tag3"]),
                 ),
-                "Charge at 200 mA for 45 minutes (1 minute period) [tag5]",
+                s("Charge at 200 mA for 45 minutes", tags=["tag5"]),
                 (
-                    "Discharge at 1W for 0.5 hours [tag4]",
-                    "Charge at 200mW for 45 minutes [tag4]",
+                    s("Discharge at 1W for 0.5 hours", tags=["tag4"]),
+                    s("Charge at 200mW for 45 minutes", tags=["tag4"]),
                 ),
-                "Rest for 10 minutes (5 minute period) [tag1,tag3,tag4]",
+                s("Rest for 10 minutes", tags=["tag1", "tag3", "tag4"]),
             ]
         )
 
