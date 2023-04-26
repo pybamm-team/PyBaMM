@@ -6,12 +6,8 @@ import pybamm
 import pandas as pd
 import os
 import numbers
-import warnings
 from pprint import pformat
 from collections import defaultdict
-import inspect
-from textwrap import fill
-import shutil
 
 
 class ParameterValues:
@@ -61,16 +57,9 @@ class ParameterValues:
         )
 
         if isinstance(values, dict):
-            if "negative electrode" in values:
-                warnings.warn(
-                    "Creating a parameter set from a dictionary of components has "
-                    "been deprecated and will be removed in a future release. "
-                    "Define the parameter set in a python script instead.",
-                    DeprecationWarning,
-                )
-                self.update_from_chemistry(values)
-            else:
-                self.update(values, check_already_exists=False)
+            # remove the "chemistry" key if it exists
+            values.pop("chemistry", None)
+            self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets:
@@ -178,62 +167,6 @@ class ParameterValues:
         See :meth:`pybamm.FuzzyDict.search()`.
         """
         return self._dict_items.search(key, print_values)
-
-    def update_from_chemistry(self, chemistry):
-        """
-        Load standard set of components from a 'chemistry' dictionary
-        """
-        self.chemistry = chemistry
-
-        base_chemistry = chemistry["chemistry"]
-
-        # Load each component name
-
-        component_groups = [
-            "cell",
-            "negative electrode",
-            "positive electrode",
-            "separator",
-            "electrolyte",
-            "experiment",
-        ]
-
-        self.component_params_by_group = {}
-
-        # add SEI parameters if provided
-        for extra_group in ["sei", "lithium plating"]:
-            if extra_group in chemistry:
-                component_groups = [extra_group] + component_groups
-
-        for component_group in component_groups:
-            component = chemistry[component_group]
-            # Create path to component and load values
-            component_path = os.path.join(
-                base_chemistry,
-                "testing_only",
-                component_group.replace(" ", "_") + "s",
-                component,
-            )
-            file_path = self.find_parameter(
-                os.path.join(component_path, "parameters.csv")
-            )
-            component_params = self.read_parameters_csv(file_path)
-
-            self.component_params_by_group[component_group] = component_params
-
-            # Update parameters, making sure to check any conflicts
-            self.update(
-                component_params,
-                check_conflict=True,
-                check_already_exists=False,
-                path=os.path.dirname(file_path),
-            )
-
-        # register (list of) citations
-        if "citation" in chemistry:
-            self.citations = chemistry["citation"]
-            if not isinstance(self.citations, list):
-                self.citations = [self.citations]
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -941,170 +874,3 @@ class ParameterValues:
             "re-installing pybamm (e.g. `pip install -e .`) to expose recently-added "
             "parameter entry points."
         )
-
-    def export_python_script(
-        self, name, old_parameters_path="", new_parameters_path=""
-    ):
-        """
-        Print a python script that can be used to reproduce the parameter set
-
-        Parameters
-        ----------
-        name : string
-            The name to save the parameter set under
-        old_parameters_path : string, optional
-            Optional path for the location where to find the old parameters.
-        new_parameters_path : string, optional
-            Optional path for the location where to save the new parameters.
-        """
-        # Initialize
-        preamble = "import pybamm\n"
-        function_output = ""
-        data_output = ""
-        dict_output = ""
-
-        component_params_by_group = getattr(
-            self, "component_params_by_group", {"": self}
-        )
-
-        # Loop through each component group and add appropriate functions, data, and
-        # parameters to the relevant strings
-        for component_group, items in component_params_by_group.items():
-            if component_group != "":
-                dict_output += f"\n        # {component_group}"
-            for k in items.keys():
-                v = self[k]
-                if callable(v):
-                    # write the function body to the file
-                    function_output += inspect.getsource(v) + "\n"
-                    v = v.__name__
-                elif isinstance(v, tuple):
-                    # save the data to a separate csv file
-                    # and load it in the parameter set
-                    data_name = v[0]
-                    data_file_old = os.path.join(
-                        old_parameters_path,
-                        component_group.replace(" ", "_") + "s",
-                        self.chemistry[component_group],
-                        f"{data_name}.csv",
-                    )
-                    data_path = os.path.join(new_parameters_path, "data")
-                    if not os.path.exists(data_path):
-                        os.makedirs(data_path)
-                    data_file_new = os.path.join(data_path, f"{data_name}.csv")
-                    shutil.copyfile(data_file_old, data_file_new)
-
-                    # add data output
-                    if data_output == "":
-                        data_output = (
-                            "# Load data in the appropriate format\n"
-                            "path, _ = os.path.split(os.path.abspath(__file__))\n"
-                        )
-                    data_output += (
-                        f"{data_name} = pybamm.parameters.process_1D_data"
-                        f"('{data_name}.csv', path)\n"
-                    )
-                    v = f"pybamm.{data_name}"
-
-                    v = f"{data_name}"
-
-                # add line to the parameter output in the appropriate section
-                line_output = f'\n        "{k}": {v},'
-                if len(line_output) > 88:
-                    # this will be split into multiple lines by black
-                    line_output = f'\n        "{k}""": {v},'
-
-                dict_output += line_output
-
-        # save citation info
-        if hasattr(self, "citations"):
-            dict_output += (
-                "\n        # citations" + f"\n        'citations': {self.citations},"
-            )
-
-        # read README.md if they exist and save info
-        docstring = self._create_docstring_from_readmes(name)
-
-        # construct the output string
-        output = (
-            function_output
-            + data_output
-            + "\n# Call dict via a function to avoid errors when editing in place"
-            + "\ndef get_parameter_values():"
-            + docstring
-            + "\n    return {"
-            + dict_output
-            + "\n    }"
-        )
-
-        # Add more packages to preamble if needed
-        if "os." in output:
-            preamble += "import os\n"
-        output = preamble + "\n\n" + output
-
-        # Add pybamm. to functions that didn't have it in function body before
-        for funcname in [
-            "Parameter",
-            "exp",
-            "tanh",
-            "cosh",
-            "log10",
-            "LeadAcidParameters",
-        ]:
-            # add space or ( before so it doesn't do this for middle-of-word matches
-            output = output.replace(f" {funcname}(", f" pybamm.{funcname}(")
-            output = output.replace(f"({funcname}(", f"(pybamm.{funcname}(")
-        output = output.replace("constants", "pybamm.constants")
-
-        # Process file name
-        filename = name
-        if not filename.endswith(".py"):
-            filename = filename + ".py"
-        filename = os.path.join(new_parameters_path, filename)
-
-        # save to file
-        with open(filename, "w") as f:
-            f.write(output)
-
-    def _create_docstring_from_readmes(self, name):
-        docstring = ""
-
-        if hasattr(self, "chemistry"):
-            chemistry = self.chemistry
-            lines = []
-            for component_group, component in chemistry.items():
-                if component_group in self.component_params_by_group:
-                    readme = os.path.join(
-                        "input",
-                        "parameters",
-                        self.chemistry["chemistry"],
-                        "testing_only",
-                        component_group.replace(" ", "_") + "s",
-                        component,
-                        "README.md",
-                    )
-                    readme = pybamm.get_parameters_filepath(readme)
-                    if os.path.isfile(readme):
-                        with open(readme, "r") as f:
-                            lines += f.readlines()
-
-            # lines, ind = np.unique(lines, return_index=True)
-            # lines = lines[np.argsort(ind)]
-            lines = [
-                fill(
-                    line,
-                    88,
-                    drop_whitespace=False,
-                    initial_indent="    ",
-                    subsequent_indent="    ",
-                )
-                + "\n"
-                for line in lines
-            ]
-            docstring = (
-                f'\n    """\n    # {name} parameter set\n'
-                + "".join(lines)
-                + '    """\n'
-            )
-
-        return docstring

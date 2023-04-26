@@ -5,10 +5,7 @@ from tests import TestCase
 
 import os
 import tempfile
-import shutil
 import unittest
-import inspect
-import importlib
 
 import numpy as np
 import pandas as pd
@@ -36,15 +33,8 @@ class TestParameterValues(TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
             os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "testing_only",
-                "positive_electrodes",
-                "lico2_Ai2020",
-                "parameters.csv",
+                os.path.dirname(__file__),
+                "parameter_values_test.csv",
             )
         )
         self.assertEqual(data["Positive electrode porosity"], "0.32")
@@ -58,22 +48,18 @@ class TestParameterValues(TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium_ion/testing_only/positive_electrodes/lico2_Ai2020/parameters.csv"
+            os.path.join(
+                os.path.dirname(__file__),
+                "parameter_values_test.csv",
+            )
         )
         self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # from file, absolute path
         param = pybamm.ParameterValues(
             os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "testing_only",
-                "positive_electrodes",
-                "lico2_Ai2020",
-                "parameters.csv",
+                os.path.dirname(__file__),
+                "parameter_values_test.csv",
             )
         )
         self.assertEqual(param["Positive electrode porosity"], 0.32)
@@ -111,13 +97,6 @@ class TestParameterValues(TestCase):
         )
 
     def test_update(self):
-        # converts to dict if not
-        param = pybamm.ParameterValues("Ai2020")
-        param_from_csv = pybamm.ParameterValues(
-            "lithium_ion/testing_only/"
-            "negative_electrodes/graphite_Ai2020/parameters.csv"
-        )
-        param.update(param_from_csv)
         # equate values
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
@@ -1007,70 +986,6 @@ class TestParameterValues(TestCase):
         self.assertEqual(df[1]["a"], "0.1")
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
-
-    def test_export_python_script(self):
-        parameter_values = pybamm.ParameterValues(
-            {
-                "chemistry": "lithium_ion",
-                "cell": "Enertech_Ai2020",
-                "negative electrode": "graphite_Ai2020",
-                "separator": "separator_Ai2020",
-                "positive electrode": "lico2_Ai2020",
-                "electrolyte": "lipf6_Enertech_Ai2020",
-                "experiment": "1C_discharge_from_full_Ai2020",
-                "sei": "example",
-                "citation": "Ai2019",
-            }
-        )
-        parameter_values.export_python_script(
-            "Ai2020_test",
-            old_parameters_path=os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "testing_only",
-            ),
-        )
-
-        # test that loading the parameter set works
-        module = importlib.import_module("Ai2020_test")
-        function = getattr(module, "get_parameter_values")
-        new_parameter_values = pybamm.ParameterValues(function())
-
-        # Parameters should be the same
-        self.assertEqual(
-            new_parameter_values["Negative particle radius [m]"],
-            parameter_values["Negative particle radius [m]"],
-        )
-
-        # Functions should be the same, except without 'pybamm.'
-        self.assertEqual(
-            inspect.getsource(
-                new_parameter_values[
-                    "Negative electrode exchange-current density [A.m-2]"
-                ]
-            ).replace(" pybamm.", " "),
-            inspect.getsource(
-                parameter_values["Negative electrode exchange-current density [A.m-2]"]
-            ),
-        )
-        # Data should be the same
-        np.testing.assert_array_equal(
-            new_parameter_values["Negative electrode OCP [V]"][1][0],
-            parameter_values["Negative electrode OCP [V]"][1][0],
-        )
-        np.testing.assert_array_equal(
-            new_parameter_values["Negative electrode OCP [V]"][1][1],
-            parameter_values["Negative electrode OCP [V]"][1][1],
-        )
-
-        # remove the file
-        filename = os.path.join("Ai2020_test.py")
-        if os.path.exists(filename):
-            os.remove(filename)
-        shutil.rmtree("data")
 
 
 if __name__ == "__main__":
