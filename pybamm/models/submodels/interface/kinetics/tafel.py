@@ -10,7 +10,7 @@ class ForwardTafel(BaseKinetics):
     Base submodel which implements the forward Tafel equation:
 
     .. math::
-        j = u * j_0(c) * \\exp((ne / (2 * (1 + \\Theta T)) * \\eta_r(c))
+        j = u * j_0(c) * \\exp((ne * alpha * F * \\eta_r(c) / RT)
 
     Parameters
     ----------
@@ -25,8 +25,6 @@ class ForwardTafel(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
@@ -34,9 +32,8 @@ class ForwardTafel(BaseKinetics):
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         alpha = self.phase_param.alpha_bv
-        return (
-            u * j0 * pybamm.exp((ne * alpha / (2 * (1 + self.param.Theta * T))) * eta_r)
-        )
+        Feta_RT = self.param.F * eta_r / (self.param.R * T)
+        return u * j0 * pybamm.exp(ne * alpha * Feta_RT)
 
 
 # backwardtafel not used by any of the models

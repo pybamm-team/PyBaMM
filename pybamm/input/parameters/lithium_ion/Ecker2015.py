@@ -63,7 +63,7 @@ def graphite_ocp_Ecker2015(sto):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Open circuit potential
+        Open-circuit potential
     """
 
     # Graphite negative electrode from Ecker, Kabitz, Laresgoiti et al.
@@ -496,7 +496,6 @@ def get_parameter_values():
         "Negative current collector thermal conductivity [W.m-1.K-1]": 398.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 238.0,
         "Nominal cell capacity [A.h]": 0.15625,
-        "Typical current [A]": 0.15652,
         "Current function [A]": 0.15652,
         "Contact resistance [Ohm]": 0,
         # negative electrode
@@ -542,10 +541,9 @@ def get_parameter_values():
         "Separator specific heat capacity [J.kg-1.K-1]": 1978.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.34,
         # electrolyte
-        "Typical electrolyte concentration [mol.m-3]": 1000.0,
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.26,
-        "1 + dlnf/dlnc": 1.0,
+        "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Ecker2015,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Ecker2015,
         # experiment

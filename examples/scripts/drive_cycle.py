@@ -20,10 +20,7 @@ drive_cycle = pd.read_csv(
 ).to_numpy()
 
 # create interpolant
-timescale = param.evaluate(model.timescale)
-current_interpolant = pybamm.Interpolant(
-    drive_cycle[:, 0], drive_cycle[:, 1], timescale * pybamm.t
-)
+current_interpolant = pybamm.Interpolant(drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t)
 
 # set drive cycle
 param["Current function [A]"] = current_interpolant
@@ -44,7 +41,7 @@ sim.plot(
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
         "Positive electrode potential [V]",
-        "Terminal voltage [V]",
-        "X-averaged cell temperature",
+        "Voltage [V]",
+        "X-averaged cell temperature [K]",
     ]
 )

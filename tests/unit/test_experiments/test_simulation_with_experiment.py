@@ -74,7 +74,7 @@ class TestSimulationExperiment(unittest.TestCase):
         np.testing.assert_array_equal(sol.cycles[0].steps[0]["C-rate"].data, 1 / 20)
         np.testing.assert_array_equal(sol.cycles[0].steps[1]["Current [A]"].data, -1)
         np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[2]["Terminal voltage [V]"].data, 4.1, decimal=5
+            sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, decimal=5
         )
         np.testing.assert_array_almost_equal(
             sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
@@ -104,7 +104,7 @@ class TestSimulationExperiment(unittest.TestCase):
             y_right = sol.cycles[0].steps[i + 1].all_ys[0][:len_rhs, 0]
             if isinstance(y_right, casadi.DM):
                 y_right = y_right.full()
-            np.testing.assert_array_equal(y_left.flatten(), y_right.flatten())
+            np.testing.assert_array_almost_equal(y_left.flatten(), y_right.flatten())
 
         # Solve again starting from solution
         sol2 = sim.solve(starting_solution=sol)
@@ -144,7 +144,7 @@ class TestSimulationExperiment(unittest.TestCase):
         sol1 = sim.solve()
         sol2 = sim.solve()
         np.testing.assert_array_equal(
-            sol1["Terminal voltage [V]"].data, sol2["Terminal voltage [V]"].data
+            sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
     def test_run_experiment_cccv_ode(self):
@@ -177,8 +177,8 @@ class TestSimulationExperiment(unittest.TestCase):
             solutions.append(solution)
 
         np.testing.assert_array_almost_equal(
-            solutions[0]["Terminal voltage [V]"].data,
-            solutions[1]["Terminal voltage [V]"].data,
+            solutions[0]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"].data,
             decimal=1,
         )
         np.testing.assert_array_almost_equal(
@@ -216,8 +216,8 @@ class TestSimulationExperiment(unittest.TestCase):
             solutions.append(solution)
 
         np.testing.assert_array_almost_equal(
-            solutions[0]["Terminal voltage [V]"].data,
-            solutions[1]["Terminal voltage [V]"].data,
+            solutions[0]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"].data,
             decimal=1,
         )
         np.testing.assert_array_almost_equal(
@@ -257,7 +257,7 @@ class TestSimulationExperiment(unittest.TestCase):
             t_eval, solver=pybamm.CasadiSolver(), callbacks=pybamm.callbacks.Callback()
         )
         pybamm.set_logging_level("WARNING")
-        self.assertEqual(sim._solution.termination, "event: Minimum voltage")
+        self.assertEqual(sim._solution.termination, "event: Minimum voltage [V]")
 
     def test_run_experiment_breaks_early_error(self):
         experiment = pybamm.Experiment(
@@ -360,12 +360,8 @@ class TestSimulationExperiment(unittest.TestCase):
         # Test with calc_esoh=False here
         sol = sim.solve(calc_esoh=False)
         # Only two cycles should be completed, only 2nd cycle should go below 4V
-        np.testing.assert_array_less(
-            4, np.min(sol.cycles[0]["Terminal voltage [V]"].data)
-        )
-        np.testing.assert_array_less(
-            np.min(sol.cycles[1]["Terminal voltage [V]"].data), 4
-        )
+        np.testing.assert_array_less(4, np.min(sol.cycles[0]["Voltage [V]"].data))
+        np.testing.assert_array_less(np.min(sol.cycles[1]["Voltage [V]"].data), 4)
         self.assertEqual(len(sol.cycles), 2)
 
     def test_save_at_cycles(self):
@@ -520,12 +516,12 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         sol2 = sim2.solve()
         np.testing.assert_array_almost_equal(
-            sol["Terminal voltage [V]"].data, sol2["Terminal voltage [V]"].data
+            sol["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
             np.testing.assert_array_almost_equal(
-                sol.cycles[0].steps[idx1]["Terminal voltage [V]"].data,
-                sol2.cycles[0].steps[idx2]["Terminal voltage [V]"].data,
+                sol.cycles[0].steps[idx1]["Voltage [V]"].data,
+                sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
             )
 
     def test_all_empty_solution_errors(self):

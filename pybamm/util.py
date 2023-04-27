@@ -64,7 +64,21 @@ class FuzzyDict(dict):
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
                 )
+            if "Measured open circuit voltage" in key:
+                raise KeyError(
+                    "The variable for open circuit voltage is now called "
+                    "'Open-circuit voltage [V]'. The variable that used to be called "
+                    "'Measured open circuit voltage [V]' is now called "
+                    "'Surface open-circuit voltage [V]', but this is not the true "
+                    "open-circuit voltage of the cell since it includes the "
+                    "particle concentration overpotentials."
+                )
             best_matches = self.get_best_matches(key)
+            for k in best_matches:
+                if key in k and k.endswith("]"):
+                    raise KeyError(
+                        f"'{key}' not found. Use the dimensional version '{k}' instead."
+                    )
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
     def search(self, key, print_values=False):
@@ -331,13 +345,13 @@ def install_jax(arguments=None):  # pragma: no cover
     """
     Install compatible versions of jax, jaxlib.
 
-    Command Line Interface:
-    -----------------------
-    >>> pybamm_install_jax
+    Command Line Interface::
 
-    optional arguments:
-    -h, --help   show help message
-    -f, --force  force install compatible versions of jax and jaxlib
+        $ pybamm_install_jax
+
+    |   optional arguments:
+    |    -h, --help   show help message
+    |    -f, --force  force install compatible versions of jax and jaxlib
     """
     parser = argparse.ArgumentParser(description="Install jax and jaxlib")
     parser.add_argument(

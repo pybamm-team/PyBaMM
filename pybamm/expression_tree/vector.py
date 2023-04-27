@@ -9,8 +9,6 @@ import pybamm
 class Vector(pybamm.Array):
     """
     node in the expression tree that holds a vector type (e.g. :class:`numpy.array`)
-
-    **Extends:** :class:`Array`
     """
 
     def __init__(

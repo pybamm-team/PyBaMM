@@ -18,7 +18,7 @@ class Scalar(pybamm.Symbol):
     name : str, optional
         the name of the node. Defaulted to ``str(value)`` if not provided
 
-    **Extends:** :class:`Symbol`
+
     """
 
     def __init__(self, value, name=None):

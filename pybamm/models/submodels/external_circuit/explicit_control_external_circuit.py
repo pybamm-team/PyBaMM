@@ -13,14 +13,12 @@ class ExplicitCurrentControl(BaseModel):
 
     def get_fundamental_variables(self):
         # Current is given as a function of time
-        i_cell = self.param.current_with_time
-        i_cell_dim = self.param.dimensional_current_density_with_time
-        I = self.param.dimensional_current_with_time
+        i_cell = self.param.current_density_with_time
+        I = self.param.current_with_time
 
         variables = {
-            "Current density variable": pybamm.Scalar(1, name="i_cell"),
-            "Total current density": i_cell,
-            "Total current density [A.m-2]": i_cell_dim,
+            "Current variable [A]": I,
+            "Total current density [A.m-2]": i_cell,
             "Current [A]": I,
             "C-rate": I / self.param.Q,
         }
@@ -41,19 +39,15 @@ class ExplicitPowerControl(BaseModel):
         param = self.param
 
         # Current is given as applied power divided by voltage
-        V = variables["Terminal voltage [V]"]
-        P = pybamm.FunctionParameter(
-            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
-        )
+        V = variables["Voltage [V]"]
+        P = pybamm.FunctionParameter("Power function [W]", {"Time [s]": pybamm.t})
         I = P / V
 
         # Update derived variables
-        i_cell = I / abs(param.I_typ)
-        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
+        i_cell = I / (param.n_electrodes_parallel * param.A_cc)
 
         variables = {
-            "Total current density": i_cell,
-            "Total current density [A.m-2]": i_cell_dim,
+            "Total current density [A.m-2]": i_cell,
             "Current [A]": I,
             "C-rate": I / param.Q,
         }
@@ -71,19 +65,17 @@ class ExplicitResistanceControl(BaseModel):
         param = self.param
 
         # Current is given as applied voltage divided by resistance
-        V = variables["Terminal voltage [V]"]
+        V = variables["Voltage [V]"]
         R = pybamm.FunctionParameter(
-            "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}
+            "Resistance function [Ohm]", {"Time [s]": pybamm.t}
         )
         I = V / R
 
         # Update derived variables
-        i_cell = I / abs(param.I_typ)
-        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
+        i_cell = I / (param.n_electrodes_parallel * param.A_cc)
 
         variables = {
-            "Total current density": i_cell,
-            "Total current density [A.m-2]": i_cell_dim,
+            "Total current density [A.m-2]": i_cell,
             "Current [A]": I,
             "C-rate": I / param.Q,
         }

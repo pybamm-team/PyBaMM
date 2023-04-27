@@ -151,10 +151,10 @@ def x_average(symbol):
     ):
         geo = pybamm.geometric_parameters
         ls = {
-            ("negative electrode",): geo.n.l,
-            ("separator",): geo.s.l,
-            ("positive electrode",): geo.p.l,
-            ("separator", "positive electrode"): geo.s.l + geo.p.l,
+            ("negative electrode",): geo.n.L,
+            ("separator",): geo.s.L,
+            ("positive electrode",): geo.p.L,
+            ("separator", "positive electrode"): geo.s.L + geo.p.L,
         }
         out = sum(
             ls[tuple(orp.domain)] * x_average(orp) for orp in symbol.orphans

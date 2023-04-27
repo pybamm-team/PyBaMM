@@ -9,27 +9,21 @@ import pybamm
 class TestPrintName(unittest.TestCase):
     def test_prettify_print_name(self):
         param = pybamm.LithiumIonParameters()
-        param1 = pybamm.standard_variables
         param2 = pybamm.LeadAcidParameters()
 
         # Test PRINT_NAME_OVERRIDES
-        self.assertEqual(param.timescale.print_name, r"\tau")
+        self.assertEqual(param.current_with_time.print_name, "I")
 
         # Test superscripts
-        self.assertEqual(param.n.U_ref.print_name, r"U_{n}^{ref}")
-        self.assertEqual(param.D_e_typ.print_name, r"D_{e}^{typ}")
+        self.assertEqual(param.n.prim.U_init.print_name, r"U_{n}^{init}")
 
         # Test subscripts
-        self.assertEqual(param.p.prim.a_R.print_name, r"a_{R\,p}")
-
-        # Test dim and dimensional
-        self.assertEqual(
-            param.n.prim.j0_ref_dimensional.print_name, r"\hat{j0}_{n}^{ref}"
-        )
-        self.assertEqual(param.n.C_dl_dimensional.print_name, r"\hat{C}_{dl\,n}")
+        self.assertEqual(param.n.C_dl.print_name, r"C_{dl\,n}")
 
         # Test bar
-        self.assertEqual(param1.c_e_av.print_name, r"\bar{c}_{e}")
+        c_e_av = pybamm.Variable("c_e_av")
+        c_e_av.print_name = "c_e_av"
+        self.assertEqual(c_e_av.print_name, r"\bar{c}_{e}")
 
         # Test greek letters
         self.assertEqual(param2.delta.print_name, r"\delta")
@@ -39,7 +33,9 @@ class TestPrintName(unittest.TestCase):
         a_n.new_copy()
 
         # Test eps
-        self.assertEqual(param1.eps_n.print_name, r"\epsilon_n")
+        eps_n = pybamm.Variable("eps_n")
+        eps_n.print_name = "eps_n"
+        self.assertEqual(eps_n.print_name, r"\epsilon_n")
 
 
 if __name__ == "__main__":

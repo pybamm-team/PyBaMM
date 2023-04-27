@@ -68,9 +68,11 @@ class StandardModelTest(object):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
-        # Use tighter default tolerances for testing
-        self.solver.rtol = 1e-8
-        self.solver.atol = 1e-8
+        # Use tighter default tolerances for testing lithium-ion
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
+            self.solver.rtol = 1e-8
+            self.solver.atol = 1e-8
+            # self.solver.root_method.tol = 1e-8
 
         Crate = abs(
             self.parameter_values["Current function [A]"]
@@ -95,9 +97,7 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-    def test_sensitivities(
-        self, param_name, param_value, output_name="Terminal voltage [V]"
-    ):
+    def test_sensitivities(self, param_name, param_value, output_name="Voltage [V]"):
         self.parameter_values.update({param_name: param_value})
         Crate = abs(
             self.parameter_values["Current function [A]"]
