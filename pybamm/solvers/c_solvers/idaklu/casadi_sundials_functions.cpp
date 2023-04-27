@@ -24,9 +24,9 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
 
-  DEBUG_VECTOR(yy);
-  DEBUG_VECTOR(yp);
-  DEBUG_VECTOR(rr);
+  //DEBUG_VECTOR(yy);
+  //DEBUG_VECTOR(yp);
+  //DEBUG_VECTOR(rr);
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
@@ -263,6 +263,7 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector tmp2, N_Vector tmp3)
 {
 
+  DEBUG("sensitivities_casadi");
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
