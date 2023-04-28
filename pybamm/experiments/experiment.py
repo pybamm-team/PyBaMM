@@ -25,11 +25,10 @@ examples = """
     "Run US06 (A) at -5oC",
     "Run US06 (V) for 5 minutes",
     "Run US06 (W) for 0.5 hours",
+    "[2023-01-01 08:00:00] Discharge at 0.5C for 1 hour",
+    "[Day 1 10:23:43] Charce at 0.3C for 1 hour",
 
     """
-
-# TODO: Add examples of timestamps! (if I have forgotten this at the PR stage
-# please bring it up)
 
 
 class Experiment:
@@ -49,7 +48,11 @@ class Experiment:
     not essential to provide a temperature and a global temperature can be set either
     from within the paramter values of passing a temperature to this experiment class.
     If the temperature is not specified in a line, then the global temperature is used,
-    even if another temperature has been set in an earlier line.
+    even if another temperature has been set in an earlier line. Experiments may include
+    a timestamp at the beginning, in the form of a date and time in square brackets,
+    which defines when that step is triggered. If the previous step finishes early, then
+    an extra resting time is added. If the previous step is meant to run until after the
+    timestamp then it is cut short.
 
     Parameters
     ----------

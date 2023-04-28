@@ -294,9 +294,6 @@ class Simulation:
 
         # Set up rest model if experiment has timestamps
         if self.experiment.initial_timestamp:
-            # Create a new model for this operating condition, since we will update
-            # the events differently (based on parameter values and inputs) for
-            # different models of the same type (current/voltage/power)
             new_model = self.model.new_copy()
             self.update_new_model_events(new_model, op)
             # Update parameter values
