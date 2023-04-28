@@ -1,11 +1,12 @@
 #
 # Test edge cases for initial SOC
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestInitialSOC(unittest.TestCase):
+class TestInitialSOC(TestCase):
     def test_interpolant_parameter_sets(self):
         model = pybamm.lithium_ion.SPM()
         params = [

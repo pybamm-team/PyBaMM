@@ -186,7 +186,21 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.8,<3.10",
+    python_requires=">=3.8,<3.12",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Topic :: Scientific/Engineering",
+    ],
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
@@ -195,9 +209,9 @@ setup(
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
-        "casadi>=3.5.0",
+        "casadi>=3.6.0",
         "imageio>=2.9.0",
-        "jupyter",  # For example notebooks
+        "importlib-metadata",
         "pybtex>=0.24.0",
         "sympy>=1.8",
         "bpx",
@@ -218,6 +232,7 @@ setup(
         "dev": [
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
+            "jupyter",  # For example notebooks
         ],
     },
     entry_points={

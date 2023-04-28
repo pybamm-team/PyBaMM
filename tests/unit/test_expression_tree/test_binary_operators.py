@@ -1,6 +1,7 @@
 #
 # Tests for the Binary Operator classes
 #
+from tests import TestCase
 import unittest
 
 import numpy as np
@@ -10,7 +11,7 @@ from scipy.sparse import coo_matrix
 import pybamm
 
 
-class TestBinaryOperators(unittest.TestCase):
+class TestBinaryOperators(TestCase):
     def test_binary_operator(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

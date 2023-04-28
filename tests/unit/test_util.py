@@ -1,6 +1,7 @@
 #
 # Tests the utility functions.
 #
+from tests import TestCase
 import numpy as np
 import os
 import sys
@@ -11,7 +12,7 @@ from unittest.mock import patch
 from io import StringIO
 
 
-class TestUtil(unittest.TestCase):
+class TestUtil(TestCase):
     """
     Test the functionality in util.py
     """
@@ -103,7 +104,7 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
 
-class TestSearch(unittest.TestCase):
+class TestSearch(TestCase):
     def test_url_gets_to_stdout(self):
         model = pybamm.BaseModel()
         model.variables = {"Electrolyte concentration": 1, "Electrode potential": 0}

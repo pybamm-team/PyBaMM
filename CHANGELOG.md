@@ -1,5 +1,21 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# Features
+
+- Added verbose logging to `pybamm.print_citations()` and citation tags for the `pybamm.Citations` class so that users can now see where the citations were registered when running simulations ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862))
+- PyBaMM is now natively supported on Apple silicon chips (`M1/M2`) ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
+- PyBaMM is now supported on Python `3.10` and `3.11` ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
+- Updated to casadi 3.6, which required some changes to the casadi integrator. ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
+
+## Bug fixes
+
+- Fixed a bug in the discretisation of initial conditions of a scaled variable ([#2856](https://github.com/pybamm-team/PyBaMM/pull/2856))
+- Fixed keyerror on "all" when getting sensitivities from IDAKLU solver([#2883](https://github.com/pybamm-team/PyBaMM/pull/2883))
+
+# Breaking changes
+
+- Made `Jupyter` a development only dependency. Now `Jupyter` would not be a required dependency for users while installing `PyBaMM`. ([#2846](https://github.com/pybamm-team/PyBaMM/pull/2846))
+
 # [v23.3](https://github.com/pybamm-team/PyBaMM/tree/v23.3) - 2023-03-31
 
 ## Features
@@ -14,12 +30,13 @@
 
 ## Bug fixes
 
+- Fix non-deteministic outcome of some tests in the test suite ([#2844](https://github.com/pybamm-team/PyBaMM/pull/2844))
 - Fixed excessive RAM consumption when running multiple simulations ([#2823](https://github.com/pybamm-team/PyBaMM/pull/2823))
+- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 - Fixed a bug where variable bounds could not contain `InputParameters` ([#2795](https://github.com/pybamm-team/PyBaMM/pull/2795))
 - Improved `model.latexify()` to have a cleaner and more readable output ([#2764](https://github.com/pybamm-team/PyBaMM/pull/2764))
 - Fixed electrolyte conservation in the case of concentration-dependent transference number ([#2758](https://github.com/pybamm-team/PyBaMM/pull/2758))
 - Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
-- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 
 ## Optimizations
 

@@ -1,6 +1,7 @@
 #
 # Tests for the Scikits Solver classes
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
@@ -10,7 +11,7 @@ import sys
 
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
-class TestScikitsSolvers(unittest.TestCase):
+class TestScikitsSolvers(TestCase):
     def test_model_ode_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")

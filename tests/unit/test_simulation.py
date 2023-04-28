@@ -1,13 +1,14 @@
 import pybamm
 import numpy as np
 import pandas as pd
+from tests import TestCase
 import os
 import sys
 import unittest
 import uuid
 
 
-class TestSimulation(unittest.TestCase):
+class TestSimulation(TestCase):
     def test_simple_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")

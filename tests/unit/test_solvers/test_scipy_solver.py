@@ -1,6 +1,7 @@
 # Tests for the Scipy Solver class
 #
 import pybamm
+from tests import TestCase
 import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
@@ -8,7 +9,7 @@ import warnings
 import sys
 
 
-class TestScipySolver(unittest.TestCase):
+class TestScipySolver(TestCase):
     def test_model_solver_python_and_jax(self):
         if pybamm.have_jax():
             formats = ["python", "jax"]
@@ -492,7 +493,7 @@ class TestScipySolver(unittest.TestCase):
         )
 
 
-class TestScipySolverWithSensitivity(unittest.TestCase):
+class TestScipySolverWithSensitivity(TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()

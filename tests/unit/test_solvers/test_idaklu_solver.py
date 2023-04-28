@@ -1,6 +1,7 @@
 #
 # Tests for the KLU Solver class
 #
+from tests import TestCase
 from contextlib import redirect_stdout
 import io
 import unittest
@@ -12,7 +13,7 @@ from tests import get_discretisation_for_testing
 
 
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
-class TestIDAKLUSolver(unittest.TestCase):
+class TestIDAKLUSolver(TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -199,6 +200,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.rhs = {u: a * v}
             model.algebraic = {v: 1 - v}
             model.initial_conditions = {u: 0, v: 1}
+            model.variables = {"2u": 2 * u}
 
             disc = pybamm.Discretisation()
             disc.process_model(model)
@@ -249,6 +251,10 @@ class TestIDAKLUSolver(unittest.TestCase):
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
             np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
+
+            # get the sensitivities for the variable
+            d2uda = sol["2u"].sensitivities["a"]
+            np.testing.assert_array_almost_equal(2 * dyda_ida[0:200:2], d2uda)
 
     def test_sensitivities_with_events(self):
         # this test implements a python version of the ida Roberts

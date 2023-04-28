@@ -1,11 +1,12 @@
 #
 # Tests for Ai (2020) Enertech parameter set loads
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestRamadass2004(unittest.TestCase):
+class TestRamadass2004(TestCase):
     def test_functions(self):
         param = pybamm.ParameterValues("Ramadass2004")
         sto = pybamm.Scalar(0.5)

@@ -1,11 +1,12 @@
 #
 # Tests for LG M50 parameter set loads
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestORegan2022(unittest.TestCase):
+class TestORegan2022(TestCase):
     def test_functions(self):
         param = pybamm.ParameterValues("ORegan2022")
         T = pybamm.Scalar(298.15)

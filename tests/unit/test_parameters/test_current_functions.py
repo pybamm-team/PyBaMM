@@ -1,13 +1,14 @@
 #
 # Tests for current input functions
 #
+from tests import TestCase
 import pybamm
 import numbers
 import unittest
 import numpy as np
 
 
-class TestCurrentFunctions(unittest.TestCase):
+class TestCurrentFunctions(TestCase):
     def test_constant_current(self):
         # test simplify
         param = pybamm.electrical_parameters

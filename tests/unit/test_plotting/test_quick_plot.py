@@ -1,10 +1,11 @@
 import os
 import pybamm
 import unittest
+from tests import TestCase
 import numpy as np
 
 
-class TestQuickPlot(unittest.TestCase):
+class TestQuickPlot(TestCase):
     def test_simple_ode_model(self):
         model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
 

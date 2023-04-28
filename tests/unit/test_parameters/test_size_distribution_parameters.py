@@ -3,12 +3,12 @@
 # and give expected values
 #
 import pybamm
-
 import unittest
 import numpy as np
+from tests import TestCase
 
 
-class TestSizeDistributionParameters(unittest.TestCase):
+class TestSizeDistributionParameters(TestCase):
     def test_parameter_values(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()

@@ -1,12 +1,13 @@
 #
 # Tests Event class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
 
 
-class TestEvent(unittest.TestCase):
+class TestEvent(TestCase):
     def test_event(self):
         expression = pybamm.Scalar(1)
         event = pybamm.Event("my event", expression)
