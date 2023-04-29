@@ -342,6 +342,21 @@ class TestSimulationExperiment(TestCase):
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
 
+    def test_run_experiment_with_pbar(self):
+        # The only thing to test here is for errors.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C for 1 sec",
+                    "Charge at 1C for 1 sec",
+                ),
+            ]
+            * 10,
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(showprogress=True)
+
     def test_run_experiment_termination_voltage(self):
         # with percent
         experiment = pybamm.Experiment(

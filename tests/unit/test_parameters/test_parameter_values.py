@@ -56,6 +56,10 @@ class TestParameterValues(TestCase):
         self.assertIn("a", param.keys())
         self.assertIn(1, param.values())
 
+        # from dict "chemistry" key gets removed
+        param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
+        self.assertNotIn("chemistry", param.keys())
+
         # from file
         param = pybamm.ParameterValues(
             "lithium_ion/testing_only/positive_electrodes/lico2_Ai2020/parameters.csv"

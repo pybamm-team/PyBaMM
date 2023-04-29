@@ -216,6 +216,7 @@ setup(
         "sympy>=1.8",
         "xarray",
         "bpx",
+        "tqdm",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
