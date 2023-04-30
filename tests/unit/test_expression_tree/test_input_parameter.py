@@ -1,12 +1,13 @@
 #
 # Tests for the InputParameter class
 #
+from tests import TestCase
 import numpy as np
 import pybamm
 import unittest
 
 
-class TestInputParameter(unittest.TestCase):
+class TestInputParameter(TestCase):
     def test_input_parameter_init(self):
         a = pybamm.InputParameter("a")
         self.assertEqual(a.name, "a")

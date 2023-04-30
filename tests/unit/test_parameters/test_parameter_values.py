@@ -1,6 +1,7 @@
 #
 # Tests for the Base Parameter Values class
 #
+from tests import TestCase
 
 import os
 import tempfile
@@ -21,7 +22,7 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
 import casadi
 
 
-class TestParameterValues(unittest.TestCase):
+class TestParameterValues(TestCase):
     def test_find_parameter(self):
         f = tempfile.NamedTemporaryFile()
         pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
@@ -54,6 +55,10 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["a"], 1)
         self.assertIn("a", param.keys())
         self.assertIn(1, param.values())
+
+        # from dict "chemistry" key gets removed
+        param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
+        self.assertNotIn("chemistry", param.keys())
 
         # from file
         param = pybamm.ParameterValues(

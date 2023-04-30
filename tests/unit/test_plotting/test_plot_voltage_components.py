@@ -1,10 +1,11 @@
 import pybamm
 import unittest
 import numpy as np
+from tests import TestCase
 import matplotlib.pyplot as plt
 
 
-class TestPlotVoltageComponents(unittest.TestCase):
+class TestPlotVoltageComponents(TestCase):
     def test_plot(self):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)

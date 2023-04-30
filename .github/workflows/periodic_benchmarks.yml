@@ -24,12 +24,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
-      - name: Install tox and asv
-        run: pip install -U pip "tox<4" asv
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc libopenblas-dev
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
+      - name: Install SuiteSparse and Sundials
+        run: python scripts/install_KLU_Sundials.py
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run --machine "GitHubRunner" NEW
+          asv run --machine "GitHubRunner" NEW --show-stderr --strict -v
+        env:
+          SUNDIALS_INST: $HOME/.local
+          LD_LIBRARY_PATH: $HOME/.local/lib
       - name: Upload results as artifact
         uses: actions/upload-artifact@v2
         with:
