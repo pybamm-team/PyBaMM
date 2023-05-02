@@ -532,14 +532,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return sensitivity solution, we need to flatten yS to
-        # (#timesteps * #states,) to match format used by Solution
+        # (#timesteps * #states (where t is changing the quickest),)
+        # to match format used by Solution
+        # note that yS is (n_p, n_t, n_y)
         if number_of_sensitivity_parameters != 0:
             yS_out = {
                 name: sol.yS[i].reshape(-1, 1)
                 for i, name in enumerate(sensitivity_names)
             }
+            # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
+            yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
         else:
             yS_out = False
+
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             if sol.flag == 0:

@@ -1,13 +1,14 @@
 #
 # Test for the standard lead acid parameters
 #
+from tests import TestCase
 import pybamm
 from tests import get_discretisation_for_testing
 
 import unittest
 
 
-class TestStandardParametersLeadAcid(unittest.TestCase):
+class TestStandardParametersLeadAcid(TestCase):
     def test_scipy_constants(self):
         constants = pybamm.constants
         self.assertAlmostEqual(constants.R.evaluate(), 8.314, places=3)

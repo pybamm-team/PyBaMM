@@ -1,6 +1,7 @@
 #
 # Tests for integration using Finite Volume method
 #
+from tests import TestCase
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -11,7 +12,7 @@ import numpy as np
 import unittest
 
 
-class TestFiniteVolumeIntegration(unittest.TestCase):
+class TestFiniteVolumeIntegration(TestCase):
     def test_definite_integral(self):
         # create discretisation
         mesh = get_mesh_for_testing(xpts=200, rpts=200)

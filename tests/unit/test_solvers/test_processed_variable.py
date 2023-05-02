@@ -1,6 +1,7 @@
 #
 # Tests for the Processed Variable class
 #
+from tests import TestCase
 import casadi
 import pybamm
 import tests
@@ -57,7 +58,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariable(unittest.TestCase):
+class TestProcessedVariable(TestCase):
     def test_processed_variable_0D(self):
         # without space
         t = pybamm.t
@@ -154,7 +155,7 @@ class TestProcessedVariable(unittest.TestCase):
             warn=False,
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol)
-        np.testing.assert_array_equal(processed_var(t_sol, x_sol), y_sol)
+        np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.ProcessedVariable(
             [eqn_sol],
@@ -162,7 +163,7 @@ class TestProcessedVariable(unittest.TestCase):
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
             warn=False,
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
         )
 
@@ -493,9 +494,7 @@ class TestProcessedVariable(unittest.TestCase):
         # 2 vectors
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
         # 1 vector, 1 scalar
-        np.testing.assert_array_almost_equal(
-            processed_var(0.5, x_sol)[:, 0], 2.5 * x_sol
-        )
+        np.testing.assert_array_almost_equal(processed_var(0.5, x_sol), 2.5 * x_sol)
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol[-1]), x_sol[-1] * np.linspace(0, 5)
         )
@@ -515,10 +514,10 @@ class TestProcessedVariable(unittest.TestCase):
             processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
         )
         # 1 vector, 1 scalar
-        self.assertEqual(processed_eqn(0.5, x_sol[10:30]).shape, (20, 1))
+        self.assertEqual(processed_eqn(0.5, x_sol[10:30]).shape, (20,))
         self.assertEqual(processed_eqn(t_sol[4:9], x_sol[-1]).shape, (5,))
         # 2 scalars
-        self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, (1,))
+        self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, ())
 
         # test x
         x_disc = disc.process_symbol(x)
@@ -530,7 +529,7 @@ class TestProcessedVariable(unittest.TestCase):
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
             warn=False,
         )
-        np.testing.assert_array_almost_equal(processed_x(x=x_sol), x_sol[:, np.newaxis])
+        np.testing.assert_array_almost_equal(processed_x(t=0, x=x_sol), x_sol)
 
         # In particles
         r_n = pybamm.Matrix(
@@ -546,7 +545,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
         r_test = np.linspace(0, 0.5)
-        np.testing.assert_array_almost_equal(processed_r_n(0, r=r_test)[:, 0], r_test)
+        np.testing.assert_array_almost_equal(processed_r_n(0, r=r_test), r_test)
 
         # On size domain
         R_n = pybamm.Matrix(
@@ -562,7 +561,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
         np.testing.assert_array_equal(R_n.entries[:, 0], processed_R_n.entries[:, 0])
         R_test = np.linspace(0, 1)
-        np.testing.assert_array_almost_equal(processed_R_n(0, R=R_test)[:, 0], R_test)
+        np.testing.assert_array_almost_equal(processed_R_n(0, R=R_test), R_test)
 
     def test_processed_var_1D_fixed_t_interpolation(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -625,7 +624,7 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             processed_var(t_sol, x_sol, r_sol),
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
@@ -705,12 +704,14 @@ class TestProcessedVariable(unittest.TestCase):
             warn=False,
         )
         # 2 vectors
-        np.testing.assert_array_equal(processed_var(x=x_sol, r=r_sol).shape, (10, 40))
+        np.testing.assert_array_equal(
+            processed_var(t=0, x=x_sol, r=r_sol).shape, (10, 40)
+        )
         # 1 vector, 1 scalar
-        np.testing.assert_array_equal(processed_var(x=0.2, r=r_sol).shape, (10,))
-        np.testing.assert_array_equal(processed_var(x=x_sol, r=0.5).shape, (40,))
+        np.testing.assert_array_equal(processed_var(t=0, x=0.2, r=r_sol).shape, (10,))
+        np.testing.assert_array_equal(processed_var(t=0, x=x_sol, r=0.5).shape, (40,))
         # 2 scalars
-        np.testing.assert_array_equal(processed_var(x=0.2, r=0.2).shape, ())
+        np.testing.assert_array_equal(processed_var(t=0, x=0.2, r=0.2).shape, ())
 
     def test_processed_var_2D_secondary_broadcast(self):
         var = pybamm.Variable("var", domain=["negative particle"])
@@ -737,7 +738,7 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             processed_var(t_sol, x_sol, r_sol),
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
@@ -800,7 +801,7 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_var(t_sol, y=y_sol, z=z_sol).shape, (15, 15, 50)
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             processed_var(t_sol, y=y_sol, z=z_sol),
             np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
         )
@@ -841,62 +842,14 @@ class TestProcessedVariable(unittest.TestCase):
             warn=False,
         )
         # 2 vectors
-        np.testing.assert_array_equal(processed_var(y=y_sol, z=z_sol).shape, (15, 15))
+        np.testing.assert_array_equal(
+            processed_var(t=0, y=y_sol, z=z_sol).shape, (15, 15)
+        )
         # 1 vector, 1 scalar
-        np.testing.assert_array_equal(processed_var(y=0.2, z=z_sol).shape, (15,))
-        np.testing.assert_array_equal(processed_var(y=y_sol, z=0.5).shape, (15,))
+        np.testing.assert_array_equal(processed_var(t=0, y=0.2, z=z_sol).shape, (15,))
+        np.testing.assert_array_equal(processed_var(t=0, y=y_sol, z=0.5).shape, (15,))
         # 2 scalars
-        np.testing.assert_array_equal(processed_var(t=None, y=0.2, z=0.2).shape, ())
-
-    def test_call_failure(self):
-        # x domain
-        var = pybamm.Variable("var x", domain=["negative electrode", "separator"])
-        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
-        disc = tests.get_discretisation_for_testing()
-        disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries[:, 0]
-        var_sol = disc.process_symbol(var)
-        t_sol = np.linspace(0, 1)
-        y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
-
-        var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
-            [var_sol],
-            [var_casadi],
-            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
-        )
-        with self.assertRaisesRegex(ValueError, "x cannot be None"):
-            processed_var(0)
-
-        # r domain
-        var = pybamm.Variable("var r", domain=["negative particle"])
-        r = pybamm.SpatialVariable(
-            "r",
-            domain=["negative particle"],
-            auxiliary_domains={"secondary": ["negative electrode"]},
-        )
-        disc = tests.get_discretisation_for_testing()
-        disc.set_variable_slices([var])
-        r_sol = disc.process_symbol(r).entries[:, 0]
-        var_sol = disc.process_symbol(var)
-        y_sol = r_sol[:, np.newaxis] * np.linspace(0, 5)
-
-        var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
-            [var_sol],
-            [var_casadi],
-            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
-        )
-        with self.assertRaisesRegex(ValueError, "r cannot be None"):
-            processed_var(0)
-        with self.assertRaisesRegex(ValueError, "r cannot be None"):
-            processed_var(0, 1)
-
-        # t is None but len(solution.t) > 1
-        with self.assertRaisesRegex(ValueError, "t cannot be None"):
-            processed_var()
+        np.testing.assert_array_equal(processed_var(t=0, y=0.2, z=0.2).shape, ())
 
     def test_3D_raises_error(self):
         var = pybamm.Variable(

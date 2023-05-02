@@ -1,11 +1,12 @@
 #
 # Tests for the lithium-ion electrode-specific SOH model
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestElectrodeSOH(unittest.TestCase):
+class TestElectrodeSOH(TestCase):
     def test_known_solution(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -136,7 +137,7 @@ class TestElectrodeSOH(unittest.TestCase):
             esoh_solver.solve(inputs)
 
 
-class TestElectrodeSOHHalfCell(unittest.TestCase):
+class TestElectrodeSOHHalfCell(TestCase):
     def test_known_solution(self):
         model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")
 
@@ -154,7 +155,7 @@ class TestElectrodeSOHHalfCell(unittest.TestCase):
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
 
 
-class TestCalculateTheoreticalEnergy(unittest.TestCase):
+class TestCalculateTheoreticalEnergy(TestCase):
     def test_efficiency(self):
         model = pybamm.lithium_ion.DFN(options={"calculate discharge energy": "true"})
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -173,7 +174,7 @@ class TestCalculateTheoreticalEnergy(unittest.TestCase):
         self.assertLess(0, theoretical_energy)
 
 
-class TestGetInitialSOC(unittest.TestCase):
+class TestGetInitialSOC(TestCase):
     def test_initial_soc(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")

@@ -1,11 +1,12 @@
 #
 # Tests for the lithium-ion DFN model
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestYang2017(unittest.TestCase):
+class TestYang2017(TestCase):
     def test_well_posed(self):
         model = pybamm.lithium_ion.Yang2017()
         model.check_well_posedness()

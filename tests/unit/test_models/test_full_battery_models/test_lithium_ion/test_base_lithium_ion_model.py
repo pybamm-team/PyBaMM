@@ -1,12 +1,13 @@
 #
 # Tests for the base lead acid model class
 #
+from tests import TestCase
 import pybamm
 import unittest
 import os
 
 
-class TestBaseLithiumIonModel(unittest.TestCase):
+class TestBaseLithiumIonModel(TestCase):
     def test_incompatible_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "convection not implemented"):
             pybamm.lithium_ion.BaseModel({"convection": "uniform transverse"})

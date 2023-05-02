@@ -1,11 +1,12 @@
 #
 # Tests the logger class.
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestLogger(unittest.TestCase):
+class TestLogger(TestCase):
     def test_logger(self):
         logger = pybamm.logger
         self.assertEqual(logger.level, 30)

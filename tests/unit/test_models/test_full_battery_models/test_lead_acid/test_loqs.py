@@ -1,11 +1,12 @@
 #
 # Tests for the lead-acid LOQS model
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestLeadAcidLOQS(unittest.TestCase):
+class TestLeadAcidLOQS(TestCase):
     def test_well_posed(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.LOQS(options)
@@ -79,7 +80,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
 
 
-class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
+class TestLeadAcidLOQSWithSideReactions(TestCase):
     def test_well_posed_differential(self):
         options = {"surface form": "differential", "hydrolysis": "true"}
         model = pybamm.lead_acid.LOQS(options)
@@ -91,7 +92,7 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
+class TestLeadAcidLOQSSurfaceForm(TestCase):
     def test_well_posed_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
@@ -120,7 +121,7 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         self.assertIn("current collector", model.default_geometry)
 
 
-class TestLeadAcidLOQSExternalCircuits(unittest.TestCase):
+class TestLeadAcidLOQSExternalCircuits(TestCase):
     def test_well_posed_voltage(self):
         options = {"operating mode": "voltage"}
         model = pybamm.lead_acid.LOQS(options)

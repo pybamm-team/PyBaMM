@@ -1,12 +1,13 @@
 #
 # Tests for the Effective Current Collector Resistance models
 #
+from tests import TestCase
 import pybamm
 import unittest
 import numpy as np
 
 
-class TestEffectiveResistance(unittest.TestCase):
+class TestEffectiveResistance(TestCase):
     def test_well_posed(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
         model.check_well_posedness()
@@ -45,7 +46,7 @@ class TestEffectiveResistance(unittest.TestCase):
             pybamm.current_collector.EffectiveResistance({"dimensionality": 10})
 
 
-class TestEffectiveResistancePostProcess(unittest.TestCase):
+class TestEffectiveResistancePostProcess(TestCase):
     def test_get_processed_variables(self):
         # solve cheap SPM to test post-processing (think of an alternative test?)
         models = [
@@ -74,15 +75,18 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
         # for each current collector model
         for model in models[1:]:
             solution = model.default_solver.solve(model)
-            vars = model.post_process(solution, param, V, I)
+            variables = model.post_process(solution, param, V, I)
             pts = np.array([0.1, 0.5, 0.9]) * min(
                 param.evaluate(model.param.L_y), param.evaluate(model.param.L_z)
             )
-            for var, processed_var in vars.items():
+            for var, processed_var in variables.items():
                 if "Voltage [V]" in var:
                     processed_var(t=solution_1D.t[5])
                 else:
-                    processed_var(t=solution_1D.t[5], y=pts, z=pts)
+                    if model.options["dimensionality"] == 1:
+                        processed_var(t=solution_1D.t[5], z=pts)
+                    else:
+                        processed_var(t=solution_1D.t[5], y=pts, z=pts)
 
 
 if __name__ == "__main__":

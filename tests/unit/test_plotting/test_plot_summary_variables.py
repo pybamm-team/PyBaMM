@@ -1,9 +1,10 @@
 import pybamm
 import unittest
 import numpy as np
+from tests import TestCase
 
 
-class TestPlotSummaryVariables(unittest.TestCase):
+class TestPlotSummaryVariables(TestCase):
     def test_plot(self):
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
         parameter_values = pybamm.ParameterValues("Mohtat2020")

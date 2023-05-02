@@ -1,13 +1,14 @@
 #
 # Compare basic models with full models
 #
+from tests import TestCase
 import pybamm
 
 import numpy as np
 import unittest
 
 
-class TestCompareBasicModels(unittest.TestCase):
+class TestCompareBasicModels(TestCase):
     def test_compare_dfns(self):
         basic_dfn = pybamm.lithium_ion.BasicDFN()
         dfn = pybamm.lithium_ion.DFN()

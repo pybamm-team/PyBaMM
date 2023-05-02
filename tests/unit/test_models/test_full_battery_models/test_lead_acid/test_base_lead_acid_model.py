@@ -1,11 +1,12 @@
 #
 # Tests for the base lead acid model class
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestBaseLeadAcidModel(unittest.TestCase):
+class TestBaseLeadAcidModel(TestCase):
     def test_default_geometry(self):
         model = pybamm.lead_acid.BaseModel({"dimensionality": 0})
         self.assertEqual(
