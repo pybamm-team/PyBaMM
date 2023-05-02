@@ -296,7 +296,6 @@ class Simulation:
         # Set up rest model if experiment has timestamps
         if self.experiment.initial_timestamp:
             new_model = self.model.new_copy()
-            self.update_new_model_events(new_model, op)
             # Update parameter values
             new_parameter_values = self.parameter_values.copy()
             self._original_temperature = new_parameter_values["Ambient temperature [K]"]
