@@ -5,8 +5,8 @@ import casadi
 import numbers
 import numpy as np
 import pybamm
-import scipy.interpolate as interp
 from scipy.integrate import cumulative_trapezoid
+import xarray as xr
 
 
 class ProcessedVariable(object):
@@ -131,18 +131,7 @@ class ProcessedVariable(object):
             )
 
         # set up interpolation
-        if len(self.t_pts) == 1:
-            # Variable is just a scalar value, but we need to create a callable
-            # function to be consistent with other processed variables
-            self._interpolation_function = Interpolant0D(entries)
-        else:
-            self._interpolation_function = interp.interp1d(
-                self.t_pts,
-                entries,
-                kind="linear",
-                fill_value=np.nan,
-                bounds_error=False,
-            )
+        self._xr_data_array = xr.DataArray(entries, coords=[("t", self.t_pts)])
 
         self.entries = entries
         self.dimensions = 0
@@ -211,22 +200,10 @@ class ProcessedVariable(object):
         self.first_dim_pts = edges
 
         # set up interpolation
-        if len(self.t_pts) == 1:
-            # function of space only
-            self._interpolation_function = Interpolant1D(
-                pts_for_interp, entries_for_interp
-            )
-        else:
-            # function of space and time. Note that the order of 't' and 'space'
-            # is the reverse of what you'd expect
-            self._interpolation_function = interp.interp2d(
-                self.t_pts,
-                pts_for_interp,
-                entries_for_interp,
-                kind="linear",
-                fill_value=np.nan,
-                bounds_error=False,
-            )
+        self._xr_data_array = xr.DataArray(
+            entries_for_interp,
+            coords=[(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
+        )
 
     def initialise_2D(self):
         """
@@ -362,21 +339,14 @@ class ProcessedVariable(object):
         self.second_dim_pts = second_dim_edges
 
         # set up interpolation
-        if len(self.t_pts) == 1:
-            # function of space only. Note the order of the points is the reverse
-            # of what you'd expect
-            self._interpolation_function = Interpolant2D(
-                first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
-            )
-        else:
-            # function of space and time.
-            self._interpolation_function = interp.RegularGridInterpolator(
-                (first_dim_pts_for_interp, second_dim_pts_for_interp, self.t_pts),
-                entries_for_interp,
-                method="linear",
-                fill_value=np.nan,
-                bounds_error=False,
-            )
+        self._xr_data_array = xr.DataArray(
+            entries_for_interp,
+            coords={
+                self.first_dimension: first_dim_pts_for_interp,
+                self.second_dimension: second_dim_pts_for_interp,
+                "t": self.t_pts,
+            },
+        )
 
     def initialise_2D_scikit_fem(self):
         y_sol = self.mesh.edges["y"]
@@ -411,74 +381,21 @@ class ProcessedVariable(object):
         self.second_dim_pts = z_sol
 
         # set up interpolation
-        if len(self.t_pts) == 1:
-            # function of space only. Note the order of the points is the reverse
-            # of what you'd expect
-            self._interpolation_function = Interpolant2D(
-                self.first_dim_pts, self.second_dim_pts, entries
-            )
-        else:
-            # function of space and time.
-            self._interpolation_function = interp.RegularGridInterpolator(
-                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
-                entries,
-                method="linear",
-                fill_value=np.nan,
-                bounds_error=False,
-            )
+        self._xr_data_array = xr.DataArray(
+            entries,
+            coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
+        )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
-        # If t is None and there is only one value of time in the soluton (i.e.
-        # the solution is independent of time) then we set t equal to the value
-        # stored in the solution. If the variable is constant (doesn't depend on
-        # time) evaluate arbitrarily at the first value of t. Otherwise, raise
-        # an error
-        if t is None:
-            if len(self.t_pts) == 1:
-                t = self.t_pts
-            elif len(self.base_variables) == 1 and self.base_variables[0].is_constant():
-                t = self.t_pts[0]
-            else:
-                raise ValueError(
-                    "t cannot be None for variable {}".format(self.base_variables)
-                )
-
-        # Call interpolant of correct spatial dimension
-        if self.dimensions == 0:
-            out = self._interpolation_function(t)
-        elif self.dimensions == 1:
-            out = self.call_1D(t, x, r, z, R)
-        elif self.dimensions == 2:
-            out = self.call_2D(t, x, r, y, z, R)
-        if warn is True and np.isnan(out).any():
-            pybamm.logger.warning(
-                "Calling variable outside interpolation range (returns 'nan')"
-            )
-        return out
-
-    def call_1D(self, t, x, r, z, R):
-        """Evaluate a 1D variable"""
-        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z, R)
-        return self._interpolation_function(t, spatial_var)
-
-    def call_2D(self, t, x, r, y, z, R):
-        """Evaluate a 2D variable"""
-        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z, R)
-        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z, R)
-        if isinstance(first_dim, np.ndarray):
-            if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
-                first_dim = first_dim[:, np.newaxis, np.newaxis]
-                second_dim = second_dim[:, np.newaxis]
-            elif isinstance(second_dim, np.ndarray) or isinstance(t, np.ndarray):
-                first_dim = first_dim[:, np.newaxis]
-        else:
-            if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
-                second_dim = second_dim[:, np.newaxis]
-        return self._interpolation_function((first_dim, second_dim, t))
+        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
+        # Remove any None arguments
+        kwargs = {key: value for key, value in kwargs.items() if value is not None}
+        # Use xarray interpolation, return numpy array
+        return self._xr_data_array.interp(**kwargs).values
 
     @property
     def data(self):
@@ -564,79 +481,3 @@ class ProcessedVariable(object):
 
         # Save attribute
         self._sensitivities = sensitivities
-
-
-class Interpolant0D:
-    def __init__(self, entries):
-        self.entries = entries
-
-    def __call__(self, t):
-        return self.entries
-
-
-class Interpolant1D:
-    def __init__(self, pts_for_interp, entries_for_interp):
-        self.interpolant = interp.interp1d(
-            pts_for_interp,
-            entries_for_interp[:, 0],
-            kind="linear",
-            fill_value=np.nan,
-            bounds_error=False,
-        )
-
-    def __call__(self, t, z):
-        if isinstance(z, np.ndarray):
-            return self.interpolant(z)[:, np.newaxis]
-        else:
-            return self.interpolant(z)
-
-
-class Interpolant2D:
-    def __init__(
-        self, first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
-    ):
-        self.interpolant = interp.interp2d(
-            second_dim_pts_for_interp,
-            first_dim_pts_for_interp,
-            entries_for_interp[:, :, 0],
-            kind="linear",
-            fill_value=np.nan,
-            bounds_error=False,
-        )
-
-    def __call__(self, input):
-        """
-        Calls and returns a 2D interpolant of the correct shape depending on the
-        shape of the input
-        """
-        first_dim, second_dim, _ = input
-        if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
-            first_dim = first_dim[:, 0, 0]
-            second_dim = second_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)
-        elif isinstance(first_dim, np.ndarray):
-            first_dim = first_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)[:, 0]
-        elif isinstance(second_dim, np.ndarray):
-            second_dim = second_dim[:, 0]
-            return self.interpolant(second_dim, first_dim)
-        else:
-            return self.interpolant(second_dim, first_dim)[0]
-
-
-def eval_dimension_name(name, x, r, y, z, R):
-    if name == "x":
-        out = x
-    elif name == "r":
-        out = r
-    elif name == "y":
-        out = y
-    elif name == "z":
-        out = z
-    elif name == "R":
-        out = R
-
-    if out is None:
-        raise ValueError("inputs {} cannot be None".format(name))
-    else:
-        return out

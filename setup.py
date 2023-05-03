@@ -214,6 +214,7 @@ setup(
         "importlib-metadata",
         "pybtex>=0.24.0",
         "sympy>=1.8",
+        "xarray",
         "bpx",
         "tqdm",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
