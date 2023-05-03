@@ -39,7 +39,7 @@ jobs:
           .\bootstrap-vcpkg.bat
 
       - name: Cache packages installed through vcpkg on windows
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: vckpg_binary_cache
         with:
