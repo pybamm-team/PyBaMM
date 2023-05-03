@@ -23,7 +23,7 @@ jobs:
         run: python -m pip install cibuildwheel==1.9.0
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
 
       # remove when a new vcpkg version is released
       - name: Install the latest commit of vcpkg on windows
