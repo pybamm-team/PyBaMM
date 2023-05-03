@@ -329,19 +329,15 @@ class TestQuickPlot(TestCase):
                 )
                 quick_plot.plot(0)
 
-                qp_data = (
-                    quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
-                        0
-                    ].get_ydata(),
-                )[0]
+                qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
+                    0
+                ].get_ydata()
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 0])
-                quick_plot.slider_update(t_eval[-1] / scale)
 
-                qp_data = (
-                    quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
-                        0
-                    ].get_ydata(),
-                )[0][:, 0]
+                quick_plot.slider_update(t_eval[-1] / scale)
+                qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
+                    0
+                ].get_ydata()
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
 
             # test quick plot of particle for spme

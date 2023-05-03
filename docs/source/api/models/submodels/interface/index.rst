@@ -5,8 +5,9 @@ Interface
   :maxdepth: 1
 
   base_interface
-  kinetics
-  inverse_butler_volmer
-  diffusion_limited
-  sei
-  open_circuit_potential
+  total_interfacial_current
+  interface_utilisation/index
+  kinetics/index
+  lithium_plating/index
+  open_circuit_potential/index
+  sei/index
