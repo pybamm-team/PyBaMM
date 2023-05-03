@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added new notebook `rpt-experiment` to demonstrate how to set up degradation experiments with RPTs ([#2851](https://github.com/pybamm-team/PyBaMM/pull/2851))
+
 # [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
 
 ## Bug fixes
@@ -11,7 +15,6 @@
 ## Features
 
 - Added verbose logging to `pybamm.print_citations()` and citation tags for the `pybamm.Citations` class so that users can now see where the citations were registered when running simulations ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862))
-- Added new notebook `rpt-experiment` to demonstrate how to set up degradation experiments with RPTs ([#2851](https://github.com/pybamm-team/PyBaMM/pull/2851))
 - PyBaMM is now natively supported on Apple silicon chips (`M1/M2`) ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
 - PyBaMM is now supported on Python `3.10` and `3.11` ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
 - Updated to casadi 3.6, which required some changes to the casadi integrator. ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
