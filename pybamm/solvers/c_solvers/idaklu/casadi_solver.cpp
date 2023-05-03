@@ -344,25 +344,12 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
   }
 
-  // TODO: not sure if I need to do this again...
-  for (int is = 0 ; is < number_of_parameters; is++) {
-    ySval[is] = N_VGetArrayPointer(yyS[is]);
-  }
-  yval = N_VGetArrayPointer(yy);
-  ypval = N_VGetArrayPointer(yp);
-
-
   // calculate consistent initial conditions
   DEBUG("IDACalcIC");
   IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
-  for (int j = 0; j < number_of_parameters; j++) {
-    for (int k = 0; k < number_of_states; k++) {
-      std::cout << "ySval[" << j << "]["<< k << "] = " << ySval[j][k] << std::endl;
-    }
-    //DEBUG_VECTOR(yyS[j]);
-  }
-  for (int k = 0; k < 10; k++) {
-    std::cout << "yval["<< k << "] = " << yval[k] << std::endl;
+  if (number_of_parameters > 0)
+  {
+    IDAGetSens(ida_mem, &t0, yyS);
   }
 
   int t_i = 1;

@@ -501,7 +501,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             y0S = (x.full() for x in y0S)
             y0S = [x.flatten() for x in y0S]
-        print("integrate y0S", y0S)
 
         # solver works with ydot0 set to zero
         ydot0 = np.zeros_like(y0)
@@ -523,7 +522,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi":
-            print("sol for ", t_eval)
             sol = self._setup["solver"].solve(
                 t_eval,
                 y0full,
