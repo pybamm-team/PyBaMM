@@ -34,11 +34,9 @@ jobs:
         with:
           python-version: 3.9
           cache: 'pip'
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
 
       - name: Check style
         run: |
@@ -61,12 +59,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
 
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'

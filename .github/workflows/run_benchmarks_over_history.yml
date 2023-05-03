@@ -28,11 +28,9 @@ jobs:
         with:
           python-version: 3.8
           cache: 'pip'
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
       - name: Install tox and asv
         run: pip install -U pip "tox<4" asv
       - name: Fetch develop branch
@@ -63,11 +61,9 @@ jobs:
         with:
           python-version: 3.8
           cache: 'pip'
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements.txt') }}
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
       - name: Install asv
         run: pip install asv
       - name: Checkout pybamm-bench repo
