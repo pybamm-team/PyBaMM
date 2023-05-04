@@ -9,7 +9,6 @@ import pybamm
 if pybamm.have_jax():
     import jax
     import jax.numpy as jnp
-    from absl import logging
     from jax import core, dtypes
     from jax import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
@@ -20,8 +19,6 @@ if pybamm.have_jax():
     from jax.util import cache, safe_map, split_list
 
     config.update("jax_enable_x64", True)
-
-    logging.set_verbosity(logging.ERROR)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
