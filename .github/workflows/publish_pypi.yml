@@ -83,7 +83,7 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
-      - name: Install sundials on macOS
+      - name: Install SUNDIALS on macOS
         if: matrix.os == 'macos-latest'
         run: |
           # https://github.com/actions/virtual-environments/issues/1280
@@ -95,6 +95,22 @@ jobs:
           brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
+          brew bundle dump --force --no-lock
+      
+      # Experimental solution for caching Homebrew installs
+      - name: Cache macOS SUNDIALS dependencies
+        uses: actions/cache@v3
+        if: matrix.os == 'macos-latest'
+        with:
+          # paths for Homebrew packages, formulae, and binaries
+          path: |
+            /usr/local/Homebrew
+            /usr/local/Cellar
+            /usr/local/Frameworks
+            /usr/local/bin
+            /usr/local/opt
+            ~/Library/Caches/Homebrew/*
+          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
 
       - name: Build wheels on Linux and MacOS
         run: python -m cibuildwheel --output-dir wheelhouse

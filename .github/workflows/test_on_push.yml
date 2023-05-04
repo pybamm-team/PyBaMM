@@ -82,6 +82,22 @@ jobs:
           brew update
           brew install graphviz
           brew install openblas
+          brew bundle dump --force --no-lock --file=Brewfile
+      
+      # Experimental solution for caching Homebrew installs
+      - name: Cache MacOS dependencies
+        uses: actions/cache@v3
+        if: matrix.os == 'macos-latest'
+        with:
+          # paths for Homebrew packages, formulae, and binaries
+          path: |
+            /usr/local/Homebrew
+            /usr/local/Cellar
+            /usr/local/Frameworks
+            /usr/local/bin
+            /usr/local/opt
+            ~/Library/Caches/Homebrew/*
+          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
