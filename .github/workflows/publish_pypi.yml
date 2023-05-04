@@ -92,7 +92,7 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: >
-            yum -y install openblas-devel
+            yum -y install openblas-devel &&
             bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0
 
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
