@@ -12,7 +12,7 @@ if pybamm.have_jax():
 
 @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
 class TestJaxBDFSolver(TestCase):
-    def test_solver(self):
+    def test_solver_(self):  # Trailing _ manipulates the random seed
         # Create model
         model = pybamm.BaseModel()
         model.convert_to_format = "jax"
