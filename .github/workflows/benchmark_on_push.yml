@@ -16,9 +16,9 @@ jobs:
             setup.py
             requirements.txt
       - name: Install Linux system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt install gfortran gcc libopenblas-dev
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        with:
+          packages: gfortran gcc libopenblas-dev
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
