@@ -9,6 +9,15 @@ on:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
         default: "pypi"
 
+env:
+  # Homebrew environment variables
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  HOMEBREW_NO_ANALYTICS: 1
+  HOMEBREW_NO_GOOGLE_ANALYTICS: 1
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  # Speed up CI
+  NONINTERACTIVE: 1
+
 jobs:
   build_windows_wheels:
     name: Build wheels on windows-latest
