@@ -15,9 +15,7 @@ jobs:
         with:
           python-version: 3.9
           cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
+          cache-dependency-path: requirements.txt
       - name: Get current date
         run: echo "VERSION=$(date +'%y.%-m')" >> $GITHUB_ENV
       - name: Install PyBaMM
