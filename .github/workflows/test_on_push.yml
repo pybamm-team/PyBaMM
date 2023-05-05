@@ -73,6 +73,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc libopenblas-dev graphviz texlive-full
+          execute_install_scripts: true
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3

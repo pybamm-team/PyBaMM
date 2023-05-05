@@ -17,6 +17,7 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         with:
           packages: gfortran gcc libopenblas-dev
+          execute_install_scripts: true
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
