@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 LIBDIR=${HOME}/.local/lib
 
 otool -L ${LIBDIR}/libklu.2.dylib
