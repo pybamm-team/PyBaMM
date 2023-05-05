@@ -111,7 +111,7 @@ jobs:
           # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
           # it for mac
           # CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}"
-          CIBW_SKIP: pp*, *musllinux*
+          CIBW_SKIP: "pp* *musllinux*"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3
