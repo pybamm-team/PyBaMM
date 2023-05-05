@@ -11,7 +11,7 @@ import subprocess
 casadi_dir = casadi.__path__[0]
 print("Removing rpath references in python casadi install at", casadi_dir)
 
-libcpp_name = "libc++.1.dylib"
+libcpp_name = "libc++.1.0.dylib"
 libcppabi_name = "libc++abi.dylib"
 libcasadi_name = "libcasadi.dylib"
 install_name_tool_args = [
