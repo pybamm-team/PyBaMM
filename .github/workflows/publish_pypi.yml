@@ -28,7 +28,9 @@ jobs:
         with:
           python-version: 3.8
           cache: 'pip'
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==1.9.0
@@ -80,7 +82,9 @@ jobs:
         with:
           python-version: 3.8
           cache: 'pip'
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
           
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==1.9.0
@@ -148,7 +152,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
 
       - name: Install dependencies
         run: pip install wheel
