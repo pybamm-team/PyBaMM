@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.comment.author_association != 'OWNER' &&
-      github.event.comment.author_association != 'COLLABORATOR'
+      github.event.comment.author_association != 'COLLABORATOR' &&
+      github.repository-owner == 'pybamm-team'
     steps:
       - name: Remove needs-reply label
         uses: octokit/request-action@v2.x
