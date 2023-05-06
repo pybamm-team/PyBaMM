@@ -1,13 +1,14 @@
 #
 # Tests for the lithium-ion MPM model
 #
+from tests import TestCase
 import pybamm
 import tests
 import numpy as np
 import unittest
 
 
-class TestMPM(unittest.TestCase):
+class TestMPM(TestCase):
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)

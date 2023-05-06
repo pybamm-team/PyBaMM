@@ -1,13 +1,14 @@
 #
 # Tests for the Vector class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 
 import unittest
 
 
-class TestVector(unittest.TestCase):
+class TestVector(TestCase):
     def setUp(self):
         self.x = np.array([[1], [2], [3]])
         self.vect = pybamm.Vector(self.x)

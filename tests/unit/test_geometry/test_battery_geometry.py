@@ -1,11 +1,12 @@
 #
 # Tests for the base model class
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestBatteryGeometry(unittest.TestCase):
+class TestBatteryGeometry(TestCase):
     def test_geometry_keys(self):
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(
@@ -83,7 +84,7 @@ class TestBatteryGeometry(unittest.TestCase):
             pybamm.battery_geometry(form_factor="triangle")
 
 
-class TestReadParameters(unittest.TestCase):
+class TestReadParameters(TestCase):
     # This is the most complicated geometry and should test the parameters are
     # all returned for the deepest dict
     def test_read_parameters(self):

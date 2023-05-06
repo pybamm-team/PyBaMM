@@ -1,6 +1,7 @@
 #
 # Tests for the lead-acid LOQS model with capacitance
 #
+from tests import TestCase
 import pybamm
 import tests
 
@@ -9,7 +10,7 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidLoqsSurfaceForm(unittest.TestCase):
+class TestLeadAcidLoqsSurfaceForm(TestCase):
     def test_basic_processing(self):
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.LOQS(options)

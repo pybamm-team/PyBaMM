@@ -1,13 +1,14 @@
 #
 # Test basic half-cell model with different parameter values
 #
+from tests import TestCase
 import pybamm
 
 import numpy as np
 import unittest
 
 
-class TestBasicHalfCellModels(unittest.TestCase):
+class TestBasicHalfCellModels(TestCase):
     def test_runs_Xu2019(self):
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)

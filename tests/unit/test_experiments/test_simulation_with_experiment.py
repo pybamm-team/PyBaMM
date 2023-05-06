@@ -1,6 +1,7 @@
 #
 # Test setting up a simulation with an experiment
 #
+from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -8,7 +9,7 @@ import os
 import unittest
 
 
-class TestSimulationExperiment(unittest.TestCase):
+class TestSimulationExperiment(TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
@@ -340,6 +341,21 @@ class TestSimulationExperiment(unittest.TestCase):
         sol = sim.solve(solver=pybamm.CasadiSolver())
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
+
+    def test_run_experiment_with_pbar(self):
+        # The only thing to test here is for errors.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C for 1 sec",
+                    "Charge at 1C for 1 sec",
+                ),
+            ]
+            * 10,
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(showprogress=True)
 
     def test_run_experiment_termination_voltage(self):
         # with percent

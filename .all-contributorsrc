@@ -441,7 +441,7 @@
       "login": "wigging",
       "name": "Gavin Wiggins",
       "avatar_url": "https://avatars.githubusercontent.com/u/6828967?v=4",
-      "profile": "https://gavinw.me",
+      "profile": "https://wigging.me",
       "contributions": [
         "bug",
         "code"
@@ -570,7 +570,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/31622972?v=4",
       "profile": "https://aniketsinghrawat.vercel.app/",
       "contributions": [
-        "code"
+        "code",
+        "doc"
       ]
     },
     {
@@ -601,6 +602,15 @@
       "contributions": [
         "code",
         "test"
+      ]
+    },
+    {
+      "login": "arjxn-py",
+      "name": "Arjun",
+      "avatar_url": "https://avatars.githubusercontent.com/u/104268427?v=4",
+      "profile": "https://github.com/arjxn-py",
+      "contributions": [
+        "infra"
       ]
     }
   ],

@@ -1,5 +1,36 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
+
+## Bug fixes
+
+- Fixed a performance regression introduced by citation tags ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862)). Citations tags functionality is removed for now.
+
+# [v23.4](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-04-30
+
+## Features
+
+- Added verbose logging to `pybamm.print_citations()` and citation tags for the `pybamm.Citations` class so that users can now see where the citations were registered when running simulations ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862))
+- PyBaMM is now natively supported on Apple silicon chips (`M1/M2`) ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
+- PyBaMM is now supported on Python `3.10` and `3.11` ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
+- Updated to casadi 3.6, which required some changes to the casadi integrator. ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
+
+## Optimizations
+
+- Fixed deprecated `interp2d` method by switching to `xarray.DataArray` as the backend for `ProcessedVariable` ([#2907](https://github.com/pybamm-team/PyBaMM/pull/2907))
+
+## Bug fixes
+
+- Parameter sets can now contain the key "chemistry", and will ignore its value (this previously would give errors in some cases) ([#2901](https://github.com/pybamm-team/PyBaMM/pull/2901))
+- Fixed a bug in the discretisation of initial conditions of a scaled variable ([#2856](https://github.com/pybamm-team/PyBaMM/pull/2856))
+- Fixed keyerror on "all" when getting sensitivities from IDAKLU solver([#2883](https://github.com/pybamm-team/PyBaMM/pull/2883))
+
+## Breaking changes
+
+- Made `Jupyter` a development only dependency. Now `Jupyter` would not be a required dependency for users while installing `PyBaMM`. ([#2846](https://github.com/pybamm-team/PyBaMM/pull/2846))
+
+# [v23.3](https://github.com/pybamm-team/PyBaMM/tree/v23.3) - 2023-03-31
+
 ## Features
 
 - Added option to limit the number of integrators stored in CasadiSolver, which is particularly relevant when running simulations back-to-back [#2823](https://github.com/pybamm-team/PyBaMM/pull/2823)
@@ -7,17 +38,18 @@
 - Added method to calculate maximum theoretical energy. ([#2777](https://github.com/pybamm-team/PyBaMM/pull/2777)) and add to summary variables ([#2781](https://github.com/pybamm-team/PyBaMM/pull/2781))
 - Renamed "Terminal voltage [V]" to just "Voltage [V]". "Terminal voltage [V]" can still be used and will return the same value as "Voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Added "Negative electrode surface potential difference at separator interface [V]", which is the value of the surface potential difference (`phi_s - phi_e`) at the anode/separator interface, commonly controlled in fast-charging algorithms to avoid plating. Also added "Positive electrode surface potential difference at separator interface [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
-- Added "Open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Added "Bulk open-circuit voltage [V]", which is the open-circuit voltage as calculated from the bulk particle concentrations. The old variable "Measured open circuit voltage [V]", which referred to the open-circuit potential as calculated from the surface particle concentrations, has been renamed to "Surface open-circuit voltage [V]". ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740)) "Bulk open-circuit voltage [V]" was briefly named "Open-circuit voltage [V]", but this was changed in ([#2845](https://github.com/pybamm-team/PyBaMM/pull/2845))
 - Added an example for `plot_voltage_components`, explaining what the different voltage components are. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 
 ## Bug fixes
 
+- Fix non-deteministic outcome of some tests in the test suite ([#2844](https://github.com/pybamm-team/PyBaMM/pull/2844))
 - Fixed excessive RAM consumption when running multiple simulations ([#2823](https://github.com/pybamm-team/PyBaMM/pull/2823))
+- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 - Fixed a bug where variable bounds could not contain `InputParameters` ([#2795](https://github.com/pybamm-team/PyBaMM/pull/2795))
 - Improved `model.latexify()` to have a cleaner and more readable output ([#2764](https://github.com/pybamm-team/PyBaMM/pull/2764))
 - Fixed electrolyte conservation in the case of concentration-dependent transference number ([#2758](https://github.com/pybamm-team/PyBaMM/pull/2758))
 - Fixed `plot_voltage_components` so that the sum of overpotentials is now equal to the voltage ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
-- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 
 ## Optimizations
 
@@ -28,7 +60,7 @@
 - `ElectrodeSOH.solve` now returns a `{str: float}` dict instead of a `pybamm.Solution` object (to avoid having to do `.data[0]` every time). In any code that uses `sol = ElectrodeSOH.solve()`, `sol[key].data[0]` should be replaced with `sol[key]`. ([#2779](https://github.com/pybamm-team/PyBaMM/pull/2779))
 - Removed "... cation signed stoichiometry" and "... electrons in reaction" parameters, they are now hardcoded. ([#2778](https://github.com/pybamm-team/PyBaMM/pull/2778))
 - When using `solver.step()`, the first time point in the step is shifted by `pybamm.settings.step_start_offset` (default 1 ns) to avoid having duplicate times in the solution steps from the end of one step and the start of the next. ([#2773](https://github.com/pybamm-team/PyBaMM/pull/2773))
-- Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Open-circuit voltage [V]" is calculated from bulk particle concentrations instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
+- Renamed "Measured open circuit voltage [V]" to "Surface open-circuit voltage [V]". This variable was calculated from surface particle concentrations, and hence "hid" the overpotential from particle gradients. The new variable "Bulk open-circuit voltage [V]" is calculated from bulk particle concentrations instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Renamed all references to "open circuit" to be "open-circuit" instead. ([#2740](https://github.com/pybamm-team/PyBaMM/pull/2740))
 - Renamed parameter "1 + dlnf/dlnc" to "Thermodynamic factor". ([#2727](https://github.com/pybamm-team/PyBaMM/pull/2727))
 - All PyBaMM models are now dimensional. This has been benchmarked against dimensionless models and found to give around the same solve time. Implementing dimensional models greatly reduces the barrier to entry for adding new models. However, this comes with several breaking changes: (i) the `timescale` and `length_scales` attributes of a model have been removed (they are no longer needed) (ii) several dimensionless variables are no longer defined, but the corresponding dimensional variables can still be accessed by adding the units to the name (iii) some parameters used only for non-dimensionalization, such as "Typical current [A]", have been removed ([#2419](https://github.com/pybamm-team/PyBaMM/pull/2419))
