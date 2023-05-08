@@ -65,9 +65,6 @@ installed on your system.
 The IDA-based solver is currently unavailable on windows.
 If you are running windows, you can simply skip this section and jump to :ref:`pybamm-install`.
 
-Using Tox (recommended for GNU/Linux users)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. code:: bash
 
 	  # in the PyBaMM/ directory
@@ -75,24 +72,6 @@ Using Tox (recommended for GNU/Linux users)
 
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
 Both libraries are installed in ``~/.local``.
-
-Using Homebrew (recommended for MacOS users)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you are using MacOS, an alternative to the above is to get the required SUNDIALS components from Homebrew:
-
-.. code:: bash
-
-	  brew install sundials
-
-Next, clone the pybind11 and casadi-headers repositories:
-
-.. code:: bash
-
-	  # in the PyBaMM/ directory
-	  git clone https://github.com/pybind/pybind11.git
-
-That's it.
 
 Manual install of build time requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
