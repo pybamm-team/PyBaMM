@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+
+- Update Jax (0.4.8) and JaxLib (0.4.7) compatibility ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2927))
+
 # [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
 
 ## Bug fixes
@@ -17,7 +21,6 @@
 
 ## Optimizations
 
-- Update Jax (0.4.8) and JaxLib (0.4.7) compatibility ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2927))
 - Fixed deprecated `interp2d` method by switching to `xarray.DataArray` as the backend for `ProcessedVariable` ([#2907](https://github.com/pybamm-team/PyBaMM/pull/2907))
 
 ## Bug fixes
