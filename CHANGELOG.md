@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+
+- Update Jax (0.4.8) and JaxLib (0.4.7) compatibility ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2927))
+
 ## Bug fixes
 
 - Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))
