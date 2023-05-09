@@ -125,9 +125,6 @@ Optional - JaxSolver
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 Currently, only GNU/Linux and macOS are supported.
 
-.. note::
-   The Jax solver is currently available only on Python 3.8 and 3.9.
-
 GNU/Linux and macOS
 ~~~~~~~~~~~~~~~~~~~
 
