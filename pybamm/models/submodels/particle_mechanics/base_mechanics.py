@@ -52,7 +52,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         T_xav = variables["X-averaged cell temperature [K]"]
         eps_s = variables[f"{Domain} electrode active material volume fraction"]
 
-        Omega = domain_param.Omega
+        Omega = domain_param.Omega(sto_rav)
         R0 = domain_param.prim.R
         c_0 = domain_param.c_0
         E0 = domain_param.E

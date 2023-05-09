@@ -33,6 +33,8 @@ class BaseParticle(pybamm.BaseSubModel):
         domain_param = self.domain_param
         phase_param = self.phase_param
 
+        sto = c/phase_param.c_max
+
         # Get diffusivity
         D = phase_param.D(c, T)
 
@@ -42,7 +44,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if stress_option == "true":
             # Ai2019 eq [12]
-            Omega = domain_param.Omega
+            Omega = domain_param.Omega(sto)
             E = domain_param.E
             nu = domain_param.nu
             theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
