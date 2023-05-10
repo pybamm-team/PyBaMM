@@ -271,19 +271,14 @@ class ElectrodeSOHSolver:
         sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
 
         # Calculate theoretical energy
-        try:
-            x_0 = sol_dict["x_0"]
-            y_0 = sol_dict["y_0"]
-            x_100 = sol_dict["x_100"]
-            y_100 = sol_dict["y_100"]
-            energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                self.parameter_values, x_100, x_0, y_100, y_0
-            )
-            sol_dict.update({"Maximum theoretical energy [W.h]": energy})
-        except:
-            warnings.warn("couldn't calculate theoretical energy")
-    
-                
+        x_0 = sol_dict["x_0"]
+        y_0 = sol_dict["y_0"]
+        x_100 = sol_dict["x_100"]
+        y_100 = sol_dict["y_100"]
+        energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+            self.parameter_values, x_100, x_0, y_100, y_0
+        )
+        sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
     def _set_up_solve(self, inputs):
