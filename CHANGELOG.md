@@ -3,6 +3,7 @@
 ## Features
 
 - If a solution contains cycles and steps, the cycle number and step number are now saved when `solution.save_data()` is called ([#2931](https://github.com/pybamm-team/PyBaMM/pull/2931))
+- Make partial molar volume a function of stoichiometry ([#2943](https://github.com/pybamm-team/PyBaMM/pull/2943))
 
 ## Optimizations
 
