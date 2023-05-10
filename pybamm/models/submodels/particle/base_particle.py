@@ -33,7 +33,7 @@ class BaseParticle(pybamm.BaseSubModel):
         domain_param = self.domain_param
         phase_param = self.phase_param
 
-        sto = c/phase_param.c_max
+        sto = c / phase_param.c_max
 
         # Get diffusivity
         D = phase_param.D(c, T)
