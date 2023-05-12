@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include <memory>
 
+#include <iostream>
 #define OPENMP 1
 
 CasadiSolver *
@@ -58,7 +59,8 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 #if SUNDIALS_VERSION_MAJOR >= 6
 # ifdef OPENMP
   DEBUG("CasadiSolver::CasadiSolver --- Pthread version");
-  int num_threads = 4;
+  int num_threads = options.num_threads;
+  DEBUG(num_threads);
   yy = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
   avtol = N_VNew_OpenMP(number_of_states, num_threads, sunctx);

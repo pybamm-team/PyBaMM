@@ -74,6 +74,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # for iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian that is kept
                 "precon_half_bandwidth_keep": 5
+
+                # Number of threads available for OpenMP
+                "num_threads": 1
             }
 
         Note: These options only have an effect if model.convert_to_format == 'casadi'
@@ -100,6 +103,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "linsol_max_iterations": 5,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
+            "num_threads": 1,
         }
         if options is None:
             options = default_options
