@@ -47,7 +47,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature [K]"]
             ocp_surf = 0 * T
-            ocp_bulk = 0 * T
+            ocp_bulk = pybamm.Scalar(0)
             dUdT = 0 * T
         elif self.reaction == "lead-acid main":
             c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
