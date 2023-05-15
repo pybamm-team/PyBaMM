@@ -29,7 +29,7 @@ jobs:
           current_branch=$(git rev-parse --abbrev-ref HEAD)
           # This workflow should also run on forks; hence,
           # we should fetch the upstream develop branch.
-          git add remote upstream https://github.com/pybamm-team/PyBaMM/develop
+          git remote add upstream https://github.com/pybamm-team/PyBaMM/
           if [ $current_branch != "develop" ]; then
               git fetch upstream develop:develop
           fi
