@@ -147,17 +147,17 @@ class BaseSolver(object):
         if model.convert_to_format == "casadi":
             # stack inputs
             inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
-            model.y0 = initial_conditions(0, y_zero, inputs_casadi)
+            model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
             if jacp_ic is None:
                 model.y0S = None
             else:
-                model.y0S = jacp_ic(0, y_zero, inputs_casadi)
+                model.y0S = jacp_ic(0.0, y_zero, inputs_casadi)
         else:
-            model.y0 = initial_conditions(0, y_zero, inputs)
+            model.y0 = initial_conditions(0.0, y_zero, inputs)
             if jacp_ic is None:
                 model.y0S = None
             else:
-                model.y0S = jacp_ic(0, y_zero, inputs)
+                model.y0S = jacp_ic(0.0, y_zero, inputs)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
