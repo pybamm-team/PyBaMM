@@ -10,6 +10,7 @@
 
 ## Bug fixes
 
+- Fixed a bug where all data included in a BPX was incorrectly assumed to be given as a function of time.([#2957](https://github.com/pybamm-team/PyBaMM/pull/2957))
 - Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))
 
 # [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
