@@ -1,18 +1,43 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-# Features
+## Features
+
+- If a solution contains cycles and steps, the cycle number and step number are now saved when `solution.save_data()` is called ([#2931](https://github.com/pybamm-team/PyBaMM/pull/2931))
+
+## Optimizations
+
+- Update Jax (0.4.8) and JaxLib (0.4.7) compatibility ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2927))
+
+## Bug fixes
+
+- Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))
+
+# [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
+
+## Bug fixes
+
+- Fixed a performance regression introduced by citation tags ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862)). Citations tags functionality is removed for now.
+
+# [v23.4](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-04-30
+
+## Features
 
 - Added verbose logging to `pybamm.print_citations()` and citation tags for the `pybamm.Citations` class so that users can now see where the citations were registered when running simulations ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862))
 - PyBaMM is now natively supported on Apple silicon chips (`M1/M2`) ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
 - PyBaMM is now supported on Python `3.10` and `3.11` ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
 - Updated to casadi 3.6, which required some changes to the casadi integrator. ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
 
+## Optimizations
+
+- Fixed deprecated `interp2d` method by switching to `xarray.DataArray` as the backend for `ProcessedVariable` ([#2907](https://github.com/pybamm-team/PyBaMM/pull/2907))
+
 ## Bug fixes
 
+- Parameter sets can now contain the key "chemistry", and will ignore its value (this previously would give errors in some cases) ([#2901](https://github.com/pybamm-team/PyBaMM/pull/2901))
 - Fixed a bug in the discretisation of initial conditions of a scaled variable ([#2856](https://github.com/pybamm-team/PyBaMM/pull/2856))
 - Fixed keyerror on "all" when getting sensitivities from IDAKLU solver([#2883](https://github.com/pybamm-team/PyBaMM/pull/2883))
 
-# Breaking changes
+## Breaking changes
 
 - Made `Jupyter` a development only dependency. Now `Jupyter` would not be a required dependency for users while installing `PyBaMM`. ([#2846](https://github.com/pybamm-team/PyBaMM/pull/2846))
 

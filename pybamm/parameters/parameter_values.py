@@ -64,7 +64,7 @@ class ParameterValues:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets:
                 values = pybamm.parameter_sets[values]
-                values.pop("chemistry")
+                values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
 
             else:

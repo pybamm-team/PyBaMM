@@ -559,7 +559,7 @@ class EvaluatorJax:
         static_argnums = (
             i
             for i, c in enumerate(constants.values())
-            if not (isinstance(c, jax.interpreters.xla.DeviceArray))
+            if not (isinstance(c, jax.Array))
         )
 
         # store constants
