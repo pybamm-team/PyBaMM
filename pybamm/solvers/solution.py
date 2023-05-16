@@ -535,6 +535,71 @@ class Solution(object):
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
+    def get_data_dict(self, variables=None, short_names=None, cycles_and_steps=True):
+        """
+        Construct a (standard python) dictionary of the solution data containing the
+        variables in `variables`. If `variables` is None then all variables are
+        returned. Any variable names in short_names are replaced with the corresponding
+        short name.
+
+        If the solution has cycles, then the cycle numbers and step numbers are also
+        returned in the dictionary.
+
+        Parameters
+        ----------
+        variables : list, optional
+            List of variables to return. If None, returns all variables in solution.data
+        short_names : dict, optional
+            Dictionary of shortened names to use when saving.
+        cycles_and_steps : bool, optional
+            Whether to include the cycle numbers and step numbers in the dictionary
+
+        Returns
+        -------
+        dict
+            A dictionary of the solution data
+        """
+        if variables is None:
+            # variables not explicitly provided -> save all variables that have been
+            # computed
+            data_long_names = self.data
+        else:
+            if isinstance(variables, str):
+                variables = [variables]
+            # otherwise, save only the variables specified
+            data_long_names = {}
+            for name in variables:
+                data_long_names[name] = self[name].data
+        if len(data_long_names) == 0:
+            raise ValueError(
+                """
+                Solution does not have any data. Please provide a list of variables
+                to save.
+                """
+            )
+
+        # Use any short names if provided
+        data_short_names = {}
+        short_names = short_names or {}
+        for name, var in data_long_names.items():
+            name = short_names.get(name, name)  # return name if no short name
+            data_short_names[name] = var
+
+        # Save cycle number and step number if the solution has them
+        if cycles_and_steps and len(self.cycles) > 0:
+            data_short_names["Cycle"] = np.array([])
+            data_short_names["Step"] = np.array([])
+            for i, cycle in enumerate(self.cycles):
+                data_short_names["Cycle"] = np.concatenate(
+                    [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
+                )
+                for j, step in enumerate(cycle.steps):
+                    data_short_names["Step"] = np.concatenate(
+                        [data_short_names["Step"], j * np.ones_like(step.t)]
+                    )
+
+        return data_short_names
+
     def save_data(
         self, filename=None, variables=None, to_format="pickle", short_names=None
     ):
@@ -565,46 +630,19 @@ class Solution(object):
         -------
         data : str, optional
             str if 'csv' or 'json' is chosen and filename is None, otherwise None
-
-
         """
-        if variables is None:
-            # variables not explicitly provided -> save all variables that have been
-            # computed
-            data = self.data
-        else:
-            # otherwise, save only the variables specified
-            data = {}
-            for name in variables:
-                data[name] = self[name].data
-        if len(data) == 0:
-            raise ValueError(
-                """
-                Solution does not have any data. Please provide a list of variables
-                to save.
-                """
-            )
-
-        # Use any short names if provided
-        data_short_names = {}
-        short_names = short_names or {}
-        for name, var in data.items():
-            # change to short name if it exists
-            if name in short_names:
-                data_short_names[short_names[name]] = var
-            else:
-                data_short_names[name] = var
+        data = self.get_data_dict(variables=variables, short_names=short_names)
 
         if to_format == "pickle":
             if filename is None:
                 raise ValueError("pickle format must be written to a file")
             with open(filename, "wb") as f:
-                pickle.dump(data_short_names, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
             if filename is None:
                 raise ValueError("matlab format must be written to a file")
             # Check all the variable names only contain a-z, A-Z or _ or numbers
-            for name in data_short_names.keys():
+            for name in data.keys():
                 # Check the string only contains the following ASCII:
                 # a-z (97-122)
                 # A-Z (65-90)
@@ -627,23 +665,23 @@ class Solution(object):
                             "['Electrolyte concentration'], to_format='matlab, "
                             "short_names={'Electrolyte concentration': 'c_e'})"
                         )
-            savemat(filename, data_short_names)
+            savemat(filename, data)
         elif to_format == "csv":
-            for name, var in data_short_names.items():
+            for name, var in data.items():
                 if var.ndim >= 2:
                     raise ValueError(
                         "only 0D variables can be saved to csv, but '{}' is {}D".format(
                             name, var.ndim - 1
                         )
                     )
-            df = pd.DataFrame(data_short_names)
+            df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
         elif to_format == "json":
             if filename is None:
-                return json.dumps(data_short_names, cls=NumpyEncoder)
+                return json.dumps(data, cls=NumpyEncoder)
             else:
                 with open(filename, "w") as outfile:
-                    json.dump(data_short_names, outfile, cls=NumpyEncoder)
+                    json.dump(data, outfile, cls=NumpyEncoder)
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
 
