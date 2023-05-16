@@ -179,7 +179,13 @@ class TestBPX(TestCase):
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
-            pybamm.ParameterValues.create_from_bpx(tmp.name)
+            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+            # check that the parameter is an Interpolant with the correct child
+            c = pybamm.Variable("c")
+            kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
+            self.assertIsInstance(kappa, pybamm.Interpolant)
+            self.assertEqual(kappa.children[0], c)
 
     def test_bpx_soc_error(self):
         with self.assertRaisesRegex(ValueError, "Target SOC"):
