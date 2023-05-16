@@ -28,6 +28,17 @@ def string(string, **kwargs):
     if not isinstance(string, str):
         raise TypeError("Input to experiment.string() must be a string")
 
+    if "period)" in string:
+        raise ValueError(
+            "Period must be specified as a keyword argument instead of in the string"
+        )
+
+    if "oC" in string:
+        raise ValueError(
+            "Temperature must be specified as a keyword argument "
+            "instead of in the string"
+        )
+
     # Save the original string
     description = string
 

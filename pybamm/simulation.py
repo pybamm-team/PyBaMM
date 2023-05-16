@@ -95,8 +95,15 @@ class Simulation:
                         }
                     )
         else:
-            if not isinstance(experiment, pybamm.Experiment):
-                raise TypeError("experiment must be a pybamm `Experiment` instance")
+            if isinstance(experiment, (str, pybamm.experiment._Step)):
+                experiment = pybamm.Experiment([experiment])
+            elif isinstance(experiment, list):
+                experiment = pybamm.Experiment(experiment)
+            elif not isinstance(experiment, pybamm.Experiment):
+                raise TypeError(
+                    "experiment must be a pybamm `Experiment` instance, a single "
+                    "experiment step, or a list of experiment steps"
+                )
 
             self.operating_mode = "with experiment"
             # Save the experiment

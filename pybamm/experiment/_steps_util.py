@@ -136,7 +136,7 @@ class _Step:
         if not isinstance(other, _Step):
             return False
         else:
-            return self.to_dict() == other.to_dict()
+            return self.__repr__() == other.__repr__()
 
     def __hash__(self):
         return hash(repr(self))

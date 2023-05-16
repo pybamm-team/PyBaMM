@@ -155,6 +155,12 @@ class TestExperimentSteps(unittest.TestCase):
                 # useful form for debugging
                 self.assertEqual([k, expected[k]], [k, actual[k]])
 
+        with self.assertRaisesRegex(ValueError, "Period must be"):
+            pybamm.experiment.string("Discharge at 1C for 1 hour (1 minute period)")
+
+        with self.assertRaisesRegex(ValueError, "Temperature must be"):
+            pybamm.experiment.string("Discharge at 1C for 1 hour at 298.15oC")
+
     def test_drive_cycle(self):
         # Import drive cycle from file
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T

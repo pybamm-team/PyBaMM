@@ -52,6 +52,23 @@ class TestSimulationExperiment(TestCase):
         with self.assertRaisesRegex(TypeError, "experiment must be"):
             pybamm.Simulation(model, experiment=0)
 
+    def test_setup_experiment_string_or_list(self):
+        model = pybamm.lithium_ion.SPM()
+
+        sim = pybamm.Simulation(model, experiment="Discharge at C/20 for 1 hour")
+        sim.build_for_experiment()
+        self.assertEqual(len(sim.experiment.operating_conditions_steps), 1)
+        self.assertEqual(
+            sim.experiment.operating_conditions_steps[0].description,
+            "Discharge at C/20 for 1 hour",
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=["Discharge at C/20 for 1 hour", pybamm.experiment.rest(60)],
+        )
+        sim.build_for_experiment()
+        self.assertEqual(len(sim.experiment.operating_conditions_steps), 2)
+
     def test_run_experiment(self):
         s = pybamm.experiment.string
         experiment = pybamm.Experiment(
