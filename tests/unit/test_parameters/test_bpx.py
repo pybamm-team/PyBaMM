@@ -165,8 +165,26 @@ class TestBPX(TestCase):
 
     def test_table_data(self):
         bpx_obj = copy.copy(self.base)
+        data = {"x": [0, 1], "y": [0, 1]}
         bpx_obj["Parameterisation"]["Electrolyte"].update(
-            {"Conductivity [S.m-1]": {"x": [800, 1000, 1200], "y": [0.9, 1, 1.1]}}
+            {
+                "Conductivity [S.m-1]": data,
+                "Diffusivity [m2.s-1]": data,
+            }
+        )
+        bpx_obj["Parameterisation"]["Negative electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": data,
+                "OCP [V]": data,
+                "Entropic change coefficient [V.K-1]": data,
+            }
+        )
+        bpx_obj["Parameterisation"]["Positive electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": data,
+                "OCP [V]": data,
+                "Entropic change coefficient [V.K-1]": data,
+            }
         )
 
         filename = "tmp.json"
@@ -181,7 +199,8 @@ class TestBPX(TestCase):
 
             param = pybamm.ParameterValues.create_from_bpx(tmp.name)
 
-            # check that the parameter is an Interpolant with the correct child
+            # Check that the electrolyte conductivity is an Interpolant with the
+            # correct child
             c = pybamm.Variable("c")
             kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
             self.assertIsInstance(kappa, pybamm.Interpolant)
