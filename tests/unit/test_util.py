@@ -17,27 +17,6 @@ class TestUtil(TestCase):
     Test the functionality in util.py
     """
 
-    def test_load_function(self):
-        function = "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
-
-        # Test function load with relative path
-        rel_test_path = os.path.join(
-            "pybamm", "input", "parameters", "lithium_ion", "Chen2020"
-        )
-        func = pybamm.load_function(rel_test_path, function)
-        self.assertEqual(
-            func,
-            pybamm.input.parameters.lithium_ion.Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
-        )
-
-        # Test function load with absolute path
-        abs_test_path = os.path.join(pybamm.root_dir(), rel_test_path)
-        func = pybamm.load_function(abs_test_path, function)
-        self.assertEqual(
-            func,
-            pybamm.input.parameters.lithium_ion.Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
-        )
-
     def test_rmse(self):
         self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
         self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)

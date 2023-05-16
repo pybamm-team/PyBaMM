@@ -30,15 +30,6 @@ class TestParameterValues(TestCase):
         with self.assertRaisesRegex(FileNotFoundError, "Could not find parameter"):
             pybamm.ParameterValues.find_parameter("not_a_file")
 
-    def test_read_parameters_csv(self):
-        data = pybamm.ParameterValues({}).read_parameters_csv(
-            os.path.join(
-                os.path.dirname(__file__),
-                "parameter_values_test.csv",
-            )
-        )
-        self.assertEqual(data["Positive electrode porosity"], "0.32")
-
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
@@ -49,24 +40,6 @@ class TestParameterValues(TestCase):
         # from dict "chemistry" key gets removed
         param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
         self.assertNotIn("chemistry", param.keys())
-
-        # from file
-        param = pybamm.ParameterValues(
-            os.path.join(
-                os.path.dirname(__file__),
-                "parameter_values_test.csv",
-            )
-        )
-        self.assertEqual(param["Positive electrode porosity"], 0.32)
-
-        # from file, absolute path
-        param = pybamm.ParameterValues(
-            os.path.join(
-                os.path.dirname(__file__),
-                "parameter_values_test.csv",
-            )
-        )
-        self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # chemistry kwarg removed
         with self.assertRaisesRegex(
@@ -970,26 +943,6 @@ class TestParameterValues(TestCase):
         y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
-
-    def test_export_csv(self):
-        def some_function(self):
-            return None
-
-        example_data = ("some_data", [0, 1, 2])
-
-        parameter_values = pybamm.ParameterValues(
-            {"a": 0.1, "b": some_function, "c": example_data}
-        )
-
-        filename = "parameter_values_test.csv"
-
-        parameter_values.export_csv(filename)
-
-        df = pd.read_csv(filename, index_col=0, header=None)
-
-        self.assertEqual(df[1]["a"], "0.1")
-        self.assertEqual(df[1]["b"], "[function]some_function")
-        self.assertEqual(df[1]["c"], "[data]some_data")
 
 
 if __name__ == "__main__":

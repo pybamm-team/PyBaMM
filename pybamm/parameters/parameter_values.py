@@ -3,8 +3,6 @@
 #
 import numpy as np
 import pybamm
-import pandas as pd
-import os
 import numbers
 from pprint import pformat
 from collections import defaultdict
@@ -20,9 +18,9 @@ class ParameterValues:
     Parameters
     ----------
     values : dict or string
-        Explicit set of parameters, or reference to a file of parameters
+        Explicit set of parameters, or reference to an inbuilt parameter set
         If string and matches one of the inbuilt parameter sets, returns that parameter
-        set. If non-matching string, gets passed to read_parameters_csv to read a file.
+        set.
 
     Examples
     --------
@@ -66,13 +64,6 @@ class ParameterValues:
                 values = pybamm.parameter_sets[values]
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
-
-            else:
-                # In this case it might be a filename, load from that filename
-                file_path = self.find_parameter(values)
-                path = os.path.split(file_path)[0]
-                values = self.read_parameters_csv(file_path)
-                self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -168,25 +159,6 @@ class ParameterValues:
         """
         return self._dict_items.search(key, print_values)
 
-    def read_parameters_csv(self, filename):
-        """Reads parameters from csv file into dict.
-
-        Parameters
-        ----------
-        filename : str
-            The name of the csv file containing the parameters.
-
-        Returns
-        -------
-        dict
-            {name: value} pairs for the parameters.
-
-        """
-        df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
-        # Drop rows that are all NaN (seems to not work with skip_blank_lines)
-        df.dropna(how="all", inplace=True)
-        return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
-
     def update(self, values, check_conflict=False, check_already_exists=True, path=""):
         """
         Update parameter dictionary, while also performing some basic checks.
@@ -237,29 +209,21 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
-            # if no conflicts, update, loading functions and data if they are specified
-            # Functions are flagged with the string "[function]"
+            # if no conflicts, update
             if isinstance(value, str):
-                if value.startswith("[function]"):
-                    loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
-                    self._dict_items[name] = loaded_value
-                # Data is flagged with the string "[data]" or "[current data]"
-                elif value.startswith("[current data]") or value.startswith("[data]"):
-                    if value.startswith("[current data]"):
-                        data_path = os.path.join(
-                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
-                        )
-                        filename = os.path.join(data_path, value[14:] + ".csv")
-                    else:
-                        filename = os.path.join(path, value[6:] + ".csv")
-                    filename = pybamm.get_parameters_filepath(filename)
-                    # Save name and data
-                    self._dict_items[name] = pybamm.parameters.process_1D_data(filename)
-                # parse 2D parameter data
-                elif value.startswith("[2D data]"):
-                    filename = os.path.join(path, value[9:] + ".json")
-                    filename = pybamm.get_parameters_filepath(filename)
-                    self._dict_items[name] = pybamm.parameters.process_2D_data(filename)
+                if (
+                    value.startswith("[function]")
+                    or value.startswith("[current data]")
+                    or value.startswith("[data]")
+                    or value.startswith("[2D data]")
+                ):
+                    raise ValueError(
+                        "Specifying parameters via [function], [current data], [data] "
+                        "or [2D data] is no longer supported. For functions, pass in a "
+                        "python function object. For data, pass in a python function "
+                        "that returns a pybamm Interpolant object. "
+                        "See https://tinyurl.com/merv43ss for an example with both."
+                    )
 
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
@@ -719,21 +683,6 @@ class ParameterValues:
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
 
-    def export_csv(self, filename):
-        # process functions and data to output
-        # like they appear in inputs csv files
-        parameter_output = {}
-        for key, val in self.items():
-            if callable(val):
-                val = "[function]" + val.__name__
-            elif isinstance(val, tuple):
-                val = "[data]" + val[0]
-            parameter_output[key] = [val]
-
-        df = pd.DataFrame(parameter_output)
-        df = df.transpose()
-        df.to_csv(filename, header=["Value"], index_label="Name [units]")
-
     def print_parameters(self, parameters, output_file=None):
         """
         Return dictionary of evaluated parameters, and optionally print these evaluated
@@ -854,23 +803,3 @@ class ParameterValues:
                     file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
-
-    @staticmethod
-    def find_parameter(path):
-        """Look for parameter file in the different locations
-        in PARAMETER_PATH
-        """
-        # Check for absolute path
-        if os.path.isfile(path) and os.path.isabs(path):
-            pybamm.logger.verbose(f"Using absolute path: '{path}'")
-            return path
-        for location in pybamm.PARAMETER_PATH:
-            trial_path = os.path.join(location, path)
-            if os.path.isfile(trial_path):
-                pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
-                return trial_path
-        raise FileNotFoundError(
-            f"Could not find parameter {path}. If you have a developer install, try "
-            "re-installing pybamm (e.g. `pip install -e .`) to expose recently-added "
-            "parameter entry points."
-        )
