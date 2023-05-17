@@ -12,7 +12,8 @@ Options::Options(py::dict options)
       linsol_max_iterations(options["linsol_max_iterations"].cast<int>()),
       linear_solver(options["linear_solver"].cast<std::string>()),
       precon_half_bandwidth(options["precon_half_bandwidth"].cast<int>()),
-      precon_half_bandwidth_keep(options["precon_half_bandwidth_keep"].cast<int>())
+      precon_half_bandwidth_keep(options["precon_half_bandwidth_keep"].cast<int>()),
+      num_threads(options["num_threads"].cast<int>())
 {
 
   using_sparse_matrix = true;
