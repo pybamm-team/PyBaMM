@@ -157,7 +157,15 @@ class BaseSolver(object):
             if jacp_ic is None:
                 model.y0S = None
             else:
-                model.y0S = jacp_ic(0.0, y_zero, inputs)
+                # we are calculating the derivative wrt the inputs
+                # so need to make sure we convert int -> float
+                # This is to satisfy JAX jacfwd function which requires
+                # float inputs
+                inputs_float = {
+                    key: float(value) if isinstance(value, int) else value
+                    for key, value in inputs.items()
+                }
+                model.y0S = jacp_ic(0.0, y_zero, inputs_float)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
