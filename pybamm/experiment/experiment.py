@@ -14,7 +14,7 @@ class Experiment:
     `pybamm.experiment.current`, `pybamm.experiment.c_rate`, `pybamm.experiment.voltage`
     , `pybamm.experiment.power`, `pybamm.experiment.resistance`, or
     `pybamm.experiment.string`, or a string, in which case the string is passed to
-    ``pybamm.experiment.string`.
+    `pybamm.experiment.string`.
 
     Parameters
     ----------
