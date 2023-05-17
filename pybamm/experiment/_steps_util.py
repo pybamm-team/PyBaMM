@@ -39,7 +39,19 @@ class _Step:
         2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
     duration : float, optional
         The duration of the step in seconds.
-
+    termination : str or list, optional
+        A string or list of strings indicating the condition(s) that will terminate the
+        step. If a list, the step will terminate when any of the conditions are met.
+    period : float or string, optional
+        The period of the step. If a float, the value is in seconds. If a string, the
+        value should be a valid time string, e.g. "1 hour".
+    temperature : float or string, optional
+        The temperature of the step. If a float, the value is in Kelvin. If a string,
+        the value should be a valid temperature string, e.g. "25 oC".
+    tags : str or list, optional
+        A string or list of strings indicating the tags associated with the step.
+    description : str, optional
+        A description of the step.
     """
 
     def __init__(
@@ -73,6 +85,11 @@ class _Step:
         # Check if drive cycle
         self.is_drive_cycle = isinstance(value, np.ndarray)
         if self.is_drive_cycle:
+            if value.ndim != 2 or value.shape[1] != 2:
+                raise ValueError(
+                    "Drive cycle must be a 2-column array with time in the first column"
+                    " and current/C-rate/power/voltage/resistance in the second"
+                )
             t, y = value[:, 0], value[:, 1]
             self.value = pybamm.Interpolant(
                 t, y, pybamm.t - pybamm.InputParameter("start time")

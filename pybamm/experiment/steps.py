@@ -11,11 +11,14 @@ def string(string, **kwargs):
     Parameters
     ----------
     string : str
-        The string to parse. The string must be in the format
-        "type:value:duration", where type is either "current" or "voltage", value is
-        the value of the step (in A or V) and duration is the duration of the step
-        (in seconds). For example, "current:1:3600" is a constant current step of 1 A
-        for 1 hour.
+        The string to parse. Each operating condition should
+        be of the form "Do this for this long" or "Do this until this happens". For
+        example, "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge
+        at 1 C for 1 hour or until 4.2 V at 25oC". The instructions can be of the form
+        "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A". The running
+        time should be a time in seconds, minutes or hours, e.g. "10 seconds",
+        "3 minutes" or "1 hour". The stopping conditions should be
+        a circuit state, e.g. "1 A", "C/50" or "3 V".
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
         class.

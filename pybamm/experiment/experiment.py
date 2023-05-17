@@ -10,13 +10,11 @@ class Experiment:
     """
     Base class for experimental conditions under which to run the model. In general, a
     list of operating conditions should be passed in. Each operating condition should
-    be of the form "Do this for this long" or "Do this until this happens". For example,
-    "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge at 1 C for 1
-    hour or until 4.2 V at 25oC". The instructions can be of the form
-    "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A". The running
-    time should be a time in seconds, minutes or
-    hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
-    a circuit state, e.g. "1 A", "C/50" or "3 V".
+    be either a `pybamm.experiment._Step` class, created using one of the methods
+    `pybamm.experiment.current`, `pybamm.experiment.c_rate`, `pybamm.experiment.voltage`
+    , `pybamm.experiment.power`, `pybamm.experiment.resistance`, or
+    `pybamm.experiment.string`, or a string, in which case the string is passed to
+    ``pybamm.experiment.string`.
 
     Parameters
     ----------
@@ -31,6 +29,12 @@ class Experiment:
         This value is overwritten if the temperature is specified in a step.
     termination : list, optional
         List of conditions under which to terminate the experiment. Default is None.
+        This is different from the termination for individual steps. Termination for
+        individual steps is specified in the step itself, and the simulation moves to
+        the next step when the termination condition is met
+        (e.g. 2.5V discharge cut-off). Termination for the
+        experiment as a whole is specified here, and the simulation stops when the
+        termination condition is met (e.g. 80% capacity).
     """
 
     def __init__(

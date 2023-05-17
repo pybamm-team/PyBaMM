@@ -36,8 +36,11 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
-    experiment : :class:`pybamm.Experiment` (optional)
-        The experimental conditions under which to solve the model
+    experiment : :class:`pybamm.Experiment` or string or list (optional)
+        The experimental conditions under which to solve the model. If a string is
+        passed, the experiment is constructed as `pybamm.Experiment([experiment])`. If
+        a list is passed, the experiment is constructed as
+        `pybamm.Experiment(experiment)`.
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
     parameter_values: :class:`pybamm.ParameterValues` (optional)
