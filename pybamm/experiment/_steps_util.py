@@ -150,10 +150,7 @@ class _Step:
         }
 
     def __eq__(self, other):
-        if not isinstance(other, _Step):
-            return False
-        else:
-            return self.__repr__() == other.__repr__()
+        return isinstance(other, _Step) and self.__repr__() == other.__repr__()
 
     def __hash__(self):
         return hash(repr(self))
@@ -214,8 +211,6 @@ def _convert_temperature_to_kelvin(temperature_and_units):
 
 def _convert_electric(value_string):
     """Convert electrical instructions to consistent output"""
-    if value_string is None:
-        return None
     # Special case for C-rate e.g. C/2
     if value_string[0] == "C":
         unit = "C"

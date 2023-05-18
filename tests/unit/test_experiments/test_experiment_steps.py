@@ -34,11 +34,23 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.temperature, 298.15)
         self.assertEqual(step.tags, ["test"])
 
+        step = pybamm.experiment._Step("current", 1, temperature="298K")
+        self.assertEqual(step.temperature, 298)
+
+        with self.assertRaisesRegex(ValueError, "temperature units"):
+            step = pybamm.experiment._Step("current", 1, temperature="298T")
+
     def test_specific_steps(self):
         current = pybamm.experiment.current(1)
         self.assertIsInstance(current, pybamm.experiment._Step)
         self.assertEqual(current.type, "current")
         self.assertEqual(current.value, 1)
+        self.assertEqual(str(current), repr(current))
+
+        c_rate = pybamm.experiment.c_rate(1)
+        self.assertIsInstance(c_rate, pybamm.experiment._Step)
+        self.assertEqual(c_rate.type, "C-rate")
+        self.assertEqual(c_rate.value, 1)
 
         voltage = pybamm.experiment.voltage(1)
         self.assertIsInstance(voltage, pybamm.experiment._Step)
@@ -49,6 +61,16 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertIsInstance(rest, pybamm.experiment._Step)
         self.assertEqual(rest.type, "current")
         self.assertEqual(rest.value, 0)
+
+        power = pybamm.experiment.power(1)
+        self.assertIsInstance(power, pybamm.experiment._Step)
+        self.assertEqual(power.type, "power")
+        self.assertEqual(power.value, 1)
+
+        resistance = pybamm.experiment.resistance(1)
+        self.assertIsInstance(resistance, pybamm.experiment._Step)
+        self.assertEqual(resistance.type, "resistance")
+        self.assertEqual(resistance.value, 1)
 
     def test_step_string(self):
         steps = [
@@ -172,6 +194,10 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(drive_cycle_step.duration, 9)
         self.assertEqual(drive_cycle_step.period, 1)
         self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
+
+        bad_drive_cycle = np.ones((10, 3))
+        with self.assertRaisesRegex(ValueError, "Drive cycle must be a 2-column array"):
+            pybamm.experiment.current(bad_drive_cycle)
 
     def test_bad_strings(self):
         with self.assertRaisesRegex(TypeError, "Input to experiment.string"):

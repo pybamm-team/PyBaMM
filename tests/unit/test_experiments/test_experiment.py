@@ -86,6 +86,12 @@ class TestExperiment(TestCase):
         ):
             pybamm.Experiment([(1, 2, 3)])
 
+    def test_deprecations(self):
+        with self.assertRaisesRegex(ValueError, "cccv_handling"):
+            pybamm.Experiment([], cccv_handling="something")
+        with self.assertRaisesRegex(ValueError, "drive_cycles"):
+            pybamm.Experiment([], drive_cycles="something")
+
     def test_termination(self):
         experiment = pybamm.Experiment(["Discharge at 1 C for 20 seconds"])
         self.assertEqual(experiment.termination, {})
