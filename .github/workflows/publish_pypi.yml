@@ -14,15 +14,6 @@ on:
           required: false
           default: false
 
-env:
-  # Homebrew environment variables
-  HOMEBREW_NO_INSTALL_CLEANUP: 1
-  HOMEBREW_NO_ANALYTICS: 1
-  HOMEBREW_NO_GOOGLE_ANALYTICS: 1
-  HOMEBREW_NO_AUTO_UPDATE: 1
-  # Speed up CI
-  NONINTERACTIVE: 1
-
 jobs:
   build_windows_wheels:
     name: Build wheels on windows-latest
@@ -32,10 +23,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.12.3
@@ -59,7 +46,7 @@ jobs:
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
           key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
-            
+
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
@@ -91,11 +78,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
-          
+
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.12.3
 
@@ -114,22 +97,6 @@ jobs:
           brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
-          brew bundle dump --force --no-lock
-      
-      # Experimental solution for caching Homebrew installs
-      - name: Cache macOS SUNDIALS dependencies
-        uses: actions/cache@v3
-        if: matrix.os == 'macos-latest'
-        with:
-          # paths for Homebrew packages, formulae, and binaries
-          path: |
-            /usr/local/Homebrew
-            /usr/local/Cellar
-            /usr/local/Frameworks
-            /usr/local/bin
-            /usr/local/opt
-            ~/Library/Caches/Homebrew/*
-          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
 
       - name: Build wheels on Linux and MacOS
         run: python -m cibuildwheel --output-dir wheelhouse
@@ -171,10 +138,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
 
       - name: Install dependencies
         run: pip install wheel
