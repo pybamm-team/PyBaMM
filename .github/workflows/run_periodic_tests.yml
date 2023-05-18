@@ -1,20 +1,16 @@
-name: PyBaMM
+# Run all unit tests and integration tests for all Python versions 
+# and platforms at 3am UTC every day and on PRs to the main branch
+name: Scheduled
 
 on:
   workflow_dispatch:
   pull_request:
-  # everyday at 3 am UTC
+    branches: 
+    - main
+
+  # Run everyday at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
-
-env:
-  # Homebrew environment variables
-  HOMEBREW_NO_INSTALL_CLEANUP: 1
-  HOMEBREW_NO_ANALYTICS: 1
-  HOMEBREW_NO_GOOGLE_ANALYTICS: 1
-  HOMEBREW_NO_AUTO_UPDATE: 1
-  # Speed up CI
-  NONINTERACTIVE: 1
 
 jobs:
   pre_job:
@@ -40,11 +36,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
+          python-version: 3.11
 
       - name: Check style
         run: |
@@ -66,17 +58,13 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
-        with:
-          packages: gfortran gcc libopenblas-dev graphviz texlive-full
-          execute_install_scripts: true
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc libopenblas-dev graphviz
+          sudo apt install texlive-full
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
@@ -91,22 +79,6 @@ jobs:
           brew update
           brew install graphviz
           brew install openblas
-          brew bundle dump --force --no-lock --file=Brewfile
-      
-      # Experimental solution for caching Homebrew installs
-      - name: Cache MacOS dependencies
-        uses: actions/cache@v3
-        if: matrix.os == 'macos-latest'
-        with:
-          # paths for Homebrew packages, formulae, and binaries
-          path: |
-            /usr/local/Homebrew
-            /usr/local/Cellar
-            /usr/local/Frameworks
-            /usr/local/bin
-            /usr/local/opt
-            ~/Library/Caches/Homebrew/*
-          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -133,18 +105,22 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
         uses: codecov/codecov-action@v2.1.0
 
-      - name: Run integration tests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run integration tests for GNU/Linux
+        if: matrix.os == 'ubuntu-latest'
         run: python -m tox -e integration
 
-      - name: Run unit tests for Windows and MacOS with all Python versions
+      - name: Run unit tests for Windows and MacOS
         if: matrix.os != 'ubuntu-latest'
         run: python -m tox -e mac-windows-unit
 
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run integration tests for Windows and MacOS
+        if: matrix.os != 'ubuntu-latest'
+        run: python -m tox -e mac-windows-integration
+
+      - name: Install docs dependencies and run doctests
+        if: matrix.os == 'ubuntu-latest'
         run: tox -e doctests
 
-      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Install dev dependencies and run example tests
+        if: matrix.os == 'ubuntu-latest'
         run: tox -e examples

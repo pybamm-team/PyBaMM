@@ -2,6 +2,7 @@
 *.pdf
 *.tmp
 *.png
+*.gif
 /local/
 *.DS_Store
 *.mat
