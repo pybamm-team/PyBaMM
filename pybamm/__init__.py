@@ -44,6 +44,7 @@ from .util import (
     is_constant_and_can_evaluate,
 )
 from .util import (
+    get_parameters_filepath,
     have_jax,
     install_jax,
     is_jax_compatible,

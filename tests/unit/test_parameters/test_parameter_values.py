@@ -4,7 +4,6 @@
 from tests import TestCase
 
 import os
-import tempfile
 import unittest
 
 import numpy as np
@@ -20,16 +19,6 @@ import casadi
 
 
 class TestParameterValues(TestCase):
-    def test_find_parameter(self):
-        f = tempfile.NamedTemporaryFile()
-        pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
-
-        tempfile_name = os.path.basename(f.name)
-        self.assertEqual(pybamm.ParameterValues.find_parameter(tempfile_name), f.name)
-
-        with self.assertRaisesRegex(FileNotFoundError, "Could not find parameter"):
-            pybamm.ParameterValues.find_parameter("not_a_file")
-
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
@@ -532,17 +521,18 @@ class TestParameterValues(TestCase):
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({"function": lico2_ocp_Dualfoil1998})
+        # path is parent dir of this file
+        path = os.path.abspath(os.path.dirname(__file__))
+        lico2_ocv_example_data = pybamm.parameters.process_1D_data(
+            "lico2_ocv_example.csv", path=path
+        )
+
+        def lico2_ocv_example(sto):
+            name, (x, y) = lico2_ocv_example_data
+            return pybamm.Interpolant(x, y, [sto], name=name)
+
         parameter_values.update(
-            {"interpolation": "[data]lico2_data_example"},
-            path=os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "data",
-            ),
-            check_already_exists=False,
+            {"interpolation": lico2_ocv_example}, check_already_exists=False
         )
 
         a = pybamm.Scalar(0.6)
@@ -559,11 +549,18 @@ class TestParameterValues(TestCase):
         parameter_values = pybamm.ParameterValues(
             {"function": lico2_diffusivity_Dualfoil1998}
         )
+        # path is parent dir of this file
+        path = os.path.abspath(os.path.dirname(__file__))
+        lico2_diffusivity_Dualfoil1998_2D_data = pybamm.parameters.process_2D_data(
+            "lico2_diffusivity_Dualfoil1998_2D.json", path=path
+        )
+
+        def lico2_diffusivity_Dualfoil1998_2D(c_s, T):
+            name, (xs, y) = lico2_diffusivity_Dualfoil1998_2D_data
+            return pybamm.Interpolant(xs, y, [c_s, T], name=name)
+
         parameter_values.update(
-            {
-                "interpolation": "[2D data]lico2_diffusivity_Dualfoil1998_2D",
-            },
-            path=os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters"),
+            {"interpolation": lico2_diffusivity_Dualfoil1998_2D},
             check_already_exists=False,
         )
 
