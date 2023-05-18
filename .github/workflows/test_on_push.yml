@@ -7,14 +7,6 @@ on:
   schedule:
     - cron: "0 3 * * *"
 
-env:
-  # Homebrew environment variables
-  HOMEBREW_NO_INSTALL_CLEANUP: 1
-  HOMEBREW_NO_ANALYTICS: 1
-  HOMEBREW_NO_GOOGLE_ANALYTICS: 1
-  HOMEBREW_NO_AUTO_UPDATE: 1
-  # Speed up CI
-  NONINTERACTIVE: 1
 
 jobs:
   pre_job:
@@ -83,6 +75,14 @@ jobs:
       # (see https://github.com/actions/virtual-environments/issues/2322)
       - name: Install MacOS system dependencies
         if: matrix.os == 'macos-latest'
+        env:
+          # Homebrew environment variables
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_ANALYTICS: 1
+          HOMEBREW_NO_GOOGLE_ANALYTICS: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
         run: |
           rm -f /usr/local/bin/2to3*
           rm -f /usr/local/bin/idle3*
@@ -92,7 +92,7 @@ jobs:
           brew install graphviz
           brew install openblas
           brew bundle dump --force --no-lock --file=Brewfile
-      
+
       # Experimental solution for caching Homebrew installs
       - name: Cache MacOS dependencies
         uses: actions/cache@v3
