@@ -25,7 +25,7 @@ class NoPlating(BasePlating):
         )
         variables = self._get_standard_concentration_variables(zero, zero)
         variables.update(self._get_standard_overpotential_variables(zero))
-        variables.update(self._get_standard_reaction_variables(zero))
+        variables.update(self._get_standard_reaction_variables(zero, zero, zero))
         return variables
 
     def get_coupled_variables(self, variables):

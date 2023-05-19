@@ -42,11 +42,12 @@ class Plating(BasePlating):
                 scale=self.param.c_Li_typ,
             )
             c_plated_Li = pybamm.PrimaryBroadcast(c_plated_Li_av, "negative electrode")
-            c_dead_Li_av = pybamm.Variable(
-                "X-averaged dead lithium concentration [mol.m-3]",
-                domain="current collector",
-            )
-            c_dead_Li = pybamm.PrimaryBroadcast(c_dead_Li_av, "negative electrode")
+            if self.options["lithium plating"] == "partially reversible":
+                c_dead_Li_av = pybamm.Variable(
+                    "X-averaged dead lithium concentration [mol.m-3]",
+                    domain="current collector",
+                )
+                c_dead_Li = pybamm.PrimaryBroadcast(c_dead_Li_av, "negative electrode")
         else:
             c_plated_Li = pybamm.Variable(
                 "Lithium plating concentration [mol.m-3]",
@@ -54,10 +55,15 @@ class Plating(BasePlating):
                 auxiliary_domains={"secondary": "current collector"},
                 scale=self.param.c_Li_typ,
             )
-            c_dead_Li = pybamm.Variable(
-                "Dead lithium concentration [mol.m-3]",
-                domain="negative electrode",
-                auxiliary_domains={"secondary": "current collector"},
+            if self.options["lithium plating"] == "partially reversible":
+                c_dead_Li = pybamm.Variable(
+                    "Dead lithium concentration [mol.m-3]",
+                    domain="negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+        if self.options["lithium plating"] != "partially reversible":
+            c_dead_Li = pybamm.FullBroadcast(
+                0, "negative electrode", "current collector"
             )
 
         variables = self._get_standard_concentration_variables(c_plated_Li, c_dead_Li)
@@ -77,21 +83,45 @@ class Plating(BasePlating):
         eta_stripping = delta_phi + eta_sei
         eta_plating = -eta_stripping
         F_RT = param.F / (param.R * T)
-        # NEW: transfer coefficients can be set by the user
-        alpha_stripping = self.param.alpha_stripping
+
         alpha_plating = self.param.alpha_plating
+        j_plating = -j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
 
         if self.options["lithium plating"] in ["reversible", "partially reversible"]:
+            alpha_stripping = self.param.alpha_stripping
             j_stripping = j0_stripping * pybamm.exp(
                 F_RT * alpha_stripping * eta_stripping
-            ) - j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
+            )
         elif self.options["lithium plating"] == "irreversible":
-            # j_stripping is always negative, because there is no stripping, only
-            # plating
-            j_stripping = -j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
+            # irreversible plating means no stripping
+            j_stripping = pybamm.FullBroadcast(
+                0, "negative electrode", "current collector"
+            )
+
+        # In the partially reversible plating model, coupling term turns reversible
+        # lithium into dead lithium. In other plating models, it is zero.
+        if self.options["lithium plating"] == "partially reversible":
+            L_sei = variables["Total SEI thickness [m]"]
+            if self.options.negative["particle phases"] == "1":
+                a = variables["Negative electrode surface area to volume ratio [m-1]"]
+            else:
+                a = variables[
+                    "Negative electrode primary surface area to volume ratio [m-1]"
+                ]
+            dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
+            # divide by a and multiply by F to get units of A.m-2
+            j_dead_lithium = -dead_lithium_decay_rate * c_plated_Li * param.F / a
+        else:
+            j_dead_lithium = pybamm.FullBroadcast(
+                0, "negative electrode", "current collector"
+            )
 
         variables.update(self._get_standard_overpotential_variables(eta_stripping))
-        variables.update(self._get_standard_reaction_variables(j_stripping))
+        variables.update(
+            self._get_standard_reaction_variables(
+                j_plating, j_stripping, j_dead_lithium
+            )
+        )
 
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
@@ -108,27 +138,24 @@ class Plating(BasePlating):
                 "X-averaged lithium plating volumetric "
                 "interfacial current density [A.m-3]"
             ]
-            L_sei = variables["X-averaged total SEI thickness [m]"]
+            a_j_dead_lithium = variables[
+                "X-averaged lithium plating volumetric "
+                "interfacial current density (dead lithium term) [A.m-3]"
+            ]
         else:
             c_plated_Li = variables["Lithium plating concentration [mol.m-3]"]
             c_dead_Li = variables["Dead lithium concentration [mol.m-3]"]
             a_j_stripping = variables[
                 "Lithium plating volumetric interfacial current density [A.m-3]"
             ]
-            L_sei = variables["Total SEI thickness [m]"]
+            a_j_dead_lithium = variables[
+                "Lithium plating volumetric interfacial current density "
+                "(dead lithium term) [A.m-3]"
+            ]
 
-        # In the partially reversible plating model, coupling term turns reversible
-        # lithium into dead lithium. In other plating models, it is zero.
+        self.rhs = {c_plated_Li: -a_j_stripping / self.param.F}
         if self.options["lithium plating"] == "partially reversible":
-            dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
-            coupling_term = dead_lithium_decay_rate * c_plated_Li
-        else:
-            coupling_term = pybamm.Scalar(0)
-
-        self.rhs = {
-            c_plated_Li: -a_j_stripping / self.param.F - coupling_term,
-            c_dead_Li: coupling_term,
-        }
+            self.rhs[c_dead_Li] = a_j_dead_lithium / self.param.F
 
     def set_initial_conditions(self, variables):
         if self.x_average is True:
@@ -140,6 +167,7 @@ class Plating(BasePlating):
             c_plated_Li = variables["Lithium plating concentration [mol.m-3]"]
             c_dead_Li = variables["Dead lithium concentration [mol.m-3]"]
         c_plated_Li_0 = self.param.c_plated_Li_0
-        zero = pybamm.Scalar(0)
 
-        self.initial_conditions = {c_plated_Li: c_plated_Li_0, c_dead_Li: zero}
+        self.initial_conditions = {c_plated_Li: c_plated_Li_0}
+        if self.options["lithium plating"] == "partially reversible":
+            self.initial_conditions[c_dead_Li] = pybamm.Scalar(0)

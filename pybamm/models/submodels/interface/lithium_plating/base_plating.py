@@ -61,6 +61,21 @@ class BasePlating(BaseInterface):
                 }
             )
 
+            for term in ["stripping", "plating", "dead lithium"]:
+                j = variables[
+                    f"Lithium plating interfacial current density ({term} term) [A.m-2]"
+                ]
+                a_j = a * j
+                a_j_av = pybamm.x_average(a_j)
+                variables.update(
+                    {
+                        "Lithium plating volumetric interfacial current density "
+                        f"({term} term) [A.m-3]": a_j,
+                        "X-averaged lithium plating volumetric interfacial current "
+                        f"density ({term} term) [A.m-3]": a_j_av,
+                    }
+                )
+
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
         zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         variables.update(
@@ -132,27 +147,48 @@ class BasePlating(BaseInterface):
 
         return variables
 
-    def _get_standard_reaction_variables(self, j_stripping):
+    def _get_standard_reaction_variables(self, j_plating, j_stripping, j_dead_lithium):
         """
         A private function to obtain the standard variables which
         can be derived from the lithum stripping interfacial reaction current
+
         Parameters
         ----------
+        j_plating : :class:`pybamm.Symbol`
+            The lithium plating interfacial reaction current.
         j_stripping : :class:`pybamm.Symbol`
-            The net lithium stripping interfacial reaction current.
+            The lithium stripping interfacial reaction current (from reactions only).
+        j_dead_lithium : :class:`pybamm.Symbol`
+            The lithium stripping interfacial reaction current (from dead lithium).
+
         Returns
         -------
         variables : dict
             The variables which can be derived from the plated lithium thickness.
         """
-        # Set scales to one for the "no plating" model so that they are not required
-        # by parameter values in general
+        j_plating_av = pybamm.x_average(j_plating)
         j_stripping_av = pybamm.x_average(j_stripping)
+        j_dead_lithium_av = pybamm.x_average(j_dead_lithium)
+
+        j_plating_net = j_plating + j_stripping + j_dead_lithium
+        j_plating_net_av = pybamm.x_average(j_plating_net)
 
         variables = {
-            "Lithium plating interfacial current density [A.m-2]": j_stripping,
+            "Lithium plating interfacial current density "
+            "(plating term) [A.m-2]": j_plating,
+            "X-averaged lithium plating interfacial current density "
+            "(plating term) [A.m-2]": j_plating_av,
+            "Lithium plating interfacial current density "
+            "(stripping term) [A.m-2]": j_stripping,
+            "X-averaged lithium plating interfacial current density "
+            "(stripping term) [A.m-2]": j_stripping_av,
+            "Lithium plating interfacial current density "
+            "(dead lithium term) [A.m-2]": j_dead_lithium,
+            "X-averaged lithium plating interfacial current density "
+            "(dead lithium term) [A.m-2]": j_dead_lithium_av,
+            "Lithium plating interfacial current density [A.m-2]": j_plating_net,
             "X-averaged lithium plating "
-            "interfacial current density [A.m-2]": j_stripping_av,
+            "interfacial current density [A.m-2]": j_plating_net_av,
         }
 
         return variables
