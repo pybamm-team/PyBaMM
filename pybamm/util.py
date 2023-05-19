@@ -22,8 +22,8 @@ import pkg_resources
 import pybamm
 
 # versions of jax and jaxlib compatible with PyBaMM
-JAX_VERSION = "0.2.12"
-JAXLIB_VERSION = "0.1.70"
+JAX_VERSION = "0.4.8"
+JAXLIB_VERSION = "0.4.7"
 
 
 def root_dir():

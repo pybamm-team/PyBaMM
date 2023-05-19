@@ -177,7 +177,9 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 1)
         sim.solve(t_eval=[0, 600], initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
-        exp = pybamm.Experiment(["Discharge at 1C until 3.6V (1 minute period)"])
+        exp = pybamm.Experiment(
+            [pybamm.experiment.string("Discharge at 1C until 3.6V", period="1 minute")]
+        )
         sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)

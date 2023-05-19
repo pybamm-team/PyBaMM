@@ -220,8 +220,9 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 # Experiments
 #
-from .experiments.experiment import Experiment
-from . import experiments
+from .experiment.experiment import Experiment
+from . import experiment
+
 
 #
 # Plotting

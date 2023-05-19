@@ -9,19 +9,16 @@ import pybamm
 if pybamm.have_jax():
     import jax
     import jax.numpy as jnp
-    from absl import logging
     from jax import core, dtypes
     from jax import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
     from jax.config import config
     from jax.flatten_util import ravel_pytree
     from jax.interpreters import partial_eval as pe
-    from jax.tree_util import tree_flatten, tree_map, tree_multimap, tree_unflatten
+    from jax.tree_util import tree_flatten, tree_map, tree_unflatten
     from jax.util import cache, safe_map, split_list
 
     config.update("jax_enable_x64", True)
-
-    logging.set_verbosity(logging.ERROR)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
@@ -31,7 +28,7 @@ if pybamm.have_jax():
 
     # https://github.com/google/jax/issues/4572#issuecomment-709809897
     def some_hash_function(x):
-        return hash(x.tobytes())
+        return hash(str(x))
 
     class HashableArrayWrapper:
         """wrapper for a numpy array to make it hashable"""
@@ -50,7 +47,7 @@ if pybamm.have_jax():
     def gnool_jit(fun, static_array_argnums=(), static_argnums=()):
         """redefinition of jax jit to allow static array args"""
 
-        @partial(jax.jit, static_argnums=static_array_argnums + static_argnums)
+        @partial(jax.jit, static_argnums=static_array_argnums)
         def callee(*args):
             args = list(args)
             for i in static_array_argnums:
@@ -65,7 +62,7 @@ if pybamm.have_jax():
 
         return caller
 
-    @jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2, 3))
+    @partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2, 3))
     def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
         """
         Implements a Backward Difference formula (BDF) implicit multistep integrator.
@@ -140,12 +137,13 @@ if pybamm.have_jax():
             stepper, t_eval, i, y_out = state
             stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
             index = jnp.searchsorted(t_eval, stepper.t)
+            index = index.astype(
+                "int" + t_eval.dtype.name[-2:]
+            )  # Coerce index to correct type
 
             def for_body(j, y_out):
                 t = t_eval[j]
-                y_out = jax.ops.index_update(
-                    y_out, jax.ops.index[j, :], _bdf_interpolate(stepper, t)
-                )
+                y_out = y_out.at[jnp.index_exp[j, :]].set(_bdf_interpolate(stepper, t))
                 return y_out
 
             y_out = jax.lax.fori_loop(i, index, for_body, y_out)
@@ -242,8 +240,8 @@ if pybamm.have_jax():
         state["h"] = _select_initial_step(atol, rtol, fun, t0, y0, f0, h0)
         state["n_equal_steps"] = 0
         D = jnp.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
-        D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
-        D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * state["h"])
+        D = D.at[jnp.index_exp[0, :]].set(y0)
+        D = D.at[jnp.index_exp[1, :]].set(f0 * state["h"])
         state["D"] = D
         state["y0"] = y0
         state["scale_y0"] = scale_y0
@@ -293,8 +291,8 @@ if pybamm.have_jax():
         I = jnp.arange(1, MAX_ORDER + 1).reshape(-1, 1)
         J = jnp.arange(1, MAX_ORDER + 1)
         M = jnp.empty((MAX_ORDER + 1, MAX_ORDER + 1))
-        M = jax.ops.index_update(M, jax.ops.index[1:, 1:], (I - 1 - factor * J) / I)
-        M = jax.ops.index_update(M, jax.ops.index[0], 1)
+        M = M.at[jnp.index_exp[1:, 1:]].set((I - 1 - factor * J) / I)
+        M = M.at[jnp.index_exp[0]].set(1)
         R = jnp.cumprod(M, axis=0)
 
         return R
@@ -316,7 +314,7 @@ if pybamm.have_jax():
 
         # calculate fun_a, function of algebraic variables
         def fun_a(y_a):
-            y_full = jax.ops.index_update(y0, algebraic_variables, y_a)
+            y_full = y0.at[algebraic_variables].set(y_a)
             return fun(y_full, t0)[algebraic_variables]
 
         y0_a = y0[algebraic_variables]
@@ -360,7 +358,7 @@ if pybamm.have_jax():
         k, converged, dy_norm_old, d, y_a = jax.lax.while_loop(
             while_cond, while_body, while_state
         )
-        y_tilde = jax.ops.index_update(y0, algebraic_variables, y_a)
+        y_tilde = y0.at[algebraic_variables].set(y_a)
 
         return y_tilde, converged
 
@@ -425,8 +423,8 @@ if pybamm.have_jax():
         """
         order = state.order
         D = state.D
-        D = jax.ops.index_update(D, jax.ops.index[order + 2], d - D[order + 1])
-        D = jax.ops.index_update(D, jax.ops.index[order + 1], d)
+        D = D.at[jnp.index_exp[order + 2]].set(d - D[order + 1])
+        D = D.at[jnp.index_exp[order + 1]].set(d)
         i = order
         while_state = [i, D]
 
@@ -436,7 +434,7 @@ if pybamm.have_jax():
 
         def while_body(while_state):
             i, D = while_state
-            D = jax.ops.index_add(D, jax.ops.index[i], D[i + 1])
+            D = D.at[jnp.index_exp[i]].add(D[i + 1])
             i -= 1
             return [i, D]
 
@@ -643,7 +641,7 @@ if pybamm.have_jax():
 
             # newton iteration did not converge, but jacobian has already been
             # evaluated so reduce step size by 0.3 (as per [1]) and try again
-            state = tree_multimap(
+            state = tree_map(
                 partial(jnp.where, not_converged * updated_jacobian),
                 _update_step_size_and_lu(state, 0.3),
                 state,
@@ -656,7 +654,7 @@ if pybamm.have_jax():
 
             # if not converged and jacobian not updated, then update the jacobian and
             # try again
-            (state, updated_jacobian) = tree_multimap(
+            (state, updated_jacobian) = tree_map(
                 partial(
                     jnp.where, not_converged * (updated_jacobian == False)  # noqa: E712
                 ),
@@ -688,7 +686,7 @@ if pybamm.have_jax():
             #         scale_y,
             #     )
 
-            (state, step_accepted) = tree_multimap(
+            (state, step_accepted) = tree_map(
                 partial(jnp.where, converged * (error_norm > 1)),  # noqa: E712
                 (_update_step_size_and_lu(state, factor), False),
                 (state, converged),
@@ -710,7 +708,7 @@ if pybamm.have_jax():
 
         state = state._replace(n_equal_steps=n_equal_steps, t=t, n_steps=n_steps)
 
-        state = tree_multimap(
+        state = tree_map(
             partial(jnp.where, n_equal_steps < state.order + 1),
             _prepare_next_step(state, d),
             _prepare_next_step_order_change(state, d, y, n_iter),
@@ -819,7 +817,7 @@ if pybamm.have_jax():
             ys.append(y)
         return carry, onp.stack(ys)
 
-    @jax.partial(gnool_jit, static_array_argnums=(1,), static_argnums=(0, 2, 3))
+    @partial(gnool_jit, static_array_argnums=(0, 1, 2, 3))
     def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
         y0, unravel = ravel_pytree(y0)
         func = ravel_first_arg(func, unravel)
@@ -876,10 +874,8 @@ if pybamm.have_jax():
                 LU = jax.scipy.linalg.lu_factor(J_aa)
                 g0_a = g0[algebraic_variables]
                 invJ_aa = jax.scipy.linalg.lu_solve(LU, g0_a)
-                y_bar = jax.ops.index_update(
-                    g0,
-                    differentiable_variables,
-                    jax.scipy.linalg.lu_solve(LU_invM_dd, g0_a - J_ad @ invJ_aa),
+                y_bar = g0.at[differentiable_variables].set(
+                    jax.scipy.linalg.lu_solve(LU_invM_dd, g0_a - J_ad @ invJ_aa)
                 )
             else:
                 y_bar = jax.scipy.linalg.lu_solve(LU_invM_dd, g0)
@@ -935,23 +931,15 @@ if pybamm.have_jax():
 
     @cache()
     def closure_convert(fun, in_tree, in_avals):
-        if config.omnistaging_enabled:
-            wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
-            jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
-        else:
-            in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
-            wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
-            with core.initial_style_staging():  # type: ignore
-                jaxpr, _, consts = pe.trace_to_jaxpr(
-                    wrapped_fun, in_pvals, instantiate=True, stage_out=False
-                )  # type: ignore
+        wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
+        jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
         out_tree = out_tree()
 
         # We only want to closure convert for constants with respect to which we're
         # differentiating. As a proxy for that, we hoist consts with float dtype.
         # TODO(mattjj): revise this approach
         def is_float(c):
-            return dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+            return dtypes.issubdtype(type(c), jnp.inexact)
 
         (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
         num_consts = len(hoisted_consts)
