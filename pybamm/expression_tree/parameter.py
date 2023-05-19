@@ -1,11 +1,16 @@
 #
 # Parameter classes
 #
+from __future__ import annotations
 import numbers
 import sys
 
 import numpy as np
 import sympy
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pybamm import FunctionParameter
 
 import pybamm
 
@@ -23,26 +28,26 @@ class Parameter(pybamm.Symbol):
         name of the node
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         super().__init__(name)
 
-    def create_copy(self):
+    def create_copy(self) -> pybamm.Parameter:
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name)
 
-    def _evaluate_for_shape(self):
+    def _evaluate_for_shape(self) -> np.nan:
         """
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return np.nan
 
-    def is_constant(self):
+    def is_constant(self) -> False:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         # Parameter is not constant since it can become an InputParameter
         return False
 
-    def to_equation(self):
+    def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
@@ -79,11 +84,11 @@ class FunctionParameter(pybamm.Symbol):
 
     def __init__(
         self,
-        name,
-        inputs,
-        diff_variable=None,
+        name: str,
+        inputs: dict[str, pybamm.Symbol],
+        diff_variable: Optional[pybamm.Symbol] = None,
         print_name="calculate",
-    ):
+    ) -> None:
         # assign diff variable
         self.diff_variable = diff_variable
         children_list = list(inputs.values())
@@ -129,7 +134,7 @@ class FunctionParameter(pybamm.Symbol):
                 print(inp)
 
     @input_names.setter
-    def input_names(self, inp=None):
+    def input_names(self, inp: dict[str, pybamm.Symbol] = None):
         if inp:
             if inp.__class__ is list:
                 for i in inp:
@@ -156,7 +161,7 @@ class FunctionParameter(pybamm.Symbol):
             + tuple(self.domain)
         )
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Symbol) -> pybamm.FunctionParameter:
         """See :meth:`pybamm.Symbol.diff()`."""
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
@@ -180,8 +185,11 @@ class FunctionParameter(pybamm.Symbol):
         return out
 
     def _function_parameter_new_copy(
-        self, input_names, children, print_name="calculate"
-    ):
+        self,
+        input_names: list[str],
+        children: list[pybamm.Symbol],
+        print_name="calculate",
+    ) -> pybamm.FunctionParameter:
         """
         Returns a new copy of the function parameter.
 
@@ -215,7 +223,7 @@ class FunctionParameter(pybamm.Symbol):
         # add 1e-16 to avoid division by zero
         return sum(child.evaluate_for_shape() for child in self.children) + 1e-16
 
-    def to_equation(self):
+    def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)

@@ -1,12 +1,14 @@
 #
 # Function classes and methods
 #
+from __future__ import annotations
 import numbers
 
 import autograd
 import numpy as np
 import sympy
 from scipy import special
+from typing import Optional
 
 import pybamm
 
@@ -33,8 +35,8 @@ class Function(pybamm.Symbol):
     def __init__(
         self,
         function,
-        *children,
-        name=None,
+        *children: pybamm.Symbol,
+        name: Optional[str] = None,
         derivative="autograd",
         differentiated_function=None,
     ):
@@ -67,7 +69,7 @@ class Function(pybamm.Symbol):
         out = out[:-2] + ")"
         return out
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol.diff()`."""
         if variable == self:
             return pybamm.Scalar(1)
@@ -91,7 +93,7 @@ class Function(pybamm.Symbol):
 
             return derivative
 
-    def _function_diff(self, children, idx):
+    def _function_diff(self, children: pybamm.Symbol, idx: float):
         """
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.
@@ -141,14 +143,20 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         evaluated_children = [
             child.evaluate(t, y, y_dot, inputs) for child in self.children
         ]
         return self._function_evaluate(evaluated_children)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return any(child.evaluates_on_edges(dimension) for child in self.children)
 
@@ -172,7 +180,7 @@ class Function(pybamm.Symbol):
         children_copy = [child.new_copy() for child in self.children]
         return self._function_new_copy(children_copy)
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children: list) -> Function:
         """
         Returns a new copy of the function.
 
@@ -241,7 +249,7 @@ class SpecificFunction(Function):
         The child to apply the function to
     """
 
-    def __init__(self, function, child):
+    def __init__(self, function, child: pybamm.Symbol):
         super().__init__(function, child)
 
     def _function_new_copy(self, children):

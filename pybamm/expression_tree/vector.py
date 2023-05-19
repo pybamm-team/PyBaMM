@@ -1,7 +1,9 @@
 #
 # Vector class
 #
+from __future__ import annotations
 import numpy as np
+from typing import Union, Optional
 
 import pybamm
 
@@ -13,13 +15,13 @@ class Vector(pybamm.Array):
 
     def __init__(
         self,
-        entries,
-        name=None,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        entries_string=None,
-    ):
+        entries: Union[np.ndarray, list, np.matrix],
+        name: str = None,
+        domain: Optional[Union[list[str], str]] = None,
+        auxiliary_domains: Optional[dict[str, str]] = None,
+        domains: Optional[dict] = None,
+        entries_string: Optional[str] = None,
+    ) -> None:
         if isinstance(entries, (list, np.matrix)):
             entries = np.array(entries)
         # make sure that entries are a vector (can be a column vector)

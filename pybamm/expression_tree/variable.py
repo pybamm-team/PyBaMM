@@ -1,11 +1,12 @@
 #
 # Variable class
 #
-
+from __future__ import annotations
 import numpy as np
 import sympy
 import numbers
 import pybamm
+from typing import Iterable, Union, Optional
 
 
 class VariableBase(pybamm.Symbol):
@@ -49,14 +50,14 @@ class VariableBase(pybamm.Symbol):
 
     def __init__(
         self,
-        name,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        bounds=None,
-        print_name=None,
-        scale=1,
-        reference=0,
+        name: str,
+        domain: Optional[Iterable[str]] = None,
+        auxiliary_domains: Optional[dict] = None,
+        domains: Optional[dict] = None,
+        bounds: Optional[tuple] = None,
+        print_name: Optional[str] = None,
+        scale: Optional[Union[float, pybamm.Symbol]] = 1,
+        reference: Optional[Union[float, pybamm.Symbol]] = 0,
     ):
         if isinstance(scale, numbers.Number):
             scale = pybamm.Scalar(scale)
@@ -82,7 +83,7 @@ class VariableBase(pybamm.Symbol):
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values):
+    def bounds(self, values: numbers.Number):
         if values is None:
             values = (-np.inf, np.inf)
         else:
@@ -170,7 +171,7 @@ class Variable(VariableBase):
         Default is 0.
     """
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Symbol):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
@@ -224,7 +225,7 @@ class VariableDot(VariableBase):
         Default is 0.
     """
 
-    def get_variable(self):
+    def get_variable(self) -> pybamm.Variable:
         """
         return a :class:`.Variable` corresponding to this VariableDot
 
@@ -233,7 +234,7 @@ class VariableDot(VariableBase):
         """
         return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Variable) -> pybamm.Scalar:
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:

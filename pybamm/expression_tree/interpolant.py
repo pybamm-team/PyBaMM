@@ -3,6 +3,7 @@
 #
 import numpy as np
 from scipy import interpolate
+from typing import Iterable, Optional
 import warnings
 
 import pybamm
@@ -41,13 +42,13 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x,
-        y,
-        children,
-        name=None,
-        interpolator="linear",
-        extrapolate=True,
-        entries_string=None,
+        x: np.ndarray,
+        y: np.ndarray,
+        children: Iterable[pybamm.Symbol],
+        name: Optional[str] = None,
+        interpolator: Optional[str] = "linear",
+        extrapolate: Optional[bool] = True,
+        entries_string: Optional[str] = None,
     ):
         # "cubic spline" has been renamed to "cubic"
         if interpolator == "cubic spline":

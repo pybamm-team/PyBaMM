@@ -3,6 +3,7 @@
 #
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
+from typing import Union
 
 import pybamm
 
@@ -14,13 +15,13 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries,
-        name=None,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        entries_string=None,
-    ):
+        entries: Union[np.ndarray, list],
+        name: str = None,
+        domain: list[str] = None,
+        auxiliary_domains: dict[str, str] = None,
+        domains: dict = None,
+        entries_string: str = None,
+    ) -> None:
         if isinstance(entries, list):
             entries = np.array(entries)
         if name is None:

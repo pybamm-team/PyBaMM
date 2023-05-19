@@ -1,6 +1,7 @@
 #
 # Unary operator classes and methods
 #
+from __future__ import annotations
 import numbers
 
 import numpy as np
@@ -26,7 +27,7 @@ class UnaryOperator(pybamm.Symbol):
         child node
     """
 
-    def __init__(self, name, child, domains=None):
+    def __init__(self, name: str, child: pybamm.Symbol, domains=None):
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
@@ -57,7 +58,13 @@ class UnaryOperator(pybamm.Symbol):
             f"{self.__class__} does not implement _unary_evaluate."
         )
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         child = self.child.evaluate(t, y, y_dot, inputs)
         return self._unary_evaluate(child)
@@ -69,7 +76,7 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self.children[0].evaluate_for_shape()
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.child.evaluates_on_edges(dimension)
 
@@ -103,7 +110,7 @@ class Negate(UnaryOperator):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}{!s}".format(self.name, self.child)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return -self.child.diff(variable)
 
@@ -312,7 +319,7 @@ class Index(UnaryOperator):
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -358,7 +365,7 @@ class Gradient(SpatialOperator):
             )
         super().__init__("grad", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
@@ -393,7 +400,7 @@ class Divergence(SpatialOperator):
             )
         super().__init__("div", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -415,7 +422,7 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -431,7 +438,7 @@ class GradientSquared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -573,7 +580,7 @@ class Integral(SpatialOperator):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -767,7 +774,7 @@ class BoundaryIntegral(SpatialOperator):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -800,7 +807,7 @@ class DeltaFunction(SpatialOperator):
             + tuple([(k, tuple(v)) for k, v in self.domains.items()])
         )
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -956,7 +963,7 @@ class UpwindDownwind(SpatialOperator):
             )
         super().__init__(name, child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
@@ -989,7 +996,7 @@ class NotConstant(UnaryOperator):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return NotConstant(child)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.child.diff(variable)
 

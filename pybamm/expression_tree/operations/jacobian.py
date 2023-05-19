@@ -1,6 +1,7 @@
 #
 # Calculate the Jacobian of a symbol
 #
+from typing import Optional
 import pybamm
 
 
@@ -18,11 +19,15 @@ class Jacobian(object):
         whether or not the Jacobian clears the domain (default True)
     """
 
-    def __init__(self, known_jacs=None, clear_domain=True):
+    def __init__(
+        self,
+        known_jacs: Optional[dict[str, pybamm.Symbol]] = None,
+        clear_domain: Optional[bool] = True,
+    ):
         self._known_jacs = known_jacs or {}
         self._clear_domain = clear_domain
 
-    def jac(self, symbol, variable):
+    def jac(self, symbol: pybamm.Symbol, variable: pybamm.Symbol) -> pybamm.Symbol:
         """
         This function recurses down the tree, computing the Jacobian using
         the Jacobians defined in classes derived from pybamm.Symbol. E.g. the
@@ -52,7 +57,7 @@ class Jacobian(object):
             self._known_jacs[symbol] = jac
             return jac
 
-    def _jac(self, symbol, variable):
+    def _jac(self, symbol: pybamm.Symbol, variable: pybamm.Symbol):
         """See :meth:`Jacobian.jac()`."""
 
         if isinstance(symbol, pybamm.BinaryOperator):

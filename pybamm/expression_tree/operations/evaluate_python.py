@@ -3,6 +3,8 @@
 #
 import numbers
 from collections import OrderedDict
+from numpy.typing import ArrayLike
+from typing import Tuple
 
 import numpy as np
 import scipy.sparse
@@ -14,6 +16,7 @@ if pybamm.have_jax():
     from jax.config import config
 
     config.update("jax_enable_x64", True)
+    # jax.typing unavailable for supported version
 
 
 class JaxCooMatrix:
@@ -37,7 +40,9 @@ class JaxCooMatrix:
         where x is the number of rows, and y the number of columns of the matrix
     """
 
-    def __init__(self, row, col, data, shape):
+    def __init__(
+        self, row: ArrayLike, col: ArrayLike, data: ArrayLike, shape: tuple[int, int]
+    ):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
@@ -54,7 +59,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
         return result.at[self.row, self.col].add(self.data)
 
-    def dot_product(self, b):
+    def dot_product(self, b: ArrayLike):
         """
         dot product of matrix with a dense column vector b
 
@@ -67,7 +72,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
         return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
 
-    def scalar_multiply(self, b):
+    def scalar_multiply(self, b: ArrayLike):
         """
         multiply of matrix with a scalar b
 
@@ -90,7 +95,7 @@ class JaxCooMatrix:
         return self.dot_product(b)
 
 
-def create_jax_coo_matrix(value):
+def create_jax_coo_matrix(value: scipy.sparse):
     """
     Creates a JaxCooMatrix from a scipy.sparse matrix
 
@@ -130,7 +135,12 @@ def is_scalar(arg):
         return np.all(np.array(arg.shape) == 1)
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
+def find_symbols(
+    symbol: pybamm.Symbol,
+    constant_symbols: OrderedDict,
+    variable_symbols: OrderedDict,
+    output_jax=False,
+):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -375,7 +385,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False, output_jax=False):
+def to_python(
+    symbol: pybamm.Symbol, debug=False, output_jax=False
+) -> Tuple[OrderedDict, str, bool]:
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -441,7 +453,7 @@ class EvaluatorPython:
 
     """
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: pybamm.Symbol):
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
         # extract constants in generated function
@@ -533,7 +545,7 @@ class EvaluatorJax:
 
     """
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: pybamm.Symbol):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501

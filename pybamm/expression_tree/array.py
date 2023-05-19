@@ -1,9 +1,11 @@
 #
 # NumpyArray class
 #
+from __future__ import annotations
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
+from typing import Union
 
 import pybamm
 
@@ -36,13 +38,13 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries,
-        name=None,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        entries_string=None,
-    ):
+        entries: Union[np.array, list],
+        name: str = None,
+        domain: list[str] = None,
+        auxiliary_domains: dict[str, str] = None,
+        domains: dict = None,
+        entries_string: str = None,
+    ) -> None:
         # if
         if isinstance(entries, list):
             entries = np.array(entries)
@@ -100,7 +102,7 @@ class Array(pybamm.Symbol):
             (self.__class__, self.name) + self.entries_string + tuple(self.domain)
         )
 
-    def _jac(self, variable):
+    def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
         jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
@@ -115,7 +117,13 @@ class Array(pybamm.Symbol):
             entries_string=self.entries_string,
         )
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._entries
 
@@ -123,13 +131,13 @@ class Array(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
-    def to_equation(self):
+    def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 
 
-def linspace(start, stop, num=50, **kwargs):
+def linspace(start: float, stop: float, num=50, **kwargs) -> pybamm.Array:
     """
     Creates a linearly spaced array by calling `numpy.linspace` with keyword
     arguments 'kwargs'. For a list of 'kwargs' see the

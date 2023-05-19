@@ -7,6 +7,10 @@ from collections import defaultdict
 import numpy as np
 import sympy
 from scipy.sparse import issparse, vstack
+from typing import Optional, Iterable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pybamm import Concatenation, DomainConcatenation
 
 import pybamm
 
@@ -21,7 +25,13 @@ class Concatenation(pybamm.Symbol):
         The symbols to concatenate
     """
 
-    def __init__(self, *children, name=None, check_domain=True, concat_fun=None):
+    def __init__(
+        self,
+        *children: Iterable[pybamm.Symbol],
+        name=None,
+        check_domain=True,
+        concat_fun=None
+    ):
         # The second condition checks whether this is the base Concatenation class
         # or a subclass of Concatenation
         # (ConcatenationVariable, NumpyConcatenation, ...)
@@ -51,7 +61,7 @@ class Concatenation(pybamm.Symbol):
         out = out[:-2] + ")"
         return out
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         children_diffs = [child.diff(variable) for child in self.children]
         if len(children_diffs) == 1:
@@ -61,7 +71,7 @@ class Concatenation(pybamm.Symbol):
 
         return diff
 
-    def get_children_domains(self, children):
+    def get_children_domains(self, children: Iterable[pybamm.Symbol]):
         # combine domains from children
         domain = []
         for child in children:
@@ -97,7 +107,13 @@ class Concatenation(pybamm.Symbol):
         else:
             return self.concatenation_function(children_eval)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         children = self.children
         children_eval = [None] * len(children)
@@ -168,7 +184,7 @@ class NumpyConcatenation(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):
+    def __init__(self, *children: Iterable[pybamm.Symbol]):
         children = list(children)
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
@@ -218,7 +234,12 @@ class DomainConcatenation(Concatenation):
         from `copy_this`. `mesh` is not used in this case
     """
 
-    def __init__(self, children, full_mesh, copy_this=None):
+    def __init__(
+        self,
+        children: Iterable[pybamm.Symbol],
+        full_mesh,  # pybamm.BaseMesh
+        copy_this=None,  #: Optional[pybamm.DomainConcatenation]
+    ):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
         children = list(children)
@@ -330,7 +351,7 @@ class SparseStack(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):
+    def __init__(self, *children):  #: Iterable[pybamm.Concatenation]
         children = list(children)
         if not any(issparse(child.evaluate_for_shape()) for child in children):
             concatenation_function = np.vstack
@@ -389,13 +410,13 @@ class ConcatenationVariable(Concatenation):
         self.print_name = print_name
 
 
-def substrings(s):
+def substrings(s: str):
     for i in range(len(s)):
         for j in range(i, len(s)):
             yield s[i : j + 1]
 
 
-def intersect(s1, s2):
+def intersect(s1: str, s2: str):
     # find all the common strings between two strings
     all_intersects = set(substrings(s1)) & set(substrings(s2))
     # intersect is the longest such intercept

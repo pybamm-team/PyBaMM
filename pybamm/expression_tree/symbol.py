@@ -1,6 +1,7 @@
 #
 # Base Symbol Class for the expression tree
 #
+from __future__ import annotations
 import numbers
 
 import anytree
@@ -9,15 +10,25 @@ import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
+from typing import Union, TYPE_CHECKING, Optional
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
+
+if TYPE_CHECKING:
+    from pybamm.expression_tree.binary_operators import (
+        Addition,
+        Subtraction,
+        Multiplication,
+        Division,
+    )
+    import casadi
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
 
 
-def domain_size(domain):
+def domain_size(domain: Union[list[str], str]):
     """
     Get the domain size.
 
@@ -45,7 +56,7 @@ def domain_size(domain):
     return size
 
 
-def create_object_of_size(size, typ="vector"):
+def create_object_of_size(size: int, typ="vector"):
     """Return object, consisting of NaNs, of the right shape."""
     if typ == "vector":
         return np.nan * np.ones((size, 1))
@@ -53,7 +64,7 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domains, typ="vector"):
+def evaluate_for_shape_using_domain(domains: dict, typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
@@ -65,11 +76,11 @@ def evaluate_for_shape_using_domain(domains, typ="vector"):
     return create_object_of_size(_domain_sizes, typ)
 
 
-def is_constant(symbol):
+def is_constant(symbol: Symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
 
 
-def is_scalar_x(expr, x):
+def is_scalar_x(expr: Symbol, x: int):
     """
     Utility function to test if an expression evaluates to a constant scalar value
     """
@@ -80,28 +91,28 @@ def is_scalar_x(expr, x):
         return False
 
 
-def is_scalar_zero(expr):
+def is_scalar_zero(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     return is_scalar_x(expr, 0)
 
 
-def is_scalar_one(expr):
+def is_scalar_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant scalar one
     """
     return is_scalar_x(expr, 1)
 
 
-def is_scalar_minus_one(expr):
+def is_scalar_minus_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant scalar minus one
     """
     return is_scalar_x(expr, -1)
 
 
-def is_matrix_x(expr, x):
+def is_matrix_x(expr: Symbol, x):
     """
     Utility function to test if an expression evaluates to a constant matrix value
     """
@@ -124,28 +135,30 @@ def is_matrix_x(expr, x):
         return False
 
 
-def is_matrix_zero(expr):
+def is_matrix_zero(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant matrix zero
     """
     return is_matrix_x(expr, 0)
 
 
-def is_matrix_one(expr):
+def is_matrix_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant matrix one
     """
     return is_matrix_x(expr, 1)
 
 
-def is_matrix_minus_one(expr):
+def is_matrix_minus_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant matrix minus one
     """
     return is_matrix_x(expr, -1)
 
 
-def simplify_if_constant(symbol):
+def simplify_if_constant(
+    symbol,
+):  # division, Negate (unary operator), Maximum (binary), multiplication, addition, subtraction
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -202,11 +215,11 @@ class Symbol:
 
     def __init__(
         self,
-        name,
-        children=None,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
+        name: str,
+        children: list[Symbol] = None,
+        domain: Union[list[str], str] = None,
+        auxiliary_domains: dict[str, str] = None,
+        domains: dict = None,
     ):
         super(Symbol, self).__init__()
         self.name = name
@@ -250,7 +263,7 @@ class Symbol:
         return self._name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str):
         assert isinstance(value, str)
         self._name = value
 
@@ -270,7 +283,7 @@ class Symbol:
         return self._domains["primary"]
 
     @domain.setter
-    def domain(self, domain):
+    def domain(self, domain: Union[list[str], str]):
         raise NotImplementedError(
             "Cannot set domain directly, use domains={'primary': domain} instead"
         )
@@ -283,7 +296,7 @@ class Symbol:
         )
 
     @domains.setter
-    def domains(self, domains):
+    def domains(self, domains: dict):
         try:
             if (
                 self._domains == domains
@@ -342,7 +355,7 @@ class Symbol:
         """Helper function to get the quaternary domain of a symbol."""
         return self._domains["quaternary"]
 
-    def copy_domains(self, symbol):
+    def copy_domains(self, symbol: Symbol):
         """Copy the domains from a given symbol, bypassing checks."""
         if self._domains != symbol._domains:
             self._domains = symbol._domains
@@ -354,7 +367,7 @@ class Symbol:
             self._domains = EMPTY_DOMAINS
             self.set_id()
 
-    def get_children_domains(self, children):
+    def get_children_domains(self, children: list[Symbol]):
         """Combine domains from children, at all levels."""
         domains = {}
         for child in children:
@@ -375,7 +388,12 @@ class Symbol:
 
         return domains
 
-    def read_domain_or_domains(self, domain, auxiliary_domains, domains):
+    def read_domain_or_domains(
+        self,
+        domain: Union[list[str], str],
+        auxiliary_domains: dict[str, str],
+        domains: dict,
+    ):
         if domains is None:
             if isinstance(domain, str):
                 domain = [domain]
@@ -418,7 +436,7 @@ class Symbol:
     def reference(self):
         return self._reference
 
-    def __eq__(self, other):
+    def __eq__(self, other: Symbol):
         try:
             return self._id == other._id
         except AttributeError:
@@ -448,7 +466,7 @@ class Symbol:
             else:
                 print("{}{}".format(pre, node.name))
 
-    def visualise(self, filename):
+    def visualise(self, filename: str):
         """
         Produces a .png file of the tree (this node and its children) with the
         name filename
@@ -538,71 +556,71 @@ class Symbol:
             {k: v for k, v in self.domains.items() if v != []},
         )
 
-    def __add__(self, other):
+    def __add__(self, other: Symbol) -> Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(self, other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: Symbol) -> Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(other, self)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Symbol) -> Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(self, other)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Symbol) -> Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(other, self)
 
-    def __mul__(self, other):
+    def __mul__(self, other: Symbol) -> Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(self, other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Symbol) -> Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: Symbol):
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(self, other)
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self, other: Symbol):
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Symbol) -> Division:
         """return a :class:`Division` object."""
         return pybamm.divide(self, other)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: Symbol) -> Division:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other):
+    def __pow__(self, other: Symbol) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
-    def __rpow__(self, other):
+    def __rpow__(self, other: Symbol) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
-    def __lt__(self, other):
+    def __lt__(self, other: Symbol) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
-    def __le__(self, other):
+    def __le__(self, other: Symbol) -> pybamm.EqualHeaviside:
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, True)
 
-    def __gt__(self, other):
+    def __gt__(self, other: Symbol) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, False)
 
-    def __ge__(self, other):
+    def __ge__(self, other: Symbol) -> pybamm.EqualHeaviside:
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
-    def __neg__(self):
+    def __neg__(self) -> pybamm.Negate:
         """return a :class:`Negate` object."""
         if isinstance(self, pybamm.Negate):
             # Double negative is a positive
@@ -621,7 +639,7 @@ class Symbol:
         else:
             return pybamm.simplify_if_constant(pybamm.Negate(self))
 
-    def __abs__(self):
+    def __abs__(self) -> pybamm.AbsoluteValue:
         """return an :class:`AbsoluteValue` object, or a smooth approximation."""
         if isinstance(self, pybamm.AbsoluteValue):
             # No need to apply abs a second time
@@ -641,7 +659,7 @@ class Symbol:
                 out = pybamm.smooth_absolute_value(self, k)
             return pybamm.simplify_if_constant(out)
 
-    def __mod__(self, other):
+    def __mod__(self, other: Symbol) -> pybamm.Modulo:
         """return an :class:`Modulo` object."""
         return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
@@ -655,7 +673,7 @@ class Symbol:
         """
         return getattr(pybamm, ufunc.__name__)(*inputs, **kwargs)
 
-    def diff(self, variable):
+    def diff(self, variable: Symbol):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
         differentiated, return `1` if differentiating with respect to yourself,
@@ -684,7 +702,12 @@ class Symbol:
         """
         raise NotImplementedError
 
-    def jac(self, variable, known_jacs=None, clear_domain=True):
+    def jac(
+        self,
+        variable: pybamm.Symbol,
+        known_jacs: Optional[dict[str, pybamm.Symbol]] = None,
+        clear_domain=True,
+    ):
         """
         Differentiate a symbol with respect to a (slice of) a StateVector
         or StateVectorDot.
@@ -705,7 +728,13 @@ class Symbol:
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """
         evaluate expression tree.
 
@@ -731,7 +760,9 @@ class Symbol:
             "{!s} of type {}".format(self, type(self))
         )
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self, t=None, y: np.array = None, y_dot: np.array = None, inputs: dict = None
+    ):
         """Evaluate expression tree (wrapper to allow using dict of known values).
 
         Parameters
@@ -836,7 +867,7 @@ class Symbol:
         return self.evaluates_to_number() and self.is_constant()
 
     @lru_cache
-    def evaluates_on_edges(self, dimension):
+    def evaluates_on_edges(self, dimension: str) -> bool:
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
@@ -873,7 +904,14 @@ class Symbol:
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
+    def to_casadi(
+        self,
+        t: Optional[casadi.MX] = None,
+        y: Optional[casadi.MX] = None,
+        y_dot: Optional[casadi.MX] = None,
+        inputs: Optional[dict] = None,
+        casadi_symbols: Optional[Symbol] = None,
+    ):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.

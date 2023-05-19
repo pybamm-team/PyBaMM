@@ -1,17 +1,22 @@
 #
 # Binary operator classes
 #
+from __future__ import annotations
 import numbers
 
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
+from typing import Union, Tuple
 
 import pybamm
 
 
-def _preprocess_binary(left, right):
+def _preprocess_binary(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+) -> Tuple[pybamm.PrimaryBroadcast, pybamm.PrimaryBroadcast]:
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
     if isinstance(right, numbers.Number):
@@ -60,7 +65,12 @@ class BinaryOperator(pybamm.Symbol):
         rhs child node (converted to :class:`Scalar` if Number)
     """
 
-    def __init__(self, name, left, right):
+    def __init__(
+        self,
+        name: str,
+        left: Union[numbers.Number, pybamm.Symbol],
+        right: Union[numbers.Number, pybamm.Symbol],
+    ):
         left, right = _preprocess_binary(left, right)
 
         domains = self.get_children_domains([left, right])
@@ -101,7 +111,11 @@ class BinaryOperator(pybamm.Symbol):
 
         return out
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: Union[numbers.Number, pybamm.Symbol],
+        right: Union[numbers.Number, pybamm.Symbol],
+    ):
         """
         Default behaviour for new_copy.
         This copies the behaviour of `_binary_evaluate`, but since `left` and `right`
@@ -109,7 +123,13 @@ class BinaryOperator(pybamm.Symbol):
         """
         return self._binary_evaluate(left, right)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         left = self.left.evaluate(t, y, y_dot, inputs)
         right = self.right.evaluate(t, y, y_dot, inputs)
@@ -131,7 +151,7 @@ class BinaryOperator(pybamm.Symbol):
             f"{self.__class__} does not implement _binary_evaluate."
         )
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
@@ -165,7 +185,7 @@ class Power(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("**", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
         base, exponent = self.orphans
@@ -206,7 +226,7 @@ class Addition(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("+", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) + self.right.diff(variable)
 
@@ -229,7 +249,7 @@ class Subtraction(BinaryOperator):
 
         super().__init__("-", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) - self.right.diff(variable)
 
@@ -254,7 +274,7 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply product rule
         left, right = self.orphans
@@ -337,7 +357,7 @@ class Division(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("/", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply quotient rule
         top, bottom = self.orphans
@@ -381,7 +401,7 @@ class Inner(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("inner product", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply product rule
         left, right = self.orphans
@@ -409,11 +429,15 @@ class Inner(BinaryOperator):
         else:
             return left * right
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: Union[numbers.Number, pybamm.Symbol],
+        right: Union[numbers.Number, pybamm.Symbol],
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.inner(left, right)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -470,7 +494,11 @@ class Equality(BinaryOperator):
         else:
             return int(left == right)
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: Union[numbers.Number, pybamm.Symbol],
+        right: Union[numbers.Number, pybamm.Symbol],
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.Equality(left, right)
 
@@ -561,7 +589,7 @@ class Modulo(BinaryOperator):
     def __init__(self, left, right):
         super().__init__("%", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
         left, right = self.orphans
@@ -603,7 +631,7 @@ class Minimum(BinaryOperator):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "minimum({!s}, {!s})".format(self.left, self.right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         left, right = self.orphans
         return (left <= right) * left.diff(variable) + (left > right) * right.diff(
@@ -620,7 +648,11 @@ class Minimum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: Union[numbers.Number, pybamm.Symbol],
+        right: Union[numbers.Number, pybamm.Symbol],
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.minimum(left, right)
 
@@ -639,7 +671,7 @@ class Maximum(BinaryOperator):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "maximum({!s}, {!s})".format(self.left, self.right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         left, right = self.orphans
         return (left >= right) * left.diff(variable) + (left < right) * right.diff(
@@ -656,7 +688,11 @@ class Maximum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: Union[numbers.Number, pybamm.Symbol],
+        right: Union[numbers.Number, pybamm.Symbol],
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.maximum(left, right)
 
@@ -665,10 +701,13 @@ class Maximum(BinaryOperator):
         return sympy.Max(left, right)
 
 
-def _simplify_elementwise_binary_broadcasts(left, right):
+def _simplify_elementwise_binary_broadcasts(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     left, right = _preprocess_binary(left, right)
 
-    def unpack_broadcast_recursive(symbol):
+    def unpack_broadcast_recursive(symbol: pybamm.Symbol):
         if isinstance(symbol, pybamm.Broadcast):
             if symbol.child.domain == []:
                 return symbol.orphans[0]
@@ -693,7 +732,11 @@ def _simplify_elementwise_binary_broadcasts(left, right):
     return left, right
 
 
-def _simplified_binary_broadcast_concatenation(left, right, operator):
+def _simplified_binary_broadcast_concatenation(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+    operator,
+):
     """
     Check if there are concatenations or broadcasts that we can commute the operator
     with
@@ -733,7 +776,10 @@ def _simplified_binary_broadcast_concatenation(left, right, operator):
             )
 
 
-def simplified_power(left, right):
+def simplified_power(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Check for Concatenations and Broadcasts
@@ -775,7 +821,10 @@ def simplified_power(left, right):
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
 
-def add(left, right):
+def add(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     """
     Note
     ----
@@ -863,7 +912,10 @@ def add(left, right):
     return pybamm.simplify_if_constant(Addition(left, right))
 
 
-def subtract(left, right):
+def subtract(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     """
     Note
     ----
@@ -945,7 +997,10 @@ def subtract(left, right):
     return pybamm.simplify_if_constant(Subtraction(left, right))
 
 
-def multiply(left, right):
+def multiply(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Move constant to always be on the left
@@ -1070,7 +1125,10 @@ def multiply(left, right):
     return Multiplication(left, right)
 
 
-def divide(left, right):
+def divide(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # anything divided by zero raises error
@@ -1141,7 +1199,10 @@ def divide(left, right):
     return pybamm.simplify_if_constant(Division(left, right))
 
 
-def matmul(left, right):
+def matmul(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     left, right = _preprocess_binary(left, right)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(MatrixMultiplication(left, right))
@@ -1200,7 +1261,10 @@ def matmul(left, right):
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
 
 
-def minimum(left, right):
+def minimum(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     """
     Returns the smaller of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.min`, which returns min function of child.
@@ -1221,7 +1285,10 @@ def minimum(left, right):
     return pybamm.simplify_if_constant(out)
 
 
-def maximum(left, right):
+def maximum(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+):
     """
     Returns the larger of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.max`, which returns max function of child.
@@ -1242,7 +1309,11 @@ def maximum(left, right):
     return pybamm.simplify_if_constant(out)
 
 
-def _heaviside(left, right, equal):
+def _heaviside(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+    equal,
+):
     """return a :class:`EqualHeaviside` object, or a smooth approximation."""
     # Check for Concatenations and Broadcasts
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
@@ -1281,7 +1352,11 @@ def _heaviside(left, right, equal):
     return pybamm.simplify_if_constant(out)
 
 
-def softminus(left, right, k):
+def softminus(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+    k: float,
+):
     """
     Softplus approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_smoothing`. The recommended value is k=10.
@@ -1289,7 +1364,11 @@ def softminus(left, right, k):
     return pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k
 
 
-def softplus(left, right, k):
+def softplus(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+    k: float,
+):
     """
     Softplus approximation to the maximum function. k is the smoothing parameter,
     set by `pybamm.settings.max_smoothing`. The recommended value is k=10.
@@ -1297,7 +1376,11 @@ def softplus(left, right, k):
     return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
 
 
-def sigmoid(left, right, k):
+def sigmoid(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+    k: float,
+):
     """
     Sigmoidal approximation to the heaviside function. k is the smoothing parameter,
     set by `pybamm.settings.heaviside_smoothing`. The recommended value is k=10.
@@ -1307,7 +1390,11 @@ def sigmoid(left, right, k):
     return (1 + pybamm.tanh(k * (right - left))) / 2
 
 
-def source(left, right, boundary=False):
+def source(
+    left: Union[numbers.Number, pybamm.Symbol],
+    right: Union[numbers.Number, pybamm.Symbol],
+    boundary=False,
+):
     """
     A convenience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix

@@ -1,6 +1,11 @@
 #
 # Helper function to unpack a symbol
 #
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    import pybamm
 
 
 class SymbolUnpacker(object):
@@ -16,11 +21,13 @@ class SymbolUnpacker(object):
         cached unpacked equations
     """
 
-    def __init__(self, classes_to_find, unpacked_symbols=None):
+    def __init__(self, classes_to_find, unpacked_symbols: Optional[set] = None):
         self.classes_to_find = classes_to_find
         self._unpacked_symbols = unpacked_symbols or {}
 
-    def unpack_list_of_symbols(self, list_of_symbols):
+    def unpack_list_of_symbols(
+        self, list_of_symbols: list[pybamm.Symbol]
+    ) -> list[pybamm.Symbol]:
         """
         Unpack a list of symbols. See :meth:`SymbolUnpacker.unpack()`
 
@@ -41,7 +48,7 @@ class SymbolUnpacker(object):
 
         return all_instances
 
-    def unpack_symbol(self, symbol):
+    def unpack_symbol(self, symbol: list[pybamm.Symbol]) -> list[pybamm.Symbol]:
         """
         This function recurses down the tree, unpacking the symbols and saving the ones
         that have a class in `self.classes_to_find`.

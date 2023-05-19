@@ -13,7 +13,14 @@ class CasadiConverter(object):
 
         pybamm.citations.register("Andersson2019")
 
-    def convert(self, symbol, t, y, y_dot, inputs):
+    def convert(
+        self,
+        symbol: pybamm.Symbol,
+        t: casadi.MX,
+        y: casadi.MX,
+        y_dot: casadi.MX,
+        inputs: dict[casadi.MX],
+    ) -> casadi.MX:
         """
         This function recurses down the tree, converting the PyBaMM expression tree to
         a CasADi expression tree

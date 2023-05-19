@@ -5,6 +5,8 @@ import copy
 import re
 import warnings
 
+from typing import Optional
+
 import sympy
 
 import pybamm
@@ -49,7 +51,9 @@ class Latexify:
     >>> model.latexify(newline=False)[1:5]
     """
 
-    def __init__(self, model, filename=None, newline=True):
+    def __init__(
+        self, model, filename: Optional[str] = None, newline: Optional[bool] = True
+    ):
         self.model = model
         self.filename = filename
         self.newline = newline

@@ -1,8 +1,10 @@
 #
 # Scalar class
 #
+from __future__ import annotations
 import numpy as np
 import sympy
+from typing import Optional
 
 import pybamm
 
@@ -21,7 +23,7 @@ class Scalar(pybamm.Symbol):
 
     """
 
-    def __init__(self, value, name=None):
+    def __init__(self, value: float, name: Optional[str] = None) -> None:
         # set default name if not provided
         self.value = value
         if name is None:
@@ -52,11 +54,17 @@ class Scalar(pybamm.Symbol):
         # indistinguishable by class and name alone
         self._id = hash((self.__class__, str(self.value)))
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float = None,
+        y: np.array = None,
+        y_dot: np.array = None,
+        inputs: dict = None,
+    ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value
 
-    def _jac(self, variable):
+    def _jac(self, variable: pybamm.Variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
@@ -64,7 +72,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Scalar(self.value, self.name)
 
-    def is_constant(self):
+    def is_constant(self) -> True:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
