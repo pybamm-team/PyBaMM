@@ -82,8 +82,8 @@ install_cmd = [
 print("-" * 10, "Building SuiteSparse", "-" * 40)
 for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     build_dir = os.path.join(suitesparse_src, libdir)
-    subprocess.run(make_cmd, cwd=build_dir)
-    subprocess.run(install_cmd, cwd=build_dir)
+    subprocess.run(make_cmd, cwd=build_dir, check=True)
+    subprocess.run(install_cmd, cwd=build_dir, check=True)
 
 # 2 --- Download SUNDIALS
 sundials_version = "6.5.0"
@@ -122,8 +122,8 @@ if not os.path.exists(build_dir):
 
 sundials_src = "../sundials-{}".format(sundials_version)
 print("-" * 10, "Running CMake prepare", "-" * 40)
-subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir)
+subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir, check=True)
 
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]
-subprocess.run(make_cmd, cwd=build_dir)
+subprocess.run(make_cmd, cwd=build_dir, check=True)
