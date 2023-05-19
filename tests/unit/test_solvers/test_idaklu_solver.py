@@ -181,6 +181,33 @@ class TestIDAKLUSolver(TestCase):
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
+    def test_sensitivites_initial_condition(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -u}
+        model.algebraic = {v: a * u - v}
+        model.initial_conditions = {u: 1, v: 1}
+        model.variables = {"2v": 2 * v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        t_eval = np.linspace(0, 3, 100)
+        a_value = 0.1
+
+        sol = solver.solve(
+            model, t_eval, inputs={"a": a_value}, calculate_sensitivities=True
+        )
+
+        np.testing.assert_array_almost_equal(
+            sol["2v"].sensitivities["a"].full().flatten(), np.exp(-sol.t) * 2, decimal=4
+        )
+
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
