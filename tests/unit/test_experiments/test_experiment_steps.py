@@ -206,10 +206,8 @@ class TestExperimentSteps(unittest.TestCase):
             pybamm.experiment.string((1, 2, 3))
         with self.assertRaisesRegex(ValueError, "Operating conditions must"):
             pybamm.experiment.string("Discharge at 1 A at 2 hours")
-        with self.assertRaisesRegex(ValueError, "Instruction must be"):
+        with self.assertRaisesRegex(ValueError, "drive cycles"):
             pybamm.experiment.string("Run at 1 A for 2 hours")
-        with self.assertRaisesRegex(ValueError, "Instruction must be"):
-            pybamm.experiment.string("Run at at 1 A for 2 hours")
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.experiment.string("Play at 1 A for 2 hours")
         with self.assertRaisesRegex(ValueError, "Operating conditions must"):

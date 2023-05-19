@@ -32,7 +32,7 @@ class _Step:
     Parameters
     ----------
     typ : str
-        The type of step, can be "current", "voltage", "cccv_ode" or "rest", "power",
+        The type of step, can be "current", "voltage", "c_rate", "power",
         or "resistance".
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a

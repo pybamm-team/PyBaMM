@@ -14,7 +14,7 @@ def string(string, **kwargs):
         The string to parse. Each operating condition should
         be of the form "Do this for this long" or "Do this until this happens". For
         example, "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge
-        at 1 C for 1 hour or until 4.2 V at 25oC". The instructions can be of the form
+        at 1 C for 1 hour or until 4.2 V". The instructions can be of the form
         "(Dis)charge at x A/C/W", "Rest", or "Hold at x V until y A". The running
         time should be a time in seconds, minutes or hours, e.g. "10 seconds",
         "3 minutes" or "1 hour". The stopping conditions should be
@@ -71,6 +71,12 @@ def string(string, **kwargs):
     if string.startswith("Rest"):
         typ = "current"
         value = 0
+    elif string.startswith("Run"):
+        raise ValueError(
+            "Simulating drive cycles with 'Run' has been deprecated. Use the "
+            "pybamm.experiment.current/voltage/power/c_rate/resistance() functions "
+            "instead."
+        )
     else:
         # split by what is before and after "at"
         # e.g. "Charge at 4 A" -> ["Charge", "4 A"]
