@@ -102,12 +102,7 @@ class Plating(BasePlating):
         # lithium into dead lithium. In other plating models, it is zero.
         if self.options["lithium plating"] == "partially reversible":
             L_sei = variables["Total SEI thickness [m]"]
-            if self.options.negative["particle phases"] == "1":
-                a = variables["Negative electrode surface area to volume ratio [m-1]"]
-            else:
-                a = variables[
-                    "Negative electrode primary surface area to volume ratio [m-1]"
-                ]
+            a = variables["Negative electrode surface area to volume ratio [m-1]"]
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             # divide by a and multiply by F to get units of A.m-2
             j_dead_lithium = -dead_lithium_decay_rate * c_plated_Li * param.F / a
