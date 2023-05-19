@@ -25,6 +25,11 @@ class TestParameterValues(TestCase):
         self.assertEqual(param["a"], 1)
         self.assertIn("a", param.keys())
         self.assertIn(1, param.values())
+        self.assertIn(("a", 1), param.items())
+
+        # from dict with strings
+        param = pybamm.ParameterValues({"a": "1"})
+        self.assertEqual(param["a"], 1)
 
         # from dict "chemistry" key gets removed
         param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
@@ -83,6 +88,10 @@ class TestParameterValues(TestCase):
         # with parameter not existing yet
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
+
+        # udpate with a ParameterValues object
+        new_param = pybamm.ParameterValues(param)
+        self.assertEqual(new_param["a"], 2)
 
         # test deleting a parameter
         del param["a"]
@@ -383,6 +392,10 @@ class TestParameterValues(TestCase):
 
         self.assertEqual(func1.domains, func2.domains)
         self.assertEqual(func1.domains, func3.domains)
+
+        # [function] is deprecated
+        with self.assertRaisesRegex(ValueError, "[function]"):
+            pybamm.ParameterValues({"func": "[function]something"})
 
     def test_process_inline_function_parameters(self):
         def D(c):

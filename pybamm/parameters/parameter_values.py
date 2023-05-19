@@ -54,7 +54,7 @@ class ParameterValues:
             }
         )
 
-        if isinstance(values, dict):
+        if isinstance(values, (dict, ParameterValues)):
             # remove the "chemistry" key if it exists
             values.pop("chemistry", None)
             self.update(values, check_already_exists=False)
@@ -69,13 +69,9 @@ class ParameterValues:
         self._processed_symbols = {}
 
         # save citations
-        citations = []
-        if hasattr(self, "citations"):
-            citations = self.citations
-        elif "citations" in self._dict_items:
-            citations = self._dict_items["citations"]
-        for citation in citations:
-            pybamm.citations.register(citation)
+        if "citations" in self._dict_items:
+            for citation in self._dict_items["citations"]:
+                pybamm.citations.register(citation)
 
     @staticmethod
     def create_from_bpx(filename, target_soc=1):
@@ -144,6 +140,9 @@ class ParameterValues:
     def items(self):
         """Get the items of the dictionary"""
         return self._dict_items.items()
+
+    def pop(self, *args, **kwargs):
+        self._dict_items.pop(*args, **kwargs)
 
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
