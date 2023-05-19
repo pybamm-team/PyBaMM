@@ -51,6 +51,7 @@ set(SUNDIALS_WANT_COMPONENTS
   sundials_sunlinsollapackdense
   sundials_sunmatrixsparse
   sundials_nvecserial
+  sundials_nvecopenmp
   )
 
 # find the SUNDIALS libraries

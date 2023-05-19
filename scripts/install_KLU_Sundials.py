@@ -101,10 +101,11 @@ download_extract_library(sundials_url, download_dir)
 KLU_INCLUDE_DIR = os.path.join(install_dir, "include")
 KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
 cmake_args = [
-    "-DLAPACK_ENABLE=ON",
+    "-DENABLE_LAPACK=ON",
     "-DSUNDIALS_INDEX_SIZE=32",
     "-DEXAMPLES_ENABLE:BOOL=OFF",
-    "-DKLU_ENABLE=ON",
+    "-DENABLE_KLU=ON",
+    "-DENABLE_OPENMP=ON",
     "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
     "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
