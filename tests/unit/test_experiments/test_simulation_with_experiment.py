@@ -583,20 +583,25 @@ class TestSimulationExperiment(TestCase):
         experiment = pybamm.Experiment(["Rest for 1 hour"])
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        self.assertNotIn("Rest for padding", sim.op_string_to_model.keys())
+        self.assertNotIn(
+            "Rest for padding", sim.experiment_unique_steps_to_model.keys()
+        )
 
         # Test padding rest model exists if there are timestamps
-        experiment = pybamm.Experiment(["[Day 1 08:00:00] Rest for 1 hour"])
+        experiment = pybamm.experiment.string(
+            "Rest for 1 hour", timestamp="Day 1 08:00:00"
+        )
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        self.assertIn("Rest for padding", sim.op_string_to_model.keys())
+        self.assertIn("Rest for padding", sim.experiment_unique_steps_to_model.keys())
         # Check at least there is an input parameter (temperature)
         self.assertGreater(
-            len(sim.op_string_to_model["Rest for padding"].parameters), 0
+            len(sim.experiment_unique_steps_to_model["Rest for padding"].parameters), 0
         )
         # Check the model is the same
         self.assertIsInstance(
-            sim.op_string_to_model["Rest for padding"], pybamm.lithium_ion.SPM
+            sim.experiment_unique_steps_to_model["Rest for padding"],
+            pybamm.lithium_ion.SPM,
         )
 
     def test_run_time_stamped_experiment(self):
@@ -605,8 +610,12 @@ class TestSimulationExperiment(TestCase):
         # Test experiment is cut short if time stamp is early
         experiment = pybamm.Experiment(
             [
-                "[2023-01-01 08:00:00] Discharge at 0.5C for 1 hour",
-                "[2023-01-01 08:30:00] Rest for 1 hour",
+                pybamm.experiment.string(
+                    "Discharge at 0.5C for 1 hour", timestamp="2023-01-01 08:00:00"
+                ),
+                pybamm.experiment.string(
+                    "Rest for 1 hour", timestamp="2023-01-01 08:30:00"
+                ),
             ]
         )
         sim = pybamm.Simulation(model, experiment=experiment)
@@ -616,8 +625,12 @@ class TestSimulationExperiment(TestCase):
         # Test padding rest is added if time stamp is late
         experiment = pybamm.Experiment(
             [
-                "[2023-01-01 08:00:00] Discharge at 0.5C for 1 hour",
-                "[2023-01-01 10:00:00] Rest for 1 hour",
+                pybamm.experiment.string(
+                    "Discharge at 0.5C for 1 hour", timestamp="2023-01-01 08:00:00"
+                ),
+                pybamm.experiment.string(
+                    "Rest for 1 hour", timestamp="2023-01-01 10:00:00"
+                ),
             ]
         )
         sim = pybamm.Simulation(model, experiment=experiment)

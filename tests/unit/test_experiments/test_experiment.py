@@ -28,6 +28,7 @@ class TestExperiment(TestCase):
                     "description": "Discharge at C/20 for 0.5 hours",
                     "termination": [],
                     "tags": [],
+                    "timestamp": None,
                 },
                 {
                     "value": -0.2,
@@ -38,6 +39,7 @@ class TestExperiment(TestCase):
                     "description": "Charge at C/5 for 45 minutes",
                     "termination": [],
                     "tags": [],
+                    "timestamp": None,
                 },
                 {
                     "value": 0.05,
@@ -48,6 +50,7 @@ class TestExperiment(TestCase):
                     "description": "Discharge at C/20 for 0.5 hours",
                     "termination": [],
                     "tags": [],
+                    "timestamp": None,
                 },
                 {
                     "value": -0.2,
@@ -58,6 +61,7 @@ class TestExperiment(TestCase):
                     "description": "Charge at C/5 for 45 minutes",
                     "termination": [],
                     "tags": [],
+                    "timestamp": None,
                 },
             ],
         )
@@ -169,92 +173,47 @@ class TestExperiment(TestCase):
         self.assertEqual(experiment.search_tag("no_tag"), [])
 
     def test_no_initial_timestamp(self):
+        s = pybamm.experiment.string
         with self.assertRaisesRegex(ValueError, "first step must have a timestamp"):
-            pybamm.Experiment(["Rest for 1 hour", "[Day 1 08:01:05] Rest for 1 hour"])
-
-    def test_process_timestamp(self):
-        experiment = pybamm.Experiment(["Rest for 1 hour"])
-
-        # No condition
-        timestamp, cond = experiment._process_timestamp(None)
-        self.assertIsNone(timestamp)
-        self.assertIsNone(cond)
-
-        # No timestamp
-        timestamp, cond = experiment._process_timestamp("No timestamp here")
-        self.assertIsNone(timestamp)
-        self.assertEqual(cond, "No timestamp here")
-
-        # Timestamp format "Day %j %H:%M:%S"
-        timestamp, cond = experiment._process_timestamp("[Day 1 08:01:05] Timestamp")
-        self.assertEqual(timestamp, datetime(1900, 1, 1, 8, 1, 5))
-        self.assertEqual(cond, "Timestamp")
-
-        # Timestamp format "%Y-%m-%d %H:%M:%S"
-        timestamp, cond = experiment._process_timestamp(
-            "[2019-10-08 09:43:23] Timestamp"
-        )
-        self.assertEqual(timestamp, datetime(2019, 10, 8, 9, 43, 23))
-        self.assertEqual(cond, "Timestamp")
-
-        # Bad timestamp
-        with self.assertRaisesRegex(ValueError, "The timestamp"):
-            experiment._process_timestamp("[bad 2019-10-08 09:43:23] Timestamp")
+            pybamm.Experiment(
+                [s("Rest for 1 hour"), s("Rest for 1 hour", timestamp="Day 1 08:01:05")]
+            )
 
     def test_set_next_timestamp(self):
         # Defined dummy experiment to access _set_next_timestamp
         experiment = pybamm.Experiment(["Rest for 1 hour"])
         raw_op = [
-            {
-                "current timestamp": datetime(2023, 1, 1, 8, 0),
-                "next timestamp": None,
-                "end timestamp": None,
-            },
-            {
-                "current timestamp": datetime(2023, 1, 1, 12, 0),
-                "next timestamp": None,
-                "end timestamp": None,
-            },
-            {
-                "current timestamp": None,
-                "next timestamp": None,
-                "end timestamp": None,
-            },
-            {
-                "current timestamp": datetime(2023, 1, 1, 15, 0),
-                "next timestamp": None,
-                "end timestamp": None,
-            },
+            pybamm.experiment._Step(
+                "current", 1, duration=3600, timestamp=datetime(2023, 1, 1, 8, 0)
+            ),
+            pybamm.experiment._Step(
+                "current", 1, duration=3600, timestamp=datetime(2023, 1, 1, 12, 0)
+            ),
+            pybamm.experiment._Step("current", 1, duration=3600, timestamp=None),
+            pybamm.experiment._Step(
+                "current", 1, duration=3600, timestamp=datetime(2023, 1, 1, 15, 0)
+            ),
         ]
         processed_op = experiment._set_next_timestamp(raw_op)
 
-        expected_result = [
-            {
-                "current timestamp": datetime(2023, 1, 1, 8, 0),
-                "next timestamp": datetime(2023, 1, 1, 12, 0),
-                "end timestamp": datetime(2023, 1, 1, 12, 0),
-            },
-            {
-                "current timestamp": datetime(2023, 1, 1, 12, 0),
-                "next timestamp": None,
-                "end timestamp": datetime(2023, 1, 1, 15, 0),
-            },
-            {
-                "current timestamp": None,
-                "next timestamp": datetime(2023, 1, 1, 15, 0),
-                "end timestamp": datetime(2023, 1, 1, 15, 0),
-            },
-            {
-                "current timestamp": datetime(2023, 1, 1, 15, 0),
-                "next timestamp": None,
-                "end timestamp": None,
-            },
+        expected_next = [
+            datetime(2023, 1, 1, 12, 0),
+            None,
+            datetime(2023, 1, 1, 15, 0),
+            None,
         ]
 
-        for expected, actual in zip(expected_result, processed_op):
-            for k in expected.keys():
-                # useful form for debugging
-                self.assertEqual([k, expected[k]], [k, actual[k]])
+        expected_end = [
+            datetime(2023, 1, 1, 12, 0),
+            datetime(2023, 1, 1, 15, 0),
+            datetime(2023, 1, 1, 15, 0),
+            None,
+        ]
+
+        for next, end, op in zip(expected_next, expected_end, processed_op):
+            # useful form for debugging
+            self.assertEqual(op.next_timestamp, next)
+            self.assertEqual(op.end_timestamp, end)
 
 
 if __name__ == "__main__":

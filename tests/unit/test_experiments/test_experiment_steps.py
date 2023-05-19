@@ -4,6 +4,7 @@
 import pybamm
 import unittest
 import numpy as np
+from datetime import datetime
 
 
 class TestExperimentSteps(unittest.TestCase):
@@ -16,6 +17,9 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.period, None)
         self.assertEqual(step.temperature, None)
         self.assertEqual(step.tags, [])
+        self.assertEqual(step.timestamp, None)
+        self.assertEqual(step.end_timestamp, None)
+        self.assertEqual(step.next_timestamp, None)
 
         step = pybamm.experiment._Step(
             "voltage",
@@ -25,6 +29,7 @@ class TestExperimentSteps(unittest.TestCase):
             period="1 minute",
             temperature=298.15,
             tags="test",
+            timestamp=datetime(2020, 1, 1, 0, 0, 0),
         )
         self.assertEqual(step.type, "voltage")
         self.assertEqual(step.value, 1)
@@ -33,6 +38,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.period, 60)
         self.assertEqual(step.temperature, 298.15)
         self.assertEqual(step.tags, ["test"])
+        self.assertEqual(step.timestamp, datetime(2020, 1, 1, 0, 0, 0))
 
         step = pybamm.experiment._Step("current", 1, temperature="298K")
         self.assertEqual(step.temperature, 298)
@@ -171,7 +177,6 @@ class TestExperimentSteps(unittest.TestCase):
         ]
 
         for step, expected in zip(steps, expected_result):
-            print(step)
             actual = pybamm.experiment.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging
@@ -220,6 +225,30 @@ class TestExperimentSteps(unittest.TestCase):
             pybamm.experiment.string("Discharge at 1 B for 2 hours")
         with self.assertRaisesRegex(ValueError, "time units must be"):
             pybamm.experiment.string("Discharge at 1 A for 2 years")
+
+    def test_timestamps(self):
+        raw_timestamps = [
+            "Day 1 01:02:03",
+            "Day 2 01:02",
+            "2020-01-01 01:02:03",
+            "2020-01-01 01:02",
+        ]
+        processed_timestamps = [
+            datetime(1900, 1, 1, 1, 2, 3),
+            datetime(1900, 1, 2, 1, 2, 0),
+            datetime(2020, 1, 1, 1, 2, 3),
+            datetime(2020, 1, 1, 1, 2, 0),
+        ]
+
+        for raw, processed in zip(raw_timestamps, processed_timestamps):
+            step = pybamm.experiment._Step("current", 1, duration=3600, timestamp=raw)
+            self.assertEqual(step.timestamp, processed)
+
+        # Test bad timestamps
+        with self.assertRaisesRegex(ValueError, "The timestamp"):
+            pybamm.experiment._Step(
+                "current", 1, duration=3600, timestamp="bad timestamp"
+            )
 
 
 if __name__ == "__main__":

@@ -270,7 +270,9 @@ class Simulation:
             parameterised_model = new_parameter_values.process_model(
                 new_model, inplace=False
             )
-            self.op_string_to_model["Rest for padding"] = parameterised_model
+            self.experiment_unique_steps_to_model[
+                "Rest for padding"
+            ] = parameterised_model
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
@@ -684,16 +686,16 @@ class Simulation:
                 for step_num in range(1, cycle_length + 1):
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
-                    op_conds = self.experiment.operating_conditions[idx]
+                    op_conds = self.experiment.operating_conditions_steps[idx]
 
                     start_time = current_solution.t[-1]
 
                     # If step has an end timestamp, dt must take that into account
-                    if op_conds["end timestamp"]:
+                    if op_conds.end_timestamp:
                         dt = min(
-                            op_conds["time"],
+                            op_conds.duration,
                             (
-                                op_conds["end timestamp"]
+                                op_conds.end_timestamp
                                 - (
                                     self.experiment.initial_timestamp
                                     + timedelta(seconds=float(start_time))
@@ -701,7 +703,7 @@ class Simulation:
                             ).total_seconds(),
                         )
                     else:
-                        dt = op_conds["time"]
+                        dt = op_conds.duration
                     op_conds_str = str(op_conds)
                     model = self.op_conds_to_built_models[repr(op_conds)]
                     solver = self.op_conds_to_built_solvers[repr(op_conds)]
@@ -746,9 +748,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds["next timestamp"] is not None:
+                    if op_conds.next_timestamp is not None:
                         rest_time = (
-                            op_conds["next timestamp"]
+                            op_conds.next_timestamp
                             - (
                                 self.experiment.initial_timestamp
                                 + timedelta(seconds=float(step_solution.t[-1]))
@@ -766,11 +768,10 @@ class Simulation:
                             callbacks.on_step_start(logs)
 
                             ambient_temp = (
-                                op_conds["temperature"] or self._original_temperature
+                                op_conds.temperature or self._original_temperature
                             )
                             kwargs["inputs"] = {
                                 **user_inputs,
-                                **op_conds,
                                 "Ambient temperature [K]": ambient_temp,
                                 "start time": start_time,
                             }

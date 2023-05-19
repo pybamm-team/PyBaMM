@@ -65,6 +65,11 @@ class Experiment:
             termination,
         )
 
+        self.datetime_formats = [
+            "Day %j %H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+        ]
+
         operating_conditions_cycles = []
         for cycle in operating_conditions:
             # Check types and convert to list
@@ -96,9 +101,20 @@ class Experiment:
         # Save the processed unique steps and the processed operating conditions
         # for every step
         self.unique_steps = set(processed_steps.values())
-        self.operating_conditions_steps = [
-            processed_steps[step] for step in operating_conditions_steps_unprocessed
-        ]
+        self.operating_conditions_steps = self._set_next_timestamp(
+            [processed_steps[step] for step in operating_conditions_steps_unprocessed]
+        )
+
+        self.initial_timestamp = self.operating_conditions_steps[0].timestamp
+
+        if (
+            self.operating_conditions_steps[0].end_timestamp is not None
+            and self.initial_timestamp is None
+        ):
+            raise ValueError(
+                "When using timestamped experiments, the first step must have a "
+                "timestamp to define the initial time."
+            )
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
@@ -179,3 +195,17 @@ class Experiment:
                     break
 
         return cycles
+
+    def _set_next_timestamp(self, operating_conditions):
+        end_timestamp = None
+        next_timestamp = None
+
+        for op in reversed(operating_conditions):
+            op.next_timestamp = next_timestamp
+            op.end_timestamp = end_timestamp
+
+            next_timestamp = op.timestamp
+            if next_timestamp:
+                end_timestamp = next_timestamp
+
+        return operating_conditions

@@ -3,6 +3,7 @@
 #
 import pybamm
 import numpy as np
+from datetime import datetime
 
 _examples = """
 
@@ -50,6 +51,8 @@ class _Step:
         the value should be a valid temperature string, e.g. "25 oC".
     tags : str or list, optional
         A string or list of strings indicating the tags associated with the step.
+    datetime : str or datetime, optional
+        A string or list of strings indicating the tags associated with the step.
     description : str, optional
         A description of the step.
     """
@@ -63,6 +66,7 @@ class _Step:
         period=None,
         temperature=None,
         tags=None,
+        timestamp=None,
         description=None,
     ):
         self.type = typ
@@ -79,6 +83,8 @@ class _Step:
             self.args += f", temperature={temperature}"
         if tags:
             self.args += f", tags={tags}"
+        if timestamp:
+            self.args += f", timestamp={timestamp}"
         if description:
             self.args += f", description={description}"
 
@@ -120,6 +126,10 @@ class _Step:
             tags = [tags]
         self.tags = tags
 
+        self.timestamp = _process_timestamp(timestamp)
+        self.next_timestamp = None
+        self.end_timestamp = None
+
     def __str__(self):
         if self.description is not None:
             return self.description
@@ -146,6 +156,7 @@ class _Step:
             "period": self.period,
             "temperature": self.temperature,
             "tags": self.tags,
+            "timestamp": self.timestamp,
             "description": self.description,
         }
 
@@ -239,3 +250,27 @@ def _convert_electric(value_string):
             f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {_examples}"
         )
     return typ, value
+
+
+datetime_formats = [
+    "Day %j %H:%M:%S",
+    "Day %j %H:%M",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+]
+
+
+def _process_timestamp(timestamp):
+    if timestamp is None or isinstance(timestamp, datetime):
+        return timestamp
+    else:
+        for format in datetime_formats:
+            try:
+                return datetime.strptime(timestamp, format)
+            except ValueError:
+                pass
+
+        raise ValueError(
+            f"The timestamp [{timestamp}] does not match any "
+            "of the supported formats."
+        )
