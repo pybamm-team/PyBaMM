@@ -54,13 +54,21 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
+      
+      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
         with:
-          packages: gfortran gcc libopenblas-dev graphviz texlive-full
+          packages: gfortran gcc graphviz texlive-full
           execute_install_scripts: true
+      
+      # BLAS library causes troubles with caching, so install it separately
+      - name: Install OpenBLAS for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libopenblas-dev
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
