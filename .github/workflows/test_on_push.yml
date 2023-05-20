@@ -106,7 +106,6 @@ jobs:
             /usr/local/bin
             /usr/local/opt
             ~/Library/Caches/Homebrew/*
-            /opt/homebrew/bin
             /opt/homebrew/etc
             /opt/homebrew/include
             /opt/homebrew/lib
