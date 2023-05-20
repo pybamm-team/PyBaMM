@@ -60,15 +60,15 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
         with:
-          packages: gfortran gcc graphviz texlive-full
+          packages: gfortran gcc graphviz
           execute_install_scripts: true
       
-      # BLAS library causes troubles with caching, so install it separately
+      # BLAS and texlive-full cause troubles with caching, so install them separately
       - name: Install OpenBLAS for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install libopenblas-dev
+          sudo apt-get install libopenblas-dev texlive-full
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
