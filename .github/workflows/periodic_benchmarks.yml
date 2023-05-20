@@ -24,10 +24,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         with:
@@ -62,10 +58,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
       - name: Install asv
         run: pip install asv
       - name: Checkout pybamm-bench repo
