@@ -74,6 +74,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # for iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian that is kept
                 "precon_half_bandwidth_keep": 5
+
+                # Number of threads available for OpenMP
+                "num_threads": 1
             }
 
         Note: These options only have an effect if model.convert_to_format == 'casadi'
@@ -100,6 +103,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "linsol_max_iterations": 5,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
+            "num_threads": 1,
         }
         if options is None:
             options = default_options
@@ -172,6 +176,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
+
+        y0S = model.y0S
+        # only casadi solver needs sensitivity ics
+        if model.convert_to_format != "casadi":
+            y0S = None
+        if y0S is not None:
+            if isinstance(y0S, casadi.DM):
+                y0S = (y0S,)
+
+            y0S = (x.full() for x in y0S)
+            y0S = [x.flatten() for x in y0S]
 
         if ics_only:
             return base_set_up_return
@@ -480,8 +495,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y0 = y0.full()
         y0 = y0.flatten()
 
+        y0S = model.y0S
+        # only casadi solver needs sensitivity ics
+        if model.convert_to_format != "casadi":
+            y0S = None
+        if y0S is not None:
+            if isinstance(y0S, casadi.DM):
+                y0S = (y0S,)
+
+            y0S = (x.full() for x in y0S)
+            y0S = [x.flatten() for x in y0S]
+
         # solver works with ydot0 set to zero
         ydot0 = np.zeros_like(y0)
+        if y0S is not None:
+            ydot0S = [np.zeros_like(y0S_i) for y0S_i in y0S]
+            y0full = np.concatenate([y0, *y0S])
+            ydot0full = np.concatenate([ydot0, *ydot0S])
+        else:
+            y0full = y0
+            ydot0full = ydot0
 
         try:
             atol = model.atol
@@ -495,8 +528,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             sol = self._setup["solver"].solve(
                 t_eval,
-                y0,
-                ydot0,
+                y0full,
+                ydot0full,
                 inputs,
             )
         else:
@@ -532,14 +565,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return sensitivity solution, we need to flatten yS to
-        # (#timesteps * #states,) to match format used by Solution
+        # (#timesteps * #states (where t is changing the quickest),)
+        # to match format used by Solution
+        # note that yS is (n_p, n_t, n_y)
         if number_of_sensitivity_parameters != 0:
             yS_out = {
                 name: sol.yS[i].reshape(-1, 1)
                 for i, name in enumerate(sensitivity_names)
             }
+            # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
+            yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
         else:
             yS_out = False
+
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             if sol.flag == 0:

@@ -1,6 +1,7 @@
 #
 # Test setting up a simulation with an experiment
 #
+from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -8,7 +9,7 @@ import os
 import unittest
 
 
-class TestSimulationExperiment(unittest.TestCase):
+class TestSimulationExperiment(TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
@@ -176,20 +177,16 @@ class TestSimulationExperiment(unittest.TestCase):
             solution = sim.solve(solver=pybamm.CasadiSolver("fast with events"))
             solutions.append(solution)
 
+        t = solutions[1]["Time [s]"].data
         np.testing.assert_array_almost_equal(
-            solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"].data,
+            solutions[0]["Voltage [V]"](t=t),
+            solutions[1]["Voltage [V]"](t=t),
             decimal=1,
         )
         np.testing.assert_array_almost_equal(
-            solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"].data,
+            solutions[0]["Current [A]"](t=t),
+            solutions[1]["Current [A]"](t=t),
             decimal=0,
-        )
-
-        np.testing.assert_array_equal(
-            solutions[0]["Ambient temperature [C]"].data,
-            solutions[1]["Ambient temperature [C]"].data,
         )
 
         self.assertEqual(solutions[1].termination, "final time")
@@ -344,6 +341,21 @@ class TestSimulationExperiment(unittest.TestCase):
         sol = sim.solve(solver=pybamm.CasadiSolver())
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
+
+    def test_run_experiment_with_pbar(self):
+        # The only thing to test here is for errors.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C for 1 sec",
+                    "Charge at 1C for 1 sec",
+                ),
+            ]
+            * 10,
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(showprogress=True)
 
     def test_run_experiment_termination_voltage(self):
         # with percent
@@ -516,12 +528,13 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         sol2 = sim2.solve()
         np.testing.assert_array_almost_equal(
-            sol["Voltage [V]"].data, sol2["Voltage [V]"].data
+            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, decimal=5
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
             np.testing.assert_array_almost_equal(
                 sol.cycles[0].steps[idx1]["Voltage [V]"].data,
                 sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
+                decimal=5,
             )
 
     def test_all_empty_solution_errors(self):
@@ -547,6 +560,23 @@ class TestSimulationExperiment(unittest.TestCase):
             model, parameter_values=parameter_values, experiment=experiment
         )
         with self.assertRaisesRegex(pybamm.SolverError, "All steps in the cycle"):
+            sim.solve()
+
+    def test_solver_error(self):
+        model = pybamm.lithium_ion.DFN()  # load model
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(
+            ["Discharge at 10C for 6 minutes or until 2.5 V"]
+        )
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(mode="fast"),
+        )
+
+        with self.assertRaisesRegex(pybamm.SolverError, "IDA_CONV_FAIL"):
             sim.solve()
 
     def test_run_experiment_half_cell(self):

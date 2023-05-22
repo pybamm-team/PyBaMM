@@ -1,6 +1,7 @@
 name: Run benchmarks on push
 on:
   push:
+  pull_request:
 
 jobs:
   benchmarks:
@@ -26,8 +27,11 @@ jobs:
           # on develop. In this case, we don't want to be
           # fetching the develop branch.
           current_branch=$(git rev-parse --abbrev-ref HEAD)
+          # This workflow should also run on forks; hence,
+          # we should fetch the upstream develop branch.
+          git remote add upstream https://github.com/pybamm-team/PyBaMM/
           if [ $current_branch != "develop" ]; then
-              git fetch origin develop:develop
+              git fetch upstream develop:develop
           fi
 
       - name: Run benchmarks
@@ -38,7 +42,7 @@ jobs:
           HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
-          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr -v
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr --strict -v
       - name: Compare commits' benchmark results
         run: |
           BASE_COMMIT=$(head -1 commits_to_compare.txt)

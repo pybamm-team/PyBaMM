@@ -26,7 +26,7 @@ copyright = "2018-2023, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "23.2"
+version = pybamm.__version__
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -88,6 +88,8 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
+# Suppress warnings generated if footnotes are not references in a docstring
+suppress_warnings = ["ref.footnote"]
 
 # -- Options for HTML output -------------------------------------------------
 

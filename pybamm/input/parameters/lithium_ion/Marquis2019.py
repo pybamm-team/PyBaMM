@@ -380,6 +380,7 @@ def get_parameter_values():
         "Inner SEI reaction proportion": 0.5,
         "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI growth transfer coefficient": 0.5,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
         "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
@@ -436,8 +437,6 @@ def get_parameter_values():
         "Negative particle radius [m]": 1e-05,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 1.5,
-        "Negative electrode cation signed stoichiometry": -1.0,
-        "Negative electrode electrons in reaction": 1.0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
@@ -457,8 +456,6 @@ def get_parameter_values():
         "Positive particle radius [m]": 1e-05,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
-        "Positive electrode cation signed stoichiometry": -1.0,
-        "Positive electrode electrons in reaction": 1.0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"

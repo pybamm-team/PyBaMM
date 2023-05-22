@@ -92,7 +92,7 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        self.compare("Open-circuit voltage [V]")
+        self.compare("Bulk open-circuit voltage [V]")
         # Currents
         self.compare(
             "X-averaged negative electrode volumetric "
@@ -128,13 +128,13 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("X-averaged positive electrode open-circuit potential [V]")
         self.compare("Voltage [V]")
         self.compare("X-averaged solid phase ohmic losses [V]")
-        self.compare("Negative electrode reaction overpotential [V]")
+        self.compare("Negative electrode reaction overpotential [V]", atol=1e-4)
         self.compare("Positive electrode reaction overpotential [V]")
         self.compare("Negative electrode potential [V]", atol=1e-5)
         self.compare("Positive electrode potential [V]")
         self.compare("Electrolyte potential [V]")
         # Currents
-        self.compare("Exchange current density [A.m-2]")
+        self.compare("Exchange current density [A.m-2]", atol=2e-3)
         self.compare("Negative electrode current density [A.m-2]", atol=1e-10)
         self.compare("Positive electrode current density [A.m-2]", atol=1e-10)
 
@@ -146,8 +146,8 @@ class ParticleConcentrationComparison(BaseOutputComparison):
     def test_all(self):
         self.compare("Negative particle concentration [mol.m-3]")
         self.compare("Positive particle concentration [mol.m-3]")
-        self.compare("Negative particle flux [mol.m-2.s-1]", rtol=0.05)
-        self.compare("Positive particle flux [mol.m-2.s-1]", rtol=0.05)
+        self.compare("Negative particle flux [mol.m-2.s-1]", atol=1e-7, rtol=0.05)
+        self.compare("Positive particle flux [mol.m-2.s-1]", atol=1e-7, rtol=0.05)
 
 
 class PorosityComparison(BaseOutputComparison):

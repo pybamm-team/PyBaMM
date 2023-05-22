@@ -1,6 +1,7 @@
 #
 # Test for the operator class
 #
+from tests import TestCase
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -12,7 +13,7 @@ import numpy as np
 import unittest
 
 
-class TestFiniteVolumeConvergence(unittest.TestCase):
+class TestFiniteVolumeConvergence(TestCase):
     def test_grad_div_broadcast(self):
         # create mesh and discretisation
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}

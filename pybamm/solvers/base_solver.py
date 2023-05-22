@@ -130,13 +130,14 @@ class BaseSolver(object):
         )
 
         # Process initial conditions
-        initial_conditions = process(
+        initial_conditions, _, jacp_ic, _ = process(
             model.concatenated_initial_conditions,
             "initial_conditions",
             vars_for_processing,
             use_jacobian=False,
-        )[0]
+        )
         model.initial_conditions_eval = initial_conditions
+        model.jacp_initial_conditions_eval = jacp_ic
 
         # evaluate initial condition
         y0_total_size = (
@@ -146,9 +147,25 @@ class BaseSolver(object):
         if model.convert_to_format == "casadi":
             # stack inputs
             inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
-            model.y0 = initial_conditions(0, y_zero, inputs_casadi)
+            model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
+            if jacp_ic is None:
+                model.y0S = None
+            else:
+                model.y0S = jacp_ic(0.0, y_zero, inputs_casadi)
         else:
-            model.y0 = initial_conditions(0, y_zero, inputs)
+            model.y0 = initial_conditions(0.0, y_zero, inputs)
+            if jacp_ic is None:
+                model.y0S = None
+            else:
+                # we are calculating the derivative wrt the inputs
+                # so need to make sure we convert int -> float
+                # This is to satisfy JAX jacfwd function which requires
+                # float inputs
+                inputs_float = {
+                    key: float(value) if isinstance(value, int) else value
+                    for key, value in inputs.items()
+                }
+                model.y0S = jacp_ic(0.0, y_zero, inputs_float)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -1085,17 +1102,33 @@ class BaseSolver(object):
                     "Cannot step empty model, use `pybamm.DummySolver` instead"
                 )
 
-        # Make sure dt is positive
-        if dt <= 0:
-            raise pybamm.SolverError("Step time must be positive")
+        # Make sure dt is greater than the offset
+        step_start_offset = pybamm.settings.step_start_offset
+        if dt <= step_start_offset:
+            raise pybamm.SolverError(
+                f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
+            )
+
+        t_start = old_solution.t[-1]
+        t_end = t_start + dt
+        # Calculate t_eval
+        t_eval = np.linspace(t_start, t_end, npts)
+
+        if t_start == 0:
+            t_start_shifted = t_start
+        else:
+            # offset t_start by t_start_offset (default 1 ns)
+            # to avoid repeated times in the solution
+            # from having the same time at the end of the previous step and
+            # the start of the next step
+            t_start_shifted = t_start + step_start_offset
+            t_eval[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()
 
         # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
-
-        t = old_solution.t[-1]
 
         first_step_this_model = False
         if model not in self._model_set_up:
@@ -1139,16 +1172,17 @@ class BaseSolver(object):
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(model, t, model_inputs, update_rhs=False)
-
-        # Calculate t_eval
-        t_eval = np.linspace(t, t + dt, npts)
+        self._set_initial_conditions(
+            model, t_start_shifted, model_inputs, update_rhs=False
+        )
 
         # Check initial conditions don't violate events
         self._check_events_with_initial_conditions(t_eval, model, model_inputs)
 
         # Step
-        pybamm.logger.verbose("Stepping for {:.0f} < t < {:.0f}".format(t, (t + dt)))
+        pybamm.logger.verbose(
+            "Stepping for {:.0f} < t < {:.0f}".format(t_start_shifted, t_end)
+        )
         timer.reset()
         solution = self._integrate(model, t_eval, model_inputs)
         solution.solve_time = timer.time()

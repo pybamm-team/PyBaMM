@@ -1,11 +1,12 @@
 #
 # Tests for Ai (2020) Enertech parameter set loads
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestAi2020(unittest.TestCase):
+class TestAi2020(TestCase):
     def test_functions(self):
         param = pybamm.ParameterValues("Ai2020")
         sto = pybamm.Scalar(0.5)
@@ -44,25 +45,6 @@ class TestAi2020(unittest.TestCase):
             self.assertAlmostEqual(
                 param.evaluate(param[name](*value[0])), value[1], places=4
             )
-
-    def test_standard_lithium_parameters(self):
-        # test with chemistry dictionary format, for coverage
-        parameter_values = pybamm.ParameterValues(
-            {
-                "chemistry": "lithium_ion",
-                "cell": "Enertech_Ai2020",
-                "negative electrode": "graphite_Ai2020",
-                "separator": "separator_Ai2020",
-                "positive electrode": "lico2_Ai2020",
-                "electrolyte": "lipf6_Enertech_Ai2020",
-                "experiment": "1C_discharge_from_full_Ai2020",
-                "sei": "example",
-                "citation": "Ai2019",
-            }
-        )
-        options = {"particle mechanics": "swelling and cracking"}
-        model = pybamm.lithium_ion.DFN(options)
-        parameter_values.process_model(model)
 
 
 if __name__ == "__main__":

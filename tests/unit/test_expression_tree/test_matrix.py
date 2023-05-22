@@ -1,13 +1,14 @@
 #
 # Tests for the Matrix class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 
 import unittest
 
 
-class TestMatrix(unittest.TestCase):
+class TestMatrix(TestCase):
     def setUp(self):
         self.A = np.array([[1, 2, 0], [0, 1, 0], [0, 0, 1]])
         self.x = np.array([1, 2, 3])

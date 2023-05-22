@@ -1,6 +1,7 @@
 #
 # Tests for the Base Solver class
 #
+from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -9,7 +10,7 @@ from scipy.sparse import csr_matrix
 import unittest
 
 
-class TestBaseSolver(unittest.TestCase):
+class TestBaseSolver(TestCase):
     def test_base_solver_init(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         self.assertEqual(solver.rtol, 1e-2)
@@ -67,9 +68,11 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
-        # Check stepping with negative step size
-        dt = -1
-        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be positive"):
+        # Check stepping with step size too small
+        dt = 1e-9
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Step time must be at least 1.000 ns"
+        ):
             solver.step(None, model, dt)
 
     def test_solution_time_length_fail(self):
@@ -226,7 +229,7 @@ class TestBaseSolver(unittest.TestCase):
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: .../casadi"
+            pybamm.SolverError, "Could not find acceptable solution: Error in Function"
         ):
             solver.calculate_consistent_state(Model())
 

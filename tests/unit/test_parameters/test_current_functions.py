@@ -1,13 +1,16 @@
 #
 # Tests for current input functions
 #
+from tests import TestCase
 import pybamm
 import numbers
 import unittest
 import numpy as np
+import os
+import pandas as pd
 
 
-class TestCurrentFunctions(unittest.TestCase):
+class TestCurrentFunctions(TestCase):
     def test_constant_current(self):
         # test simplify
         param = pybamm.electrical_parameters
@@ -18,12 +21,18 @@ class TestCurrentFunctions(unittest.TestCase):
 
     def test_get_current_data(self):
         # test process parameters
-        param = pybamm.electrical_parameters
-        current = param.current_with_time
-        parameter_values = pybamm.ParameterValues(
-            {"Current function [A]": "[current data]car_current"}
+        current_data = pd.read_csv(
+            os.path.join(pybamm.__path__[0], "input", "drive_cycles", "US06.csv"),
+            comment="#",
+            names=["Time [s]", "Current [A]"],
         )
-        current_eval = parameter_values.process_symbol(current)
+        t, I = current_data["Time [s]"].values, current_data["Current [A]"].values
+        parameter_values = pybamm.ParameterValues(
+            {"Current function [A]": pybamm.Interpolant(t, I, pybamm.t, "US06")}
+        )
+        current_eval = parameter_values.process_symbol(
+            pybamm.electrical_parameters.current_with_time
+        )
 
         def current(t):
             return current_eval.evaluate(t=t)

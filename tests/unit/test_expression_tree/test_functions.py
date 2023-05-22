@@ -1,6 +1,7 @@
 #
 # Tests for the Function classes
 #
+from tests import TestCase
 import unittest
 
 import numpy as np
@@ -22,7 +23,7 @@ def test_multi_var_function_cube(arg1, arg2):
     return arg1 + arg2**3
 
 
-class TestFunction(unittest.TestCase):
+class TestFunction(TestCase):
     def test_number_input(self):
         # with numbers
         log = pybamm.Function(np.log, 10)
@@ -145,7 +146,7 @@ class TestFunction(unittest.TestCase):
         self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
 
 
-class TestSpecificFunctions(unittest.TestCase):
+class TestSpecificFunctions(TestCase):
     def test_arcsinh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.arcsinh(a)

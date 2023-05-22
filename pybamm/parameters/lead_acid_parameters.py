@@ -34,8 +34,10 @@ class LeadAcidParameters(BaseParameters):
         """Defines the dimensional parameters."""
 
         # Physical constants
-        self.R = pybamm.constants.R
-        self.F = pybamm.constants.F
+        self.R = pybamm.Parameter("Ideal gas constant [J.K-1.mol-1]")
+        self.F = pybamm.Parameter("Faraday constant [C.mol-1]")
+        self.k_b = pybamm.Parameter("Boltzmann constant [J.K-1]")
+        self.q_e = pybamm.Parameter("Elementary charge [C]")
 
         # Thermal parameters
         self.T_ref = self.therm.T_ref
@@ -349,10 +351,11 @@ class PhaseLeadAcidParameters(BaseParameters):
 
         # Electrochemical reactions
         # Main
-        self.s_plus_S = pybamm.Parameter(
-            f"{Domain} electrode cation signed stoichiometry"
-        )
-        self.ne_S = pybamm.Parameter(f"{Domain} electrode electrons in reaction")
+        if domain == "negative":
+            self.s_plus_S = pybamm.Scalar(1)
+        elif domain == "positive":
+            self.s_plus_S = pybamm.Scalar(3)
+        self.ne_S = pybamm.Scalar(2)
         self.ne = self.ne_S
         self.s_plus_S = self.s_plus_S / self.ne_S
         self.alpha_bv = pybamm.Parameter(

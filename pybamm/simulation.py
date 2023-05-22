@@ -8,6 +8,7 @@ import copy
 import warnings
 import sys
 from functools import lru_cache
+import tqdm
 
 
 def is_notebook():
@@ -127,6 +128,23 @@ class Simulation:
             import warnings
 
             warnings.filterwarnings("ignore")
+
+        self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    def __getstate__(self):
+        """
+        Return dictionary of picklable items
+        """
+        result = self.__dict__.copy()
+        result["get_esoh_solver"] = None  # Exclude LRU cache
+        return result
+
+    def __setstate__(self, state):
+        """
+        Unpickle, restoring unpicklable relationships
+        """
+        self.__dict__ = state
+        self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
 
     def set_up_and_parameterise_experiment(self):
         """
@@ -392,14 +410,10 @@ class Simulation:
         if self.model_with_set_params:
             return
 
-        if self._parameter_values._dict_items == {}:
-            # Don't process if parameter values is empty
-            self._model_with_set_params = self._unprocessed_model
-        else:
-            self._model_with_set_params = self._parameter_values.process_model(
-                self._unprocessed_model, inplace=False
-            )
-            self._parameter_values.process_geometry(self.geometry)
+        self._model_with_set_params = self._parameter_values.process_model(
+            self._unprocessed_model, inplace=False
+        )
+        self._parameter_values.process_geometry(self.geometry)
         self.model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):
@@ -497,6 +511,7 @@ class Simulation:
         starting_solution=None,
         initial_soc=None,
         callbacks=None,
+        showprogress=False,
         **kwargs,
     ):
         """
@@ -544,6 +559,10 @@ class Simulation:
         callbacks : list of callbacks, optional
             A list of callbacks to be called at each time step. Each callback must
             implement all the methods defined in :class:`pybamm.callbacks.BaseCallback`.
+        showprogress : bool, optional
+            Whether to show a progress bar for cycling. If true, shows a progress bar
+            for cycles. Has no effect when not used with an experiment.
+            Default is False.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -656,7 +675,7 @@ class Simulation:
                     cycle_sum_vars,
                     cycle_first_state,
                 ) = pybamm.make_cycle_solution(
-                    starting_solution.steps,
+                    [starting_solution],
                     esoh_solver=esoh_solver,
                     save_this_cycle=True,
                 )
@@ -685,7 +704,13 @@ class Simulation:
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
             for cycle_num, cycle_length in enumerate(
-                self.experiment.cycle_lengths, start=1
+                # tqdm is the progress bar.
+                tqdm.tqdm(
+                    self.experiment.cycle_lengths,
+                    disable=(not showprogress),
+                    desc="Cycling",
+                ),
+                start=1,
             ):
                 logs["cycle number"] = (
                     cycle_num + cycle_offset,
@@ -904,8 +929,7 @@ class Simulation:
 
         return self.solution
 
-    @lru_cache
-    def get_esoh_solver(self, calc_esoh):
+    def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
             or isinstance(self.model, pybamm.lead_acid.BaseModel)

@@ -1,13 +1,14 @@
 #
 # Tests for the Scalar class
 #
+from tests import TestCase
 import pybamm
 
 import unittest
 import numpy as np
 
 
-class TestDDT(unittest.TestCase):
+class TestDDT(TestCase):
     def test_time_derivative(self):
         a = pybamm.Scalar(5).diff(pybamm.t)
         self.assertIsInstance(a, pybamm.Scalar)

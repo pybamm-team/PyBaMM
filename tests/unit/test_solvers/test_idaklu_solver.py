@@ -1,6 +1,7 @@
 #
 # Tests for the KLU Solver class
 #
+from tests import TestCase
 from contextlib import redirect_stdout
 import io
 import unittest
@@ -12,7 +13,7 @@ from tests import get_discretisation_for_testing
 
 
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
-class TestIDAKLUSolver(unittest.TestCase):
+class TestIDAKLUSolver(TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -180,6 +181,33 @@ class TestIDAKLUSolver(unittest.TestCase):
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
+    def test_sensitivites_initial_condition(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -u}
+        model.algebraic = {v: a * u - v}
+        model.initial_conditions = {u: 1, v: 1}
+        model.variables = {"2v": 2 * v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        t_eval = np.linspace(0, 3, 100)
+        a_value = 0.1
+
+        sol = solver.solve(
+            model, t_eval, inputs={"a": a_value}, calculate_sensitivities=True
+        )
+
+        np.testing.assert_array_almost_equal(
+            sol["2v"].sensitivities["a"].full().flatten(), np.exp(-sol.t) * 2, decimal=4
+        )
+
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -199,6 +227,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.rhs = {u: a * v}
             model.algebraic = {v: 1 - v}
             model.initial_conditions = {u: 0, v: 1}
+            model.variables = {"2u": 2 * u}
 
             disc = pybamm.Discretisation()
             disc.process_model(model)
@@ -249,6 +278,10 @@ class TestIDAKLUSolver(unittest.TestCase):
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
             np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
+
+            # get the sensitivities for the variable
+            d2uda = sol["2u"].sensitivities["a"]
+            np.testing.assert_array_almost_equal(2 * dyda_ida[0:200:2], d2uda)
 
     def test_sensitivities_with_events(self):
         # this test implements a python version of the ida Roberts

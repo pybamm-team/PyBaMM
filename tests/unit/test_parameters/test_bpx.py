@@ -1,6 +1,7 @@
 #
 # Tests for the create_from_bpx function
 #
+from tests import TestCase
 
 import tempfile
 import unittest
@@ -9,7 +10,7 @@ import pybamm
 import copy
 
 
-class TestBPX(unittest.TestCase):
+class TestBPX(TestCase):
     def setUp(self):
         self.base = {
             "Header": {
