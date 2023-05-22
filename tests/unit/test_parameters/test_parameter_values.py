@@ -89,7 +89,7 @@ class TestParameterValues(TestCase):
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
 
-        # udpate with a ParameterValues object
+        # update with a ParameterValues object
         new_param = pybamm.ParameterValues(param)
         self.assertEqual(new_param["a"], 2)
 
