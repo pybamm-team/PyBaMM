@@ -177,6 +177,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y0 = y0.full()
         y0 = y0.flatten()
 
+        y0S = model.y0S
+        # only casadi solver needs sensitivity ics
+        if model.convert_to_format != "casadi":
+            y0S = None
+        if y0S is not None:
+            if isinstance(y0S, casadi.DM):
+                y0S = (y0S,)
+
+            y0S = (x.full() for x in y0S)
+            y0S = [x.flatten() for x in y0S]
+
         if ics_only:
             return base_set_up_return
 
@@ -484,8 +495,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y0 = y0.full()
         y0 = y0.flatten()
 
+        y0S = model.y0S
+        # only casadi solver needs sensitivity ics
+        if model.convert_to_format != "casadi":
+            y0S = None
+        if y0S is not None:
+            if isinstance(y0S, casadi.DM):
+                y0S = (y0S,)
+
+            y0S = (x.full() for x in y0S)
+            y0S = [x.flatten() for x in y0S]
+
         # solver works with ydot0 set to zero
         ydot0 = np.zeros_like(y0)
+        if y0S is not None:
+            ydot0S = [np.zeros_like(y0S_i) for y0S_i in y0S]
+            y0full = np.concatenate([y0, *y0S])
+            ydot0full = np.concatenate([ydot0, *ydot0S])
+        else:
+            y0full = y0
+            ydot0full = ydot0
 
         try:
             atol = model.atol
@@ -499,8 +528,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             sol = self._setup["solver"].solve(
                 t_eval,
-                y0,
-                ydot0,
+                y0full,
+                ydot0full,
                 inputs,
             )
         else:
