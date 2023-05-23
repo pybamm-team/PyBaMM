@@ -15,6 +15,7 @@ class BaseModel(pybamm.BaseSubModel):
         Q_Ah.print_name = "Q_Ah"
         # Throughput capacity (cumulative)
         Qt_Ah = pybamm.Variable("Throughput capacity [A.h]")
+        Qt_Ah.print_name = "Qt_Ah"
 
         variables = {
             "Discharge capacity [A.h]": Q_Ah,
