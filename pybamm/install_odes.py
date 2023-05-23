@@ -33,7 +33,7 @@ def download_extract_library(url, directory):
 def install_sundials(download_dir, install_dir):
     # Download the SUNDIALS library and compile it.
     logger = logging.getLogger("scikits.odes setup")
-    sundials_version = "6.5.0"
+    sundials_version = "5.1.0"
 
     try:
         subprocess.run(["cmake", "--version"])
