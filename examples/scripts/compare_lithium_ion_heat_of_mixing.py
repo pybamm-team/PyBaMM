@@ -30,5 +30,5 @@ pybamm.dynamic_plot(
         "X-averaged total heating [W.m-3]",
         "Voltage [V]",
         "Current [A]",
-    ]
+    ],
 )

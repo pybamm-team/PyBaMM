@@ -160,7 +160,9 @@ class BaseThermal(pybamm.BaseSubModel):
                 R_n = variables["Negative particle radius [m]"]
                 N_n = a_n / (4 * pi * R_n**2)
                 if self.x_average:
-                    c_n = variables["X-averaged negative particle concentration [mol.m-3]" ]
+                    c_n = variables[
+                        "X-averaged negative particle concentration [mol.m-3]"
+                    ]
                 else:
                     c_n = variables["Negative particle concentration [mol.m-3]"]
                 T_n_part = pybamm.PrimaryBroadcast(
