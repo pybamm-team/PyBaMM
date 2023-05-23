@@ -1046,7 +1046,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.OneDimensionalX
 
-        self.submodels["thermal"] = thermal_submodel(self.param, self.options)
+        self.submodels["thermal"] = thermal_submodel(self.param, self.options, self.x_average)
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in ["uniform"]:

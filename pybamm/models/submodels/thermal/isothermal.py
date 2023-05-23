@@ -18,8 +18,8 @@ class Isothermal(BaseThermal):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, options=None, x_average=False):
+        super().__init__(param, options=options, x_average=x_average)
 
     def get_fundamental_variables(self):
         T_amb = self.param.T_amb(pybamm.t)

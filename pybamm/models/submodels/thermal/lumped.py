@@ -27,8 +27,8 @@ class Lumped(BaseThermal):
            of The Electrochemical Society, 167(14):140513, 2020
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, options=None, x_average=False):
+        super().__init__(param, options=options, x_average=x_average)
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
