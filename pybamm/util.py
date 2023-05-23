@@ -73,6 +73,11 @@ class FuzzyDict(dict):
                     "open-circuit voltage evaluated at the average particle "
                     "concentrations."
                 )
+            if "Open circuit potential at 0% SOC [V]" in key:
+                raise KeyError(
+                    "Set the 'Open circuit potential at 0% SOC [V]'="
+                    "'Lower voltage cut-off [V]'"
+                )
             best_matches = self.get_best_matches(key)
             for k in best_matches:
                 if key in k and k.endswith("]"):
