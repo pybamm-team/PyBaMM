@@ -90,11 +90,29 @@ class _Step:
                     "Drive cycle must be a 2-column array with time in the first column"
                     " and current/C-rate/power/voltage/resistance in the second"
                 )
-            t, y = value[:, 0], value[:, 1]
+            if duration is not None:
+                t_max = _convert_time_to_seconds(duration)
+                self.duration = _convert_time_to_seconds(duration)
+                if t_max > value[-1, 0]:
+                    # duration longer than drive cycle values so loop
+                    nloop = np.ceil(t_max / value[-1, 0]).astype(int)
+                    tstep = np.diff(value[:, 0])[0]
+                    t = []
+                    y = []
+                    for i in range(nloop):
+                        t.append(value[:, 0] + ((value[-1, 0] + tstep)*i))
+                        y.append(value[:, 1])
+                    t = np.asarray(t).flatten()
+                    y = np.asarray(y).flatten()
+                else:
+                    t, y = value[:, 0], value[:, 1]
+            else:
+                t, y = value[:, 0], value[:, 1]
+                self.duration = t.max()
+                
             self.value = pybamm.Interpolant(
                 t, y, pybamm.t - pybamm.InputParameter("start time")
             )
-            self.duration = t.max()
             self.period = np.diff(t).min()
         else:
             self.value = value
