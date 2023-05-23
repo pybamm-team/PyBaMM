@@ -100,7 +100,7 @@ class _Step:
                     t = []
                     y = []
                     for i in range(nloop):
-                        t.append(value[:, 0] + ((value[-1, 0] + tstep)*i))
+                        t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
                         y.append(value[:, 1])
                     t = np.asarray(t).flatten()
                     y = np.asarray(y).flatten()
@@ -109,7 +109,7 @@ class _Step:
             else:
                 t, y = value[:, 0], value[:, 1]
                 self.duration = t.max()
-                
+
             self.value = pybamm.Interpolant(
                 t, y, pybamm.t - pybamm.InputParameter("start time")
             )
