@@ -623,10 +623,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
         return u_ref + (T - self.main_param.T_ref) * dudt
-        # Drop the regularisation term when computing the derivative
-        # sto_dv = pybamm.InputParameter("sto_dv")
-        # T_dv = pybamm.InputParameter("T_dv")
-        # return self.U(sto_dv, T_dv).children[0].diff(sto_dv).evaluate({sto_dv: sto, T_dv: T})
 
     def dUdT(self, sto):
         """
