@@ -17,8 +17,9 @@ class BaseThermal(pybamm.BaseSubModel):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, options=None):
+    def __init__(self, param, options=None, x_average=False):
         super().__init__(param, options=options)
+        self.x_average = x_average
 
     def _get_standard_fundamental_variables(self, T_dict):
         """
@@ -158,13 +159,18 @@ class BaseThermal(pybamm.BaseSubModel):
                 a_n = variables["Negative electrode surface area to volume ratio [m-1]"]
                 R_n = variables["Negative particle radius [m]"]
                 N_n = a_n / (4 * pi * R_n**2)
-                c_n = variables["Negative particle concentration [mol.m-3]"]
-                dc_n_dr = pybamm.grad_squared(c_n)
-                D_n = variables["Negative particle effective diffusivity [m2.s-1]"]
-                Ueq_n = variables["Negative electrode open-circuit potential [V]"]
-                # TODO: Drop terms as it has spatial operators and diff doesn't work
-                dUeq_n = Ueq_n.children[0].children[0].diff(c_n)
-                integrand_r_n = D_n * dc_n_dr**2 * dUeq_n
+                if self.x_average:
+                    c_n = variables["X-averaged negative particle concentration [mol.m-3]" ]
+                else:
+                    c_n = variables["Negative particle concentration [mol.m-3]"]
+                T_n_part = pybamm.PrimaryBroadcast(
+                    variables["Negative electrode temperature [K]"],
+                    ["negative particle"],
+                )
+                dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
+                D_n = param.n.prim.D(c_n, T_n_part)
+                dUeq_n = param.n.prim.dUdsto(c_n / param.n.prim.c_max, T_n_part)
+                integrand_r_n = D_n * dc_n_dr2 * dUeq_n / param.n.prim.c_max
                 integration_variable_r_n = [
                     pybamm.SpatialVariable("r", domain=integrand_r_n.domain)
                 ]
@@ -173,12 +179,18 @@ class BaseThermal(pybamm.BaseSubModel):
             a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
             R_p = variables["Positive particle radius [m]"]
             N_p = a_p / (4 * pi * R_p**2)
-            c_p = variables["Positive particle concentration [mol.m-3]"]
-            dc_p_dr = pybamm.grad_squared(c_p)
-            D_p = variables["Positive particle effective diffusivity [m2.s-1]"]
-            Ueq_p = variables["Positive electrode open-circuit potential [V]"]
-            dUeq_p = Ueq_p.children[0].children[0].diff(c_p)
-            integrand_r_p = D_p * dc_p_dr**2 * dUeq_p
+            if self.x_average:
+                c_p = variables["X-averaged positive particle concentration [mol.m-3]"]
+            else:
+                c_p = variables["Positive particle concentration [mol.m-3]"]
+            T_p_part = pybamm.PrimaryBroadcast(
+                variables["Positive electrode temperature [K]"],
+                ["positive particle"],
+            )
+            dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
+            D_p = param.p.prim.D(c_p, T_p_part)
+            dUeq_p = param.p.prim.dUdsto(c_p / param.p.prim.c_max, T_p_part)
+            integrand_r_p = D_p * dc_p_dr2 * dUeq_p / param.p.prim.c_max
             integration_variable_r_p = [
                 pybamm.SpatialVariable("r", domain=integrand_r_p.domain)
             ]
