@@ -1,6 +1,7 @@
 #
 # Test for the Finite Volume Mesh class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
@@ -18,7 +19,7 @@ def get_param():
     )
 
 
-class TestMesh(unittest.TestCase):
+class TestMesh(TestCase):
     def test_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
@@ -384,7 +385,7 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(mesh["current collector"].tabs["positive tab"], "left")
 
 
-class TestMeshGenerator(unittest.TestCase):
+class TestMeshGenerator(TestCase):
     def test_init_name(self):
         mesh_generator = pybamm.MeshGenerator(pybamm.SubMesh0D)
         self.assertEqual(mesh_generator.__repr__(), "Generator for SubMesh0D")

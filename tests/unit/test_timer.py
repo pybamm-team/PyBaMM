@@ -6,9 +6,10 @@
 #
 import pybamm
 import unittest
+from tests import TestCase
 
 
-class TestTimer(unittest.TestCase):
+class TestTimer(TestCase):
     """
     Tests the basic methods of the Timer class.
     """

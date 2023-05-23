@@ -1,6 +1,7 @@
 #
 # Test the base experiment class
 #
+from tests import TestCase
 import pybamm
 import numpy as np
 import unittest
@@ -8,7 +9,7 @@ import pandas as pd
 import os
 
 
-class TestExperiment(unittest.TestCase):
+class TestExperiment(TestCase):
     def test_read_strings(self):
         # Import drive cycle from file
         drive_cycle = pd.read_csv(

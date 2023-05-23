@@ -22,8 +22,8 @@ import pkg_resources
 import pybamm
 
 # versions of jax and jaxlib compatible with PyBaMM
-JAX_VERSION = "0.2.12"
-JAXLIB_VERSION = "0.1.70"
+JAX_VERSION = "0.4.8"
+JAXLIB_VERSION = "0.4.7"
 
 
 def root_dir():
@@ -66,12 +66,12 @@ class FuzzyDict(dict):
                 )
             if "Measured open circuit voltage" in key:
                 raise KeyError(
-                    "The variable for open circuit voltage is now called "
-                    "'Open-circuit voltage [V]'. The variable that used to be called "
+                    "The variable that used to be called "
                     "'Measured open circuit voltage [V]' is now called "
-                    "'Surface open-circuit voltage [V]', but this is not the true "
-                    "open-circuit voltage of the cell since it includes the "
-                    "particle concentration overpotentials."
+                    "'Surface open-circuit voltage [V]'. There is also another "
+                    "variable called 'Bulk open-circuit voltage [V]' which is the"
+                    "open-circuit voltage evaluated at the average particle "
+                    "concentrations."
                 )
             best_matches = self.get_best_matches(key)
             for k in best_matches:

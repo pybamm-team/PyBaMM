@@ -134,7 +134,7 @@ class SpatialMethod:
             matrix = vstack([identity for _ in range(tertiary_domain_size)])
             out = pybamm.Matrix(matrix) @ symbol
         elif broadcast_type.startswith("full"):
-            out = symbol * pybamm.Vector(np.ones(full_domain_size))
+            out = symbol * pybamm.Vector(np.ones(full_domain_size), domains=domains)
 
         out.domains = domains.copy()
         return out

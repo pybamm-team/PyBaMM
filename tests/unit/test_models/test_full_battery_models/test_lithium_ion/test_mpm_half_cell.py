@@ -1,11 +1,12 @@
 #
 # Tests for the lithium-ion MPM model
 #
+from tests import TestCase
 import pybamm
 import unittest
 
 
-class TestMPM(unittest.TestCase):
+class TestMPM(TestCase):
     def test_well_posed(self):
         options = {"thermal": "isothermal", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
@@ -45,7 +46,7 @@ class TestMPM(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestMPMExternalCircuits(unittest.TestCase):
+class TestMPMExternalCircuits(TestCase):
     def test_well_posed_voltage(self):
         options = {"operating mode": "voltage", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)

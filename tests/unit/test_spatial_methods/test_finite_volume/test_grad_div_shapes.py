@@ -1,6 +1,7 @@
 #
 # Test for the gradient and divergence in Finite Volumes
 #
+from tests import TestCase
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -12,7 +13,7 @@ import numpy as np
 import unittest
 
 
-class TestFiniteVolumeGradDiv(unittest.TestCase):
+class TestFiniteVolumeGradDiv(TestCase):
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in Cartesian coordinates

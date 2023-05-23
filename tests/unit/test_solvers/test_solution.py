@@ -1,6 +1,7 @@
 #
 # Tests for the Solution class
 #
+from tests import TestCase
 import json
 import pybamm
 import unittest
@@ -10,7 +11,7 @@ from scipy.io import loadmat
 from tests import get_discretisation_for_testing
 
 
-class TestSolution(unittest.TestCase):
+class TestSolution(TestCase):
     def test_init(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
@@ -205,8 +206,6 @@ class TestSolution(unittest.TestCase):
         model.variables["c"] = c
         model.variables["2c"] = 2 * c
 
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
         # test create a new processed variable
@@ -229,8 +228,6 @@ class TestSolution(unittest.TestCase):
         model.variables["c"] = c
         model.variables["2c"] = 2 * c
 
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
         solution.plot(["c", "2c"], testing=True)
@@ -325,6 +322,27 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(solution.all_models[0].name, solution_load.all_models[0].name)
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
+
+    def test_get_data_cycles_steps(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+
+        solver = pybamm.ScipySolver()
+        sol1 = solver.solve(model, np.linspace(0, 1))
+        sol2 = solver.solve(model, np.linspace(1, 2))
+
+        sol = sol1 + sol2
+        sol.cycles = [sol]
+        sol.cycles[0].steps = [sol1, sol2]
+
+        data = sol.get_data_dict("c")
+        np.testing.assert_array_equal(data["Cycle"], 0)
+        np.testing.assert_array_equal(
+            data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
+        )
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()

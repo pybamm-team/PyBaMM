@@ -1,12 +1,13 @@
 #
 # Tests for the lithium-ion Newman-Tobias model
 #
+from tests import TestCase
 import pybamm
 import unittest
 from tests import BaseIntegrationTestLithiumIon
 
 
-class TestNewmanTobias(BaseIntegrationTestLithiumIon, unittest.TestCase):
+class TestNewmanTobias(BaseIntegrationTestLithiumIon, TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.NewmanTobias
 

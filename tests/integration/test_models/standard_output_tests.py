@@ -145,7 +145,7 @@ class VoltageTests(BaseOutputTest):
         self.ocp_p = solution[
             f"Positive electrode {self.phase_name_p}bulk open-circuit potential [V]"
         ]
-        self.ocv = solution["Open-circuit voltage [V]"]
+        self.ocv = solution["Bulk open-circuit voltage [V]"]
         self.voltage = solution["Voltage [V]"]
 
     def test_each_reaction_overpotential(self):
