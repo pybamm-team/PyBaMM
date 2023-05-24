@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Realign 'count' increment in CasadiSolver._integrate() ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2974))
+
 ## Features
 
 - Enable multithreading in IDAKLU solver ([#2947](https://github.com/pybamm-team/PyBaMM/pull/2947))
