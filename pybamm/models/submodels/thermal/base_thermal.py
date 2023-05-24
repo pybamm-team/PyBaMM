@@ -163,12 +163,11 @@ class BaseThermal(pybamm.BaseSubModel):
                     c_n = variables[
                         "X-averaged negative particle concentration [mol.m-3]"
                     ]
+                    T_n = variables["X-averaged negative electrode temperature [K]"]
                 else:
                     c_n = variables["Negative particle concentration [mol.m-3]"]
-                T_n_part = pybamm.PrimaryBroadcast(
-                    variables["Negative electrode temperature [K]"],
-                    ["negative particle"],
-                )
+                    T_n = variables["Negative electrode temperature [K]"]
+                T_n_part = pybamm.PrimaryBroadcast(T_n, ["negative particle"])
                 dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
                 D_n = param.n.prim.D(c_n, T_n_part)
                 dUeq_n = param.n.prim.dUdsto(c_n / param.n.prim.c_max, T_n_part)
@@ -183,12 +182,11 @@ class BaseThermal(pybamm.BaseSubModel):
             N_p = a_p / (4 * pi * R_p**2)
             if self.x_average:
                 c_p = variables["X-averaged positive particle concentration [mol.m-3]"]
+                T_p = variables["X-averaged positive electrode temperature [K]"]
             else:
                 c_p = variables["Positive particle concentration [mol.m-3]"]
-            T_p_part = pybamm.PrimaryBroadcast(
-                variables["Positive electrode temperature [K]"],
-                ["positive particle"],
-            )
+                T_p = variables["Positive electrode temperature [K]"]
+            T_p_part = pybamm.PrimaryBroadcast(T_p, ["positive particle"])
             dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
             D_p = param.p.prim.D(c_p, T_p_part)
             dUeq_p = param.p.prim.dUdsto(c_p / param.p.prim.c_max, T_p_part)
@@ -278,6 +276,9 @@ class BaseThermal(pybamm.BaseSubModel):
                 Q_s_cn = self.param.n.sigma_cc * pybamm.grad_squared(phi_s_cn)
                 Q_s_cp = self.param.p.sigma_cc * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
+
+    def _heat_of_mixing(self, variables):
+        """Compute heat of mixing source terms."""
 
     def _x_average(self, var, var_cn, var_cp):
         """
