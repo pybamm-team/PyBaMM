@@ -208,7 +208,7 @@ class TestBPX(TestCase):
             # Check other parameters give interpolants
             D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
             self.assertIsInstance(D, pybamm.Interpolant)
-            for electrode in ["Negative"]:  # , "Positive"]:
+            for electrode in ["Negative", "Positive"]:
                 D = param[f"{electrode} electrode diffusivity [m2.s-1]"](c, 298.15)
                 self.assertIsInstance(D, pybamm.Interpolant)
                 OCP = param[f"{electrode} electrode OCP [V]"](c)
