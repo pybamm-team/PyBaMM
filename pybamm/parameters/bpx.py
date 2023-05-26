@@ -44,6 +44,18 @@ positive_electrode = Domain(
     pre_name="Positive electrode ",
     short_pre_name="Positive ",
 )
+positive_current_collector = Domain(
+    name="positive current collector",
+    pre_name="Positive current collector ",
+    short_pre_name="",
+)
+
+negative_current_collector = Domain(
+    name="negative current collector",
+    pre_name="Negative current collector ",
+    short_pre_name="",
+)
+
 electrolyte = Domain(name="electrolyte", pre_name="Electrolyte ", short_pre_name="")
 separator = Domain(name="separator", pre_name="Separator ", short_pre_name="")
 experiment = Domain(name="experiment", pre_name="", short_pre_name="")
@@ -114,10 +126,40 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         "Density [kg.m-3]",
         "Thermal conductivity [W.m-1.K-1]",
     ]:
-        for domain in [negative_electrode, positive_electrode, separator]:
+        for domain in [
+            negative_electrode,
+            positive_electrode,
+            separator,
+            negative_current_collector,
+            positive_current_collector,
+        ]:
             pybamm_name = domain.pre_name + name[:1].lower() + name[1:]
             if name in pybamm_dict:
                 pybamm_dict[pybamm_name] = pybamm_dict[name]
+
+    # correct BPX specific heat capacity units to be consistent with pybamm
+    for domain in [
+        negative_electrode,
+        positive_electrode,
+        separator,
+        negative_current_collector,
+        positive_current_collector,
+    ]:
+        incorrect_name = domain.pre_name + "specific heat capacity [J.K-1.kg-1]"
+        new_name = domain.pre_name + "specific heat capacity [J.kg-1.K-1]"
+        if incorrect_name in pybamm_dict:
+            pybamm_dict[new_name] = pybamm_dict[incorrect_name]
+            del pybamm_dict[incorrect_name]
+
+    # lumped thermal model requires current collector parameters. Arbitrarily assign
+    for domain in [negative_current_collector, positive_current_collector]:
+        pybamm_dict[domain.pre_name + "thickness [m]"] = 0
+        pybamm_dict[domain.pre_name + "conductivity [S.m-1]"] = 4e7
+
+    # add a default heat transfer coefficient
+    pybamm_dict.update(
+        {"Total heat transfer coefficient [W.m-2.K-1]": 0}, check_already_exists=False
+    )
 
     # BET surface area
     for domain in [negative_electrode, positive_electrode]:

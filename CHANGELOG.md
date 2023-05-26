@@ -14,6 +14,7 @@
 
 - Fix `pybamm_install_odes` and update the required SUNDIALS version ([#2958](https://github.com/pybamm-team/PyBaMM/pull/2958))
 - Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))
+- Fix `bpx.py` to correctly generate parameters for "lumped" thermal model ([#2860](https://github.com/pybamm-team/PyBaMM/issues/2860))
 
 ## Breaking changes
 
