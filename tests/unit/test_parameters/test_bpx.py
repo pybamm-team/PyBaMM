@@ -205,6 +205,18 @@ class TestBPX(TestCase):
             kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
             self.assertIsInstance(kappa, pybamm.Interpolant)
             self.assertEqual(kappa.children[0], c)
+            # Check other parameters give interpolants
+            D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
+            self.assertIsInstance(D, pybamm.Interpolant)
+            for electrode in ["Negative"]:  # , "Positive"]:
+                D = param[f"{electrode} electrode diffusivity [m2.s-1]"](c, 298.15)
+                self.assertIsInstance(D, pybamm.Interpolant)
+                OCP = param[f"{electrode} electrode OCP [V]"](c)
+                self.assertIsInstance(OCP, pybamm.Interpolant)
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](
+                    c, 10000
+                )
+                self.assertIsInstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
         with self.assertRaisesRegex(ValueError, "Target SOC"):

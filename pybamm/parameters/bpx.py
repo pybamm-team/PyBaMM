@@ -139,7 +139,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     U_n = pybamm_dict[negative_electrode.pre_name + "OCP [V]"]
     if isinstance(U_n, tuple):
 
-        def _negative_electrode_ocp(sto, T):
+        def _negative_electrode_ocp(sto):
             name, (x, y) = U_n
             return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
 
@@ -149,7 +149,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     U_p = pybamm_dict[positive_electrode.pre_name + "OCP [V]"]
     if isinstance(U_p, tuple):
 
-        def _positive_electrode_ocp(sto, T):
+        def _positive_electrode_ocp(sto):
             name, (x, y) = U_p
             return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
 
@@ -190,7 +190,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         def _positive_electrode_entropic_change(sto, c_s_max):
             return dUdT_p(sto)
 
-    elif isinstance(U_p, tuple):
+    elif isinstance(dUdT_p, tuple):
 
         def _positive_electrode_entropic_change(sto, c_s_max):
             name, (x, y) = dUdT_p
