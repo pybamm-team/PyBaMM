@@ -106,6 +106,8 @@ def get_parameter_values():
         "U0_n_5": 0.36325,
         "Xj_n_5": 0.05476,
         "w_n_5": 5.97354,
+        "Negative electrode stoichiometry at 0% SOC": 0.03,
+        "Negative electrode stoichiometry at 100% SOC": 0.9,
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
         "Negative electrode diffusivity [m2.s-1]": 3.3e-14,
@@ -131,6 +133,8 @@ def get_parameter_values():
         "U0_p_3": 4.22955,
         "Xj_p_3": 0.32980,
         "w_p_3": 5.52757,
+        "Positive electrode stoichiometry at 0% SOC": 0.85,
+        "Positive electrode stoichiometry at 100% SOC": 0.1,
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
         "Positive electrode diffusivity [m2.s-1]": 4e-15,
@@ -215,8 +219,12 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
         c_p_max = param.p.prim.c_max
         self.rhs[U_n] = (-3 * j_n / F / R_n / c_n_max) / dxdU_n(U_n)
         self.rhs[U_p] = (-3 * j_p / F / R_p / c_p_max) / dxdU_p(U_p)
-        self.initial_conditions[U_n] = 0.1
-        self.initial_conditions[U_p] = 4
+        self.initial_conditions[U_n] = pybamm.Parameter(
+            "Initial negative electrode potential [V]"
+        )
+        self.initial_conditions[U_p] = pybamm.Parameter(
+            "Initial positive electrode potential [V]"
+        )
 
         ######################
         # (Some) variables
