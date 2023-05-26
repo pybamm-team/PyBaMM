@@ -20,7 +20,13 @@ class BaseIntegrationTestLithiumIon:
     def test_sensitivities(self):
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        if pybamm.have_idaklu():
+            solver = pybamm.IDAKLUSolver()
+        else:
+            solver = pybamm.CasadiSolver()
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=param, solver=solver
+        )
         modeltest.test_sensitivities("Current function [A]", 0.15652)
 
     def test_basic_processing_1plus1D(self):
