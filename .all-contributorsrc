@@ -621,6 +621,16 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "darryl-ad",
+      "name": "darryl-ad",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91731499?v=4",
+      "profile": "https://www.aboutenergy.io/",
+      "contributions": [
+        "code",
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
