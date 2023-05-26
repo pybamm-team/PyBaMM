@@ -156,6 +156,11 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         pybamm_dict[domain.pre_name + "thickness [m]"] = 0
         pybamm_dict[domain.pre_name + "conductivity [S.m-1]"] = 4e7
 
+    # add a default heat transfer coefficient
+    pybamm_dict.update(
+        {"Total heat transfer coefficient [W.m-2.K-1]": 0}, check_already_exists=False
+    )
+
     # BET surface area
     for domain in [negative_electrode, positive_electrode]:
         pybamm_dict[domain.pre_name + "active material volume fraction"] = (
