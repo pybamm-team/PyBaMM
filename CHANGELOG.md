@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-- Realign 'count' increment in CasadiSolver._integrate() ([#2974](https://github.com/pybamm-team/PyBaMM/pull/2974))
+- Realign 'count' increment in CasadiSolver._integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
 
 ## Features
 

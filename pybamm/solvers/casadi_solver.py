@@ -269,7 +269,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         # global timestep will only be reduced after the first timestep.
                         if first_ts_solved:
                             dt_max = dt
-                        if count - 1 >= self.max_step_decrease_count:
+                        if count > self.max_step_decrease_count:
                             message = (
                                 "Maximum number of decreased steps occurred at "
                                 f"t={t} (final SolverError: '{error}'). "
