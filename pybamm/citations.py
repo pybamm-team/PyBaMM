@@ -8,7 +8,6 @@ import os
 import warnings
 import pybtex
 from sys import _getframe
-from functools import cache
 from pybtex.database import parse_file, parse_string, Entry
 from pybtex.scanner import PybtexError
 
@@ -64,7 +63,6 @@ class Citations:
         self.register("Sulzer2021")
         self.register("Harris2020")
 
-    @cache
     def _caller_name():
         """
         Returns the qualified name of classes that call :meth:`register` internally.
