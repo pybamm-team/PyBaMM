@@ -38,7 +38,7 @@ class Citations:
         self._all_citations: dict[str, str] = dict()
 
         # Set of unknown citations to parse with pybtex
-        self._unknown_citations: set()
+        self._unknown_citations = set()
 
         # Dict mapping citation tags for use when registering citations
         self._citation_tags = dict()
@@ -56,6 +56,8 @@ class Citations:
         """Reset citations to default only (only for testing purposes)"""
         # Initialize empty papers to cite
         self._papers_to_cite = set()
+        # Initialize empty set of unknown citations
+        self._unknown_citations = set()
         # Initialize empty citation tags
         self._citation_tags = dict()
         # Register the PyBaMM paper and the NumPy paper
