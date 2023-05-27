@@ -8,6 +8,7 @@ import os
 import warnings
 import pybtex
 from sys import _getframe
+from functools import cache
 from pybtex.database import parse_file, parse_string, Entry
 from pybtex.scanner import PybtexError
 
@@ -37,7 +38,7 @@ class Citations:
         self._all_citations: dict[str, str] = dict()
 
         # Dict mapping citation tags for use when registering citations
-        self._citation_tags = dict()
+        self._papers_to_cite_with_tags = dict()
 
         # store citation error
         self._citation_err_msg = None
@@ -53,14 +54,16 @@ class Citations:
         # Initialize empty papers to cite
         self._papers_to_cite = set()
         # Initialize empty citation tags
-        self._citation_tags = dict()
+        self._papers_to_cite_with_tags = dict()
         # Register the PyBaMM paper and the NumPy paper
         self.register("Sulzer2021")
         self.register("Harris2020")
 
+    @cache
     def _caller_name():
         """
         Returns the qualified name of classes that call :meth:`register` internally.
+        Gets cached in order to reduce the number of calls.
         """
         # Attributed to https://stackoverflow.com/a/53490973
         caller_name = _getframe().f_back.f_back.f_locals["self"].__class__.__qualname__
@@ -95,7 +98,7 @@ class Citations:
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
         class that called :meth:`register`"""
-        self._citation_tags[key] = entry
+        self._papers_to_cite_with_tags[key] = entry
 
     @property
     def _cited(self):
@@ -117,41 +120,43 @@ class Citations:
             - One or more BibTeX formatted citations
         """
         if self._citation_err_msg is None:
+            self._papers_to_cite.add(key)
             # Check if citation is a known key
             if key in self._all_citations:
-                self._papers_to_cite.add(key)
                 # Add citation tags for the key for verbose output
                 try:
                     caller = Citations._caller_name()
                     self._add_citation_tag(key, entry=caller)
-                # Don't add citation tags if the citation is registered manually
+                    # Don't add citation tags if the citation is registered manually
                 except KeyError:  # pragma: no cover
                     pass
+            return
+
+    def _parse_citation(self, key):
+        """ """
+        # Try to parse the citation using pybtex
+        try:
+            # Parse string as a bibtex citation, and check that a citation was found
+            bib_data = parse_string(key, bib_format="bibtex")
+            if not bib_data.entries:
+                raise PybtexError("no entries found")
+
+            # Add and register all citations
+            for key, entry in bib_data.entries.items():
+                self._add_citation(key, entry)
+                self.register(key)
                 return
-
-            # Try to parse the citation using pybtex
-            try:
-                # Parse string as a bibtex citation, and check that a citation was found
-                bib_data = parse_string(key, bib_format="bibtex")
-                if not bib_data.entries:
-                    raise PybtexError("no entries found")
-
-                # Add and register all citations
-                for key, entry in bib_data.entries.items():
-                    self._add_citation(key, entry)
-                    self.register(key)
-                    return
-            except PybtexError:
-                # Unable to parse / unknown key
-                raise KeyError(f"Not a bibtex citation or known citation: {key}")
+        except PybtexError:
+            # Unable to parse / unknown key
+            raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
     def _tag_citations(self):
         """Prints the citation tags for the citations that have been registered
         (non-manually) in the code, for verbose output purposes
         """
-        if self._citation_tags:
+        if self._papers_to_cite_with_tags:
             print("\nCitations registered: \n")
-            for key, entry in self._citation_tags.items():
+            for key, entry in self._papers_to_cite_with_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
 
     def print(self, filename=None, output_format="text", verbose=False):
