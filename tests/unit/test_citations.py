@@ -34,9 +34,15 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Sulzer2019physical", citations._all_citations.keys())
         self.assertNotIn("Sulzer2019physical", citations._papers_to_cite)
 
-        # test key error
+        # Register a citation that does not exist
+        citations.register("not a citation")
+
+        # Test key error
         with self.assertRaises(KeyError):
-            citations.register("not a citation")
+            citations._parse_citation("not a citation")  # this should raise key error
+
+        # Test unknown citations at registration
+        self.assertIn("not a citation", citations._unknown_citations)
 
     def test_print_citations(self):
         pybamm.citations._reset()
@@ -74,17 +80,22 @@ class TestCitations(unittest.TestCase):
         fake_citation = r"@article{NotACitation, title = {This Doesn't Exist}}"
         with warnings.catch_warnings():
             pybamm.citations.register(fake_citation)
+            pybamm.citations._parse_citation(fake_citation)
         self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
 
         # Same NotACitation
         with warnings.catch_warnings():
             pybamm.citations.register(fake_citation)
+            pybamm.citations._parse_citation(fake_citation)
         self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
 
         # Overwrite NotACitation
         old_citation = pybamm.citations._all_citations["NotACitation"]
         with self.assertWarns(Warning):
             pybamm.citations.register(r"@article{NotACitation, title = {A New Title}}")
+            pybamm.citations._parse_citation(
+                r"@article{NotACitation, title = {A New Title}}"
+            )  # noqa: E501
         self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
         self.assertNotEqual(
             pybamm.citations._all_citations["NotACitation"], old_citation
@@ -92,8 +103,10 @@ class TestCitations(unittest.TestCase):
 
     def test_input_validation(self):
         """Test type validation of ``_add_citation``"""
+        pybamm.citations.register(1)
+
         with self.assertRaises(TypeError):
-            pybamm.citations.register(1)
+            pybamm.citations._parse_citation(1)
 
         with self.assertRaises(TypeError):
             pybamm.citations._add_citation("NotACitation", "NotAEntry")
