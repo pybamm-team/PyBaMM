@@ -125,6 +125,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: tox -e examples
 
-      - name: Test pybamm_install_odes
+      - name: Install scikits.odes and test pybamm_install_odes
         if: matrix.os == 'ubuntu-latest'
-        run: pybamm_install_odes
+        run: tox -e odes
