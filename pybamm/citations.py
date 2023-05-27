@@ -111,8 +111,9 @@ class Citations:
         return [self._all_citations[key] for key in self._papers_to_cite]
 
     def register(self, key):
-        """Register a paper to be cited. The intended use is that :meth:`register`
-        should be called only when the referenced functionality is actually being used.
+        """Register a paper to be cited, one at a time. The intended use is that
+        :meth:`register` should be called only when the referenced functionality is
+        actually being used.
 
         .. warning::
             Registering a BibTeX citation, with the same key as an existing citation,
@@ -122,7 +123,7 @@ class Citations:
         ----------
         key : str
             - The citation key for an entry in `pybamm/CITATIONS.txt` or
-            - One or more BibTeX formatted citations
+            - A BibTeX formatted citation
         """
         if self._citation_err_msg is None:
             # Check if citation is a known key
@@ -144,6 +145,15 @@ class Citations:
         """
         Parses a citation with pybtex and adds it to the _papers_to_cite set. This
         method is called when a citation is unknown at the time of registration.
+
+        .. warning::
+            Registering a BibTeX citation, with the same key as an existing citation,
+            will overwrite the current citation.
+
+        Parameters
+        ----------
+        key: str
+            A BibTeX formatted citation
         """
         try:
             # Parse string as a bibtex citation, and check that a citation was found
