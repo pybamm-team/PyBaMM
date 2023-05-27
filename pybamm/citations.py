@@ -37,8 +37,11 @@ class Citations:
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
 
+        # Set of unknown citations to parse with pybtex
+        self._unknown_citations: set()
+
         # Dict mapping citation tags for use when registering citations
-        self._papers_to_cite_with_tags = dict()
+        self._citation_tags = dict()
 
         # store citation error
         self._citation_err_msg = None
@@ -54,7 +57,7 @@ class Citations:
         # Initialize empty papers to cite
         self._papers_to_cite = set()
         # Initialize empty citation tags
-        self._papers_to_cite_with_tags = dict()
+        self._citation_tags = dict()
         # Register the PyBaMM paper and the NumPy paper
         self.register("Sulzer2021")
         self.register("Harris2020")
@@ -98,7 +101,7 @@ class Citations:
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
         class that called :meth:`register`"""
-        self._papers_to_cite_with_tags[key] = entry
+        self._citation_tags[key] = entry
 
     @property
     def _cited(self):
@@ -120,9 +123,9 @@ class Citations:
             - One or more BibTeX formatted citations
         """
         if self._citation_err_msg is None:
-            self._papers_to_cite.add(key)
             # Check if citation is a known key
             if key in self._all_citations:
+                self._papers_to_cite.add(key)
                 # Add citation tags for the key for verbose output
                 try:
                     caller = Citations._caller_name()
@@ -130,11 +133,16 @@ class Citations:
                     # Don't add citation tags if the citation is registered manually
                 except KeyError:  # pragma: no cover
                     pass
-            return
+            else:
+                # If citation is unknown, parse it later with pybtex
+                self._unknown_citations.add(key)
+                return
 
     def _parse_citation(self, key):
-        """ """
-        # Try to parse the citation using pybtex
+        """
+        Parses a citation with pybtex and adds it to the _papers_to_cite set. This
+        method is called when a citation is unknown at the time of registration.
+        """
         try:
             # Parse string as a bibtex citation, and check that a citation was found
             bib_data = parse_string(key, bib_format="bibtex")
@@ -143,8 +151,10 @@ class Citations:
 
             # Add and register all citations
             for key, entry in bib_data.entries.items():
+                # Add to _all_citations dictionary
                 self._add_citation(key, entry)
-                self.register(key)
+                # Add to _papers_to_cite set
+                self._papers_to_cite.add(key)
                 return
         except PybtexError:
             # Unable to parse / unknown key
@@ -154,9 +164,9 @@ class Citations:
         """Prints the citation tags for the citations that have been registered
         (non-manually) in the code, for verbose output purposes
         """
-        if self._papers_to_cite_with_tags:
+        if self._citation_tags:
             print("\nCitations registered: \n")
-            for key, entry in self._papers_to_cite_with_tags.items():
+            for key, entry in self._citation_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
 
     def print(self, filename=None, output_format="text", verbose=False):
@@ -193,6 +203,10 @@ class Citations:
             Marquis2019 was cited due to the use of SPM
 
         """
+        # Parse citations that were not known keys at registration
+        for key in self._unknown_citations:
+            self._parse_citation(key)
+
         if output_format == "text":
             citations = pybtex.format_from_strings(
                 self._cited, style="plain", output_backend="plaintext"
