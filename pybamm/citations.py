@@ -127,13 +127,15 @@ class Citations:
             # Check if citation is a known key
             if key in self._all_citations:
                 self._papers_to_cite.add(key)
-                # Add citation tags for the key for verbose output
-                try:
-                    caller = Citations._caller_name()
-                    self._add_citation_tag(key, entry=caller)
-                    # Don't add citation tags if the citation is registered manually
-                except KeyError:  # pragma: no cover
-                    pass
+                # Add citation tags for the key for verbose output, but
+                # don't if they already exist in _citation_tags dict
+                if key not in self._citation_tags:
+                    try:
+                        caller = Citations._caller_name()
+                        self._add_citation_tag(key, entry=caller)
+                        # Don't add citation tags if the citation is registered manually
+                    except KeyError:  # pragma: no cover
+                        pass
             else:
                 # If citation is unknown, parse it later with pybtex
                 self._unknown_citations.add(key)
@@ -213,9 +215,18 @@ class Citations:
             Marquis2019 was cited due to the use of SPM
 
         """
-        # Parse citations that were not known keys at registration
-        for key in self._unknown_citations:
-            self._parse_citation(key)
+        # Parse citations that were not known keys at registration, but do not
+        # fail if they cannot be parsed
+        try:
+            for key in self._unknown_citations:
+                self._parse_citation(key)
+        except KeyError:  # pragma: no cover
+            warnings.warn(
+                message=f'\nCitation with key "{key}" is invalid. Please try again\n',
+                category=UserWarning,
+            )
+            # delete the invalid citation from the set
+            self._unknown_citations.remove(key)
 
         if output_format == "text":
             citations = pybtex.format_from_strings(
