@@ -127,7 +127,7 @@ def main(arguments=None):
     desc = "Install scikits.odes."
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("--sundials-libs", type=str, help="path to sundials libraries.")
-    default_install_dir = os.path.join(os.getenv("HOME"), ".local")
+    default_install_dir = os.path.join("/home/runner", ".local")
     parser.add_argument("--install-dir", type=str, default=default_install_dir)
     args = parser.parse_args(arguments)
 
@@ -139,7 +139,7 @@ def main(arguments=None):
     )
 
     # Check is sundials is already installed
-    SUNDIALS_LIB_DIRS = [join(os.getenv("HOME"), ".local"), "/usr/local", "/usr"]
+    SUNDIALS_LIB_DIRS = [join("/home/runner", ".local"), "/usr/local", "/usr"]
 
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)
