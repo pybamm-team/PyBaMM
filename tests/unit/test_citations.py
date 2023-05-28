@@ -75,6 +75,12 @@ class TestCitations(unittest.TestCase):
             pybamm.print_citations()
         pybamm.citations._citation_err_msg = None
 
+        # Test that unknown citation raises warning message on printing
+        pybamm.citations._reset()
+        pybamm.citations.register("not a citation")
+        with self.assertWarnsRegex(UserWarning, "not a citation"):
+            pybamm.print_citations()
+
     def test_overwrite_citation(self):
         # Unknown citation
         fake_citation = r"@article{NotACitation, title = {This Doesn't Exist}}"
