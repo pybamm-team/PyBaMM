@@ -66,8 +66,9 @@ class CasadiSolver(pybamm.BaseSolver):
         the simulation, but managed to take some successful steps. Default is False.
     perturb_algebraic_initial_conditions : bool, optional
         Whether to perturb algebraic initial conditions to avoid a singularity. This
-        can sometimes slow down the solver, but is kept True as default for "safe" mode
-        as it seems to be more robust (False by default for other modes).
+        is set to Flase as default. Keeping this as True can sometimes slow down the
+        solver, but it can be kept True for "safe" mode as it seems to be more robust
+        than other modes.
     integrators_maxcount : int, optional
         The maximum number of integrators that the solver will retain before
         ejecting past integrators using an LRU methodology. A value of 0 or
@@ -87,7 +88,7 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_setup=None,
         extra_options_call=None,
         return_solution_if_failed_early=False,
-        perturb_algebraic_initial_conditions=None,
+        perturb_algebraic_initial_conditions=False,
         integrators_maxcount=100,
     ):
         super().__init__(
@@ -114,18 +115,7 @@ class CasadiSolver(pybamm.BaseSolver):
         self.return_solution_if_failed_early = return_solution_if_failed_early
 
         self._on_extrapolation = "error"
-
-        # Decide whether to perturb algebraic initial conditions, True by default for
-        # "safe" mode, False by default for other modes
-        if perturb_algebraic_initial_conditions is None:
-            if mode == "safe":
-                self.perturb_algebraic_initial_conditions = True
-            else:
-                self.perturb_algebraic_initial_conditions = False
-        else:
-            self.perturb_algebraic_initial_conditions = (
-                perturb_algebraic_initial_conditions
-            )
+        self.perturb_algebraic_initial_conditions = perturb_algebraic_initial_conditions
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
