@@ -146,10 +146,6 @@ class Citations:
         Parses a citation with pybtex and adds it to the _papers_to_cite set. This
         method is called when a citation is unknown at the time of registration.
 
-        .. warning::
-            Registering a BibTeX citation, with the same key as an existing citation,
-            will overwrite the current citation.
-
         Parameters
         ----------
         key: str
@@ -189,6 +185,10 @@ class Citations:
 
         .. note::
             If a citation is registered manually, it will not be tagged.
+
+        .. warning::
+            This function will notify the user if a citation that has been previously
+            registered is invalid or cannot be parsed.
 
         Parameters
         ----------
