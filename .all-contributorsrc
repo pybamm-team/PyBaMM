@@ -612,6 +612,25 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "chenzhao-py",
+      "name": "CHEN ZHAO",
+      "avatar_url": "https://avatars.githubusercontent.com/u/75906533?v=4",
+      "profile": "https://github.com/chenzhao-py",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "darryl-ad",
+      "name": "darryl-ad",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91731499?v=4",
+      "profile": "https://www.aboutenergy.io/",
+      "contributions": [
+        "code",
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -620,5 +639,6 @@
   "repoType": "github",
   "repoHost": "https://github.com",
   "skipCi": true,
-  "commitConvention": "angular"
+  "commitConvention": "angular",
+  "commitType": "docs"
 }
