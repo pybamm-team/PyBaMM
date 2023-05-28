@@ -172,7 +172,7 @@ class Citations:
         """Prints the citation tags for the citations that have been registered
         (non-manually) in the code, for verbose output purposes
         """
-        if self._citation_tags:
+        if self._citation_tags:  # pragma: no cover
             print("\nCitations registered: \n")
             for key, entry in self._citation_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
