@@ -1,8 +1,16 @@
-name: PyBaMM
+# Run all unit tests and integration tests for all Python versions 
+# and platforms at 3am UTC every day and on PRs to the main branch
+name: Scheduled
 
 on:
   workflow_dispatch:
   pull_request:
+    branches: 
+    - main
+
+  # Run everyday at 3 am UTC
+  schedule:
+    - cron: "0 3 * * *"
 
 jobs:
   pre_job:
@@ -28,7 +36,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: 3.11
 
       - name: Check style
         run: |
@@ -97,18 +105,22 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
         uses: codecov/codecov-action@v2.1.0
 
-      - name: Run integration tests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run integration tests for GNU/Linux
+        if: matrix.os == 'ubuntu-latest'
         run: python -m tox -e integration
 
-      - name: Run unit tests for Windows and MacOS with all Python versions
+      - name: Run unit tests for Windows and MacOS
         if: matrix.os != 'ubuntu-latest'
         run: python -m tox -e mac-windows-unit
 
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run integration tests for Windows and MacOS
+        if: matrix.os != 'ubuntu-latest'
+        run: python -m tox -e mac-windows-integration
+
+      - name: Install docs dependencies and run doctests
+        if: matrix.os == 'ubuntu-latest'
         run: tox -e doctests
 
-      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Install dev dependencies and run example tests
+        if: matrix.os == 'ubuntu-latest'
         run: tox -e examples
