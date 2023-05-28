@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-05-31
+
 ## Features
 
 - Enable multithreading in IDAKLU solver ([#2947](https://github.com/pybamm-team/PyBaMM/pull/2947))
