@@ -127,4 +127,5 @@ jobs:
 
       - name: Install scikits.odes and test pybamm_install_odes
         if: matrix.os == 'ubuntu-latest'
-        run: tox -e odes
+        run: |
+          tox -e odes
