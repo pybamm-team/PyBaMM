@@ -78,7 +78,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 # Find OpenMP
-if(APPLE AND USE_OpenMP)
+if(APPLE)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(OpenMP_C "${CMAKE_C_COMPILER}")
         set(OpenMP_C_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
