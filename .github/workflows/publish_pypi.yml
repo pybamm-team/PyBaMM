@@ -95,7 +95,8 @@ jobs:
           rm -f /usr/local/bin/python3*
           brew update
           brew reinstall gcc
-          python -m pip install cmake wget libomp
+          brew install libomp
+          python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on Linux and MacOS
