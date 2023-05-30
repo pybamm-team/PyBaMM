@@ -631,6 +631,15 @@
         "code",
         "bug"
       ]
+    },
+    {
+      "login": "julian-evers",
+      "name": "julian-evers",
+      "avatar_url": "https://avatars.githubusercontent.com/u/133691040?v=4",
+      "profile": "https://github.com/julian-evers",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
