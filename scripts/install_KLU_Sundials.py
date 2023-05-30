@@ -112,8 +112,8 @@ cmake_args = [
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
     # find omp on mac
-    "-DCC=/usr/bin/clang",
-    "-DCXX=/usr/bin/clang++",
+    "-DCC=usr/local/opt/llvm/bin/clang",
+    "-DCXX=usr/local/opt/llvm/bin/clang++",
     "-DLDFLAGS=-L/usr/local/opt/llvm/lib",
     "-DCPPFLAGS=-I/usr/local/opt/llvm/include",
 ]
