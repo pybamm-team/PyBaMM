@@ -112,8 +112,8 @@ cmake_args = [
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
     # find omp on mac
-    "-DCC=clang-omp",
-    "-DCXX=clang-omp++",
+    "-DCC=/usr/bin/clang",
+    "-DCXX=/usr/bin/clang++",
 ]
 
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root

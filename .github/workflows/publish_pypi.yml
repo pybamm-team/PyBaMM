@@ -96,10 +96,6 @@ jobs:
           brew update
           brew reinstall gcc
           python -m pip install cmake wget
-          # http://stechschulte.net/2016/03/20/openmp-osx-cmake.html
-          brew install llvm
-          ln -s /opt/homebrew/Cellar/llvm/16.0.4/bin/clang /usr/local/bin/clang-omp
-          ln -s /opt/homebrew/Cellar/llvm/16.0.4/bin/clang++ /usr/local/bin/clang-omp++
           python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on Linux and MacOS
