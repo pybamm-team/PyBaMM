@@ -756,7 +756,7 @@ class Simulation:
                                 + timedelta(seconds=float(step_solution.t[-1]))
                             )
                         ).total_seconds()
-                        if rest_time > 0:
+                        if rest_time > pybamm.settings.step_start_offset:
                             start_time = step_solution.t[-1]
                             # Let me know if you have a better name
                             op_conds_str = "Rest for padding"
