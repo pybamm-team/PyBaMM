@@ -67,7 +67,8 @@ def install_sundials(download_dir, install_dir):
     print("-" * 10, "Running CMake prepare", "-" * 40)
     subprocess.run(
         ["cmake", "../sundials-{}".format(sundials_version)] + cmake_args,
-        cwd=build_directory, check=True
+        cwd=build_directory,
+        check=True,
     )
 
     print("-" * 10, "Building the sundials", "-" * 40)
