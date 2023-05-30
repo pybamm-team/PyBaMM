@@ -111,11 +111,15 @@ cmake_args = [
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
-    # find omp on mac
-    "-DCC=usr/local/opt/llvm/bin/clang",
-    "-DCXX=usr/local/opt/llvm/bin/clang++",
-    "-DLDFLAGS=-L/usr/local/opt/llvm/lib",
-    "-DCPPFLAGS=-I/usr/local/opt/llvm/include",
+    # try to find OpenMP on mac
+    "-DLDFLAGS=-L/opt/homebrew/opt/libomp/lib",
+    "-DCPPFLAGS=-I/opt/homebrew/opt/libomp/include",
+    "-DOpenMP_C_FLAGS=-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include",
+    "-DOpenMP_CXX_FLAGS=-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include",
+    "-DOpenMP_C_LIB_NAMES=omp",
+    "-DOpenMP_CXX_LIB_NAMES=omp",
+    "-DOpenMP_libomp_LIBRARY=/opt/homebrew/opt/libomp/lib/libomp.dylib",
+    "-DOpenMP_omp_LIBRARY=/opt/homebrew/opt/libomp/lib/libomp.dylib",
 ]
 
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
