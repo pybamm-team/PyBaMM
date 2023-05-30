@@ -114,6 +114,8 @@ cmake_args = [
     # find omp on mac
     "-DCC=/usr/bin/clang",
     "-DCXX=/usr/bin/clang++",
+    "-DLDFLAGS=-L/usr/local/opt/llvm/lib",
+    "-DCPPFLAGS=-I/usr/local/opt/llvm/include",
 ]
 
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root

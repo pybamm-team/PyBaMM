@@ -95,6 +95,7 @@ jobs:
           rm -f /usr/local/bin/python3*
           brew update
           brew reinstall gcc
+          brew install llvm
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
