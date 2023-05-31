@@ -95,26 +95,6 @@ sundials_url = (
 
 download_extract_library(sundials_url, download_dir)
 
-# flags to find OpenMP on mac
-if platform.processor() == "arm":
-    LDFLAGS = "-L/opt/homebrew/opt/libomp/lib"
-    CPPFLAGS = "-I/opt/homebrew/opt/libomp/include"
-    OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
-    OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
-    OpenMP_C_LIB_NAMES = "omp"
-    OpenMP_CXX_LIB_NAMES = "omp"
-    OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
-    OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
-elif platform.processor() == "i386":
-    LDFLAGS = "-L/usr/local/opt/libomp/lib"
-    CPPFLAGS = "-I/usr/local/opt/libomp/include"
-    OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
-    OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
-    OpenMP_C_LIB_NAMES = "omp"
-    OpenMP_CXX_LIB_NAMES = "omp"
-    OpenMP_libomp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
-    OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
-
 # Set install dir for SuiteSparse libs
 # Ex: if install_dir -> "/usr/local/" then
 # KLU_INCLUDE_DIR -> "/usr/local/include"
@@ -132,16 +112,40 @@ cmake_args = [
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
-    # try to find OpenMP on mac
-    "-DLDFLAGS=" + LDFLAGS,
-    "-DCPPFLAGS=" + CPPFLAGS,
-    "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
-    "-DOpenMP_CXX_FLAGS=" + OpenMP_CXX_FLAGS,
-    "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
-    "-DOpenMP_CXX_LIB_NAMES=" + OpenMP_CXX_LIB_NAMES,
-    "-DOpenMP_libomp_LIBRARY=" + OpenMP_libomp_LIBRARY,
-    "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
 ]
+
+# try to find OpenMP on mac
+if platform.system() == "Darwin":
+    # flags to find OpenMP on mac
+    if platform.processor() == "arm":
+        LDFLAGS = "-L/opt/homebrew/opt/libomp/lib"
+        CPPFLAGS = "-I/opt/homebrew/opt/libomp/include"
+        OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
+        OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
+        OpenMP_C_LIB_NAMES = "omp"
+        OpenMP_CXX_LIB_NAMES = "omp"
+        OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
+        OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
+    elif platform.processor() == "i386":
+        LDFLAGS = "-L/usr/local/opt/libomp/lib"
+        CPPFLAGS = "-I/usr/local/opt/libomp/include"
+        OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
+        OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
+        OpenMP_C_LIB_NAMES = "omp"
+        OpenMP_CXX_LIB_NAMES = "omp"
+        OpenMP_libomp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
+        OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
+
+    cmake_args += [
+        "-DLDFLAGS=" + LDFLAGS,
+        "-DCPPFLAGS=" + CPPFLAGS,
+        "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
+        "-DOpenMP_CXX_FLAGS=" + OpenMP_CXX_FLAGS,
+        "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
+        "-DOpenMP_CXX_LIB_NAMES=" + OpenMP_CXX_LIB_NAMES,
+        "-DOpenMP_libomp_LIBRARY=" + OpenMP_libomp_LIBRARY,
+        "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
+    ]
 
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
 # download_dir
