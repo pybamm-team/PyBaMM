@@ -179,7 +179,12 @@ class _Step:
         }
 
     def __eq__(self, other):
-        return isinstance(other, _Step) and self.__repr__() == other.__repr__()
+        return (
+            isinstance(other, _Step)
+            and self.__repr__() == other.__repr__()
+            and self.next_timestamp == other.next_timestamp
+            and self.end_timestamp == other.end_timestamp
+        )
 
     def __hash__(self):
         return hash(repr(self))

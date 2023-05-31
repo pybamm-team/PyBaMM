@@ -80,9 +80,9 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
 
-        operating_conditions_steps_unprocessed = [
-            cond for cycle in operating_conditions_cycles for cond in cycle
-        ]
+        operating_conditions_steps_unprocessed = self._set_next_timestamp(
+            [cond for cycle in operating_conditions_cycles for cond in cycle]
+        )
 
         # Convert strings to pybamm.experiment._Step objects
         # We only do this once per unique step, do avoid unnecessary conversions
@@ -101,9 +101,9 @@ class Experiment:
         # Save the processed unique steps and the processed operating conditions
         # for every step
         self.unique_steps = set(processed_steps.values())
-        self.operating_conditions_steps = self._set_next_timestamp(
-            [processed_steps[step] for step in operating_conditions_steps_unprocessed]
-        )
+        self.operating_conditions_steps = [
+            processed_steps[step] for step in operating_conditions_steps_unprocessed
+        ]
 
         self.initial_timestamp = self.operating_conditions_steps[0].timestamp
 
