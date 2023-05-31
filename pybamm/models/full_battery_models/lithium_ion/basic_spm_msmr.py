@@ -172,11 +172,48 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
         param = self.param
 
         ######################
+        # Parameters
+        ######################
+
+        def x_n_fun(U_n):
+            inputs = {"Negative electrode OCP [V]": U_n}
+            return pybamm.FunctionParameter(
+                "Negative electrode stoichiometry", inputs=inputs
+            )
+
+        def x_p_fun(U_p):
+            inputs = {"Positive electrode OCP [V]": U_p}
+            return pybamm.FunctionParameter(
+                "Positive electrode stoichiometry", inputs=inputs
+            )
+
+        def dxdU_n_fun(U_n):
+            inputs = {"Negative electrode OCP [V]": U_n}
+            return pybamm.FunctionParameter(
+                "Negative electrode stoichiometry change [V-1]", inputs=inputs
+            )
+
+        def dxdU_p_fun(U_p):
+            inputs = {"Positive electrode OCP [V]": U_p}
+            return pybamm.FunctionParameter(
+                "Positive electrode stoichiometry change [V-1]", inputs=inputs
+            )
+
+        ######################
         # Variables
         ######################
         Q = pybamm.Variable("Discharge capacity [A.h]")
-        U_n = pybamm.Variable("X-averaged negative electrode OCP [V]")
-        U_p = pybamm.Variable("X-averaged positive electrode OCP [V]")
+        U_n_dist = pybamm.Variable(
+            "X-averaged negative particle OCP [V]", domain="negative particle"
+        )
+        U_p_dist = pybamm.Variable(
+            "X-averaged positive particle OCP [V]", domain="positive particle"
+        )
+        U_n = pybamm.surf(U_n_dist)
+        U_p = pybamm.surf(U_p_dist)
+
+        # Constant temperature
+        T = param.T_init
 
         # Current density
         i_cell = param.current_density_with_time
@@ -199,30 +236,43 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
         # Particles
         ######################
 
-        def dxdU_n(U_n):
-            inputs = {"Negative electrode OCP [V]": U_n}
-            return pybamm.FunctionParameter(
-                "Negative electrode stoichiometry change [V-1]", inputs=inputs
-            )
-
-        def dxdU_p(U_p):
-            inputs = {"Positive electrode OCP [V]": U_p}
-            return pybamm.FunctionParameter(
-                "Positive electrode stoichiometry change [V-1]", inputs=inputs
-            )
-
-        # Fast diffusion limit
         F = param.F
-        R_n = pybamm.x_average(param.n.prim.R)
-        R_p = pybamm.x_average(param.p.prim.R)
+        f = F / (param.R * T)
         c_n_max = param.n.prim.c_max
         c_p_max = param.p.prim.c_max
-        self.rhs[U_n] = (-3 * j_n / F / R_n / c_n_max) / dxdU_n(U_n)
-        self.rhs[U_p] = (-3 * j_p / F / R_p / c_p_max) / dxdU_p(U_p)
-        self.initial_conditions[U_n] = pybamm.Parameter(
+        x_n = x_n_fun(U_n_dist)
+        x_p = x_p_fun(U_p_dist)
+        dxdU_n = dxdU_n_fun(U_n_dist)
+        dxdU_p = dxdU_p_fun(U_p_dist)
+        c_n = c_n_max * x_n
+        c_p = c_p_max * x_p
+        D_n = param.n.prim.D(c_n, T)
+        D_p = param.p.prim.D(c_p, T)
+        N_n = c_n_max * x_n * (1 - x_n) * f * D_n * pybamm.grad(U_n_dist)
+        N_p = c_p_max * x_p * (1 - x_p) * f * D_p * pybamm.grad(U_p_dist)
+
+        self.rhs[U_n_dist] = -pybamm.div(N_n) / c_n_max / dxdU_n
+        self.rhs[U_p_dist] = -pybamm.div(N_p) / c_p_max / dxdU_p
+
+        self.boundary_conditions[U_n_dist] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (
+                (j_n / F) / pybamm.surf(c_n_max * x_n * (1 - x_n) * f * D_n),
+                "Neumann",
+            ),
+        }
+        self.boundary_conditions[U_p_dist] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (
+                (j_p / F) / pybamm.surf(c_p_max * x_p * (1 - x_p) * f * D_p),
+                "Neumann",
+            ),
+        }
+
+        self.initial_conditions[U_n_dist] = pybamm.Parameter(
             "Initial negative electrode potential [V]"
         )
-        self.initial_conditions[U_p] = pybamm.Parameter(
+        self.initial_conditions[U_p_dist] = pybamm.Parameter(
             "Initial positive electrode potential [V]"
         )
 
@@ -236,6 +286,16 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
         self.variables = {
             "Discharge capacity [A.h]": Q,
             "Current [A]": I,
+            "X-averaged negative electrode stoichiometry": x_n,
+            "X-averaged positive electrode stoichiometry": x_p,
+            "X-averaged negative particle concentration": c_n,
+            "X-averaged positive particle concentration": c_p,
+            "X-averaged negative electrode stoichiometry change [V-1]": dxdU_n,
+            "X-averaged positive electrode stoichiometry change [V-1]": dxdU_p,
+            "X-averaged negative particle OCP [V]": U_n_dist,
+            "X-averaged positive particle OCP [V]": U_p_dist,
+            "X-averaged negative electrode OCP [V]": U_n,
+            "X-averaged positive electrode OCP [V]": U_p,
             "Negative electrode potential [V]": pybamm.PrimaryBroadcast(
                 phi_s_n, "negative electrode"
             ),
@@ -256,15 +316,49 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
     @property
     def default_quick_plot_variables(self):
         return [
+            "X-averaged negative electrode stoichiometry",
+            "X-averaged positive electrode stoichiometry",
+            "X-averaged negative particle OCP [V]",
+            "X-averaged positive particle OCP [V]",
+            "X-averaged negative electrode OCP [V]",
+            "X-averaged positive electrode OCP [V]",
             "Current [A]",
-            "Negative electrode potential [V]",
-            "Positive electrode potential [V]",
             "Voltage [V]",
         ]
 
 
-model = BasicSPMSMR()
+if __name__ == "__main__":
+    model = BasicSPMSMR()
+    parameter_values = model.default_parameter_values
 
-sim = pybamm.Simulation(model)
-sim.solve([0, 1800])
-sim.plot()
+    soc_model = pybamm.BaseModel()
+    U_n = pybamm.Variable("U_n")
+    U_p = pybamm.Variable("U_p")
+    soc_model.variables = {"U_n": U_n, "U_p": U_p}
+    x_0 = parameter_values["Negative electrode stoichiometry at 0% SOC"]
+    x_100 = parameter_values["Negative electrode stoichiometry at 100% SOC"]
+    y_0 = parameter_values["Positive electrode stoichiometry at 0% SOC"]
+    y_100 = parameter_values["Positive electrode stoichiometry at 100% SOC"]
+    initial_soc = pybamm.InputParameter("Initial soc")
+    x = x_0 + initial_soc * (x_100 - x_0)
+    y = y_0 - initial_soc * (y_0 - y_100)
+    soc_model.algebraic = {U_n: x - x_n(U_n), U_p: y - x_p(U_p)}
+    soc_model.initial_conditions = {U_n: pybamm.Scalar(0), U_p: pybamm.Scalar(4)}
+    parameter_values.process_model(soc_model)
+    soc_sol = pybamm.AlgebraicSolver(tol=1e-6).solve(
+        soc_model, inputs={"Initial soc": 1}
+    )
+    U_n, U_p = soc_sol["U_n"].data[0], soc_sol["U_p"].data[0]
+
+    parameter_values.update(
+        {
+            "Initial negative electrode potential [V]": U_n,
+            "Initial positive electrode potential [V]": U_p,
+        },
+        check_already_exists=False,
+    )
+    print(U_n, U_p)
+
+    sim = pybamm.Simulation(model, parameter_values=parameter_values)
+    sim.solve([0, 3300])
+    sim.plot()
