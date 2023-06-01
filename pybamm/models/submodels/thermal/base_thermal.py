@@ -21,6 +21,9 @@ class BaseThermal(pybamm.BaseSubModel):
         super().__init__(param, options=options)
         self.x_average = x_average
 
+        if self.options["heat of mixing"] == "true":
+            pybamm.citations.register("Richardson2021")
+
     def _get_standard_fundamental_variables(self, T_dict):
         """
         Note: here we explicitly pass in the averages for the temperature as computing
