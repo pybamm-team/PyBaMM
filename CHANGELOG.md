@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-05-31
+
 ## Bug fixes
 
 - Realign 'count' increment in CasadiSolver._integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
