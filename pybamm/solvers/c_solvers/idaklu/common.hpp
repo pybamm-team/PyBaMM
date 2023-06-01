@@ -6,6 +6,7 @@
 
 #include <nvector/nvector_serial.h>  /* access to serial N_Vector            */
 #include <nvector/nvector_openmp.h>  /* access to openmp N_Vector            */
+#include <nvector/nvector_cuda.h>  /* access to cuda N_Vector            */
 #include <sundials/sundials_math.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_config.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_types.h> /* defs. of realtype, sunindextype      */
@@ -24,6 +25,7 @@
 #include <sunlinsol/sunlinsol_sptfqmr.h>
 
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */
+#include <sunmatrix/sunmatrix_cusparse.h> /* access to cuda sparse SUNMatrix           */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix           */
 
 
