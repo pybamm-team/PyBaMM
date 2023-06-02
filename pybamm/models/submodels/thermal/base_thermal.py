@@ -257,7 +257,7 @@ class BaseThermal(pybamm.BaseSubModel):
                     pybamm.SpatialVariable("r", domain=integrand_r_n.domain)
                 ]
                 integral_r_n = pybamm.Integral(integrand_r_n, integration_variable_r_n)
-                Q_mix_s_n = F * N_n * integral_r_n
+                Q_mix_s_n = -F * N_n * integral_r_n
 
             # Compute heat of mixing in positive electrode
             a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
@@ -278,7 +278,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 pybamm.SpatialVariable("r", domain=integrand_r_p.domain)
             ]
             integral_r_p = pybamm.Integral(integrand_r_p, integration_variable_r_p)
-            Q_mix_s_p = F * N_p * integral_r_p
+            Q_mix_s_p = -F * N_p * integral_r_p
             Q_mix_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         else:
             Q_mix_s_n = pybamm.FullBroadcast(
