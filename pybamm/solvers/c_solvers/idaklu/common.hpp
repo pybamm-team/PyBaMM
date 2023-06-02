@@ -23,6 +23,7 @@
 #include <sunlinsol/sunlinsol_spfgmr.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
 #include <sunlinsol/sunlinsol_sptfqmr.h>
+#include <sunlinsol/sunlinsol_cusolversp_batchqr.h>
 
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */
 #include <sunmatrix/sunmatrix_cusparse.h> /* access to cuda sparse SUNMatrix           */

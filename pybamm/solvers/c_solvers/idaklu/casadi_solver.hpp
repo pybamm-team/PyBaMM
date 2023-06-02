@@ -9,6 +9,8 @@ using Function = casadi::Function;
 #include "options.hpp"
 #include "solution.hpp"
 
+#define CUDA 1
+
 class CasadiSolver
 {
 public:
@@ -45,10 +47,25 @@ public:
   {
     return N_VNew_Serial(vec_length);
   }
+  
+  N_Vector N_VNew_OpenMP(sunindextype vec_length, SUNContext sunctx)
+  {
+    return N_VNew_OpenMP(vec_length);
+  }
+  
+  N_Vector N_VNew_Cuda(sunindextype vec_length, SUNContext sunctx)
+  {
+    return N_VNew_Cuda(vec_length);
+  }
 
   SUNMatrix SUNSparseMatrix(sunindextype M, sunindextype N, sunindextype NNZ, int sparsetype, SUNContext sunctx)
   {
     return SUNMatrix SUNSparseMatrix(M, N, NNZ, sparsetype);
+  }
+
+  SUNMatrix SUNMatrix_cuSparse_NewCSR(int M, int N, int NNZ, cusparseHandle_t cusp, SUNContext sunctx)
+  {
+    return SUNMatrix_cuSparse_NewCSR(M, N, NNZ, cusp);
   }
 
   SUNMatrix SUNBandMatrix(sunindextype N, sunindextype mu, sunindextype ml, SUNContext sunctx)
@@ -95,6 +112,11 @@ public:
   {
     return SUNLinSol_SPTFQMR(y, pretype, maxl);
   }
+
+  SUNLinearSolver SUNLinSol_cuSolverSp_batchQR(N_Vector y, SUNMatrix A, cusolverHandle_t cusol, SUNContext sunctx)
+  {
+    return SUNLinSol_cuSolverSp_batchQR(y, A, cusol);
+  }
 #endif
 
   int number_of_states;
@@ -105,6 +127,11 @@ public:
   N_Vector id;            // rhs_alg_id
   realtype rtol;
   const int jac_times_cjmass_nnz;
+  
+#ifdef CUDA
+  cusparseHandle_t cusp;
+  cusolverSpHandle_t cusol;
+#endif
 
   SUNMatrix J;
   SUNLinearSolver LS;

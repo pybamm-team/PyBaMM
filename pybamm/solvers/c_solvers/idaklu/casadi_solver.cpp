@@ -53,12 +53,19 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   ida_mem = IDACreate(sunctx);
 
   // allocate vectors
+#ifdef CUDA
+  yy = N_VNew_Cuda(number_of_states, sunctx);
+  yp = N_VNew_Cuda(number_of_states, sunctx);
+  avtol = N_VNew_Cuda(number_of_states, sunctx);
+  id = N_VNew_Cuda(number_of_states, sunctx);
+#else
   int num_threads = options.num_threads;
   yy = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
   avtol = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
   id = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
-  
+#endif
+
   if (number_of_parameters > 0)
   {
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
@@ -93,12 +100,39 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
 
+
+  printf("1\n");
+
+  // setup CUDA handles
+#ifdef CUDA
+  cusparseStatus_t cusp_status = cusparseCreate(&cusp);
+  if (cusp_status != CUSPARSE_STATUS_SUCCESS) {
+    printf("ERROR: could not create cuSPARSE handle\n");
+  }
+  cusolverStatus_t cusol_status = cusolverSpCreate(&cusol);
+  if (cusol_status != CUSOLVER_STATUS_SUCCESS) {
+    printf("ERROR: could not create cuSOLVER handle\n");
+  }
+#endif
+
   // set matrix
   if (options.jacobian == "sparse")
   {
     DEBUG("\tsetting sparse matrix");
-    J = SUNSparseMatrix(number_of_states, number_of_states,
+#ifdef CUDA
+    if (options.linear_solver == "SUNLinSol_cuSolverSp_batchQR") {
+      J = SUNMatrix_cuSparse_NewCSR(number_of_states, number_of_states,
+                        jac_times_cjmass_nnz, cusp, sunctx);
+    }
+    else
+    {
+      J = SUNSparseMatrix(number_of_states, number_of_states,
                         jac_times_cjmass_nnz, CSC_MAT, sunctx);
+    }
+#else
+    J = SUNSparseMatrix(number_of_states, number_of_states,
+                      jac_times_cjmass_nnz, CSC_MAT, sunctx);
+#endif
   }
   else if (options.jacobian == "banded") {
     DEBUG("\tsetting banded matrix");
@@ -113,6 +147,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     DEBUG("\tsetting matrix-free");
     J = NULL;
   }
+  printf("2\n");
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   int precon_type = SUN_PREC_NONE;
@@ -166,6 +201,14 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     LS = SUNLinSol_SPTFQMR(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
   }
+#ifdef CUDA
+  else if (options.linear_solver == "SUNLinSol_cuSolverSp_batchQR")
+  {
+    DEBUG("\tsetting SUNLinSol_cuSolverSp_batchQR solver");
+    LS = SUNLinSol_cuSolverSp_batchQR(yy, J, cusol, sunctx);
+  }
+#endif
+  printf("3\n");
 
 
 
@@ -232,6 +275,10 @@ CasadiSolver::~CasadiSolver()
     N_VDestroyVectorArray(ypS, number_of_parameters);
   }
 
+#ifdef CUDA
+  cusparseDestroy(cusp);
+  cusolverSpDestroy(cusol);
+#endif
   IDAFree(&ida_mem);
   SUNContext_Free(&sunctx);
 }
