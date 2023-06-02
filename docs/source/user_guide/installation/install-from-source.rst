@@ -43,7 +43,7 @@ On MacOS,
 
 .. code:: bash
 
-	  brew install python openblas gcc gfortran
+	  brew install python openblas gcc gfortran libomp
 
 Finally, we recommend using `Tox <https://tox.readthedocs.io/en/latest/>`_.
 You can install it with
