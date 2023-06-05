@@ -12,15 +12,8 @@ import unittest
 
 class TestProcessParameterData(TestCase):
     def test_process_1D_data(self):
-        name = "lico2_data_example"
-        path = os.path.join(
-            pybamm.root_dir(),
-            "pybamm",
-            "input",
-            "parameters",
-            "lithium_ion",
-            "data",
-        )
+        name = "lico2_ocv_example"
+        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
         processed = pybamm.parameters.process_1D_data(name, path)
         self.assertEqual(processed[0], name)
         self.assertIsInstance(processed[1], tuple)
