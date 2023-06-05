@@ -31,7 +31,7 @@ class TestParameterValuesWithModel(TestCase):
             "ORegan2022": pybamm.lithium_ion.DFN(),
             "Prada2013": pybamm.lithium_ion.DFN(),
             "Ramadass2004": pybamm.lithium_ion.DFN(),
-            "Xu2019": pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+            "Xu2019": pybamm.lithium_ion.DFN({"half-cell": "true"}),
         }
 
         # Loop over each parameter set, testing that parameters can be set

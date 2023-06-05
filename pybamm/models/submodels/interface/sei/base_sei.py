@@ -30,38 +30,43 @@ class BaseModel(BaseInterface):
 
     def get_coupled_variables(self, variables):
         # Update some common variables
+        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
+        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
         if self.reaction_loc != "interface":
-            j_sei_av = variables[
-                f"X-averaged {self.reaction_name}interfacial current density [A.m-2]"
-            ]
-            j_sei = variables[
-                f"{self.reaction_name}interfacial current density [A.m-2]"
-            ]
             variables.update(
                 {
                     f"X-averaged negative electrode {self.reaction_name}interfacial "
-                    "current density [A.m-2]": j_sei_av,
+                    "current density": variables[
+                        f"X-averaged {self.reaction_name}interfacial current density"
+                    ],
                     f"Negative electrode {self.reaction_name}interfacial current "
-                    "density [A.m-2]": j_sei,
+                    "density": variables[
+                        f"{self.reaction_name}interfacial current density"
+                    ],
+                    f"Negative electrode {self.reaction_name}interfacial current "
+                    "density [A.m-2]": variables[
+                        f"{self.reaction_name}interfacial current density [A.m-2]"
+                    ],
                 }
             )
+            variables.update(
+                self._get_standard_volumetric_current_density_variables(variables)
+            )
 
-        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
-        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         variables.update(
             {
+                f"X-averaged positive electrode {self.reaction} "
+                "interfacial current density": zero_av,
+                f"Positive electrode {self.reaction} "
+                "interfacial current density": zero,
                 f"Positive electrode {self.reaction} "
                 "interfacial current density [A.m-2]": zero,
                 f"X-averaged positive electrode {self.reaction} "
-                "volumetric interfacial current density [A.m-2]": zero_av,
+                "volumetric interfacial current density": zero_av,
                 f"Positive electrode {self.reaction} "
-                "volumetric interfacial current density [A.m-3]": zero,
+                "volumetric interfacial current density": zero,
             }
-        )
-
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
         )
 
         return variables
@@ -157,7 +162,7 @@ class BaseModel(BaseInterface):
             else:
                 # m * (mol/m4) = mol/m3 (n is a bulk quantity)
                 a = variables[
-                    f"Negative electrode {self.phase_name}"
+                    f"{Domain} electrode {self.phase_name}"
                     "surface area to volume ratio [m-1]"
                 ]
                 L_to_n_inner = a / phase_param.V_bar_inner

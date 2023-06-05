@@ -934,7 +934,7 @@ class Simulation:
             calc_esoh is False
             or isinstance(self.model, pybamm.lead_acid.BaseModel)
             or isinstance(self.model, pybamm.equivalent_circuit.Thevenin)
-            or self.model.options["working electrode"] != "both"
+            or self.model.options["half-cell"] == "true"
         ):
             return None
 

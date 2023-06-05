@@ -7,7 +7,7 @@
 class BaseUnitTestLithiumIonHalfCell:
     def check_well_posedness(self, options):
         if self.model is not None:
-            options["working electrode"] = "positive"
+            options["half-cell"] = "true"
             model = self.model(options)
             model.check_well_posedness()
 

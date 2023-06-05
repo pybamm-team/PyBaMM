@@ -16,14 +16,14 @@ class LithiumIonParameters(BaseParameters):
         A dictionary of options to be passed to the parameters. The options that
         can be set are listed below.
 
+            * "half-cell": str
+                Can be "false" (default) for a standard battery or "true" for a
+                half-cell where the negative electrode is replaced with a lithium metal
+                counter electrode.
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
                 (default). TODO: implement "cylindrical" and "platelet".
-            * "working electrode": str
-                Which electrode(s) intercalates and which is counter. If "both"
-                (default), the model is a standard battery. Otherwise can be "negative"
-                or "positive" to indicate a half-cell model.
 
     """
 
