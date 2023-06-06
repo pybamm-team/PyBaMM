@@ -3,18 +3,18 @@
 #
 
 import pybamm
-from ._steps_util import _convert_time_to_seconds, _convert_temperature_to_kelvin
+from pybamm.step._steps_util import _convert_time_to_seconds, _convert_temperature_to_kelvin
 
 
 class Experiment:
     """
     Base class for experimental conditions under which to run the model. In general, a
     list of operating conditions should be passed in. Each operating condition should
-    be either a `pybamm.experiment._Step` class, created using one of the methods
-    `pybamm.experiment.current`, `pybamm.experiment.c_rate`, `pybamm.experiment.voltage`
-    , `pybamm.experiment.power`, `pybamm.experiment.resistance`, or
-    `pybamm.experiment.string`, or a string, in which case the string is passed to
-    `pybamm.experiment.string`.
+    be either a `pybamm.step._Step` class, created using one of the methods
+    `pybamm.step.current`, `pybamm.step.c_rate`, `pybamm.step.voltage`
+    , `pybamm.step.power`, `pybamm.step.resistance`, or
+    `pybamm.step.string`, or a string, in which case the string is passed to
+    `pybamm.step.string`.
 
     Parameters
     ----------
@@ -49,13 +49,13 @@ class Experiment:
         if cccv_handling is not None:
             raise ValueError(
                 "cccv_handling has been deprecated, use "
-                "`pybamm.experiment.cccv_ode(current, voltage)` instead to produce the "
+                "`pybamm.step.cccv_ode(current, voltage)` instead to produce the "
                 "same behavior as the old `cccv_handling='ode'`"
             )
         if drive_cycles is not None:
             raise ValueError(
                 "drive_cycles should now be passed as an experiment step object, e.g. "
-                "`pybamm.experiment.current(drive_cycle)`"
+                "`pybamm.step.current(drive_cycle)`"
             )
         # Save arguments for copying
         self.args = (
@@ -79,14 +79,14 @@ class Experiment:
             cond for cycle in operating_conditions_cycles for cond in cycle
         ]
 
-        # Convert strings to pybamm.experiment._Step objects
+        # Convert strings to pybamm.step._Step objects
         # We only do this once per unique step, do avoid unnecessary conversions
         unique_steps_unprocessed = set(operating_conditions_steps_unprocessed)
         processed_steps = {}
         for step in unique_steps_unprocessed:
             if isinstance(step, str):
-                processed_steps[step] = pybamm.experiment.string(step)
-            elif not isinstance(step, pybamm.experiment._Step):
+                processed_steps[step] = pybamm.step.string(step)
+            elif not isinstance(step, pybamm.step._Step):
                 raise TypeError(
                     "Operating conditions should be strings or _Step objects"
                 )

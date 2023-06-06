@@ -3,18 +3,18 @@ Experiment step functions
 
 The following functions can be used to define steps in an experiment.
 
-.. autofunction:: pybamm.experiment.string
+.. autofunction:: pybamm.step.string
 
-.. autofunction:: pybamm.experiment.current
+.. autofunction:: pybamm.step.current
 
-.. autofunction:: pybamm.experiment.voltage
+.. autofunction:: pybamm.step.voltage
 
-.. autofunction:: pybamm.experiment.power
+.. autofunction:: pybamm.step.power
 
-.. autofunction:: pybamm.experiment.resistance
+.. autofunction:: pybamm.step.resistance
 
 These functions return the following step class, which is not intended to be used
 directly:
 
-.. autoclass:: pybamm.experiment._Step
+.. autoclass:: pybamm.step._Step
     :members:

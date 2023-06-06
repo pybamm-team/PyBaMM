@@ -142,7 +142,7 @@ class TestExperiment(TestCase):
             )
 
     def test_search_tag(self):
-        s = pybamm.experiment.string
+        s = pybamm.step.string
         experiment = pybamm.Experiment(
             [
                 (s("Discharge at 1C for 0.5 hours", tags=["tag1"]),),

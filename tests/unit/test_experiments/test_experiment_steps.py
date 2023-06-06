@@ -8,7 +8,7 @@ import numpy as np
 
 class TestExperimentSteps(unittest.TestCase):
     def test_step(self):
-        step = pybamm.experiment._Step("current", 1, duration=3600)
+        step = pybamm.step._Step("current", 1, duration=3600)
         self.assertEqual(step.type, "current")
         self.assertEqual(step.value, 1)
         self.assertEqual(step.duration, 3600)
@@ -17,7 +17,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.temperature, None)
         self.assertEqual(step.tags, [])
 
-        step = pybamm.experiment._Step(
+        step = pybamm.step._Step(
             "voltage",
             1,
             duration="1h",
@@ -34,41 +34,41 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.temperature, 298.15)
         self.assertEqual(step.tags, ["test"])
 
-        step = pybamm.experiment._Step("current", 1, temperature="298K")
+        step = pybamm.step._Step("current", 1, temperature="298K")
         self.assertEqual(step.temperature, 298)
 
         with self.assertRaisesRegex(ValueError, "temperature units"):
-            step = pybamm.experiment._Step("current", 1, temperature="298T")
+            step = pybamm.step._Step("current", 1, temperature="298T")
 
     def test_specific_steps(self):
-        current = pybamm.experiment.current(1)
-        self.assertIsInstance(current, pybamm.experiment._Step)
+        current = pybamm.step.current(1)
+        self.assertIsInstance(current, pybamm.step._Step)
         self.assertEqual(current.type, "current")
         self.assertEqual(current.value, 1)
         self.assertEqual(str(current), repr(current))
 
-        c_rate = pybamm.experiment.c_rate(1)
-        self.assertIsInstance(c_rate, pybamm.experiment._Step)
+        c_rate = pybamm.step.c_rate(1)
+        self.assertIsInstance(c_rate, pybamm.step._Step)
         self.assertEqual(c_rate.type, "C-rate")
         self.assertEqual(c_rate.value, 1)
 
-        voltage = pybamm.experiment.voltage(1)
-        self.assertIsInstance(voltage, pybamm.experiment._Step)
+        voltage = pybamm.step.voltage(1)
+        self.assertIsInstance(voltage, pybamm.step._Step)
         self.assertEqual(voltage.type, "voltage")
         self.assertEqual(voltage.value, 1)
 
-        rest = pybamm.experiment.rest()
-        self.assertIsInstance(rest, pybamm.experiment._Step)
+        rest = pybamm.step.rest()
+        self.assertIsInstance(rest, pybamm.step._Step)
         self.assertEqual(rest.type, "current")
         self.assertEqual(rest.value, 0)
 
-        power = pybamm.experiment.power(1)
-        self.assertIsInstance(power, pybamm.experiment._Step)
+        power = pybamm.step.power(1)
+        self.assertIsInstance(power, pybamm.step._Step)
         self.assertEqual(power.type, "power")
         self.assertEqual(power.value, 1)
 
-        resistance = pybamm.experiment.resistance(1)
-        self.assertIsInstance(resistance, pybamm.experiment._Step)
+        resistance = pybamm.step.resistance(1)
+        self.assertIsInstance(resistance, pybamm.step._Step)
         self.assertEqual(resistance.type, "resistance")
         self.assertEqual(resistance.value, 1)
 
@@ -172,23 +172,23 @@ class TestExperimentSteps(unittest.TestCase):
 
         for step, expected in zip(steps, expected_result):
             print(step)
-            actual = pybamm.experiment.string(step).to_dict()
+            actual = pybamm.step.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging
                 self.assertEqual([k, expected[k]], [k, actual[k]])
 
         with self.assertRaisesRegex(ValueError, "Period must be"):
-            pybamm.experiment.string("Discharge at 1C for 1 hour (1 minute period)")
+            pybamm.step.string("Discharge at 1C for 1 hour (1 minute period)")
 
         with self.assertRaisesRegex(ValueError, "Temperature must be"):
-            pybamm.experiment.string("Discharge at 1C for 1 hour at 298.15oC")
+            pybamm.step.string("Discharge at 1C for 1 hour at 298.15oC")
 
     def test_drive_cycle(self):
         # Import drive cycle from file
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
 
         # Create steps
-        drive_cycle_step = pybamm.experiment.current(drive_cycle, temperature="-5oC")
+        drive_cycle_step = pybamm.step.current(drive_cycle, temperature="-5oC")
         # Check drive cycle operating conditions
         self.assertEqual(drive_cycle_step.type, "current")
         self.assertEqual(drive_cycle_step.duration, 9)
@@ -197,27 +197,41 @@ class TestExperimentSteps(unittest.TestCase):
 
         bad_drive_cycle = np.ones((10, 3))
         with self.assertRaisesRegex(ValueError, "Drive cycle must be a 2-column array"):
-            pybamm.experiment.current(bad_drive_cycle)
+            pybamm.step.current(bad_drive_cycle)
+
+    def test_drive_cycle_duration(self):
+        # Import drive cycle from file
+        drive_cycle = np.array([np.arange(10), np.arange(10)]).T
+
+        # Create steps
+        drive_cycle_step = pybamm.step.current(drive_cycle,
+                                               duration=20,
+                                               temperature="-5oC")
+        # Check drive cycle operating conditions
+        self.assertEqual(drive_cycle_step.type, "current")
+        self.assertEqual(drive_cycle_step.duration, 20)
+        self.assertEqual(drive_cycle_step.period, 1)
+        self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
 
     def test_bad_strings(self):
-        with self.assertRaisesRegex(TypeError, "Input to experiment.string"):
-            pybamm.experiment.string(1)
-        with self.assertRaisesRegex(TypeError, "Input to experiment.string"):
-            pybamm.experiment.string((1, 2, 3))
+        with self.assertRaisesRegex(TypeError, "Input to step.string"):
+            pybamm.step.string(1)
+        with self.assertRaisesRegex(TypeError, "Input to step.string"):
+            pybamm.step.string((1, 2, 3))
         with self.assertRaisesRegex(ValueError, "Operating conditions must"):
-            pybamm.experiment.string("Discharge at 1 A at 2 hours")
+            pybamm.step.string("Discharge at 1 A at 2 hours")
         with self.assertRaisesRegex(ValueError, "drive cycles"):
-            pybamm.experiment.string("Run at 1 A for 2 hours")
+            pybamm.step.string("Run at 1 A for 2 hours")
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
-            pybamm.experiment.string("Play at 1 A for 2 hours")
+            pybamm.step.string("Play at 1 A for 2 hours")
         with self.assertRaisesRegex(ValueError, "Operating conditions must"):
-            pybamm.experiment.string("Do at 1 A")
+            pybamm.step.string("Do at 1 A")
         with self.assertRaisesRegex(ValueError, "Instruction"):
-            pybamm.experiment.string("Cell Charge at 1 A for 2 hours")
+            pybamm.step.string("Cell Charge at 1 A for 2 hours")
         with self.assertRaisesRegex(ValueError, "units must be"):
-            pybamm.experiment.string("Discharge at 1 B for 2 hours")
+            pybamm.step.string("Discharge at 1 B for 2 hours")
         with self.assertRaisesRegex(ValueError, "time units must be"):
-            pybamm.experiment.string("Discharge at 1 A for 2 years")
+            pybamm.step.string("Discharge at 1 A for 2 years")
 
 
 if __name__ == "__main__":
