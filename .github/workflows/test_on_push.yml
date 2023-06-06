@@ -60,14 +60,16 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
         with:
-          packages: gfortran gcc
+          packages: gfortran gcc graphviz
           execute_install_scripts: true
 
-      - name: Install OpenBLAS, GraphViz, and TexLive for Linux
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TexLive for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install libopenblas-dev graphviz texlive-latex-extra dvipng
+          sudo dot -c 
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
