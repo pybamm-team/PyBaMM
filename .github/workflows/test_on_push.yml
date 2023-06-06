@@ -76,7 +76,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install texlive-latex-extra dvipng
+          sudo apt-get install texlive-latex-extra dvipng ghostscript cm-super
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
