@@ -1,7 +1,9 @@
 #include "casadi_solver.hpp"
 #include "casadi_sundials_functions.hpp"
 #include "common.hpp"
+#include <idas/idas.h>
 #include <memory>
+
 
 CasadiSolver *
 create_casadi_solver(int number_of_states, int number_of_parameters,
@@ -53,16 +55,17 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 #endif
 
   // allocate vectors
+  int num_threads = options.num_threads;
 #if SUNDIALS_VERSION_MAJOR >= 6
-  yy = N_VNew_Serial(number_of_states, sunctx);
-  yp = N_VNew_Serial(number_of_states, sunctx);
-  avtol = N_VNew_Serial(number_of_states, sunctx);
-  id = N_VNew_Serial(number_of_states, sunctx);
+  yy = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
+  yp = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
+  avtol = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
+  id = N_VNew_OpenMP(number_of_states, num_threads, sunctx);
 #else
-  yy = N_VNew_Serial(number_of_states);
-  yp = N_VNew_Serial(number_of_states);
-  avtol = N_VNew_Serial(number_of_states);
-  id = N_VNew_Serial(number_of_states);
+  yy = N_VNew_OpenMP(number_of_states, num_threads);
+  yp = N_VNew_OpenMP(number_of_states, num_threads);
+  avtol = N_VNew_OpenMP(number_of_states, num_threads);
+  id = N_VNew_OpenMP(number_of_states, num_threads);
 #endif
 
   if (number_of_parameters > 0)
@@ -289,7 +292,27 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
                              np_array_dense inputs)
 {
   DEBUG("CasadiSolver::solve");
+
   int number_of_timesteps = t_np.request().size;
+  auto t = t_np.unchecked<1>();
+  realtype t0 = RCONST(t(0));
+  auto y0 = y0_np.unchecked<1>();
+  auto yp0 = yp0_np.unchecked<1>();
+
+
+  if (y0.size() != number_of_states + number_of_parameters * number_of_states) {
+    throw std::domain_error(
+      "y0 has wrong size. Expected " + 
+      std::to_string(number_of_states + number_of_parameters * number_of_states) + 
+      " but got " + std::to_string(y0.size()));
+  }
+
+  if (yp0.size() != number_of_states + number_of_parameters * number_of_states) {
+    throw std::domain_error(
+      "yp0 has wrong size. Expected " + 
+      std::to_string(number_of_states + number_of_parameters * number_of_states) + 
+      " but got " + std::to_string(yp0.size()));
+  }
 
   // set inputs
   auto p_inputs = inputs.unchecked<2>();
@@ -298,26 +321,38 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     functions->inputs[i] = p_inputs(i, 0);
   }
 
+  // set initial conditions
   realtype *yval = N_VGetArrayPointer(yy);
   realtype *ypval = N_VGetArrayPointer(yp);
   std::vector<realtype *> ySval(number_of_parameters);
-  for (int is = 0 ; is < number_of_parameters; is++) {
-    ySval[is] = N_VGetArrayPointer(yyS[is]);
-    N_VConst(RCONST(0.0), yyS[is]);
-    N_VConst(RCONST(0.0), ypS[is]);
+  std::vector<realtype *> ypSval(number_of_parameters);
+  for (int p = 0 ; p < number_of_parameters; p++) {
+    ySval[p] = N_VGetArrayPointer(yyS[p]);
+    ypSval[p] = N_VGetArrayPointer(ypS[p]);
+    for (int i = 0; i < number_of_states; i++) {
+      ySval[p][i] = y0[i + (p + 1) * number_of_states];
+      ypSval[p][i] = yp0[i + (p + 1) * number_of_states];
+    }
   }
 
-  auto t = t_np.unchecked<1>();
-  auto y0 = y0_np.unchecked<1>();
-  auto yp0 = yp0_np.unchecked<1>();
   for (int i = 0; i < number_of_states; i++)
   {
     yval[i] = y0[i];
     ypval[i] = yp0[i];
   }
 
-  realtype t0 = RCONST(t(0));
   IDAReInit(ida_mem, t0, yy, yp);
+  if (number_of_parameters > 0) {
+    IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
+  }
+
+  // calculate consistent initial conditions
+  DEBUG("IDACalcIC");
+  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+  if (number_of_parameters > 0)
+  {
+    IDAGetSens(ida_mem, &t0, yyS);
+  }
 
   int t_i = 1;
   realtype tret;
@@ -366,9 +401,7 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
     }
   }
 
-  // calculate consistent initial conditions
-  DEBUG("IDACalcIC");
-  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+
 
   int retval;
   while (true)
