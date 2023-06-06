@@ -54,7 +54,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
@@ -76,7 +76,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt install --no-install-recommends texlive-latex-extra
+          sudo apt-get install --no-install-recommends texlive-latex-extra
+          sudo apt-get install dvipng
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
@@ -99,7 +100,7 @@ jobs:
           brew update
           brew install graphviz
           brew install openblas
-          brew bundle dump --force --no-lock --file=Brewfile
+          brew bundle dump --force
 
       # Experimental solution for caching Homebrew installs
       - name: Cache MacOS dependencies
@@ -108,14 +109,11 @@ jobs:
         with:
           # paths for Homebrew packages, formulae, casks, and binaries
           path: |
-            /usr/local/Homebrew
-            /usr/local/Cellar
-            /usr/local/Frameworks
-            /usr/local/bin
-            /usr/local/opt
-            ~/Library/Caches/Homebrew/*
-            /opt/homebrew/*
-          key: ${{ runner.os }}-brew-${{ hashFiles('**/Brewfile') }}
+            /usr/local/Homebrew/*
+            /usr/local/Cellar/*
+            /usr/local/etc/*
+            /usr/local/opt/*
+          key: brew-cache-${{ runner.os }}-${{ hashFiles('**/Brewfile.lock.json') }}
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
