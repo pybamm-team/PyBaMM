@@ -63,6 +63,13 @@ jobs:
           packages: gfortran gcc graphviz libopenblas-dev texlive-full
           execute_install_scripts: true
 
+      # BLAS causes troubles with caching, so install it separately
+      - name: Install OpenBLAS for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libopenblas-dev
+
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
       # (see https://github.com/actions/virtual-environments/issues/2322)
