@@ -204,9 +204,9 @@ class TestExperimentSteps(unittest.TestCase):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
 
         # Create steps
-        drive_cycle_step = pybamm.step.current(drive_cycle,
-                                               duration=20,
-                                               temperature="-5oC")
+        drive_cycle_step = pybamm.step.current(
+            drive_cycle, duration=20, temperature="-5oC"
+        )
         # Check drive cycle operating conditions
         self.assertEqual(drive_cycle_step.type, "current")
         self.assertEqual(drive_cycle_step.duration, 20)

@@ -3,7 +3,10 @@
 #
 
 import pybamm
-from pybamm.step._steps_util import _convert_time_to_seconds, _convert_temperature_to_kelvin
+from pybamm.step._steps_util import (
+    _convert_time_to_seconds,
+    _convert_temperature_to_kelvin,
+)
 
 
 class Experiment:
