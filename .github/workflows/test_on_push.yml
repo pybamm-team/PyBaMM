@@ -106,7 +106,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco install graphviz --version=2.38.0.20190211
 
-      - name: Install standard python dependencies
+      - name: Install standard Python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools
           python -m pip install "tox<4"
