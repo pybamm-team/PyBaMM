@@ -60,23 +60,14 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
         with:
-          packages: gfortran gcc graphviz
+          packages: gfortran gcc
           execute_install_scripts: true
 
-      # BLAS causes troubles with caching, so install it separately
-      - name: Install OpenBLAS for Linux
+      - name: Install OpenBLAS, GraphViz, and TexLive for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install libopenblas-dev
-
-      # TeXLive causes troubles with caching, so install it separately
-      # without the documentation and language packages to reduce size
-      - name: Install TeXLive for Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install texlive-latex-extra dvipng ghostscript cm-super
+          sudo apt-get install libopenblas-dev graphviz texlive-latex-extra dvipng
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
