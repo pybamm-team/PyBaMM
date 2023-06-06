@@ -76,14 +76,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt install --no-install-recommends $(sudo apt --assume-no install texlive-full | sed -n '/The following additional packages will be installed/,/Suggested packages/ {//!p}' | grep -vP 'doc$' | grep -vP 'texlive-lang' | grep -vP 'latex-cjk' | paste -s -d' ')
-
-      - name: Cache TexLive on Linux
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/cache@v3
-        with:
-          path: /usr/local/texlive
-          key: ${{ runner.os }}-texlive-${{ hashFiles('/usr/local/texlive') }}
+          sudo apt install --no-install-recommends texlive-latex-extra
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
