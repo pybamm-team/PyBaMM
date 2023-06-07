@@ -1,14 +1,15 @@
 #ifndef PYBAMM_IDAKLU_CASADI_SOLVER_CUDA_HPP
 #define PYBAMM_IDAKLU_CASADI_SOLVER_CUDA_HPP
 
+#include "CasadiSolver.hpp"
 #include "casadi_solver.hpp"
 
-class CasadiSolver_cuSolverSp_batchQR : public CasadiSolver {
+class CasadiSolverCuda_cuSolverSp_batchQR : public CasadiSolver {
 public:
   cusparseHandle_t cusp;
   cusolverSpHandle_t cusol;
 public:
-  CasadiSolver_cuSolverSp_batchQR(
+  CasadiSolverCuda_cuSolverSp_batchQR(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -19,26 +20,15 @@ public:
     int jac_bandwidth_upper,
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
-  ) :
-    CasadiSolver(
-      atol_np,
-      rel_tol,
-      rhs_alg_id,
-      number_of_parameters,
-      number_of_events,
-      jac_times_cjmass_nnz,
-      jac_bandwidth_lower,
-      jac_bandwidth_upper,
-      std::move(functions),
-      options
-    )
-  {
+  ) {
     Initialize();
   }
-  void SetLinearSolver() override;
-  void AllocateVectors();
-  void SetMatrix();
-  void ChildDestructors();
+  void Initialize() override;
+  Solution solve(
+    np_array t_np,
+    np_array y0_np,
+    np_array yp0_np,
+    np_array_dense inputs) override;
 };
 
 #endif // PYBAMM_IDAKLU_CASADI_SOLVER_CUDA_HPP

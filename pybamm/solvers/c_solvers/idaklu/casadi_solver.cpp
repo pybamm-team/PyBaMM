@@ -1,7 +1,6 @@
 #include "casadi_solver.hpp"
 #include "CasadiSolver.hpp"
-#include "CasadiSolver_OpenMP.hpp"
-#include "CasadiSolver_Cuda.hpp"
+#include "CasadiSolverOpenMP_solvers.hpp"
 #include "casadi_sundials_functions.hpp"
 #include "common.hpp"
 #include <idas/idas.h>
@@ -9,7 +8,7 @@
 
 #define CUDA 1
 #ifdef CUDA
-  #include "CasadiSolver_Cuda.hpp"
+  #include "CasadiSolverCuda_solvers.hpp"
 #endif
 
 CasadiSolver *create_casadi_solver(
@@ -58,132 +57,132 @@ CasadiSolver *create_casadi_solver(
   // Instantiate solver class
   if (options_cpp.linear_solver == "SUNLinSol_Dense")
   {
-      DEBUG("\tsetting SUNLinSol_Dense linear solver");
-      casadiSolver = new CasadiSolver_Dense(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_Dense linear solver");
+    casadiSolver = new CasadiSolverOpenMP_Dense(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
   else if (options_cpp.linear_solver == "SUNLinSol_KLU")
   {
-      DEBUG("\tsetting SUNLinSol_KLU linear solver");
-      casadiSolver = new CasadiSolver_KLU(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_KLU linear solver");
+    casadiSolver = new CasadiSolverOpenMP_KLU(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
   else if (options_cpp.linear_solver == "SUNLinSol_Band")
   {
-      DEBUG("\tsetting SUNLinSol_Band linear solver");
-      casadiSolver = new CasadiSolver_Band(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_Band linear solver");
+    casadiSolver = new CasadiSolverOpenMP_Band(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
   else if (options_cpp.linear_solver == "SUNLinSol_SPBCGS")
   {
-      DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
-      casadiSolver = new CasadiSolver_SPBCGS(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
+    casadiSolver = new CasadiSolverOpenMP_SPBCGS(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
   else if (options_cpp.linear_solver == "SUNLinSol_SPFGMR")
   {
-      DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
-      casadiSolver = new CasadiSolver_SPFGMR(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
+    casadiSolver = new CasadiSolverOpenMP_SPFGMR(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
   else if (options_cpp.linear_solver == "SUNLinSol_SPGMR")
   {
-      DEBUG("\tsetting SUNLinSol_SPGMR solver");
-      casadiSolver = new CasadiSolver_SPGMR(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_SPGMR solver");
+    casadiSolver = new CasadiSolverOpenMP_SPGMR(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
   else if (options_cpp.linear_solver == "SUNLinSol_SPTFQMR")
   {
-      DEBUG("\tsetting SUNLinSol_SPGMR solver");
-      casadiSolver = new CasadiSolver_SPTFQMR(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_SPGMR solver");
+    casadiSolver = new CasadiSolverOpenMP_SPTFQMR(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
 #ifdef CUDA
   else if (options_cpp.linear_solver == "SUNLinSol_cuSolverSp_batchQR")
   {
-      DEBUG("\tsetting SUNLinSol_cuSolverSp_batchQR solver");
-      casadiSolver = new CasadiSolver_cuSolverSp_batchQR(
-          atol_np,
-          rel_tol,
-          rhs_alg_id,
-          number_of_parameters,
-          number_of_events,
-          jac_times_cjmass_nnz,
-          jac_bandwidth_lower,
-          jac_bandwidth_upper,
-          std::move(functions),
-          options_cpp
-       );
+    DEBUG("\tsetting SUNLinSol_cuSolverSp_batchQR solver");
+    casadiSolver = new CasadiSolverCuda_cuSolverSp_batchQR(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      options_cpp
+     );
   }
 #endif
 

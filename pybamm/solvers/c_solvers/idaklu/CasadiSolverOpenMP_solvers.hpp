@@ -1,11 +1,12 @@
 #ifndef PYBAMM_IDAKLU_CASADI_SOLVER_OPENMP_HPP
 #define PYBAMM_IDAKLU_CASADI_SOLVER_OPENMP_HPP
 
+#include "CasadiSolverOpenMP.hpp"
 #include "casadi_solver.hpp"
 
-class CasadiSolver_Dense : public CasadiSolver {
+class CasadiSolverOpenMP_Dense : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_Dense(
+  CasadiSolverOpenMP_Dense(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -17,7 +18,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -35,9 +36,9 @@ public:
   void SetLinearSolver() override;
 };
 
-class CasadiSolver_KLU : public CasadiSolver {
+class CasadiSolverOpenMP_KLU : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_KLU(
+  CasadiSolverOpenMP_KLU(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -49,7 +50,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -67,9 +68,9 @@ public:
   void SetLinearSolver() override;
 };
 
-class CasadiSolver_Band : public CasadiSolver {
+class CasadiSolverOpenMP_Band : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_Band(
+  CasadiSolverOpenMP_Band(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -81,7 +82,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -99,9 +100,9 @@ public:
   void SetLinearSolver() override;
 };
 
-class CasadiSolver_SPBCGS : public CasadiSolver {
+class CasadiSolverOpenMP_SPBCGS : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_SPBCGS(
+  CasadiSolverOpenMP_SPBCGS(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -113,7 +114,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -131,9 +132,9 @@ public:
   void SetLinearSolver() override;
 };
 
-class CasadiSolver_SPFGMR : public CasadiSolver {
+class CasadiSolverOpenMP_SPFGMR : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_SPFGMR(
+  CasadiSolverOpenMP_SPFGMR(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -145,7 +146,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -163,9 +164,9 @@ public:
   void SetLinearSolver() override;
 };
 
-class CasadiSolver_SPGMR : public CasadiSolver {
+class CasadiSolverOpenMP_SPGMR : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_SPGMR(
+  CasadiSolverOpenMP_SPGMR(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -177,7 +178,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -195,9 +196,9 @@ public:
   void SetLinearSolver() override;
 };
 
-class CasadiSolver_SPTFQMR : public CasadiSolver {
+class CasadiSolverOpenMP_SPTFQMR : public CasadiSolverOpenMP {
 public:
-  CasadiSolver_SPTFQMR(
+  CasadiSolverOpenMP_SPTFQMR(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -209,7 +210,7 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options
   ) :
-    CasadiSolver(
+    CasadiSolverOpenMP(
       atol_np,
       rel_tol,
       rhs_alg_id,
