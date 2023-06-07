@@ -203,6 +203,7 @@ class TestExperimentSteps(unittest.TestCase):
         # Import drive cycle from file
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
 
+        # Check duration longer than drive cycle data
         # Create steps
         drive_cycle_step = pybamm.step.current(
             drive_cycle, duration=20, temperature="-5oC"
@@ -210,6 +211,17 @@ class TestExperimentSteps(unittest.TestCase):
         # Check drive cycle operating conditions
         self.assertEqual(drive_cycle_step.type, "current")
         self.assertEqual(drive_cycle_step.duration, 20)
+        self.assertEqual(drive_cycle_step.period, 1)
+        self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
+
+        # Check duration shorter than drive cycle data
+        # Create steps
+        drive_cycle_step = pybamm.step.current(
+            drive_cycle, duration=5, temperature="-5oC"
+        )
+        # Check drive cycle operating conditions
+        self.assertEqual(drive_cycle_step.type, "current")
+        self.assertEqual(drive_cycle_step.duration, 5)
         self.assertEqual(drive_cycle_step.period, 1)
         self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
 
