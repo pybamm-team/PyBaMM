@@ -1017,6 +1017,15 @@ class Simulation:
             and self._solver.integrator_specs != {}
         ):
             self._solver.integrator_specs = {}
+
+        if self.op_conds_to_built_solvers is not None:
+            for solver in self.op_conds_to_built_solvers.values():
+                if (
+                    isinstance(solver, pybamm.CasadiSolver)
+                    and solver.integrator_specs != {}
+                ):
+                    solver.integrator_specs = {}
+
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

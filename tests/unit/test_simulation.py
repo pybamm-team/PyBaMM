@@ -308,9 +308,13 @@ class TestSimulation(TestCase):
         sim.solve([0, 600])
         sim.save("test.pickle")
 
-        # with Casadi solver
+        # with Casadi solver & experiment
         model.convert_to_format = "casadi"
-        sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver())
+        sim = pybamm.Simulation(
+            model,
+            experiment="Discharge at 1C for 20 minutes",
+            solver=pybamm.CasadiSolver(),
+        )
         sim.solve([0, 600])
         sim.save("test.pickle")
         sim_load = pybamm.load_sim("test.pickle")
