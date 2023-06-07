@@ -209,6 +209,10 @@ class Experiment:
         for op in reversed(operating_conditions):
             if isinstance(op, str):
                 op = pybamm.step.string(op)
+            elif not isinstance(op, pybamm.step._Step):
+                raise TypeError(
+                    "Operating conditions should be strings or _Step objects"
+                )
 
             op.next_timestamp = next_timestamp
             op.end_timestamp = end_timestamp

@@ -183,14 +183,14 @@ class TestExperiment(TestCase):
         # Defined dummy experiment to access _set_next_timestamp
         experiment = pybamm.Experiment(["Rest for 1 hour"])
         raw_op = [
-            pybamm.experiment._Step(
+            pybamm.step._Step(
                 "current", 1, duration=3600, timestamp=datetime(2023, 1, 1, 8, 0)
             ),
-            pybamm.experiment._Step(
+            pybamm.step._Step(
                 "current", 1, duration=3600, timestamp=datetime(2023, 1, 1, 12, 0)
             ),
-            pybamm.experiment._Step("current", 1, duration=3600, timestamp=None),
-            pybamm.experiment._Step(
+            pybamm.step._Step("current", 1, duration=3600, timestamp=None),
+            pybamm.step._Step(
                 "current", 1, duration=3600, timestamp=datetime(2023, 1, 1, 15, 0)
             ),
         ]

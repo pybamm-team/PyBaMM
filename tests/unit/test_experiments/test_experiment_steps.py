@@ -265,14 +265,12 @@ class TestExperimentSteps(unittest.TestCase):
         ]
 
         for raw, processed in zip(raw_timestamps, processed_timestamps):
-            step = pybamm.experiment._Step("current", 1, duration=3600, timestamp=raw)
+            step = pybamm.step._Step("current", 1, duration=3600, timestamp=raw)
             self.assertEqual(step.timestamp, processed)
 
         # Test bad timestamps
         with self.assertRaisesRegex(ValueError, "The timestamp"):
-            pybamm.experiment._Step(
-                "current", 1, duration=3600, timestamp="bad timestamp"
-            )
+            pybamm.step._Step("current", 1, duration=3600, timestamp="bad timestamp")
 
 
 if __name__ == "__main__":
