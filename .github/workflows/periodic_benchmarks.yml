@@ -33,8 +33,6 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
       - name: Install SuiteSparse and Sundials
         run: python scripts/install_KLU_Sundials.py
-      - name: Install tox and asv
-        run: pip install -U pip "tox<4" asv
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
