@@ -200,10 +200,16 @@ class Experiment:
         return cycles
 
     def _set_next_timestamp(self, operating_conditions):
+        if all(isinstance(i, str) for i in operating_conditions):
+            return operating_conditions
+
         end_timestamp = None
         next_timestamp = None
 
         for op in reversed(operating_conditions):
+            if isinstance(op, str):
+                op = pybamm.step.string(op)
+
             op.next_timestamp = next_timestamp
             op.end_timestamp = end_timestamp
 

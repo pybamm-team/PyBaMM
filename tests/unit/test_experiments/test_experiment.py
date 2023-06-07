@@ -173,7 +173,7 @@ class TestExperiment(TestCase):
         self.assertEqual(experiment.search_tag("no_tag"), [])
 
     def test_no_initial_timestamp(self):
-        s = pybamm.experiment.string
+        s = pybamm.step.string
         with self.assertRaisesRegex(ValueError, "first step must have a timestamp"):
             pybamm.Experiment(
                 [s("Rest for 1 hour"), s("Rest for 1 hour", timestamp="Day 1 08:01:05")]

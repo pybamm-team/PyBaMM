@@ -177,7 +177,7 @@ class TestExperimentSteps(unittest.TestCase):
         ]
 
         for step, expected in zip(steps, expected_result):
-            actual = pybamm.experiment.string(step).to_dict()
+            actual = pybamm.step.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging
                 self.assertEqual([k, expected[k]], [k, actual[k]])
