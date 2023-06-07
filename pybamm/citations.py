@@ -1,7 +1,7 @@
 #
 # Bibliographical information for PyBaMM
 # Inspired by firedrake/PETSc citation workflow
-# https://www.firedrakeproject.org/citing.html
+# https://firedrakeproject.org/citing.html
 #
 import pybamm
 import os
