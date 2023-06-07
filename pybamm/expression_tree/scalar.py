@@ -2,9 +2,10 @@
 # Scalar class
 #
 from __future__ import annotations
+import numbers
 import numpy as np
 import sympy
-from typing import Optional
+from typing import Optional, Literal, Union
 
 import pybamm
 
@@ -23,7 +24,11 @@ class Scalar(pybamm.Symbol):
 
     """
 
-    def __init__(self, value: float, name: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        value: Union[pybamm.Scalar, numbers.Number, float],
+        name: Optional[str] = None,
+    ) -> None:
         # set default name if not provided
         self.value = value
         if name is None:
@@ -56,10 +61,10 @@ class Scalar(pybamm.Symbol):
 
     def _base_evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value
@@ -72,7 +77,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Scalar(self.value, self.name)
 
-    def is_constant(self) -> True:
+    def is_constant(self) -> Literal[True]:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 

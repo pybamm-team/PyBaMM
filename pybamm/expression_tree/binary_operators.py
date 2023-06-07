@@ -8,7 +8,7 @@ import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 
 import pybamm
 
@@ -16,7 +16,7 @@ import pybamm
 def _preprocess_binary(
     left: Union[numbers.Number, pybamm.Symbol],
     right: Union[numbers.Number, pybamm.Symbol],
-) -> Tuple[pybamm.PrimaryBroadcast, pybamm.PrimaryBroadcast]:
+) -> Tuple[pybamm.Symbol, pybamm.Symbol]:
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
     if isinstance(right, numbers.Number):
@@ -70,7 +70,7 @@ class BinaryOperator(pybamm.Symbol):
         name: str,
         left: Union[numbers.Number, pybamm.Symbol],
         right: Union[numbers.Number, pybamm.Symbol],
-    ):
+    ) -> None:
         left, right = _preprocess_binary(left, right)
 
         domains = self.get_children_domains([left, right])
@@ -125,10 +125,10 @@ class BinaryOperator(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         left = self.left.evaluate(t, y, y_dot, inputs)
@@ -210,7 +210,11 @@ class Power(BinaryOperator):
                 right * left_jac + left * pybamm.log(left) * right_jac
             )
 
-    def _binary_evaluate(self, left, right):
+    def _binary_evaluate(
+        self,
+        left: Union[float, np.ndarray, pybamm.Symbol],
+        right: Union[float, np.ndarray, pybamm.Symbol],
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
@@ -222,7 +226,7 @@ class Addition(BinaryOperator):
     A node in the expression tree representing an addition operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(self, left: pybamm.Symbol, right: pybamm.Symbol):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("+", left, right)
 
@@ -230,11 +234,15 @@ class Addition(BinaryOperator):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) + self.right.diff(variable)
 
-    def _binary_jac(self, left_jac, right_jac):
+    def _binary_jac(
+        self, left_jac: Union[float, np.ndarray], right_jac: Union[float, np.ndarray]
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac + right_jac
 
-    def _binary_evaluate(self, left, right):
+    def _binary_evaluate(
+        self, left: Union[float, np.ndarray], right: Union[float, np.ndarray]
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
 
@@ -244,7 +252,7 @@ class Subtraction(BinaryOperator):
     A node in the expression tree representing a subtraction operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(self, left: pybamm.Symbol, right: pybamm.Symbol):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("-", left, right)
@@ -257,7 +265,9 @@ class Subtraction(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac - right_jac
 
-    def _binary_evaluate(self, left, right):
+    def _binary_evaluate(
+        self, left: Union[float, np.ndarray], right: Union[float, np.ndarray]
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
 
@@ -704,10 +714,10 @@ class Maximum(BinaryOperator):
 def _simplify_elementwise_binary_broadcasts(
     left: Union[numbers.Number, pybamm.Symbol],
     right: Union[numbers.Number, pybamm.Symbol],
-):
+) -> Tuple[pybamm.Symbol, pybamm.Symbol]:
     left, right = _preprocess_binary(left, right)
 
-    def unpack_broadcast_recursive(symbol: pybamm.Symbol):
+    def unpack_broadcast_recursive(symbol: pybamm.Symbol) -> pybamm.Symbol:
         if isinstance(symbol, pybamm.Broadcast):
             if symbol.child.domain == []:
                 return symbol.orphans[0]
@@ -733,10 +743,10 @@ def _simplify_elementwise_binary_broadcasts(
 
 
 def _simplified_binary_broadcast_concatenation(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: pybamm.Symbol,  # Union[numbers.Number, pybamm.Symbol]
+    right: pybamm.Symbol,  # Union[numbers.Number, pybamm.Symbol]
     operator,
-):
+) -> Union[None, pybamm.Broadcast]:
     """
     Check if there are concatenations or broadcasts that we can commute the operator
     with
@@ -774,6 +784,7 @@ def _simplified_binary_broadcast_concatenation(
             return right._concatenation_new_copy(
                 [operator(left, child) for child in right.orphans]
             )
+    return None
 
 
 def simplified_power(
@@ -822,8 +833,8 @@ def simplified_power(
 
 
 def add(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
 ):
     """
     Note
@@ -1002,6 +1013,8 @@ def multiply(
     right: Union[numbers.Number, pybamm.Symbol],
 ):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
+
+    assert isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)
 
     # Move constant to always be on the left
     if right.is_constant() and not left.is_constant():

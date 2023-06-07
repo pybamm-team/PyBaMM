@@ -1,7 +1,7 @@
 #
 # Classes and methods for averaging
 #
-from typing import Union
+from typing import Union, Callable
 import pybamm
 
 
@@ -15,13 +15,15 @@ class _BaseAverage(pybamm.Integral):
         The child node
     """
 
-    def __init__(self, child: pybamm.Symbol, name: str, integration_variable):
+    def __init__(
+        self, child: pybamm.Symbol, name: str, integration_variable: list
+    ) -> None:
         super().__init__(child, integration_variable)
         self.name = name
 
 
 class XAverage(_BaseAverage):
-    def __init__(self, child: pybamm.Symbol):
+    def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
         elif all(n in child.domain[0] for n in ["positive", "particle"]):
@@ -37,7 +39,7 @@ class XAverage(_BaseAverage):
 
 
 class YZAverage(_BaseAverage):
-    def __init__(self, child: pybamm.Symbol):
+    def __init__(self, child: pybamm.Symbol) -> None:
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
         integration_variable = [y, z]
@@ -49,7 +51,7 @@ class YZAverage(_BaseAverage):
 
 
 class ZAverage(_BaseAverage):
-    def __init__(self, child: pybamm.Symbol):
+    def __init__(self, child: pybamm.Symbol) -> None:
         integration_variable = [pybamm.standard_spatial_vars.z]
         super().__init__(child, "z-average", integration_variable)
 
@@ -59,7 +61,7 @@ class ZAverage(_BaseAverage):
 
 
 class RAverage(_BaseAverage):
-    def __init__(self, child: pybamm.Symbol):
+    def __init__(self, child: pybamm.Symbol) -> None:
         integration_variable = [pybamm.SpatialVariable("r", child.domain)]
         super().__init__(child, "r-average", integration_variable)
 
@@ -69,7 +71,7 @@ class RAverage(_BaseAverage):
 
 
 class SizeAverage(_BaseAverage):
-    def __init__(self, child: pybamm.Symbol, f_a_dist):
+    def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
         R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
         integration_variable = [R]
         super().__init__(child, "size-average", integration_variable)
@@ -199,7 +201,7 @@ def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.reduce_one_dimension()
+        return symbol.reduce_one_dimension()  # type:ignore
     # Average of a sum is sum of averages
     elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
         return _sum_of_averages(symbol, z_average)
@@ -235,7 +237,7 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.reduce_one_dimension()
+        return symbol.reduce_one_dimension()  # type:ignore
     # Average of a sum is sum of averages
     elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
         return _sum_of_averages(symbol, yz_average)
@@ -345,7 +347,8 @@ def size_average(symbol: pybamm.Symbol, f_a_dist=None) -> pybamm.Symbol:
 
 
 def _sum_of_averages(
-    symbol: Union[pybamm.Addition, pybamm.Subtraction], average_function
+    symbol: Union[pybamm.Addition, pybamm.Subtraction],
+    average_function: Callable[[pybamm.Symbol], pybamm.Symbol],
 ):
     if isinstance(symbol, pybamm.Addition):
         return average_function(symbol.left) + average_function(symbol.right)

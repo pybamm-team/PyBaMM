@@ -7,7 +7,7 @@ import numpy as np
 import scipy.sparse
 import pybamm
 
-from typing import Union, Iterable
+from typing import Union, Iterable, Optional
 
 
 class InputParameter(pybamm.Symbol):
@@ -31,8 +31,8 @@ class InputParameter(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Union[Iterable[str], str] = None,
-        expected_size: int = None,
+        domain: Optional[Union[Iterable[str], str]] = None,
+        expected_size: Optional[int] = None,
     ) -> None:
         # Expected size defaults to 1 if no domain else None (gets set later)
         if expected_size is None:
@@ -75,10 +75,10 @@ class InputParameter(pybamm.Symbol):
 
     def _base_evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         # inputs should be a dictionary
         # convert 'None' to empty dictionary for more informative error

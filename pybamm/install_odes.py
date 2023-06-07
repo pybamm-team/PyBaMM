@@ -10,7 +10,7 @@ from pybamm.util import root_dir
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
-    import wget
+    import wget  # type: ignore
 
     NO_WGET = False
 except ModuleNotFoundError:

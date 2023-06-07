@@ -94,8 +94,8 @@ class ParameterValues:
         if target_soc < 0 or target_soc > 1:
             raise ValueError("Target SOC should be between 0 and 1")
 
-        from bpx import parse_bpx_file, get_electrode_concentrations
-        from .bpx import _bpx_to_param_dict
+        from bpx import parse_bpx_file, get_electrode_concentrations  # type: ignore
+        from .bpx import _bpx_to_param_dict  # type: ignore
 
         # parse bpx
         bpx = parse_bpx_file(filename)

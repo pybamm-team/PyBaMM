@@ -7,10 +7,10 @@ import sys
 
 import numpy as np
 import sympy
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Literal
 
-if TYPE_CHECKING:
-    from pybamm import FunctionParameter
+# if TYPE_CHECKING:
+#     from pybamm import FunctionParameter
 
 import pybamm
 
@@ -42,7 +42,7 @@ class Parameter(pybamm.Symbol):
         """
         return np.nan
 
-    def is_constant(self) -> False:
+    def is_constant(self) -> Literal[False]:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         # Parameter is not constant since it can become an InputParameter
         return False
@@ -134,7 +134,7 @@ class FunctionParameter(pybamm.Symbol):
                 print(inp)
 
     @input_names.setter
-    def input_names(self, inp: dict[str, pybamm.Symbol] = None):
+    def input_names(self, inp=None):
         if inp:
             if inp.__class__ is list:
                 for i in inp:

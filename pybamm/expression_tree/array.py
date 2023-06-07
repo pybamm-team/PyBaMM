@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
-from typing import Union
+from typing import Union, Tuple, Optional
 
 import pybamm
 
@@ -38,12 +38,12 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries: Union[np.array, list],
-        name: str = None,
-        domain: list[str] = None,
-        auxiliary_domains: dict[str, str] = None,
-        domains: dict = None,
-        entries_string: str = None,
+        entries: Union[np.ndarray, list],
+        name: Optional[str] = None,
+        domain: Union[list[str], str, None] = None,
+        auxiliary_domains: Optional[dict[str, str]] = None,
+        domains: Optional[dict] = None,
+        entries_string: Optional[str] = None,
     ) -> None:
         # if
         if isinstance(entries, list):
@@ -119,10 +119,10 @@ class Array(pybamm.Symbol):
 
     def _base_evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._entries
@@ -146,7 +146,9 @@ def linspace(start: float, stop: float, num=50, **kwargs) -> pybamm.Array:
     return pybamm.Array(np.linspace(start, stop, num, **kwargs))
 
 
-def meshgrid(x, y, **kwargs):
+def meshgrid(
+    x: pybamm.Array, y: pybamm.Array, **kwargs
+) -> Tuple[pybamm.Array, pybamm.Array]:
     """
     Return coordinate matrices as from coordinate vectors by calling
     `numpy.meshgrid` with keyword arguments 'kwargs'. For a list of 'kwargs'

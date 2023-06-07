@@ -10,7 +10,7 @@ import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
-from typing import Union, TYPE_CHECKING, Optional
+from typing import Union, TYPE_CHECKING, Optional, Iterable, Sequence
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
@@ -157,8 +157,8 @@ def is_matrix_minus_one(expr: Symbol):
 
 
 def simplify_if_constant(
-    symbol,
-):  # division, Negate (unary operator), Maximum (binary), multiplication, addition, subtraction
+    symbol: Symbol,
+) -> Symbol:
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -216,10 +216,10 @@ class Symbol:
     def __init__(
         self,
         name: str,
-        children: list[Symbol] = None,
-        domain: Union[list[str], str] = None,
-        auxiliary_domains: dict[str, str] = None,
-        domains: dict = None,
+        children: Optional[list[Symbol]] = None,
+        domain: Optional[Union[list[str], str]] = None,
+        auxiliary_domains: Optional[dict[str, str]] = None,
+        domains: Optional[dict] = None,
     ):
         super(Symbol, self).__init__()
         self.name = name
@@ -296,7 +296,7 @@ class Symbol:
         )
 
     @domains.setter
-    def domains(self, domains: dict):
+    def domains(self, domains):
         try:
             if (
                 self._domains == domains
@@ -367,9 +367,9 @@ class Symbol:
             self._domains = EMPTY_DOMAINS
             self.set_id()
 
-    def get_children_domains(self, children: list[Symbol]):
+    def get_children_domains(self, children: Iterable[Symbol]):
         """Combine domains from children, at all levels."""
-        domains = {}
+        domains: dict = {}
         for child in children:
             for level in child.domains.keys():
                 if child.domains[level] == []:
@@ -390,9 +390,9 @@ class Symbol:
 
     def read_domain_or_domains(
         self,
-        domain: Union[list[str], str],
-        auxiliary_domains: dict[str, str],
-        domains: dict,
+        domain: Optional[Union[list[str], str]],
+        auxiliary_domains: Optional[dict[str, str]],
+        domains: Optional[dict],
     ):
         if domains is None:
             if isinstance(domain, str):
@@ -436,7 +436,7 @@ class Symbol:
     def reference(self):
         return self._reference
 
-    def __eq__(self, other: Symbol):
+    def __eq__(self, other):
         try:
             return self._id == other._id
         except AttributeError:
@@ -596,7 +596,7 @@ class Symbol:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other: Symbol) -> pybamm.Power:
+    def __pow__(self, other: Union[Symbol, float]) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
@@ -604,7 +604,7 @@ class Symbol:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
-    def __lt__(self, other: Symbol) -> pybamm.NotEqualHeaviside:
+    def __lt__(self, other: Union[Symbol, float]) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
@@ -620,7 +620,7 @@ class Symbol:
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
-    def __neg__(self) -> pybamm.Negate:
+    def __neg__(self) -> pybamm.Symbol:
         """return a :class:`Negate` object."""
         if isinstance(self, pybamm.Negate):
             # Double negative is a positive
@@ -730,10 +730,10 @@ class Symbol:
 
     def _base_evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """
         evaluate expression tree.
@@ -761,7 +761,11 @@ class Symbol:
         )
 
     def evaluate(
-        self, t=None, y: np.array = None, y_dot: np.array = None, inputs: dict = None
+        self,
+        t: Optional[numbers.Number] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """Evaluate expression tree (wrapper to allow using dict of known values).
 

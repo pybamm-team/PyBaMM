@@ -5,7 +5,7 @@ import numbers
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from typing import Iterable, Optional
+from typing import Sequence, Optional, Union
 
 import pybamm
 
@@ -31,7 +31,7 @@ class Broadcast(pybamm.SpatialOperator):
     """
 
     def __init__(
-        self, child: pybamm.Symbol, domains: Iterable[str], name: Optional[str] = None
+        self, child: pybamm.Symbol, domains: Sequence[str], name: Optional[str] = None
     ):
         if name is None:
             name = "broadcast"
@@ -75,8 +75,8 @@ class PrimaryBroadcast(Broadcast):
 
     def __init__(
         self,
-        child: pybamm.Symbol,
-        broadcast_domain: Iterable[str],
+        child: Union[numbers.Number, pybamm.Symbol],
+        broadcast_domain: Sequence[str],
         name: Optional[str] = None,
     ):
         # Convert child to scalar if it is a number
@@ -92,7 +92,7 @@ class PrimaryBroadcast(Broadcast):
         super().__init__(child, domains, name=name)
 
     def check_and_set_domains(
-        self, child: pybamm.Symbol, broadcast_domain: Iterable[str]
+        self, child: pybamm.Symbol, broadcast_domain: Sequence[str]
     ):
         """See :meth:`Broadcast.check_and_set_domains`"""
         # Can only do primary broadcast from current collector to electrode,
@@ -172,7 +172,7 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Iterable[str],
+        broadcast_domain: Sequence[str],
         name: Optional[str] = None,
     ):
         name = name or "broadcast to edges"
@@ -208,7 +208,7 @@ class SecondaryBroadcast(Broadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Iterable[str],
+        broadcast_domain: Sequence[str],
         name: Optional[str] = None,
     ):
         # Convert domain to list if it's a string
@@ -221,7 +221,7 @@ class SecondaryBroadcast(Broadcast):
         super().__init__(child, domains, name=name)
 
     def check_and_set_domains(
-        self, child: pybamm.Symbol, broadcast_domain: Iterable[str]
+        self, child: pybamm.Symbol, broadcast_domain: Sequence[str]
     ):
         """See :meth:`Broadcast.check_and_set_domains`"""
         if child.domain == []:
@@ -308,7 +308,7 @@ class SecondaryBroadcastToEdges(SecondaryBroadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Iterable[str],
+        broadcast_domain: Sequence[str],
         name: Optional[str] = None,
     ):
         name = name or "broadcast to edges"
@@ -344,7 +344,7 @@ class TertiaryBroadcast(Broadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Iterable[str],
+        broadcast_domain: Sequence[str],
         name: Optional[str] = None,
     ):
         # Convert domain to list if it's a string
@@ -357,7 +357,7 @@ class TertiaryBroadcast(Broadcast):
         super().__init__(child, domains, name=name)
 
     def check_and_set_domains(
-        self, child: pybamm.Symbol, broadcast_domain: Iterable[str]
+        self, child: pybamm.Symbol, broadcast_domain: Sequence[str]
     ):
         """See :meth:`Broadcast.check_and_set_domains`"""
         if child.domains["secondary"] == []:
@@ -429,7 +429,7 @@ class TertiaryBroadcastToEdges(TertiaryBroadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Iterable[str],
+        broadcast_domain: Sequence[str],
         name: Optional[str] = None,
     ):
         name = name or "broadcast to edges"

@@ -1,4 +1,4 @@
-from bpx import BPX, Function, InterpolatedTable
+from bpx import BPX, Function, InterpolatedTable  # type: ignore
 import pybamm
 import math
 from dataclasses import dataclass

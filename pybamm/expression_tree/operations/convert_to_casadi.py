@@ -19,7 +19,7 @@ class CasadiConverter(object):
         t: casadi.MX,
         y: casadi.MX,
         y_dot: casadi.MX,
-        inputs: dict[casadi.MX],
+        inputs: dict,
     ) -> casadi.MX:
         """
         This function recurses down the tree, converting the PyBaMM expression tree to

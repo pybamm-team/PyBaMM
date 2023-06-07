@@ -6,7 +6,7 @@ import numpy as np
 import sympy
 import numbers
 import pybamm
-from typing import Iterable, Union, Optional
+from typing import Iterable, Union, Optional, Sequence
 
 
 class VariableBase(pybamm.Symbol):
@@ -83,7 +83,7 @@ class VariableBase(pybamm.Symbol):
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values: numbers.Number):
+    def bounds(self, values: Sequence[numbers.Number]):
         if values is None:
             values = (-np.inf, np.inf)
         else:

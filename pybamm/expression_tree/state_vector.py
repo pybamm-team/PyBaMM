@@ -39,7 +39,7 @@ class StateVectorBase(pybamm.Symbol):
         *y_slices: slice,
         base_name="y",
         name: Optional[str] = None,
-        domain: Iterable[str] = None,
+        domain: Optional[Iterable[str]] = None,
         auxiliary_domains: Optional[dict[str]] = None,
         domains: Optional[dict] = None,
         evaluation_array: Optional[list] = None,
@@ -113,7 +113,7 @@ class StateVectorBase(pybamm.Symbol):
             + tuple(self.domain)
         )
 
-    def _jac_diff_vector(self, variable: pybamm.Symbol):
+    def _jac_diff_vector(self, variable: pybamm.StateVectorBase):
         """
         Differentiate a slice of a StateVector of size m with respect to another slice
         of a different StateVector of size n. This returns a (sparse) zero matrix of
@@ -134,7 +134,7 @@ class StateVectorBase(pybamm.Symbol):
         # Return zeros of correct size since no entries match
         return pybamm.Matrix(csr_matrix((slices_size, variable_size)))
 
-    def _jac_same_vector(self, variable: pybamm.Symbol):
+    def _jac_same_vector(self, variable: pybamm.StateVectorBase):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size
@@ -226,7 +226,7 @@ class StateVector(StateVectorBase):
         self,
         *y_slices: slice,
         name: Optional[str] = None,
-        domain: Iterable[str] = None,
+        domain: Optional[Iterable[str]] = None,
         auxiliary_domains: Optional[dict[str]] = None,
         domains: Optional[dict] = None,
         evaluation_array: Optional[list] = None,
@@ -243,10 +243,10 @@ class StateVector(StateVectorBase):
 
     def _base_evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y is None:
@@ -310,7 +310,7 @@ class StateVectorDot(StateVectorBase):
         self,
         *y_slices: slice,
         name: Optional[str] = None,
-        domain: Iterable[str] = None,
+        domain: Optional[Iterable[str]] = None,
         auxiliary_domains: Optional[dict[str]] = None,
         domains: Optional[dict] = None,
         evaluation_array: Optional[list] = None,
@@ -327,10 +327,10 @@ class StateVectorDot(StateVectorBase):
 
     def _base_evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y_dot is None:

@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 import numbers
+from typing import Optional
 
 import numpy as np
 import sympy
@@ -60,10 +61,10 @@ class UnaryOperator(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         child = self.child.evaluate(t, y, y_dot, inputs)
@@ -343,7 +344,7 @@ class SpatialOperator(UnaryOperator):
         child node
     """
 
-    def __init__(self, name, child, domains=None):
+    def __init__(self, name: str, child: pybamm.Symbol, domains=None):
         super().__init__(name, child, domains)
 
 

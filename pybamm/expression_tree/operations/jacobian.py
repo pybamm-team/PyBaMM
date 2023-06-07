@@ -22,7 +22,7 @@ class Jacobian(object):
     def __init__(
         self,
         known_jacs: Optional[dict[str, pybamm.Symbol]] = None,
-        clear_domain: Optional[bool] = True,
+        clear_domain: bool = True,
     ):
         self._known_jacs = known_jacs or {}
         self._clear_domain = clear_domain

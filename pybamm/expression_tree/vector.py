@@ -16,7 +16,7 @@ class Vector(pybamm.Array):
     def __init__(
         self,
         entries: Union[np.ndarray, list, np.matrix],
-        name: str = None,
+        name: Optional[str] = None,
         domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict[str, str]] = None,
         domains: Optional[dict] = None,

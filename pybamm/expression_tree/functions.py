@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numbers
 
-import autograd
+import autograd  # type: ignore
 import numpy as np
 import sympy
 from scipy import special
@@ -145,10 +145,10 @@ class Function(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: float = None,
-        y: np.array = None,
-        y_dot: np.array = None,
-        inputs: dict = None,
+        t: Optional[float] = None,
+        y: Optional[np.ndarray] = None,
+        y_dot: Optional[np.ndarray] = None,
+        inputs: Optional[dict] = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         evaluated_children = [

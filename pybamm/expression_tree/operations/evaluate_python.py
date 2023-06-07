@@ -13,6 +13,7 @@ import pybamm
 
 if pybamm.have_jax():
     import jax
+    import jaxlib
     from jax.config import config
 
     config.update("jax_enable_x64", True)
@@ -59,7 +60,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
         return result.at[self.row, self.col].add(self.data)
 
-    def dot_product(self, b: ArrayLike):
+    def dot_product(self, b: jaxlib.xla_extension.DeviceArray):
         """
         dot product of matrix with a dense column vector b
 
@@ -72,7 +73,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
         return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
 
-    def scalar_multiply(self, b: ArrayLike):
+    def scalar_multiply(self, b: float):
         """
         multiply of matrix with a scalar b
 
@@ -387,7 +388,7 @@ def find_symbols(
 
 def to_python(
     symbol: pybamm.Symbol, debug=False, output_jax=False
-) -> Tuple[OrderedDict, str, bool]:
+) -> Tuple[OrderedDict, str]:
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -413,8 +414,8 @@ def to_python(
         operations are used
 
     """
-    constant_values = OrderedDict()
-    variable_symbols = OrderedDict()
+    constant_values: OrderedDict = OrderedDict()
+    variable_symbols: OrderedDict = OrderedDict()
     find_symbols(symbol, constant_values, variable_symbols, output_jax)
 
     line_format = "{} = {}"
