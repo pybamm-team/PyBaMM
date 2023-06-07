@@ -94,11 +94,7 @@ class Experiment:
         for step in unique_steps_unprocessed:
             if isinstance(step, str):
                 processed_steps[step] = pybamm.step.string(step)
-            elif not isinstance(step, pybamm.step._Step):
-                raise TypeError(
-                    "Operating conditions should be strings or _Step objects"
-                )
-            else:
+            elif isinstance(step, pybamm.step._Step):
                 processed_steps[step] = step
 
         # Save the processed unique steps and the processed operating conditions
