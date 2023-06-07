@@ -20,16 +20,16 @@ def string(string, **kwargs):
         "3 minutes" or "1 hour". The stopping conditions should be
         a circuit state, e.g. "1 A", "C/50" or "3 V".
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
+        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
 
     Returns
     -------
-    :class:`pybamm.experiment.Step`
+    :class:`pybamm.step._Step`
         A step parsed from the string.
     """
     if not isinstance(string, str):
-        raise TypeError("Input to experiment.string() must be a string")
+        raise TypeError("Input to step.string() must be a string")
 
     if "period)" in string:
         raise ValueError(
@@ -74,7 +74,7 @@ def string(string, **kwargs):
     elif string.startswith("Run"):
         raise ValueError(
             "Simulating drive cycles with 'Run' has been deprecated. Use the "
-            "pybamm.experiment.current/voltage/power/c_rate/resistance() functions "
+            "pybamm.step.current/voltage/power/c_rate/resistance() functions "
             "instead."
         )
     else:
@@ -117,12 +117,12 @@ def current(value, **kwargs):
     value : float
         The current value in A.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
+        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
 
     Returns
     -------
-    :class:`pybamm.experiment.Step`
+    :class:`pybamm.step._Step`
         A current-controlled step.
     """
     return _Step("current", value, **kwargs)
@@ -138,12 +138,12 @@ def c_rate(value, **kwargs):
     value : float
         The C-rate value.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
+        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
 
     Returns
     -------
-    :class:`pybamm.experiment.Step`
+    :class:`pybamm.step._Step`
         A C-rate controlled step.
     """
     return _Step("C-rate", value, **kwargs)
@@ -159,12 +159,12 @@ def voltage(value, **kwargs):
     value : float
         The voltage value in V.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
+        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
 
     Returns
     -------
-    :class:`pybamm.experiment.Step`
+    :class:`pybamm.step._Step`
         A voltage-controlled step.
     """
     return _Step("voltage", value, **kwargs)
@@ -180,12 +180,12 @@ def power(value, **kwargs):
     value : float
         The power value in W.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
+        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
 
     Returns
     -------
-    :class:`pybamm.experiment.Step`
+    :class:`pybamm.step._Step`
         A power-controlled step.
     """
     return _Step("power", value, **kwargs)
@@ -201,12 +201,12 @@ def resistance(value, **kwargs):
     value : float
         The resistance value in Ohm.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.experiment.Step`
+        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
 
     Returns
     -------
-    :class:`pybamm.experiment.Step`
+    :class:`pybamm.step._Step`
         A resistance-controlled step.
     """
     return _Step("resistance", value, **kwargs)
@@ -215,6 +215,6 @@ def resistance(value, **kwargs):
 def rest(duration=None, **kwargs):
     """
     Create a rest step, equivalent to a constant current step with value 0
-    (see :meth:`pybamm.experiment.current`).
+    (see :meth:`pybamm.step.current`).
     """
     return current(0, duration=duration, **kwargs)

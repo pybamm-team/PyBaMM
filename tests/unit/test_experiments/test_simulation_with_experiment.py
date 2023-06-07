@@ -64,13 +64,13 @@ class TestSimulationExperiment(TestCase):
         )
         sim = pybamm.Simulation(
             model,
-            experiment=["Discharge at C/20 for 1 hour", pybamm.experiment.rest(60)],
+            experiment=["Discharge at C/20 for 1 hour", pybamm.step.rest(60)],
         )
         sim.build_for_experiment()
         self.assertEqual(len(sim.experiment.operating_conditions_steps), 2)
 
     def test_run_experiment(self):
-        s = pybamm.experiment.string
+        s = pybamm.step.string
         experiment = pybamm.Experiment(
             [
                 (
@@ -147,7 +147,7 @@ class TestSimulationExperiment(TestCase):
         os.remove("test_experiment.sav")
 
     def test_run_experiment_multiple_times(self):
-        s = pybamm.experiment.string
+        s = pybamm.step.string
         experiment = pybamm.Experiment(
             [
                 (
@@ -205,9 +205,9 @@ class TestSimulationExperiment(TestCase):
         experiment = pybamm.Experiment(
             [
                 (
-                    pybamm.experiment.current(drive_cycle, temperature="35oC"),
-                    pybamm.experiment.voltage(drive_cycle),
-                    pybamm.experiment.power(drive_cycle),
+                    pybamm.step.current(drive_cycle, temperature="35oC"),
+                    pybamm.step.voltage(drive_cycle),
+                    pybamm.step.power(drive_cycle),
                 )
             ],
         )
@@ -233,7 +233,7 @@ class TestSimulationExperiment(TestCase):
         self.assertEqual(sim._solution.termination, "event: Minimum voltage [V]")
 
     def test_run_experiment_breaks_early_error(self):
-        s = pybamm.experiment.string
+        s = pybamm.step.string
         experiment = pybamm.Experiment(
             [
                 (

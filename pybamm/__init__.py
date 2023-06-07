@@ -39,7 +39,6 @@ PARAMETER_PATH = [
 from .util import Timer, TimerTime, FuzzyDict
 from .util import (
     root_dir,
-    load_function,
     rmse,
     load,
     is_constant_and_can_evaluate,
