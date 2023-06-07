@@ -59,6 +59,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
                 # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
                 # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
+                # "SUNLinSol_cuSolverSp_batchQR",
                 "linear_solver": "SUNLinSol_KLU",
 
                 # preconditioner for iterative solvers, can be "none", "BBDP"
