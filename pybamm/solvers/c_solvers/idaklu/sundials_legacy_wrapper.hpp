@@ -1,5 +1,9 @@
 
 #if SUNDIALS_VERSION_MAJOR < 6
+
+  #define SUN_PREC_NONE PREC_NONE
+  #define SUN_PREC_LEFT PREC_LEFT
+
   // Compatibility layer - wrap older sundials functions in new-style calls
   void SUNContext_Create(void *comm, SUNContext *ctx)
   {
