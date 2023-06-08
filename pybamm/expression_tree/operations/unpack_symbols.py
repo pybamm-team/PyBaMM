@@ -27,7 +27,7 @@ class SymbolUnpacker(object):
         unpacked_symbols: Optional[set] = None,
     ):
         self.classes_to_find = classes_to_find
-        self._unpacked_symbols: set = unpacked_symbols or {}
+        self._unpacked_symbols: Union[set, dict] = unpacked_symbols or {}
 
     def unpack_list_of_symbols(
         self, list_of_symbols: Sequence[pybamm.Symbol]

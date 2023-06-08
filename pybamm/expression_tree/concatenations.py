@@ -49,7 +49,7 @@ class Concatenation(pybamm.Symbol):
             domains = {"primary": []}
         self.concatenation_function = concat_fun
 
-        super().__init__(name, children, domains=domains)
+        super().__init__(name, children, domains=domains)  # type:ignore[arg-type]
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -71,7 +71,7 @@ class Concatenation(pybamm.Symbol):
 
     def get_children_domains(self, children: Sequence[pybamm.Symbol]):
         # combine domains from children
-        domain = []
+        domain: list = []
         for child in children:
             if not isinstance(child, pybamm.Symbol):
                 raise TypeError("{} is not a pybamm symbol".format(child))

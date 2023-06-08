@@ -10,7 +10,7 @@ import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
-from typing import Union, TYPE_CHECKING, Optional, Iterable, Sequence
+from typing import Union, TYPE_CHECKING, Optional, Iterable, Sequence, TypeVar
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
         Division,
     )
     import casadi
+
+    S = TypeVar("S", bound=pybamm.Symbol)
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
@@ -157,8 +159,8 @@ def is_matrix_minus_one(expr: Symbol):
 
 
 def simplify_if_constant(
-    symbol: Symbol,
-) -> Symbol:
+    symbol: S,
+) -> S:
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -216,7 +218,7 @@ class Symbol:
     def __init__(
         self,
         name: str,
-        children: Optional[list[Symbol]] = None,
+        children: Optional[Sequence[Symbol]] = None,
         domain: Optional[Union[Sequence[str], str]] = None,
         auxiliary_domains: Optional[dict[str, str]] = None,
         domains: Optional[dict] = None,
@@ -295,8 +297,8 @@ class Symbol:
             "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
         )
 
-    @domains.setter
-    def domains(self, domains):  # type:ignore
+    @domains.setter  # type:ignore[no-redef, attr-defined]
+    def domains(self, domains):
         try:
             if (
                 self._domains == domains
@@ -596,7 +598,7 @@ class Symbol:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other: Union[Symbol, float]) -> pybamm.Power:
+    def __pow__(self, other: Union[Symbol, numbers.Number]) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
@@ -604,7 +606,7 @@ class Symbol:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
-    def __lt__(self, other: Union[Symbol, float]) -> pybamm.NotEqualHeaviside:
+    def __lt__(self, other: Union[Symbol, numbers.Number]) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 

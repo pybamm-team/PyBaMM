@@ -71,7 +71,9 @@ class JaxCooMatrix:
         """
         # assume b is a column vector
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-        return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+        return result.at[self.row].add(
+            self.data.reshape(-1, 1) * b[self.col]  # type:ignore[index]
+        )
 
     def scalar_multiply(self, b: float):
         """
@@ -612,7 +614,8 @@ class EvaluatorJax:
 
         self._static_argnums = tuple(static_argnums)
         self._jit_evaluate = jax.jit(
-            self._evaluate_jax, static_argnums=self._static_argnums
+            self._evaluate_jax,  # type:ignore[attr-defined]
+            static_argnums=self._static_argnums,
         )
 
     def get_jacobian(self):

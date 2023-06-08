@@ -1,9 +1,10 @@
 #
 # Interpolating class
 #
+from __future__ import annotations
 import numpy as np
 from scipy import interpolate
-from typing import Iterable, Optional
+from typing import Optional, Sequence, Union
 import warnings
 
 import pybamm
@@ -42,9 +43,9 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: np.ndarray,
+        x: Sequence[np.ndarray],
         y: np.ndarray,
-        children: Iterable[pybamm.Symbol],
+        children: Union[Sequence[pybamm.Symbol], pybamm.Time],
         name: Optional[str] = None,
         interpolator: Optional[str] = "linear",
         extrapolate: Optional[bool] = True,
@@ -130,7 +131,7 @@ class Interpolant(pybamm.Function):
                 if extrapolate is False:
                     fill_value = np.nan
                 elif extrapolate is True:
-                    fill_value = "extrapolate"
+                    fill_value = "extrapolate"  # type:ignore[assignment]
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y.T,
@@ -180,7 +181,7 @@ class Interpolant(pybamm.Function):
                 )
             else:
                 interpolating_function = interpolate.RegularGridInterpolator(
-                    (x1, x2, x3),
+                    (x1, x2, x3),  # type:ignore[has-type]
                     y,
                     method=interpolator,
                     bounds_error=False,

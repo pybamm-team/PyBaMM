@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
-from typing import Optional, Iterable, Union
+from typing import Optional, Iterable, Union, Sequence
 
 import pybamm
 
@@ -39,7 +39,7 @@ class StateVectorBase(pybamm.Symbol):
         *y_slices: slice,
         base_name="y",
         name: Optional[str] = None,
-        domain: Optional[Iterable[str]] = None,
+        domain: Optional[Sequence[str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
@@ -226,7 +226,7 @@ class StateVector(StateVectorBase):
         self,
         *y_slices: slice,
         name: Optional[str] = None,
-        domain: Optional[Iterable[str]] = None,
+        domain: Optional[Sequence[str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
@@ -310,7 +310,7 @@ class StateVectorDot(StateVectorBase):
         self,
         *y_slices: slice,
         name: Optional[str] = None,
-        domain: Optional[Iterable[str]] = None,
+        domain: Optional[Sequence[str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,

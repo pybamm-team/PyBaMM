@@ -61,7 +61,7 @@ experiment = Domain(name="experiment", pre_name="", short_pre_name="")
 
 
 def _bpx_to_param_dict(bpx: BPX) -> dict:
-    pybamm_dict = {}
+    pybamm_dict: dict = {}
     pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.cell, pybamm_dict, cell
     )

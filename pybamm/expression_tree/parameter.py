@@ -35,7 +35,7 @@ class Parameter(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name)
 
-    def _evaluate_for_shape(self) -> np.nan:
+    def _evaluate_for_shape(self) -> float:
         """
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
@@ -101,7 +101,7 @@ class FunctionParameter(pybamm.Symbol):
         domains = self.get_children_domains(children_list)
         super().__init__(name, children=children_list, domains=domains)
 
-        self.input_names = list(inputs.keys())
+        self.input_names = list(inputs.keys())  # type:ignore[misc]
 
         # Use the inspect module to find the function's "short name" from the
         # Parameters module that called it
@@ -109,12 +109,12 @@ class FunctionParameter(pybamm.Symbol):
             self.print_name = print_name
         else:
             frame = sys._getframe().f_back
-            print_name = frame.f_code.co_name
+            print_name = frame.f_code.co_name  # type:ignore[union-attr]
             if print_name.startswith("_"):
                 self.print_name = None
             else:
                 try:
-                    parent_param = frame.f_locals["self"]
+                    parent_param = frame.f_locals["self"]  # type:ignore[union-attr]
                 except KeyError:
                     parent_param = None
                 if hasattr(parent_param, "domain") and parent_param.domain is not None:
@@ -133,7 +133,7 @@ class FunctionParameter(pybamm.Symbol):
             for inp in self._input_names:
                 print(inp)
 
-    @input_names.setter
+    @input_names.setter  # type:ignore[no-redef, attr-defined]
     def input_names(self, inp=None):
         if inp:
             if inp.__class__ is list:
