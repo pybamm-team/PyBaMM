@@ -24,10 +24,10 @@ class SymbolUnpacker(object):
     def __init__(
         self,
         classes_to_find: Union[pybamm.Symbol, Sequence[pybamm.Symbol]],
-        unpacked_symbols: Optional[set] = None,
+        unpacked_symbols: Optional[dict] = None,
     ):
         self.classes_to_find = classes_to_find
-        self._unpacked_symbols: Union[set, dict] = unpacked_symbols or {}
+        self._unpacked_symbols: dict = unpacked_symbols or {}  # type:ignore[assignment]
 
     def unpack_list_of_symbols(
         self, list_of_symbols: Sequence[pybamm.Symbol]
@@ -52,7 +52,9 @@ class SymbolUnpacker(object):
 
         return all_instances
 
-    def unpack_symbol(self, symbol: Sequence[pybamm.Symbol]) -> list[pybamm.Symbol]:
+    def unpack_symbol(
+        self, symbol: Union[Sequence[pybamm.Symbol], pybamm.Symbol]
+    ) -> list[pybamm.Symbol]:
         """
         This function recurses down the tree, unpacking the symbols and saving the ones
         that have a class in `self.classes_to_find`.

@@ -243,7 +243,9 @@ class DomainConcatenation(Concatenation):
         children = list(children)
 
         # Allow the base class to sort the domains into the correct order
-        super().__init__(*children, name="domain_concatenation")
+        super().__init__(
+            *children, name="domain_concatenation"  # type:ignore[arg-type]
+        )  # type:ignore[arg-type]
 
         if copy_this is None:
             # store mesh

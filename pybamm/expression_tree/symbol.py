@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 import numbers
+import inspect
 
 import anytree
 import numpy as np
@@ -10,7 +11,18 @@ import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
-from typing import Union, TYPE_CHECKING, Optional, Iterable, Sequence, TypeVar
+from typing import (
+    Union,
+    TYPE_CHECKING,
+    Optional,
+    Iterable,
+    Sequence,
+    TypeVar,
+    no_type_check,
+)
+
+# from pydantic import BaseModel
+# from pydantic.dataclasses import dataclass
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
@@ -27,7 +39,28 @@ if TYPE_CHECKING:
     S = TypeVar("S", bound=pybamm.Symbol)
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
-EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
+EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
+
+
+# class PatchedModel(BaseModel):
+#     @no_type_check
+#     def __setattr__(self, name, value):
+#         """
+#         To be able to use properties with setters
+#         """
+#         try:
+#             super().__setattr__(name, value)
+#         except ValueError as e:
+#             setters = inspect.getmembers(
+#                 self.__class__,
+#                 predicate=lambda x: isinstance(x, property) and x.fset is not None,
+#             )
+#             for setter_name, func in setters:
+#                 if setter_name == name:
+#                     object.__setattr__(self, name, value)
+#                     break
+#             else:
+#                 raise e
 
 
 def domain_size(domain: Union[list[str], str]):
@@ -173,20 +206,25 @@ def simplify_if_constant(
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                return pybamm.Scalar(result)
+                return pybamm.Scalar(result)  # type:ignore[return-value, arg-type]
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result, domains=symbol.domains)
+                    return pybamm.Vector(  # type:ignore[return-value]
+                        result, domains=symbol.domains
+                    )
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(result, domains=symbol.domains)
+                    return pybamm.Matrix(  # type:ignore[return-value]
+                        result, domains=symbol.domains
+                    )
 
     return symbol
 
 
-class Symbol:
+# @dataclass
+class Symbol:  # PatchedModel
     """
     Base node class for the expression tree.
 
@@ -215,6 +253,8 @@ class Symbol:
         deprecated.
     """
 
+    # name: str
+
     def __init__(
         self,
         name: str,
@@ -223,6 +263,13 @@ class Symbol:
         auxiliary_domains: Optional[dict[str, str]] = None,
         domains: Optional[dict] = None,
     ):
+        # super().__init__(
+        #     name=name,
+        #     children=children,
+        #     domain=domain,
+        #     auxiliary_domains=auxiliary_domains,
+        #     domains=domains,
+        # )
         super(Symbol, self).__init__()
         self.name = name
 
@@ -234,9 +281,9 @@ class Symbol:
         self._orphans = children
 
         # Set domains (and hence id)
-        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
+        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)  # type: ignore[misc]
 
-        self._saved_evaluates_on_edges = {}
+        self._saved_evaluates_on_edges: dict = {}
         self._print_name = None
 
         # Test shape on everything but nodes that contain the base Symbol class or
@@ -248,6 +295,15 @@ class Symbol:
                 for x in self.pre_order()
             ):
                 self.test_shape()
+
+    #     # super().__init__(name, children, domain, auxiliary_domains, domains)
+
+    # class Config:
+    #     arbitrary_types_allowed = True
+    #     # underscore_attrs_are_private = True
+    #     keep_untouched = (cached_property,)
+    #     fields = {"domain": {"exclude": True}, "auxiliary_domains": {"exclude": True}}
+    #     # json_encoders = {"Symbol": lambda u: u.__dict__}
 
     @property
     def children(self):
@@ -598,7 +654,7 @@ class Symbol:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other: Union[Symbol, numbers.Number]) -> pybamm.Power:
+    def __pow__(self, other: Union[Symbol, float]) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
@@ -606,7 +662,7 @@ class Symbol:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
-    def __lt__(self, other: Union[Symbol, numbers.Number]) -> pybamm.NotEqualHeaviside:
+    def __lt__(self, other: Union[Symbol, float]) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
@@ -707,7 +763,7 @@ class Symbol:
     def jac(
         self,
         variable: pybamm.Symbol,
-        known_jacs: Optional[dict[str, pybamm.Symbol]] = None,
+        known_jacs: Optional[dict[pybamm.Symbol, pybamm.Symbol]] = None,
         clear_domain=True,
     ):
         """

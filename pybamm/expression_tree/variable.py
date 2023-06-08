@@ -99,7 +99,7 @@ class VariableBase(pybamm.Symbol):
         values = list(values)
         for idx, bound in enumerate(values):
             if isinstance(bound, numbers.Number):
-                values[idx] = pybamm.Scalar(bound)
+                values[idx] = pybamm.Scalar(bound)  # type:ignore[call-overload]
         self._bounds = tuple(values)
 
     def set_id(self):
@@ -234,7 +234,9 @@ class VariableDot(VariableBase):
         """
         return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
 
-    def diff(self, variable: pybamm.Variable) -> pybamm.Scalar:
+    def diff(
+        self, variable: pybamm.VariableDot  # type:ignore[override]
+    ) -> pybamm.Scalar:
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:

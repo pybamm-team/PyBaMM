@@ -3,7 +3,7 @@
 #
 import sympy
 import numpy as np
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 import pybamm
 
@@ -34,7 +34,7 @@ class IndependentVariable(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[list[str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict] = None,
     ) -> None:
@@ -65,6 +65,7 @@ class Time(IndependentVariable):
 
     def __init__(self):
         super().__init__("time")
+        # making this super(pybamm.Symbol, self)__init__(name="time") works, but not sure why.
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -114,6 +115,8 @@ class SpatialVariable(IndependentVariable):
         deprecated.
     """
 
+    # coord_sys: Optional[Any]
+
     def __init__(
         self,
         name: str,
@@ -127,6 +130,7 @@ class SpatialVariable(IndependentVariable):
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
         domain = self.domain
+        # using a dataclass, at this point the domain doesn't get set for some reason, during initialisation.
 
         if domain == []:
             raise ValueError("domain must be provided")

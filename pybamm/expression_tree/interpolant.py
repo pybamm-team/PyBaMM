@@ -103,7 +103,7 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x = [x]
+                x = [x]  # type:ignore[list-item]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(

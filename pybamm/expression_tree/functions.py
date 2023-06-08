@@ -8,7 +8,7 @@ import autograd  # type: ignore
 import numpy as np
 import sympy
 from scipy import special
-from typing import Optional
+from typing import Optional, Sequence
 
 import pybamm
 
@@ -93,7 +93,7 @@ class Function(pybamm.Symbol):
 
             return derivative
 
-    def _function_diff(self, children: pybamm.Symbol, idx: float):
+    def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
         """
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.

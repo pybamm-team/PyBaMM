@@ -493,7 +493,7 @@ class Integral(SpatialOperator):
         self,
         child,
         integration_variable: Union[
-            Sequence[pybamm.IndependentVariable], pybamm.IndependentVariable
+            list[pybamm.IndependentVariable], pybamm.IndependentVariable
         ],
     ):
         if not isinstance(integration_variable, list):

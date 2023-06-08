@@ -1,6 +1,7 @@
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
+# mypy: ignore-errors
 import casadi
 import pybamm
 import numpy as np

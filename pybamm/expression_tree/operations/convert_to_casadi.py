@@ -5,6 +5,7 @@ import pybamm
 import casadi
 import numpy as np
 from scipy import special
+from typing import Union
 
 
 class CasadiConverter(object):
@@ -19,7 +20,7 @@ class CasadiConverter(object):
         t: casadi.MX,
         y: casadi.MX,
         y_dot: casadi.MX,
-        inputs: dict,
+        inputs: Union[dict, None],
     ) -> casadi.MX:
         """
         This function recurses down the tree, converting the PyBaMM expression tree to

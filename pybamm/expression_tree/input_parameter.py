@@ -7,7 +7,7 @@ import numpy as np
 import scipy.sparse
 import pybamm
 
-from typing import Union, Iterable, Optional
+from typing import Union, Iterable, Optional, Sequence
 
 
 class InputParameter(pybamm.Symbol):
@@ -31,7 +31,7 @@ class InputParameter(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[Union[Iterable[str], str]] = None,
+        domain: Optional[Union[Sequence[str], str]] = None,
         expected_size: Optional[int] = None,
     ) -> None:
         # Expected size defaults to 1 if no domain else None (gets set later)

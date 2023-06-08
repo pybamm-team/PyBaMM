@@ -26,7 +26,7 @@ class Scalar(pybamm.Symbol):
 
     def __init__(
         self,
-        value: Union[pybamm.Scalar, numbers.Number, float],
+        value: Union[float, numbers.Number],
         name: Optional[str] = None,
     ) -> None:
         # set default name if not provided

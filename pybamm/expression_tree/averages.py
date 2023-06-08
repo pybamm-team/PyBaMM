@@ -21,7 +21,7 @@ class _BaseAverage(pybamm.Integral):
         child: pybamm.Symbol,
         name: str,
         integration_variable: Union[
-            Sequence[pybamm.IndependentVariable], pybamm.IndependentVariable
+            list[pybamm.IndependentVariable], pybamm.IndependentVariable
         ],
     ) -> None:
         super().__init__(child, integration_variable)
@@ -48,7 +48,7 @@ class YZAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        integration_variable = [y, z]
+        integration_variable: list[pybamm.IndependentVariable] = [y, z]
         super().__init__(child, "yz-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
@@ -58,7 +58,9 @@ class YZAverage(_BaseAverage):
 
 class ZAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
-        integration_variable = [pybamm.standard_spatial_vars.z]
+        integration_variable: list[pybamm.IndependentVariable] = [
+            pybamm.standard_spatial_vars.z
+        ]
         super().__init__(child, "z-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
@@ -68,7 +70,9 @@ class ZAverage(_BaseAverage):
 
 class RAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
-        integration_variable = [pybamm.SpatialVariable("r", child.domain)]
+        integration_variable: list[pybamm.IndependentVariable] = [
+            pybamm.SpatialVariable("r", child.domain)
+        ]
         super().__init__(child, "r-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
@@ -79,7 +83,7 @@ class RAverage(_BaseAverage):
 class SizeAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
         R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
-        integration_variable = [R]
+        integration_variable: list[pybamm.IndependentVariable] = [R]
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
 

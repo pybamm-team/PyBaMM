@@ -14,8 +14,8 @@ import pybamm
 
 
 def _preprocess_binary(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ) -> Tuple[pybamm.Symbol, pybamm.Symbol]:
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
@@ -68,8 +68,8 @@ class BinaryOperator(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        left: Union[numbers.Number, pybamm.Symbol],
-        right: Union[numbers.Number, pybamm.Symbol],
+        left: Union[float, pybamm.Symbol],
+        right: Union[float, pybamm.Symbol],
     ) -> None:
         left, right = _preprocess_binary(left, right)
 
@@ -113,8 +113,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def _binary_new_copy(
         self,
-        left: Union[numbers.Number, pybamm.Symbol],
-        right: Union[numbers.Number, pybamm.Symbol],
+        left: Union[float, pybamm.Symbol],
+        right: Union[float, pybamm.Symbol],
     ):
         """
         Default behaviour for new_copy.
@@ -441,8 +441,8 @@ class Inner(BinaryOperator):
 
     def _binary_new_copy(
         self,
-        left: Union[numbers.Number, pybamm.Symbol],
-        right: Union[numbers.Number, pybamm.Symbol],
+        left: Union[float, pybamm.Symbol],
+        right: Union[float, pybamm.Symbol],
     ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.inner(left, right)
@@ -506,8 +506,8 @@ class Equality(BinaryOperator):
 
     def _binary_new_copy(
         self,
-        left: Union[numbers.Number, pybamm.Symbol],
-        right: Union[numbers.Number, pybamm.Symbol],
+        left: Union[float, pybamm.Symbol],
+        right: Union[float, pybamm.Symbol],
     ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.Equality(left, right)
@@ -660,8 +660,8 @@ class Minimum(BinaryOperator):
 
     def _binary_new_copy(
         self,
-        left: Union[numbers.Number, pybamm.Symbol],
-        right: Union[numbers.Number, pybamm.Symbol],
+        left: Union[float, pybamm.Symbol],
+        right: Union[float, pybamm.Symbol],
     ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.minimum(left, right)
@@ -700,8 +700,8 @@ class Maximum(BinaryOperator):
 
     def _binary_new_copy(
         self,
-        left: Union[numbers.Number, pybamm.Symbol],
-        right: Union[numbers.Number, pybamm.Symbol],
+        left: Union[float, pybamm.Symbol],
+        right: Union[float, pybamm.Symbol],
     ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.maximum(left, right)
@@ -712,8 +712,8 @@ class Maximum(BinaryOperator):
 
 
 def _simplify_elementwise_binary_broadcasts(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ) -> Tuple[pybamm.Symbol, pybamm.Symbol]:
     left, right = _preprocess_binary(left, right)
 
@@ -788,8 +788,8 @@ def _simplified_binary_broadcast_concatenation(
 
 
 def simplified_power(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
@@ -924,8 +924,8 @@ def add(
 
 
 def subtract(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ):
     """
     Note
@@ -1009,8 +1009,8 @@ def subtract(
 
 
 def multiply(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
@@ -1139,8 +1139,8 @@ def multiply(
 
 
 def divide(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
@@ -1213,8 +1213,8 @@ def divide(
 
 
 def matmul(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ):
     left, right = _preprocess_binary(left, right)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
@@ -1275,8 +1275,8 @@ def matmul(
 
 
 def minimum(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ) -> pybamm.Symbol:
     """
     Returns the smaller of two objects, possibly with a smoothing approximation.
@@ -1299,8 +1299,8 @@ def minimum(
 
 
 def maximum(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
 ):
     """
     Returns the larger of two objects, possibly with a smoothing approximation.
@@ -1323,8 +1323,8 @@ def maximum(
 
 
 def _heaviside(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: Union[float, pybamm.Symbol],
+    right: Union[float, pybamm.Symbol],
     equal,
 ):
     """return a :class:`EqualHeaviside` object, or a smooth approximation."""
