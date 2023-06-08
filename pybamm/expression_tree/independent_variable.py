@@ -117,7 +117,7 @@ class SpatialVariable(IndependentVariable):
     def __init__(
         self,
         name: str,
-        domain: Union[list[str], str, None] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict] = None,
         coord_sys=None,
@@ -132,20 +132,22 @@ class SpatialVariable(IndependentVariable):
             raise ValueError("domain must be provided")
 
         # Check symbol name vs domain name
-        if name == "r_n" and not all(n in domain[0] for n in ["negative", "particle"]):
+        if name == "r_n" and not all(
+            n in domain[0] for n in ["negative", "particle"]  # type:ignore[index]
+        ):
             # catches "negative particle", "negative secondary particle", etc
             raise pybamm.DomainError(
                 "domain must be negative particle if name is 'r_n'"
             )
         elif name == "r_p" and not all(
-            n in domain[0] for n in ["positive", "particle"]
+            n in domain[0] for n in ["positive", "particle"]  # type:ignore[index]
         ):
             # catches "positive particle", "positive secondary particle", etc
             raise pybamm.DomainError(
                 "domain must be positive particle if name is 'r_p'"
             )
         elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
-            ["particle" in dom for dom in domain]
+            ["particle" in dom for dom in domain]  # type:ignore[index, union-attr]
         ):
             raise pybamm.DomainError(
                 "domain cannot be particle if name is '{}'".format(name)

@@ -87,9 +87,9 @@ class Function(pybamm.Symbol):
             # remove None entries
             partial_derivatives = [x for x in partial_derivatives if x is not None]
 
-            derivative = sum(partial_derivatives)
+            derivative = sum(partial_derivatives)  # type:ignore[arg-type]
             if derivative == 0:
-                derivative = pybamm.Scalar(0)
+                derivative = pybamm.Scalar(0)  # type:ignore[assignment]
 
             return derivative
 
@@ -106,7 +106,7 @@ class Function(pybamm.Symbol):
                 differentiated_function=self.function,
             )
         elif self.derivative == "derivative":
-            if len(children) > 1:
+            if len(children) > 1:  # type:ignore[arg-type]
                 raise ValueError(
                     """
                     differentiation using '.derivative()' not implemented for functions
@@ -194,7 +194,7 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.simplify_if_constant(
+        return pybamm.simplify_if_constant(  # type:ignore[return-value]
             pybamm.Function(
                 self.function,
                 *children,

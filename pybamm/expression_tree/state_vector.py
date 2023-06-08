@@ -40,8 +40,8 @@ class StateVectorBase(pybamm.Symbol):
         base_name="y",
         name: Optional[str] = None,
         domain: Optional[Iterable[str]] = None,
-        auxiliary_domains: Optional[dict[str]] = None,
-        domains: Optional[dict] = None,
+        auxiliary_domains: Optional[dict] = None,
+        domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
     ):
         for y_slice in y_slices:
@@ -227,8 +227,8 @@ class StateVector(StateVectorBase):
         *y_slices: slice,
         name: Optional[str] = None,
         domain: Optional[Iterable[str]] = None,
-        auxiliary_domains: Optional[dict[str]] = None,
-        domains: Optional[dict] = None,
+        auxiliary_domains: Optional[dict] = None,
+        domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
     ):
         super().__init__(
@@ -311,8 +311,8 @@ class StateVectorDot(StateVectorBase):
         *y_slices: slice,
         name: Optional[str] = None,
         domain: Optional[Iterable[str]] = None,
-        auxiliary_domains: Optional[dict[str]] = None,
-        domains: Optional[dict] = None,
+        auxiliary_domains: Optional[dict] = None,
+        domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
     ):
         super().__init__(

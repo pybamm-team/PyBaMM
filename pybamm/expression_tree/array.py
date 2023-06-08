@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, Any
 
 import pybamm
 
@@ -155,6 +155,6 @@ def meshgrid(
     see the `numpy meshgrid documentation <https://tinyurl.com/y8azewrj>`_
     """
     [X, Y] = np.meshgrid(x.entries, y.entries)
-    X = pybamm.Array(X)
-    Y = pybamm.Array(Y)
-    return X, Y
+    X = pybamm.Array(X)  # type:ignore[assignment]
+    Y = pybamm.Array(Y)  # type:ignore[assignment]
+    return X, Y  # type:ignore[return-value]

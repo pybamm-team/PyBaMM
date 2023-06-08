@@ -3,7 +3,7 @@
 #
 from __future__ import annotations
 import numbers
-from typing import Optional
+from typing import Optional, Union, Sequence
 
 import numpy as np
 import sympy
@@ -489,7 +489,13 @@ class Integral(SpatialOperator):
         The variable over which to integrate
     """
 
-    def __init__(self, child, integration_variable):
+    def __init__(
+        self,
+        child,
+        integration_variable: Union[
+            Sequence[pybamm.IndependentVariable], pybamm.IndependentVariable
+        ],
+    ):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 

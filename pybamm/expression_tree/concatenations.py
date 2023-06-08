@@ -25,8 +25,8 @@ class Concatenation(pybamm.Symbol):
 
     def __init__(
         self,
-        *children: Iterable[pybamm.Symbol],
-        name=None,
+        *children: Sequence[pybamm.Symbol],
+        name: Optional[str] = None,
         check_domain=True,
         concat_fun=None,
     ):
@@ -44,7 +44,7 @@ class Concatenation(pybamm.Symbol):
         if name is None:
             name = "concatenation"
         if check_domain:
-            domains = self.get_children_domains(children)
+            domains = self.get_children_domains(children)  # type:ignore[arg-type]
         else:
             domains = {"primary": []}
         self.concatenation_function = concat_fun
@@ -183,12 +183,12 @@ class NumpyConcatenation(Concatenation):
     """
 
     def __init__(self, *children: Sequence[pybamm.Symbol]):
-        children = list(children)
+        children = list(children)  # type:ignore[assignment]
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
         for i, child in enumerate(children):
             if child.evaluates_to_number():  # type:ignore
-                children[i] = child * pybamm.Vector([1])
+                children[i] = child * pybamm.Vector([1])  # type:ignore
         super().__init__(
             *children,
             name="numpy_concatenation",
@@ -234,7 +234,7 @@ class DomainConcatenation(Concatenation):
 
     def __init__(
         self,
-        children: Iterable[pybamm.Symbol],
+        children: Sequence[pybamm.Symbol],
         full_mesh: pybamm.Mesh,
         copy_this: Optional[pybamm.DomainConcatenation] = None,
     ):

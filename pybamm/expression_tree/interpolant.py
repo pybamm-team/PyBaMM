@@ -114,7 +114,7 @@ class Interpolant(pybamm.Function):
             children = [children]
         # Either a single x is provided and there is one child
         # or x is a 2-tuple and there are two children
-        if len(x) != len(children):
+        if len(x) != len(children):  # type:ignore[arg-type]
             raise ValueError("len(x) should equal len(children)")
         # if there is only one x, y can be 2-dimensional but the child must have
         # length 1

@@ -51,7 +51,7 @@ class VariableBase(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[Iterable[str]] = None,
+        domain: Optional[Union[Sequence[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict] = None,
         bounds: Optional[tuple] = None,
@@ -89,7 +89,7 @@ class VariableBase(pybamm.Symbol):
         else:
             if (
                 all(isinstance(b, numbers.Number) for b in values)
-                and values[0] >= values[1]
+                and values[0] >= values[1]  # type:ignore
             ):
                 raise ValueError(
                     f"Invalid bounds {values}. "

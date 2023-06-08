@@ -217,7 +217,7 @@ class Symbol:
         self,
         name: str,
         children: Optional[list[Symbol]] = None,
-        domain: Optional[Union[list[str], str]] = None,
+        domain: Optional[Union[Sequence[str], str]] = None,
         auxiliary_domains: Optional[dict[str, str]] = None,
         domains: Optional[dict] = None,
     ):
@@ -296,7 +296,7 @@ class Symbol:
         )
 
     @domains.setter
-    def domains(self, domains):
+    def domains(self, domains):  # type:ignore
         try:
             if (
                 self._domains == domains
@@ -367,7 +367,7 @@ class Symbol:
             self._domains = EMPTY_DOMAINS
             self.set_id()
 
-    def get_children_domains(self, children: Iterable[Symbol]):
+    def get_children_domains(self, children: Sequence[Symbol]):
         """Combine domains from children, at all levels."""
         domains: dict = {}
         for child in children:
@@ -390,7 +390,7 @@ class Symbol:
 
     def read_domain_or_domains(
         self,
-        domain: Optional[Union[list[str], str]],
+        domain: Optional[Union[Sequence[str], str]],
         auxiliary_domains: Optional[dict[str, str]],
         domains: Optional[dict],
     ):
@@ -762,7 +762,7 @@ class Symbol:
 
     def evaluate(
         self,
-        t: Optional[numbers.Number] = None,
+        t: Optional[float] = None,
         y: Optional[np.ndarray] = None,
         y_dot: Optional[np.ndarray] = None,
         inputs: Optional[dict] = None,

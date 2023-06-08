@@ -1,7 +1,8 @@
 #
 # Classes and methods for averaging
 #
-from typing import Union, Callable
+from __future__ import annotations
+from typing import Union, Callable, Sequence
 import pybamm
 
 
@@ -16,7 +17,12 @@ class _BaseAverage(pybamm.Integral):
     """
 
     def __init__(
-        self, child: pybamm.Symbol, name: str, integration_variable: list
+        self,
+        child: pybamm.Symbol,
+        name: str,
+        integration_variable: Union[
+            Sequence[pybamm.IndependentVariable], pybamm.IndependentVariable
+        ],
     ) -> None:
         super().__init__(child, integration_variable)
         self.name = name

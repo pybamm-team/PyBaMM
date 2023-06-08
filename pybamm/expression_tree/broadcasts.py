@@ -548,7 +548,7 @@ class FullBroadcastToEdges(FullBroadcast):
             )
 
 
-def full_like(symbols: pybamm.Symbol, fill_value: float):
+def full_like(symbols: Sequence[pybamm.Symbol], fill_value: float) -> pybamm.Symbol:
     """
     Returns an array with the same shape and domains as the sum of the
     input symbols, with a constant value given by `fill_value`.
@@ -575,7 +575,7 @@ def full_like(symbols: pybamm.Symbol, fill_value: float):
         if shape[1] == 1:
             array_type = pybamm.Vector
         else:
-            array_type = pybamm.Matrix
+            array_type = pybamm.Matrix  # type:ignore[assignment]
         # return dense array, except for a matrix of zeros
         if shape[1] != 1 and fill_value == 0:
             entries = csr_matrix(shape)

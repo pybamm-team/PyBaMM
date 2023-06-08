@@ -218,7 +218,7 @@ class Power(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
-            return left**right
+            return left**right  # type:ignore[operator]
 
 
 class Addition(BinaryOperator):
@@ -1151,7 +1151,7 @@ def divide(
     # Move constant to always be on the left
     # For a division, this means (var / constant) becomes (1/constant * var)
     if right.is_constant() and not left.is_constant():
-        return (1 / right) * left
+        return (1 / right) * left  # type:ignore
 
     # Check for Concatenations and Broadcasts
     out = _simplified_binary_broadcast_concatenation(left, right, divide)
@@ -1277,7 +1277,7 @@ def matmul(
 def minimum(
     left: Union[numbers.Number, pybamm.Symbol],
     right: Union[numbers.Number, pybamm.Symbol],
-):
+) -> pybamm.Symbol:
     """
     Returns the smaller of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.min`, which returns min function of child.
@@ -1292,10 +1292,10 @@ def minimum(
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
     if k == "exact" or (left.is_constant() and right.is_constant()):
-        out = Minimum(left, right)
+        out = Minimum(left, right)  # type:ignore
     else:
-        out = pybamm.softminus(left, right, k)
-    return pybamm.simplify_if_constant(out)
+        out = pybamm.softminus(left, right, k)  # type:ignore
+    return pybamm.simplify_if_constant(out)  # type:ignore
 
 
 def maximum(
@@ -1316,10 +1316,10 @@ def maximum(
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
     if k == "exact" or (left.is_constant() and right.is_constant()):
-        out = Maximum(left, right)
+        out = Maximum(left, right)  # type:ignore
     else:
-        out = pybamm.softplus(left, right, k)
-    return pybamm.simplify_if_constant(out)
+        out = pybamm.softplus(left, right, k)  # type:ignore
+    return pybamm.simplify_if_constant(out)  # type:ignore
 
 
 def _heaviside(
@@ -1357,41 +1357,43 @@ def _heaviside(
     # (i.e. no need for smoothing)
     if k == "exact" or (left.is_constant() and right.is_constant()):
         if equal is True:
-            out = pybamm.EqualHeaviside(left, right)
+            out = pybamm.EqualHeaviside(left, right)  # type:ignore
         else:
-            out = pybamm.NotEqualHeaviside(left, right)
+            out = pybamm.NotEqualHeaviside(left, right)  # type:ignore
     else:
-        out = pybamm.sigmoid(left, right, k)
-    return pybamm.simplify_if_constant(out)
+        out = pybamm.sigmoid(left, right, k)  # type:ignore
+    return pybamm.simplify_if_constant(out)  # type:ignore
 
 
 def softminus(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
     k: float,
-):
+) -> pybamm.Symbol:
     """
     Softplus approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_smoothing`. The recommended value is k=10.
     """
-    return pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k
+    return (
+        pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k  # type:ignore
+    )
 
 
 def softplus(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
     k: float,
 ):
     """
     Softplus approximation to the maximum function. k is the smoothing parameter,
     set by `pybamm.settings.max_smoothing`. The recommended value is k=10.
     """
-    return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
+    return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k  # type:ignore
 
 
 def sigmoid(
-    left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
     k: float,
 ):
     """
@@ -1400,7 +1402,7 @@ def sigmoid(
     Note that the concept of deciding which side to pick when left=right does not apply
     for this smooth approximation. When left=right, the value is (left+right)/2.
     """
-    return (1 + pybamm.tanh(k * (right - left))) / 2
+    return (1 + pybamm.tanh(k * (right - left))) / 2  # type:ignore
 
 
 def source(
@@ -1438,11 +1440,13 @@ def source(
     if isinstance(left, numbers.Number):
         left = pybamm.PrimaryBroadcast(left, "current collector")
 
-    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+    if left.domain != ["current collector"] or right.domain != [  # type:ignore
+        "current collector"
+    ]:
         raise pybamm.DomainError(
             """'source' only implemented in the 'current collector' domain,
             but symbols have domains {} and {}""".format(
-                left.domain, right.domain
+                left.domain, right.domain  # type:ignore
             )
         )
     if boundary:
