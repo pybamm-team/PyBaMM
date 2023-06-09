@@ -51,6 +51,7 @@ extensions = [
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_extend_parent",
+    "sphinx_inline_tabs",
 ]
 
 
