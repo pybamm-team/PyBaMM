@@ -9,37 +9,37 @@ Prerequisites
 
 To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
-   .. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
+.. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
 
-      To install Python 3 on Debian-based distributions (Debian, Ubuntu, Linux Mint), open a terminal and run
+   To install Python 3 on Debian-based distributions (Debian, Ubuntu, Linux Mint), open a terminal and run
 
-      .. code:: bash
+   .. code:: bash
 
-         sudo apt update
-         sudo apt install python3
+      sudo apt update
+      sudo apt install python3
 
-   .. tab:: Fedora/CentOS
+.. tab:: Fedora/CentOS
 
-      On Fedora or CentOS, you can use DNF or Yum. For example
+   On Fedora or CentOS, you can use DNF or Yum. For example
 
-      .. code:: bash
+   .. code:: bash
 
-         sudo dnf install python3
+      sudo dnf install python3
 
-   .. tab:: macOS
+.. tab:: macOS
 
-      On macOS, you can use the ``homebrew`` package manager. First, `install
-      brew <https://docs.python-guide.org/starting/install3/osx/>`__:
+   On macOS, you can use the ``homebrew`` package manager. First, `install
+   brew <https://docs.python-guide.org/starting/install3/osx/>`__:
 
-      .. code:: bash
+   .. code:: bash
 
-         ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-      then follow instructions in the link on adding ``brew`` to path, and run
+   then follow instructions in the link on adding ``brew`` to path, and run
 
-      .. code:: bash
+   .. code:: bash
 
-         brew install python3
+      brew install python3
 
 Install PyBaMM
 ==============
