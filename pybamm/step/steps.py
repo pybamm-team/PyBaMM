@@ -31,11 +31,6 @@ def string(string, **kwargs):
     if not isinstance(string, str):
         raise TypeError("Input to step.string() must be a string")
 
-    if "period)" in string:
-        raise ValueError(
-            "Period must be specified as a keyword argument instead of in the string"
-        )
-
     if "oC" in string:
         raise ValueError(
             "Temperature must be specified as a keyword argument "
@@ -45,6 +40,16 @@ def string(string, **kwargs):
     # Save the original string
     description = string
 
+    # extract period
+    if "period)" in string:
+        if "period" in kwargs:
+            raise ValueError(
+                "Period cannot be specified both as a keyword argument "
+                "and in the string"
+            )
+        string, period_full = string.split(" (")
+        period, _ = period_full.split(" period)")
+        kwargs["period"] = period
     # extract termination condition based on "until" keyword
     if "until" in string:
         # e.g. "Charge at 4 A until 3.8 V"
