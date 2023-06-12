@@ -6,3 +6,4 @@ Classes to help set operating conditions for some standard battery modelling exp
 .. toctree::
 
   experiment
+  experiment_steps
