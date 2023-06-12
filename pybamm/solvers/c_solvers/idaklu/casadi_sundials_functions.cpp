@@ -2,34 +2,38 @@
 #include "casadi_functions.hpp"
 #include "common.hpp"
 
-int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
-                    void *user_data)
+int residual_casadi(
+  realtype tres,
+  N_Vector yy,
+  N_Vector yp,
+  N_Vector rr,
+  void *user_data)
 {
-    DEBUG("residual_casadi");
-    CasadiFunctions *p_python_functions =
-        static_cast<CasadiFunctions *>(user_data);
+  DEBUG("residual_casadi");
+  CasadiFunctions *p_python_functions =
+    static_cast<CasadiFunctions *>(user_data);
+  
+  p_python_functions->rhs_alg.m_arg[0] = &tres;
+  p_python_functions->rhs_alg.m_arg[1] = NV_DATA_OMP(yy);
+  p_python_functions->rhs_alg.m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->rhs_alg.m_res[0] = NV_DATA_OMP(rr);
+  p_python_functions->rhs_alg();
 
-    p_python_functions->rhs_alg.m_arg[0] = &tres;
-    p_python_functions->rhs_alg.m_arg[1] = NV_DATA_OMP(yy);
-    p_python_functions->rhs_alg.m_arg[2] = p_python_functions->inputs.data();
-    p_python_functions->rhs_alg.m_res[0] = NV_DATA_OMP(rr);
-    p_python_functions->rhs_alg();
+  realtype *tmp = p_python_functions->get_tmp_state_vector();
+  p_python_functions->mass_action.m_arg[0] = NV_DATA_OMP(yp);
+  p_python_functions->mass_action.m_res[0] = tmp;
+  p_python_functions->mass_action();
 
-    realtype *tmp = p_python_functions->get_tmp_state_vector();
-    p_python_functions->mass_action.m_arg[0] = NV_DATA_OMP(yp);
-    p_python_functions->mass_action.m_res[0] = tmp;
-    p_python_functions->mass_action();
+  // AXPY: y <- a*x + y
+  const int ns = p_python_functions->number_of_states;
+  casadi::casadi_axpy(ns, -1., tmp, NV_DATA_OMP(rr));
 
-    // AXPY: y <- a*x + y
-    const int ns = p_python_functions->number_of_states;
-    casadi::casadi_axpy(ns, -1., tmp, NV_DATA_OMP(rr));
+  DEBUG_VECTORn(yy, 5);
+  DEBUG_VECTORn(yp, 5);
+  DEBUG_VECTORn(rr, 5);
 
-    //DEBUG_VECTOR(yy);
-    //DEBUG_VECTOR(yp);
-    //DEBUG_VECTOR(rr);
-
-    // now rr has rhs_alg(t, y) - mass_matrix * yp
-    return 0;
+  // now rr has rhs_alg(t, y) - mass_matrix * yp
+  return 0;
 }
 
 // This Gres function computes G(t, y, yp). It loads the vector gval as a
@@ -61,14 +65,19 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 // within user_data.
 //
 // The case where G is mathematically identical to F is allowed.
-int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
-                           N_Vector yp, N_Vector gval, void *user_data)
+int residual_casadi_approx(
+  sunindextype Nlocal,
+  realtype tt,
+  N_Vector yy,
+  N_Vector yp,
+  N_Vector gval,
+  void *user_data)
 {
-    DEBUG("residual_casadi_approx");
+  DEBUG("residual_casadi_approx");
 
-    // Just use true residual for now
-    int result = residual_casadi(tt, yy, yp, gval, user_data);
-    return result;
+  // Just use true residual for now
+  int result = residual_casadi(tt, yy, yp, gval, user_data);
+  return result;
 }
 
 // Purpose This function computes the product Jv of the DAE system Jacobian J
@@ -91,34 +100,42 @@ int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
 //     tmp2 are pointers to memory allocated for variables of type N Vector
 //     which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
-int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
-                  N_Vector v, N_Vector Jv, realtype cj, void *user_data,
-                  N_Vector tmp1, N_Vector tmp2)
+int jtimes_casadi(
+  realtype tt,
+  N_Vector yy,
+  N_Vector yp,
+  N_Vector rr,
+  N_Vector v,
+  N_Vector Jv,
+  realtype cj,
+  void *user_data,
+  N_Vector tmp1,
+  N_Vector tmp2)
 {
-    DEBUG("jtimes_casadi");
-    CasadiFunctions *p_python_functions =
-        static_cast<CasadiFunctions *>(user_data);
+  DEBUG("jtimes_casadi");
+  CasadiFunctions *p_python_functions =
+    static_cast<CasadiFunctions *>(user_data);
 
-    // Jv has ∂F/∂y v
-    p_python_functions->jac_action.m_arg[0] = &tt;
-    p_python_functions->jac_action.m_arg[1] = NV_DATA_OMP(yy);
-    p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
-    p_python_functions->jac_action.m_arg[3] = NV_DATA_OMP(v);
-    p_python_functions->jac_action.m_res[0] = NV_DATA_OMP(Jv);
-    p_python_functions->jac_action();
+  // Jv has ∂F/∂y v
+  p_python_functions->jac_action.m_arg[0] = &tt;
+  p_python_functions->jac_action.m_arg[1] = NV_DATA_OMP(yy);
+  p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->jac_action.m_arg[3] = NV_DATA_OMP(v);
+  p_python_functions->jac_action.m_res[0] = NV_DATA_OMP(Jv);
+  p_python_functions->jac_action();
 
-    // tmp has -∂F/∂y˙ v
-    realtype *tmp = p_python_functions->get_tmp_state_vector();
-    p_python_functions->mass_action.m_arg[0] = NV_DATA_OMP(v);
-    p_python_functions->mass_action.m_res[0] = tmp;
-    p_python_functions->mass_action();
+  // tmp has -∂F/∂y˙ v
+  realtype *tmp = p_python_functions->get_tmp_state_vector();
+  p_python_functions->mass_action.m_arg[0] = NV_DATA_OMP(v);
+  p_python_functions->mass_action.m_res[0] = tmp;
+  p_python_functions->mass_action();
 
-    // AXPY: y <- a*x + y
-    // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
-    const int ns = p_python_functions->number_of_states;
-    casadi::casadi_axpy(ns, -cj, tmp, NV_DATA_OMP(Jv));
+  // AXPY: y <- a*x + y
+  // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
+  const int ns = p_python_functions->number_of_states;
+  casadi::casadi_axpy(ns, -cj, tmp, NV_DATA_OMP(Jv));
 
-    return 0;
+  return 0;
 }
 
 // Arguments tt is the current value of the independent variable t.
@@ -138,9 +155,17 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 //   tmp3 are pointers to memory allocated for variables of type N Vector which
 //   can
 //     be used by IDALsJacFn function as temporary storage or work space.
-int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
-                    N_Vector resvec, SUNMatrix JJ, void *user_data,
-                    N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
+int jacobian_casadi(
+  realtype tt,
+  realtype cj,
+  N_Vector yy,
+  N_Vector yp,
+  N_Vector resvec,
+  SUNMatrix JJ,
+  void *user_data,
+  N_Vector tempv1,
+  N_Vector tempv2,
+  N_Vector tempv3)
 {
     DEBUG("jacobian_casadi");
 

@@ -107,7 +107,7 @@ void CasadiSolverOpenMP::SetMatrix() {
 }
 
 void CasadiSolverOpenMP::Initialize() {
-  DEBUG("CasadiSolver::CasadiSolver");
+  DEBUG("CasadiSolverOpenMP::Initialize");
   auto atol = atol_np.unchecked<1>();
 
   // create SUNDIALS context object
@@ -148,7 +148,7 @@ void CasadiSolverOpenMP::Initialize() {
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
 
-  // specigy preconditioner type
+  // specify preconditioner type
   precon_type = SUN_PREC_NONE;
   if (options.preconditioner != "none") {
     precon_type = SUN_PREC_LEFT;
