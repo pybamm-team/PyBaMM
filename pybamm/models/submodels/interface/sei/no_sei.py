@@ -21,8 +21,8 @@ class NoSEI(BaseModel):
         Whether this is a submodel for standard SEI or SEI on cracks
     """
 
-    def __init__(self, param, options, phase="primary", cracks=False):
-        super().__init__(param, options=options, phase=phase, cracks=cracks)
+    def __init__(self, param, domain, options, phase="primary", cracks=False):
+        super().__init__(param, domain, options=options, phase=phase, cracks=cracks)
         if self.options.electrode_types[self.domain] == "planar":
             self.reaction_loc = "interface"
         else:

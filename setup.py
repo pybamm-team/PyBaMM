@@ -250,7 +250,9 @@ setup(
             "Ai2020 = pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values",  # noqa: E501
             "Chen2020 = pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values",  # noqa: E501
             "Chen2020_composite = pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values",  # noqa: E501
+            "Chen2020_composite_halfcell = pybamm.input.parameters.lithium_ion.Chen2020_composite_halfcell:get_parameter_values",  # noqa: E501
             "Ecker2015 = pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values",  # noqa: E501
+            "Ecker2015_graphite_halfcell = pybamm.input.parameters.lithium_ion.Ecker2015_graphite_halfcell:get_parameter_values",  # noqa: E501
             "Marquis2019 = pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values",  # noqa: E501
             "Mohtat2020 = pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values",  # noqa: E501
             "NCA_Kim2011 = pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values",  # noqa: E501
