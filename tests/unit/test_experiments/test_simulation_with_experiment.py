@@ -207,7 +207,7 @@ class TestSimulationExperiment(TestCase):
                 (
                     pybamm.step.current(drive_cycle, temperature="35oC"),
                     pybamm.step.voltage(drive_cycle),
-                    pybamm.step.power(drive_cycle),
+                    pybamm.step.power(drive_cycle, termination="3 V"),
                 )
             ],
         )
