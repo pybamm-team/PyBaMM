@@ -44,6 +44,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
+'decomposition': 'false' (possible: ['false', 'true'])
 'external submodels': []
 'timescale': 'default'
 """  # noqa: E501

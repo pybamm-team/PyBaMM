@@ -281,6 +281,19 @@ OKane2022 = {
     "citation": ["OKane2022", "Chen2020"],
 }
 
+# same as Mohtat2020 but includes additional thermal runaway parameters
+Tran2023 = {
+    "chemistry": "lithium_ion",
+    "cell": "UMBL_Mohtat2020",
+    "negative electrode": "graphite_UMBL_Tran2023",
+    "separator": "separator_Mohtat2020",
+    "positive electrode": "NMC_UMBL_Tran2023",
+    "electrolyte": "LiPF6_Tran2023",
+    "experiment": "1C_charge_from_empty_Mohtat2020",
+    "sei": "example",
+    "citation": "Mohtat2020",
+}
+
 #
 # Lead-acid
 #

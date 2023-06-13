@@ -90,6 +90,12 @@ class BaseThermal(pybamm.BaseSubModel):
     def _get_standard_coupled_variables(self, variables):
         param = self.param
 
+        # Tab heating 
+        Q_scale = param.i_typ * param.potential_scale / param.L_x # moved to accommodate tabbing I^2R
+        I = variables["Current [A]"]
+        R_tab = pybamm.Parameter("Tabbing resistance [Ohm]")
+        Q_tabbing = I**2*R_tab/ param.V_cell/Q_scale*0.5 # originally W.m-3
+
         # Ohmic heating in solid
         i_s_p = variables["Positive electrode current density"]
         phi_s_p = variables["Positive electrode potential"]
@@ -140,7 +146,14 @@ class BaseThermal(pybamm.BaseSubModel):
                 Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
 
         # Total Ohmic heating
-        Q_ohm = Q_ohm_s + Q_ohm_e
+        Q_ohm = Q_ohm_s + Q_ohm_e + Q_tabbing
+
+        # Side reaction heating
+        Q_decomposition_an = variables["Anode decomposition heating"]
+        Q_decomposition_sei = variables["SEI decomposition heating"]
+        Q_decomposition_ca = variables["Cathode decomposition heating"]
+        Q_decomposition_n = Q_decomposition_an + Q_decomposition_sei
+        Q_decomposition_p = Q_decomposition_ca
 
         # Irreversible electrochemical heating
         a_p = variables["Positive electrode surface area to volume ratio"]
@@ -154,8 +167,8 @@ class BaseThermal(pybamm.BaseSubModel):
             a_n = variables["Negative electrode surface area to volume ratio"]
             j_n = variables["Negative electrode interfacial current density"]
             eta_r_n = variables["Negative electrode reaction overpotential"]
-            Q_rxn_n = a_n * j_n * eta_r_n
-        Q_rxn_p = a_p * j_p * eta_r_p
+            Q_rxn_n = a_n * j_n * eta_r_n + Q_decomposition_n
+        Q_rxn_p = a_p * j_p * eta_r_p + Q_decomposition_p
         Q_rxn = pybamm.concatenation(
             *[
                 Q_rxn_n,
@@ -205,6 +218,7 @@ class BaseThermal(pybamm.BaseSubModel):
         variables.update(
             {
                 "Ohmic heating": Q_ohm,
+                "Tab heating": Q_tabbing,
                 "Ohmic heating [W.m-3]": Q_ohm * Q_scale,
                 "X-averaged Ohmic heating": Q_ohm_av,
                 "X-averaged Ohmic heating [W.m-3]": Q_ohm_av * Q_scale,
@@ -230,6 +244,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 "X-averaged total heating [W.m-3]": Q_av * Q_scale,
                 "Volume-averaged total heating": Q_vol_av,
                 "Volume-averaged total heating [W.m-3]": Q_vol_av * Q_scale,
+                "Tab heating [W.m-3]": Q_tabbing * Q_scale,
             }
         )
         return variables
