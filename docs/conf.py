@@ -52,7 +52,13 @@ extensions = [
     "myst_parser",
     "sphinx_extend_parent",
     "sphinx_inline_tabs",
+    "sphinxcontrib.bibtex",
 ]
+
+# -- sphinxcontrib-bibtex configuration --------------------------------------
+bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_style = "unsrt"
+bibtex_footbibliography_header = "References"
 
 
 napoleon_use_rtype = True
