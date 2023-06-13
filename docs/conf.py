@@ -58,7 +58,9 @@ extensions = [
 # -- sphinxcontrib-bibtex configuration --------------------------------------
 bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
 bibtex_style = "unsrt"
-bibtex_footbibliography_header = "References"
+bibtex_footbibliography_header = """References\n----------\n"""
+bibtex_reference_style = "author_year"
+bibtex_tooltips = True
 
 
 napoleon_use_rtype = True
