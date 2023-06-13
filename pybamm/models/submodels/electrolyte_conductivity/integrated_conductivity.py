@@ -8,7 +8,7 @@ from .base_electrolyte_conductivity import BaseElectrolyteConductivity
 class Integrated(BaseElectrolyteConductivity):
     """
     Integrated model for conservation of charge in the electrolyte derived from
-    integrating the Stefan-Maxwell constitutive equations, from 
+    integrating the Stefan-Maxwell constitutive equations, from
     :footcite:`BrosaPlanella2021`.
 
     Parameters
