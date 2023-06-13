@@ -76,7 +76,7 @@ void CasadiSolverOpenMP::SetMatrix() {
       number_of_states,
       number_of_states,
       jac_times_cjmass_nnz,
-      CSC_MAT,
+      CSR_MAT,
       sunctx
     );
   }

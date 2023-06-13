@@ -2,6 +2,10 @@
 #include "casadi_functions.hpp"
 #include "common.hpp"
 
+#include <stdio.h>
+#include <string.h>
+#include <memory.h>
+
 int residual_casadi(
   realtype tres,
   N_Vector yy,
@@ -167,81 +171,120 @@ int jacobian_casadi(
   N_Vector tempv2,
   N_Vector tempv3)
 {
-    DEBUG("jacobian_casadi");
+  DEBUG("jacobian_casadi");
 
-    CasadiFunctions *p_python_functions =
-        static_cast<CasadiFunctions *>(user_data);
+  CasadiFunctions *p_python_functions =
+    static_cast<CasadiFunctions *>(user_data);
 
-    // create pointer to jac data, column pointers, and row values
-    realtype *jac_data;
-    if (p_python_functions->options.using_sparse_matrix)
+  // create pointer to jac data, column pointers, and row values
+  realtype *jac_data;
+  if (p_python_functions->options.using_sparse_matrix)
+    jac_data = SUNSparseMatrix_Data(JJ);
+  else if (p_python_functions->options.using_banded_matrix)
+    jac_data = p_python_functions->get_tmp_sparse_jacobian_data();
+  else
+    jac_data = SUNDenseMatrix_Data(JJ);
+
+  if (p_python_functions->options.using_banded_matrix)
+  {
+    // copy data from temporary matrix to the banded matrix
+    auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
+    auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
+    int ncols = p_python_functions->number_of_states;
+    for (int col_ij = 0; col_ij < ncols; col_ij++) {
+      realtype *banded_col = SM_COLUMN_B(JJ, col_ij);
+      for (auto data_i = jac_colptrs[col_ij]; data_i < jac_colptrs[col_ij+1]; data_i++) {
+        auto row_ij = jac_rowvals[data_i];
+        const realtype value_ij = jac_data[data_i];
+        DEBUG("(" << row_ij << ", " << col_ij << ") = " << value_ij);
+        SM_COLUMN_ELEMENT_B(banded_col, row_ij, col_ij) = value_ij;
+      }
+    }
+  }
+  else if (p_python_functions->options.using_sparse_matrix)
+  {
+    if (0) //SUNSparseMatrix_SparseType(JJ) == CSC_MAT)
     {
-        jac_data = SUNSparseMatrix_Data(JJ);
-    }
-    else if (p_python_functions->options.using_banded_matrix) {
-        jac_data = p_python_functions->get_tmp_sparse_jacobian_data();
-    }
-    else
-    {
-        jac_data = SUNDenseMatrix_Data(JJ);
-    }
+      // CSC
+      DEBUG("CSC");
 
-    // args are t, y, cj, put result in jacobian data matrix
-    p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-    p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA_OMP(yy);
-    p_python_functions->jac_times_cjmass.m_arg[2] =
+      // args are t, y, cj, put result in jacobian data matrix
+      p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
+      p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA_OMP(yy);
+      p_python_functions->jac_times_cjmass.m_arg[2] =
         p_python_functions->inputs.data();
-    p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-    p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
+      p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
+      p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
+      p_python_functions->jac_times_cjmass();
 
-    p_python_functions->jac_times_cjmass();
+      sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
+      sunindextype *jac_rowvals = SUNSparseMatrix_IndexValues(JJ);
+      // row vals and col ptrs
+      const int n_row_vals = p_python_functions->jac_times_cjmass_rowvals.size();
+      auto p_jac_times_cjmass_rowvals =
+        p_python_functions->jac_times_cjmass_rowvals.data();
 
+      // just copy across row vals (do I need to do this every time?)
+      // (or just in the setup?)
+      for (int i = 0; i < n_row_vals; i++)
+        jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
 
-    if (p_python_functions->options.using_banded_matrix)
-    {
-        // copy data from temporary matrix to the banded matrix
-        auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
-        auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
-        int ncols = p_python_functions->number_of_states;
-        for (int col_ij = 0; col_ij < ncols; col_ij++) {
-            realtype *banded_col = SM_COLUMN_B(JJ, col_ij);
-            for (auto data_i = jac_colptrs[col_ij]; data_i < jac_colptrs[col_ij+1]; data_i++) {
-                auto row_ij = jac_rowvals[data_i];
-                const realtype value_ij = jac_data[data_i];
-                DEBUG("(" << row_ij << ", " << col_ij << ") = " << value_ij);
-                SM_COLUMN_ELEMENT_B(banded_col, row_ij, col_ij) = value_ij;
-            }
-        }
+      const int n_col_ptrs = p_python_functions->jac_times_cjmass_colptrs.size();
+      auto p_jac_times_cjmass_colptrs =
+        p_python_functions->jac_times_cjmass_colptrs.data();
+
+      // just copy across col ptrs (do I need to do this every time?)
+      for (int i = 0; i < n_col_ptrs; i++)
+        jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
+    
+    } else {
+
+      // CSR
+      DEBUG("CSR");
+
+      sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
+      sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
+
+      realtype newjac[SUNSparseMatrix_NNZ(JJ)];
+      csc_csr(
+        jac_data,
+        p_python_functions->jac_times_cjmass_rowvals.data(),
+        p_python_functions->jac_times_cjmass_colptrs.data(),
+        newjac,
+        jac_ptrs,
+        jac_vals,
+        SUNSparseMatrix_NNZ(JJ),
+        SUNSparseMatrix_NP(JJ)
+      );
+      
+      // args are t, y, cj, put result in jacobian data matrix
+      p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
+      p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA_OMP(yy);
+      p_python_functions->jac_times_cjmass.m_arg[2] =
+        p_python_functions->inputs.data();
+      p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
+      p_python_functions->jac_times_cjmass.m_res[0] = newjac;
+      p_python_functions->jac_times_cjmass();
+      
+      long new_vals[SUNSparseMatrix_NNZ(JJ)];
+      long new_ptrs[SUNSparseMatrix_Columns(JJ)];
+
+      csc_csr(
+        newjac,
+        jac_vals,
+        jac_ptrs,
+        jac_data,
+        new_ptrs,
+        new_vals,
+        SUNSparseMatrix_NNZ(JJ),
+        SUNSparseMatrix_NP(JJ)
+      );
     }
-    else if (p_python_functions->options.using_sparse_matrix)
-    {
+  }
 
-        sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
-        sunindextype *jac_rowvals = SUNSparseMatrix_IndexValues(JJ);
-        // row vals and col ptrs
-        const int n_row_vals = p_python_functions->jac_times_cjmass_rowvals.size();
-        auto p_jac_times_cjmass_rowvals =
-            p_python_functions->jac_times_cjmass_rowvals.data();
+  //throw std::runtime_error("That's enough.");
 
-        // just copy across row vals (do I need to do this every time?)
-        // (or just in the setup?)
-        for (int i = 0; i < n_row_vals; i++)
-        {
-            jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
-        }
-
-        const int n_col_ptrs = p_python_functions->jac_times_cjmass_colptrs.size();
-        auto p_jac_times_cjmass_colptrs =
-            p_python_functions->jac_times_cjmass_colptrs.data();
-
-        // just copy across col ptrs (do I need to do this every time?)
-        for (int i = 0; i < n_col_ptrs; i++)
-        {
-            jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
-        }
-    }
-
-    return (0);
+  return (0);
 }
 
 int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,

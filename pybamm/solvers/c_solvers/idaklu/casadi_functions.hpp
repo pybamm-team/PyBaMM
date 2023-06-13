@@ -6,6 +6,9 @@
 #include "solution.hpp"
 #include <casadi/casadi.hpp>
 
+void csc_csr(realtype f[], long c[], long r[], realtype nf[], int nc[], int nr[], int N, int cols);
+void csc_csr(realtype f[], int c[], int r[], realtype nf[], long nc[], long nr[], int N, int cols);
+
 using Function = casadi::Function;
 
 class CasadiFunction

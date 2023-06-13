@@ -115,14 +115,14 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
   
 
   std::cout << "asssi\n";
-  std::cout << number_of_states << '\n';
-  std::cout << SUNMatrix_cuSparse_BlockRows(J) << '\n';
-  std::cout << SUNMatrix_cuSparse_BlockNNZ(J) << '\n';
+  std::cout << number_of_states << '\n'; //2800
+  std::cout << SUNMatrix_cuSparse_BlockRows(J) << '\n'; // 2800
+  std::cout << SUNMatrix_cuSparse_BlockNNZ(J) << '\n'; // 12388
 
   DEBUG(":");
   realtype *jac_data =  SUNMatrix_cuSparse_BlockData(J, 0);
-  std::cout << SUNMatrix_cuSparse_Rows(J) << '\n';
-  std::cout << SUNMatrix_cuSparse_Columns(J) << '\n';
+  std::cout << SUNMatrix_cuSparse_Rows(J) << '\n'; // 2800
+  std::cout << SUNMatrix_cuSparse_Columns(J) << '\n'; // 2800
 
   DEBUG("1");
   jac_data =
@@ -142,12 +142,12 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
     throw std::runtime_error("SUNMatrix_cuSparse_CopyFromDevice: Failed");
   
   DEBUG("3");
-  for (int i = 0; i < SUNMatrix_cuSparse_BlockRows(J); i++) {
+/*  for (int i = 0; i < SUNMatrix_cuSparse_BlockRows(J); i++) {
     std::cout << jac_rowvals[i] << " ";
   }
   DEBUG("4");
   for (int i = 1; i < SUNMatrix_cuSparse_BlockNNZ(J); i++)
-    std::cout << jac_colptrs[i] << " ";
+    std::cout << jac_colptrs[i] << " ";*/
   DEBUG("5");
   SUNMatrix_cuSparse_CopyToDevice(
     J,

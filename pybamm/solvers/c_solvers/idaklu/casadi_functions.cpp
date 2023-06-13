@@ -1,5 +1,78 @@
 #include "casadi_functions.hpp"
 
+void csc_csr(realtype f[], long c[], long r[], realtype nf[], int nc[], int nr[], int N, int cols) {
+
+  /*for (int i=0; i<N; i++) {
+    nf[i] = f[i];
+    nr[i] = c[i];
+  }
+  for (int i=0; i<cols+1; i++)
+    nc[i] = r[i];
+
+  return;*/
+
+  int nn[cols+1];
+  int rr[N];
+  for (int i=0; i<cols+1; i++)
+    nc[i] = 0;
+  
+  for (int k = 0, i = 0; i < cols+1; i++) {
+    for (int j = 0; j < r[i+1] - r[i]; j++) {
+      if (k == N)  // r does not contain the final element
+        break;
+      rr[k++] = i;
+    }
+  }
+  for (int i = 0; i < N; i++)
+    nc[c[i]+1]++;
+  for (int i = 1; i <= cols; i++)
+    nc[i] += nc[i-1];
+  for (int i = 0; i < cols+1; i++)
+    nn[i] = nc[i];
+
+  for (int i = 0; i < N; i++) {
+    int x = nn[c[i]]++;
+    nf[x] = f[i];
+    nr[x] = rr[i];
+  }
+}
+
+void csc_csr(realtype f[], int c[], int r[], realtype nf[], long nc[], long nr[], int N, int cols) {
+  /*for (int i=0; i<N; i++) {
+    nf[i] = f[i];
+    nr[i] = c[i];
+  }
+  for (int i=0; i<cols+1; i++)
+    nc[i] = r[i];
+
+  return;*/
+
+  int nn[cols+1];
+  int rr[N];
+  for (int i=0; i<cols+1; i++)
+    nc[i] = 0;
+  
+  for (int k = 0, i = 0; i < cols+1; i++) {
+    for (int j = 0; j < r[i+1] - r[i]; j++) {
+      if (k == N)  // r does not contain the final element
+        break;
+      rr[k++] = i;
+    }
+  }
+  for (int i = 0; i < N; i++)
+    nc[c[i]+1]++;
+  for (int i = 1; i <= cols; i++)
+    nc[i] += nc[i-1];
+  for (int i = 0; i < cols+1; i++)
+    nn[i] = nc[i];
+
+  for (int i = 0; i < N; i++) {
+    int x = nn[c[i]]++;
+    nf[x] = f[i];
+    nr[x] = rr[i];
+  }
+}
+
 CasadiFunction::CasadiFunction(const Function &f) : m_func(f)
 {
     size_t sz_arg;

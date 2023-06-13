@@ -195,6 +195,11 @@ int jacobian_casadi_cuda(
   if (SUNMatrix_cuSparse_CopyFromDevice(JJ, jac_data, jac_colptrs, jac_rowvals))
     throw std::runtime_error("SUNMatrix_cuSparse_CopyFromDevice: Failed");
   
+  std::cout << "\n\njac data " << SUNMatrix_cuSparse_NNZ(JJ) << ": ";
+  for (int i=0; i<100; i++)
+    std::cout << jac_data[i] << " ";
+  std::cout << "\n\n";
+  
   // args are t, y, cj, put result in jacobian data matrix
   p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
   p_python_functions->jac_times_cjmass.m_arg[1] = yyd;
@@ -203,6 +208,11 @@ int jacobian_casadi_cuda(
   p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
   p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
   p_python_functions->jac_times_cjmass();
+
+  std::cout << "\n\njac data: ";
+  for (int i=0; i<100; i++)
+    std::cout << jac_data[i] << " ";
+  std::cout << "\n\n";
 
   if (p_python_functions->options.using_sparse_matrix)
   {
@@ -224,8 +234,9 @@ int jacobian_casadi_cuda(
       p_python_functions->jac_times_cjmass_colptrs.data();
 
     // just copy across col ptrs (do I need to do this every time?)
-    for (int i = 0; i < n_col_ptrs; i++)
+    for (int i = 0; i < n_col_ptrs; i++) {
       jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
+    }
   }
   else
     throw std::runtime_error("Invalid matrix type provided.");
