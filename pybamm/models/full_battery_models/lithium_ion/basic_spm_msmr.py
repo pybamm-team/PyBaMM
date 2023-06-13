@@ -286,8 +286,12 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
         self.variables = {
             "Discharge capacity [A.h]": Q,
             "Current [A]": I,
-            "X-averaged negative electrode stoichiometry": x_n,
-            "X-averaged positive electrode stoichiometry": x_p,
+            "X-averaged negative particle stoichiometry": x_n,
+            "X-averaged positive particle stoichiometry": x_p,
+            "X-averaged negative electrode extent of lithiation": pybamm.r_average(x_n),
+            "X-averaged positive electrode extent of lithiation": pybamm.r_average(x_p),
+            "X-averaged negative particle surface stoichiometry": pybamm.surf(x_n),
+            "X-averaged positive particle surface stoichiometry": pybamm.surf(x_p),
             "X-averaged negative particle concentration": c_n,
             "X-averaged positive particle concentration": c_p,
             "X-averaged negative electrode stoichiometry change [V-1]": dxdU_n,
@@ -304,6 +308,24 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
             ),
             "Voltage [V]": V,
         }
+
+        # x_n
+        for i in range(6):
+            U0 = pybamm.Parameter(f"U0_n_{i}")
+            w = pybamm.Parameter(f"w_n_{i}")
+            Xj = pybamm.Parameter(f"Xj_n_{i}")
+
+            self.variables[f"x{i}_n"] = Xj / (1 + pybamm.exp(f * (U_n - U0) / w))
+
+        # x_p
+        for i in range(4):
+            U0 = pybamm.Parameter(f"U0_p_{i}")
+            w = pybamm.Parameter(f"w_p_{i}")
+            Xj = pybamm.Parameter(f"Xj_p_{i}")
+
+            self.variables[f"x{i}_p"] = Xj / (1 + pybamm.exp(f * (U_p - U0) / w))
+
+        # events
         self.events += [
             pybamm.Event("Minimum voltage [V]", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - V),
@@ -316,8 +338,8 @@ class BasicSPMSMR(pybamm.lithium_ion.BaseModel):
     @property
     def default_quick_plot_variables(self):
         return [
-            "X-averaged negative electrode stoichiometry",
-            "X-averaged positive electrode stoichiometry",
+            "X-averaged negative particle stoichiometry",
+            "X-averaged positive particle stoichiometry",
             "X-averaged negative particle OCP [V]",
             "X-averaged positive particle OCP [V]",
             "X-averaged negative electrode OCP [V]",
@@ -350,15 +372,36 @@ if __name__ == "__main__":
     )
     U_n, U_p = soc_sol["U_n"].data[0], soc_sol["U_p"].data[0]
 
+    def current(t):
+        return 5 * (t < 3000)
+
     parameter_values.update(
         {
             "Initial negative electrode potential [V]": U_n,
             "Initial positive electrode potential [V]": U_p,
+            "Current function [A]": current,
         },
         check_already_exists=False,
     )
     print(U_n, U_p)
 
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
-    sim.solve([0, 3300])
-    sim.plot()
+    sim.solve([0, 4000])
+    sim.plot(
+        [
+            [
+                "X-averaged negative electrode extent of lithiation",
+                "X-averaged negative particle surface stoichiometry",
+            ],
+            [
+                "X-averaged positive electrode extent of lithiation",
+                "X-averaged positive particle surface stoichiometry",
+            ],
+            "X-averaged negative electrode OCP [V]",
+            "X-averaged positive electrode OCP [V]",
+            [f"x{i}_n" for i in range(6)],
+            [f"x{i}_p" for i in range(4)],
+            "Current [A]",
+            "Voltage [V]",
+        ]
+    )
