@@ -50,7 +50,7 @@ experiment = pb.Experiment(
             "Charge at 1 C until 4.2 V",
             "Hold at 4.2 V until C/20",
             "Rest for 30 minutes",
-            "Discharge at 3 C until 2.8 V (10 second period)",
+            pb.step.string("Discharge at 3 C until 2.8 V", period=10),
             "Rest for 30 minutes",
         ),
     ]

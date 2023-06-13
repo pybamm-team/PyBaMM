@@ -2,35 +2,45 @@ Installation
 ============
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
-It can be installed using pip or conda, or from source.
+It can be installed using `pip` or `conda`, or from source.
 
-Using pip
-----------
+.. tab:: GNU/Linux and Windows
 
-PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__
+   .. tab:: pip
 
-GNU/Linux and Windows
-~~~~~~~~~~~~~~~~~~~~~
+      PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
 
-.. code:: bash
+      .. code:: bash
 
-   pip install pybamm
+         pip install pybamm
 
-macOS
-~~~~~
+   .. tab:: conda
 
-.. code:: bash
+      PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
 
-   brew install sundials && pip install pybamm
+      .. code:: bash
 
-Using conda
------------
+         conda install -c conda-forge pybamm
 
-PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel
+.. tab:: macOS
 
-.. code:: bash
+   .. tab:: pip
 
-   conda install -c conda-forge pybamm
+      PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
+
+      .. code:: bash
+
+         brew install sundials && pip install pybamm
+
+
+   .. tab:: conda
+
+      PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
+
+      .. code:: bash
+
+         conda install -c conda-forge pybamm
+
 
 Optional solvers
 ----------------
