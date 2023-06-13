@@ -81,7 +81,7 @@ class TestExperimentSteps(unittest.TestCase):
     def test_step_string(self):
         steps = [
             "Discharge at 1C for 0.5 hours",
-            "Discharge at C/20 for 0.5 hours",
+            "Discharge at C/20 for 1h (2 minute period)",
             "Charge at 0.5 C for 45 minutes",
             "Discharge at 1 A for 0.5 hours",
             "Charge at 200 mA for 45 minutes",
@@ -105,8 +105,9 @@ class TestExperimentSteps(unittest.TestCase):
             {
                 "type": "C-rate",
                 "value": 0.05,
-                "duration": 1800.0,
+                "duration": 3600.0,
                 "termination": [],
+                "period": 120,
             },
             {
                 "type": "C-rate",
@@ -182,8 +183,10 @@ class TestExperimentSteps(unittest.TestCase):
                 # useful form for debugging
                 self.assertEqual([k, expected[k]], [k, actual[k]])
 
-        with self.assertRaisesRegex(ValueError, "Period must be"):
-            pybamm.step.string("Discharge at 1C for 1 hour (1 minute period)")
+        with self.assertRaisesRegex(ValueError, "Period cannot be"):
+            pybamm.step.string(
+                "Discharge at 1C for 1 hour (1 minute period)", period=60
+            )
 
         with self.assertRaisesRegex(ValueError, "Temperature must be"):
             pybamm.step.string("Discharge at 1C for 1 hour at 298.15oC")

@@ -230,6 +230,7 @@ setup(
             "sphinx_design",
             "sphinx-copybutton",
             "myst-parser",
+            "sphinx-inline-tabs",
         ],  # For doc generation
         "dev": [
             "pre-commit",  # For code style checking
