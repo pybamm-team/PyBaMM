@@ -6,3 +6,5 @@ Doyle-Fuller-Newman (DFN)
 
 .. autoclass:: pybamm.lithium_ion.BasicDFN
     :members:
+
+.. footbibliography::
