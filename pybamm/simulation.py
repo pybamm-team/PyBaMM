@@ -273,7 +273,10 @@ class Simulation:
                 # figure out whether the voltage event is greater than the starting
                 # voltage (charge) or less (discharge) and set the sign of the
                 # event accordingly
-                sign = np.sign(op.value)
+                if isinstance(op.value, pybamm.Interpolant):
+                    sign = np.sign(op.value.y[0])
+                else:
+                    sign = np.sign(op.value)
                 if sign > 0:
                     name = "Discharge"
                 else:
