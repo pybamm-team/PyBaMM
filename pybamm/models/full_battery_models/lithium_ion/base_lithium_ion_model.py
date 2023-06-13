@@ -396,10 +396,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         if "true" in self.options["decomposition"]:
             self.submodels[
                 "anode decomposition"
-            ] = pybamm.decomposition.NoAnodeDecomposition(self.param)
+            ] = pybamm.decomposition.AnodeDecomposition(self.param)
             self.submodels[
                 "cathode decomposition"
-            ] = pybamm.decomposition.NoCathodeDecomposition(self.param)
+            ] = pybamm.decomposition.CathodeDecomposition(self.param)
             self.submodels["SEI decomposition"] = pybamm.decomposition.SeiDecomposition(
                 self.param
             )

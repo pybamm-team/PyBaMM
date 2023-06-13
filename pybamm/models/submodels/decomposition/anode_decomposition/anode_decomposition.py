@@ -65,4 +65,4 @@ class AnodeDecomposition(pybamm.BaseSubModel):
 
     def set_initial_conditions(self, variables):
         z = variables["Relative SEI thickness"]
-        self.initial_conditions = {z: self.therm.param.z_0}
+        self.initial_conditions = {z: self.param.therm.z_0}
