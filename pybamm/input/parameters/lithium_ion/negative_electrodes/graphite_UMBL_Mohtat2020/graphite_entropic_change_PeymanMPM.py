@@ -24,5 +24,5 @@ def graphite_entropic_change_PeymanMPM(sto, c_s_max):
         + 90.71 * sto ** (5)
         - 27.14 * sto ** (6)
     )
-
+    # du_dT = 0
     return du_dT

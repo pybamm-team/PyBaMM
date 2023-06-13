@@ -95,10 +95,12 @@ class SEIGrowth(BaseModel):
         L_sei_inner = variables[f"Inner {self.reaction_name}thickness"]
         L_sei_outer = variables[f"Outer {self.reaction_name}thickness"]
         L_sei = variables[f"Total {self.reaction_name}thickness"]
+        L_plated_Li = variables[f"X-averaged lithium plating thickness"]
 
         T = variables["Negative electrode temperature"]
         R_sei = phase_param.R_sei
-        eta_SEI = delta_phi - j * L_sei * R_sei
+        R_plated_Li = phase_param.R_plated_Li
+        eta_SEI = delta_phi - j * L_sei * R_sei -j * L_plated_Li * R_plated_Li
         # Thermal prefactor for reaction, interstitial and EC models
         prefactor = 1 / (1 + self.param.Theta * T)
 
