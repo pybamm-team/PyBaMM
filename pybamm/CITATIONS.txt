@@ -36,6 +36,17 @@
   doi = {10.1007/s12532-018-0139-4},
 }
 
+@article{Baker2018,
+  title={Multi-species, multi-reaction model for porous intercalation electrodes: Part I. Model formulation and a perturbation solution for low-scan-rate, linear-sweep voltammetry of a spinel lithium manganese oxide electrode},
+  author={Baker, Daniel R and Verbrugge, Mark W},
+  journal={Journal of The Electrochemical Society},
+  volume={165},
+  number={16},
+  pages={A3952},
+  year={2018},
+  publisher={IOP Publishing}
+}
+
 @article{BrosaPlanella2021,
   title = {Systematic derivation and validation of a reduced thermal-electrochemical model for lithium-ion batteries using asymptotic methods},
   author = {Brosa Planella, Ferran and Sheikh, Muhammad and Widanage, W. Dhammika},
