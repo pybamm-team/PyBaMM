@@ -9,7 +9,7 @@ from .base_thermal import BaseThermal
 class Lumped(BaseThermal):
     """
     Class for lumped thermal submodel. For more information see :footcite:`Timms2021`
-    and TODO.
+    and :footcite:`Marquis2020`.
 
     Parameters
     ----------

@@ -10,7 +10,8 @@ class CurrentCollector1D(BaseThermal):
     """
     Class for one-dimensional thermal submodel for use in the "1+1D" pouch cell
     model. The thermal model is averaged in the x-direction and is therefore referred
-    to as 'x-lumped'. For more information see :footcite:`Timms2021` and TODO.
+    to as 'x-lumped'. For more information see :footcite:`Timms2021` and
+    :footcite:`Marquis2020`.
 
     Parameters
     ----------
