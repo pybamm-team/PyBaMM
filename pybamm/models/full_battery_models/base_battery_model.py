@@ -72,6 +72,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
+            * "open-circuit potential" : str
+                Sets the model for the open circuit potential. Can be "single" 
+                (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
+                option must also be "MSMR". A 2-tuple can be provided for different 
+                behaviour in negative and positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -91,8 +96,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", or "quartic profile". A 2-tuple can be provided 
-                for different behaviour in negative and positive electrodes.
+                "quadratic profile", "quartic profile", or "MSMR". If "MSMR" then the 
+                "open-circuit potential" must also be "MSMR". A 2-tuple can be 
+                provided for different behaviour in negative and positive electrodes. 
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle
                 swelling and cracking. Can be "none" (default), "swelling only",
@@ -221,7 +227,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
-            "open-circuit potential": ["single", "current sigmoid"],
+            "open-circuit potential": ["single", "current sigmoid", "MSMR"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -239,6 +245,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "uniform profile",
                 "quadratic profile",
                 "quartic profile",
+                "MSMR",
             ],
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
             "particle phases": ["1", "2"],
@@ -368,6 +375,25 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             name, options.get_best_matches(name)
                         )
                     )
+
+        # IF "open-circuit potential" is "MSMR" then "particle" must be "MSMR" too
+        # and vice-versa
+        if (
+            options["open-circuit potential"] == "MSMR"
+            and options["particle"] != "MSMR"
+        ):
+            raise pybamm.OptionError(
+                "If 'open-circuit potential' is 'MSMR' then 'particle' must be 'MSMR' "
+                "too"
+            )
+        if (
+            options["particle"] == "MSMR"
+            and options["open-circuit potential"] != "MSMR"
+        ):
+            raise pybamm.OptionError(
+                "If 'particle' is 'MSMR' then 'open-circuit potential' must be 'MSMR' "
+                "too"
+            )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
@@ -832,6 +858,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
             if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
+            if options["open-circuit potential"] == "MSMR":
+                raise pybamm.OptionError(
+                    "Lead-acid models cannot use the MSMR open-circuit potential model"
+                )
 
         if (
             isinstance(self, pybamm.lead_acid.LOQS)
@@ -1216,7 +1246,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.variables.update(
             {
-                "Change in open-circuit voltage [V]": eta_ocv,
+                # "Change in open-circuit voltage [V]": eta_ocv,
                 "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
                 * v_ecm
                 / (i_cc_not_zero * A_cc),

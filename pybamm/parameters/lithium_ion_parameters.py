@@ -20,11 +20,6 @@ class LithiumIonParameters(BaseParameters):
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
                 (default). TODO: implement "cylindrical" and "platelet".
-            * "working electrode": str
-                Which electrode(s) intercalates and which is counter. If "both"
-                (default), the model is a standard battery. Otherwise can be "negative"
-                or "positive" to indicate a half-cell model.
-
     """
 
     def __init__(self, options=None):
@@ -332,7 +327,7 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode reaction-driven LAM factor [m3.mol-1]"
         )
 
-        # utilisation parameters
+        # Utilisation parameters
         self.u_init = pybamm.Parameter(
             f"Initial {domain} electrode interface utilisation"
         )
@@ -514,6 +509,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.Q_init = self.elec_loading * main.A_cc
 
         self.U_init = self.U(self.sto_init_av, main.T_init)
+        self.U_msmr_init = pybamm.Parameter(
+            f"{pref}Initial voltage in {domain} electrode [V]"
+        )
 
         if main.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
@@ -590,6 +588,30 @@ class ParticleLithiumIonParameters(BaseParameters):
         elif self.domain == "positive":
             out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
         return out
+
+    def x(self, U):
+        "Stoichiometry as a function of potential (for use with MSMR models)"
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode stoichiometry", inputs
+        )
+
+    def dxdU(self, U):
+        """
+        Differential stoichiometry as a function of potential (for use with MSMR models)
+        """
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode differential "
+            "stoichiometry [V-1]",
+            inputs,
+        )
 
     def dUdT(self, sto):
         """

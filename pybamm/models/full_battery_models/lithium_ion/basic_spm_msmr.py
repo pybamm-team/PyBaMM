@@ -356,7 +356,6 @@ if __name__ == "__main__":
     soc_model = pybamm.BaseModel()
     U_n = pybamm.Variable("U_n")
     U_p = pybamm.Variable("U_p")
-    soc_model.variables = {"U_n": U_n, "U_p": U_p}
     x_0 = parameter_values["Negative electrode stoichiometry at 0% SOC"]
     x_100 = parameter_values["Negative electrode stoichiometry at 100% SOC"]
     y_0 = parameter_values["Positive electrode stoichiometry at 0% SOC"]
@@ -366,10 +365,12 @@ if __name__ == "__main__":
     y = y_0 - initial_soc * (y_0 - y_100)
     soc_model.algebraic = {U_n: x - x_n(U_n), U_p: y - x_p(U_p)}
     soc_model.initial_conditions = {U_n: pybamm.Scalar(0), U_p: pybamm.Scalar(4)}
+    soc_model.variables = {"U_n": U_n, "U_p": U_p, "x": x, "y": y}
     parameter_values.process_model(soc_model)
     soc_sol = pybamm.AlgebraicSolver(tol=1e-6).solve(
         soc_model, inputs={"Initial soc": 1}
     )
+    x, y = soc_sol["x"].data[0], soc_sol["y"].data[0]
     U_n, U_p = soc_sol["U_n"].data[0], soc_sol["U_p"].data[0]
 
     def current(t):
@@ -383,6 +384,9 @@ if __name__ == "__main__":
         },
         check_already_exists=False,
     )
+    c_n_max = parameter_values["Maximum concentration in negative electrode [mol.m-3]"]
+    c_p_max = parameter_values["Maximum concentration in positive electrode [mol.m-3]"]
+    print(x * c_n_max, y * c_p_max)
     print(U_n, U_p)
 
     sim = pybamm.Simulation(model, parameter_values=parameter_values)

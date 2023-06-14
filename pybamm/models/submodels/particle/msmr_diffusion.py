@@ -272,7 +272,7 @@ class MSMRDiffusion(BaseParticle):
                 * pybamm.div(N_s)
                 / c_max
                 / dxdU,
-                f"{Domain} {phase_name}particle bc [V.m-1]": -j
+                f"{Domain} {phase_name}particle bc [V.m-1]": j
                 * R_nondim
                 / param.F
                 / pybamm.surf(c_max * x * (1 - x) * f * D_eff),
@@ -362,7 +362,7 @@ class MSMRDiffusion(BaseParticle):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        U_init = self.phase_param.U_init
+        U_init = self.phase_param.U_msmr_init
         if self.size_distribution is False:
             if self.x_average is False:
                 U = variables[
