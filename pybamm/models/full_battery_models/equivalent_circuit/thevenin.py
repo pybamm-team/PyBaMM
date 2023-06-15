@@ -12,7 +12,7 @@ class Thevenin(pybamm.BaseModel):
     element, and a number of RC elements (by default 1). The model is
     coupled to two lumped thermal models, one for the cell and
     one for the surrounding jig. Heat generation terms for each element
-    follow equation (1) of :footcite:``Nieto2012`.
+    follow equation (1) of :footcite:`Nieto2012`.
 
     Parameters
     ----------
