@@ -31,9 +31,7 @@ package (``cell_parameters``) should consist of the following::
 .. _entry point: https://setuptools.pypa.io/en/latest/userguide/entry_point.html
 
 The actual parameter set is defined within ``cell_alpha.py``, as shown below.
-For an example, see the `Marquis2019`_ parameter sets. See the reference :footcite:`Marquis2019`
-
-.. footbibliography::
+For an example, see the `Marquis2019`_ parameter sets.
 
 .. _Marquis2019: https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/input/parameters/lithium_ion/Marquis2019.py
 
