@@ -98,7 +98,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = None
 
 # Suppress warnings generated if footnotes are not references in a docstring
-suppress_warnings = ["ref.footnote"]
+# suppress_warnings = ["ref.footnote"]
 
 # -- Options for HTML output -------------------------------------------------
 
