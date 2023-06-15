@@ -1224,17 +1224,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Battery voltage [V]": V * num_cells,
             }
         )
-        # Variables for calculating the equivalent circuit model (ECM) resistance
-        # Need to compare OCV to initial value to capture this as an overpotential
-        ocv_init = self.param.ocv_init
-        eta_ocv = ocv_bulk - ocv_init
-        # Current collector current density for working out euiqvalent resistance
-        # based on Ohm's Law
-        i_cc = self.variables["Current collector current density [A.m-2]"]
+
+        # Calculate equivalent resistance of an OCV-R Equivalent Circuit Model
         # ECM overvoltage is OCV minus voltage
         v_ecm = ocv_bulk - V
-        # Current collector area for turning resistivity into resistance
-        A_cc = self.param.A_cc
 
         # Hack to avoid division by zero if i_cc is exactly zero
         # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
@@ -1242,11 +1235,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         def x_not_zero(x):
             return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
 
+        i_cc = self.variables["Current collector current density [A.m-2]"]
         i_cc_not_zero = x_not_zero(i_cc)
+        A_cc = self.param.A_cc
 
         self.variables.update(
             {
-                # "Change in open-circuit voltage [V]": eta_ocv,
                 "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
                 * v_ecm
                 / (i_cc_not_zero * A_cc),
