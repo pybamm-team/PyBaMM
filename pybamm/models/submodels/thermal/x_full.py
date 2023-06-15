@@ -110,23 +110,16 @@ class OneDimensionalX(BaseThermal):
             self.param.p.lambda_(T_p),
         )
 
+        # Edge cooling. TODO: account for tab cooling
+        area_to_volume_yz = (
+            2 * (self.param.L_y + self.param.L_z) / (self.param.L_y * self.param.L_z)
+        )
+        edge_cooling_cn = -self.param.h_edge * (T_cn - T_amb) * area_to_volume_yz
+        edge_cooling = -self.param.h_edge * (T - T_amb) * area_to_volume_yz
+        edge_cooling_cp = -self.param.h_edge * (T_cp - T_amb) * area_to_volume_yz
+
         # Fourier's law for heat flux
         q = -lambda_ * pybamm.grad(T)
-
-        # Edge cooling. TODO: account for tab cooling
-        edge_cooling_cn = (
-            -self.param.h_edge
-            * (T_cn - T_amb)
-            / (2 * (self.param.L_y + self.param.L_z))
-        )
-        edge_cooling = (
-            -self.param.h_edge * (T - T_amb) / (2 * (self.param.L_y + self.param.L_z))
-        )
-        edge_cooling_cp = (
-            -self.param.h_edge
-            * (T_cp - T_amb)
-            / (2 * (self.param.L_y + self.param.L_z))
-        )
 
         self.rhs = {
             T_cn: (
