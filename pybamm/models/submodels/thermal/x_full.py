@@ -49,8 +49,16 @@ class OneDimensionalX(BaseThermal):
             T_dict[domain] = T_k
 
         T = pybamm.concatenation(*T_dict.values())
-        T_cn = pybamm.boundary_value(T_dict["negative electrode"], "left")
-        T_cp = pybamm.boundary_value(T_dict["positive electrode"], "right")
+        T_cn = pybamm.Variable(
+            "Negative current collector temperature [K]",
+            domain="current collector",
+            scale=self.param.T_ref,
+        )
+        T_cp = pybamm.Variable(
+            "Positive current collector temperature [K]",
+            domain="current collector",
+            scale=self.param.T_ref,
+        )
         T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
         T_dict.update(
@@ -71,20 +79,31 @@ class OneDimensionalX(BaseThermal):
 
     def set_rhs(self, variables):
         T = variables["Cell temperature [K]"]
+        T_cn = variables["Negative current collector temperature [K]"]
         T_n = variables["Negative electrode temperature [K]"]
         T_s = variables["Separator temperature [K]"]
         T_p = variables["Positive electrode temperature [K]"]
-
+        T_cp = variables["Positive current collector temperature [K]"]
         Q = variables["Total heating [W.m-3]"]
+        Q_cn = variables["Negative current collector Ohmic heating [W.m-3]"]
+        Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
+        T_amb = variables["Ambient temperature [K]"]
 
-        # Define volumetric heat capacity
+        L_cn = self.param.n.L_cc
+        L_cp = self.param.p.L_cc
+        h_cn = self.param.n.h_cc
+        h_cp = self.param.p.h_cc
+        lambda_n = self.param.n.lambda_(T_n)
+        lambda_p = self.param.p.lambda_(T_p)
+
+        # Define volumetric heat capacity for electrode/separator/electrode sandwich
         rho_c_p = pybamm.concatenation(
             self.param.n.rho_c_p(T_n),
             self.param.s.rho_c_p(T_s),
             self.param.p.rho_c_p(T_p),
         )
 
-        # Define thermal conductivity
+        # Define thermal conductivity for electrode/separator/electrode sandwich
         lambda_ = pybamm.concatenation(
             self.param.n.lambda_(T_n),
             self.param.s.lambda_(T_s),
@@ -94,34 +113,59 @@ class OneDimensionalX(BaseThermal):
         # Fourier's law for heat flux
         q = -lambda_ * pybamm.grad(T)
 
-        # N.B only y-z surface cooling is implemented for this model
-        self.rhs = {T: (-pybamm.div(q) + Q) / rho_c_p}
+        # Edge cooling. TODO: account for tab cooling
+        edge_cooling_cn = (
+            -self.param.h_edge
+            * (T_cn - T_amb)
+            / (2 * (self.param.L_y + self.param.L_z))
+        )
+        edge_cooling = (
+            -self.param.h_edge * (T - T_amb) / (2 * (self.param.L_y + self.param.L_z))
+        )
+        edge_cooling_cp = (
+            -self.param.h_edge
+            * (T_cp - T_amb)
+            / (2 * (self.param.L_y + self.param.L_z))
+        )
+
+        self.rhs = {
+            T_cn: (
+                (
+                    pybamm.boundary_value(lambda_n, "left")
+                    * pybamm.boundary_gradient(T_n, "left")
+                    - h_cn * (T_cn - T_amb)
+                )
+                / L_cn
+                + Q_cn
+                + edge_cooling_cn
+            )
+            / self.param.n.rho_c_p_cc(T_cn),
+            T: (-pybamm.div(q) + Q + edge_cooling) / rho_c_p,
+            T_cp: (
+                (
+                    -pybamm.boundary_value(lambda_p, "right")
+                    * pybamm.boundary_gradient(T_p, "right")
+                    - h_cp * (T_cp - T_amb)
+                )
+                / L_cp
+                + Q_cp
+                + edge_cooling_cp
+            )
+            / self.param.p.rho_c_p_cc(T_cp),
+        }
 
     def set_boundary_conditions(self, variables):
         T = variables["Cell temperature [K]"]
-        T_n_left = pybamm.boundary_value(T, "left")
-        T_p_right = pybamm.boundary_value(T, "right")
-        T_amb = variables["Ambient temperature [K]"]
+        T_cn = variables["Negative current collector temperature [K]"]
+        T_cp = variables["Positive current collector temperature [K]"]
 
-        # N.B only y-z surface cooling is implemented for this thermal model.
-        # Tab and edge cooling is not accounted for.
         self.boundary_conditions = {
-            T: {
-                "left": (
-                    self.param.n.h_cc
-                    * (T_n_left - T_amb)
-                    / self.param.n.lambda_(T_n_left),
-                    "Neumann",
-                ),
-                "right": (
-                    -self.param.p.h_cc
-                    * (T_p_right - T_amb)
-                    / self.param.p.lambda_(T_p_right),
-                    "Neumann",
-                ),
-            }
+            T: {"left": (T_cn, "Dirichlet"), "right": (T_cp, "Dirichlet")}
         }
 
     def set_initial_conditions(self, variables):
         T = variables["Cell temperature [K]"]
-        self.initial_conditions = {T: self.param.T_init}
+        T_cn = variables["Negative current collector temperature [K]"]
+        T_cp = variables["Positive current collector temperature [K]"]
+        T_init = self.param.T_init
+        self.initial_conditions = {T_cn: T_init, T: T_init, T_cp: T_init}
