@@ -8,7 +8,7 @@ import warnings
 
 
 class _ElectrodeSOH(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH, from [1]_.
+    """Model to calculate electrode-specific SOH, from :footcite:`Mohtat2019`.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
     Some of the output variables are defined in [2]_.
@@ -24,11 +24,6 @@ class _ElectrodeSOH(pybamm.BaseModel):
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
 
-    References
-    ----------
-    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-           better estimability of electrode-specific state of health: Decoding the cell
-           expansion. Journal of Power Sources, 427, 101-111.
     """
 
     def __init__(
