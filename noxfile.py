@@ -30,7 +30,7 @@ def run_coverage(session):
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("coverage")
-    session.run("pip", "install", "-e", ".")
+    session.run("pip", "install", "-e", ".[tests]")
     if sys.platform != "win32" or sys.platform != "darwin":
         session.install("scikits.odes")
         session.run("pybamm_install_jax")
@@ -46,7 +46,7 @@ def run_integration(session):
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    session.run("pip", "install", "-e", ".")
+    session.run("pip", "install", "-e", ".[tests]")
     if sys.platform == "linux":
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--integration")
@@ -65,7 +65,7 @@ def run_unit(session):
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    session.run("pip", "install", "-e", ".")
+    session.run("pip", "install", "-e", ".[tests]")
     if sys.platform == "linux":
         session.run("pybamm_install_jax")
         session.install("scikits.odes")
@@ -96,7 +96,7 @@ def set_dev(session):
 
 @nox.session(name="tests", reuse_venv=True)
 def run_tests(session):
-    session.run("pip", "install", "-e", ".")
+    session.run("pip", "install", "-e", ".[tests]")
     if sys.platform == "linux":
         session.run("pybamm_install_jax")
     session.run("python", "run-tests.py", "--all")
@@ -105,7 +105,7 @@ def run_tests(session):
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
     envbindir = session.bin
-    session.run("pip", "install", "-e", ".")
+    session.run("pip", "install", "-e", ".[tests]")
     session.install(
         "sphinx>=1.5",
         "pydata-sphinx-theme",

@@ -247,6 +247,23 @@ setup(
         "tqdm": [
             "tqdm",
         ],
+        "tests": [
+            "numpy>=1.16",
+            "scipy>=1.3",
+            "pandas>=0.24",
+            "anytree>=2.4.3",
+            "autograd>=1.2",
+            "scikit-fem>=0.2.0",
+            "casadi>=3.6.0",
+            "imageio>=2.9.0",
+            "importlib-metadata",
+            "pybtex>=0.24.0",
+            "sympy>=1.8",
+            "xarray",
+            "bpx",
+            "tqdm",
+            "matplotlib>=2.0",
+        ],
         "all": [
             "numpy>=1.16",
             "scipy>=1.3",
