@@ -119,3 +119,10 @@ vcpkg_installed/
 # benchmarks
 html/
 results/
+
+# expression tree images for notebooks in docs
+!docs/source/examples/notebooks/expression_tree/expression_tree1.png
+!docs/source/examples/notebooks/expression_tree/expression_tree2.png
+!docs/source/examples/notebooks/expression_tree/expression_tree3.png
+!docs/source/examples/notebooks/expression_tree/expression_tree4.png
+!docs/source/examples/notebooks/expression_tree/expression_tree5.png
