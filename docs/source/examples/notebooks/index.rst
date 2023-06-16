@@ -16,7 +16,7 @@ This folder contains a collection of Jupyter notebooks that demonstrate how to u
     solvers/index
     spatial_methods/index
     batch_study.ipynb
-    callbacks.upynb
+    callbacks.ipynb
     change-settings.ipynb
     initialize-model-with-solution.ipynb
     simulating-long-experiments.ipynb
