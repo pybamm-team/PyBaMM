@@ -789,7 +789,7 @@ class EmptySolution:
             return self.copy()
 
     def copy(self):
-        return EmptySolution(self.termination)
+        return EmptySolution(termination=self.termination, t=self.t)
 
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
