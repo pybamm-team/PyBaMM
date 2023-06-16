@@ -96,9 +96,6 @@ language = "en"
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
-
 # Suppress warnings generated if footnotes are not references in a docstring
 # suppress_warnings = ["ref.footnote"]
 
@@ -154,6 +151,8 @@ html_theme_options = {
     # for dark mode toggle, version switcher, and social media links
     "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
     "use_edit_page_button": True,
+    "pygment_light_style": "xcode",
+    "pygment_dark_style": "monokai",
 }
 
 html_title = "%s v%s Manual" % (project, version)
