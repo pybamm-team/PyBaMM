@@ -53,6 +53,8 @@ extensions = [
     "sphinx_extend_parent",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
+    "nbsphinx",
+    "IPython.sphinxext.ipython_console_highlighting",
 ]
 
 # -- sphinxcontrib-bibtex configuration --------------------------------------
