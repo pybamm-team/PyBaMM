@@ -83,7 +83,7 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
 
-        operating_conditions_steps_unprocessed = self._set_next_timestamp(
+        operating_conditions_steps_unprocessed = self._set_next_start_time(
             [cond for cycle in operating_conditions_cycles for cond in cycle]
         )
 
@@ -104,15 +104,15 @@ class Experiment:
             processed_steps[step] for step in operating_conditions_steps_unprocessed
         ]
 
-        self.initial_timestamp = self.operating_conditions_steps[0].timestamp
+        self.initial_start_time = self.operating_conditions_steps[0].start_time
 
         if (
-            self.operating_conditions_steps[0].end_timestamp is not None
-            and self.initial_timestamp is None
+            self.operating_conditions_steps[0].end_time is not None
+            and self.initial_start_time is None
         ):
             raise ValueError(
-                "When using timestamped experiments, the first step must have a "
-                "timestamp to define the initial time."
+                "When using experiments with `start_time`, the first step must have a "
+                "`start_time`."
             )
 
         self.termination_string = termination
@@ -195,12 +195,12 @@ class Experiment:
 
         return cycles
 
-    def _set_next_timestamp(self, operating_conditions):
+    def _set_next_start_time(self, operating_conditions):
         if all(isinstance(i, str) for i in operating_conditions):
             return operating_conditions
 
-        end_timestamp = None
-        next_timestamp = None
+        end_time = None
+        next_start_time = None
 
         for op in reversed(operating_conditions):
             if isinstance(op, str):
@@ -210,11 +210,11 @@ class Experiment:
                     "Operating conditions should be strings or _Step objects"
                 )
 
-            op.next_timestamp = next_timestamp
-            op.end_timestamp = end_timestamp
+            op.next_start_time = next_start_time
+            op.end_time = end_time
 
-            next_timestamp = op.timestamp
-            if next_timestamp:
-                end_timestamp = next_timestamp
+            next_start_time = op.start_time
+            if next_start_time:
+                end_time = next_start_time
 
         return operating_conditions

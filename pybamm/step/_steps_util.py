@@ -66,7 +66,7 @@ class _Step:
         period=None,
         temperature=None,
         tags=None,
-        timestamp=None,
+        start_time=None,
         description=None,
     ):
         self.type = typ
@@ -83,8 +83,8 @@ class _Step:
             self.args += f", temperature={temperature}"
         if tags:
             self.args += f", tags={tags}"
-        if timestamp:
-            self.args += f", timestamp={timestamp}"
+        if start_time:
+            self.args += f", start_time={start_time}"
         if description:
             self.args += f", description={description}"
 
@@ -144,9 +144,12 @@ class _Step:
             tags = [tags]
         self.tags = tags
 
-        self.timestamp = _process_timestamp(timestamp)
-        self.next_timestamp = None
-        self.end_timestamp = None
+        if start_time is None or isinstance(start_time, datetime):
+            self.start_time = start_time
+        else:
+            raise TypeError("`start_time` should be a datetime.datetime object")
+        self.next_start_time = None
+        self.end_time = None
 
     def __str__(self):
         if self.description is not None:
@@ -174,7 +177,7 @@ class _Step:
             "period": self.period,
             "temperature": self.temperature,
             "tags": self.tags,
-            "timestamp": self.timestamp,
+            "start_time": self.start_time,
             "description": self.description,
         }
 
@@ -182,8 +185,8 @@ class _Step:
         return (
             isinstance(other, _Step)
             and self.__repr__() == other.__repr__()
-            and self.next_timestamp == other.next_timestamp
-            and self.end_timestamp == other.end_timestamp
+            and self.next_start_time == other.next_start_time
+            and self.end_time == other.end_time
         )
 
     def __hash__(self):
@@ -273,27 +276,3 @@ def _convert_electric(value_string):
             f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {_examples}"
         )
     return typ, value
-
-
-datetime_formats = [
-    "Day %j %H:%M:%S",
-    "Day %j %H:%M",
-    "%Y-%m-%d %H:%M:%S",
-    "%Y-%m-%d %H:%M",
-]
-
-
-def _process_timestamp(timestamp):
-    if timestamp is None or isinstance(timestamp, datetime):
-        return timestamp
-    else:
-        for format in datetime_formats:
-            try:
-                return datetime.strptime(timestamp, format)
-            except ValueError:
-                pass
-
-        raise ValueError(
-            f"The timestamp [{timestamp}] does not match any "
-            "of the supported formats."
-        )
