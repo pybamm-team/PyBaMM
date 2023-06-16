@@ -206,22 +206,9 @@ setup(
         "numpy>=1.16",
         "scipy>=1.3",
         "pandas>=0.24",
-        "anytree>=2.4.3",
-        "autograd>=1.2",
-        "scikit-fem>=0.2.0",
         "casadi>=3.6.0",
-        "imageio>=2.9.0",
         "importlib-metadata",
-        "pybtex>=0.24.0",
-        "sympy>=1.8",
         "xarray",
-        "bpx",
-        "tqdm",
-        # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
-        # on systems without an attached display, it should never be imported
-        # outside of plot() methods.
-        # Should not be imported
-        "matplotlib>=2.0",
     ],
     extras_require={
         "docs": [
@@ -236,6 +223,55 @@ setup(
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
             "jupyter",  # For example notebooks
+            "anytree>=2.4.3",
+            "autograd>=1.2",
+            "scikit-fem>=0.2.0",
+        ],
+        "plot": [
+            "imageio>=2.9.0",
+            # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
+            # on systems without an attached display, it should never be imported
+            # outside of plot() methods.
+            # Should not be imported
+            "matplotlib>=2.0",
+        ],
+        "cite": [
+            "pybtex>=0.24.0",
+        ],
+        "latexify": [
+            "sympy>=1.8",
+        ],
+        "bpx": [
+            "bpx",
+        ],
+        "tqdm": [
+            "tqdm",
+        ],
+        "all": [
+            "numpy>=1.16",
+            "scipy>=1.3",
+            "pandas>=0.24",
+            "anytree>=2.4.3",
+            "autograd>=1.2",
+            "scikit-fem>=0.2.0",
+            "casadi>=3.6.0",
+            "imageio>=2.9.0",
+            "importlib-metadata",
+            "pybtex>=0.24.0",
+            "sympy>=1.8",
+            "xarray",
+            "bpx",
+            "tqdm",
+            "matplotlib>=2.0",
+            "sphinx>=1.5",
+            "pydata-sphinx-theme",
+            "sphinx_design",
+            "sphinx-copybutton",
+            "myst-parser",
+            "sphinx-inline-tabs",
+            "pre-commit",
+            "black",
+            "jupyter",
         ],
     },
     entry_points={
