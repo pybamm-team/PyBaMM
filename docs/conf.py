@@ -141,10 +141,6 @@ html_theme_options = {
     "collapse_navigation": True,
     "external_links": [
         {
-            "name": "Examples",
-            "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/examples",
-        },
-        {
             "name": "Contributing",
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
