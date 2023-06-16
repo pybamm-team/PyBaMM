@@ -89,13 +89,6 @@ class OneDimensionalX(BaseThermal):
         Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
         T_amb = variables["Ambient temperature [K]"]
 
-        L_cn = self.param.n.L_cc
-        L_cp = self.param.p.L_cc
-        h_cn = self.param.n.h_cc
-        h_cp = self.param.p.h_cc
-        lambda_n = self.param.n.lambda_(T_n)
-        lambda_p = self.param.p.lambda_(T_p)
-
         # Define volumetric heat capacity for electrode/separator/electrode sandwich
         rho_c_p = pybamm.concatenation(
             self.param.n.rho_c_p(T_n),
@@ -110,16 +103,42 @@ class OneDimensionalX(BaseThermal):
             self.param.p.lambda_(T_p),
         )
 
-        # Edge cooling. TODO: account for tab cooling
-        area_to_volume_yz = (
+        # Calculate edge/tab cooling
+        L_y = self.param.L_y
+        L_z = self.param.L_z
+        L_cn = self.param.n.L_cc
+        L_cp = self.param.p.L_cc
+        h_cn = self.param.n.h_cc
+        h_cp = self.param.p.h_cc
+        lambda_n = self.param.n.lambda_(T_n)
+        lambda_p = self.param.p.lambda_(T_p)
+        # Negative current collector
+        volume_cn = L_cn * L_y * L_z
+        negative_tab_area = self.param.n.L_tab * self.param.n.L_cc
+        edge_area_cn = 2 * (L_y + L_z) * L_cn - negative_tab_area
+        negative_tab_cooling_coefficient = (
+            -self.param.n.h_tab * negative_tab_area / volume_cn
+        )
+        edge_cooling_coefficient_cn = -self.param.h_edge * edge_area_cn / volume_cn
+        cooling_coefficient_cn = (
+            negative_tab_cooling_coefficient + edge_cooling_coefficient_cn
+        )
+        # Electrode/separator/electrode sandwich
+        area_to_volume = (
             2 * (self.param.L_y + self.param.L_z) / (self.param.L_y * self.param.L_z)
         )
-        edge_cooling_cn = -self.param.h_edge * (T_cn - T_amb) * area_to_volume_yz
-        edge_cooling = -self.param.h_edge * (T - T_amb) * area_to_volume_yz
-        edge_cooling_cp = -self.param.h_edge * (T_cp - T_amb) * area_to_volume_yz
-
-        # Fourier's law for heat flux
-        q = -lambda_ * pybamm.grad(T)
+        cooling_coefficient = -self.param.h_edge * area_to_volume
+        # Positive current collector
+        volume_cp = L_cp * L_y * L_z
+        positive_tab_area = self.param.p.L_tab * self.param.p.L_cc
+        edge_area_cp = 2 * (L_y + L_z) * L_cp - positive_tab_area
+        positive_tab_cooling_coefficient = (
+            -self.param.p.h_tab * positive_tab_area / volume_cp
+        )
+        edge_cooling_coefficient_cp = -self.param.h_edge * edge_area_cp / volume_cp
+        cooling_coefficient_cp = (
+            positive_tab_cooling_coefficient + edge_cooling_coefficient_cp
+        )
 
         self.rhs = {
             T_cn: (
@@ -130,10 +149,15 @@ class OneDimensionalX(BaseThermal):
                 )
                 / L_cn
                 + Q_cn
-                + edge_cooling_cn
+                + cooling_coefficient_cn * (T_cn - T_amb)
             )
             / self.param.n.rho_c_p_cc(T_cn),
-            T: (-pybamm.div(q) + Q + edge_cooling) / rho_c_p,
+            T: (
+                pybamm.div(lambda_ * pybamm.grad(T))
+                + Q
+                + cooling_coefficient * (T - T_amb)
+            )
+            / rho_c_p,
             T_cp: (
                 (
                     -pybamm.boundary_value(lambda_p, "right")
@@ -142,7 +166,7 @@ class OneDimensionalX(BaseThermal):
                 )
                 / L_cp
                 + Q_cp
-                + edge_cooling_cp
+                + cooling_coefficient_cp * (T_cp - T_amb)
             )
             / self.param.p.rho_c_p_cc(T_cp),
         }
