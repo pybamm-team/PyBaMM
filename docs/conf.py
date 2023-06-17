@@ -262,6 +262,32 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
+# -- nbsphinx configuration options ------------------------------------------
+
+nbsphinx_prolog = r"""
+
+{% set docname =
+'github/pybamm-team/pybamm/blob/develop/docs' +
+env.doc2path(env.docname, base=None) %}
+
+.. raw:: html
+
+    <div class="admonition tip">
+        <p class="admonition-title">
+            Tip
+        </p>
+        <p>
+            An interactive online version of this notebook is available, which can be
+            accessed via
+            <a href="https://colab.research.google.com/{{ docname | e }}" 
+            target="_blank">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg"
+            alt="Open this notebook in Google Colab"/></a>
+        </p>
+    </div>
+
+"""
+
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
 
