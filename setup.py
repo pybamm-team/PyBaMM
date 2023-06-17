@@ -219,6 +219,7 @@ setup(
             "myst-parser",
             "sphinx-inline-tabs",
             "pybtex>=0.24.0",
+            "anytree>=2.4.3",
         ],  # For doc generation
         "dev": [
             "pre-commit",  # For code style checking
