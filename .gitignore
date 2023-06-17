@@ -113,6 +113,9 @@ test.json
 # tox
 .tox/
 
+# nox
+.nox/
+
 # vcpkg
 vcpkg_installed/
 
