@@ -4,6 +4,7 @@ Getting Started
 .. toctree::
     :maxdepth: 1
 
+    tutorial-1-how-to-run-a-model.ipynb
     tutorial-2-compare-models.ipynb
     tutorial-3-basic-plotting.ipynb
     tutorial-4-setting-parameter-values.ipynb
