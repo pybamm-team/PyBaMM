@@ -218,6 +218,7 @@ setup(
             "sphinx-copybutton",
             "myst-parser",
             "sphinx-inline-tabs",
+            "pybtex>=0.24.0",
         ],  # For doc generation
         "dev": [
             "pre-commit",  # For code style checking
