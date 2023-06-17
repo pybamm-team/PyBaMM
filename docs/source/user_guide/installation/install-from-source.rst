@@ -52,7 +52,7 @@ You can install it with
 
 .. code:: bash
 
-	  python3.X -m pip install --user nox
+	  python3.X -m pip install --user "nox"
 
 Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
