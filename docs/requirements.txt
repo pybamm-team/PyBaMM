@@ -27,3 +27,4 @@ sphinxcontrib-bibtex
 nbsphinx
 ipython
 ipykernel
+ipywidgets

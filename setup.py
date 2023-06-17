@@ -232,6 +232,8 @@ setup(
             "sphinx-inline-tabs",
             "sphinxcontrib-bibtex",
             "nbsphinx",
+            "ipykernel",
+            "ipywidgets",
         ],  # For doc generation
         "dev": [
             "pre-commit",  # For code style checking
