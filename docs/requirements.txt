@@ -28,3 +28,4 @@ nbsphinx
 ipython
 ipykernel
 ipywidgets
+sphinx-gallery

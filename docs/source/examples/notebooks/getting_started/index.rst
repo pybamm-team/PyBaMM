@@ -1,8 +1,9 @@
 Getting Started
 ===============
 
-.. toctree::
-    :maxdepth: 1
+.. nbgallery::
+    :caption: Getting Started
+    :glob:
 
     tutorial-1-how-to-run-a-model.ipynb
     tutorial-2-compare-models.ipynb
