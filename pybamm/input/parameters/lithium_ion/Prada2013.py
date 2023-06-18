@@ -201,44 +201,21 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for an A123 LFP cell, from the paper
-
-        Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
-        power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.
-        doi:10.3390/batteries5040064.
+    Parameters for an A123 LFP cell, from the paper :footcite:t:`Lain2019`
 
     LG M50 Graphite negative electrode parameters
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     Parameters for negative electrode (graphite) and separator are from the paper
+    :footcite:t:`Chen2020` and references therein.
 
-        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-
-    and references therein.
-
-    Parameters for positive electrode (LFP) are from the paper
-
-        Eric Prada, D. Di Domenico, Y. Creff, J. Bernard, Valérie Sauvant-Moynot, and
-        François Huet. A simplified electrochemical and thermal aging model of
-        LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
-        of The Electrochemical Society, 160(4):A616, 2013. doi:10.1149/2.053304jes.
-
-
+    Parameters for positive electrode (LFP) are from the paper :footcite:t:`Prada2013`
     and references therein. The functions used for OCP and exchange-current density are
     from separate references (documented within the functions), to provide better fit to
     data
 
-    Parameters for a LiPF6 electrolyte are from the paper
-
-        Andreas Nyman, Mårten Behm, and Göran Lindbergh. Electrochemical
-        characterisation and modelling of the mass transport phenomena in lipf6-ec-emc
-        electrolyte. Electrochimica Acta, 53(22):6356-6365, 2008.
-
-
-    and references therein.
+    Parameters for a LiPF6 electrolyte are from the paper :footcite:t:`Nyman2008`and
+    references therein.
     """
 
     return {
