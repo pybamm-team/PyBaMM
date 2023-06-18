@@ -803,7 +803,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     esoh_solver : :class:`pybamm.lithium_ion.ElectrodeSOHSolver`
         Solver to calculate electrode SOH (eSOH) variables. If `None` (default)
         then only summary variables that do not require the eSOH calculation
-        are calculated. See :footcite:`Mohtat2019` for more details on eSOH variables.
+        are calculated. See :footcite:t:`Mohtat2019` for more details on eSOH variables.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True

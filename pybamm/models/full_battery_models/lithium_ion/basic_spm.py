@@ -7,7 +7,7 @@ from .base_lithium_ion_model import BaseModel
 
 class BasicSPM(BaseModel):
     """Single Particle Model (SPM) model of a lithium-ion battery, from
-    :footcite:`Marquis2019`.
+    :footcite:t:`Marquis2019`.
 
     This class differs from the :class:`pybamm.lithium_ion.SPM` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in

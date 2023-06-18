@@ -7,7 +7,7 @@ from .base_mechanics import BaseMechanics
 
 class SwellingOnly(BaseMechanics):
     """
-    Class for swelling only (no cracking), from :footcite:`Ai2019`.
+    Class for swelling only (no cracking), from :footcite:t:`Ai2019`.
 
     Parameters
     ----------

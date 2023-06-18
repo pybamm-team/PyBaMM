@@ -9,7 +9,7 @@ class Integrated(BaseElectrolyteConductivity):
     """
     Integrated model for conservation of charge in the electrolyte derived from
     integrating the Stefan-Maxwell constitutive equations, from
-    :footcite:`BrosaPlanella2021`.
+    :footcite:t:`BrosaPlanella2021`.
 
     Parameters
     ----------

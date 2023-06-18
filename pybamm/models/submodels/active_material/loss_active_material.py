@@ -7,8 +7,8 @@ from .base_active_material import BaseModel
 
 
 class LossActiveMaterial(BaseModel):
-    """Submodel for varying active material volume fraction from :footcite:`Ai2019`
-    and :footcite:`Reniers2019`.
+    """Submodel for varying active material volume fraction from :footcite:t:`Ai2019`
+    and :footcite:t:`Reniers2019`.
 
     Parameters
     ----------

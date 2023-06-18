@@ -43,7 +43,7 @@ class Marcus(BaseKinetics):
 class MarcusHushChidsey(BaseKinetics):
     """
     Submodel which implements asymptotic Marcus-Hush-Chidsey kinetics, as derived in
-    :footcite:`Sripad2020`
+    :footcite:t:`Sripad2020`
 
     Parameters
     ----------

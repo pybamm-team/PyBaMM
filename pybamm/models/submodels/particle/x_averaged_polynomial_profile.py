@@ -10,7 +10,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     """
     Class for molar conservation in a single x-averaged particle employing Fick's law,
     with an assumed polynomial concentration profile in r. Model equations from
-    :footcite:`Subramanian2005`.
+    :footcite:t:`Subramanian2005`.
 
     Parameters
     ----------

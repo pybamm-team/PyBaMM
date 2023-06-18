@@ -6,7 +6,8 @@ from .base_plating import BasePlating
 
 
 class Plating(BasePlating):
-    """Class for lithium plating, from :footcite:`OKane2020` and :footcite:`OKane2022`.
+    """Class for lithium plating, from :footcite:t:`OKane2020` and
+    :footcite:t:`OKane2022`.
 
     Parameters
     ----------

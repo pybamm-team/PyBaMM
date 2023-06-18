@@ -6,8 +6,8 @@ from ..base_interface import BaseInterface
 
 
 class BasePlating(BaseInterface):
-    """Base class for lithium plating models, from :footcite:`OKane2020` and
-    :footcite:`OKane2022`.
+    """Base class for lithium plating models, from :footcite:t:`OKane2020` and
+    :footcite:t:`OKane2022`.
 
     Parameters
     ----------

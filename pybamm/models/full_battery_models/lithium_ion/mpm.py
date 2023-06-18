@@ -8,7 +8,7 @@ from .spm import SPM
 class MPM(SPM):
     """
     Many-Particle Model (MPM) of a lithium-ion battery with particle-size
-    distributions for each electrode, from :footcite:`Kirk2020`.
+    distributions for each electrode, from :footcite:t:`Kirk2020`.
     See :class:`pybamm.lithium_ion.BaseModel` for more details.
 
     Examples

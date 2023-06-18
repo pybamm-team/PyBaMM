@@ -8,7 +8,7 @@ from .base_lead_acid_model import BaseModel
 class LOQS(BaseModel):
     """
     Leading-Order Quasi-Static model for lead-acid, from
-    :footcite:`Sulzer2019asymptotic`.
+    :footcite:t:`Sulzer2019asymptotic`.
     See :class:`pybamm.lead_acid.BaseModel` for more details.
 
     """

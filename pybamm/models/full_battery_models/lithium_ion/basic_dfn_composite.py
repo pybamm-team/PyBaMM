@@ -7,7 +7,7 @@ from .base_lithium_ion_model import BaseModel
 
 class BasicDFNComposite(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery with composite particles
-    of graphite and silicon, from :footcite:`Ai2022`.
+    of graphite and silicon, from :footcite:t:`Ai2022`.
 
     This class differs from the :class:`pybamm.lithium_ion.DFN` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in

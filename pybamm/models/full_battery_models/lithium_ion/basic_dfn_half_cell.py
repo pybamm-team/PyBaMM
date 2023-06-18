@@ -7,7 +7,7 @@ from .base_lithium_ion_model import BaseModel
 
 class BasicDFNHalfCell(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery with lithium counter
-    electrode, adapted from :footcite:`Doyle1993`.
+    electrode, adapted from :footcite:t:`Doyle1993`.
 
     This class differs from the :class:`pybamm.lithium_ion.BasicDFN` model class in
     that it is for a cell with a lithium counter electrode (half cell). This is a

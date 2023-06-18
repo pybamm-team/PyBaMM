@@ -10,7 +10,7 @@ class PolynomialProfile(BaseParticle):
     """
     Class for molar conservation in particles employing Fick's
     law, assuming a polynomial concentration profile in r, and allowing variation
-    in the electrode domain. Model equations from :footcite:`Subramanian2005`.
+    in the electrode domain. Model equations from :footcite:t:`Subramanian2005`.
 
     Parameters
     ----------

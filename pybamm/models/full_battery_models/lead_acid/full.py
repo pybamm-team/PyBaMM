@@ -7,7 +7,7 @@ from .base_lead_acid_model import BaseModel
 
 class Full(BaseModel):
     """
-    Porous electrode model for lead-acid, from :footcite:`Sulzer2019asymptotic`,
+    Porous electrode model for lead-acid, from :footcite:t:`Sulzer2019asymptotic`,
     based on the Newman-Tiedemann model. See :class:`pybamm.lead_acid.BaseModel`
     for more details.
 

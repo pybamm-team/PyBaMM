@@ -94,7 +94,7 @@ class EffectiveResistance(BaseEffectiveResistance):
     """
     A model which calculates the effective Ohmic resistance of the current
     collectors in the limit of large electrical conductivity. For details see
-    :footcite:`Timms2021`.
+    :footcite:t:`Timms2021`.
     Note that this formulation assumes uniform *potential* across the tabs. See
     :class:`pybamm.AlternativeEffectiveResistance2D` for the formulation that
     assumes a uniform *current density* at the tabs (in 1D the two formulations

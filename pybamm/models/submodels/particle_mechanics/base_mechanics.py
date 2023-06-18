@@ -6,8 +6,8 @@ import pybamm
 
 class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle mechanics models, referenced from :footcite:`Ai2019` and
-    :footcite:`Deshpande2012`.
+    Base class for particle mechanics models, referenced from :footcite:t:`Ai2019` and
+    :footcite:t:`Deshpande2012`.
 
     Parameters
     ----------

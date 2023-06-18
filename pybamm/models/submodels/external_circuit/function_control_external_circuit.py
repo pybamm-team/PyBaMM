@@ -139,7 +139,7 @@ class ResistanceFunctionControl(FunctionControl):
 class CCCVFunctionControl(FunctionControl):
     """
     External circuit with constant-current constant-voltage control, as implemented in
-    :footcite:`Mohtat2021`.
+    :footcite:t:`Mohtat2021`.
 
     .. footbibliography::
 

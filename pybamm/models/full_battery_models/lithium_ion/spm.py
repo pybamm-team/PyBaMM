@@ -7,7 +7,8 @@ from .base_lithium_ion_model import BaseModel
 
 class SPM(BaseModel):
     """
-    Single Particle Model (SPM) of a lithium-ion battery, from :footcite:`Marquis2019`.
+    Single Particle Model (SPM) of a lithium-ion battery, from
+    :footcite:t:`Marquis2019`.
     See :class:`pybamm.lithium_ion.BaseModel` for more details.
 
     Examples

@@ -6,7 +6,7 @@ import pybamm
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH for a half-cell, adapted from
-    :footcite:`Mohtat2019`.
+    :footcite:t:`Mohtat2019`.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
 

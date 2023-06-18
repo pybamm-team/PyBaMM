@@ -9,10 +9,10 @@ class SEIGrowth(BaseModel):
     """
     Class for SEI growth.
 
-    Most of the models are from Section 5.6.4 of :footcite:`Marquis2020` and
+    Most of the models are from Section 5.6.4 of :footcite:t:`Marquis2020` and
     references therein.
 
-    The ec reaction limited model is from :footcite:`Yang2017`.
+    The ec reaction limited model is from :footcite:t:`Yang2017`.
 
     Parameters
     ----------

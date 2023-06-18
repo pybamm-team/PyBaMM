@@ -77,7 +77,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     def cv_boundary_reconstruction_sub_matrix(self):
         """
         Coefficients for reconstruction of a function through averages.
-        The resulting matrix is scale-invariant :footcite:`Wang2002`.
+        The resulting matrix is scale-invariant :footcite:t:`Wang2002`.
 
         Parameters
         ----------
@@ -175,7 +175,8 @@ class SpectralVolume(pybamm.FiniteVolume):
 
     def chebyshev_differentiation_matrices(self, noe, dod):
         """
-        Chebyshev differentiation matrices, from :footcite:`baltensperger2003spectral`.
+        Chebyshev differentiation matrices, from
+        :footcite:t:`baltensperger2003spectral`.
 
         Parameters
         ----------

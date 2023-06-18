@@ -6,13 +6,13 @@ from .ecm_model_options import NaturalNumberOption, OperatingModes
 class Thevenin(pybamm.BaseModel):
     """
     The classical Thevenin Equivalent Circuit Model of a battery as
-    described in, for example, :footcite:`Barletta2022thevenin`.
+    described in, for example, :footcite:t:`Barletta2022thevenin`.
 
     This equivalent circuit model consists of an OCV element, a resistor
     element, and a number of RC elements (by default 1). The model is
     coupled to two lumped thermal models, one for the cell and
     one for the surrounding jig. Heat generation terms for each element
-    follow equation (1) of :footcite:`Nieto2012`.
+    follow equation (1) of :footcite:t:`Nieto2012`.
 
     Parameters
     ----------
