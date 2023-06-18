@@ -10,5 +10,4 @@ For further examples, see the `PyBaMM case studies GitHub repository <https://gi
 .. toctree::
     :maxdepth: 2
 
-    scripts/index
     notebooks/index
