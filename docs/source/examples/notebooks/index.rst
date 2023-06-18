@@ -15,6 +15,11 @@ This folder contains a collection of Jupyter notebooks that demonstrate how to u
     plotting/index
     solvers/index
     spatial_methods/index
+
+.. nbgallery::
+    :caption: Miscellaneous notebooks
+    :glob:
+
     batch_study.ipynb
     callbacks.ipynb
     change-settings.ipynb

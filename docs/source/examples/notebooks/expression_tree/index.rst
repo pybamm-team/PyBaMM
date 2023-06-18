@@ -1,8 +1,8 @@
 Expression Tree
 ===============
 
-.. toctree::
-    :maxdepth: 2
+.. nbgallery::
+    :glob:
 
     broadcasts.ipynb
     expression-tree.ipynb

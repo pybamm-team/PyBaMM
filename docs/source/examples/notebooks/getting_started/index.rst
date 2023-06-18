@@ -2,7 +2,6 @@ Getting Started
 ===============
 
 .. nbgallery::
-    :caption: Getting Started
     :glob:
 
     tutorial-1-how-to-run-a-model.ipynb

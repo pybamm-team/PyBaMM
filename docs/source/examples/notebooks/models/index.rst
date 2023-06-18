@@ -1,8 +1,8 @@
 Models
 ======
 
-.. toctree::
-    :maxdepth: 1
+.. nbgallery::
+    :glob:
 
     compare-comsol-discharge-curve.ipynb
     compare-ecker-data.ipynb

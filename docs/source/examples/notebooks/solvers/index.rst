@@ -1,8 +1,8 @@
 Solvers
 =======
 
-.. toctree::
-    :maxdepth: 2
+.. nbgallery::
+    :glob:
 
     dae-solver.ipynb
     ode-solver.ipynb

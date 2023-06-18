@@ -1,8 +1,8 @@
 Plotting
 ========
 
-.. toctree::
-    :maxdepth: 2
+.. nbgallery::
+    :glob:
 
     customize-quick-plot.ipynb
     plot-voltage-components.ipynb

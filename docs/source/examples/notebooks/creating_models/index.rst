@@ -1,8 +1,8 @@
 Creating Models
 ===============
 
-.. toctree::
-    :maxdepth: 1
+.. nbgallery::
+    :glob:
 
     1-an-ode-model.ipynb
     2-a-pde-model.ipynb

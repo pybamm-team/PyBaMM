@@ -1,7 +1,7 @@
 Spatial Methods
 ===============
 
-.. toctree::
-    :maxdepth: 2
+.. nbgallery::
+    :glob:
 
     finite-volumes.ipynb

@@ -1,8 +1,8 @@
 Parameterization
 ================
 
-.. toctree::
-    :maxdepth: 1
+.. nbgallery::
+    :glob:
 
     change-input-current.ipynb
     parameter-values.ipynb
