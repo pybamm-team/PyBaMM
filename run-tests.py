@@ -7,7 +7,6 @@
 #
 import re
 import os
-import shutil
 import pybamm
 import sys
 import argparse
@@ -65,20 +64,28 @@ def run_doc_tests():
     used).
     """
     print("Checking if docs can be built.")
-    p = subprocess.Popen(["sphinx-build", "-b", "doctest", "docs", "docs/build/html"])
+    p = subprocess.Popen(
+        [
+            "sphinx-build",
+            "-b",
+            "doctest",
+            "docs",
+            "docs/build/html",
+            "-W",
+            "--keep-going",
+        ]
+    )
     try:
         ret = p.wait()
     except KeyboardInterrupt:
         try:
             p.terminate()
-            shutil.move("../../examples_temp", "docs/source/examples")
         except OSError:
             pass
         p.wait()
         print("")
         sys.exit(1)
     if ret != 0:
-        shutil.move("../../examples_temp", "docs/source/examples")
         print("FAILED")
         sys.exit(ret)
 
