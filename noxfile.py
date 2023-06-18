@@ -13,6 +13,8 @@ def run_pybamm_requires(session):
     if sys.platform != "win32" or sys.platform != "darwin":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
+        if os.path.exists('./pybind11'):
+            os.rmdir('./pybind11')
         session.run(
             "git",
             "clone",
