@@ -3,7 +3,7 @@ import os
 import sys
 
 
-@nox.session(name="pybamm-requires")
+@nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
     homedir = os.getenv("HOME")
     session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
@@ -22,7 +22,7 @@ def run_pybamm_requires(session):
         )
 
 
-@nox.session(name="coverage")
+@nox.session(name="coverage", reuse_venv=True)
 def run_coverage(session):
     homedir = os.getenv("HOME")
     session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
@@ -46,7 +46,7 @@ def run_integration(session):
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    session.run("pip", "install", "-e", ".")
+    session.run("pip", "install", "-e", ".[dev]")
     if sys.platform == "linux":
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--integration")
@@ -111,16 +111,7 @@ def run_tests(session):
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
     envbindir = session.bin
-    session.run("pip", "install", "-e", ".")
-    session.install(
-        "sphinx>=1.5",
-        "pydata-sphinx-theme",
-        "sphinx-autobuild",
-        "sphinx_design",
-        "sphinx-copybutton",
-        "myst-parser",
-        "sphinx-inline-tabs",
-    )
+    session.run("pip", "install", "-e", ".[docs]")
     session.chdir("docs/")
     session.run(
         "sphinx-autobuild", "--open-browser", "-qT", ".", f"{envbindir}/../tmp/html"
