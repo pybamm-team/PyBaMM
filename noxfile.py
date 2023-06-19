@@ -13,15 +13,14 @@ def run_pybamm_requires(session):
     if sys.platform != "win32" or sys.platform != "darwin":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
-        if os.path.exists("./pybind11"):
-            os.rmdir("./pybind11")
-        session.run(
-            "git",
-            "clone",
-            "https://github.com/pybind/pybind11.git",
-            "pybind11/",
-            external=True,
-        )
+        if not os.path.exists("./pybind11"):
+            session.run(
+                "git",
+                "clone",
+                "https://github.com/pybind/pybind11.git",
+                "pybind11/",
+                external=True,
+            )
 
 
 @nox.session(name="coverage", reuse_venv=True)
@@ -33,7 +32,7 @@ def run_coverage(session):
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("coverage")
     session.install("-e", ".")
-    if sys.platform != "win32" or sys.platform != "darwin":
+    if sys.platform != "win32":
         session.install("scikits.odes")
         session.run("pybamm_install_jax")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
@@ -49,7 +48,7 @@ def run_integration(session):
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("-e", ".[dev]")
-    if sys.platform == "linux":
+    if sys.platform == "linux" or sys.platform == "darwin":
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--integration")
 
@@ -68,7 +67,7 @@ def run_unit(session):
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("-e", ".")
-    if sys.platform == "linux":
+    if sys.platform == "linux" or sys.platform == "darwin":
         session.run("pybamm_install_jax")
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--unit")
@@ -104,7 +103,7 @@ def run_tests(session):
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("-e", ".")
-    if sys.platform == "linux":
+    if sys.platform == "linux" or sys.platform == "darwin":
         session.run("pybamm_install_jax")
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--all")
