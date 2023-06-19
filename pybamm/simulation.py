@@ -8,6 +8,7 @@ import copy
 import warnings
 import sys
 from functools import lru_cache
+from datetime import timedelta
 import tqdm
 
 
@@ -255,6 +256,23 @@ class Simulation:
                 new_model, inplace=False
             )
             self.experiment_unique_steps_to_model[repr(op)] = parameterised_model
+
+        # Set up rest model if experiment has start times
+        if self.experiment.initial_start_time:
+            new_model = self.model.new_copy()
+            # Update parameter values
+            new_parameter_values = self.parameter_values.copy()
+            self._original_temperature = new_parameter_values["Ambient temperature [K]"]
+            new_parameter_values.update(
+                {"Current function [A]": 0, "Ambient temperature [K]": "[input]"},
+                check_already_exists=False,
+            )
+            parameterised_model = new_parameter_values.process_model(
+                new_model, inplace=False
+            )
+            self.experiment_unique_steps_to_model[
+                "Rest for padding"
+            ] = parameterised_model
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
@@ -672,7 +690,23 @@ class Simulation:
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions_steps[idx]
-                    dt = op_conds.duration
+
+                    start_time = current_solution.t[-1]
+
+                    # If step has an end time, dt must take that into account
+                    if op_conds.end_time:
+                        dt = min(
+                            op_conds.duration,
+                            (
+                                op_conds.end_time
+                                - (
+                                    self.experiment.initial_start_time
+                                    + timedelta(seconds=float(start_time))
+                                )
+                            ).total_seconds(),
+                        )
+                    else:
+                        dt = op_conds.duration
                     op_conds_str = str(op_conds)
                     model = self.op_conds_to_built_models[repr(op_conds)]
                     solver = self.op_conds_to_built_solvers[repr(op_conds)]
@@ -681,7 +715,6 @@ class Simulation:
                     logs["step operating conditions"] = op_conds_str
                     callbacks.on_step_start(logs)
 
-                    start_time = current_solution.t[-1]
                     kwargs["inputs"] = {
                         **user_inputs,
                         "start time": start_time,
@@ -715,6 +748,51 @@ class Simulation:
                             # Otherwise, just stop this cycle
                             break
 
+                    step_termination = step_solution.termination
+
+                    # Add a padding rest step if necessary
+                    if op_conds.next_start_time is not None:
+                        rest_time = (
+                            op_conds.next_start_time
+                            - (
+                                self.experiment.initial_start_time
+                                + timedelta(seconds=float(step_solution.t[-1]))
+                            )
+                        ).total_seconds()
+                        if rest_time > pybamm.settings.step_start_offset:
+                            start_time = step_solution.t[-1]
+                            # Let me know if you have a better name
+                            op_conds_str = "Rest for padding"
+                            model = self.op_conds_to_built_models[op_conds_str]
+                            solver = self.op_conds_to_built_solvers[op_conds_str]
+
+                            logs["step number"] = (step_num, cycle_length)
+                            logs["step operating conditions"] = op_conds_str
+                            callbacks.on_step_start(logs)
+
+                            ambient_temp = (
+                                op_conds.temperature or self._original_temperature
+                            )
+                            kwargs["inputs"] = {
+                                **user_inputs,
+                                "Ambient temperature [K]": ambient_temp,
+                                "start time": start_time,
+                            }
+                            # Make sure we take at least 2 timesteps
+                            # The period is hardcoded to 10 minutes, the user can
+                            # always override it by adding a rest step
+                            npts = max(int(round(rest_time / 600)) + 1, 2)
+
+                            step_solution_with_rest = solver.step(
+                                step_solution,
+                                model,
+                                rest_time,
+                                npts=npts,
+                                save=False,
+                                **kwargs,
+                            )
+                            step_solution += step_solution_with_rest
+
                     steps.append(step_solution)
 
                     cycle_solution = cycle_solution + step_solution
@@ -726,8 +804,8 @@ class Simulation:
                     # Only allow events specified by experiment
                     if not (
                         isinstance(step_solution, pybamm.EmptySolution)
-                        or step_solution.termination == "final time"
-                        or "[experiment]" in step_solution.termination
+                        or step_termination == "final time"
+                        or "[experiment]" in step_termination
                     ):
                         callbacks.on_experiment_infeasible(logs)
                         feasible = False
