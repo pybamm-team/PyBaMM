@@ -2,7 +2,11 @@
 #include "casadi_functions.hpp"
 #include "common.hpp"
 
-#define NV_DATA(x) NV_DATA_S(x)
+//#define NV_DATA(x) NV_DATA_S(x)
+#define NV_DATA(x) N_VGetArrayPointer(x)
+//#define NV_DATA_HOST(x) N_VGetHostArrayPointer_Cuda(x)
+//#define NV_DATA_DEVICE(x) N_VGetDeviceArrayPointer_Cuda(x)
+//#define NV_DATA(x) NV_DATA_DEVICE(x)
 
 int residual_casadi_cuda(
   realtype tres,
@@ -12,6 +16,7 @@ int residual_casadi_cuda(
   void *user_data)
 {
   DEBUG("residual_casadi");
+
   CasadiFunctions *p_python_functions =
     static_cast<CasadiFunctions *>(user_data);
 
@@ -174,69 +179,47 @@ int jacobian_casadi_cuda(
   N_Vector tempv3)
 {
   DEBUG("jacobian_casadi");
+  return 0;
 
   CasadiFunctions *p_python_functions =
     static_cast<CasadiFunctions *>(user_data);
   
   // create pointer to jac data, column pointers, and row values
-  realtype *yyd = N_VGetArrayPointer(yy);
-  realtype *jac_data =
-    (realtype*) malloc(
-      SUNMatrix_cuSparse_NNZ(JJ) * sizeof(realtype)
-    );
-  sunindextype *jac_colptrs =
-    (sunindextype*) malloc(
-      (SUNMatrix_cuSparse_BlockRows(JJ)+1) * sizeof(sunindextype)
-    );
-  sunindextype *jac_rowvals =
-    (sunindextype*) malloc(
-      SUNMatrix_cuSparse_BlockNNZ(JJ) * sizeof(sunindextype)
-    );
-  if (SUNMatrix_cuSparse_CopyFromDevice(JJ, jac_data, jac_colptrs, jac_rowvals))
-    throw std::runtime_error("SUNMatrix_cuSparse_CopyFromDevice: Failed");
-  
-  std::cout << "\n\njac data " << SUNMatrix_cuSparse_NNZ(JJ) << ": ";
-  for (int i=0; i<100; i++)
-    std::cout << jac_data[i] << " ";
-  std::cout << "\n\n";
-  
-  // args are t, y, cj, put result in jacobian data matrix
-  p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-  p_python_functions->jac_times_cjmass.m_arg[1] = yyd;
-  p_python_functions->jac_times_cjmass.m_arg[2] =
-      p_python_functions->inputs.data();
-  p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-  p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
-  p_python_functions->jac_times_cjmass();
-
-  std::cout << "\n\njac data: ";
-  for (int i=0; i<100; i++)
-    std::cout << jac_data[i] << " ";
-  std::cout << "\n\n";
+  realtype jac_data[SUNMatrix_cuSparse_NNZ(JJ)];
+  sunindextype jac_ptrs[SUNMatrix_cuSparse_BlockRows(JJ)+1];
+  sunindextype jac_vals[SUNMatrix_cuSparse_BlockNNZ(JJ)];
+//  if (SUNMatrix_cuSparse_CopyFromDevice(JJ, jac_data, jac_colptrs, jac_rowvals))
+//    throw std::runtime_error("SUNMatrix_cuSparse_CopyFromDevice: Failed");
 
   if (p_python_functions->options.using_sparse_matrix)
   {
-    // row vals and col ptrs
-    const int n_row_vals =
-      p_python_functions->jac_times_cjmass_rowvals.size();
-    auto p_jac_times_cjmass_rowvals =
-      p_python_functions->jac_times_cjmass_rowvals.data();
+    // CSR
+    DEBUG("CSR");
 
-    // just copy across row vals (do I need to do this every time?)
-    // (or just in the setup?)
-    for (int i = 0; i < n_row_vals; i++) {
-      jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
-    }
+    realtype newjac[SUNMatrix_cuSparse_NNZ(JJ)];
+    //sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
+    //sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
+    
+    // args are t, y, cj, put result in jacobian data matrix
+    p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
+    p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);
+    p_python_functions->jac_times_cjmass.m_arg[2] =
+      p_python_functions->inputs.data();
+    p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
+    p_python_functions->jac_times_cjmass.m_res[0] = newjac;
+    p_python_functions->jac_times_cjmass();
 
-    const int n_col_ptrs =
-      p_python_functions->jac_times_cjmass_colptrs.size();
-    auto p_jac_times_cjmass_colptrs =
-      p_python_functions->jac_times_cjmass_colptrs.data();
-
-    // just copy across col ptrs (do I need to do this every time?)
-    for (int i = 0; i < n_col_ptrs; i++) {
-      jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
-    }
+    // convert (casadi's) CSC format to CSR
+    csc_csr<long, int>(
+      newjac,
+      p_python_functions->jac_times_cjmass_rowvals.data(),
+      p_python_functions->jac_times_cjmass_colptrs.data(),
+      jac_data,
+      jac_ptrs,
+      jac_vals,
+      SUNMatrix_cuSparse_NNZ(JJ),
+      SUNMatrix_cuSparse_BlockRows(JJ)
+    );
   }
   else
     throw std::runtime_error("Invalid matrix type provided.");
@@ -245,16 +228,11 @@ int jacobian_casadi_cuda(
   SUNMatrix_cuSparse_CopyToDevice(
     JJ,
     jac_data,
-    jac_colptrs,
-    jac_rowvals
+    jac_ptrs,
+    jac_vals
   );
   cudaDeviceSynchronize();
 
-  // Free local memory
-  free(jac_data);
-  free(jac_colptrs);
-  free(jac_rowvals);
-  
   return 0;
 }
 

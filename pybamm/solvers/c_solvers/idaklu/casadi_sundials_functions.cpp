@@ -2,10 +2,6 @@
 #include "casadi_functions.hpp"
 #include "common.hpp"
 
-#include <stdio.h>
-#include <string.h>
-#include <memory.h>
-
 int residual_casadi(
   realtype tres,
   N_Vector yy,

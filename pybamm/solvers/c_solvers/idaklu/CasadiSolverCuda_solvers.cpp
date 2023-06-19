@@ -38,6 +38,16 @@ void CasadiSolverCuda_cuSolverSp_batchQR::sync_device() {
 }
 
 void CasadiSolverCuda_cuSolverSp_batchQR::SetLinearSolver() {
+  // Initialize cuSOLVER
+  cusol_status = cusolverSpCreate(&cusol_handle);
+  if (cusol_status != CUSOLVER_STATUS_SUCCESS) {
+    throw std::runtime_error("cusolverSpCreate: could not create cuSOLVER handle");
+  }
+  
+  // Create linear solver object
+  LS = SUNLinSol_cuSolverSp_batchQR(yy, J, cusol_handle, sunctx);
+  if (LS == NULL)
+    throw std::runtime_error("SUNLinSol_cuSolverSp_batchQR: returned NULL");
 }
 
 void CasadiSolverCuda_cuSolverSp_batchQR::AllocateVectors() {
@@ -49,6 +59,24 @@ void CasadiSolverCuda_cuSolverSp_batchQR::AllocateVectors() {
 }
 
 void CasadiSolverCuda_cuSolverSp_batchQR::SetMatrix() {
+  // Initialize cuSPARSE
+  cusp_status = cusparseCreate(&cusp_handle);
+  if (cusp_status != CUSPARSE_STATUS_SUCCESS) {
+    throw std::runtime_error("cusparseCreate: could not create cuSPARSE handle");
+  }
+
+  nblocks = 1;
+  block_nnz = jac_times_cjmass_nnz;
+  J = SUNMatrix_cuSparse_NewBlockCSR(
+    nblocks,
+    number_of_states,
+    number_of_states,
+    block_nnz,
+    cusp_handle,
+    sunctx
+  );
+  if (J == NULL)
+    throw std::runtime_error("ERROR: could not create J\n");
 }
 
 void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
@@ -60,18 +88,6 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
   // Create SUNDIALS context object
   if (SUNContext_Create(NULL, &sunctx)) {
     throw std::runtime_error("SUNContext_Create: failed");
-  }
-  
-  // Initialize cuSPARSE
-  cusp_status = cusparseCreate(&cusp_handle);
-  if (cusp_status != CUSPARSE_STATUS_SUCCESS) {
-    throw std::runtime_error("cusparseCreate: could not create cuSPARSE handle");
-  }
-
-  // Initialize cuSOLVER
-  cusol_status = cusolverSpCreate(&cusol_handle);
-  if (cusol_status != CUSOLVER_STATUS_SUCCESS) {
-    throw std::runtime_error("cusolverSpCreate: could not create cuSOLVER handle");
   }
 
   // Allocate memory for solver
@@ -97,73 +113,9 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
     N_VConst(RCONST(0.0), ypS[is]);
   }
   
-  // Create the device matrix
-  nblocks = 1;
-  block_nnz = jac_times_cjmass_nnz;
-  J = SUNMatrix_cuSparse_NewBlockCSR(
-    nblocks,
-    number_of_states,
-    number_of_states,
-    block_nnz,
-    cusp_handle,
-    sunctx
-  );
-  if (J == NULL)
-    throw std::runtime_error("ERROR: could not create J\n");
+  // create Matrix objects
+  SetMatrix();
 
-
-  
-
-  std::cout << "asssi\n";
-  std::cout << number_of_states << '\n'; //2800
-  std::cout << SUNMatrix_cuSparse_BlockRows(J) << '\n'; // 2800
-  std::cout << SUNMatrix_cuSparse_BlockNNZ(J) << '\n'; // 12388
-
-  DEBUG(":");
-  realtype *jac_data =  SUNMatrix_cuSparse_BlockData(J, 0);
-  std::cout << SUNMatrix_cuSparse_Rows(J) << '\n'; // 2800
-  std::cout << SUNMatrix_cuSparse_Columns(J) << '\n'; // 2800
-
-  DEBUG("1");
-  jac_data =
-    (realtype*) malloc(
-      SUNMatrix_cuSparse_NNZ(J) * sizeof(realtype)
-    );
-  sunindextype *jac_colptrs =
-    (sunindextype*) malloc(
-      (SUNMatrix_cuSparse_BlockRows(J)+1) * sizeof(sunindextype)
-    );
-  sunindextype *jac_rowvals =
-    (sunindextype*) malloc(
-      SUNMatrix_cuSparse_BlockNNZ(J) * sizeof(sunindextype)
-    );
-  DEBUG("2");
-  if (SUNMatrix_cuSparse_CopyFromDevice(J, jac_data, jac_colptrs, jac_rowvals))
-    throw std::runtime_error("SUNMatrix_cuSparse_CopyFromDevice: Failed");
-  
-  DEBUG("3");
-/*  for (int i = 0; i < SUNMatrix_cuSparse_BlockRows(J); i++) {
-    std::cout << jac_rowvals[i] << " ";
-  }
-  DEBUG("4");
-  for (int i = 1; i < SUNMatrix_cuSparse_BlockNNZ(J); i++)
-    std::cout << jac_colptrs[i] << " ";*/
-  DEBUG("5");
-  SUNMatrix_cuSparse_CopyToDevice(
-    J,
-    jac_data,
-    jac_colptrs,
-    jac_rowvals
-  );
-  DEBUG("6");
-  cudaDeviceSynchronize();
-  DEBUG("7");
-
-
-
-
-
-  
   // Initialise solver
   rtn = IDAInit(ida_mem, residual_casadi_cuda, 0, yy, yp);
   if (rtn != IDA_SUCCESS)
@@ -190,10 +142,8 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
     precon_type = SUN_PREC_LEFT;
   }
   
-  // Create linear solver object
-  LS = SUNLinSol_cuSolverSp_batchQR(yy, J, cusol_handle, sunctx);
-  if (LS == NULL)
-    throw std::runtime_error("SUNLinSol_cuSolverSp_batchQR: returned NULL");
+  // create linear solver object
+  SetLinearSolver();
 
   // Attach the linear solver
   rtn = IDASetLinearSolver(ida_mem, LS, J);
@@ -399,6 +349,7 @@ Solution CasadiSolverCuda_cuSolverSp_batchQR::solve(
   int retval;
   while (true)
   {
+    sync_device();
     t_next = t(t_i);
     IDASetStopTime(
       ida_mem,

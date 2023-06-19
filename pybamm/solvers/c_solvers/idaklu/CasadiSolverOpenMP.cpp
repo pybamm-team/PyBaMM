@@ -76,7 +76,7 @@ void CasadiSolverOpenMP::SetMatrix() {
       number_of_states,
       number_of_states,
       jac_times_cjmass_nnz,
-      CSR_MAT,
+      CSR_MAT,  // CSC is used by casadi; CSR requires a conversion step
       sunctx
     );
   }
