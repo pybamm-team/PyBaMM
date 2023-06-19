@@ -10,7 +10,7 @@ def run_pybamm_requires(session):
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    if sys.platform != "win32" or sys.platform != "darwin":
+    if sys.platform != "win32":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
         if not os.path.exists("./pybind11"):
@@ -48,7 +48,7 @@ def run_integration(session):
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("-e", ".[dev]")
-    if sys.platform == "linux" or sys.platform == "darwin":
+    if sys.platform == "linux":
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--integration")
 
@@ -67,7 +67,7 @@ def run_unit(session):
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("-e", ".")
-    if sys.platform == "linux" or sys.platform == "darwin":
+    if sys.platform == "linux":
         session.run("pybamm_install_jax")
         session.install("scikits.odes")
     session.run("python", "run-tests.py", "--unit")
