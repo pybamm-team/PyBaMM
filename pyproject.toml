@@ -24,3 +24,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering",
 ]
+dynamic = [
+  "version",
+]
+dependencies = [
+    "numpy>=1.16",
+    "scipy>=1.3",
+    "pandas>=0.24",
+    "casadi>=3.6.0",
+    "xarray"
+]
