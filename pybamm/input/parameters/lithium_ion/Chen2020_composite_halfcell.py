@@ -2,6 +2,37 @@ import pybamm
 import os
 
 
+def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
+    """
+    Exchange-current density for Butler-Volmer reactions between li metal and LiPF6 in
+    EC:DMC.
+
+    References
+    ----------
+    .. [1] Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
+    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
+    Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    Parameters
+    ----------
+    c_e : :class:`pybamm.Symbol`
+        Electrolyte concentration [mol.m-3]
+    c_Li : :class:`pybamm.Symbol`
+        Pure metal lithium concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Exchange-current density [A.m-2]
+    """
+    m_ref = 3.5e-8 * pybamm.constants.F  # (A/m2)(mol/m3) - includes ref concentrations
+
+    return m_ref * c_Li**0.7 * c_e**0.3
+
+
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -284,8 +315,10 @@ def get_parameter_values():
         "Primary: Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Primary: Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Primary: SEI resistivity [Ohm.m]": 200000.0,
-        "Primary: Initial inner SEI thickness [m]": 2.5e-09,
-        "Primary: Initial outer SEI thickness [m]": 2.5e-09,
+        "Primary: Initial negative inner SEI thickness [m]": 2.5e-09,
+        "Primary: Initial negative outer SEI thickness [m]": 2.5e-09,
+        "Primary: Initial positive inner SEI thickness [m]": 2.5e-09,
+        "Primary: Initial positive outer SEI thickness [m]": 2.5e-09,
         "Primary: EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "Primary: EC diffusivity [m2.s-1]": 2e-18,
         "Primary: SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -295,8 +328,8 @@ def get_parameter_values():
         "Secondary: Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Secondary: Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Secondary: SEI resistivity [Ohm.m]": 200000.0,
-        "Secondary: Initial inner SEI thickness [m]": 2.5e-09,
-        "Secondary: Initial outer SEI thickness [m]": 2.5e-09,
+        "Secondary: Initial positive inner SEI thickness [m]": 2.5e-09,
+        "Secondary: Initial positive outer SEI thickness [m]": 2.5e-09,
         "Secondary: EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "Secondary: EC diffusivity [m2.s-1]": 2e-18,
         "Secondary: SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -318,13 +351,22 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 5.0,
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
+        # negative electrode
+        "Negative electrode OCP [V]": 0.0,
+        "Negative electrode conductivity [S.m-1]": 10776000.0,
+        "Negative electrode OCP entropic change [V.K-1]": 0.0,
+        "Typical plated lithium concentration [mol.m-3]": 76900.0,
+        "Exchange-current density for plating [A.m-2]"
+        "": li_metal_electrolyte_exchange_current_density_Xu2019,
+        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode double-layer capacity [F.m-2]": 0.2,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 215.0,
         "Primary: Maximum concentration in positive electrode [mol.m-3]": 28700.0,
         "Primary: Initial concentration in positive electrode [mol.m-3]": 27700.0,
         "Primary: Positive electrode diffusivity [m2.s-1]": 5.5e-14,
         "Primary: Positive electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
-        "Negative electrode porosity": 0.25,
+        "Positive electrode porosity": 0.25,
         "Primary: Positive electrode active material volume fraction": 0.735,
         "Primary: Positive particle radius [m]": 5.86e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
@@ -373,5 +415,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 29866.0,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Chen2020", "Ai2022"],
+        "citations": ["Xu 2019", "Chen2020", "Ai2022"],
     }

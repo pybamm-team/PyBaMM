@@ -62,10 +62,10 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             reaction_names = [""]
             if phase_name == "":
                 reaction_names += ["SEI "]
-                if self.options.electrode_types["negative"] == "porous":
-                    # separate plating reaction only if the negative electrode is
-                    # porous, since plating is the main reaction
-                    # SEI on cracks only in a porous negative electrode
+                if self.options.electrode_types[domain] == "porous":
+                    # separate plating reaction only if the electrode is porous,
+                    # since plating is the main reaction otherwise.
+                    # Likewise, SEI on cracks only in a porous electrode
                     reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]

@@ -67,7 +67,7 @@ class Plating(BasePlating):
 
     def get_coupled_variables(self, variables):
         param = self.param
-        Domain = self.domain.capitalize()
+        domain, Domain = self.domain_Domain
         delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
         c_e_n = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
@@ -83,11 +83,12 @@ class Plating(BasePlating):
         alpha_stripping = self.param.alpha_stripping
         alpha_plating = self.param.alpha_plating
 
-        if self.options["lithium plating"] in ["reversible", "partially reversible"]:
+        lithium_plating_option = getattr(self.options, domain)["lithium_plating"]
+        if lithium_plating_option in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(
                 F_RT * alpha_stripping * eta_stripping
             ) - j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
-        elif self.options["lithium plating"] == "irreversible":
+        elif lithium_plating_option == "irreversible":
             # j_stripping is always negative, because there is no stripping, only
             # plating
             j_stripping = -j0_plating * pybamm.exp(F_RT * alpha_plating * eta_plating)
@@ -125,7 +126,8 @@ class Plating(BasePlating):
 
         # In the partially reversible plating model, coupling term turns reversible
         # lithium into dead lithium. In other plating models, it is zero.
-        if self.options["lithium plating"] == "partially reversible":
+        lithium_plating_option = getattr(self.options, domain)["lithium_plating"]
+        if lithium_plating_option == "partially reversible":
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li
         else:

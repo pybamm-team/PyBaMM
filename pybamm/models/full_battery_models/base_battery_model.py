@@ -270,8 +270,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
 
-        # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
+
+        # If "SEI", "SEI on cracks" and "lithium plating" options are not provided as
+        # tuples and "half-cell" == "false", change them to tuples with "none" or
+        # "false" on the positive electrode. To use these options on the positive
+        # electrode of a full cell, the tuple must be provided by the user
+        if "half-cell" == "false":
+            SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
+            if not (isinstance(SEI_option, tuple)):
+                extra_options["SEI"] = (SEI_option, "none")
+            SEI_on_cracks_option = extra_options.get("SEI on cracks", "false")
+            if not (isinstance(SEI_on_cracks_option, tuple)):
+                extra_options["SEI on cracks"] = (SEI_on_cracks_option, "false")
+            lithium_plating_option = extra_options.get("lithium plating", "none")
+            if not (isinstance(lithium_plating_option, tuple)):
+                extra_options["lithium plating"] = (lithium_plating_option, "none")
+
+        # Change the default for cell geometry based on which thermal option is provided
         # return "none" if option not given
         thermal_option = extra_options.get("thermal", "none")
         if thermal_option in ["none", "isothermal", "lumped"]:
@@ -295,16 +311,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Change the default for particle mechanics based on which half-cell,
         # SEI on cracks and LAM options are provided
         # return "false", "false" and "none" respectively if options not given
-        half_cell_option = extra_options.get("half-cell", "false")
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
         LAM_opt = extra_options.get("loss of active material", "none")
-        if "true" in SEI_cracks_option:
-            if half_cell_option == "true":
-                default_options["particle mechanics"] = (  # is this right?
-                    "none",
-                    "swelling and cracking",
-                )
-            elif "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+        if SEI_cracks_option == "true":
+            default_options["particle mechanics"] = "swelling and cracking"
+        elif SEI_cracks_option == ("true", "false"):
+            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = (
                     "swelling and cracking",
                     "swelling only",
@@ -354,6 +366,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         plating_option = extra_options.get("lithium plating", "none")
         if plating_option == "partially reversible":
             default_options["SEI"] = "constant"
+        elif plating_option == ("partially reversible", "none"):
+            default_options["SEI"] = ("constant", "none")
         else:
             default_options["SEI"] = "none"
         # The "SEI" option will still be overridden by extra_options if provided

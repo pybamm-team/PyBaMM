@@ -1,6 +1,37 @@
 import pybamm
 
 
+def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
+    """
+    Exchange-current density for Butler-Volmer reactions between li metal and LiPF6 in
+    EC:DMC.
+
+    References
+    ----------
+    .. [1] Xu, Shanshan, Chen, Kuan-Hung, Dasgupta, Neil P., Siegel, Jason B. and
+    Stefanopoulou, Anna G. "Evolution of Dead Lithium Growth in Lithium Metal Batteries:
+    Experimentally Validated Model of the Apparent Capacity Loss." Journal of The
+    Electrochemical Society 166.14 (2019): A3456-A3463.
+
+    Parameters
+    ----------
+    c_e : :class:`pybamm.Symbol`
+        Electrolyte concentration [mol.m-3]
+    c_Li : :class:`pybamm.Symbol`
+        Pure metal lithium concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Exchange-current density [A.m-2]
+    """
+    m_ref = 3.5e-8 * pybamm.constants.F  # (A/m2)(mol/m3) - includes ref concentrations
+
+    return m_ref * c_Li**0.7 * c_e**0.3
+
+
 def graphite_diffusivity_Ecker2015(sto, T):
     """
     Graphite diffusivity as a function of stochiometry [1, 2, 3].
@@ -317,8 +348,10 @@ def get_parameter_values():
         "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 2.5e-09,
-        "Initial outer SEI thickness [m]": 2.5e-09,
+        "Initial negative inner SEI thickness [m]": 2.5e-09,
+        "Initial negative outer SEI thickness [m]": 2.5e-09,
+        "Initial positive inner SEI thickness [m]": 2.5e-09,
+        "Initial positive outer SEI thickness [m]": 2.5e-09,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -343,6 +376,15 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 0.15625,
         "Current function [A]": 0.15652,
         "Contact resistance [Ohm]": 0,
+        # negative electrode
+        "Negative electrode OCP [V]": 0.0,
+        "Negative electrode conductivity [S.m-1]": 10776000.0,
+        "Negative electrode OCP entropic change [V.K-1]": 0.0,
+        "Typical plated lithium concentration [mol.m-3]": 76900.0,
+        "Exchange-current density for plating [A.m-2]"
+        "": li_metal_electrolyte_exchange_current_density_Xu2019,
+        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode double-layer capacity [F.m-2]": 0.2,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 14.0,
         "Maximum concentration in positive electrode [mol.m-3]": 31920.0,
@@ -391,6 +433,6 @@ def get_parameter_values():
             "Ecker2015ii",
             "Zhao2018",
             "Hales2019",
-            "Richardson2020",
+            "Xu 2019" "Richardson2020",
         ],
     }

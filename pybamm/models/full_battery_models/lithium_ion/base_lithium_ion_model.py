@@ -259,12 +259,12 @@ class BaseModel(pybamm.BaseBatteryModel):
                 reaction_loc = "x-average"
             else:
                 reaction_loc = "full electrode"
-
+            sei_option = getattr(self.options, domain)["SEI"]
             phases = self.options.phases[domain]
             for phase in phases:
-                if self.options["SEI"] == "none":
+                if sei_option == "none":
                     submodel = pybamm.sei.NoSEI(self.param, domain, self.options, phase)
-                elif self.options["SEI"] == "constant":
+                elif sei_option == "constant":
                     submodel = pybamm.sei.ConstantSEI(
                         self.param, domain, self.options, phase
                     )
@@ -278,17 +278,33 @@ class BaseModel(pybamm.BaseBatteryModel):
                         cracks=False,
                     )
                 self.submodels[f"{domain} {phase} sei"] = submodel
-                # Do not set "sei on cracks" submodel for a planar electrode. For porous
-                # electrodes, "sei on cracks" submodel must be set, even if it is zero
-                if reaction_loc != "interface":
+            if len(phases) > 1:
+                self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
+                    self.param, self.options
+                )
+
+    def set_sei_on_cracks_submodel(self):
+        # Do not set "sei on cracks" submodel for a planar electrode. For porous
+        # electrodes, "sei on cracks" submodel must be set, even if it is zero
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                domain = domain.split()[0].lower()
+                sei_option = getattr(self.options, domain)["SEI"]
+                sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
+                phases = self.options.phases[domain]
+                for phase in phases:
                     if (
-                        self.options["SEI"] in ["none", "constant"]
-                        or self.options["SEI on cracks"] == "false"
+                        sei_option in ["none", "constant"]
+                        or sei_on_cracks_option == "false"
                     ):
                         submodel = pybamm.sei.NoSEI(
                             self.param, domain, self.options, phase, cracks=True
                         )
                     else:
+                        if self.options["x-average side reactions"] == "true":
+                            reaction_loc = "x-average"
+                        else:
+                            reaction_loc = "full electrode"
                         submodel = pybamm.sei.SEIGrowth(
                             self.param,
                             domain,
@@ -298,19 +314,19 @@ class BaseModel(pybamm.BaseBatteryModel):
                             cracks=True,
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
-
-            if len(phases) > 1:
-                self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
-                    self.param, self.options
-                )
-                self.submodels[f"{domain} total sei on cracks"] = pybamm.sei.TotalSEI(
-                    self.param, self.options, cracks=True
-                )
+                if len(phases) > 1:
+                    self.submodels[
+                        f"{domain} total sei on cracks"
+                    ] = pybamm.sei.TotalSEI(self.param, self.options, cracks=True)
 
     def set_lithium_plating_submodel(self):
-        domains = [d for d in self.options.whole_cell_domains if d != "separator"]
-        for domain in domains:
-            if self.options["lithium plating"] == "none":
+        # Do not set "lithium plating" submodel for a planar electrode. For porous
+        # electrodes, "lithium plating" submodel must be set, even if it is zero
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                domain = domain.split()[0].lower()
+                lithium_plating_opt = getattr(self.options, domain)["lithium_plating"]
+            if lithium_plating_opt == "none":
                 self.submodels[
                     f"{domain} lithium plating"
                 ] = pybamm.lithium_plating.NoPlating(self.param, domain, self.options)

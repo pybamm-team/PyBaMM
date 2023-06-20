@@ -101,33 +101,34 @@ class BaseKinetics(BaseInterface):
         j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
             variables
         )
-        # Add SEI resistance in the negative electrode
-        if self.domain == "negative":
-            if self.options.electrode_types["negative"] == "planar":
-                R_sei = self.phase_param.R_sei
-                L_sei = variables[
-                    f"Total {phase_name}SEI thickness [m]"
-                ]  # on interface
-                eta_sei = -j_tot_av * L_sei * R_sei
-            elif self.options["SEI film resistance"] == "average":
-                R_sei = self.phase_param.R_sei
-                L_sei_av = variables[f"X-averaged total {phase_name}SEI thickness [m]"]
-                eta_sei = -j_tot_av * L_sei_av * R_sei
-            elif self.options["SEI film resistance"] == "distributed":
-                R_sei = self.phase_param.R_sei
-                L_sei = variables[f"Total {phase_name}SEI thickness [m]"]
-                j_tot = variables[
-                    f"Total negative electrode {phase_name}"
-                    "interfacial current density variable [A.m-2]"
-                ]
+        # Add SEI resistance
+        if self.options.electrode_types[domain] == "planar":
+            R_sei = self.phase_param.R_sei
+            L_sei = variables[
+                f"Total {domain} {phase_name}SEI thickness [m]"
+            ]  # on interface
+            eta_sei = -j_tot_av * L_sei * R_sei
+        elif self.options["SEI film resistance"] == "average":
+            R_sei = self.phase_param.R_sei
+            L_sei_av = variables[
+                f"X-averaged total {domain} {phase_name}SEI thickness [m]"
+            ]
+            eta_sei = -j_tot_av * L_sei_av * R_sei
+        elif self.options["SEI film resistance"] == "distributed":
+            R_sei = self.phase_param.R_sei
+            L_sei = variables[f"Total {domain} {phase_name}SEI thickness [m]"]
+            j_tot = variables[
+                f"Total {domain} electrode {phase_name}"
+                "interfacial current density variable [A.m-2]"
+            ]
 
-                # Override print_name
-                j_tot.print_name = "j_tot"
+            # Override print_name
+            j_tot.print_name = "j_tot"
 
-                eta_sei = -j_tot * L_sei * R_sei
-            else:
-                eta_sei = pybamm.Scalar(0)
-            eta_r += eta_sei
+            eta_sei = -j_tot * L_sei * R_sei
+        else:
+            eta_sei = pybamm.Scalar(0)
+        eta_r += eta_sei
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
