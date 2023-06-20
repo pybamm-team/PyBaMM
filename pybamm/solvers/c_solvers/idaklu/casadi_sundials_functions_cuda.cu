@@ -3,26 +3,123 @@
 #include "common.hpp"
 
 //#define NV_DATA(x) NV_DATA_S(x)
-#define NV_DATA(x) N_VGetArrayPointer(x)
-//#define NV_DATA_HOST(x) N_VGetHostArrayPointer_Cuda(x)
+#define NV_DATA(x) N_VGetHostArrayPointer_Cuda(x)
+//#deine NV_DATA_HOST(x) N_VGetHostArrayPointer_Cuda(x)
 //#define NV_DATA_DEVICE(x) N_VGetDeviceArrayPointer_Cuda(x)
 //#define NV_DATA(x) NV_DATA_DEVICE(x)
+
+#ifdef __CUDACC__
+#define CUDA_CALLABLE_MEMBER __host__ __device__
+#else
+#define CUDA_CALLABLE_MEMBER
+#endif 
+
+// Example class that can be used on host and device
+class Action {
+public:
+  CUDA_CALLABLE_MEMBER Action() { x=110; }
+  CUDA_CALLABLE_MEMBER void Increment() { x+=1; }
+  CUDA_CALLABLE_MEMBER realtype getValue() { return x; }
+public:
+  //CUDA_CALLABLE_MEMBER casadi::Function p_python_functions;
+  realtype x;
+};
+
+__global__
+void resKernel(
+    realtype *yy,
+    realtype *yp,
+    realtype *rr,
+    Action *action
+) {
+  sunindextype tid;
+  tid = blockDim.x * blockIdx.x + threadIdx.x;
+
+  // Kernel code here
+  //if (tid<20) {
+    //printf("(%d) %f %f ", tid, yy[tid], action->x);
+    //action->Increment();
+    //yy[tid] = action->x;
+    //printf("%f ", action->x);
+    //action->p_python_functions;
+    // AXPY: y <- a*x + y
+    //for (int i=0; i<n; ++i) *rr++ += -1**tmp++;
+    //fcn();
+  //}
+}
 
 int residual_casadi_cuda(
   realtype tres,
   N_Vector yy,
   N_Vector yp,
   N_Vector rr,
-  void *user_data)
-{
+  void *user_data
+) {
   DEBUG("residual_casadi");
+
+  /* This function currently implements the residual ON CPU and transfers it to
+     the GPU. This is to test that the solver actually works and converges.
+     The main challenge from here is to transfer the computation in this function
+     to the GPU.
+
+     We need to copy the result to the device at the end for this to work.
+     The work should be done on the device to start with.
+     At present data is read from the device, processed, sent back to the device
+       and potentially / presumably read back from the device again by SUNDIALS
+       to implement the adjustment.
+  */
 
   CasadiFunctions *p_python_functions =
     static_cast<CasadiFunctions *>(user_data);
 
-  realtype *yyd = N_VGetArrayPointer(yy);
-  realtype *ypd = N_VGetArrayPointer(yp);
-  realtype *rrd = N_VGetArrayPointer(rr);
+  std::cout << N_VGetHostArrayPointer_Cuda(yy) << ' ' <<
+               N_VGetDeviceArrayPointer_Cuda(yy) << ' ' <<
+               N_VGetArrayPointer(yy) << std::endl;
+
+  realtype *t = &tres;
+  realtype *yyd = N_VGetDeviceArrayPointer_Cuda(yy);  // device pointers
+  realtype *ypd = N_VGetDeviceArrayPointer_Cuda(yp);
+  realtype *rrd = N_VGetDeviceArrayPointer_Cuda(rr);
+
+  if (0) {
+      // GPU part --- currently redundant but need to transfer processes into
+      // device kernel
+      Action act;
+      std::cout << act.x << std::endl;
+
+      Action *action;
+      cudaError rtn = cudaMalloc((void **)&action, sizeof(Action));
+      if (rtn != cudaSuccess)
+          throw std::runtime_error("cudaMalloc failed.");
+      rtn = cudaMemcpy(action, &act, sizeof(Action), cudaMemcpyHostToDevice);
+      if (rtn != cudaSuccess)
+          throw std::runtime_error("cudaMemcpy failed.");
+
+      sunindextype len = N_VGetLength(yy);
+      //unsigned block = 256;
+      //unsigned grid = (len + block - 1) / block;
+      unsigned block = 1;
+      unsigned grid = 1;
+      resKernel<<<grid, block>>>(
+        yyd,
+        ypd,
+        rrd,
+        action
+      );
+      cudaDeviceSynchronize();  // kernels run asynchronously to cpu, so wait
+  }
+
+  N_VCopyFromDevice_Cuda(yy);
+  N_VCopyFromDevice_Cuda(yp);
+  N_VCopyFromDevice_Cuda(rr);
+  //std::cout << yyd << "; ";
+  yyd = N_VGetHostArrayPointer_Cuda(yy);  // after copying from device you get a different address which is accessible
+  ypd = N_VGetHostArrayPointer_Cuda(yp);
+  rrd = N_VGetHostArrayPointer_Cuda(rr);
+  //std::cout << yyd << ": ";
+  //DEBUG_v(yyd, 20);
+
+  //return 0;
 
   p_python_functions->rhs_alg.m_arg[0] = &tres;
   p_python_functions->rhs_alg.m_arg[1] = yyd;
@@ -39,6 +136,12 @@ int residual_casadi_cuda(
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -1., tmp, rrd); 
   
+//  cudaDeviceSynchronize();
+
+  //N_VCopyToDevice_Cuda(yy);  // copy modified result back to device (required)
+  //N_VCopyToDevice_Cuda(yp);
+  N_VCopyToDevice_Cuda(rr);
+
   DEBUG_VECTORn(yy, 5);
   DEBUG_VECTORn(yp, 5);
   DEBUG_VECTORn(rr, 5);
@@ -179,7 +282,6 @@ int jacobian_casadi_cuda(
   N_Vector tempv3)
 {
   DEBUG("jacobian_casadi");
-  return 0;
 
   CasadiFunctions *p_python_functions =
     static_cast<CasadiFunctions *>(user_data);
@@ -188,8 +290,6 @@ int jacobian_casadi_cuda(
   realtype jac_data[SUNMatrix_cuSparse_NNZ(JJ)];
   sunindextype jac_ptrs[SUNMatrix_cuSparse_BlockRows(JJ)+1];
   sunindextype jac_vals[SUNMatrix_cuSparse_BlockNNZ(JJ)];
-//  if (SUNMatrix_cuSparse_CopyFromDevice(JJ, jac_data, jac_colptrs, jac_rowvals))
-//    throw std::runtime_error("SUNMatrix_cuSparse_CopyFromDevice: Failed");
 
   if (p_python_functions->options.using_sparse_matrix)
   {
@@ -197,12 +297,11 @@ int jacobian_casadi_cuda(
     DEBUG("CSR");
 
     realtype newjac[SUNMatrix_cuSparse_NNZ(JJ)];
-    //sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
-    //sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
+    realtype* yyd = N_VGetHostArrayPointer_Cuda(yy);
     
     // args are t, y, cj, put result in jacobian data matrix
     p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-    p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);
+    p_python_functions->jac_times_cjmass.m_arg[1] = yyd;
     p_python_functions->jac_times_cjmass.m_arg[2] =
       p_python_functions->inputs.data();
     p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
@@ -231,7 +330,6 @@ int jacobian_casadi_cuda(
     jac_ptrs,
     jac_vals
   );
-  cudaDeviceSynchronize();
 
   return 0;
 }

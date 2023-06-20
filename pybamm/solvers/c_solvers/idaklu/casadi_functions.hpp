@@ -6,18 +6,10 @@
 #include "solution.hpp"
 #include <casadi/casadi.hpp>
 
+// Utility function for compressed-sparse-column (CSC) to/from
+// compressed-sparse-row (CSR) matrix representation.
 template<typename T1, typename T2>
 void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int N, int cols) {
-
-  /*for (int i=0; i<N; i++) {
-    nf[i] = f[i];
-    nr[i] = c[i];
-  }
-  for (int i=0; i<cols+1; i++)
-    nc[i] = r[i];
-
-  return;*/
-
   int nn[cols+1];
   int rr[N];
   for (int i=0; i<cols+1; i++)
@@ -25,7 +17,7 @@ void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int 
   
   for (int k = 0, i = 0; i < cols+1; i++) {
     for (int j = 0; j < r[i+1] - r[i]; j++) {
-      if (k == N)  // r does not contain the final element
+      if (k == N)  // SUNDIALS indexing does not include the count element
         break;
       rr[k++] = i;
     }
@@ -36,7 +28,6 @@ void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int 
     nc[i] += nc[i-1];
   for (int i = 0; i < cols+1; i++)
     nn[i] = nc[i];
-
   for (int i = 0; i < N; i++) {
     int x = nn[c[i]]++;
     nf[x] = f[i];

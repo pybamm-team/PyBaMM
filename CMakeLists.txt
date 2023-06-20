@@ -49,7 +49,7 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/CasadiSolverCuda_solvers.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp
-  pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions_cuda.cpp
+  pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions_cuda.cu
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions_cuda.hpp
   pybamm/solvers/c_solvers/idaklu/common.hpp
   pybamm/solvers/c_solvers/idaklu/python.hpp

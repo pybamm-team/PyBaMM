@@ -52,10 +52,10 @@ void CasadiSolverCuda_cuSolverSp_batchQR::SetLinearSolver() {
 
 void CasadiSolverCuda_cuSolverSp_batchQR::AllocateVectors() {
   // Device vectors
-  yy = N_VNewManaged_Cuda(number_of_states, sunctx);
-  yp = N_VNewManaged_Cuda(number_of_states, sunctx);
-  avtol = N_VNewManaged_Cuda(number_of_states, sunctx);
-  id = N_VNewManaged_Cuda(number_of_states, sunctx);
+  yy = N_VNew_Cuda(number_of_states, sunctx);
+  yp = N_VClone(yy);
+  avtol = N_VClone(yy);
+  id = N_VClone(yy);
 }
 
 void CasadiSolverCuda_cuSolverSp_batchQR::SetMatrix() {
@@ -65,10 +65,8 @@ void CasadiSolverCuda_cuSolverSp_batchQR::SetMatrix() {
     throw std::runtime_error("cusparseCreate: could not create cuSPARSE handle");
   }
 
-  nblocks = 1;
   block_nnz = jac_times_cjmass_nnz;
-  J = SUNMatrix_cuSparse_NewBlockCSR(
-    nblocks,
+  J = SUNMatrix_cuSparse_NewCSR(
     number_of_states,
     number_of_states,
     block_nnz,
@@ -97,9 +95,10 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
 
   // Create and initialize vectors
   AllocateVectors();
-  realtype *atval = N_VGetArrayPointer(avtol);
+  realtype *atval = N_VGetHostArrayPointer_Cuda(avtol);
   for (int i = 0; i < number_of_states; i++)
     atval[i] = atol[i];
+  N_VCopyToDevice_Cuda(avtol);
   
   // Sensitivity vectors
   if (number_of_parameters > 0)
@@ -117,6 +116,7 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
   SetMatrix();
 
   // Initialise solver
+  sync_device();
   rtn = IDAInit(ida_mem, residual_casadi_cuda, 0, yy, yp);
   if (rtn != IDA_SUCCESS)
     throw std::runtime_error("IDAInit: Return value: " + std::to_string(rtn));
@@ -196,9 +196,11 @@ void CasadiSolverCuda_cuSolverSp_batchQR::Initialize() {
       throw std::runtime_error("SUNLinSolInitialize: Return value: " + std::to_string(rtn));
 
   auto id_np_val = rhs_alg_id.unchecked<1>();
-  realtype *id_val = N_VGetArrayPointer(id);
+  realtype *id_val = N_VGetHostArrayPointer_Cuda(id);
   for (int ii = 0; ii < number_of_states; ii++)
     id_val[ii] = id_np_val[ii];
+  N_VCopyToDevice_Cuda(id);
+  sync_device();
 
   rtn = IDASetId(ida_mem, id);
   if (rtn != IDA_SUCCESS)
@@ -261,25 +263,30 @@ Solution CasadiSolverCuda_cuSolverSp_batchQR::solve(
     functions->inputs[i] = p_inputs(i, 0);
 
   // set initial conditions
-  realtype *yval = N_VGetArrayPointer(yy);
-  realtype *ypval = N_VGetArrayPointer(yp);
+  realtype *yval = N_VGetHostArrayPointer_Cuda(yy);
+  realtype *ypval = N_VGetHostArrayPointer_Cuda(yp);
   for (int i = 0; i < number_of_states; i++)
   {
     yval[i] = y0[i];
     ypval[i] = yp0[i];
   }
+  N_VCopyToDevice_Cuda(yy);
+  N_VCopyToDevice_Cuda(yp);
 
   // sensitivity parameters
   std::vector<realtype *> ySval(number_of_parameters);
   std::vector<realtype *> ypSval(number_of_parameters);
   for (int p = 0 ; p < number_of_parameters; p++) {
-    ySval[p] = N_VGetArrayPointer(yyS[p]);
-    ypSval[p] = N_VGetArrayPointer(ypS[p]);
+    ySval[p] = N_VGetHostArrayPointer_Cuda(yyS[p]);
+    ypSval[p] = N_VGetHostArrayPointer_Cuda(ypS[p]);
     for (int i = 0; i < number_of_states; i++) {
       ySval[p][i] = y0[i + (p + 1) * number_of_states];
       ypSval[p][i] = yp0[i + (p + 1) * number_of_states];
     }
+    N_VCopyToDevice_Cuda(yyS[p]);
+    N_VCopyToDevice_Cuda(ypS[p]);
   }
+  sync_device();
 
   rtn = IDAReInit(ida_mem, t0, yy, yp);
   if (rtn)
@@ -292,6 +299,7 @@ Solution CasadiSolverCuda_cuSolverSp_batchQR::solve(
 
   // correct initial values
   DEBUG("IDACalcIC");
+  std::cout << N_VGetHostArrayPointer_Cuda(yy) << std::endl;
   rtn = IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
   if (rtn)
     throw std::runtime_error("IDACalcIC: Return value: " + std::to_string(rtn));
@@ -349,7 +357,6 @@ Solution CasadiSolverCuda_cuSolverSp_batchQR::solve(
   int retval;
   while (true)
   {
-    sync_device();
     t_next = t(t_i);
     IDASetStopTime(
       ida_mem,
