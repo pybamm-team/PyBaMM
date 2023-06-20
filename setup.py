@@ -218,13 +218,10 @@ setup(
             "myst-parser",
             "sphinx-inline-tabs",
         ],  # For doc generation
-        "dev": [
+        "examples": [
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
             "jupyter",  # For example notebooks
-            "anytree>=2.4.3",
-            "autograd>=1.2",
-            "scikit-fem>=0.2.0",
         ],
         "plot": [
             "imageio>=2.9.0",
@@ -246,7 +243,7 @@ setup(
         "tqdm": [
             "tqdm",
         ],
-        "tests": [
+        "dev": [
             "numpy>=1.16",
             "scipy>=1.3",
             "pandas>=0.24",
