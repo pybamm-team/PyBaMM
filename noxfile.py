@@ -75,6 +75,7 @@ def run_unit(session):
 
 @nox.session(name="examples", reuse_venv=True)
 def run_examples(session):
+    session.install("-e", ".[dev]")
     session.install("-e", ".[examples]")
     session.run("python", "run-tests.py", "--examples")
 
