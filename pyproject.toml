@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel", "cmake"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybamm"
+description = "Python Battery Mathematical Modelling."
+readme = { file = "README.md", content-type = "text/markdown" }
+keywords = [
+  "pybamm",
+]
+license = "OSI Approved :: BSD License"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
