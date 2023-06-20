@@ -2,6 +2,7 @@
 # Test the base experiment class
 #
 from tests import TestCase
+from datetime import datetime
 import pybamm
 import unittest
 
@@ -27,6 +28,7 @@ class TestExperiment(TestCase):
                     "description": "Discharge at C/20 for 0.5 hours",
                     "termination": [],
                     "tags": [],
+                    "start_time": None,
                 },
                 {
                     "value": -0.2,
@@ -37,6 +39,7 @@ class TestExperiment(TestCase):
                     "description": "Charge at C/5 for 45 minutes",
                     "termination": [],
                     "tags": [],
+                    "start_time": None,
                 },
                 {
                     "value": 0.05,
@@ -47,6 +50,7 @@ class TestExperiment(TestCase):
                     "description": "Discharge at C/20 for 0.5 hours",
                     "termination": [],
                     "tags": [],
+                    "start_time": None,
                 },
                 {
                     "value": -0.2,
@@ -57,6 +61,7 @@ class TestExperiment(TestCase):
                     "description": "Charge at C/5 for 45 minutes",
                     "termination": [],
                     "tags": [],
+                    "start_time": None,
                 },
             ],
         )
@@ -166,6 +171,52 @@ class TestExperiment(TestCase):
         self.assertEqual(experiment.search_tag("tag4"), [4, 5])
         self.assertEqual(experiment.search_tag("tag5"), [3])
         self.assertEqual(experiment.search_tag("no_tag"), [])
+
+    def test_no_initial_start_time(self):
+        s = pybamm.step.string
+        with self.assertRaisesRegex(ValueError, "first step must have a `start_time`"):
+            pybamm.Experiment(
+                [
+                    s("Rest for 1 hour"),
+                    s("Rest for 1 hour", start_time=datetime(2023, 1, 1, 8, 0)),
+                ]
+            )
+
+    def test_set_next_start_time(self):
+        # Defined dummy experiment to access _set_next_start_time
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        raw_op = [
+            pybamm.step._Step(
+                "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 8, 0)
+            ),
+            pybamm.step._Step(
+                "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 12, 0)
+            ),
+            pybamm.step._Step("current", 1, duration=3600, start_time=None),
+            pybamm.step._Step(
+                "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 15, 0)
+            ),
+        ]
+        processed_op = experiment._set_next_start_time(raw_op)
+
+        expected_next = [
+            datetime(2023, 1, 1, 12, 0),
+            None,
+            datetime(2023, 1, 1, 15, 0),
+            None,
+        ]
+
+        expected_end = [
+            datetime(2023, 1, 1, 12, 0),
+            datetime(2023, 1, 1, 15, 0),
+            datetime(2023, 1, 1, 15, 0),
+            None,
+        ]
+
+        for next, end, op in zip(expected_next, expected_end, processed_op):
+            # useful form for debugging
+            self.assertEqual(op.next_start_time, next)
+            self.assertEqual(op.end_time, end)
 
 
 if __name__ == "__main__":
