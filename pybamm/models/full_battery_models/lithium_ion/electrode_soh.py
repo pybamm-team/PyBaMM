@@ -7,7 +7,76 @@ from functools import lru_cache
 import warnings
 
 
-class _ElectrodeSOH(pybamm.BaseModel):
+class _BaseElectrodeSOH(pybamm.BaseModel):
+    def __init__(self):
+        pybamm.citations.register("Mohtat2019")
+        pybamm.citations.register("Weng2023")
+        name = "ElectrodeSOH model"
+        super().__init__(name)
+
+    def get_100_soc_variables(
+        self, x_100, y_100, Un_100, Up_100, Q_Li, Q_n, Q_p, param
+    ):
+        Acc_cm2 = param.A_cc * 1e4
+        variables = {
+            "x_100": x_100,
+            "y_100": y_100,
+            "Un(x_100)": Un_100,
+            "Up(y_100)": Up_100,
+            "Up(y_100) - Un(x_100)": Up_100 - Un_100,
+            "Q_Li": Q_Li,
+            "n_Li": Q_Li * 3600 / param.F,
+            "Q_n": Q_n,
+            "Q_p": Q_p,
+            "Cyclable lithium capacity [A.h]": Q_Li,
+            "Negative electrode capacity [A.h]": Q_n,
+            "Positive electrode capacity [A.h]": Q_p,
+            "Cyclable lithium capacity [mA.h.cm-2]": Q_Li * 1e3 / Acc_cm2,
+            "Negative electrode capacity [mA.h.cm-2]": Q_n * 1e3 / Acc_cm2,
+            "Positive electrode capacity [mA.h.cm-2]": Q_p * 1e3 / Acc_cm2,
+            # eq 33 of Weng2023
+            "Formation capacity loss [A.h]": Q_p - Q_Li,
+            "Formation capacity loss [mA.h.cm-2]": (Q_p - Q_Li) * 1e3 / Acc_cm2,
+            # eq 26 of Weng2024
+            "Negative positive ratio": Q_n / Q_p,
+            "NPR": Q_n / Q_p,
+        }
+        return variables
+
+    def get_0_soc_variables(
+        self, x_0, y_0, x_100, y_100, Un_0, Up_0, Q, Q_n, Q_p, param
+    ):
+        Acc_cm2 = param.A_cc * 1e4
+        # eq 27 of Weng2023
+        Q_n_excess = Q_n * (1 - x_100)
+        NPR_practical = 1 + Q_n_excess / Q
+        variables = {
+            "Q": Q,
+            "Capacity [A.h]": Q,
+            "Capacity [mA.h.cm-2]": Q * 1e3 / Acc_cm2,
+            "x_0": x_0,
+            "y_0": y_0,
+            "Un(x_0)": Un_0,
+            "Up(y_0)": Up_0,
+            "Up(y_0) - Un(x_0)": Up_0 - Un_0,
+            "x_100 - x_0": x_100 - x_0,
+            "y_0 - y_100": y_0 - y_100,
+            "Q_n * (x_100 - x_0)": Q_n * (x_100 - x_0),
+            "Q_p * (y_0 - y_100)": Q_p * (y_0 - y_100),
+            "Negative electrode excess capacity ratio": Q_n / Q,
+            "Positive electrode excess capacity ratio": Q_p / Q,
+            "Practical negative positive ratio": NPR_practical,
+            "Practical NPR": NPR_practical,
+        }
+        return variables
+
+    @property
+    def default_solver(self):
+        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
+        return pybamm.AlgebraicSolver()
+
+
+class _ElectrodeSOH(_BaseElectrodeSOH):
     """Model to calculate electrode-specific SOH, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
@@ -28,16 +97,13 @@ class _ElectrodeSOH(pybamm.BaseModel):
     ----------
     .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
            better estimability of electrode-specific state of health: Decoding the cell
-           ex_pansion. Journal of Power Sources, 427, 101-111.
+           expansion. Journal of Power Sources, 427, 101-111.
     """
 
     def __init__(
         self, param=None, solve_for=None, known_value="cyclable lithium capacity"
     ):
-        pybamm.citations.register("Mohtat2019")
-        pybamm.citations.register("Weng2023")
-        name = "ElectrodeSOH model"
-        super().__init__(name)
+        super().__init__()
 
         param = param or pybamm.LithiumIonParameters()
         solve_for = solve_for or ["x_0", "x_100"]
@@ -82,30 +148,9 @@ class _ElectrodeSOH(pybamm.BaseModel):
             self.initial_conditions[x_100] = pybamm.Scalar(0.9)
 
         # These variables are defined in all cases
-        Acc_cm2 = param.A_cc * 1e4
-        self.variables = {
-            "x_100": x_100,
-            "y_100": y_100,
-            "Un(x_100)": Un_100,
-            "Up(y_100)": Up_100,
-            "Up(y_100) - Un(x_100)": Up_100 - Un_100,
-            "Q_Li": Q_Li,
-            "n_Li": Q_Li * 3600 / param.F,
-            "Q_n": Q_n,
-            "Q_p": Q_p,
-            "Cyclable lithium capacity [A.h]": Q_Li,
-            "Negative electrode capacity [A.h]": Q_n,
-            "Positive electrode capacity [A.h]": Q_p,
-            "Cyclable lithium capacity [mA.h.cm-2]": Q_Li * 1e3 / Acc_cm2,
-            "Negative electrode capacity [mA.h.cm-2]": Q_n * 1e3 / Acc_cm2,
-            "Positive electrode capacity [mA.h.cm-2]": Q_p * 1e3 / Acc_cm2,
-            # eq 33 of Weng2023
-            "Formation capacity loss [A.h]": Q_p - Q_Li,
-            "Formation capacity loss [mA.h.cm-2]": (Q_p - Q_Li) * 1e3 / Acc_cm2,
-            # eq 26 of Weng2024
-            "Negative positive ratio": Q_n / Q_p,
-            "NPR": Q_n / Q_p,
-        }
+        self.variables = self.get_100_soc_variables(
+            x_100, y_100, Un_100, Up_100, Q_Li, Q_n, Q_p, param
+        )
 
         # Define variables and equations for 0% state of charge
         if "x_0" in solve_for:
@@ -127,46 +172,23 @@ class _ElectrodeSOH(pybamm.BaseModel):
             self.initial_conditions[var] = pybamm.Scalar(0.1)
 
             # These variables are only defined if x_0 is solved for
-            # eq 27 of Weng2023
-            Q_n_excess = Q_n * (1 - x_100)
-            NPR_practical = 1 + Q_n_excess / Q
             self.variables.update(
-                {
-                    "Q": Q,
-                    "Capacity [A.h]": Q,
-                    "Capacity [mA.h.cm-2]": Q * 1e3 / Acc_cm2,
-                    "x_0": x_0,
-                    "y_0": y_0,
-                    "Un(x_0)": Un_0,
-                    "Up(y_0)": Up_0,
-                    "Up(y_0) - Un(x_0)": Up_0 - Un_0,
-                    "x_100 - x_0": x_100 - x_0,
-                    "y_0 - y_100": y_0 - y_100,
-                    "Q_n * (x_100 - x_0)": Q_n * (x_100 - x_0),
-                    "Q_p * (y_0 - y_100)": Q_p * (y_0 - y_100),
-                    "Negative electrode excess capacity ratio": Q_n / Q,
-                    "Positive electrode excess capacity ratio": Q_p / Q,
-                    "Practical negative positive ratio": NPR_practical,
-                    "Practical NPR": NPR_practical,
-                }
+                self.get_0_soc_variables(
+                    x_0, y_0, x_100, y_100, Un_0, Up_0, Q, Q_n, Q_p, param
+                )
             )
 
-    @property
-    def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
 
-
-class _ElectrodeSOHMSMR(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH using the MSMR formulation."""
+class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
+    """
+    Model to calculate electrode-specific SOH using the MSMR formulation, see
+    :class:`_ElectrodeSOH`.
+    """
 
     def __init__(
         self, param=None, solve_for=None, known_value="cyclable lithium capacity"
     ):
-        pybamm.citations.register("Mohtat2019")
-        pybamm.citations.register("Weng2023")
-        name = "ElectrodeSOH model"
-        super().__init__(name)
+        super().__init__()
 
         param = param or pybamm.LithiumIonParameters({"open-circuit potential": "MSMR"})
         solve_for = solve_for or ["Un_0", "Un_100"]
@@ -223,30 +245,9 @@ class _ElectrodeSOHMSMR(pybamm.BaseModel):
             self.initial_conditions[Un_100] = pybamm.Scalar(0.05)  # better ic?
 
         # These variables are defined in all cases
-        Acc_cm2 = param.A_cc * 1e4
-        self.variables = {
-            "x_100": x_100,
-            "y_100": y_100,
-            "Un(x_100)": Un_100,
-            "Up(y_100)": Up_100,
-            "Up(y_100) - Un(x_100)": Up_100 - Un_100,
-            "Q_Li": Q_Li,
-            "n_Li": Q_Li * 3600 / param.F,
-            "Q_n": Q_n,
-            "Q_p": Q_p,
-            "Cyclable lithium capacity [A.h]": Q_Li,
-            "Negative electrode capacity [A.h]": Q_n,
-            "Positive electrode capacity [A.h]": Q_p,
-            "Cyclable lithium capacity [mA.h.cm-2]": Q_Li * 1e3 / Acc_cm2,
-            "Negative electrode capacity [mA.h.cm-2]": Q_n * 1e3 / Acc_cm2,
-            "Positive electrode capacity [mA.h.cm-2]": Q_p * 1e3 / Acc_cm2,
-            # eq 33 of Weng2023
-            "Formation capacity loss [A.h]": Q_p - Q_Li,
-            "Formation capacity loss [mA.h.cm-2]": (Q_p - Q_Li) * 1e3 / Acc_cm2,
-            # eq 26 of Weng2024
-            "Negative positive ratio": Q_n / Q_p,
-            "NPR": Q_n / Q_p,
-        }
+        self.variables = self.get_100_soc_variables(
+            x_100, y_100, Un_100, Up_100, Q_Li, Q_n, Q_p, param
+        )
 
         # Define equation for 0% state of charge
         if "Un_0" in solve_for:
@@ -255,35 +256,12 @@ class _ElectrodeSOHMSMR(pybamm.BaseModel):
             self.algebraic[Un_0] = y_100 - y_0 + Q / Q_p
             self.initial_conditions[Un_0] = pybamm.Scalar(0.5)  # better ic?
 
-            # These variables are only defined if Un_0 is solved for
-            # eq 27 of Weng2023
-            Q_n_excess = Q_n * (1 - x_100)
-            NPR_practical = 1 + Q_n_excess / Q
+            # These variables are only defined if x_0 is solved for
             self.variables.update(
-                {
-                    "Q": Q,
-                    "Capacity [A.h]": Q,
-                    "Capacity [mA.h.cm-2]": Q * 1e3 / Acc_cm2,
-                    "x_0": x_0,
-                    "y_0": y_0,
-                    "Un(x_0)": Un_0,
-                    "Up(y_0)": Up_0,
-                    "Up(y_0) - Un(x_0)": Up_0 - Un_0,
-                    "x_100 - x_0": x_100 - x_0,
-                    "y_0 - y_100": y_0 - y_100,
-                    "Q_n * (x_100 - x_0)": Q_n * (x_100 - x_0),
-                    "Q_p * (y_0 - y_100)": Q_p * (y_0 - y_100),
-                    "Negative electrode excess capacity ratio": Q_n / Q,
-                    "Positive electrode excess capacity ratio": Q_p / Q,
-                    "Practical negative positive ratio": NPR_practical,
-                    "Practical NPR": NPR_practical,
-                }
+                self.get_0_soc_variables(
+                    x_0, y_0, x_100, y_100, Un_0, Up_0, Q, Q_n, Q_p, param
+                )
             )
-
-    @property
-    def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver(tol=1)
 
 
 class ElectrodeSOHSolver:
@@ -319,15 +297,14 @@ class ElectrodeSOHSolver:
 
         # Check whether each electrode OCP is a function (False) or data (True)
         # Set to false for MSMR models
-        if self.options.positive["open-circuit potential"] == "MSMR":
+        if self.options["open-circuit potential"] == "MSMR":
             OCPp_data = False
+            OCPn_data = False
+
         else:
             OCPp_data = isinstance(
                 parameter_values["Positive electrode OCP [V]"], tuple
             )
-        if self.options.negative["open-circuit potential"] == "MSMR":
-            OCPn_data = False
-        else:
             OCPn_data = isinstance(
                 parameter_values["Negative electrode OCP [V]"], tuple
             )
@@ -423,21 +400,23 @@ class ElectrodeSOHSolver:
                 sol = self._solve_split(inputs, ics)
             except pybamm.SolverError as split_error:
                 # check if the error is due to the simulation not being feasible
-                # self._check_esoh_feasible(inputs)
+                if self.options["open-circuit potential"] != "MSMR":
+                    self._check_esoh_feasible(inputs)
                 # if that didn't raise an error, raise the original error instead
                 raise split_error
 
         sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
 
         # Calculate theoretical energy
-        # x_0 = sol_dict["x_0"]
-        # y_0 = sol_dict["y_0"]
-        # x_100 = sol_dict["x_100"]
-        # y_100 = sol_dict["y_100"]
-        # energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-        #    self.parameter_values, x_100, x_0, y_100, y_0
-        # )
-        # sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+        if self.options["open-circuit potential"] != "MSMR":
+            x_0 = sol_dict["x_0"]
+            y_0 = sol_dict["y_0"]
+            x_100 = sol_dict["x_100"]
+            y_100 = sol_dict["y_100"]
+            energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+                self.parameter_values, x_100, x_0, y_100, y_0
+            )
+            sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
     def _set_up_solve(self, inputs):
