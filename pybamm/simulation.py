@@ -945,7 +945,7 @@ class Simulation:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self.parameter_values, self.model.param
+            self.parameter_values, self.model.param, options=self.model.options
         )
 
     def plot(self, output_variables=None, **kwargs):

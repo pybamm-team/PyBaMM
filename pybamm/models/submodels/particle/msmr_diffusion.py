@@ -171,12 +171,12 @@ class MSMRDiffusion(BaseParticle):
 
         if self.size_distribution is False:
             if self.x_average is False:
-                x = variables[f"{Domain} {phase_name} particle stoichiometry"]
+                x = variables[f"{Domain} {phase_name}particle stoichiometry"]
                 dxdU = variables[
-                    f"{Domain} {phase_name} particle differential stoichiometry [V-1]"
+                    f"{Domain} {phase_name}particle differential stoichiometry [V-1]"
                 ]
                 U = variables[
-                    f"{Domain} {phase_name} particle open-circuit potential [V]"
+                    f"{Domain} {phase_name}particle open-circuit potential [V]"
                 ]
                 T = pybamm.PrimaryBroadcast(
                     variables[f"{Domain} electrode temperature [K]"],
@@ -362,7 +362,7 @@ class MSMRDiffusion(BaseParticle):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        U_init = self.phase_param.U_msmr_init
+        U_init = self.phase_param.U_init
         if self.size_distribution is False:
             if self.x_average is False:
                 U = variables[

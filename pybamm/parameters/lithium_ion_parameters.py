@@ -13,13 +13,8 @@ class LithiumIonParameters(BaseParameters):
     ----------
 
     options : dict, optional
-        A dictionary of options to be passed to the parameters. The options that
-        can be set are listed below.
-
-            * "particle shape" : str, optional
-                Sets the model shape of the electrode particles. This is used to
-                calculate the surface area to volume ratio. Can be "spherical"
-                (default). TODO: implement "cylindrical" and "platelet".
+        A dictionary of options to be passed to the parameters, see
+        :class:`pybamm.BatteryModelOptions`.
     """
 
     def __init__(self, options=None):
@@ -447,6 +442,8 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.U_init = pybamm.Scalar(0)
             return
 
+        # Spatial variables for parameters that depend on position within the cell
+        # and/or particle
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
@@ -463,55 +460,58 @@ class ParticleLithiumIonParameters(BaseParameters):
             coord_sys="spherical polar",
         )
 
-        # Macroscale geometry
+        # Microscale geometry
         # Note: the surface area to volume ratio is defined later with the function
         # parameters. The particle size as a function of through-cell position is
         # already defined in geometric_parameters.py
         self.R = self.geo.R
         self.R_typ = self.geo.R_typ
-
-        # Particle properties
-        self.c_max = pybamm.Parameter(
-            f"{pref}Maximum concentration in {domain} electrode [mol.m-3]"
-        )
-
         # Particle-size distribution parameters
         self.R_min = self.geo.R_min
         self.R_max = self.geo.R_max
         self.sd_a = self.geo.sd_a
         self.f_a_dist = self.geo.f_a_dist
 
+        # Particle properties
         self.epsilon_s = pybamm.FunctionParameter(
             f"{pref}{Domain} electrode active material volume fraction",
             {"Through-cell distance (x) [m]": x},
         )
-        self.c_init = pybamm.FunctionParameter(
-            f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
-            {
-                "Radial distance (r) [m]": r,
-                "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
-                    x, f"{domain} {phase_name}particle"
-                ),
-            },
+        self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
+        self.c_max = pybamm.Parameter(
+            f"{pref}Maximum concentration in {domain} electrode [mol.m-3]"
         )
+        if main.options["open-circuit potential"] == "MSMR":
+            self.U_init = pybamm.Parameter(
+                f"{pref}Initial voltage in {domain} electrode [V]",
+            )
+            self.c_init = self.x(self.U_init) * self.c_max
+        else:
+            self.c_init = pybamm.FunctionParameter(
+                f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
+                {
+                    "Radial distance (r) [m]": r,
+                    "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+                        x, f"{domain} {phase_name}particle"
+                    ),
+                },
+            )
         self.c_init_av = pybamm.xyz_average(pybamm.r_average(self.c_init))
         self.sto_init_av = self.c_init_av / self.c_max
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
-        self.n_Li_init = eps_c_init_av * self.domain_param.L * main.A_cc
-        self.Q_Li_init = self.n_Li_init * main.F / 3600
 
-        self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
+        if main.options["open-circuit potential"] != "MSMR":
+            self.U_init = self.U(self.sto_init_av, main.T_init)
+
+        # Electrode loading and capacity
         self.elec_loading = (
             self.epsilon_s_av * self.domain_param.L * self.c_max * main.F / 3600
         )
+        self.n_Li_init = eps_c_init_av * self.domain_param.L * main.A_cc
+        self.Q_Li_init = self.n_Li_init * main.F / 3600
         self.Q_init = self.elec_loading * main.A_cc
-
-        self.U_init = self.U(self.sto_init_av, main.T_init)
-        self.U_msmr_init = pybamm.Parameter(
-            f"{pref}Initial voltage in {domain} electrode [V]"
-        )
 
         if main.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
@@ -603,6 +603,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         Differential stoichiometry as a function of potential (for use with MSMR models)
         """
+        # TODO: remove and use .diff(U) instead
         Domain = self.domain.capitalize()
         inputs = {
             f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U

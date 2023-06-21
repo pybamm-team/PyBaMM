@@ -366,6 +366,12 @@ class TestBaseBatteryModel(TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
             pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
 
+        # msmr
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel({"open-circuit potential": "MSMR"})
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel({"particle": "MSMR"})
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
