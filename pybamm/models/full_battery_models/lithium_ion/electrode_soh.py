@@ -417,11 +417,13 @@ class ElectrodeSOHSolver:
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
+        # address numpy 1.25 deprecation warning: array should have ndim=0
+        # before conversion
         V_lower_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
         )
         V_upper_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
+            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
         )
         if V_lower_bound > self.V_min:
             raise (
@@ -617,9 +619,10 @@ def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100
     T = param.T_amb(0)
     Vs = np.empty(n_vals.shape)
     for i in range(n_vals.size):
-        Vs[i] = parameter_values.evaluate(
-            param.p.prim.U(p_vals[i], T)
-        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
+        Vs[i] = (
+            parameter_values.evaluate(param.p.prim.U(p_vals[i], T)).item()
+            - parameter_values.evaluate(param.n.prim.U(n_vals[i], T)).item()
+        )
     # Calculate dQ
     Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
     dQ = Q_p / (points - 1)
