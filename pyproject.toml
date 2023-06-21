@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools", "wheel", "cmake"]
-build-backend = "setuptools.build_meta"
+build-backend = "setuptools.build_meta:__legacy__"
 
 [project]
 name = "pybamm"
