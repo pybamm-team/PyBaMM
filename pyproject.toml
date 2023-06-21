@@ -9,7 +9,6 @@ readme = { file = "README.md", content-type = "text/markdown" }
 keywords = [
   "pybamm",
 ]
-license = "OSI Approved :: BSD License"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
