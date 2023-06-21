@@ -6,7 +6,8 @@ from .base_lithium_ion_model import BaseModel
 
 
 class BasicSPM(BaseModel):
-    """Single Particle Model (SPM) model of a lithium-ion battery, from [2]_.
+    """Single Particle Model (SPM) model of a lithium-ion battery, from
+    :footcite:t:`Marquis2019`.
 
     This class differs from the :class:`pybamm.lithium_ion.SPM` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in
@@ -17,12 +18,6 @@ class BasicSPM(BaseModel):
     ----------
     name : str, optional
         The name of the model.
-
-    References
-    ----------
-    .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. Journal of The
-           Electrochemical Society, 166(15):A3693–A3706, 2019
     """
 
     def __init__(self, name="Single Particle Model"):

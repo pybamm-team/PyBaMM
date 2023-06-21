@@ -91,7 +91,7 @@ Lead-acid Parameter Sets
 {% for k,v in parameter_sets.items() if v.chemistry == "lead_acid" %}
 {{k}}
 ----------------------------
-{{ parameter_sets.get_docstring(k) | safe }}
+{{ parameter_sets.get_docstring(k) }}
 {% endfor %}
 
 Lithium-ion Parameter Sets
@@ -101,3 +101,5 @@ Lithium-ion Parameter Sets
 ----------------------------
 {{ parameter_sets.get_docstring(k) }}
 {% endfor %}
+
+.. footbibliography::

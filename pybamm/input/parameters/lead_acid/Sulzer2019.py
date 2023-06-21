@@ -208,13 +208,7 @@ def diffusivity_Gu1997(c_e):
 def get_parameter_values():
     """
     Parameters for BBOXX lead-acid cells, from the paper
-
-        Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles W.
-        Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part
-        I. Physical Model. Journal of The Electrochemical Society, 166(12):A2363-A2371,
-        2019. doi:10.1149/2.0301910jes.
-
-    and references therein.
+    :footcite:t:`sulzer2019asymptotic` and references therein.
     """
 
     return {

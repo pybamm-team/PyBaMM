@@ -920,21 +920,10 @@ def electrolyte_conductivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for an LG M50 cell, from the paper
-
-        Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-        Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-        battery. Electrochimica Acta, 425:140700, 2022.
-        doi:10.1016/j.electacta.2022.140700.
+    Parameters for an LG M50 cell, from the paper :footcite:t:`ORegan2022`
 
     Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte are from the paper
-
-        Johannes Landesfeind and Hubert A. Gasteiger, Temperature and Concentration
-        Dependence of the Ionic Transport Properties of Lithium-Ion Battery
-        Electrolytes. Journal of the Electrochemical Society 166 (2019): A3079.
-        doi:10.1149/2.0571912jes
-
-    and references therein.
+    :footcite:t:`landesfeind2019temperature` and references therein.
     """
 
     return {
