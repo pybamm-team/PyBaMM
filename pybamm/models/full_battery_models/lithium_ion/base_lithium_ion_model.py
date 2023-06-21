@@ -49,8 +49,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_electrolyte_potential_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
-
         self.set_sei_submodel()
+        self.set_sei_on_cracks_submodel()
         self.set_lithium_plating_submodel()
         self.set_li_metal_counter_electrode_submodels()
         self.set_total_interface_submodel()
@@ -163,11 +163,12 @@ class BaseModel(pybamm.BaseBatteryModel):
         n_Li_lost_pos_sei = self.variables["Loss of lithium to positive SEI [mol]"]
         n_Li_lost_reactions = n_Li_lost_neg_sei + n_Li_lost_pos_sei
         for domain in domains:
+            dom = domain.split()[0].lower()
             n_Li_lost_sei_cracks = self.variables[
-                f"Loss of lithium to {domain} SEI on cracks [mol]"
+                f"Loss of lithium to {dom} SEI on cracks [mol]"
             ]
             n_Li_lost_pl = self.variables[
-                f"Loss of lithium to {domain} lithium plating [mol]"
+                f"Loss of lithium to {dom} lithium plating [mol]"
             ]
             n_Li_lost_reactions += n_Li_lost_sei_cracks + n_Li_lost_pl
 
@@ -325,18 +326,20 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
-                lithium_plating_opt = getattr(self.options, domain)["lithium_plating"]
-            if lithium_plating_opt == "none":
-                self.submodels[
-                    f"{domain} lithium plating"
-                ] = pybamm.lithium_plating.NoPlating(self.param, domain, self.options)
-            else:
-                x_average = self.options["x-average side reactions"] == "true"
-                self.submodels[
-                    f"{domain} lithium plating"
-                ] = pybamm.lithium_plating.Plating(
-                    self.param, domain, x_average, self.options
-                )
+                lithium_plating_opt = getattr(self.options, domain)["lithium plating"]
+                if lithium_plating_opt == "none":
+                    self.submodels[
+                        f"{domain} lithium plating"
+                    ] = pybamm.lithium_plating.NoPlating(
+                        self.param, domain, self.options
+                    )
+                else:
+                    x_average = self.options["x-average side reactions"] == "true"
+                    self.submodels[
+                        f"{domain} lithium plating"
+                    ] = pybamm.lithium_plating.Plating(
+                        self.param, domain, x_average, self.options
+                    )
 
     def set_total_interface_submodel(self):
         self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(

@@ -28,7 +28,7 @@ class ReactionDriven(BaseModel):
             if domain == "separator":
                 delta_eps_k = 0  # separator porosity does not change
             else:
-                dom = domain = domain.split()[0].lower()
+                dom = domain.split()[0].lower()
                 Domain = dom.capitalize()
                 L_sei_k = variables[f"Total {dom} SEI thickness [m]"]
                 L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0

@@ -422,8 +422,8 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         # Dividing by 10000 makes initial condition effectively zero
         # without triggering division by zero errors
-        self.L_inner_crack_0 = self.L_inner_neg_0 / 10000
-        self.L_outer_crack_0 = self.L_outer_neg_0 / 10000
+        self.L_inner_crack_0 = self.L_inner_0 / 10000
+        self.L_outer_crack_0 = self.L_outer_0 / 10000
 
         self.L_sei_0 = self.L_inner_0 + self.L_outer_0
         self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")

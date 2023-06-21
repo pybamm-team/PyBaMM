@@ -183,7 +183,7 @@ class BaseKinetics(BaseInterface):
             self._get_standard_volumetric_current_density_variables(variables)
         )
 
-        if self.domain == "negative" and self.reaction in [
+        if self.reaction in [
             "lithium-ion main",
             "lithium metal plating",
             "lead-acid main",

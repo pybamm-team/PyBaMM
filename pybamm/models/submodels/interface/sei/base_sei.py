@@ -290,22 +290,23 @@ class BaseModel(BaseInterface):
         j_sei = j_inner + j_outer
 
         variables = {
-            f"{Domain} inner {self.reaction_name}"
-            "interfacial currentdensity [A.m-2]": j_inner,
-            f"X-averaged {domain} inner {self.reaction_name}"
+            f"{Domain} electrode inner {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_inner,
+            f"X-averaged {domain} electrode inner {self.reaction_name}"
             "interfacial current density [A.m-2]": j_inner_av,
-            f"{Domain} outer {self.reaction_name}"
+            f"{Domain} electrode outer {self.reaction_name}"
             "interfacial current density [A.m-2]": j_outer,
-            f"X-averaged {domain} outer {self.reaction_name}"
+            f"X-averaged {domain} electrode outer {self.reaction_name}"
             "interfacial current density [A.m-2]": j_outer_av,
-            f"{Domain} {self.reaction_name}interfacial current density [A.m-2]": j_sei,
+            f"{Domain} electrode {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_sei,
         }
 
         if self.reaction_loc != "interface":
             j_sei_av = pybamm.x_average(j_sei)
             variables.update(
                 {
-                    f"X-averaged {domain} {self.reaction_name}"
+                    f"X-averaged {domain} electrode {self.reaction_name}"
                     "interfacial current density [A.m-2]": j_sei_av,
                 }
             )

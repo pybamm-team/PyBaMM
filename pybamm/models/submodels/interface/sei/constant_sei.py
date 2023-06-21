@@ -25,12 +25,13 @@ class ConstantSEI(BaseModel):
 
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
-        if self.options.electrode_types["negative"] == "planar":
+        if self.options.electrode_types[domain] == "planar":
             self.reaction_loc = "interface"
         else:
             self.reaction_loc = "full electrode"
 
     def get_fundamental_variables(self):
+        domain = self.domain.lower()
         # Constant thicknesses
         L_inner = self.phase_param.L_inner_0
         L_outer = self.phase_param.L_outer_0
@@ -41,7 +42,7 @@ class ConstantSEI(BaseModel):
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         else:
             zero = pybamm.FullBroadcast(
-                pybamm.Scalar(0), "negative electrode", "current collector"
+                pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
         variables.update(self._get_standard_reaction_variables(zero, zero))
 

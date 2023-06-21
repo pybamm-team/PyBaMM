@@ -79,7 +79,9 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         Domain = self.domain.capitalize()
         if self.options["surface form"] == "differential":
             j_pl = variables["Lithium metal plating current density [A.m-2]"]
-            j_sei = variables[f"{Domain} SEI interfacial current density [A.m-2]"]
+            j_sei = variables[
+                f"{Domain} electrode SEI interfacial current density [A.m-2]"
+            ]
             sum_j = j_pl + j_sei
 
             i_cc = variables["Current collector current density [A.m-2]"]
@@ -95,7 +97,9 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         Domain = self.domain.capitalize()
         if self.options["surface form"] != "differential":  # also catches "false"
             j_pl = variables["Lithium metal plating current density [A.m-2]"]
-            j_sei = variables[f"{Domain} SEI interfacial current density [A.m-2]"]
+            j_sei = variables[
+                f"{Domain} electrode SEI interfacial current density [A.m-2]"
+            ]
             sum_j = j_pl + j_sei
 
             i_cc = variables["Current collector current density [A.m-2]"]

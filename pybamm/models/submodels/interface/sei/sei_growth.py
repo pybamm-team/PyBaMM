@@ -219,11 +219,11 @@ class SEIGrowth(BaseModel):
             L_inner = variables[f"{Domain} inner {self.reaction_name}thickness [m]"]
             L_outer = variables[f"{Domain} outer {self.reaction_name}thickness [m]"]
             j_inner = variables[
-                f"{Domain} inner {self.reaction_name}"
+                f"{Domain} electrode inner {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
             j_outer = variables[
-                f"{Domain} outer {self.reaction_name}"
+                f"{Domain} electrode outer {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
 
