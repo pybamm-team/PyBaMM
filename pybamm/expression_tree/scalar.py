@@ -37,9 +37,14 @@ class Scalar(pybamm.Symbol):
         """The value returned by the node when evaluated."""
         return self._value
 
+    # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion
     @value.setter
     def value(self, value):
-        self._value = np.float64(value)
+        self._value = (
+            np.float64(value.item())
+            if isinstance(value, np.ndarray)
+            else np.float64(value)
+        )
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""

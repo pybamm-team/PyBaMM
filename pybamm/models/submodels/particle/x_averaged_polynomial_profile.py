@@ -9,7 +9,8 @@ from .polynomial_profile import PolynomialProfile
 class XAveragedPolynomialProfile(PolynomialProfile):
     """
     Class for molar conservation in a single x-averaged particle employing Fick's law,
-    with an assumed polynomial concentration profile in r. Model equations from [1]_.
+    with an assumed polynomial concentration profile in r. Model equations from
+    :footcite:t:`Subramanian2005`.
 
     Parameters
     ----------
@@ -23,11 +24,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    References
-    ----------
-    .. [1] VR Subramanian, VD Diwakar and D Tapriyal. “Efficient Macro-Micro Scale
-           Coupled Modeling of Batteries”. Journal of The Electrochemical Society,
-           152(10):A2002-A2008, 2005
     """
 
     def __init__(self, param, domain, options, phase="primary"):

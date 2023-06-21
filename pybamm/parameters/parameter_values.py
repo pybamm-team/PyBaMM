@@ -647,7 +647,9 @@ class ParameterValues:
             new_symbol._scale = self.process_symbol(symbol.scale)
             reference = self.process_symbol(symbol.reference)
             if isinstance(reference, pybamm.Vector):
-                reference = pybamm.Scalar(float(reference.evaluate()))
+                # address numpy 1.25 deprecation warning: array should have ndim=0
+                # before conversion
+                reference = pybamm.Scalar((reference.evaluate()).item())
             new_symbol._reference = reference
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol

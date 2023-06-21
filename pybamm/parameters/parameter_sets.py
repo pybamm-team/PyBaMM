@@ -26,7 +26,8 @@ class ParameterSets(Mapping):
         >>> import pybamm
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
         <BLANKLINE>
-        Parameters for the Enertech cell (Ai2020), from the papers:
+        Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
+        :footcite:t:`rieger2016new` and references therein.
         ...
 
     See also: :ref:`adding-parameter-sets`

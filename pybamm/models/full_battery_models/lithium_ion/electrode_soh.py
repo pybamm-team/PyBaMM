@@ -8,7 +8,7 @@ import warnings
 
 
 class _ElectrodeSOH(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH, from [1]_.
+    """Model to calculate electrode-specific SOH, from :footcite:t:`Mohtat2019`.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
     Some of the output variables are defined in [2]_.
@@ -24,11 +24,6 @@ class _ElectrodeSOH(pybamm.BaseModel):
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
 
-    References
-    ----------
-    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-           better estimability of electrode-specific state of health: Decoding the cell
-           expansion. Journal of Power Sources, 427, 101-111.
     """
 
     def __init__(
@@ -422,11 +417,13 @@ class ElectrodeSOHSolver:
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
+        # address numpy 1.25 deprecation warning: array should have ndim=0
+        # before conversion
         V_lower_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
         )
         V_upper_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
+            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
         )
         if V_lower_bound > self.V_min:
             raise (
@@ -622,9 +619,10 @@ def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100
     T = param.T_amb(0)
     Vs = np.empty(n_vals.shape)
     for i in range(n_vals.size):
-        Vs[i] = parameter_values.evaluate(
-            param.p.prim.U(p_vals[i], T)
-        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
+        Vs[i] = (
+            parameter_values.evaluate(param.p.prim.U(p_vals[i], T)).item()
+            - parameter_values.evaluate(param.n.prim.U(n_vals[i], T)).item()
+        )
     # Calculate dQ
     Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
     dQ = Q_p / (points - 1)

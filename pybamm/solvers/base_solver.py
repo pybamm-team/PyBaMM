@@ -502,8 +502,12 @@ class BaseSolver(object):
                     # We only need to do this if the model is a DAE model
                     # see #1082
                     k = 20
+                    # address numpy 1.25 deprecation warning: array should have
+                    # ndim=0 before conversion
                     init_sign = float(
-                        np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
+                        np.sign(
+                            event.evaluate(0, model.y0.full(), inputs=inputs)
+                        ).item()
                     )
                     # We create a sigmoid for each event which will multiply the
                     # rhs. Doing * 2 - 1 ensures that when the event is crossed,

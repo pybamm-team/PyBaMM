@@ -6,7 +6,8 @@ from ..base_interface import BaseInterface
 
 
 class BasePlating(BaseInterface):
-    """Base class for lithium plating models.
+    """Base class for lithium plating models, from :footcite:t:`OKane2020` and
+    :footcite:t:`OKane2022`.
 
     Parameters
     ----------
@@ -14,16 +15,6 @@ class BasePlating(BaseInterface):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
-    References
-    ----------
-    .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
-           Origin of the Differential Voltage Minimum Associated with Li Plating in
-           Lithium-Ion Batteries". Journal of The Electrochemical Society,
-           167:090540, 2020
-    .. [2] SEJ O'Kane, W Ai, G Madabattula, D Alonso-Alvarez, R Timms, V Sulzer,
-           JS Edge, B Wu, GJ Offer and M Marinescu. "Lithium-ion battery degradation:
-           how to model it". Physical Chemistry: Chemical Physics, 24:7909, 2022
     """
 
     def __init__(self, param, options=None):
