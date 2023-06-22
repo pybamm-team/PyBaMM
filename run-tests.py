@@ -97,20 +97,28 @@ def run_doc_tests():
 
 def run_notebook_and_scripts(executable="python"):
     """
-    Runs Jupyter notebook tests. Exits if they fail.
+    Runs Jupyter notebook and example scripts tests. Exits if they fail.
     """
 
     # Scan and run
     print("Testing notebooks and scripts with executable `" + str(executable) + "`")
-    if not scan_for_nb_and_scripts("examples", True, executable):
+
+    # Test notebooks in docs/source/examples
+    if not scan_for_notebooks("docs/source/examples", True, executable):
         print("\nErrors encountered in notebooks")
+        sys.exit(1)
+
+    # Test scripts in examples
+    # TODO: add scripts to docs/source/examples
+    if not scan_for_scripts("examples", True, executable):
+        print("\nErrors encountered in scripts")
         sys.exit(1)
     print("\nOK")
 
 
-def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
+def scan_for_notebooks(root, recursive=True, executable="python"):
     """
-    Scans for, and tests, all notebooks and scripts in a directory.
+    Scans for, and tests, all notebooks in a directory.
     """
     ok = True
     debug = False
@@ -124,7 +132,7 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
             # Ignore hidden directories
             if filename[:1] == ".":
                 continue
-            ok &= scan_for_nb_and_scripts(path, recursive, executable)
+            ok &= scan_for_notebooks(path, recursive, executable)
 
         # Test notebooks
         if os.path.splitext(path)[1] == ".ipynb":
@@ -132,6 +140,29 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
                 print(path)
             else:
                 ok &= test_notebook(path, executable)
+
+    # Return True if every notebook is ok
+    return ok
+
+
+def scan_for_scripts(root, recursive=True, executable="python"):
+    """
+    Scans for, and tests, all scripts in a directory.
+    """
+    ok = True
+    debug = False
+
+    # Scan path
+    for filename in os.listdir(root):
+        path = os.path.join(root, filename)
+
+        # Recurse into subdirectories
+        if recursive and os.path.isdir(path):
+            # Ignore hidden directories
+            if filename[:1] == ".":
+                continue
+            ok &= scan_for_scripts(path, recursive, executable)
+
         # Test scripts
         elif os.path.splitext(path)[1] == ".py":
             if debug:
@@ -139,13 +170,13 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
             else:
                 ok &= test_script(path, executable)
 
-    # Return True if every notebook is ok
+    # Return True if every script is ok
     return ok
 
 
 def test_notebook(path, executable="python"):
     """
-    Tests a single notebook, exists if it doesn't finish.
+    Tests a single notebook, exits if it doesn't finish.
     """
     import nbconvert
     import pybamm
@@ -233,7 +264,7 @@ def test_notebook(path, executable="python"):
 
 def test_script(path, executable="python"):
     """
-    Tests a single notebook, exists if it doesn't finish.
+    Tests a single script, exits if it doesn't finish.
     """
     import pybamm
 
