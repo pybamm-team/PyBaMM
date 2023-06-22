@@ -268,7 +268,7 @@ intersphinx_mapping = {
 nbsphinx_prolog = r"""
 
 {% set docname =
-'github/pybamm-team/pybamm/blob/develop/docs' +
+'github/pybamm-team/pybamm/blob/develop/docs/' +
 env.doc2path(env.docname, base=None) %}
 
 .. raw:: html
