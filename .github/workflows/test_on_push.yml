@@ -56,16 +56,18 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
         with:
-          packages: gfortran gcc graphviz pandoc
+          packages: gfortran gcc graphviz
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TexLive for Linux
+      - name: Install OpenBLAS, TeXLive, and Pandoc for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo dot -c 
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          # Install pandoc from conda-forge to get a recent version
+          conda install -c conda-forge pandoc
 
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
