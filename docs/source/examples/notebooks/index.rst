@@ -27,3 +27,4 @@ This folder contains a collection of Jupyter notebooks that demonstrate how to u
     simulating-long-experiments.ipynb
     simulation-class.ipynb
     solution-data-and-processed-variables.ipynb
+    experiments-start-time.ipynb
