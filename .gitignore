@@ -41,7 +41,7 @@ input/*
 !input/drive_cycles
 
 # keep images required by notebooks
-!examples/notebooks/Creating%20Models/SEI.png
+!docs/examples/notebooks/creating_models/SEI.png
 
 # simulation outputs
 out/
