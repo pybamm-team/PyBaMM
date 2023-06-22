@@ -7,6 +7,7 @@
 #
 import re
 import os
+import shutil
 import pybamm
 import sys
 import argparse
@@ -88,6 +89,10 @@ def run_doc_tests():
     if ret != 0:
         print("FAILED")
         sys.exit(ret)
+    # delete the entire docs/source/build folder + files since it currently
+    # causes problems with nbsphinx in further docs or doctest builds
+    print("Deleting built files.")
+    shutil.rmtree("docs/build")
 
 
 def run_notebook_and_scripts(executable="python"):
