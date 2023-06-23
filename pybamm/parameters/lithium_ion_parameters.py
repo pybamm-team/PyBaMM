@@ -609,9 +609,9 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode differential "
-            "stoichiometry [V-1]",
+            f"{self.phase_prefactor}{Domain} electrode stoichiometry",
             inputs,
+            diff_variable=U,
         )
 
     def dUdT(self, sto):

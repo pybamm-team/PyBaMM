@@ -411,14 +411,16 @@ class ElectrodeSOHSolver:
         sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
 
         # Calculate theoretical energy
-        x_0 = sol_dict["x_0"]
-        y_0 = sol_dict["y_0"]
-        x_100 = sol_dict["x_100"]
-        y_100 = sol_dict["y_100"]
-        energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-            self.parameter_values, x_100, x_0, y_100, y_0, options=self.options
-        )
-        sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+        # TODO: energy calc for MSMR
+        if self.options["open-circuit potential"] != "MSMR":
+            x_0 = sol_dict["x_0"]
+            y_0 = sol_dict["y_0"]
+            x_100 = sol_dict["x_100"]
+            y_100 = sol_dict["y_100"]
+            energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
+                self.parameter_values, x_100, x_0, y_100, y_0, options=self.options
+            )
+            sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
     def _set_up_solve(self, inputs):
@@ -904,9 +906,7 @@ def get_min_max_ocps(
     return esoh_solver.get_min_max_ocps()
 
 
-def theoretical_energy_integral(
-    parameter_values, n_i, n_f, p_i, p_f, points=100, options=None
-):
+def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
     given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -920,37 +920,22 @@ def theoretical_energy_integral(
         electrodes, respectively
     points : int
         The number of points at which to calculate voltage.
-    options : dict-like, optional
-        A dictionary of options to be passed to the model, see
-        :class:`pybamm.BatteryModelOptions`.
-
     Returns
     -------
     E
         The total energy of the cell in Wh
     """
-    options = options or {}
-    param = pybamm.LithiumIonParameters(options)
-
     n_vals = np.linspace(n_i, n_f, num=points)
     p_vals = np.linspace(p_i, p_f, num=points)
-    Vs = np.empty(n_vals.shape)
+    param = pybamm.LithiumIonParameters()
     T = param.T_amb(0)
 
     # Calculate OCV at each stoichiometry
-    if options["open-circuit potential"] == "MSMR":
-        msmr_pot_model = _get_msmr_potential_model(parameter_values, param)
-        for i in range(n_vals.size):
-            sol0 = pybamm.AlgebraicSolver().solve(
-                msmr_pot_model, inputs={"x": n_vals[i], "y": p_vals[i]}
-            )
-            Vs[i] = sol0["Up"].data - sol0["Un"].data
-    else:
-        for i in range(n_vals.size):
-            Vs[i] = parameter_values.evaluate(
-                param.p.prim.U(p_vals[i], T)
-            ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
-
+    Vs = np.empty(n_vals.shape)
+    for i in range(n_vals.size):
+        Vs[i] = parameter_values.evaluate(
+            param.p.prim.U(p_vals[i], T)
+        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
     # Calculate dQ
     Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
     dQ = Q_p / (points - 1)
@@ -960,7 +945,7 @@ def theoretical_energy_integral(
 
 
 def calculate_theoretical_energy(
-    parameter_values, initial_soc=1.0, final_soc=0.0, points=100, options=None
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
 ):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
@@ -976,10 +961,6 @@ def calculate_theoretical_energy(
         The soc at end of discharge, default 0.0
     points : int
         The number of points at which to calculate voltage.
-    options : dict-like, optional
-        A dictionary of options to be passed to the model, see
-        :class:`pybamm.BatteryModelOptions`.
-
     Returns
     -------
     E
@@ -989,6 +970,6 @@ def calculate_theoretical_energy(
     x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values)
     x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values)
     E = theoretical_energy_integral(
-        parameter_values, x_100, x_0, y_100, y_0, points=points, options=options
+        parameter_values, x_100, x_0, y_100, y_0, points=points
     )
     return E

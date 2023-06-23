@@ -27,21 +27,6 @@ def x_n(U):
     return xj
 
 
-def dxdU_n(U):
-    T = 298.15
-    f = pybamm.constants.F / (pybamm.constants.R * T)
-    dxj = 0
-    for i in range(6):
-        U0 = pybamm.Parameter(f"U0_n_{i}")
-        w = pybamm.Parameter(f"w_n_{i}")
-        Xj = pybamm.Parameter(f"Xj_n_{i}")
-
-        e = pybamm.exp(f * (U - U0) / w)
-        dxj += -(f / w) * (Xj * e) / (1 + e) ** 2
-
-    return dxj
-
-
 def x_p(U):
     T = 298.15
     f = pybamm.constants.F / (pybamm.constants.R * T)
@@ -54,21 +39,6 @@ def x_p(U):
         xj += Xj / (1 + pybamm.exp(f * (U - U0) / w))
 
     return xj
-
-
-def dxdU_p(U):
-    T = 298.15
-    f = pybamm.constants.F / (pybamm.constants.R * T)
-    dxj = 0
-    for i in range(4):
-        U0 = pybamm.Parameter(f"U0_p_{i}")
-        w = pybamm.Parameter(f"w_p_{i}")
-        Xj = pybamm.Parameter(f"Xj_p_{i}")
-
-        e = pybamm.exp(f * (U - U0) / w)
-        dxj += -(f / w) * (Xj * e) / (1 + e) ** 2
-
-    return dxj
 
 
 def get_parameter_values():
@@ -84,7 +54,6 @@ def get_parameter_values():
         "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode stoichiometry": x_n,
-        "Negative electrode differential stoichiometry [V-1]": dxdU_n,
         "U0_n_0": 0.08843,
         "Xj_n_0": 0.43336,
         "w_n_0": 0.08611,
@@ -115,7 +84,6 @@ def get_parameter_values():
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
         # positive electrode
         "Positive electrode stoichiometry": x_p,
-        "Positive electrode differential stoichiometry [V-1]": dxdU_p,
         "U0_p_0": 3.62274,
         "Xj_p_0": 0.13442,
         "w_p_0": 0.96710,
