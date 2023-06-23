@@ -21,6 +21,8 @@ def run_pybamm_requires(session):
                 "pybind11/",
                 external=True,
             )
+    else:
+        session.error("nox -s pybamm-requires is only available on Linux & MacOS.")
 
 
 @nox.session(name="coverage", reuse_venv=True)
