@@ -9,32 +9,37 @@ Prerequisites
 
 To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
-To install Python 3 on Debian-based distribution (Debian, Ubuntu, Linux
-mint), open a terminal and run
+.. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
 
-.. code:: bash
+   To install Python 3 on Debian-based distributions (Debian, Ubuntu, Linux Mint), open a terminal and run
 
-   sudo apt update
-   sudo apt install python3
+   .. code:: bash
 
-On Fedora or CentOS, you can use DNF or Yum. For example
+      sudo apt update
+      sudo apt install python3
 
-.. code:: bash
+.. tab:: Fedora/CentOS
 
-   sudo dnf install python3
+   On Fedora or CentOS, you can use DNF or Yum. For example
 
-On Mac OS distributions, you can use ``homebrew``. First `install
-brew <https://docs.python-guide.org/starting/install3/osx/>`__:
+   .. code:: bash
 
-.. code:: bash
+      sudo dnf install python3
 
-   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+.. tab:: macOS
 
-then follow instructions in link on adding brew to path, and run
+   On macOS, you can use the ``homebrew`` package manager. First, `install
+   brew <https://docs.python-guide.org/starting/install3/osx/>`__:
 
-.. code:: bash
+   .. code:: bash
 
-   brew install python3
+      ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+   then follow instructions in the link on adding ``brew`` to path, and run
+
+   .. code:: bash
+
+      brew install python3
 
 Install PyBaMM
 ==============
@@ -70,18 +75,22 @@ the environment and go back to your original system, just type:
 PyBaMM can be installed via pip. On macOS, it is necessary to install the `SUNDIALS <https://computing.llnl.gov/projects/sundials/>`__
 library beforehand.
 
-GNU/Linux and Windows
-~~~~~~~~~~~~~~~~~~~~~
-.. code:: bash
+.. tab:: GNU/Linux and Windows
 
-   pip install pybamm
+   In a terminal, run the following command:
 
-macOS
-~~~~~
-.. code:: bash
+   .. code:: bash
 
-   brew install sundials
-   pip install pybamm
+      pip install pybamm
+
+.. tab:: macOS
+
+   In a terminal, run the following commands:
+
+   .. code:: bash
+
+      brew install sundials
+      pip install pybamm
 
 PyBaMM’s dependencies (such as ``numpy``, ``scipy``, etc) will be
 installed automatically when you install PyBaMM using ``pip``.
@@ -99,25 +108,27 @@ order to use the wrapped SUNDIALS ODE and DAE
 `solvers <https://pybamm.readthedocs.io/en/latest/source/api/solvers/scikits_solvers.html>`__.
 Currently, only GNU/Linux and macOS are supported.
 
-GNU/Linux
-~~~~~~~~~
+.. tab:: GNU/Linux
 
-.. code:: bash
+   In a terminal, run the following commands:
 
-	  apt install libopenblas-dev
-	  pybamm_install_odes
+   .. code:: bash
 
-The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
-system (under ``~/.local``), before installing ``sckits.odes`` (by running ``pip install scikits.odes``).
+	   apt install libopenblas-dev
+	   pybamm_install_odes
 
-macOS
-~~~~~
+   The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
+   system (under ``~/.local``), before installing ``scikits.odes`` (by running ``pip install scikits.odes``).
 
-.. code:: bash
+.. tab:: macOS
+
+   In a terminal, run the following command:
+
+   .. code:: bash
 
 	  pip install scikits.odes
 
-Assuming that the SUNDIALS were installed as described :ref:`above<user-install-label>`.
+   Assuming that SUNDIALS was installed as described :ref:`above<user-install-label>`.
 
 Optional - JaxSolver
 --------------------
@@ -138,20 +149,24 @@ Developer install
 -----------------
 
 If you wish to contribute to PyBaMM, you should get the latest version
-from the GitHub repository. To do so, you must have Git and graphviz
-installed. For instance run
+from the GitHub repository. To do so, you must have ``Git`` and ``graphviz``
+installed. For instance, run
 
-.. code:: bash
+   .. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
 
-   sudo apt install git graphviz
+      In a terminal, run the following command:
 
-on Debian-based distributions, or
+      .. code:: bash
 
-.. code:: bash
+         sudo apt install git graphviz
 
-   brew install git graphviz
+   .. tab:: macOS
 
-on Mac OS.
+      In a terminal, run the following command:
+
+      .. code:: bash
+
+         brew install git graphviz
 
 To install PyBaMM, the first step is to get the code by cloning this
 repository
@@ -163,9 +178,15 @@ repository
 
 Then, to install PyBaMM as a `developer <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__, type
 
- .. code:: bash
+.. code:: bash
 
    pip install -e .[dev,docs]
+
+or on ``zsh`` shells, type
+
+.. code:: bash
+   
+   pip install -e .'[dev,docs]'
 
 To check whether PyBaMM has installed properly, you can run the tests:
 

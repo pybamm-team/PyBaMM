@@ -165,8 +165,26 @@ class TestBPX(TestCase):
 
     def test_table_data(self):
         bpx_obj = copy.copy(self.base)
+        data = {"x": [0, 1], "y": [0, 1]}
         bpx_obj["Parameterisation"]["Electrolyte"].update(
-            {"Conductivity [S.m-1]": {"x": [800, 1000, 1200], "y": [0.9, 1, 1.1]}}
+            {
+                "Conductivity [S.m-1]": data,
+                "Diffusivity [m2.s-1]": data,
+            }
+        )
+        bpx_obj["Parameterisation"]["Negative electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": data,
+                "OCP [V]": data,
+                "Entropic change coefficient [V.K-1]": data,
+            }
+        )
+        bpx_obj["Parameterisation"]["Positive electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": data,
+                "OCP [V]": data,
+                "Entropic change coefficient [V.K-1]": data,
+            }
         )
 
         filename = "tmp.json"
@@ -179,7 +197,26 @@ class TestBPX(TestCase):
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
-            pybamm.ParameterValues.create_from_bpx(tmp.name)
+            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+            # Check that the electrolyte conductivity is an Interpolant with the
+            # correct child
+            c = pybamm.Variable("c")
+            kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
+            self.assertIsInstance(kappa, pybamm.Interpolant)
+            self.assertEqual(kappa.children[0], c)
+            # Check other parameters give interpolants
+            D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
+            self.assertIsInstance(D, pybamm.Interpolant)
+            for electrode in ["Negative", "Positive"]:
+                D = param[f"{electrode} electrode diffusivity [m2.s-1]"](c, 298.15)
+                self.assertIsInstance(D, pybamm.Interpolant)
+                OCP = param[f"{electrode} electrode OCP [V]"](c)
+                self.assertIsInstance(OCP, pybamm.Interpolant)
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](
+                    c, 10000
+                )
+                self.assertIsInstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
         with self.assertRaisesRegex(ValueError, "Target SOC"):

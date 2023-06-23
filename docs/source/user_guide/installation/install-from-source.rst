@@ -31,19 +31,21 @@ To install PyBaMM, you will need:
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
 
-On Ubuntu, you can install the above with
+You can install the above with
 
-.. code:: bash
+.. tab:: Ubuntu
 
-	  sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran
+	.. code:: bash
 
-Where ``X`` is the version sub-number.
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran
 
-On MacOS,
+	Where ``X`` is the version sub-number.
 
-.. code:: bash
+.. tab:: MacOS
 
-	  brew install python openblas gcc gfortran
+	.. code:: bash
+
+		brew install python openblas gcc gfortran libomp
 
 Finally, we recommend using `Tox <https://tox.readthedocs.io/en/latest/>`_.
 You can install it with
@@ -100,12 +102,19 @@ You should now have everything ready to build and install PyBaMM successfully.
 Using Tox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: bash
+.. tab:: GNU/Linux and MacOS
 
-	  # in the PyBaMM/ directory
-	  tox -e dev # (GNU/Linux and MacOS)
-	  #
-	  python -m tox -e windows-dev # (Windows)
+	.. code:: bash
+
+		# in the PyBaMM/ directory
+		tox -e dev
+
+.. tab:: Windows
+
+	.. code:: bash
+
+		# in the PyBaMM/ directory
+	  	python -m tox -e windows-dev
 
 
 This creates a virtual environment ``.tox/dev`` (or ``windows-dev``) inside the ``PyBaMM/`` directory.
@@ -113,11 +122,17 @@ It comes ready with PyBaMM and some useful development tools like `pre-commit <h
 
 You can now activate the environment with
 
-.. code:: bash
+.. tab:: GNU/Linux and MacOS
 
-	  source .tox/dev/bin/activate # (GNU/Linux and MacOS)
-	  #
-	  .tox\windows-dev\Scripts\activate.bat # (Windows)
+	.. code:: bash
+
+		source .tox/dev/bin/activate
+
+.. tab:: Windows
+
+	.. code:: bash
+
+	  	.tox\windows-dev\Scripts\activate.bat # (Windows)
 
 and run the tests to check your installation.
 
@@ -130,12 +145,17 @@ From the ``PyBaMM/`` directory, you can install PyBaMM using ``python setup.py i
 
 	  pip install .
 
-
 If you intend to contribute to the development of PyBaMM, it is convenient to install in "editable mode", along with useful tools for development and documentation:
 
 .. code:: bash
 
 	  pip install -e .[dev,docs]
+
+If you are using ``zsh``, you would need to use different pattern matching:
+
+.. code:: bash
+
+	  pip install -e .'[dev,docs]'
 
 Running the tests
 --------------------
@@ -147,23 +167,34 @@ You can use Tox to run the unit tests and example notebooks in isolated virtual 
 
 The default command
 
-.. code:: bash
+.. tab:: GNU/Linux and MacOS
 
-	  tox -e tests # (GNU/Linux and MacOS)
-	  #
-	  python -m tox -e windows-tests # (Windows)
+	.. code:: bash
+
+		tox -e tests
+
+.. tab:: Windows
+
+	.. code:: bash
+
+	  	python -m tox -e windows-tests
 
 will run the full test suite (integration and unit tests).
 This can take several minutes.
 
 It is often sufficient to run the unit tests only. To do so, use
 
+.. tab:: GNU/Linux and MacOS
+
    .. code:: bash
 
-      tox -e unit # (GNU/Linux and MacOS)
-      #
-      python -m tox -e windows-unit # (Windows)
+    	tox -e unit
 
+.. tab:: Windows
+
+   .. code:: bash
+
+		python -m tox -e windows-unit
 
 Using the test runner 
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -206,23 +237,18 @@ The preview will be updated automatically following changes.
 Doctests, examples, style and coverage
 --------------------------------------
 
-- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
-- ``tox -e doctests``: Run doctests.
-- ``tox -e coverage``: Measure current test coverage.
+.. tab:: GNU/Linux and MacOS
 
-Note for Windows users
-----------------------
+	``Tox`` can also be used to run the following commands:
 
-If you are running Windows, the following tox commands must be prefixed by ``windows-``:
+	- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
+	- ``tox -e doctests``: Run doctests.
 
-- ``tests``
-- ``unit``
-- ``examples``
-- ``doctests``
-- ``dev``
+.. tab:: Windows
 
-For example, to run the full test suite on Windows you would type:
+	``Tox`` can also be used to run the following commands:
 
-.. code:: bash
+	- ``python -m tox -e windows-examples``: Run the example scripts in ``examples/scripts``.
+	- ``python -m tox -e windows-doctests``: Run doctests.
 
-	  python -m tox -e windows-tests  
+Use ``tox -e coverage`` to measure current test coverage on all platforms.
