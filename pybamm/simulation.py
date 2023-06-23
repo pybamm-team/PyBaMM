@@ -944,9 +944,15 @@ class Simulation:
         ):
             return None
 
-        return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self.parameter_values, self.model.param, options=self.model.options
-        )
+        if self.model.options["open-circuit potential"] == "MSMR":
+            esoh_solver = pybamm.lithium_ion.ElectrodeSOHMSMRSolver(
+                self.parameter_values, self.model.param
+            )
+        else:
+            esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+                self.parameter_values, self.model.param
+            )
+        return esoh_solver
 
     def plot(self, output_variables=None, **kwargs):
         """
