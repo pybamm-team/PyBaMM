@@ -74,7 +74,7 @@ def dxdU_p(U):
 def get_parameter_values():
     return {
         # cell
-        "Negative electrode thickness [m]": 7.56e-05,
+        "Negative electrode thickness [m]": 8.52e-05,
         "Separator thickness [m]": 1.2e-05,
         "Positive electrode thickness [m]": 7.56e-05,
         "Electrode height [m]": 0.065,
@@ -103,8 +103,6 @@ def get_parameter_values():
         "U0_n_5": 0.36325,
         "Xj_n_5": 0.05476,
         "w_n_5": 5.97354,
-        "Negative electrode stoichiometry at 0% SOC": 0.03,
-        "Negative electrode stoichiometry at 100% SOC": 0.9,
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
         "Negative electrode diffusivity [m2.s-1]": 3.3e-14,
@@ -130,8 +128,6 @@ def get_parameter_values():
         "U0_p_3": 4.22955,
         "Xj_p_3": 0.32980,
         "w_p_3": 5.52757,
-        "Positive electrode stoichiometry at 0% SOC": 0.85,
-        "Positive electrode stoichiometry at 100% SOC": 0.1,
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
         "Positive electrode diffusivity [m2.s-1]": 4e-15,
@@ -157,11 +153,11 @@ def get_parameter_values():
         "Ambient temperature [K]": 298.15,
         "Number of electrodes connected in parallel to make a cell": 1.0,
         "Number of cells connected in series to make a battery": 1.0,
-        "Lower voltage cut-off [V]": 1,
-        "Upper voltage cut-off [V]": 5,
+        "Lower voltage cut-off [V]": 2.5,
+        "Upper voltage cut-off [V]": 4.2,
         "Initial temperature [K]": 298.15,
-        "Initial voltage in negative electrode [V]": 0.085,
-        "Initial voltage in positive electrode [V]": 4.35,
+        "Initial voltage in negative electrode [V]": 0.01,
+        "Initial voltage in positive electrode [V]": 4.27,
         "Initial concentration in negative electrode [mol.m-3]": 29820,
         "Initial concentration in positive electrode [mol.m-3]": 6310,
     }

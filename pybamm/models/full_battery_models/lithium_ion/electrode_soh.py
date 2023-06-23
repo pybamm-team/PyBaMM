@@ -217,7 +217,7 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         # TODO: thermal effects (include dU/dT)
         if "Un_0" in solve_for:
             Un_0 = pybamm.Variable("Un(x_0)")
-            Up_0 = V_min - Un_0
+            Up_0 = V_min + Un_0
             x_0 = x_n(Un_0)
             y_0 = x_p(Up_0)
 
@@ -242,7 +242,7 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
                 Un_100_eqn = x_100 - x_0 - Q / Q_n
                 Q_Li = y_100 * Q_p + x_100 * Q_n
             self.algebraic[Un_100] = Un_100_eqn
-            self.initial_conditions[Un_100] = pybamm.Scalar(0.05)  # better ic?
+            self.initial_conditions[Un_100] = pybamm.Scalar(0)  # better ic?
 
         # These variables are defined in all cases
         self.variables = self.get_100_soc_variables(
@@ -254,7 +254,7 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
             if known_value == "cyclable lithium capacity":
                 Q = Q_n * (x_100 - x_0)
             self.algebraic[Un_0] = y_100 - y_0 + Q / Q_p
-            self.initial_conditions[Un_0] = pybamm.Scalar(0.5)  # better ic?
+            self.initial_conditions[Un_0] = pybamm.Scalar(1)  # better ic?
 
             # These variables are only defined if x_0 is solved for
             self.variables.update(
@@ -295,6 +295,18 @@ class ElectrodeSOHSolver:
         self.known_value = known_value
         self.options = options or pybamm.BatteryModelOptions({})
 
+        self.lims_ocp = self._get_lims_ocp()
+        self.OCV_function = None
+        self._get_electrode_soh_sims_full = lru_cache()(
+            self.__get_electrode_soh_sims_full
+        )
+        self._get_electrode_soh_sims_split = lru_cache()(
+            self.__get_electrode_soh_sims_split
+        )
+
+    def _get_lims_ocp(self):
+        parameter_values = self.parameter_values
+
         # Check whether each electrode OCP is a function (False) or data (True)
         # Set to false for MSMR models
         if self.options["open-circuit potential"] == "MSMR":
@@ -325,15 +337,7 @@ class ElectrodeSOHSolver:
         else:
             x0_min = 1e-6
             x100_max = 1 - 1e-6
-
-        self.lims_ocp = (x0_min, x100_max, y100_min, y0_max)
-        self.OCV_function = None
-        self._get_electrode_soh_sims_full = lru_cache()(
-            self.__get_electrode_soh_sims_full
-        )
-        self._get_electrode_soh_sims_split = lru_cache()(
-            self.__get_electrode_soh_sims_split
-        )
+        return (x0_min, x100_max, y100_min, y0_max)
 
     def __get_electrode_soh_sims_full(self):
         if self.options["open-circuit potential"] == "MSMR":
@@ -400,8 +404,7 @@ class ElectrodeSOHSolver:
                 sol = self._solve_split(inputs, ics)
             except pybamm.SolverError as split_error:
                 # check if the error is due to the simulation not being feasible
-                if self.options["open-circuit potential"] != "MSMR":
-                    self._check_esoh_feasible(inputs)
+                self._check_esoh_feasible(inputs)
                 # if that didn't raise an error, raise the original error instead
                 raise split_error
 
@@ -496,38 +499,14 @@ class ElectrodeSOHSolver:
             y100_init = np.maximum(y0_max - Q / Q_p, 0.1)
             y0_init = np.minimum(y100_min + Q / Q_p, 0.9)
         if self.options["open-circuit potential"] == "MSMR":
-            x_n = self.param.n.prim.x
-            x_p = self.param.p.prim.x
-            model = pybamm.BaseModel()
-            Un_0 = pybamm.Variable("Un(x_0)")
-            Un_100 = pybamm.Variable("Un(x_100)")
-            Up_0 = pybamm.Variable("Up(x_0)")
-            Up_100 = pybamm.Variable("Up(x_100)")
-            model.algebraic = {
-                Un_0: x_n(Un_0) - x0_init,
-                Un_100: x_n(Un_100) - x100_init,
-                Up_0: x_p(Up_0) - y0_init,
-                Up_100: x_p(Up_100) - y100_init,
-            }
-            model.initial_conditions = {
-                Un_0: pybamm.Scalar(1),
-                Un_100: pybamm.Scalar(0.05),
-                Up_0: pybamm.Scalar(2.5),
-                Up_100: pybamm.Scalar(4),
-            }
-            model.variables = {
-                "Un(x_100)": Un_100,
-                "Un(x_0)": Un_0,
-                "Up(x_100)": Up_100,
-                "Up(x_0)": Up_0,
-            }
-            self.parameter_values.process_model(model)
-            sol = pybamm.AlgebraicSolver().solve(model)
+            Un0, Un100, Up100, Up0 = self._get_ocp_msmr(
+                x0_init, x100_init, y100_init, y0_init
+            )
             return {
-                "Un(x_100)": sol["Un(x_100)"].data,
-                "Un(x_0)": sol["Un(x_0)"].data,
-                "Up(x_100)": sol["Up(x_100)"].data,
-                "Up(x_0)": sol["Up(x_0)"].data,
+                "Un(x_100)": Un100,
+                "Un(x_0)": Un0,
+                "Up(y_100)": Up100,
+                "Up(y_0)": Up0,
             }
         else:
             return {
@@ -619,25 +598,32 @@ class ElectrodeSOHSolver:
         """
         x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
 
-        # Parameterize the OCP functions
-        if self.OCV_function is None:
-            T = self.parameter_values["Reference temperature [K]"]
-            x = pybamm.InputParameter("x")
-            y = pybamm.InputParameter("y")
-            self.V_max = self.parameter_values.evaluate(self.param.voltage_high_cut)
-            self.V_min = self.parameter_values.evaluate(self.param.voltage_low_cut)
-            self.OCV_function = self.parameter_values.process_symbol(
-                self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
+        if self.options["open-circuit potential"] == "MSMR":
+            Un0, Un100, Up100, Up0 = self._get_ocp_msmr(
+                x0_min, x100_max, y100_min, y0_max
+            )
+            V_lower_bound = float(Up0 - Un0)
+            V_upper_bound = float(Up100 - Un100)
+        else:
+            # Parameterize the OCP functions
+            if self.OCV_function is None:
+                T = self.parameter_values["Reference temperature [K]"]
+                x = pybamm.InputParameter("x")
+                y = pybamm.InputParameter("y")
+                self.V_max = self.parameter_values.evaluate(self.param.voltage_high_cut)
+                self.V_min = self.parameter_values.evaluate(self.param.voltage_low_cut)
+                self.OCV_function = self.parameter_values.process_symbol(
+                    self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
+                )
+            V_lower_bound = float(
+                self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+            )
+            V_upper_bound = float(
+                self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
             )
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
-        V_lower_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
-        )
-        V_upper_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
-        )
         if V_lower_bound > self.V_min:
             raise (
                 ValueError(
@@ -656,6 +642,47 @@ class ElectrodeSOHSolver:
                     f"y:[{y100_min:.4f}, {y0_max:.4f}]."
                 )
             )
+
+    def _get_ocp_msmr(self, x0, x100, y100, y0):
+        """
+        Get the open-circuit potentials of the electrodes at the given stoichiometries
+        """
+        V_max = self.param.voltage_high_cut
+        V_min = self.param.voltage_low_cut
+        x_n = self.param.n.prim.x
+        x_p = self.param.p.prim.x
+        model = pybamm.BaseModel()
+        Un_0 = pybamm.Variable("Un(x_0)")
+        Un_100 = pybamm.Variable("Un(x_100)")
+        Up_0 = pybamm.Variable("Up(y_0)")
+        Up_100 = pybamm.Variable("Up(y_100)")
+        model.algebraic = {
+            Un_0: x_n(Un_0) - x0,
+            Un_100: x_n(Un_100) - x100,
+            Up_0: x_p(Up_0) - y0,
+            Up_100: x_p(Up_100) - y100,
+        }
+        model.initial_conditions = {
+            Un_0: pybamm.Scalar(1),
+            Un_100: pybamm.Scalar(0),
+            Up_0: V_min * pybamm.Scalar(1),
+            Up_100: V_max,
+        }
+        model.variables = {
+            "Un(x_100)": Un_100,
+            "Un(x_0)": Un_0,
+            "Up(y_100)": Up_100,
+            "Up(y_0)": Up_0,
+        }
+        self.parameter_values.process_model(model)
+        sol = pybamm.AlgebraicSolver().solve(model)
+
+        return (
+            sol["Un(x_0)"].data,
+            sol["Un(x_100)"].data,
+            sol["Up(y_100)"].data,
+            sol["Up(y_0)"].data,
+        )
 
     def get_initial_stoichiometries(self, initial_value):
         """

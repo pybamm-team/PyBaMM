@@ -373,25 +373,17 @@ class MSMRDiffusion(BaseParticle):
                     f"X-averaged {domain} {phase_name}particle open-circuit "
                     "potential [V]"
                 ]
-                U_init = pybamm.x_average(U_init)
         else:
             if self.x_average is False:
                 U = variables[
                     f"{Domain} {phase_name}particle "
-                    "concentration distribution [mol.m-3]"
+                    "open-circuit potential distribution [V]"
                 ]
-                U_init = pybamm.SecondaryBroadcast(
-                    U_init, f"{domain} {phase_name}particle size"
-                )
             else:
                 U = variables[
                     f"X-averaged {domain} {phase_name}particle "
-                    "concentration distribution [mol.m-3]"
+                    "open-circuit potential distribution [V]"
                 ]
-
-                U_init = pybamm.SecondaryBroadcast(
-                    pybamm.x_average(U_init), f"{domain} {phase_name}particle size"
-                )
         self.initial_conditions = {U: U_init}
 
     def _get_standard_potential_variables(self, U):
