@@ -137,6 +137,63 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
 
 
+class TestElectrodeSOHMSMR(TestCase):
+    def test_known_solution(self):
+        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        param = pybamm.LithiumIonParameters(options=options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, options=options
+        )
+
+        Vmin = 2.5
+        Vmax = 4.2
+        Q_n = parameter_values.evaluate(param.n.Q_init)
+        Q_p = parameter_values.evaluate(param.p.Q_init)
+        Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
+
+        inputs = {"Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
+
+        # Solve the model and check outputs
+        sol = esoh_solver.solve(inputs)
+
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
+
+        # Solve with split esoh and check outputs
+        ics = esoh_solver._set_up_solve(inputs)
+        sol_split = esoh_solver._solve_split(inputs, ics)
+        for key in sol:
+            if key != "Maximum theoretical energy [W.h]":
+                self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
+
+    def test_known_solution_cell_capacity(self):
+        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, known_value="cell capacity", options=options
+        )
+
+        Vmin = 2.5
+        Vmax = 4.2
+        Q_n = parameter_values.evaluate(param.n.Q_init)
+        Q_p = parameter_values.evaluate(param.p.Q_init)
+        Q = parameter_values.evaluate(param.Q)
+
+        inputs = {"Q": Q, "Q_n": Q_n, "Q_p": Q_p}
+
+        # Solve the model and check outputs
+        sol = esoh_solver.solve(inputs)
+
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q"], Q, places=5)
+
+
 class TestElectrodeSOHHalfCell(TestCase):
     def test_known_solution(self):
         model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")

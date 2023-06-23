@@ -418,7 +418,7 @@ class ElectrodeSOHSolver:
             x_100 = sol_dict["x_100"]
             y_100 = sol_dict["y_100"]
             energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                self.parameter_values, x_100, x_0, y_100, y_0, options=self.options
+                self.parameter_values, x_100, x_0, y_100, y_0
             )
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
@@ -428,10 +428,10 @@ class ElectrodeSOHSolver:
         sim = self._get_electrode_soh_sims_full()
         if sim.solution is not None:
             if self.options["open-circuit potential"] == "MSMR":
-                Un_100_sol = sim.solution["Un_100"].data
-                Un_0_sol = sim.solution["Un_0"].data
-                Up_100_sol = sim.solution["Up_100"].data
-                Up_0_sol = sim.solution["Up_0"].data
+                Un_100_sol = sim.solution["Un(x_100)"].data
+                Un_0_sol = sim.solution["Un(x_0)"].data
+                Up_100_sol = sim.solution["Up(y_100)"].data
+                Up_0_sol = sim.solution["Up(y_0)"].data
                 return {
                     "Un(x_100)": Un_100_sol,
                     "Un(x_0)": Un_0_sol,

@@ -260,6 +260,7 @@ setup(
             "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
             "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
             "ECM_Example = pybamm.input.parameters.ecm.example_set:get_parameter_values",  # noqa: E501
+            "MSMR_Example = pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values",  # noqa: E501
         ],
     },
 )

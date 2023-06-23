@@ -2,18 +2,83 @@ import pybamm
 
 
 def electrolyte_diffusivity_Nyman2008(c_e, T):
+    """
+    Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
+    comes from [1]
+
+    References
+    ----------
+    .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Solid diffusivity
+    """
+
     D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
+
+    # Nyman et al. (2008) does not provide temperature dependence
+
     return D_c_e
 
 
 def electrolyte_conductivity_Nyman2008(c_e, T):
+    """
+    Conductivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
+    comes from [1].
+
+    References
+    ----------
+    .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Solid diffusivity
+    """
+
     sigma_e = (
         0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
     )
+
+    # Nyman et al. (2008) does not provide temperature dependence
+
     return sigma_e
 
 
 def x_n(U):
+    """
+    Graphite stoichiometry as a function of potential.
+
+    Parameters
+    ----------
+    :class:`pybamm.Symbol`
+        Potential [V]
+
+    Returns
+    -------
+    sto: :class:`pybamm.Symbol`
+        Electrode stochiometry
+    """
     T = 298.15
     f = pybamm.constants.F / (pybamm.constants.R * T)
     xj = 0
@@ -28,6 +93,19 @@ def x_n(U):
 
 
 def x_p(U):
+    """
+    NMC stoichiometry as a function of potential.
+
+    Parameters
+    ----------
+    :class:`pybamm.Symbol`
+        Potential [V]
+
+    Returns
+    -------
+    sto: :class:`pybamm.Symbol`
+        Electrode stochiometry
+    """
     T = 298.15
     f = pybamm.constants.F / (pybamm.constants.R * T)
     xj = 0
@@ -42,6 +120,17 @@ def x_p(U):
 
 
 def get_parameter_values():
+    """
+    Example parameter values for use with MSMR models. The values are loosely based on
+    the LG M50 cell, from the paper
+
+        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
+        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+
+    and references therein.
+    """
     return {
         # cell
         "Negative electrode thickness [m]": 8.52e-05,

@@ -1,8 +1,4 @@
 import pybamm
-from MSMR_example import get_parameter_values
-
-pybamm.set_logging_level("DEBUG")
-
 
 model = pybamm.lithium_ion.DFN(
     {
@@ -12,10 +8,7 @@ model = pybamm.lithium_ion.DFN(
 )
 
 
-parameter_values = pybamm.ParameterValues(get_parameter_values())
-parameter_values = pybamm.get_size_distribution_parameters(
-    parameter_values, sd_n=0.2, sd_p=0.4
-)
+parameter_values = pybamm.ParameterValues("MSMR_Example")
 experiment = pybamm.Experiment(
     [
         (
@@ -29,9 +22,4 @@ experiment = pybamm.Experiment(
 )
 sim = pybamm.Simulation(model, parameter_values=parameter_values, experiment=experiment)
 sim.solve()
-sim.plot(
-    # [
-    #    "Negative electrode open-circuit potential [V]",
-    #    "Positive electrode open-circuit potential [V]",
-    # ]
-)
+sim.plot()
