@@ -1,11 +1,3 @@
-Discretisation and spatial methods
-==================================
+.. automodule:: pybamm.discretisations
 
-.. toctree::
-
-  discretisation
-  spatial_method
-  finite_volume
-  spectral_volume
-  scikit_finite_element
-  zero_dimensional_method
+.. automodule:: pybamm.spatial_methods
