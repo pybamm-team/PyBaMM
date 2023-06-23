@@ -1,8 +1,1 @@
-Geometry
-========
-
-.. toctree::
-
-  geometry
-  battery_geometry
- 
+.. automodule:: pybamm.geometry
