@@ -75,8 +75,13 @@ class FuzzyDict(dict):
                 )
             if "Open circuit potential at 0% SOC [V]" in key:
                 raise KeyError(
-                    "Set the 'Open circuit potential at 0% SOC [V]'="
-                    "'Lower voltage cut-off [V]'"
+                    "Variable 'Open circuit potential at 0% SOC [V]' not found."
+                    "In most cases this should be equal to 'Lower voltage cut-off [V]'"
+                )
+            if "Open circuit potential at 100% SOC [V]" in key:
+                raise KeyError(
+                    "Variable 'Open circuit potential at 100% SOC [V]' not found."
+                    "In most cases this should be equal to 'Upper voltage cut-off [V]'"
                 )
             best_matches = self.get_best_matches(key)
             for k in best_matches:
