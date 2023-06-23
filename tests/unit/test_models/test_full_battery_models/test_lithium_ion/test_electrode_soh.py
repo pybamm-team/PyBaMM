@@ -95,8 +95,8 @@ class TestElectrodeSOH(TestCase):
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
         parameter_values.update(
             {
-                "Open circuit potential at 0% SOC [V]": 0,
-                "Open circuit potential at 100% SOC [V]": 5,
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 5,
             }
             # need to update both the target voltages at 0 and 100% SOC
         )
@@ -112,8 +112,8 @@ class TestElectrodeSOH(TestCase):
             {
                 "Lower voltage cut-off [V]": 0,
                 "Upper voltage cut-off [V]": 6,
-                "Open circuit potential at 0% SOC [V]": 0,
-                "Open circuit potential at 100% SOC [V]": 6,
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 6,
             }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
@@ -125,8 +125,8 @@ class TestElectrodeSOH(TestCase):
             {
                 "Lower voltage cut-off [V]": -10,
                 "Upper voltage cut-off [V]": 5,
-                "Open circuit potential at 0% SOC [V]": -10,
-                "Open circuit potential at 100% SOC [V]": 5,
+                "Open-circuit voltage at 0% SOC [V]": -10,
+                "Open-circuit voltage at 100% SOC [V]": 5,
             }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
@@ -139,8 +139,8 @@ class TestElectrodeSOH(TestCase):
             {
                 "Lower voltage cut-off [V]": 3,
                 "Upper voltage cut-off [V]": 4.2,
-                "Open circuit potential at 0% SOC [V]": 3,
-                "Open circuit potential at 100% SOC [V]": 4.2,
+                "Open-circuit voltage at 0% SOC [V]": 3,
+                "Open-circuit voltage at 100% SOC [V]": 4.2,
             }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
