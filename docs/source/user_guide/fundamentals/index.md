@@ -71,7 +71,7 @@ solution.plot()
 Finally, PyBaMM provides cusotm visualization tools:
 
 - [](quick_plot): for easily plotting simulation outputs in a grid, including comparing multiple simulations
-- [](plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
+- [](pybamm.plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
 
 Users are not limited to these tools and can plot the output of a simulation solution by accessing the underlying numpy array for the solution variables as
 
