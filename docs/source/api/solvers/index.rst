@@ -1,1 +1,4 @@
+Solvers
+=======
+
 .. automodule:: pybamm.solvers

@@ -1,1 +1,4 @@
+Geometry
+========
+
 .. automodule:: pybamm.geometry

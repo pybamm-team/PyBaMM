@@ -1,8 +1,5 @@
 r"""
 
-Discretisation and spatial methods
-==================================
-
 .. toctree::
 
   discretisation

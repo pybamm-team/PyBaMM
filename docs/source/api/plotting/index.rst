@@ -1,1 +1,4 @@
+Plotting
+========
+
 .. automodule:: pybamm.plotting

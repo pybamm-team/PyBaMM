@@ -1,8 +1,5 @@
 r"""
 
-Geometry
-========
-
 .. toctree::
 
   geometry

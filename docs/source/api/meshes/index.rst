@@ -1,1 +1,4 @@
+Meshes
+======
+
 .. automodule:: pybamm.meshes

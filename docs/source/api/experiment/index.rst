@@ -1,1 +1,4 @@
+Experiments
+===========
+
 .. automodule:: pybamm.experiment

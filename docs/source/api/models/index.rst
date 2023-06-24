@@ -1,1 +1,4 @@
+Models
+======
+
 .. automodule:: pybamm.models

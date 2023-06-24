@@ -1,8 +1,5 @@
 r"""
 
-Plotting
-========
-
 .. toctree::
 
   quick_plot

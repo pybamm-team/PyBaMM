@@ -1,8 +1,5 @@
 r"""
 
-Expression Tree
-===============
-
 .. toctree::
 
   symbol

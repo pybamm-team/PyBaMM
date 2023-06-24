@@ -1,8 +1,5 @@
 r"""
 
-Solvers
-=======
-
 .. toctree::
 
   base_solver

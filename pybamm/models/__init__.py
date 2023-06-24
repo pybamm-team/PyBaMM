@@ -1,8 +1,5 @@
 r"""
 
-Models
-======
-
 Below is an overview of all the battery models included in PyBaMM.
 Each of the pre-built models contains a reference to the paper in which it is derived.
 

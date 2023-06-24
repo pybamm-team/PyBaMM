@@ -1,8 +1,5 @@
 r"""
 
-Meshes
-======
-
 .. toctree::
 
   meshes
