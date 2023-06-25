@@ -86,7 +86,7 @@ and specific sets of dependencies are listed in the sections below.
 Plot dependencies
 ^^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pandas[plot]"``
+Installable with ``pip install "pybamm[plot]"``
 
 =========================================================== ================== ================== ===================================================================================================================================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
@@ -95,8 +95,26 @@ Dependency                                                  Minimum Version    p
 `Matplotlib <https://matplotlib.org/stable/>`__             2.0.0              plot               To plot various battery models, and analyzing battery performance.
 =========================================================== ================== ================== ===================================================================================================================================================================================
 
+.. _install.docs_dependencies:
+
+Docs dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[docs]"``
+
+================================================================================ ================== ================== ===================================================================================================================================================================================
+Dependency                                                                       Minimum Version    pip extra          Notes
+================================================================================ ================== ================== ===================================================================================================================================================================================
+`sphinx <https://www.sphinx-doc.org/en/master/>`__                               1.5.0              docs               Sphinx makes it easy to create intelligent and beautiful documentation.
+`pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__  -                  docs               A clean, Bootstrap-based Sphinx theme
+`sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__              -                  docs               A sphinx extension for designing
+`sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__      -                  docs               To copy codeblocks
+`myst-parser <https://myst-parser.readthedocs.io/en/latest/>`__                  -                  docs               For technical & scientific documentation.
+`sphinx-inline-tabs <https://sphinx-inline-tabs.readthedocs.io/en/latest/>`__    -                  docs               Add inline tabbed content to your Sphinx documentation.
+================================================================================ ================== ================== ===================================================================================================================================================================================
+
 Full installation guide
------------------------
+-----------------------             
 
 Installing a specific version? Installing from source? Check the advanced installation pages below
 
