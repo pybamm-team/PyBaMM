@@ -115,7 +115,7 @@ Dependency                                                                      
 
 .. _install.examples_dependencies:
 
-examples dependencies
+Examples dependencies
 ^^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[examples]"``
@@ -126,6 +126,33 @@ Dependency                                                                      
 `pre-commit <https://pre-commit.com/index.html>`__                               -                  examples           For managing and maintaining multi-language pre-commit hooks.
 `black <https://black.readthedocs.io/en/stable/>`__                              -                  examples           For code formatting.
 `jupyter <https://docs.jupyter.org/en/latest/>`__                                -                  examples           For example notebooks rendering.
+================================================================================ ================== ================== ===================================================================================================================================================================================
+
+.. _install.dev_dependencies:
+
+Dev dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[dev]"``
+
+================================================================================ ================== ================== ===================================================================================================================================================================================
+Dependency                                                                       Minimum Version    pip extra          Notes
+================================================================================ ================== ================== ===================================================================================================================================================================================
+`numpy <https://numpy.org/>`__                                                   1.16.0             dev                For complex computation handling.
+`scipy <https://docs.scipy.org/doc/scipy>`__                                     2.8.2              dev                Provides algorithms for optimization, integration, interpolation etc.
+`pandas <https://pandas.pydata.org/docs/>`__                                     0.24.0             dev                For data manipulation & analysis.
+`anytree <https://anytree.readthedocs.io/en/latest/intro.html>`__                2.4.3              dev                For Tree Data Structure
+`autograd <https://autograd.readthedocs.io/en/latest/>`__                        1.2.0              dev                To differentiate python & numpy code.
+`scikit-fem <https://scikit-fem.readthedocs.io/en/latest/>`__                    0.2.0              dev                For performing finite element assembly.
+`imageio <https://imageio.readthedocs.io/en/stable/>`__                          2.9.0              dev                Handles diverse image data formats, including animated, volumetric, and scientific formats.
+`matplotlib <https://matplotlib.org/stable/>`__                                  2.0.0              dev                To plot various battery models, and analyzing battery performance.
+`casadi <https://web.casadi.org/docs/>`__                                        3.6.0              dev                For nonlinear optimization and algorithmic differentiation
+`pybtex <https://docs.pybtex.org/>`__                                            0.24.0             dev                BibTeX-compatible bibliography processor
+`sympy <https://docs.sympy.org/latest/index.html>`__                             1.8.0              dev                For symbolic mathematics.
+`xarray <https://docs.xarray.dev/en/stable/>`__                                  2023.04.0          dev                For labelled multi dimensional arrays.
+`bpx <https://pypi.org/project/bpx/>`__                                          -                  dev                Battery Parameter eXchange
+`tqdm <https://tqdm.github.io/>`__                                               -                  dev                For faster loops.
+`pre-commit <https://pre-commit.com/index.html>`__                               -                  dev                For managing and maintaining multi-language pre-commit hooks.
 ================================================================================ ================== ================== ===================================================================================================================================================================================
 
 Full installation guide
