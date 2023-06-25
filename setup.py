@@ -258,6 +258,7 @@ setup(
             "bpx",
             "tqdm",
             "matplotlib>=2.0",
+            "pre-commit",
         ],
         "all": [
             "numpy>=1.16",
@@ -280,8 +281,6 @@ setup(
             "sphinx-copybutton",
             "myst-parser",
             "sphinx-inline-tabs",
-            "pre-commit",
-            "black",
             "jupyter",
         ],
     },
