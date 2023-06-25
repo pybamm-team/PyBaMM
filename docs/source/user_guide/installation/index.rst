@@ -69,6 +69,32 @@ Package                                                          Minimum support
 `xarray <https://docs.xarray.dev/en/stable/>`__                  2023.04.0
 ================================================================ ==========================
 
+.. _install.optional_dependencies:
+
+Optional Dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+PyBaMM has a number of optional dependencies for different functionalities.
+If the optional dependency is not installed, PyBaMM will raise an ImportError when the method requiring that dependency is called.
+
+If using pip, optional PyBaMM dependencies can be installed or managed in a file (e.g. requirements.txt or setup.py)
+as optional extras (e.g.,``pybamm[dev,plot]``). All optional dependencies can be installed with ``pybamm[all]``,
+and specific sets of dependencies are listed in the sections below.
+
+.. _install.plot_dependencies:
+
+Plot dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pandas[plot]"``
+
+=========================================================== ================== ================== ===================================================================================================================================================================================
+Dependency                                                  Minimum Version    pip extra          Notes
+=========================================================== ================== ================== ===================================================================================================================================================================================
+`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.9.0              plot               Handles diverse image data formats, including animated, volumetric, and scientific formats.
+`Matplotlib <https://matplotlib.org/stable/>`__             2.0.0              plot               To plot various battery models, and analyzing battery performance.
+=========================================================== ================== ================== ===================================================================================================================================================================================
+
 Full installation guide
 -----------------------
 
