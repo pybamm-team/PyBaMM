@@ -10,7 +10,7 @@
 
 - Enable multithreading in IDAKLU solver ([#2947](https://github.com/pybamm-team/PyBaMM/pull/2947))
 - If a solution contains cycles and steps, the cycle number and step number are now saved when `solution.save_data()` is called ([#2931](https://github.com/pybamm-team/PyBaMM/pull/2931))
-- Experiments can now be given a `start_time` to define when each step should be triggered ([#2616](https://github.com/pybamm-team/PyBaMM/pull/2616)) 
+- Experiments can now be given a `start_time` to define when each step should be triggered ([#2616](https://github.com/pybamm-team/PyBaMM/pull/2616))
 
 ## Optimizations
 
@@ -28,6 +28,7 @@
 ## Breaking changes
 
 - Deprecate functionality to load parameter set from a csv file. Parameter sets must now be provided as python dictionaries ([#2959](https://github.com/pybamm-team/PyBaMM/pull/2959))
+- PyBaMM now has optional dependencies that can be installed with `pip install pybamm[option]` e.g. `pybamm[dev]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
 # [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
 
@@ -43,7 +44,6 @@
 - Updated to casadi 3.6, which required some changes to the casadi integrator ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
 - PyBaMM is now natively supported on Apple silicon chips (`M1/M2`) ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
 - PyBaMM is now supported on Python `3.10` and `3.11` ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
-
 
 ## Optimizations
 

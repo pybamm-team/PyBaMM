@@ -116,7 +116,7 @@ Dependency                                                                      
 .. _install.examples_dependencies:
 
 Examples dependencies
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[examples]"``
 
@@ -159,7 +159,7 @@ Dependency                                                  Minimum Version    p
 .. _install.latexify_dependencies:
 
 Latexify dependencies
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[latexify]"``
 
