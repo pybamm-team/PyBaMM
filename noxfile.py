@@ -104,7 +104,7 @@ def run_tests(session):
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    session.install("-e", ".")
+    session.install("-e", ".[dev]")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run("pybamm_install_jax")
         session.install("scikits.odes")
