@@ -22,13 +22,19 @@ class NoSeiDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-
+        # variables = {
+        #     "Fraction of Li in SEI": pybamm.Scalar(0),
+        #     "SEI decomposition reaction rate [s-1]": pybamm.Scalar(0),
+        #     "SEI decomposition reaction rate": pybamm.Scalar(0),
+        #     "SEI decomposition heating": pybamm.Scalar(0),
+        #     "SEI decomposition heating [W.m-3]": pybamm.Scalar(0),
+        # }
         variables = {
-            "Fraction of Li in SEI": pybamm.Scalar(0),
-            "SEI decomposition reaction rate [s-1]": pybamm.Scalar(0),
-            "SEI decomposition reaction rate": pybamm.Scalar(0),
-            "SEI decomposition heating": pybamm.Scalar(0),
-            "SEI decomposition heating [W.m-3]": pybamm.Scalar(0),
+            "Fraction of Li in SEI": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
+            "SEI decomposition reaction rate [s-1]": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
+            "SEI decomposition reaction rate": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
+            "SEI decomposition heating": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
+            "SEI decomposition heating [W.m-3]": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
         }
 
         return variables

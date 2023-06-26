@@ -154,6 +154,13 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_decomposition_ca = variables["Cathode decomposition heating"]
         Q_decomposition_n = Q_decomposition_an + Q_decomposition_sei
         Q_decomposition_p = Q_decomposition_ca
+        Q_decomp = pybamm.concatenation(
+            *[
+                Q_decomposition_n,
+                pybamm.FullBroadcast(0, ["separator"], "current collector"),
+                Q_decomposition_p,
+            ]
+        )
 
         # Irreversible electrochemical heating
         a_p = variables["Positive electrode surface area to volume ratio"]
@@ -167,8 +174,8 @@ class BaseThermal(pybamm.BaseSubModel):
             a_n = variables["Negative electrode surface area to volume ratio"]
             j_n = variables["Negative electrode interfacial current density"]
             eta_r_n = variables["Negative electrode reaction overpotential"]
-            Q_rxn_n = a_n * j_n * eta_r_n + Q_decomposition_n
-        Q_rxn_p = a_p * j_p * eta_r_p + Q_decomposition_p
+            Q_rxn_n = a_n * j_n * eta_r_n
+        Q_rxn_p = a_p * j_p * eta_r_p
         Q_rxn = pybamm.concatenation(
             *[
                 Q_rxn_n,
@@ -198,18 +205,20 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         # Total heating
-        Q = Q_ohm + Q_rxn + Q_rev
+        Q = Q_ohm + Q_rxn + Q_rev + Q_decomp
 
         # Compute the X-average over the entire cell, including current collectors
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
+        Q_decomp_av = self._x_average(Q_decomp, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
         # Compute volume-averaged heat source terms
         Q_ohm_vol_av = self._yz_average(Q_ohm_av)
         Q_rxn_vol_av = self._yz_average(Q_rxn_av)
         Q_rev_vol_av = self._yz_average(Q_rev_av)
+        Q_decomp_vol_av = self._yz_average(Q_decomp_av)
         Q_vol_av = self._yz_average(Q_av)
 
         # Dimensional scaling for heat source terms
@@ -217,8 +226,8 @@ class BaseThermal(pybamm.BaseSubModel):
 
         variables.update(
             {
-                "Ohmic heating": Q_ohm,
                 "Tab heating": Q_tabbing,
+                "Ohmic heating": Q_ohm,
                 "Ohmic heating [W.m-3]": Q_ohm * Q_scale,
                 "X-averaged Ohmic heating": Q_ohm_av,
                 "X-averaged Ohmic heating [W.m-3]": Q_ohm_av * Q_scale,
@@ -238,6 +247,12 @@ class BaseThermal(pybamm.BaseSubModel):
                 "X-averaged reversible heating [W.m-3]": Q_rev_av * Q_scale,
                 "Volume-averaged reversible heating": Q_rev_vol_av,
                 "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av * Q_scale,
+                "Decomposition heating": Q_decomp,
+                "Decomposition heating [W.m-3]": Q_decomp * Q_scale,
+                "X-averaged decomposition heating": Q_decomp_av,
+                "X-averaged decomposition heating [W.m-3]": Q_decomp_av * Q_scale,
+                "Volume-averaged decomposition heating": Q_decomp_vol_av,
+                "Volume-averaged decomposition heating [W.m-3]": Q_decomp_vol_av * Q_scale,
                 "Total heating": Q,
                 "Total heating [W.m-3]": Q * Q_scale,
                 "X-averaged total heating": Q_av,

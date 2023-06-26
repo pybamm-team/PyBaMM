@@ -21,13 +21,20 @@ class NoCathodeDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        
-        variables = {
-            "Degree of conversion of cathode decomposition": pybamm.Scalar(0),
-            "Cathode decomposition reaction rate [s-1]": pybamm.Scalar(0),
-            "Cathode decomposition reaction rate": pybamm.Scalar(0),
-            "Cathode decomposition heating": pybamm.Scalar(0),
-            "Cathode decomposition heating [W.m-3]": pybamm.Scalar(0),
 
+        variables = {
+            "Degree of conversion of cathode decomposition": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
+            "Cathode decomposition reaction rate [s-1]": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
+            "Cathode decomposition reaction rate": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
+            "Cathode decomposition heating": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
+            "Cathode decomposition heating [W.m-3]": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
         }
+        # variables = {
+        #     "Degree of conversion of cathode decomposition": pybamm.Scalar(0),
+        #     "Cathode decomposition reaction rate [s-1]": pybamm.Scalar(0),
+        #     "Cathode decomposition reaction rate": pybamm.Scalar(0),
+        #     "Cathode decomposition heating": pybamm.Scalar(0),
+        #     "Cathode decomposition heating [W.m-3]": pybamm.Scalar(0),
+
+        # }
         return variables
