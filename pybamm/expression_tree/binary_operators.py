@@ -456,7 +456,11 @@ class Equality(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-        return int(left == right)
+        # numpy 1.25 deprecation warning: extract value from numpy arrays
+        if isinstance(right, np.ndarray):
+            return int(left == right.item())
+        else:
+            return int(left == right)
 
     def _binary_new_copy(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""

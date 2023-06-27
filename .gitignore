@@ -13,7 +13,7 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!pybamm/CITATIONS.txt
+!pybamm/CITATIONS.bib
 !pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png
@@ -112,6 +112,9 @@ test.json
 
 # tox
 .tox/
+
+# nox
+.nox/
 
 # vcpkg
 vcpkg_installed/

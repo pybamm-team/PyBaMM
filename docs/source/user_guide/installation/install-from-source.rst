@@ -47,12 +47,12 @@ You can install the above with
 
 		brew install python openblas gcc gfortran libomp
 
-Finally, we recommend using `Tox <https://tox.readthedocs.io/en/latest/>`_.
+Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
 You can install it with
 
 .. code:: bash
 
-	  python3.X -m pip install --user "tox<4"
+	  python3.X -m pip install --user "nox"
 
 Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
@@ -70,7 +70,7 @@ If you are running windows, you can simply skip this section and jump to :ref:`p
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  tox -e pybamm-requires
+	  nox -s pybamm-requires
 
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
 Both libraries are installed in ``~/.local``.
@@ -99,25 +99,17 @@ Installing PyBaMM
 
 You should now have everything ready to build and install PyBaMM successfully.
 
-Using Tox (recommended)
+Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux, MacOS & Windows
 
 	.. code:: bash
 
 		# in the PyBaMM/ directory
-		tox -e dev
+		nox -s dev
 
-.. tab:: Windows
-
-	.. code:: bash
-
-		# in the PyBaMM/ directory
-	  	python -m tox -e windows-dev
-
-
-This creates a virtual environment ``.tox/dev`` (or ``windows-dev``) inside the ``PyBaMM/`` directory.
+This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
 You can now activate the environment with
@@ -126,13 +118,13 @@ You can now activate the environment with
 
 	.. code:: bash
 
-		source .tox/dev/bin/activate
+		source .nox/dev/bin/activate
 
 .. tab:: Windows
 
 	.. code:: bash
 
-	  	.tox\windows-dev\Scripts\activate.bat # (Windows)
+	  	.nox\dev\Scripts\activate.bat # (Windows)
 
 and run the tests to check your installation.
 
@@ -160,41 +152,29 @@ If you are using ``zsh``, you would need to use different pattern matching:
 Running the tests
 --------------------
 
-Using Tox (recommended)
+Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-You can use Tox to run the unit tests and example notebooks in isolated virtual environments.
+You can use Nox to run the unit tests and example notebooks in isolated virtual environments.
 
 The default command
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux, MacOS & Windows
 
 	.. code:: bash
 
-		tox -e tests
-
-.. tab:: Windows
-
-	.. code:: bash
-
-	  	python -m tox -e windows-tests
+		nox -s tests
 
 will run the full test suite (integration and unit tests).
 This can take several minutes.
 
 It is often sufficient to run the unit tests only. To do so, use
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux, MacOS & Windows
 
    .. code:: bash
 
-    	tox -e unit
-
-.. tab:: Windows
-
-   .. code:: bash
-
-		python -m tox -e windows-unit
+    	nox -s unit
 
 Using the test runner 
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -229,7 +209,7 @@ The documentation is built using
 
 .. code:: bash
 
-	  tox -e docs
+	  nox -s docs
 
 This will build the documentation and serve it locally (thanks to `sphinx-autobuild <https://github.com/GaretJax/sphinx-autobuild>`_) for preview.
 The preview will be updated automatically following changes.
@@ -237,18 +217,12 @@ The preview will be updated automatically following changes.
 Doctests, examples, style and coverage
 --------------------------------------
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux, MacOS & Windows
 
-	``Tox`` can also be used to run the following commands:
+	``Nox`` can also be used to run the following commands:
 
-	- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
-	- ``tox -e doctests``: Run doctests.
+	- ``nox -s examples``: Run the example scripts in ``examples/scripts``.
+	- ``nox -s doctests``: Run doctests.
 
-.. tab:: Windows
 
-	``Tox`` can also be used to run the following commands:
-
-	- ``python -m tox -e windows-examples``: Run the example scripts in ``examples/scripts``.
-	- ``python -m tox -e windows-doctests``: Run doctests.
-
-Use ``tox -e coverage`` to measure current test coverage on all platforms.
+Use ``nox -s coverage`` to measure current test coverage on all platforms.

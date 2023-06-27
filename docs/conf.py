@@ -52,7 +52,15 @@ extensions = [
     "myst_parser",
     "sphinx_extend_parent",
     "sphinx_inline_tabs",
+    "sphinxcontrib.bibtex",
 ]
+
+# -- sphinxcontrib-bibtex configuration --------------------------------------
+bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_style = "unsrt"
+bibtex_footbibliography_header = """.. rubric:: References"""
+bibtex_reference_style = "author_year"
+bibtex_tooltips = True
 
 
 napoleon_use_rtype = True
@@ -90,7 +98,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = None
 
 # Suppress warnings generated if footnotes are not references in a docstring
-suppress_warnings = ["ref.footnote"]
+# suppress_warnings = ["ref.footnote"]
 
 # -- Options for HTML output -------------------------------------------------
 

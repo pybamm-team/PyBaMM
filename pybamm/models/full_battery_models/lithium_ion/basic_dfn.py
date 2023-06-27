@@ -6,7 +6,8 @@ from .base_lithium_ion_model import BaseModel
 
 
 class BasicDFN(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [2]_.
+    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from
+    :footcite:t:`Marquis2019`.
 
     This class differs from the :class:`pybamm.lithium_ion.DFN` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in
@@ -18,11 +19,6 @@ class BasicDFN(BaseModel):
     name : str, optional
         The name of the model.
 
-    References
-    ----------
-    .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. Journal of The
-           Electrochemical Society, 166(15):A3693–A3706, 2019
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):

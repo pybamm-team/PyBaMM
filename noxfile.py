@@ -3,26 +3,29 @@ import os
 import sys
 
 
-@nox.session(name="pybamm-requires")
+@nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
     homedir = os.getenv("HOME")
     session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    if sys.platform != "win32" or sys.platform != "darwin":
+    if sys.platform != "win32":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
-        session.run(
-            "git",
-            "clone",
-            "https://github.com/pybind/pybind11.git",
-            "pybind11/",
-            external=True,
-        )
+        if not os.path.exists("./pybind11"):
+            session.run(
+                "git",
+                "clone",
+                "https://github.com/pybind/pybind11.git",
+                "pybind11/",
+                external=True,
+            )
+    else:
+        session.error("nox -s pybamm-requires is only available on Linux & MacOS.")
 
 
-@nox.session(name="coverage")
+@nox.session(name="coverage", reuse_venv=True)
 def run_coverage(session):
     homedir = os.getenv("HOME")
     session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
@@ -31,7 +34,7 @@ def run_coverage(session):
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("coverage")
     session.install("-e", ".[dev,plot,cite,latexify,bpx,tqdm]")
-    if sys.platform != "win32" or sys.platform != "darwin":
+    if sys.platform != "win32":
         session.install("scikits.odes")
         session.run("pybamm_install_jax")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
@@ -54,7 +57,6 @@ def run_integration(session):
 
 @nox.session(name="doctests", reuse_venv=True)
 def run_doctests(session):
-    session.install("-e", ".[dev,plot,cite,latexify,bpx,tqdm]")
     session.install("-e", ".[docs]")
     session.run("python", "run-tests.py", "--doctest")
 
@@ -98,25 +100,22 @@ def set_dev(session):
 
 @nox.session(name="tests", reuse_venv=True)
 def run_tests(session):
+    homedir = os.getenv("HOME")
+    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
+    session.env[
+        "LD_LIBRARY_PATH"
+    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     session.install("-e", ".[dev,plot,cite,latexify,bpx,tqdm]")
-    if sys.platform == "linux":
+    if sys.platform == "linux" or sys.platform == "darwin":
         session.run("pybamm_install_jax")
+        session.install("scikits.odes")
     session.run("python", "run-tests.py", "--all")
 
 
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
     envbindir = session.bin
-    session.install("-e", ".[dev,plot,cite,latexify,bpx,tqdm]")
-    session.install(
-        "sphinx>=1.5",
-        "pydata-sphinx-theme",
-        "sphinx-autobuild",
-        "sphinx_design",
-        "sphinx-copybutton",
-        "myst-parser",
-        "sphinx-inline-tabs",
-    )
+    session.install("-e", ".[dev,plot,cite,latexify,bpx,tqdm,docs]")
     session.chdir("docs/")
     session.run(
         "sphinx-autobuild", "--open-browser", "-qT", ".", f"{envbindir}/../tmp/html"

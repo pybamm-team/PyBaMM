@@ -7,7 +7,8 @@ from .base_active_material import BaseModel
 
 
 class LossActiveMaterial(BaseModel):
-    """Submodel for varying active material volume fraction from [1]_ and [2]_.
+    """Submodel for varying active material volume fraction from :footcite:t:`Ai2019`
+    and :footcite:t:`Reniers2019`.
 
     Parameters
     ----------
@@ -20,14 +21,6 @@ class LossActiveMaterial(BaseModel):
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
 
-    References
-    ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-           Cells. Journal of The Electrochemical Society, 167(1), 013512.
-    .. [2] Reniers, J. M., Mulder, G., & Howey, D. A. (2019). Review and performance
-           comparison of mechanical-chemical degradation models for lithium-ion
-           batteries. Journal of The Electrochemical Society, 166(14), A3189.
     """
 
     def __init__(self, param, domain, options, x_average):

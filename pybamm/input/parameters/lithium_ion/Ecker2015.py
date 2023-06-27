@@ -385,65 +385,29 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for a Kokam SLPB 75106100 cell, from the papers
+    Parameters for a Kokam SLPB 75106100 cell, from the papers :footcite:t:`Ecker2015i`
+    and :footcite:t:`Ecker2015ii`
 
-        Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-        lithium-ion battery I. determination of parameters." Journal of the
-        Electrochemical Society 162.9 (2015): A1836-A1848.
-
-        Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a
-        lithium-ion battery II. Model validation." Journal of The Electrochemical
-        Society 162.9 (2015): A1849-A1857.
-
-    The tab placement parameters are taken from measurements in
-
-        Hales, Alastair, et al. "The cell cooling coefficient: a standard to define heat
-        rejection from lithium-ion batteries." Journal of The Electrochemical Society
-        166.12 (2019): A2383.
+    The tab placement parameters are taken from measurements in :footcite:t:`Hales2019`
 
     The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
-    are extracted from
-
-        Zhao, Y., et al. "Modeling the effects of thermal gradients induced by tab and
-        surface cooling on lithium ion cell performance."" Journal of The
-        Electrochemical Society, 165.13 (2018): A3169-A3178.
+    are extracted from :footcite:t:`Zhao2018`
 
     Graphite negative electrode parameters
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     The fits to data for the electrode and electrolyte properties are those provided
-    by Dr. Simon O'Kane in the paper:
+    by Dr. Simon O'Kane in the paper :footcite:t:`Richardson2020`
 
-        Richardson, Giles, et. al. "Generalised single particle models for high-rate
-        operation of graded lithium-ion electrodes: Systematic derivation and
-        validation." Electrochemica Acta 339 (2020): 135862
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
 
-    SEI parameters are example parameters for SEI growth from the papers:
-
-
-        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-        Development of first principles capacity fade model for Li-ion cells. Journal of
-        the Electrochemical Society, 151(2), A196-A203.
-
-        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
-        151(3), A456-A462.
-
-        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-        continued growth of the solid-electrolyte interphase. ChemSusChem, 11(12),
-        1950-1955.
-
-        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
-        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
-        The Electrochemical Society, 156(3),
-
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -557,6 +521,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.5,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.5,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 26120.05,
         "Initial concentration in positive electrode [mol.m-3]": 12630.8,
         "Initial temperature [K]": 298.15,
