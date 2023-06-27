@@ -170,9 +170,7 @@ When you commit anything to PyBaMM, these checks will also be run automatically 
 To test all example scripts and notebooks, type
 
 ```bash
-tox -e examples # (GNU/Linux and MacOS)
-#
-python -m tox -e windows-examples # (Windows)
+nox -s examples
 ```
 
 To edit the structure and how the Jupyter notebooks get rendered in the Sphinx documentation (using `nbsphinx`), install [Pandoc](https://pandoc.org/installing.html) on your system, either using `conda` (through the `conda-forge` channel)
