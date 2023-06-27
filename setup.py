@@ -231,6 +231,7 @@ setup(
             "myst-parser",
             "sphinx-inline-tabs",
             "sphinxcontrib-bibtex",
+            "sphinx-autobuild",
             "nbsphinx",
             "ipykernel",
             "ipywidgets",

@@ -94,7 +94,11 @@ class TestElectrodeSOH(TestCase):
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 5}
+            {
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 5,
+            }
+            # need to update both the target voltages at 0 and 100% SOC
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
@@ -105,7 +109,12 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to upper voltage limit
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 6}
+            {
+                "Lower voltage cut-off [V]": 0,
+                "Upper voltage cut-off [V]": 6,
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 6,
+            }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
@@ -113,7 +122,12 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to lower voltage limit
         parameter_values.update(
-            {"Lower voltage cut-off [V]": -10, "Upper voltage cut-off [V]": 5}
+            {
+                "Lower voltage cut-off [V]": -10,
+                "Upper voltage cut-off [V]": 5,
+                "Open-circuit voltage at 0% SOC [V]": -10,
+                "Open-circuit voltage at 100% SOC [V]": 5,
+            }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
@@ -122,7 +136,12 @@ class TestElectrodeSOH(TestCase):
 
         # errors for cell capacity based solver
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 3, "Upper voltage cut-off [V]": 4.2}
+            {
+                "Lower voltage cut-off [V]": 3,
+                "Upper voltage cut-off [V]": 4.2,
+                "Open-circuit voltage at 0% SOC [V]": 3,
+                "Open-circuit voltage at 100% SOC [V]": 4.2,
+            }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
             parameter_values, param, known_value="cell capacity"

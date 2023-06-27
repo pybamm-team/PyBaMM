@@ -99,6 +99,16 @@ class ParameterValues:
         bpx = parse_bpx_file(filename)
         pybamm_dict = _bpx_to_param_dict(bpx)
 
+        if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
+            pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
+                "Lower voltage cut-off [V]"
+            ]
+            pybamm_dict["Open-circuit voltage at 100% SOC [V]"] = pybamm_dict[
+                "Upper voltage cut-off [V]"
+            ]
+            # probably should put a warning here to indicate we are going
+            # ahead with the low voltage limit.
+
         # get initial concentrations based on SOC
         c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
         pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
