@@ -175,7 +175,15 @@ tox -e examples # (GNU/Linux and MacOS)
 python -m tox -e windows-examples # (Windows)
 ```
 
-If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
+To edit the structure and how the Jupyter notebooks get rendered in the Sphinx documentation (using `nbsphinx`), install [Pandoc](https://pandoc.org/installing.html) on your system, either using `conda` (through the `conda-forge` channel)
+
+```bash
+conda install -c conda-forge pandoc
+```
+
+or refer to the [Pandoc installation instructions](https://pandoc.org/installing.html) specific to your platform.
+
+If notebooks fail because of changes to PyBaMM, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
 
 ```bash
 python run-tests.py --debook docs/source/examples/notebooks/notebook-name.ipynb script.py
