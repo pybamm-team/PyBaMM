@@ -1,4 +1,4 @@
-Open circuit potential models
+Open-circuit potential models
 =============================
 
 .. toctree::

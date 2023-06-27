@@ -37,8 +37,8 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             U_w = param.p.prim.U
             Q = Q_w * (x_100 - x_0)
 
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.opc_soc_100_dimensional
+        V_min = param.opc_soc_0_dimensional
 
         self.algebraic = {
             x_100: U_w(x_100, T_ref) - V_max,

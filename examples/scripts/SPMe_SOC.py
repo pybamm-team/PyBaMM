@@ -49,6 +49,8 @@ for l_n in thicknesses:
                 "Separator thickness [m]": l_s,
                 "Lower voltage cut-off [V]": 2.8,
                 "Upper voltage cut-off [V]": 4.7,
+                "Open-circuit voltage at 0% SOC [V]": 2.8,
+                "Open-circuit voltage at 100% SOC [V]": 4.7,
                 "Maximum concentration in negative electrode [mol.m-3]": 25000,
                 "Maximum concentration in positive electrode [mol.m-3]": 50000,
                 "Initial concentration in negative electrode [mol.m-3]": 12500,
