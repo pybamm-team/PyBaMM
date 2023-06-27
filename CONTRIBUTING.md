@@ -173,20 +173,11 @@ To test all example scripts and notebooks, type
 nox -s examples
 ```
 
-To edit the structure and how the Jupyter notebooks get rendered in the Sphinx documentation (using `nbsphinx`), install [Pandoc](https://pandoc.org/installing.html) on your system, either using `conda` (through the `conda-forge` channel)
+If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
 
 ```bash
-conda install -c conda-forge pandoc
+python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
 ```
-
-or refer to the [Pandoc installation instructions](https://pandoc.org/installing.html) specific to your platform.
-
-If notebooks fail because of changes to PyBaMM, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
-
-```bash
-python run-tests.py --debook docs/source/examples/notebooks/notebook-name.ipynb script.py
-```
-
 
 ### Debugging
 
@@ -250,8 +241,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-
-   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
 
       ```python
       expression_tree.render()
@@ -323,9 +313,9 @@ And then visit the webpage served at http://127.0.0.1:8000. Each time a change t
 
 ### Example notebooks
 
-Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](docs/source/examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
+Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [examples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
 All the notebooks are tested daily.
 
