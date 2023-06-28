@@ -267,18 +267,14 @@ intersphinx_mapping = {
 
 nbsphinx_prolog = r"""
 
-{% set download_url =
-'https://raw.githubusercontent.com/pybamm-team/pybamm/develop/docs/' +
-env.doc2path(env.docname, base=None) %}
-
-{% set alternative_download_url =
-'https://docs.pybamm.org/en/latest/' %}
-
-{% set doc_path = env.doc2path(env.docname, base=None) %}
-
 {% set github_docname =
 'github/pybamm-team/pybamm/blob/develop/docs/' +
 env.doc2path(env.docname, base=None) %}
+
+{% set readthedocs_download_url =
+'https://docs.pybamm.org/en/latest/' %}
+
+{% set doc_path = env.doc2path(env.docname, base=None) %}
 
 .. raw:: html
 
@@ -297,7 +293,7 @@ env.doc2path(env.docname, base=None) %}
             <hr>
         <p>
             Alternatively, you may
-            <a href="{{ alternative_download_url | e }}{{ doc_path | e }}"
+            <a href="{{ readthedocs_download_url | e }}{{ doc_path | e }}"
             target="_blank" download>
             download this notebook</a> and run it offline.
         </p>
