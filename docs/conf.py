@@ -20,7 +20,7 @@ import pybamm
 sys.path.insert(0, os.path.abspath("../"))
 
 # Path for local Sphinx extensions
-sys.path.append(os.path.abspath("docs/sphinxext/"))
+sys.path.append(os.path.abspath("./sphinxext/"))
 
 
 # -- Project information -----------------------------------------------------
