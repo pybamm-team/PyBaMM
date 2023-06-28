@@ -59,6 +59,12 @@ class TestUtil(TestCase):
         with self.assertRaisesRegex(KeyError, "open circuit voltage"):
             d.__getitem__("Measured open circuit voltage [V]")
 
+        with self.assertRaisesRegex(KeyError, "Lower voltage"):
+            d.__getitem__("Open-circuit voltage at 0% SOC [V]")
+
+        with self.assertRaisesRegex(KeyError, "Upper voltage"):
+            d.__getitem__("Open-circuit voltage at 100% SOC [V]")
+
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
         self.assertTrue(

@@ -19,10 +19,10 @@ explore the effect of different battery designs and modeling assumptions under a
 The core of the framework is a custom computer algebra system to define mathematical equations,
 and a domain specific modeling language to combine these equations into systems of differential equations
 (usually partial differential equations for variables depending on space and time).
-The [expression tree](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb) example gives an introduction to the computer algebra system, and the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Getting%20Started) tutorials
+The [expression tree](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb) example gives an introduction to the computer algebra system, and the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/getting_started/) tutorials
 walk through creating models of increasing complexity.
 
-Once a model has been defined symbolically, PyBaMM solves it using the Method of Lines. First, the equations are discretised in the spatial dimension, using the finite volume method. Then, the resulting system is solved using third-party numerical solvers. Depending on the form of the model, the system can be ordinary differential equations (ODEs) (if only `model.rhs` is defined), or algebraic equations (if only `model.algebraic` is defined), or differential-algebraic equations (DAEs) (if both `model.rhs` and `model.algebraic` are defined). Jupyter notebooks explaining the solvers can be found [here](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/solvers).
+Once a model has been defined symbolically, PyBaMM solves it using the Method of Lines. First, the equations are discretised in the spatial dimension, using the finite volume method. Then, the resulting system is solved using third-party numerical solvers. Depending on the form of the model, the system can be ordinary differential equations (ODEs) (if only `model.rhs` is defined), or algebraic equations (if only `model.algebraic` is defined), or differential-algebraic equations (DAEs) (if both `model.rhs` and `model.algebraic` are defined). Jupyter notebooks explaining the solvers can be found [here](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/solvers).
 
 ## Model and Parameter Library
 
