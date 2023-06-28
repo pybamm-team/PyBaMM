@@ -4,9 +4,6 @@
 
 from inspect import getmro, isclass
 
-# Initialise empty list of classes for logging
-classes_to_add_diagram = []
-
 
 def add_diagram(app, what, name, obj, options, lines):
     # if it is not a class, do nothing
@@ -25,19 +22,15 @@ def add_diagram(app, what, name, obj, options, lines):
 
             # Append the inheritance diagram to the docstring
             lines.append("\n")
-            lines.append(".. dropdown:: View inheritance diagram")
+            lines.append(".. dropdown:: View an inheritance diagram for this model")
             lines.append("   :animate: fade-in-slide-down")
             lines.append("   :icon: eye\n")
             lines.append("   :class-title: sd-align-major-center sd-fs-6 \n")
-            lines.append("   :class-body: sd-text-info sd-shadow-none\n")
             lines.append("   :class-container: sd-text-info \n")
             lines.append("\n")
             lines.append("       .. inheritance-diagram:: " + cls_name)
             lines.append("           :parts: 2\n")
             lines.append("\n")
-
-            # Add the class name to the list of classes
-            classes_to_add_diagram.append(cls_name)
 
 
 def setup(app):
