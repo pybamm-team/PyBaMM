@@ -39,10 +39,6 @@ def add_diagram(app, what, name, obj, options, lines):
             # Add the class name to the list of classes
             classes_to_add_diagram.append(cls_name)
 
-    # Logging purposes
-    print("Successfully added inheritance diagrams for the following classes: ")
-    print(*classes_to_add_diagram, sep=", ")
-
 
 def setup(app):
     app.connect("autodoc-add-inheritance-diagram", add_diagram)
