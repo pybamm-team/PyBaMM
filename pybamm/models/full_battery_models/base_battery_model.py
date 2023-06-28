@@ -272,11 +272,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         extra_options = extra_options or {}
 
-        # If "SEI", "SEI on cracks" and "lithium plating" options are not provided as
-        # tuples and "half-cell" == "false", change them to tuples with "none" or
+        half_cell_option = extra_options.get("half-cell", "false")
+        # For the full cell model, if "SEI", "SEI on cracks" and "lithium plating"
+        # options are not provided as tuples, change them to tuples with "none" or
         # "false" on the positive electrode. To use these options on the positive
         # electrode of a full cell, the tuple must be provided by the user
-        if "half-cell" == "false":
+        if half_cell_option == "false":
             SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
             if not (isinstance(SEI_option, tuple)):
                 extra_options["SEI"] = (SEI_option, "none")
@@ -354,7 +355,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # phases option is provided.
         # return "1" if option not given
         phases_option = extra_options.get("particle phases", "1")
-        if phases_option == "1":
+        if not (isinstance(phases_option, tuple)):
             default_options["surface form"] = "false"
         else:
             default_options["surface form"] = "algebraic"

@@ -359,6 +359,8 @@ def get_parameter_values():
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         # cell
+        "Negative current collector thickness [m]": 1.4e-05,
+        "Negative electrode thickness [m]": 0.0007,
         "Positive current collector thickness [m]": 1.4e-05,
         "Positive electrode thickness [m]": 7.4e-05,
         "Separator thickness [m]": 2e-05,
@@ -423,8 +425,8 @@ def get_parameter_values():
         "Ambient temperature [K]": 298.15,
         "Number of electrodes connected in parallel to make a cell": 1.0,
         "Number of cells connected in series to make a battery": 1.0,
-        "Lower voltage cut-off [V]": 2.5,
-        "Upper voltage cut-off [V]": 4.2,
+        "Lower voltage cut-off [V]": 0,
+        "Upper voltage cut-off [V]": 1,
         "Initial concentration in positive electrode [mol.m-3]": 26120.05,
         "Initial temperature [K]": 298.15,
         # citations
@@ -433,6 +435,7 @@ def get_parameter_values():
             "Ecker2015ii",
             "Zhao2018",
             "Hales2019",
-            "Xu 2019" "Richardson2020",
+            "Xu2019",
+            "Richardson2020",
         ],
     }

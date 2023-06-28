@@ -281,7 +281,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.submodels[f"{domain} {phase} sei"] = submodel
             if len(phases) > 1:
                 self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
-                    self.param, self.options
+                    self.param, domain, self.options
                 )
 
     def set_sei_on_cracks_submodel(self):
@@ -318,7 +318,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                 if len(phases) > 1:
                     self.submodels[
                         f"{domain} total sei on cracks"
-                    ] = pybamm.sei.TotalSEI(self.param, self.options, cracks=True)
+                    ] = pybamm.sei.TotalSEI(
+                        self.param, domain, self.options, cracks=True
+                    )
 
     def set_lithium_plating_submodel(self):
         # Do not set "lithium plating" submodel for a planar electrode. For porous

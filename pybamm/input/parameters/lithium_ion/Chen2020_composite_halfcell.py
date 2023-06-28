@@ -336,6 +336,8 @@ def get_parameter_values():
         "Secondary: SEI open-circuit potential [V]": 0.4,
         "Secondary: SEI growth activation energy [J.mol-1]": 0.0,
         # cell
+        "Negative current collector thickness [m]": 1.2e-05,
+        "Negative electrode thickness [m]": 0.0007,
         "Positive current collector thickness [m]": 1.2e-05,
         "Positive electrode thickness [m]": 8.52e-05,
         "Separator thickness [m]": 1.2e-05,
@@ -344,6 +346,10 @@ def get_parameter_values():
         "Cell cooling surface area [m2]": 0.00531,
         "Cell volume [m3]": 2.42e-05,
         "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
+        "Negative current collector conductivity [S.m-1]": 58411000.0,
+        "Negative current collector density [kg.m-3]": 8960.0,
+        "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
+        "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector conductivity [S.m-1]": 58411000.0,
         "Positive current collector density [kg.m-3]": 8960.0,
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 385.0,
@@ -410,10 +416,10 @@ def get_parameter_values():
         "Ambient temperature [K]": 298.15,
         "Number of electrodes connected in parallel to make a cell": 1.0,
         "Number of cells connected in series to make a battery": 1.0,
-        "Lower voltage cut-off [V]": 2.5,
-        "Upper voltage cut-off [V]": 4.2,
+        "Lower voltage cut-off [V]": 0,
+        "Upper voltage cut-off [V]": 1,
         "Initial concentration in positive electrode [mol.m-3]": 29866.0,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Xu 2019", "Chen2020", "Ai2022"],
+        "citations": ["Xu2019", "Chen2020", "Ai2022"],
     }
