@@ -57,7 +57,7 @@ def run_integration(session):
 
 @nox.session(name="doctests", reuse_venv=True)
 def run_doctests(session):
-    session.install("-e", ".[docs]")
+    session.install("-e", ".[dev,docs]")
     session.run("python", "run-tests.py", "--doctest")
 
 
