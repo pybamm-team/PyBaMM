@@ -102,19 +102,21 @@ Docs dependencies
 
 Installable with ``pip install "pybamm[docs]"``
 
-================================================================================ ================== ================== ===================================================================================================================================================================================
-Dependency                                                                       Minimum Version    pip extra          Notes
-================================================================================ ================== ================== ===================================================================================================================================================================================
-`sphinx <https://www.sphinx-doc.org/en/master/>`__                               1.5.0              docs               Sphinx makes it easy to create intelligent and beautiful documentation.
-`pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__  -                  docs               A clean, Bootstrap-based Sphinx theme
-`sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__              -                  docs               A sphinx extension for designing
-`sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__      -                  docs               To copy codeblocks
-`myst-parser <https://myst-parser.readthedocs.io/en/latest/>`__                  -                  docs               For technical & scientific documentation.
-`sphinx-inline-tabs <https://sphinx-inline-tabs.readthedocs.io/en/latest/>`__    -                  docs               Add inline tabbed content to your Sphinx documentation.
-================================================================================ ================== ================== ===================================================================================================================================================================================
+================================================================================================= ================== ================== ===================================================================================================================================================================================
+Dependency                                                                                        Minimum Version    pip extra          Notes
+================================================================================================= ================== ================== ===================================================================================================================================================================================
+`sphinx <https://www.sphinx-doc.org/en/master/>`__                                                1.5.0              docs               Sphinx makes it easy to create intelligent and beautiful documentation.
+`pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__                   -                  docs               A clean, Bootstrap-based Sphinx theme
+`sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__                               -                  docs               A sphinx extension for designing
+`sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__                       -                  docs               To copy codeblocks
+`myst-parser <https://myst-parser.readthedocs.io/en/latest/>`__                                   -                  docs               For technical & scientific documentation.
+`sphinx-inline-tabs <https://sphinx-inline-tabs.readthedocs.io/en/latest/>`__                     -                  docs               Add inline tabbed content to your Sphinx documentation.
+`sphinxcontrib-bibtex <https://sphinxcontrib-bibtex.readthedocs.io/en/latest/>`__                 -                  docs               For BibTeX citations
+`sphinx-autobuild <https://sphinx-extensions.readthedocs.io/en/latest/sphinx-autobuild.html>`__   -                  docs               For re-building docs once triggered
+================================================================================================= ================== ================== ===================================================================================================================================================================================
 
-.. _install.examples_dependencies:
-
+.. _install.examples_dependencies:                 
+=================
 Examples dependencies
 ^^^^^^^^^^^^^^^^^^^^^
 
