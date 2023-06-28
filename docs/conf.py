@@ -267,9 +267,14 @@ intersphinx_mapping = {
 
 nbsphinx_prolog = r"""
 
-{% set docname =
+{% set github_docname =
 'github/pybamm-team/pybamm/blob/develop/docs/' +
 env.doc2path(env.docname, base=None) %}
+
+{% set readthedocs_download_url =
+'https://docs.pybamm.org/en/latest/' %}
+
+{% set doc_path = env.doc2path(env.docname, base=None) %}
 
 .. raw:: html
 
@@ -280,10 +285,17 @@ env.doc2path(env.docname, base=None) %}
         <p>
             An interactive online version of this notebook is available, which can be
             accessed via
-            <a href="https://colab.research.google.com/{{ docname | e }}" 
+            <a href="https://colab.research.google.com/{{ github_docname | e }}" 
             target="_blank">
             <img src="https://colab.research.google.com/assets/colab-badge.svg"
             alt="Open this notebook in Google Colab"/></a>
+        </p>
+            <hr>
+        <p>
+            Alternatively, you may
+            <a href="{{ readthedocs_download_url | e }}{{ doc_path | e }}"
+            target="_blank" download>
+            download this notebook</a> and run it offline.
         </p>
     </div>
 
