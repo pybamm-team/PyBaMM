@@ -30,7 +30,7 @@ def add_diagram(app, what, name, obj, options, lines):
             lines.append("   :icon: eye\n")
             lines.append("   :class-title: sd-align-major-center sd-fs-6 \n")
             lines.append("   :class-body: sd-text-info sd-shadow-none\n")
-            lines.append("   :class-container: sd-font-weight-lighter sd-text-info \n")
+            lines.append("   :class-container: sd-text-info \n")
             lines.append("\n")
             lines.append("       .. inheritance-diagram:: " + cls_name)
             lines.append("           :parts: 2\n")
@@ -41,4 +41,4 @@ def add_diagram(app, what, name, obj, options, lines):
 
 
 def setup(app):
-    app.connect("autodoc-add-inheritance-diagram", add_diagram)
+    app.connect("autodoc-process-docstring", add_diagram)
