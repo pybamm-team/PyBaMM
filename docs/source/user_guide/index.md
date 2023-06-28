@@ -22,3 +22,15 @@ maxdepth: 2
 ---
 fundamentals/index
 ```
+
+```{toctree}
+---
+caption: Example notebooks
+maxdepth: 1
+---
+../examples/notebooks/getting_started/index
+../examples/notebooks/creating_models/index
+```
+
+The above notebooks provide a good introduction to PyBaMM and how to use it. For more
+examples, see the [](../examples/index) section.
