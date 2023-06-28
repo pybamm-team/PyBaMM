@@ -15,6 +15,7 @@ PyBaMM documentation
 
    User Guide <source/user_guide/index>
    source/api/index
+   source/examples/index
 
 **Version**: |version|
 
@@ -68,7 +69,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-link:: https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks
+      .. button-ref:: source/examples/index
          :expand:
          :color: secondary
          :click-parent:
