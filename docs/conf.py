@@ -16,7 +16,11 @@ import os
 import sys
 import pybamm
 
+# Path for repository root
 sys.path.insert(0, os.path.abspath("../"))
+
+# Path for local Sphinx extensions
+sys.path.append(os.path.abspath("docs/sphinxext/"))
 
 
 # -- Project information -----------------------------------------------------
@@ -41,29 +45,27 @@ release = version
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # Sphinx extensions
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.inheritance_diagram",
+    # Local and custom extensions
+    "extend_parent",
+    "inheritance_diagram",
+    # Third-party extensions
     "sphinx_design",
     "sphinx_copybutton",
     "myst_parser",
-    "sphinx_extend_parent",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
     "nbsphinx",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
 ]
-
-# -- sphinxcontrib-bibtex configuration --------------------------------------
-bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
-bibtex_style = "unsrt"
-bibtex_footbibliography_header = """.. rubric:: References"""
-bibtex_reference_style = "author_year"
-bibtex_tooltips = True
 
 
 napoleon_use_rtype = True
@@ -263,6 +265,14 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
+# -- sphinxcontrib-bibtex configuration --------------------------------------
+
+bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_style = "unsrt"
+bibtex_footbibliography_header = """.. rubric:: References"""
+bibtex_reference_style = "author_year"
+bibtex_tooltips = True
+
 # -- nbsphinx configuration options ------------------------------------------
 
 nbsphinx_prolog = r"""
@@ -288,6 +298,32 @@ env.doc2path(env.docname, base=None) %}
     </div>
 
 """
+
+# -- sphinxext/inheritance_diagram.py options --------------------------------
+
+graphviz_output_format = "svg"
+inheritance_graph_attrs = dict(
+    rankdir="TB",
+    size='"10.0, 10.0"',
+    fontsize=10,
+    ratio="auto",
+    center="true",
+    nodesep=5,
+    ranksep=0.35,
+    bgcolor="white",
+)
+inheritance_node_attrs = dict(
+    shape="box",
+    fontsize=14,
+    fontname="monospace",
+    height=0.20,
+    color="black",
+    style="filled",
+)
+inheritance_edge_attrs = dict(
+    arrowsize=0.75,
+    style='"setlinewidth(0.5)"',
+)
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
