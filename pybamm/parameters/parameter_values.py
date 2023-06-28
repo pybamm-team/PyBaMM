@@ -99,6 +99,16 @@ class ParameterValues:
         bpx = parse_bpx_file(filename)
         pybamm_dict = _bpx_to_param_dict(bpx)
 
+        if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
+            pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
+                "Lower voltage cut-off [V]"
+            ]
+            pybamm_dict["Open-circuit voltage at 100% SOC [V]"] = pybamm_dict[
+                "Upper voltage cut-off [V]"
+            ]
+            # probably should put a warning here to indicate we are going
+            # ahead with the low voltage limit.
+
         # get initial concentrations based on SOC
         c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
         pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
@@ -647,7 +657,9 @@ class ParameterValues:
             new_symbol._scale = self.process_symbol(symbol.scale)
             reference = self.process_symbol(symbol.reference)
             if isinstance(reference, pybamm.Vector):
-                reference = pybamm.Scalar(float(reference.evaluate()))
+                # address numpy 1.25 deprecation warning: array should have ndim=0
+                # before conversion
+                reference = pybamm.Scalar((reference.evaluate()).item())
             new_symbol._reference = reference
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol

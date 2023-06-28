@@ -22,3 +22,10 @@ pydata-sphinx-theme
 sphinx_design
 sphinx-copybutton
 myst-parser
+sphinx-inline-tabs
+sphinxcontrib-bibtex
+nbsphinx
+ipython
+ipykernel
+ipywidgets
+sphinx-gallery

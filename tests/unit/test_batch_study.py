@@ -62,11 +62,9 @@ class TestBatchStudy(TestCase):
             solvers_list = [solver.name for solver in bs_false.solvers.values()]
             self.assertIn(output_solver, solvers_list)
 
-            output_experiment = bs_false.sims[
-                num
-            ].experiment.operating_conditions_strings
+            output_experiment = bs_false.sims[num].experiment.operating_conditions_steps
             experiments_list = [
-                experiment.operating_conditions_strings
+                experiment.operating_conditions_steps
                 for experiment in bs_false.experiments.values()
             ]
             self.assertIn(output_experiment, experiments_list)
@@ -84,11 +82,9 @@ class TestBatchStudy(TestCase):
             solvers_list = [solver.name for solver in bs_true.solvers.values()]
             self.assertIn(output_solver, solvers_list)
 
-            output_experiment = bs_true.sims[
-                num
-            ].experiment.operating_conditions_strings
+            output_experiment = bs_true.sims[num].experiment.operating_conditions_steps
             experiments_list = [
-                experiment.operating_conditions_strings
+                experiment.operating_conditions_steps
                 for experiment in bs_true.experiments.values()
             ]
             self.assertIn(output_experiment, experiments_list)

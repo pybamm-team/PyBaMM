@@ -5,3 +5,5 @@ JAX Solver
   :members:
 
 .. autofunction:: pybamm.jax_bdf_integrate
+
+.. footbibliography::

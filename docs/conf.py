@@ -51,7 +51,19 @@ extensions = [
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_extend_parent",
+    "sphinx_inline_tabs",
+    "sphinxcontrib.bibtex",
+    "nbsphinx",
+    "IPython.sphinxext.ipython_console_highlighting",
+    "sphinx_gallery.load_style",
 ]
+
+# -- sphinxcontrib-bibtex configuration --------------------------------------
+bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_style = "unsrt"
+bibtex_footbibliography_header = """.. rubric:: References"""
+bibtex_reference_style = "author_year"
+bibtex_tooltips = True
 
 
 napoleon_use_rtype = True
@@ -83,13 +95,10 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints"]
 
 # Suppress warnings generated if footnotes are not references in a docstring
-suppress_warnings = ["ref.footnote"]
+# suppress_warnings = ["ref.footnote"]
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -130,10 +139,6 @@ html_theme_options = {
     "collapse_navigation": True,
     "external_links": [
         {
-            "name": "Examples",
-            "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/examples",
-        },
-        {
             "name": "Contributing",
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
@@ -147,6 +152,8 @@ html_theme_options = {
     # for dark mode toggle, version switcher, and social media links
     "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
     "use_edit_page_button": True,
+    "pygment_light_style": "xcode",
+    "pygment_dark_style": "monokai",
 }
 
 html_title = "%s v%s Manual" % (project, version)
@@ -253,8 +260,34 @@ intersphinx_mapping = {
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "matplotlib": ("https://matplotlib.org", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
 }
+
+# -- nbsphinx configuration options ------------------------------------------
+
+nbsphinx_prolog = r"""
+
+{% set docname =
+'github/pybamm-team/pybamm/blob/develop/docs/' +
+env.doc2path(env.docname, base=None) %}
+
+.. raw:: html
+
+    <div class="admonition tip">
+        <p class="admonition-title">
+            Tip
+        </p>
+        <p>
+            An interactive online version of this notebook is available, which can be
+            accessed via
+            <a href="https://colab.research.google.com/{{ docname | e }}" 
+            target="_blank">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg"
+            alt="Open this notebook in Google Colab"/></a>
+        </p>
+    </div>
+
+"""
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/

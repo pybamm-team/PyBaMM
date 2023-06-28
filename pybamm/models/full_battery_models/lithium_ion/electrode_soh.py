@@ -8,7 +8,7 @@ import warnings
 
 
 class _ElectrodeSOH(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH, from [1]_.
+    """Model to calculate electrode-specific SOH, from :footcite:t:`Mohtat2019`.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
     Some of the output variables are defined in [2]_.
@@ -24,11 +24,6 @@ class _ElectrodeSOH(pybamm.BaseModel):
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
 
-    References
-    ----------
-    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-           better estimability of electrode-specific state of health: Decoding the cell
-           expansion. Journal of Power Sources, 427, 101-111.
     """
 
     def __init__(
@@ -52,8 +47,8 @@ class _ElectrodeSOH(pybamm.BaseModel):
         Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.opc_soc_100_dimensional
+        V_min = param.opc_soc_0_dimensional
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -246,13 +241,15 @@ class ElectrodeSOHSolver:
         if inputs.pop("V_min", None) is not None:
             warnings.warn(
                 "V_min has been removed from the inputs. "
-                "The 'Lower voltage cut-off [V]' parameter is now used automatically.",
+                "The 'Open-circuit voltage at 0% SOC [V]' "
+                "parameter is now used automatically.",
                 DeprecationWarning,
             )
         if inputs.pop("V_max", None) is not None:
             warnings.warn(
                 "V_max has been removed from the inputs. "
-                "The 'Upper voltage cut-off [V]' parameter is now used automatically.",
+                "The 'Open-circuit voltage at 100% SOC [V]' "
+                "parameter is now used automatically.",
                 DeprecationWarning,
             )
         ics = self._set_up_solve(inputs)
@@ -414,19 +411,25 @@ class ElectrodeSOHSolver:
             T = self.parameter_values["Reference temperature [K]"]
             x = pybamm.InputParameter("x")
             y = pybamm.InputParameter("y")
-            self.V_max = self.parameter_values.evaluate(self.param.voltage_high_cut)
-            self.V_min = self.parameter_values.evaluate(self.param.voltage_low_cut)
+            self.V_max = self.parameter_values.evaluate(
+                self.param.opc_soc_100_dimensional
+            )
+            self.V_min = self.parameter_values.evaluate(
+                self.param.opc_soc_0_dimensional
+            )
             self.OCV_function = self.parameter_values.process_symbol(
                 self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
             )
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
+        # address numpy 1.25 deprecation warning: array should have ndim=0
+        # before conversion
         V_lower_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
         )
         V_upper_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
+            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
         )
         if V_lower_bound > self.V_min:
             raise (
@@ -472,8 +475,8 @@ class ElectrodeSOHSolver:
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.voltage_low_cut)
-            V_max = parameter_values.evaluate(param.voltage_high_cut)
+            V_min = parameter_values.evaluate(param.opc_soc_0_dimensional)
+            V_max = parameter_values.evaluate(param.opc_soc_100_dimensional)
 
             if not V_min < V_init < V_max:
                 raise ValueError(
@@ -622,9 +625,10 @@ def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100
     T = param.T_amb(0)
     Vs = np.empty(n_vals.shape)
     for i in range(n_vals.size):
-        Vs[i] = parameter_values.evaluate(
-            param.p.prim.U(p_vals[i], T)
-        ) - parameter_values.evaluate(param.n.prim.U(n_vals[i], T))
+        Vs[i] = (
+            parameter_values.evaluate(param.p.prim.U(p_vals[i], T)).item()
+            - parameter_values.evaluate(param.n.prim.U(n_vals[i], T)).item()
+        )
     # Calculate dQ
     Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
     dQ = Q_p / (points - 1)

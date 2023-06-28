@@ -7,13 +7,13 @@ model = pybamm.equivalent_circuit.Thevenin()
 experiment = pybamm.Experiment(
     [
         (
-            "Discharge at C/10 for 10 hours or until 3.3 V at 15oC",
-            "Rest for 30 minutes at 15oC",
-            "Rest for 2 hours at 35oC",
-            "Charge at 100 A until 4.1 V at 35oC (1 second period)",
-            "Hold at 4.1 V until 5 A at 35oC (1 seconds period)",
-            "Rest for 30 minutes at 35oC",
-            "Rest for 1 hour at 25oC",
+            "Discharge at C/10 for 10 hours or until 3.3 V",
+            "Rest for 30 minutes",
+            "Rest for 2 hours",
+            "Charge at 100 A until 4.1 V",
+            "Hold at 4.1 V until 5 A",
+            "Rest for 30 minutes",
+            "Rest for 1 hour",
         ),
     ]
 )
