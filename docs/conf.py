@@ -309,7 +309,7 @@ env.doc2path(env.docname, base=None) %}
 hoverxref_default_type = "tooltip"
 hoverxref_auto_ref = True
 
-hoverxref_roles = ["class", "meth", "func", "ref", "autoclass", "autofunction", "term"]
+hoverxref_roles = ["class", "meth", "func", "ref", "term"]
 hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
 
 hoverxref_domains = ["py"]
@@ -320,7 +320,10 @@ hoverxref_intersphinx = list(intersphinx_mapping.keys())
 
 # Tooltips settings
 hoverxref_tooltip_lazy = False
-# TODO: configure theme and sizing for tooltips
+hoverxref_tooltip_maxwidth = 750
+hoverxref_tooltip_animation = "swing"
+hoverxref_tooltip_content = "Loading information..."
+hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-punk"]
 
 
 # -- Jinja templating --------------------------------------------------------
