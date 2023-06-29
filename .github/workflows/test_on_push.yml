@@ -98,7 +98,22 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools
           python -m pip install nox
 
-      - name: Install SuiteSparse and Sundials
+      - name: Cache pybamm-requires nox environment for GNU/Linux
+        uses: actions/cache@v3
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          path: |
+            # Repository files
+            ${{ github.workspace }}/.nox/pybamm-requires/
+            ${{ github.workspace }}/pybind11/
+            ${{ github.workspace }}/install_KLU_Sundials/
+            # Headers and dynamic library files for SuiteSparse and SUNDIALS
+            ${{ env.HOME }}/.local/lib/
+            ${{ env.HOME }}/.local/include/
+            ${{ env.HOME }}/.local/examples/
+          key: nox-pybamm-requires-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/install_KLU_Sundials.py') }}
+
+      - name: Install SuiteSparse and SUNDIALS
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
