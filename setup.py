@@ -236,6 +236,7 @@ setup(
             "ipykernel",
             "ipywidgets",
             "sphinx-gallery",
+            "sphinx-hoverxref",
         ],  # For doc generation
         "dev": [
             "pre-commit",  # For code style checking
