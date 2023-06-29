@@ -64,7 +64,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo dot -c 
+          sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       # Added fixes to homebrew installs:
@@ -86,8 +86,7 @@ jobs:
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
           brew update
-          brew install graphviz
-          brew install openblas
+          brew install graphviz openblas
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -128,6 +127,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11
         run: nox -s unit
 
+      - name: Cache coverage nox environment for GNU/Linux with Python 3.11
+        uses: actions/cache@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        with:
+          path: ${{ github.workspace }}/.nox/coverage/
+          key: ${{ runner.os }}-nox-coverage-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py', '**/.coveragerc') }}
+
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s coverage
@@ -135,6 +141,13 @@ jobs:
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v2.1.0
+
+      - name: Cache integration tests nox environment for GNU/Linux with Python 3.11
+        uses: actions/cache@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        with:
+          path: ${{ github.workspace }}/.nox/integration/
+          key: ${{ runner.os }}-nox-integration-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
 
       - name: Run integration tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
@@ -151,9 +164,23 @@ jobs:
         if: matrix.os != 'ubuntu-latest'
         run: nox -s unit
 
+      - name: Cache doctests nox environment for GNU/Linux with Python 3.11
+        uses: actions/cache@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        with:
+          path: ${{ github.workspace }}/.nox/doctests/
+          key: ${{ runner.os }}-nox-doctests-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py', '**/docs/requirements.txt') }}
+
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s doctests
+
+      - name: Cache examples nox environment for GNU/Linux with Python 3.11
+        uses: actions/cache@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        with:
+          path: ${{ github.workspace }}/.nox/examples/
+          key: ${{ runner.os }}-nox-examples-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
