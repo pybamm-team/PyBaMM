@@ -302,6 +302,27 @@ env.doc2path(env.docname, base=None) %}
 
 """
 
+# -- Options for sphinx-hoverxref --------------------------------------------
+
+# Hoverxref settings
+
+hoverxref_default_type = "tooltip"
+hoverxref_auto_ref = True
+
+hoverxref_roles = ["class", "meth", "func", "ref", "autoclass", "autofunction", "term"]
+hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
+
+hoverxref_domains = ["py"]
+
+# Currently, only projects that are hosted on readthedocs + CPython, NumPy, and
+# SymPy are supported
+hoverxref_intersphinx = list(intersphinx_mapping.keys())
+
+# Tooltips settings
+hoverxref_tooltip_lazy = False
+# TODO: configure theme and sizing for tooltips
+
+
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
 
