@@ -244,9 +244,6 @@ setup(
             "tqdm",
         ],
         "dev": [
-            "anytree>=2.4.3",
-            "autograd>=1.2",
-            "scikit-fem>=0.2.0",
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
         ],
