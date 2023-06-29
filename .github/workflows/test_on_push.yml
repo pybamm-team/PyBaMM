@@ -108,7 +108,6 @@ jobs:
             ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
           key: nox-pybamm-requires-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/install_KLU_Sundials.py') }}
