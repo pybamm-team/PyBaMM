@@ -355,7 +355,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # phases option is provided.
         # return "1" if option not given
         phases_option = extra_options.get("particle phases", "1")
-        if not (isinstance(phases_option, tuple)):
+        if phases_option == "1":
             default_options["surface form"] = "false"
         else:
             default_options["surface form"] = "algebraic"
