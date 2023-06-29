@@ -3,13 +3,17 @@ import os
 import sys
 
 
-@nox.session(name="pybamm-requires", reuse_venv=True)
-def run_pybamm_requires(session):
+def set_env(session):
     homedir = os.getenv("HOME")
     session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
     session.env[
         "LD_LIBRARY_PATH"
     ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+
+
+@nox.session(name="pybamm-requires", reuse_venv=True)
+def run_pybamm_requires(session):
+    set_env(session=session)
     if sys.platform != "win32":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
@@ -27,11 +31,7 @@ def run_pybamm_requires(session):
 
 @nox.session(name="coverage", reuse_venv=True)
 def run_coverage(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_env(session=session)
     session.install("coverage")
     session.install("-e", ".")
     if sys.platform != "win32":
@@ -44,11 +44,7 @@ def run_coverage(session):
 
 @nox.session(name="integration", reuse_venv=True)
 def run_integration(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_env(session=session)
     session.install("-e", ".[dev]")
     if sys.platform == "linux":
         session.install("scikits.odes")
@@ -63,11 +59,7 @@ def run_doctests(session):
 
 @nox.session(name="unit", reuse_venv=True)
 def run_unit(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_env(session=session)
     session.install("-e", ".")
     if sys.platform == "linux":
         session.run("pybamm_install_jax")
@@ -83,10 +75,7 @@ def run_examples(session):
 
 @nox.session(name="dev", reuse_venv=True)
 def set_dev(session):
-    homedir = os.getenv("HOME")
-    LD_LIBRARY_PATH = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
-    envbindir = session.bin
-    session.install("-e", ".[dev]")
+    set_env(session=session)
     session.install("cmake")
     session.run(
         "echo",
@@ -99,11 +88,7 @@ def set_dev(session):
 
 @nox.session(name="tests", reuse_venv=True)
 def run_tests(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_env(session=session)
     session.install("-e", ".[dev]")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run("pybamm_install_jax")
