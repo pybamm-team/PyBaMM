@@ -70,7 +70,7 @@ jobs:
       # Added fixes to homebrew installs:
       # rm -f /usr/local/bin/2to3
       # (see https://github.com/actions/virtual-environments/issues/2322)
-      - name: Install MacOS system dependencies
+      - name: Install macOS system dependencies
         if: matrix.os == 'macos-latest'
         env:
           # Homebrew environment variables
@@ -125,9 +125,16 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s integration
 
-      - name: Run unit tests for Windows and MacOS with all Python versions
+      - name: Run unit tests for Windows and macOS with all Python versions
         if: matrix.os != 'ubuntu-latest'
         run: nox -s unit
+
+      - name: Cache unit tests nox environment for Windows and macOS with all Python versions
+        uses: actions/cache@v3
+        if: matrix.os != 'ubuntu-latest'
+        with:
+          path: ${{ github.workspace }}/.nox/unit/
+          key: ${{ runner.os }}-nox-unit-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
