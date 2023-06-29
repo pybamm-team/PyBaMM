@@ -23,8 +23,8 @@ class ConstantSEI(BaseModel):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, options, phase="primary"):
-        super().__init__(param, domain, options=options, phase=phase)
+    def __init__(self, param, options, phase="primary"):
+        super().__init__(param, options=options, phase=phase)
         if self.options.electrode_types["negative"] == "planar":
             self.reaction_loc = "interface"
         else:

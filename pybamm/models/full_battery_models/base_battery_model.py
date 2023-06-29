@@ -292,19 +292,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for particle mechanics based on which half-cell,
-        # SEI on cracks and LAM options are provided
-        # return "false", "false" and "none" respectively if options not given
-        half_cell_option = extra_options.get("half-cell", "false")
+        # Change the default for particle mechanics based on which SEI on cracks and LAM
+        # options are provided
+        # return "false" and "none" respectively if options not given
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
         LAM_opt = extra_options.get("loss of active material", "none")
-        if "true" in SEI_cracks_option:
-            if half_cell_option == "true":
-                default_options["particle mechanics"] = (  # is this right?
-                    "none",
-                    "swelling and cracking",
-                )
-            elif "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+        if SEI_cracks_option == "true":
+            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = (
                     "swelling and cracking",
                     "swelling only",
@@ -348,7 +342,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["surface form"] = "algebraic"
         # The "surface form" option will still be overridden by
         # extra_options if provided
-
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
@@ -548,15 +541,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             in [
                                 "intercalation kinetics",
                                 "interface utilisation",
-                                "lithium plating",
                                 "loss of active material",
                                 "open-circuit potential",
                                 "particle",
                                 "particle mechanics",
                                 "particle phases",
                                 "particle size",
-                                "SEI",
-                                "SEI on cracks",
                                 "stress-induced diffusion",
                             ]
                             and isinstance(value, tuple)

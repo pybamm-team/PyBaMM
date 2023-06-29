@@ -97,16 +97,10 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_sei_submodel(self):
-        for domain in ["negative", "positive"]:
-            self.submodels[f"{domain} sei"] = pybamm.sei.NoSEI(
-                self.param, domain, self.options
-            )
+        self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
 
     def set_lithium_plating_submodel(self):
-        for domain in ["negative", "positive"]:
-            self.submodels[
-                f"{domain} lithium plating"
-            ] = pybamm.lithium_plating.NoPlating(self.param, domain)
+        self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
 
     def set_total_interface_submodel(self):
         self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(
