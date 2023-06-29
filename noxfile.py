@@ -121,7 +121,7 @@ def build_docs(session):
     )
 
 
-@nox.session(name="pre-commit",reuse_venv=True)
+@nox.session(name="pre-commit", reuse_venv=True)
 def lint(session):
     session.install("pre-commit")
     session.run("pre-commit", "run", "--all-files")
