@@ -7,9 +7,9 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM({"half-cell": "true"}),
-    pybamm.lithium_ion.SPMe({"half-cell": "true"}),
-    pybamm.lithium_ion.DFN({"half-cell": "true"}),
+    pybamm.lithium_ion.SPM({"working electrode": "positive"}),
+    pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
+    pybamm.lithium_ion.DFN({"working electrode": "positive"}),
 ]
 
 # create and run simulations

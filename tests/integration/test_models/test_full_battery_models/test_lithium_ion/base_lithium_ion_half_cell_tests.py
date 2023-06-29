@@ -7,7 +7,7 @@ import pybamm
 
 class BaseIntegrationTestLithiumIonHalfCell:
     def run_basic_processing_test(self, options, **kwargs):
-        options["half-cell"] = "true"
+        options["working electrode"] = "positive"
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, **kwargs)
         modeltest.test_all(skip_output_tests=True)

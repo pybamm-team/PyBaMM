@@ -21,17 +21,21 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     """
 
-    def __init__(self, name="Electrode-specific SOH model"):
+    def __init__(self, working_electrode, name="Electrode-specific SOH model"):
+        self.working_electrode = working_electrode
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
-        param = pybamm.LithiumIonParameters({"half-cell": "true"})
+        param = pybamm.LithiumIonParameters({"working electrode": working_electrode})
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))
         x_0 = pybamm.Variable("x_0", bounds=(0, 1))
         Q_w = pybamm.InputParameter("Q_w")
         T_ref = param.T_ref
-        U_w = param.p.prim.U
-        Q = Q_w * (x_100 - x_0)
+        if working_electrode == "negative":  # pragma: no cover
+            raise NotImplementedError
+        elif working_electrode == "positive":
+            U_w = param.p.prim.U
+            Q = Q_w * (x_100 - x_0)
 
         V_max = param.opc_soc_100_dimensional
         V_min = param.opc_soc_0_dimensional
