@@ -323,7 +323,7 @@ hoverxref_tooltip_lazy = False
 hoverxref_tooltip_maxwidth = 750
 hoverxref_tooltip_animation = "swing"
 hoverxref_tooltip_content = "Loading information..."
-hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-punk"]
+hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
 
 
 # -- Jinja templating --------------------------------------------------------

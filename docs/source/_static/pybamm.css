@@ -144,3 +144,14 @@ html[data-theme="dark"] h1 {
 html[data-theme="dark"] h3 {
   color: #0a6774;
 }
+
+/* Overrides for sphinx-hoverxref since it does not support a native dark theme, see */
+/* https://github.com/readthedocs/sphinx-hoverxref/issues/231 */
+
+html[data-theme="dark"] .tooltipster-sidetip.tooltipster-shadow .tooltipster-box
+.tooltipster-arrow .tooltipster-right .tooltipster-left .tooltipster-arrow-border {
+  border: none;
+  border-radius: 5px;
+  background-color: var(--pst-color-background);
+  box-shadow: 0 0 10px 6px rgba(0,0,0,.1);
+}
