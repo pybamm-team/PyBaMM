@@ -148,10 +148,22 @@ html[data-theme="dark"] h3 {
 /* Overrides for sphinx-hoverxref since it does not support a native dark theme, see */
 /* https://github.com/readthedocs/sphinx-hoverxref/issues/231 */
 
-html[data-theme="dark"] .tooltipster-sidetip.tooltipster-shadow .tooltipster-box
-.tooltipster-arrow .tooltipster-right .tooltipster-left .tooltipster-arrow-border {
-  border: none;
-  border-radius: 5px;
-  background-color: var(--pst-color-background);
-  box-shadow: 0 0 10px 6px rgba(0,0,0,.1);
+/* These will ensure that the tooltip inherits the PyData colours */
+
+.tooltipster-sidetip.tooltipster-shadow .tooltipster-box {
+  background: var(--pst-color-background) !important;
+}
+
+.tooltipster-sidetip.tooltipster-shadow .tooltipster-arrow {
+  background: var(--pst-color-background) !important;
+  overflow: hidden;
+  position: absolute;
+}
+
+.tooltipster-sidetip.tooltipster-shadow.tooltipster-right .tooltipster-arrow-border {
+  border-right-color: var(--pst-color-background) !important;
+}
+
+.tooltipster-sidetip.tooltipster-shadow.tooltipster-left .tooltipster-arrow-border {
+  border-left-color: var(--pst-color-background) !important;
 }
