@@ -186,7 +186,7 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -196,7 +196,7 @@ class JaxSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs_dict : dict, optional
+        inputs : dict, list[dict], optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -206,11 +206,25 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        if isinstance(inputs, dict):
+            inputs = [inputs]
         timer = pybamm.Timer()
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = self._cached_solves[model](inputs_dict).block_until_ready()
+        # split input list into a list of lists based on available xlu devices
+        device_count = jax.local_device_count()
+        inputs_listoflists = [inputs[x:x + device_count] for x in range(0, len(inputs), device_count)]
+        if len(inputs_listoflists) > 1:
+            print("{} parameter sets were provided, but only {} XLA devices are available".format(len(inputs), device_count))
+            print("Parameter sets split into {} lists for parallel processing".format(len(inputs_listoflists)))
+        y = []
+        for k, inputs_list in enumerate(inputs_listoflists):
+            if len(inputs_listoflists) > 1:
+                print(" Solving list {} of {} ({} parameter sets)".format(k + 1, len(inputs_listoflists), len(inputs_list)))
+            # convert inputs to a dict of arrays for pmap
+            inputs_v = {k: jnp.array([dic[k] for dic in inputs_list]) for k in inputs_list[0]}
+            y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
         integration_time = timer.time()
 
         # convert to a normal numpy array
@@ -219,8 +233,22 @@ class JaxSolver(pybamm.BaseSolver):
         termination = "final time"
         t_event = None
         y_event = onp.array(None)
-        sol = pybamm.Solution(
-            t_eval, y, model, inputs_dict, t_event, y_event, termination
-        )
-        sol.integration_time = integration_time
-        return sol
+
+        # Extract solutions from y with their associated input dicts
+        solutions = []
+        for k, inputs_dict in enumerate(inputs):
+            sol = pybamm.Solution(
+                t_eval,
+                jnp.reshape(y[k,], y.shape[1:]),
+                model,
+                inputs_dict,
+                t_event,
+                y_event,
+                termination
+            )
+            sol.integration_time = integration_time
+            solutions.append(sol)
+
+        if len(solutions) == 1:
+            return solutions[0]
+        return solutions

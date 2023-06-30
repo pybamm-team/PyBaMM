@@ -22,8 +22,8 @@ import pkg_resources
 import pybamm
 
 # versions of jax and jaxlib compatible with PyBaMM
-JAX_VERSION = "0.4.8"
-JAXLIB_VERSION = "0.4.7"
+JAX_VERSION = "0.4"
+JAXLIB_VERSION = "0.4"
 
 
 def root_dir():
@@ -271,8 +271,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        pkg_resources.get_distribution("jax").version == JAX_VERSION
-        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+        pkg_resources.get_distribution("jax").version.startswith(JAX_VERSION)
+        and pkg_resources.get_distribution("jaxlib").version.startswith(JAXLIB_VERSION)
     )
 
 
