@@ -155,7 +155,7 @@ html[data-theme="dark"] h3 {
 }
 
 .tooltipster-sidetip.tooltipster-shadow .tooltipster-arrow {
-  background: var(--pst-color-background) !important;
+  background: none !important;
   overflow: hidden;
   position: absolute;
 }
