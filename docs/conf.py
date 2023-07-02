@@ -53,6 +53,7 @@ extensions = [
     "sphinx_extend_parent",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
+    "sphinx_last_updated_by_git",
     "nbsphinx",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
