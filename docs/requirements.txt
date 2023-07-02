@@ -24,6 +24,7 @@ sphinx-copybutton
 myst-parser
 sphinx-inline-tabs
 sphinxcontrib-bibtex
+sphinx-last-updated-by-git
 nbsphinx
 ipython
 ipykernel
