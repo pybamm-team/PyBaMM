@@ -32,7 +32,7 @@ def run_coverage(session):
     session.install("coverage")
     session.install("-e", ".")
     if sys.platform != "win32":
-        session.install("scikits.odes")
+        session.run("pybamm_install_odes")
         session.run("pybamm_install_jax")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
@@ -43,7 +43,7 @@ def run_coverage(session):
 def run_integration(session):
     session.install("-e", ".[dev]")
     if sys.platform == "linux":
-        session.install("scikits.odes")
+        session.run("pybamm_install_odes")
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -58,7 +58,7 @@ def run_unit(session):
     session.install("-e", ".")
     if sys.platform == "linux":
         session.run("pybamm_install_jax")
-        session.install("scikits.odes")
+        session.run("pybamm_install_odes")
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -86,7 +86,7 @@ def run_tests(session):
     session.install("-e", ".[dev]")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run("pybamm_install_jax")
-        session.install("scikits.odes")
+        session.run("pybamm_install_odes")
     session.run("python", "run-tests.py", "--all")
 
 
