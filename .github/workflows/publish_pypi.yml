@@ -8,6 +8,11 @@ on:
       target:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
         default: "pypi"
+      debug_enabled:
+          type: boolean
+          description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+          required: false
+          default: false
 
 jobs:
   build_windows_wheels:
@@ -20,10 +25,10 @@ jobs:
           python-version: 3.8
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==1.9.0
+        run: python -m pip install cibuildwheel==2.12.3
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
 
       # remove when a new vcpkg version is released
       - name: Install the latest commit of vcpkg on windows
@@ -35,18 +40,23 @@ jobs:
           .\bootstrap-vcpkg.bat
 
       - name: Cache packages installed through vcpkg on windows
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: vckpg_binary_cache
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
           key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
 
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
       - name: Build 64 bits wheels on Windows
         run: |
           python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
+          CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=C:\vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
           CIBW_ARCHS: "AMD64"
 
       - name: Upload windows wheels
@@ -70,12 +80,12 @@ jobs:
           python-version: 3.8
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==1.9.0
+        run: python -m pip install cibuildwheel==2.12.3
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
 
-      - name: Install sundials on macOS
+      - name: Install SUNDIALS on macOS
         if: matrix.os == 'macos-latest'
         run: |
           # https://github.com/actions/virtual-environments/issues/1280
@@ -85,19 +95,30 @@ jobs:
           rm -f /usr/local/bin/python3*
           brew update
           brew reinstall gcc
+          brew install libomp
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on Linux and MacOS
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
+          # TODO: openblas no longer available on centos 7 i686 image, use blas instead for now
+          CIBW_BEFORE_ALL_LINUX: >
+            yum -y install blas-devel lapack-devel &&
+            bash build_manylinux_wheels/install_sundials.sh 5.8.1 6.5.0
+
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
-          CIBW_BEFORE_BUILD_MACOS: "python -m pip install cmake casadi numpy && python scripts/fix_casadi_rpath_mac.py"
+          CIBW_BEFORE_BUILD_MACOS: >
+            python -m pip
+            install cmake casadi numpy &&
+            python scripts/fix_casadi_rpath_mac.py &&
+            scripts/fix_suitesparse_rpath_mac.sh
           # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
           # it for mac
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}"
-          CIBW_SKIP: pp*
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            delocate-listdeps {wheel} &&
+            delocate-wheel -v -w {dest_dir} {wheel}
+          CIBW_SKIP: "pp* *musllinux*"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3

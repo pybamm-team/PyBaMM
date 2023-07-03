@@ -51,6 +51,7 @@ extensions = [
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_extend_parent",
+    "sphinx_inline_tabs",
 ]
 
 
@@ -88,6 +89,8 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
+# Suppress warnings generated if footnotes are not references in a docstring
+suppress_warnings = ["ref.footnote"]
 
 # -- Options for HTML output -------------------------------------------------
 

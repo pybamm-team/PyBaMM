@@ -5,7 +5,7 @@
 <div align="center">
 
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](http://numfocus.org)
-[![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
+[![Scheduled](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml/badge.svg?branch=develop)](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/main/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/)
@@ -14,7 +14,7 @@
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-54-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-58-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -246,11 +246,16 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ayeankit"><img src="https://avatars.githubusercontent.com/u/72691866?v=4?s=100" width="100px;" alt="Ankit Kumar"/><br /><sub><b>Ankit Kumar</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=ayeankit" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://aniketsinghrawat.vercel.app/"><img src="https://avatars.githubusercontent.com/u/31622972?v=4?s=100" width="100px;" alt="Aniket Singh Rawat"/><br /><sub><b>Aniket Singh Rawat</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=dikwickley" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://aniketsinghrawat.vercel.app/"><img src="https://avatars.githubusercontent.com/u/31622972?v=4?s=100" width="100px;" alt="Aniket Singh Rawat"/><br /><sub><b>Aniket Singh Rawat</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=dikwickley" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=dikwickley" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/jeromtom"><img src="https://avatars.githubusercontent.com/u/83979298?v=4?s=100" width="100px;" alt="Jerom Palimattom Tom"/><br /><sub><b>Jerom Palimattom Tom</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=jeromtom" title="Documentation">📖</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=jeromtom" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=jeromtom" title="Tests">⚠️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://bradyplanden.github.io"><img src="https://avatars.githubusercontent.com/u/55357039?v=4?s=100" width="100px;" alt="Brady Planden"/><br /><sub><b>Brady Planden</b></sub></a><br /><a href="#example-BradyPlanden" title="Examples">💡</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://www.jsbrittain.com/"><img src="https://avatars.githubusercontent.com/u/98161205?v=4?s=100" width="100px;" alt="jsbrittain"/><br /><sub><b>jsbrittain</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=jsbrittain" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=jsbrittain" title="Tests">⚠️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/arjxn-py"><img src="https://avatars.githubusercontent.com/u/104268427?v=4?s=100" width="100px;" alt="Arjun"/><br /><sub><b>Arjun</b></sub></a><br /><a href="#infra-arjxn-py" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chenzhao-py"><img src="https://avatars.githubusercontent.com/u/75906533?v=4?s=100" width="100px;" alt="CHEN ZHAO"/><br /><sub><b>CHEN ZHAO</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Achenzhao-py" title="Bug reports">🐛</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.aboutenergy.io/"><img src="https://avatars.githubusercontent.com/u/91731499?v=4?s=100" width="100px;" alt="darryl-ad"/><br /><sub><b>darryl-ad</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=darryl-ad" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Adarryl-ad" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/julian-evers"><img src="https://avatars.githubusercontent.com/u/133691040?v=4?s=100" width="100px;" alt="julian-evers"/><br /><sub><b>julian-evers</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=julian-evers" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
