@@ -112,19 +112,19 @@ jobs:
             ${{ env.HOME }}/.local/examples/
           key: nox-pybamm-requires-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/install_KLU_Sundials.py') }}
 
-      - name: Install SuiteSparse and SUNDIALS
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Cache unit tests nox environment for GNU/Linux with Python 3.8, 3.9, and 3.10
+      - name: Cache unit tests nox environment for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11
+        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         with:
           path: ${{ github.workspace }}/.nox/unit/
           key: ${{ runner.os }}-nox-unit-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11
+      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
+        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: nox -s unit
 
       - name: Cache coverage nox environment for GNU/Linux with Python 3.11
@@ -152,17 +152,6 @@ jobs:
       - name: Run integration tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s integration
-
-      - name: Cache unit tests nox environment for Windows and macOS with all Python versions
-        uses: actions/cache@v3
-        if: matrix.os != 'ubuntu-latest'
-        with:
-          path: ${{ github.workspace }}/.nox/unit/
-          key: ${{ runner.os }}-nox-unit-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
-
-      - name: Run unit tests for Windows and macOS with all Python versions
-        if: matrix.os != 'ubuntu-latest'
-        run: nox -s unit
 
       - name: Cache doctests nox environment for GNU/Linux with Python 3.11
         uses: actions/cache@v3
