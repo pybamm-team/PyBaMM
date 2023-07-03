@@ -12,6 +12,12 @@ import pybamm
 if pybamm.have_jax():
     import jax
     from jax.config import config
+    from jax.experimental import sparse
+
+    # Extend jax sparse matrix to make it hashable
+    class hashableJaxSparseBCOO(sparse.BCOO):
+        def __hash__(self):
+            return hash((self.data.tobytes(), self.indices.tobytes()))
 
     config.update("jax_enable_x64", True)
 
@@ -169,9 +175,11 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
             if output_jax and scipy.sparse.issparse(value):
-                # convert any remaining sparse matrices to our custom coo matrix
-                constant_symbols[symbol.id] = create_jax_coo_matrix(value)
-
+                # convert any remaining sparse matrices to jax sparse matrix
+                (I, J, V) = scipy.sparse.find(value)
+                constant_symbols[symbol.id] = hashableJaxSparseBCOO(
+                    (V, np.transpose(np.vstack((I, J)))),
+                    shape=value.shape)
             else:
                 constant_symbols[symbol.id] = value
         return

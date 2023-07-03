@@ -175,7 +175,7 @@ if True:
     var = pybamm.standard_spatial_vars
     n = 5
     k = 3
-    values = np.linspace(0.1, 0.5, 2)
+    values = np.linspace(0.1, 0.5, 8)
     var_pts = {var.x_n: n, var.x_s: n, var.x_p: n, var.r_n: k, var.r_p: k}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
