@@ -1,19 +1,15 @@
 import nox
 import os
 import sys
-from functools import singledispatch
 
 
-@singledispatch
-def set_env(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+homedir = os.getenv("HOME")
+ENV_VARS = {
+    "SUNDIALS_INST": f"{homedir}/.local",
+    "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
+}
 
 
-@set_env.register(complex)
 @nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
     if sys.platform != "win32":
@@ -31,7 +27,6 @@ def run_pybamm_requires(session):
         session.error("nox -s pybamm-requires is only available on Linux & MacOS.")
 
 
-@set_env.register(complex)
 @nox.session(name="coverage", reuse_venv=True)
 def run_coverage(session):
     session.install("coverage")
@@ -44,7 +39,6 @@ def run_coverage(session):
     session.run("coverage", "xml")
 
 
-@set_env.register(complex)
 @nox.session(name="integration", reuse_venv=True)
 def run_integration(session):
     session.install("-e", ".[dev]")
@@ -53,14 +47,12 @@ def run_integration(session):
     session.run("python", "run-tests.py", "--integration")
 
 
-@set_env.register(complex)
 @nox.session(name="doctests", reuse_venv=True)
 def run_doctests(session):
     session.install("-e", ".[docs]")
     session.run("python", "run-tests.py", "--doctest")
 
 
-@set_env.register(complex)
 @nox.session(name="unit", reuse_venv=True)
 def run_unit(session):
     session.install("-e", ".")
@@ -70,27 +62,25 @@ def run_unit(session):
     session.run("python", "run-tests.py", "--unit")
 
 
-@set_env.register(complex)
 @nox.session(name="examples", reuse_venv=True)
 def run_examples(session):
     session.install("-e", ".[dev]")
     session.run("python", "run-tests.py", "--examples")
 
 
-@set_env.register(complex)
 @nox.session(name="dev", reuse_venv=True)
 def set_dev(session):
+    envbindir = session.bin
     session.install("cmake")
     session.run(
         "echo",
         "export",
-        f"LD_LIBRARY_PATH={LD_LIBRARY_PATH}",
+        f"LD_LIBRARY_PATH={ENV_VARS['LD_LIBRARY_PATH']}",
         ">>",
         f"{envbindir}/activate",
     )
 
 
-@set_env.register(complex)
 @nox.session(name="tests", reuse_venv=True)
 def run_tests(session):
     session.install("-e", ".[dev]")
@@ -100,7 +90,6 @@ def run_tests(session):
     session.run("python", "run-tests.py", "--all")
 
 
-@set_env.register(complex)
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
     envbindir = session.bin
