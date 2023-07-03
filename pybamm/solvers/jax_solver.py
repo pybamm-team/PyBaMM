@@ -2,6 +2,7 @@
 # Solver class using Scipy's adaptive time stepper
 #
 import numpy as onp
+import asyncio
 
 import pybamm
 
@@ -212,19 +213,63 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        # split input list into a list of lists based on available xlu devices
-        device_count = jax.local_device_count()
-        inputs_listoflists = [inputs[x:x + device_count] for x in range(0, len(inputs), device_count)]
-        if len(inputs_listoflists) > 1:
-            print("{} parameter sets were provided, but only {} XLA devices are available".format(len(inputs), device_count))
-            print("Parameter sets split into {} lists for parallel processing".format(len(inputs_listoflists)))
         y = []
-        for k, inputs_list in enumerate(inputs_listoflists):
-            if len(inputs_listoflists) > 1:
-                print(" Solving list {} of {} ({} parameter sets)".format(k + 1, len(inputs_listoflists), len(inputs_list)))
-            # convert inputs to a dict of arrays for pmap
-            inputs_v = {k: jnp.array([dic[k] for dic in inputs_list]) for k in inputs_list[0]}
-            y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
+        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        if platform.startswith("cpu"):
+            # cpu execution runs faster when multithreaded
+            async def solve_model_for_inputs():
+                async def solve_model_async(inputs_v):
+                    return self._cached_solves[model](inputs_v)
+                coro = []
+                for inputs_v in inputs:
+                    coro.append(asyncio.create_task(solve_model_async(inputs_v)))
+                return await asyncio.gather(*coro)
+            y = asyncio.run(solve_model_for_inputs())
+        elif platform.startswith("gpu") or platform.startswith("tpu"):
+            # gpu execution runs faster when parallelised with vmap
+            # (see also comment below regarding single-program multiple-data
+            #  execution (SPMD) using pmap on multiple XLAs)
+
+            # convert inputs (array of dict) to a dict of arrays for vmap
+            inputs_v = {key: jnp.array([dic[key] for dic in inputs])
+                        for key in inputs[0]}
+            y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
+        else:
+            # Unknown platform, use serial execution as fallback
+            print(f"Unknown platform requested: \"{platform}\", "
+                  "falling back to serial execution")
+            for inputs_v in inputs:
+                y.append(self._cached_solves[model](inputs_v))
+
+        # This code block implements single-program multiple-data execution
+        # using pmap across multiple XLAs. It is currently commented out
+        # because it produces bus errors for even moderate-sized models.
+        # It is suspected that this is due to either a bug in JAX, insufficient
+        # sparse matrix support in JAX resulting in high memory usage, or a bug
+        # in the BDF solver.
+        #
+        # This issue on guthub appears related:
+        # https://github.com/google/jax/discussions/13930
+        #
+        #     # Split input list based on the number of available xla devices
+        #     device_count = jax.local_device_count()
+        #     inputs_listoflists = [inputs[x:x + device_count]
+        #                           for x in range(0, len(inputs), device_count)]
+        #     if len(inputs_listoflists) > 1:
+        #         print(f"{len(inputs)} parameter sets were provided, "
+        #               f"but only {device_count} XLA devices are available")
+        #         print(f"Parameter sets split into {len(inputs_listoflists)} "
+        #               "lists for parallel processing")
+        #     y = []
+        #     for k, inputs_list in enumerate(inputs_listoflists):
+        #         if len(inputs_listoflists) > 1:
+        #             print(f" Solving list {k+1} of {len(inputs_listoflists)} "
+        #                   f"({len(inputs_list)} parameter sets)")
+        #         # convert inputs to a dict of arrays for pmap
+        #         inputs_v = {key: jnp.array([dic[key] for dic in inputs_list])
+        #                     for key in inputs_list[0]}
+        #         y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
+
         integration_time = timer.time()
 
         # convert to a normal numpy array

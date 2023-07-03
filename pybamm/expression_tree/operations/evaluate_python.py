@@ -19,6 +19,9 @@ if pybamm.have_jax():
         def __hash__(self):
             return hash((self.data.tobytes(), self.indices.tobytes()))
 
+        def __eq__(self, other):
+            return np.all(self.data == other.data) and np.all(self.indices == other.indices)
+
     config.update("jax_enable_x64", True)
 
 
