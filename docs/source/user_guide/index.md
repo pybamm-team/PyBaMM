@@ -1,4 +1,4 @@
-(user)=
+(user_guide)=
 
 # PyBaMM user guide
 
