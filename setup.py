@@ -225,6 +225,7 @@ setup(
     extras_require={
         "docs": [
             "sphinx>=6",
+            "sphinx_rtd_theme>=0.5",
             "pydata-sphinx-theme",
             "sphinx_design",
             "sphinx-copybutton",
