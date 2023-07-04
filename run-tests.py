@@ -195,7 +195,9 @@ def test_notebook(path, executable="python"):
             print("\n" + "-" * 70)
             print("ERROR")
             print("-" * 70)
-            print("Installation command '%pip install pybamm[all] -q' not found in notebook")
+            print(
+                "Installation command '%pip install pybamm[all] -q' not found in notebook"
+            )
             print("-" * 70)
             return False
 
