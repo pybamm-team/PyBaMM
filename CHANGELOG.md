@@ -10,11 +10,7 @@
 
 - PyBaMM now has optional dependencies that can be installed with `pip install pybamm[option]` e.g. `pybamm[dev]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
-# [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-05-31
 
-## Bug fixes
-
-- Realign 'count' increment in CasadiSolver._integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 
 ## Features
