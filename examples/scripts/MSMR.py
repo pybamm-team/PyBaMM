@@ -1,6 +1,7 @@
 import pybamm
 
-model = pybamm.lithium_ion.DFN(
+pybamm.set_logging_level("DEBUG")
+model = pybamm.lithium_ion.SPM(
     {
         "open-circuit potential": "MSMR",
         "particle": "MSMR",

@@ -341,7 +341,7 @@ class SpatialOperator(UnaryOperator):
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
-        # We shouldn't need this
+        # We shouldn't need this, except for Broadcasts
         raise NotImplementedError
 
 

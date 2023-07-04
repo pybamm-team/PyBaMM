@@ -33,8 +33,7 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
                     f"{Domain} {phase_name}particle surface stoichiometry distribution"
                 ]
                 ocp_surf = variables[
-                    f"{Domain} {phase_name}particle surface open-circuit potential "
-                    "distribution [V]"
+                    f"{Domain} {phase_name}particle surface potential distribution [V]"
                 ]
                 # If variable was broadcast, take only the orphan
                 if (
@@ -51,7 +50,7 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
                     f"{Domain} {phase_name}particle surface stoichiometry"
                 ]
                 ocp_surf = variables[
-                    f"{Domain} {phase_name}particle surface open-circuit potential [V]"
+                    f"{Domain} {phase_name}particle surface potential [V]"
                 ]
                 # If variable was broadcast, take only the orphan
                 if (
@@ -63,9 +62,7 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
                     ocp_surf = ocp_surf.orphans[0]
                     T = T.orphans[0]
 
-            ocp_bulk = variables[
-                f"Average {domain} {phase_name}particle open-circuit potential [V]"
-            ]
+            ocp_bulk = variables[f"Average {domain} {phase_name}particle potential [V]"]
             dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))

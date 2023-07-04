@@ -45,6 +45,27 @@ class Broadcast(pybamm.SpatialOperator):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         return child
 
+    def diff(self, variable):
+        """
+        Override :meth:`pybamm.SpatialOperator.diff()` to reinstate behaviour of
+        :meth:`pybamm.Symbol.diff()`.
+        """
+        if variable == self:
+            return pybamm.Scalar(1)
+        elif any(variable == x for x in self.pre_order()):
+            return self._diff(variable)
+        elif variable == pybamm.t and self.has_symbol_of_classes(
+            (pybamm.VariableBase, pybamm.StateVectorBase)
+        ):
+            return self._diff(variable)
+        else:
+            return pybamm.Scalar(0)
+
+    def _diff(self, variable):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Differentiate the child and broadcast the result in the same way
+        return self._unary_new_copy(self.child.diff(variable))
+
 
 class PrimaryBroadcast(Broadcast):
     """

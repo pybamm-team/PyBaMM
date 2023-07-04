@@ -280,3 +280,13 @@ class BaseIntegrationTestLithiumIon:
             {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_basic_processing_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+        }
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+        model = self.model(options)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)

@@ -487,7 +487,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.U_init = pybamm.Parameter(
                 f"{pref}Initial voltage in {domain} electrode [V]",
             )
-            self.c_init = self.x(self.U_init) * self.c_max
+            self.c_init = self.X(self.U_init) * self.c_max
         else:
             self.c_init = pybamm.FunctionParameter(
                 f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
@@ -591,7 +591,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
         return out
 
-    def x(self, U):
+    def X(self, U):
         "Stoichiometry as a function of potential (for use with MSMR models)"
         Domain = self.domain.capitalize()
         inputs = {
@@ -601,11 +601,10 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} electrode stoichiometry", inputs
         )
 
-    def dxdU(self, U):
+    def dXdU(self, U):
         """
         Differential stoichiometry as a function of potential (for use with MSMR models)
         """
-        # TODO: remove and use .diff(U) instead
         Domain = self.domain.capitalize()
         inputs = {
             f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U

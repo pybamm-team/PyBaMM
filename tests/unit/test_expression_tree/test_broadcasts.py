@@ -332,6 +332,14 @@ class TestBroadcasts(TestCase):
         a = pybamm.PrimaryBroadcast(0, "test").to_equation()
         self.assertEqual(a, 0)
 
+    def test_diff(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.PrimaryBroadcast(a, "separator")
+        y = np.array([5])
+        d = b.diff(a)
+        self.assertIsInstance(d, pybamm.PrimaryBroadcast)
+        self.assertEqual(d.child.evaluate(y=y), 1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
