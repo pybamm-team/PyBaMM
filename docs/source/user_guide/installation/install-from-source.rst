@@ -107,7 +107,7 @@ Using Nox (recommended)
 	.. code:: bash
 
 		# in the PyBaMM/ directory
-		nox -s dev
+		nox -s dev --verbose
 
 This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
