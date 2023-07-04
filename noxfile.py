@@ -116,12 +116,18 @@ def run_tests(session):
 def build_docs(session):
     envbindir = session.bin
     session.install("-e", ".[docs]")
-    session.chdir("docs/")
-    session.run(
-        "sphinx-autobuild", "--open-browser", "-qT", ".", f"{envbindir}/../tmp/html"
-    )
-
-
+    with session.chdir("docs/"):
+        session.run(
+            "sphinx-autobuild",
+            "-j",
+            "auto",
+            "--open-browser",
+            "-qT",
+            ".",
+            f"{envbindir}/../tmp/html",
+        )
+        
+        
 @nox.session(name="pre-commit", reuse_venv=True)
 def lint(session):
     session.install("pre-commit")
