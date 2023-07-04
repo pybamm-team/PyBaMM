@@ -293,45 +293,27 @@ def nca_ocp_Kim2011(sto):
 def get_parameter_values():
     """
     Parameters for a "Nominal Design" graphite/NCA pouch cell, from the paper
+    :footcite:t:`Kim2011`
 
-        Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A. (2011).
-        Multi-domain modeling of lithium-ion batteries encompassing multi-physics in
-        varied length scales. Journal of The Electrochemical Society, 158(8), A955-A969.
+    .. note::
+        Only an effective cell volumetric heat capacity is provided in the paper. We
+        therefore used the values for the density and specific heat capacity reported in
+        the Marquis2019 parameter set in each region and multiplied each density by the
+        ratio of the volumetric heat capacity provided in smith to the calculated value.
+        This ensures that the values produce the same effective cell volumetric heat
+        capacity. This works fine for thermal models that are averaged over the
+        x-direction but not for full (PDE in x direction) thermal models. We do the same
+        for the planar effective thermal conductivity.
 
-    Note, only an effective cell volumetric heat capacity is provided in the paper. We
-    therefore used the values for the density and specific heat capacity reported in the
-     Marquis2019 parameter set in each region and multiplied each density by the ratio
-    of the volumetric heat capacity provided in smith to the calculated value. This
-    ensures that the values produce the same effective cell volumetric heat capacity.
-    This works fine for thermal models that are averaged over the x-direction but not
-    for full (PDE in x direction) thermal models. We do the same for the planar
-    effective thermal conductivity.
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
 
-    SEI parameters are example parameters for SEI growth from the papers:
-
-        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-        Development of first principles capacity fade model for Li-ion cells. Journal of
-        the Electrochemical Society, 151(2), A196-A203.
-
-        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
-        151(3), A456-A462.
-
-        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-        continued growth of the solid–electrolyte interphase. ChemSusChem, 11(12),
-        1950-1955.
-
-        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
-        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
-        The Electrochemical Society, 156(3),
-
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -449,6 +431,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.7,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.7,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 18081.0,
         "Initial concentration in positive electrode [mol.m-3]": 20090.0,
         "Initial temperature [K]": 298.15,
