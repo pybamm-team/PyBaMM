@@ -81,7 +81,7 @@ def set_dev(session):
     session.run(
         "echo",
         "export",
-        f"LD_LIBRARY_PATH={LD_LIBRARY_PATH}",
+        f"LD_LIBRARY_PATH={LD_LIBRARY_PATH}",  # noqa: F821
         ">>",
         f"{envbindir}/activate",
     )
