@@ -1,10 +1,21 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+## Features
+
+## Optimizations
+
+## Breaking changes
+
+- PyBaMM now has optional dependencies that can be installed with `pip install pybamm[option]` e.g. `pybamm[dev]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
+
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-05-31
 
 ## Bug fixes
 
 - Realign 'count' increment in CasadiSolver._integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
+# [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 
 ## Features
 
@@ -21,6 +32,7 @@
 
 ## Bug fixes
 
+- Realign 'count' increment in CasadiSolver._integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
 - Fix `pybamm_install_odes` and update the required SUNDIALS version ([#2958](https://github.com/pybamm-team/PyBaMM/pull/2958))
 - Fixed a bug where all data included in a BPX was incorrectly assumed to be given as a function of time.([#2957](https://github.com/pybamm-team/PyBaMM/pull/2957))
 - Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))
@@ -29,7 +41,6 @@
 ## Breaking changes
 
 - Deprecate functionality to load parameter set from a csv file. Parameter sets must now be provided as python dictionaries ([#2959](https://github.com/pybamm-team/PyBaMM/pull/2959))
-- PyBaMM now has optional dependencies that can be installed with `pip install pybamm[option]` e.g. `pybamm[dev]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 - Tox support for Installation & testing has now been replaced by Nox ([#3005](https://github.com/pybamm-team/PyBaMM/pull/3005))
 
 # [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
@@ -921,7 +932,7 @@ This release introduces many new features and optimizations. All models can now 
 - Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
 - Moved `results` to separate repositories ([#761](https://github.com/pybamm-team/PyBaMM/pull/761))
 - The parameters "Bruggeman coefficient" must now be specified separately as "Bruggeman coefficient (electrolyte)" and "Bruggeman coefficient (electrode)"
-- The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/main/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
+- The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
 - Parameter functions must now use pybamm functions instead of numpy functions (e.g. `pybamm.exp` instead of `numpy.exp`), as these are then used to construct the expression tree directly. Generally, pybamm syntax follows numpy syntax; please get in touch if a function you need is missing.
 - The current must now be updated by changing "Current function [A]" or "C-rate" instead of "Typical current [A]"
 

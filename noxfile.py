@@ -78,7 +78,6 @@ def run_unit(session):
 @nox.session(name="examples", reuse_venv=True)
 def run_examples(session):
     session.install("-e", ".[all]")
-    session.install("-e", ".[examples]")
     session.run("python", "run-tests.py", "--examples")
 
 
@@ -115,8 +114,14 @@ def run_tests(session):
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
     envbindir = session.bin
-    session.install("-e", ".[all,docs]")
-    session.chdir("docs/")
-    session.run(
-        "sphinx-autobuild", "--open-browser", "-qT", ".", f"{envbindir}/../tmp/html"
-    )
+    session.install("-e", ".[docs]")
+    with session.chdir("docs/"):
+        session.run(
+            "sphinx-autobuild",
+            "-j",
+            "auto",
+            "--open-browser",
+            "-qT",
+            ".",
+            f"{envbindir}/../tmp/html",
+        )

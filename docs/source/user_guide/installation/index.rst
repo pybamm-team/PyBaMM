@@ -106,17 +106,17 @@ Installable with ``pip install "pybamm[docs]"``
 Dependency                                                                                        Minimum Version    pip extra          Notes
 ================================================================================================= ================== ================== ===================================================================================================================================================================================
 `sphinx <https://www.sphinx-doc.org/en/master/>`__                                                1.5.0              docs               Sphinx makes it easy to create intelligent and beautiful documentation.
-`pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__                   -                  docs               A clean, Bootstrap-based Sphinx theme
-`sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__                               -                  docs               A sphinx extension for designing
-`sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__                       -                  docs               To copy codeblocks
-`myst-parser <https://myst-parser.readthedocs.io/en/latest/>`__                                   -                  docs               For technical & scientific documentation.
-`sphinx-inline-tabs <https://sphinx-inline-tabs.readthedocs.io/en/latest/>`__                     -                  docs               Add inline tabbed content to your Sphinx documentation.
-`sphinxcontrib-bibtex <https://sphinxcontrib-bibtex.readthedocs.io/en/latest/>`__                 -                  docs               For BibTeX citations
-`sphinx-autobuild <https://sphinx-extensions.readthedocs.io/en/latest/sphinx-autobuild.html>`__   -                  docs               For re-building docs once triggered
+`pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__                   \-                  docs               A clean, Bootstrap-based Sphinx theme
+`sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__                               \-                  docs               A sphinx extension for designing
+`sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__                       \-                  docs               To copy codeblocks
+`myst-parser <https://myst-parser.readthedocs.io/en/latest/>`__                                   \-                  docs               For technical & scientific documentation.
+`sphinx-inline-tabs <https://sphinx-inline-tabs.readthedocs.io/en/latest/>`__                     \-                  docs               Add inline tabbed content to your Sphinx documentation.
+`sphinxcontrib-bibtex <https://sphinxcontrib-bibtex.readthedocs.io/en/latest/>`__                 \-                  docs               For BibTeX citations
+`sphinx-autobuild <https://sphinx-extensions.readthedocs.io/en/latest/sphinx-autobuild.html>`__   \-                  docs               For re-building docs once triggered
 ================================================================================================= ================== ================== ===================================================================================================================================================================================
 
 .. _install.examples_dependencies:                 
-=================
+
 Examples dependencies
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -125,7 +125,7 @@ Installable with ``pip install "pybamm[examples]"``
 ================================================================================ ================== ================== ===================================================================================================================================================================================
 Dependency                                                                       Minimum Version    pip extra          Notes
 ================================================================================ ================== ================== ===================================================================================================================================================================================
-`jupyter <https://docs.jupyter.org/en/latest/>`__                                -                  examples           For example notebooks rendering.
+`jupyter <https://docs.jupyter.org/en/latest/>`__                                \-                  examples           For example notebooks rendering.
 ================================================================================ ================== ================== ===================================================================================================================================================================================
 
 .. _install.dev_dependencies:
@@ -138,11 +138,8 @@ Installable with ``pip install "pybamm[dev]"``
 ================================================================================ ================== ================== ===================================================================================================================================================================================
 Dependency                                                                       Minimum Version    pip extra          Notes
 ================================================================================ ================== ================== ===================================================================================================================================================================================
-`anytree <https://anytree.readthedocs.io/en/latest/intro.html>`__                2.4.3              dev                For Tree Data Structure
-`autograd <https://autograd.readthedocs.io/en/latest/>`__                        1.2.0              dev                To differentiate python & numpy code.
-`scikit-fem <https://scikit-fem.readthedocs.io/en/latest/>`__                    0.2.0              dev                For performing finite element assembly.
-`pre-commit <https://pre-commit.com/index.html>`__                               -                  dev                For managing and maintaining multi-language pre-commit hooks.
-`black <https://black.readthedocs.io/en/stable/>`__                              -                  dev                For code formatting.
+`pre-commit <https://pre-commit.com/index.html>`__                               \-                  dev                For managing and maintaining multi-language pre-commit hooks.
+`black <https://black.readthedocs.io/en/stable/>`__                              \-                  dev                For code formatting.
 ================================================================================ ================== ================== ===================================================================================================================================================================================
 
 .. _install.cite_dependencies:
@@ -181,7 +178,7 @@ Installable with ``pip install "pybamm[bpx]"``
 =========================================================== ================== ================== ===================================================================================================================================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ===================================================================================================================================================================================
-`bpx <https://pypi.org/project/bpx/>`__                     -                  bpx                Battery Parameter eXchange
+`bpx <https://pypi.org/project/bpx/>`__                     \-                  bpx                Battery Parameter eXchange
 =========================================================== ================== ================== ===================================================================================================================================================================================
 
 .. _install.tqdm_dependencies:
@@ -194,7 +191,7 @@ Installable with ``pip install "pybamm[tqdm]"``
 =========================================================== ================== ================== ===================================================================================================================================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ===================================================================================================================================================================================
-`tqdm <https://tqdm.github.io/>`__                          -                  tqdm               For logging loops.
+`tqdm <https://tqdm.github.io/>`__                          \-                  tqdm               For logging loops.
 =========================================================== ================== ================== ===================================================================================================================================================================================
 
 Full installation guide

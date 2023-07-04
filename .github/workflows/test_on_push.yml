@@ -56,7 +56,7 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         if: matrix.os == 'ubuntu-latest'
         with:
-          packages: gfortran gcc graphviz
+          packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins

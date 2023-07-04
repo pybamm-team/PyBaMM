@@ -219,6 +219,10 @@ setup(
             "sphinx-inline-tabs",
             "sphinxcontrib-bibtex",
             "sphinx-autobuild",
+            "nbsphinx",
+            "ipykernel",
+            "ipywidgets",
+            "sphinx-gallery",
         ],  # For doc generation
         "examples": [
             "jupyter",  # For example notebooks
