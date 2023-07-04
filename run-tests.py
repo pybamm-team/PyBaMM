@@ -187,15 +187,15 @@ def test_notebook(path, executable="python"):
     print("Test " + path + " ... ", end="")
     sys.stdout.flush()
 
-    # Make sure the notebook has a "%pip install pybamm -q" command, for using Google
+    # Make sure the notebook has a "%pip install pybamm[all] -q" command, for using Google
     # Colab
     with open(path, "r") as f:
-        if "%pip install pybamm -q" not in f.read():
+        if "%pip install pybamm[all] -q" not in f.read():
             # print error and exit
             print("\n" + "-" * 70)
             print("ERROR")
             print("-" * 70)
-            print("Installation command '%pip install pybamm -q' not found in notebook")
+            print("Installation command '%pip install pybamm[all] -q' not found in notebook")
             print("-" * 70)
             return False
 
