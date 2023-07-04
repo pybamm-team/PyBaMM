@@ -1,14 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Bug fixes
-
-## Features
-
-## Optimizations
-
 ## Breaking changes
 
-- PyBaMM now has optional dependencies that can be installed with `pip install pybamm[option]` e.g. `pybamm[dev]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
+- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
 
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
