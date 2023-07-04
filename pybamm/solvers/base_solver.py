@@ -48,7 +48,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
-        max_step=None
+        max_step=None,
     ):
         self.method = method
         self.rtol = rtol
