@@ -155,10 +155,18 @@ html_theme_options = {
     "use_edit_page_button": True,
     "pygment_light_style": "xcode",
     "pygment_dark_style": "monokai",
+    "footer_start": [
+        "copyright",
+        "sphinx-version",
+    ],
+    "footer_end": [
+        "theme-version",
+        "last-updated",
+    ],
 }
 
 html_title = "%s v%s Manual" % (project, version)
-html_last_updated_fmt = "%b %d, %Y"
+html_last_updated_fmt = "%Y-%m-%d"
 html_css_files = ["pybamm.css"]
 html_context = {"default_mode": "light"}
 html_use_modindex = True
