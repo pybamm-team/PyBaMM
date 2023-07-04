@@ -2,6 +2,7 @@ import nox
 import os
 import sys
 
+nox.options.sessions = ["pre-commit", "unit"]
 
 @nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
