@@ -228,3 +228,18 @@ Doctests, examples, style and coverage
 
 
 Use ``nox -s coverage`` to measure current test coverage on all platforms.
+
+Extra tips while using Nox
+--------------------------
+Here are some additional useful commands you can run with Nox:
+
+- ``nox -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
+- ``nox -l``: Lists all available Nox sessions and their descriptions.
+- ``nox -p <python.version>``: Runs only sessions with the specified Python version. Replace ``python.version`` with the desired Python version.
+- ``nox -k "<keyword_expression>"``: Runs test sessions that match the specified pytest-style keyword expression.
+- ``nox -t "<tag1>" "<tag2>"``: Runs test sessions that have the specified tags.
+- ``nox --stop-on-first-error``: Stops the execution of Nox sessions immediately after the first error or failure occurs.
+- ``nox --envdir <path>``: Specifies the directory where Nox creates and manages the virtual environments used by the sessions. In this case, the directory is set to ``<path>``.
+- ``nox --install-only``: Skips the test execution and only performs the installation step defined in the Nox sessions.
+- ``nox --nocolor``: Disables the color output in the console during the execution of Nox sessions.
+- ``nox --report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".
