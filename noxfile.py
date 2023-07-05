@@ -114,7 +114,7 @@ def run_tests(session):
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
     envbindir = session.bin
-    session.install("-e", ".[docs]")
+    session.install("-e", ".[all,docs]")
     with session.chdir("docs/"):
         session.run(
             "sphinx-autobuild",
