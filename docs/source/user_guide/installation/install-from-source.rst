@@ -109,6 +109,9 @@ Using Nox (recommended)
 		# in the PyBaMM/ directory
 		nox -s dev
 
+.. note::
+    It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
+
 This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
@@ -226,3 +229,15 @@ Doctests, examples, style and coverage
 
 
 Use ``nox -s coverage`` to measure current test coverage on all platforms.
+
+Extra tips while using Nox
+--------------------------
+Here are some additional useful commands you can run with Nox:
+
+- ``--verbose or -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
+- ``--list or -l``: Lists all available Nox sessions and their descriptions.
+- ``--stop-on-first-error``: Stops the execution of Nox sessions immediately after the first error or failure occurs.
+- ``--envdir <path>``: Specifies the directory where Nox creates and manages the virtual environments used by the sessions. In this case, the directory is set to ``<path>``.
+- ``--install-only``: Skips the test execution and only performs the installation step defined in the Nox sessions.
+- ``--nocolor``: Disables the color output in the console during the execution of Nox sessions.
+- ``--report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".
