@@ -2,6 +2,11 @@ import nox
 import os
 import sys
 
+if sys.platform == "linux":
+    nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
+else:
+    nox.options.sessions = ["pre-commit", "unit"]
+
 
 @nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
@@ -125,3 +130,9 @@ def build_docs(session):
             ".",
             f"{envbindir}/../tmp/html",
         )
+
+
+@nox.session(name="pre-commit", reuse_venv=True)
+def lint(session):
+    session.install("pre-commit")
+    session.run("pre-commit", "run", "--all-files")
