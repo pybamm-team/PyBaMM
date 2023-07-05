@@ -51,7 +51,6 @@ def run_integration(session):
 
 @nox.session(name="doctests", reuse_venv=True)
 def run_doctests(session):
-    set_environment_variables(session=session)
     session.install("-e", ".[docs]")
     session.run("python", "run-tests.py", "--doctest")
 
@@ -68,7 +67,6 @@ def run_unit(session):
 
 @nox.session(name="examples", reuse_venv=True)
 def run_examples(session):
-    set_environment_variables(session=session)
     session.install("-e", ".[dev]")
     session.run("python", "run-tests.py", "--examples")
 
@@ -99,7 +97,6 @@ def run_tests(session):
 
 @nox.session(name="docs", reuse_venv=True)
 def build_docs(session):
-    set_environment_variables(session=session)
     envbindir = session.bin
     session.install("-e", ".[docs]")
     session.chdir("docs/")
