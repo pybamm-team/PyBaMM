@@ -2,6 +2,11 @@ import nox
 import os
 import sys
 
+if sys.platform == "linux":
+    nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
+else:
+    nox.options.sessions = ["pre-commit", "unit"]
+
 
 @nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
@@ -115,7 +120,19 @@ def run_tests(session):
 def build_docs(session):
     envbindir = session.bin
     session.install("-e", ".[docs]")
-    session.chdir("docs/")
-    session.run(
-        "sphinx-autobuild", "--open-browser", "-qT", ".", f"{envbindir}/../tmp/html"
-    )
+    with session.chdir("docs/"):
+        session.run(
+            "sphinx-autobuild",
+            "-j",
+            "auto",
+            "--open-browser",
+            "-qT",
+            ".",
+            f"{envbindir}/../tmp/html",
+        )
+
+
+@nox.session(name="pre-commit", reuse_venv=True)
+def lint(session):
+    session.install("pre-commit")
+    session.run("pre-commit", "run", "--all-files")
