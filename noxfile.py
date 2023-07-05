@@ -73,8 +73,10 @@ def run_examples(session):
 
 @nox.session(name="dev", reuse_venv=True)
 def set_dev(session):
-    set_environment_variables(session=session)
+    homedir = os.getenv("HOME")
+    LD_LIBRARY_PATH = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
     envbindir = session.bin
+    session.install("-e", ".[dev]")
     session.install("cmake")
     session.run(
         "echo",
