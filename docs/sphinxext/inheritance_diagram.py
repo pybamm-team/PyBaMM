@@ -22,7 +22,7 @@ def add_diagram(app, what, name, obj, options, lines):
 
             # Append the inheritance diagram to the docstring
             lines.append("\n")
-            lines.append(".. dropdown:: View an inheritance diagram for this model")
+            lines.append(".. dropdown:: View inheritance diagram for this model")
             lines.append("   :animate: fade-in-slide-down")
             lines.append("   :icon: eye\n")
             lines.append("   :class-title: sd-align-major-center sd-fs-6 \n")
