@@ -109,7 +109,8 @@ Using Nox (recommended)
 		# in the PyBaMM/ directory
 		nox -s dev
 
-**Note** : It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
+.. note::
+    It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
 
 This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
