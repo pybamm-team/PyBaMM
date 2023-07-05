@@ -29,6 +29,8 @@ author = "The PyBaMM Team"
 version = pybamm.__version__
 # The full version, including alpha/beta/rc tags
 release = version
+# Load the latest version by default
+dropdown_version = "latest"
 
 
 # -- General configuration ---------------------------------------------------
@@ -146,8 +148,8 @@ html_theme_options = {
         },
     ],
     "switcher": {
-        "version_match": release,
-        "json_url": "https://pybamm.readthedocs.io/en/latest/_static/versions.json",  # noqa: E501
+        "version_match": dropdown_version,
+        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
     },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
