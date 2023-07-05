@@ -150,7 +150,7 @@ If you are using ``zsh``, you would need to use different pattern matching:
 	  pip install -e '.[all,dev,docs]'
 
 Running the tests
---------------------
+-----------------
 
 Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,6 +171,18 @@ To just run the unit tests, use
 .. code:: bash
 
 	nox -s unit
+
+Similarly, to run the integration tests, use
+
+.. code:: bash
+
+	nox -s integration
+
+Finally, to run the unit and the integration suites sequentially, use
+
+.. code:: bash
+
+	nox -s tests
 
 Using the test runner 
 ~~~~~~~~~~~~~~~~~~~~~~
