@@ -56,6 +56,7 @@ extensions = [
     "nbsphinx",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
+    "hoverxref.extension",
 ]
 
 # -- sphinxcontrib-bibtex configuration --------------------------------------
@@ -300,6 +301,31 @@ env.doc2path(env.docname, base=None) %}
     </div>
 
 """
+
+# -- Options for sphinx-hoverxref --------------------------------------------
+
+# Hoverxref settings
+
+hoverxref_default_type = "tooltip"
+hoverxref_auto_ref = True
+
+hoverxref_roles = ["class", "meth", "func", "ref", "term"]
+hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
+
+hoverxref_domains = ["py"]
+
+# Currently, only projects that are hosted on readthedocs + CPython, NumPy, and
+# SymPy are supported
+hoverxref_intersphinx = list(intersphinx_mapping.keys())
+
+# Tooltips settings
+hoverxref_tooltip_lazy = False
+hoverxref_tooltip_maxwidth = 750
+hoverxref_tooltip_animation = "fade"
+hoverxref_tooltip_animation_duration = 1
+hoverxref_tooltip_content = "Loading information..."
+hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
+
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
