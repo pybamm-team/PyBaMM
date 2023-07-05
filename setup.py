@@ -224,7 +224,8 @@ setup(
     ],
     extras_require={
         "docs": [
-            "sphinx>=1.5",
+            "sphinx>=6",
+            "sphinx_rtd_theme>=0.5",
             "pydata-sphinx-theme",
             "sphinx_design",
             "sphinx-copybutton",
@@ -232,6 +233,7 @@ setup(
             "sphinx-inline-tabs",
             "sphinxcontrib-bibtex",
             "sphinx-autobuild",
+            "sphinx-last-updated-by-git",
             "nbsphinx",
             "ipykernel",
             "ipywidgets",

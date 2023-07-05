@@ -17,13 +17,15 @@ xarray
 # Should not be imported
 matplotlib >= 2.0
 #
-sphinx>4.0
+sphinx>6.0
+sphinx_rtd_theme>=0.5
 pydata-sphinx-theme
 sphinx_design
 sphinx-copybutton
 myst-parser
 sphinx-inline-tabs
 sphinxcontrib-bibtex
+sphinx-last-updated-by-git
 nbsphinx
 ipython
 ipykernel
