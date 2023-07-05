@@ -174,7 +174,7 @@ It is often sufficient to run the unit tests only. To do so, use
 
    .. code:: bash
 
-    	nox -s unit
+    	nox
 
 Using the test runner 
 ~~~~~~~~~~~~~~~~~~~~~~
