@@ -235,7 +235,6 @@ Here are some additional useful commands you can run with Nox:
 
 - ``--verbose or -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
 - ``--list or -l``: Lists all available Nox sessions and their descriptions.
-- ``--python <python.version> or -p <python.version>``: Runs only sessions with the specified Python version. Replace ``python.version`` with the desired Python version.
 - ``-k "<keyword_expression>"``: Runs test sessions that match the specified pytest-style keyword expression.
 - ``-t "<tag1>" "<tag2>"``: Runs test sessions that have the specified tags.
 - ``--stop-on-first-error``: Stops the execution of Nox sessions immediately after the first error or failure occurs.
