@@ -77,11 +77,10 @@ class _BaseElectrodeSOH(pybamm.BaseModel):
 
 
 class _ElectrodeSOH(_BaseElectrodeSOH):
-    """Model to calculate electrode-specific SOH, from :footcite:t:`Mohtat2019`.
-
-    This model is mainly for internal use, to calculate summary variables in a
-    simulation.
-    Some of the output variables are defined in [2]_.
+    """
+    Model to calculate electrode-specific SOH, from :footcite:t:`Mohtat2019`. This
+    model is mainly for internal use, to calculate summary variables in a simulation.
+    Some of the output variables are defined in :footcite:t:`Weng2023`.
 
     .. math::
         Q_{Li} = y_{100}Q_p + x_{100}Q_n,
@@ -177,13 +176,14 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
 
 class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
     """
-    Model to calculate electrode-specific SOH using the MSMR formulation, see
-    :class:`_ElectrodeSOH`.
+    Model to calculate electrode-specific SOH using the MSMR formulation from
+    :footcite:t:`Baker2018`. See :class:`_ElectrodeSOH` for more details.
     """
 
     def __init__(
         self, param=None, solve_for=None, known_value="cyclable lithium capacity"
     ):
+        pybamm.citations.register("Baker2018")
         super().__init__()
 
         param = param or pybamm.LithiumIonParameters({"open-circuit potential": "MSMR"})
@@ -757,6 +757,27 @@ class ElectrodeSOHSolver:
         sol = self.solve(inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
+    def get_initial_ocps(self, initial_value):
+        """
+        Calculate initial open-circuit potentials to start off the simulation at a
+        particular state of charge, given voltage limits, open-circuit potentials, etc
+        defined by parameter_values
+
+        Parameters
+        ----------
+        initial_value : float
+            Target SOC, must be between 0 and 1.
+
+        Returns
+        -------
+        Un, Up
+            The initial open-circuit potentials at the desired initial state of charge
+        """
+        # TODO: For "normal" model get init sto and eval OCP. For msmr get init sto and
+        # use _get_msmr_potential_model to get OCP. This is to be consistent with
+        # linearly interpolating in sto to define soc
+        raise NotImplementedError
+
     def get_min_max_ocps(self):
         """
         Calculate min/max open-circuit potentials
@@ -782,36 +803,6 @@ class ElectrodeSOHSolver:
         # Solve the model and check outputs
         sol = self.solve(inputs)
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
-
-
-def _get_msmr_potential_model(parameter_values, param):
-    """
-    Returns a solver to calculate the open-circuit potentials of the indivdual
-    electrodes at the given stoichiometries
-    """
-    V_max = param.voltage_high_cut
-    V_min = param.voltage_low_cut
-    X_n = param.n.prim.X
-    X_p = param.p.prim.X
-    model = pybamm.BaseModel()
-    Un = pybamm.Variable("Un")
-    Up = pybamm.Variable("Up")
-    x = pybamm.InputParameter("x")
-    y = pybamm.InputParameter("y")
-    model.algebraic = {
-        Un: X_n(Un) - x,
-        Up: X_p(Up) - y,
-    }
-    model.initial_conditions = {
-        Un: 1 - x,
-        Up: V_max * (1 - y) + V_min * y,
-    }
-    model.variables = {
-        "Un": Un,
-        "Up": Up,
-    }
-    parameter_values.process_model(model)
-    return model
 
 
 def get_initial_stoichiometries(
@@ -883,6 +874,46 @@ def get_min_max_stoichiometries(
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
     return esoh_solver.get_min_max_stoichiometries()
+
+
+def get_initial_ocps(
+    initial_value,
+    parameter_values,
+    param=None,
+    known_value="cyclable lithium capacity",
+    options=None,
+):
+    """
+    Calculate initial open-circuit potentials to start off the simulation at a
+    particular state of charge, given voltage limits, open-circuit potentials, etc
+    defined by parameter_values
+
+    Parameters
+    ----------
+    initial_value : float
+        Target initial value.
+        If integer, interpreted as SOC, must be between 0 and 1.
+        If string e.g. "4 V", interpreted as voltage, must be between V_min and V_max.
+    parameter_values : :class:`pybamm.ParameterValues`
+        The parameter values class that will be used for the simulation. Required for
+        calculating appropriate initial stoichiometries.
+    param : :class:`pybamm.LithiumIonParameters`, optional
+        The symbolic parameter set to use for the simulation.
+        If not provided, the default parameter set will be used.
+    known_value : str, optional
+        The known value needed to complete the electrode SOH model.
+        Can be "cyclable lithium capacity" (default) or "cell capacity".
+    options : dict-like, optional
+        A dictionary of options to be passed to the model, see
+        :class:`pybamm.BatteryModelOptions`.
+
+    Returns
+    -------
+    x, y
+        The initial stoichiometries that give the desired initial state of charge
+    """
+    esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
+    return esoh_solver.get_initial_ocps(initial_value)
 
 
 def get_min_max_ocps(
@@ -984,3 +1015,33 @@ def calculate_theoretical_energy(
         parameter_values, x_100, x_0, y_100, y_0, points=points
     )
     return E
+
+
+def _get_msmr_potential_model(parameter_values, param):
+    """
+    Returns a solver to calculate the open-circuit potentials of the individual
+    electrodes at the given stoichiometries
+    """
+    V_max = param.voltage_high_cut
+    V_min = param.voltage_low_cut
+    X_n = param.n.prim.X
+    X_p = param.p.prim.X
+    model = pybamm.BaseModel()
+    Un = pybamm.Variable("Un")
+    Up = pybamm.Variable("Up")
+    x = pybamm.InputParameter("x")
+    y = pybamm.InputParameter("y")
+    model.algebraic = {
+        Un: X_n(Un) - x,
+        Up: X_p(Up) - y,
+    }
+    model.initial_conditions = {
+        Un: 1 - x,
+        Up: V_max * (1 - y) + V_min * y,
+    }
+    model.variables = {
+        "Un": Un,
+        "Up": Up,
+    }
+    parameter_values.process_model(model)
+    return model

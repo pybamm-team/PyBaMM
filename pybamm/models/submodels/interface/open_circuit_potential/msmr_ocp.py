@@ -8,15 +8,7 @@ from . import BaseOpenCircuitPotential
 class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
     """
     Class for open-circuit potential within the Multi-Species Multi-Reaction
-    framework [1]_.
-
-    References
-    ----------
-    .. [1] DR Baker and MW Verbrugge. "Multi-species, multi-reaction model for porous
-           intercalation electrodes: Part I. Model formulation and a perturbation
-           solution for low-scan-rate, linear-sweep voltammetry of a spinel lithium
-           manganese oxide electrode." Journal of The Electrochemical Society,
-           165(16):A3952, 2019
+    framework :footcite:t:`Baker2018`.
     """
 
     def get_coupled_variables(self, variables):

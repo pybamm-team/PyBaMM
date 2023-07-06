@@ -8,7 +8,7 @@ from .base_particle import BaseParticle
 class MSMRDiffusion(BaseParticle):
     """
     Class for molar conservation in particles within the Multi-Species Multi-Reaction
-    framework [1]_.
+    framework :footcite:t:`Baker2018`.
 
     Parameters
     ----------
@@ -23,14 +23,6 @@ class MSMRDiffusion(BaseParticle):
         Phase of the particle (default is "primary")
     x_average : bool
         Whether the particle concentration is averaged over the x-direction
-
-    References
-    ----------
-    .. [1] DR Baker and MW Verbrugge. "Multi-species, multi-reaction model for porous
-           intercalation electrodes: Part I. Model formulation and a perturbation
-           solution for low-scan-rate, linear-sweep voltammetry of a spinel lithium
-           manganese oxide electrode." Journal of The Electrochemical Society,
-           165(16):A3952, 2019
     """
 
     def __init__(self, param, domain, options, phase="primary", x_average=False):
