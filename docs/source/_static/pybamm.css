@@ -49,20 +49,20 @@ Nat Methods 8, 441 (2011). https://doi.org/10.1038/nmeth.1618
 */
 
 /* If the active version has the name "latest", style it orange */
-.version-switcher__button[data-active-version-name*="latest"] {
+.version-switcher__container a[data-active-version-name*="latest"] {
   background-color: #e69f00;
   border-color: #e69f00;
   color: #000000;
 }
 
 /* green for `stable` */
-.version-switcher__button[data-active-version-name*="stable"] {
+.version-switcher__container a[data-active-version-name*="stable"] {
   background-color: #009e73;
   border-color: #009e73;
 }
 
 /* red for `old` */
-.version-switcher__button:not(
+.version-switcher__container a:not(
     [data-active-version-name*="latest"],
     [data-active-version-name*="stable"]
   ) {
