@@ -334,7 +334,7 @@ def install_jax(arguments=None):  # pragma: no cover
             "-m",
             "pip",
             "install",
-            f"jax=={JAX_VERSION}",
-            f"jaxlib=={JAXLIB_VERSION}",
+            f"jax>={JAX_VERSION}",
+            f"jaxlib>={JAXLIB_VERSION}",
         ]
     )
