@@ -60,10 +60,12 @@ class ParameterValues:
             self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
-            if isinstance(values, str) and values in pybamm.parameter_sets:
+            if isinstance(values, str) and values in pybamm.parameter_sets.keys():
                 values = pybamm.parameter_sets[values]
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
+            else:
+                print('Invalid Parameter Set Value')
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
