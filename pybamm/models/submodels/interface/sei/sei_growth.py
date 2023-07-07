@@ -9,13 +9,10 @@ class SEIGrowth(BaseModel):
     """
     Class for SEI growth.
 
-    Most of the models are from section 5.6.4 of the thesis of
-    Scott Marquis (Marquis, S. G. (2020). Long-term degradation of lithium-ion batteries
-    (Doctoral dissertation, University of Oxford)), and references therein
+    Most of the models are from Section 5.6.4 of :footcite:t:`Marquis2020` and
+    references therein.
 
-    The ec reaction limited model is from: Yang, Xiao-Guang, et al. "Modeling of lithium
-    plating induced aging of lithium-ion batteries: Transition from linear to nonlinear
-    aging." Journal of Power Sources 360 (2017): 28-40.
+    The ec reaction limited model is from :footcite:t:`Yang2017`.
 
     Parameters
     ----------

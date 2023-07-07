@@ -7,7 +7,7 @@ from .base_lead_acid_model import BaseModel
 
 class BasicFull(BaseModel):
     """
-    Porous electrode model for lead-acid, from [2]_.
+    Porous electrode model for lead-acid, from :footcite:t:`Sulzer2019asymptotic`.
 
     This class differs from the :class:`pybamm.lead_acid.Full` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in
@@ -19,11 +19,6 @@ class BasicFull(BaseModel):
     name : str, optional
         The name of the model.
 
-    References
-    ----------
-    .. [2] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
-           battery simulations from porous-electrode theory: Part II. Asymptotic
-           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382..
     """
 
     def __init__(self, name="Basic full model"):

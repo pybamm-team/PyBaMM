@@ -11,7 +11,7 @@ API documentation
 
 This reference manual details functions, modules, and objects
 included in PyBaMM, describing what they are and what they do.
-For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>`.
+For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>` and the :ref:`examples <examples>`.
 
 .. toctree::
    :maxdepth: 2
@@ -23,7 +23,7 @@ For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>`.
    meshes/index
    spatial_methods/index
    solvers/index
-   experiments/index
+   experiment/index
    simulation
    plotting/index
    util

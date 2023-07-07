@@ -8,7 +8,8 @@ from .base_electrolyte_conductivity import BaseElectrolyteConductivity
 class Integrated(BaseElectrolyteConductivity):
     """
     Integrated model for conservation of charge in the electrolyte derived from
-    integrating the Stefan-Maxwell constitutive equations, from [1]_.
+    integrating the Stefan-Maxwell constitutive equations, from
+    :footcite:t:`BrosaPlanella2021`.
 
     Parameters
     ----------
@@ -19,11 +20,6 @@ class Integrated(BaseElectrolyteConductivity):
     options : dict, optional
         A dictionary of options to be passed to the model.
 
-    References
-    ----------
-    .. [1] F. Brosa Planella, M. Sheikh, and W. D. Widanage, “Systematic derivation and
-           validation of reduced thermal-electrochemical models for lithium-ion
-           batteries using asymptotic methods.” arXiv preprint, 2020.
     """
 
     def __init__(self, param, domain=None, options=None):

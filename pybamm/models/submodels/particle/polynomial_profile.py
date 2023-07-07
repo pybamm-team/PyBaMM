@@ -10,7 +10,7 @@ class PolynomialProfile(BaseParticle):
     """
     Class for molar conservation in particles employing Fick's
     law, assuming a polynomial concentration profile in r, and allowing variation
-    in the electrode domain. Model equations from [1]_.
+    in the electrode domain. Model equations from :footcite:t:`Subramanian2005`.
 
     Parameters
     ----------
@@ -24,11 +24,6 @@ class PolynomialProfile(BaseParticle):
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    References
-    ----------
-    .. [1] VR Subramanian, VD Diwakar and D Tapriyal. “Efficient Macro-Micro Scale
-           Coupled Modeling of Batteries”. Journal of The Electrochemical Society,
-           152(10):A2002-A2008, 2005
     """
 
     def __init__(self, param, domain, options, phase="primary"):
