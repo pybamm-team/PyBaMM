@@ -68,6 +68,8 @@ def run_doc_tests():
     p = subprocess.Popen(
         [
             "sphinx-build",
+            "-j",
+            "auto",
             "-b",
             "doctest",
             "docs",
