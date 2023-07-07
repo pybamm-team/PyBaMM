@@ -26,7 +26,7 @@ class BasePlating(BaseInterface):
            how to model it". Physical Chemistry: Chemical Physics, 24:7909, 2022
     """
 
-    def __init__(self, domain, param, options=None):
+    def __init__(self, param, domain, options=None):
         reaction = "lithium plating"
         super().__init__(param, domain, reaction, options=options)
 
@@ -42,7 +42,8 @@ class BasePlating(BaseInterface):
                 f"X-averaged {domain} lithium plating "
                 "interfacial current density [A.m-2]"
             ]
-            if self.options.negative["particle phases"] == "1":
+            particle_phases_option = getattr(self.options, domain)["particle phases"]
+            if particle_phases_option == "1":
                 a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
             else:
                 a = variables[
@@ -90,19 +91,24 @@ class BasePlating(BaseInterface):
         # by parameter values in general
         if isinstance(self, pybamm.lithium_plating.NoPlating):
             c_to_L = 1
-        else:
-            c_to_L = param.V_bar_plated_Li / param.n.prim.a_typ
+            L_k = 1
+        elif domain == "negative":
+            c_to_L = param.V_bar_Li / param.n.prim.a_typ
+            L_k = param.n.L
+        elif domain == "positive":
+            c_to_L = param.V_bar_Li / param.p.prim.a_typ
+            L_k = param.p.L
 
         c_plated_Li_av = pybamm.x_average(c_plated_Li)
         L_plated_Li = c_plated_Li * c_to_L  # plated Li thickness
         L_plated_Li_av = pybamm.x_average(L_plated_Li)
-        Q_plated_Li = c_plated_Li_av * param.n.L * param.L_y * param.L_z
+        Q_plated_Li = c_plated_Li_av * L_k * param.L_y * param.L_z
 
         c_dead_Li_av = pybamm.x_average(c_dead_Li)
         # dead Li "thickness", required by porosity submodel
         L_dead_Li = c_dead_Li * c_to_L
         L_dead_Li_av = pybamm.x_average(L_dead_Li)
-        Q_dead_Li = c_dead_Li_av * param.n.L * param.L_y * param.L_z
+        Q_dead_Li = c_dead_Li_av * L_k * param.L_y * param.L_z
 
         variables = {
             f"{Domain} lithium plating concentration [mol.m-3]": c_plated_Li,

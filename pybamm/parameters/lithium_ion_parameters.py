@@ -98,7 +98,7 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # Lithium plating parameters
-        self.V_bar_plated_Li = pybamm.Parameter(
+        self.V_bar_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
         )
         self.c_Li_typ = pybamm.Parameter(
@@ -182,6 +182,17 @@ class LithiumIonParameters(BaseParameters):
         c_e = pybamm.maximum(c_e, tol)
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
+
+    def j0_Li_metal(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for lithium metal electrode [A.m-2]"""
+        inputs = {
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "Lithium metal concentration [mol.m-3]": c_Li,
+            "Temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            "Exchange-current density for lithium metal electrode [A.m-2]", inputs
+        )
 
     def j0_stripping(self, c_e, c_Li, T):
         """Dimensional exchange-current density for stripping [A.m-2]"""
@@ -413,12 +424,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.c_li_0 = pybamm.Parameter(
             f"{pref}Lithium interstitial reference concentration [mol.m-3]"
         )
-        self.L_inner_0 = pybamm.Parameter(
-            f"{pref}Initial {domain} inner SEI thickness [m]"
-        )
-        self.L_outer_0 = pybamm.Parameter(
-            f"{pref}Initial {domain} outer SEI thickness [m]"
-        )
+        self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
+        self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
 
         # Dividing by 10000 makes initial condition effectively zero
         # without triggering division by zero errors

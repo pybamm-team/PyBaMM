@@ -114,8 +114,8 @@ class BaseInterface(pybamm.BaseSubModel):
         elif self.reaction == "lithium metal plating":
             # compute T on the surface of the anode (interface with separator)
             T = pybamm.boundary_value(T, "right")
-            c_Li_typ = param.c_Li_typ
-            j0 = param.j0_plating(c_e, c_Li_typ, T)
+            c_Li_metal = 1 / param.V_bar_Li
+            j0 = param.j0_Li_metal(c_e, c_Li_metal, T)
 
         elif self.reaction == "lead-acid main":
             # If variable was broadcast, take only the orphan

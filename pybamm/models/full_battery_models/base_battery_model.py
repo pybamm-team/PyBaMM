@@ -284,9 +284,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             SEI_on_cracks_option = extra_options.get("SEI on cracks", "false")
             if not (isinstance(SEI_on_cracks_option, tuple)):
                 extra_options["SEI on cracks"] = (SEI_on_cracks_option, "false")
-            lithium_plating_option = extra_options.get("lithium plating", "none")
-            if not (isinstance(lithium_plating_option, tuple)):
-                extra_options["lithium plating"] = (lithium_plating_option, "none")
+            plating_option = extra_options.get("lithium plating", "none")
+            if not (isinstance(plating_option, tuple)) and plating_option != "none":
+                extra_options["lithium plating"] = (plating_option, "none")
 
         # Change the default for cell geometry based on which thermal option is provided
         # return "none" if option not given
@@ -1165,7 +1165,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 f"X-averaged negative electrode {phase_n}SEI film overpotential [V]"
             ]
         eta_sei_p_av = self.variables[
-            f"X-averaged positive electrode {phase_n}SEI film overpotential [V]"
+            f"X-averaged positive electrode {phase_p}SEI film overpotential [V]"
         ]
         eta_sei_av = eta_sei_n_av + eta_sei_p_av
 

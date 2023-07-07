@@ -106,14 +106,14 @@ class BaseModel(BaseInterface):
 
         variables = {
             f"{Domain} {self.reaction_name}[m]": L_sei,
-            f"Total {domain} {self.reaction_name}thickness [m]": L_sei,
+            f"{Domain} total {self.reaction_name}thickness [m]": L_sei,
         }
         if self.reaction_loc != "interface":
             L_sei_av = pybamm.x_average(L_sei)
             variables.update(
                 {
                     f"X-averaged {domain} {self.reaction_name}thickness [m]": L_sei_av,
-                    f"X-averaged total {domain} {self.reaction_name}"
+                    f"X-averaged {domain} total {self.reaction_name}"
                     "thickness [m]": L_sei_av,
                 }
             )
@@ -186,14 +186,16 @@ class BaseModel(BaseInterface):
 
             # Q_sei in mol
             if self.reaction_loc == "interface":
-                L_n = 1
-            else:
-                L_n = self.param.n.L
+                L_k = 1
+            elif domain == "negative":
+                L_k = self.param.n.L
+            elif domain == "positive":
+                L_k = self.param.p.L
 
-            # Multiply delta_n_SEI by V_n to get total moles of SEI formed
+            # Multiply delta_n_SEI by V_k to get total moles of SEI formed
             # multiply by z_sei to get total lithium moles consumed by SEI
-            V_n = L_n * self.param.L_y * self.param.L_z
-            Q_sei = z_sei * delta_n_SEI * V_n
+            V_k = L_k * self.param.L_y * self.param.L_z
+            Q_sei = z_sei * delta_n_SEI * V_k
 
             variables.update(
                 {
@@ -236,14 +238,13 @@ class BaseModel(BaseInterface):
             n_SEI_cr_init = n_crack_0 * (roughness_av - 1)
             delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
+            if domain == "negative":
+                L_k = self.param.n.L
+            elif domain == "positive":
+                L_k = self.param.p.L
+
             # Q_sei_cr in mol
-            Q_sei_cr = (
-                z_sei
-                * delta_n_SEI_cr
-                * self.param.n.L
-                * self.param.L_y
-                * self.param.L_z
-            )
+            Q_sei_cr = z_sei * delta_n_SEI_cr * L_k * self.param.L_y * self.param.L_z
 
             variables.update(
                 {

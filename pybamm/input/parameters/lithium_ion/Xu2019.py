@@ -252,8 +252,8 @@ def get_parameter_values():
         "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial negative inner SEI thickness [m]": 2.5e-09,
-        "Initial negative outer SEI thickness [m]": 2.5e-09,
+        "Initial inner SEI thickness [m]": 2.5e-09,
+        "Initial outer SEI thickness [m]": 2.5e-09,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -274,8 +274,8 @@ def get_parameter_values():
         "Negative electrode OCP [V]": 0.0,
         "Negative electrode conductivity [S.m-1]": 10776000.0,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
-        "Typical plated lithium concentration [mol.m-3]": 76900.0,
-        "Exchange-current density for plating [A.m-2]"
+        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
+        "Exchange-current density for lithium metal electrode [A.m-2]"
         "": li_metal_electrolyte_exchange_current_density_Xu2019,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,

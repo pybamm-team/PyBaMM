@@ -71,8 +71,8 @@ class Plating(BasePlating):
         delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
         c_e_n = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
-        eta_sei = variables[f"{Domain} SEI film overpotential [V]"]
-        c_plated_Li = variables[f" {Domain} lithium plating concentration [mol.m-3]"]
+        eta_sei = variables[f"{Domain} electrode SEI film overpotential [V]"]
+        c_plated_Li = variables[f"{Domain} lithium plating concentration [mol.m-3]"]
         j0_stripping = param.j0_stripping(c_e_n, c_plated_Li, T)
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
 
@@ -83,7 +83,7 @@ class Plating(BasePlating):
         alpha_stripping = self.param.alpha_stripping
         alpha_plating = self.param.alpha_plating
 
-        lithium_plating_option = getattr(self.options, domain)["lithium_plating"]
+        lithium_plating_option = getattr(self.options, domain)["lithium plating"]
         if lithium_plating_option in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(
                 F_RT * alpha_stripping * eta_stripping
@@ -126,7 +126,7 @@ class Plating(BasePlating):
 
         # In the partially reversible plating model, coupling term turns reversible
         # lithium into dead lithium. In other plating models, it is zero.
-        lithium_plating_option = getattr(self.options, domain)["lithium_plating"]
+        lithium_plating_option = getattr(self.options, domain)["lithium plating"]
         if lithium_plating_option == "partially reversible":
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li
@@ -149,7 +149,7 @@ class Plating(BasePlating):
             ]
         else:
             c_plated_Li = variables[f"{Domain} lithium plating concentration [mol.m-3]"]
-            c_dead_Li = variables[f"{domain} dead lithium concentration [mol.m-3]"]
+            c_dead_Li = variables[f"{Domain} dead lithium concentration [mol.m-3]"]
         c_plated_Li_0 = self.param.c_plated_Li_0
         zero = pybamm.Scalar(0)
 

@@ -28,13 +28,15 @@ class ReactionDriven(BaseModel):
             if domain == "separator":
                 delta_eps_k = 0  # separator porosity does not change
             else:
-                dom = domain.split()[0].lower()
-                Domain = dom.capitalize()
-                L_sei_k = variables[f"Total {dom} SEI thickness [m]"]
-                L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
+                Domain = domain.split()[0].capitalize()
+                L_sei_k = variables[f"{Domain} total SEI thickness [m]"]
+                if Domain == "Negative":
+                    L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
+                elif Domain == "Positive":
+                    L_sei_0 = self.param.p.prim.L_inner_0 + self.param.p.prim.L_outer_0
                 L_pl_k = variables[f"{Domain} lithium plating thickness [m]"]
                 L_dead_k = variables[f"{Domain} dead lithium thickness [m]"]
-                L_sei_cr_k = variables[f"Total {dom} SEI on cracks thickness [m]"]
+                L_sei_cr_k = variables[f"{Domain} total SEI on cracks thickness [m]"]
                 roughness_k = variables[f"{Domain} electrode roughness ratio"]
 
                 L_tot = (

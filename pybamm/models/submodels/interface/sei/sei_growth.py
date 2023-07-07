@@ -116,7 +116,7 @@ class SEIGrowth(BaseModel):
 
         L_sei_inner = variables[f"{Domain} inner {self.reaction_name}thickness [m]"]
         L_sei_outer = variables[f"{Domain} outer {self.reaction_name}thickness [m]"]
-        L_sei = variables[f"Total {domain} {self.reaction_name}thickness [m]"]
+        L_sei = variables[f"{Domain} total {self.reaction_name}thickness [m]"]
 
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
