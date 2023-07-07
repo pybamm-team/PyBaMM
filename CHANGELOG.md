@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+
+-  Add parameter list support to JAX solver (permitting multithreading/GPU execution) ([#3121](https://github.com/pybamm-team/PyBaMM/pull/3121))
+
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-05-31
 
 ## Bug fixes
