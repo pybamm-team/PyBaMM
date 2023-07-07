@@ -165,7 +165,7 @@ class JaxSolver(pybamm.BaseSolver):
                 inputs,
                 rtol=self.rtol,
                 atol=self.atol,
-                **self.extra_options
+                **self.extra_options,
             )
             return jnp.transpose(y)
 
@@ -178,7 +178,7 @@ class JaxSolver(pybamm.BaseSolver):
                 rtol=self.rtol,
                 atol=self.atol,
                 mass=mass,
-                **self.extra_options
+                **self.extra_options,
             )
             return jnp.transpose(y)
 
@@ -220,10 +220,12 @@ class JaxSolver(pybamm.BaseSolver):
             async def solve_model_for_inputs():
                 async def solve_model_async(inputs_v):
                     return self._cached_solves[model](inputs_v)
+
                 coro = []
                 for inputs_v in inputs:
                     coro.append(asyncio.create_task(solve_model_async(inputs_v)))
                 return await asyncio.gather(*coro)
+
             y = asyncio.run(solve_model_for_inputs())
         elif platform.startswith("gpu") or platform.startswith("tpu"):
             # gpu execution runs faster when parallelised with vmap
@@ -231,13 +233,16 @@ class JaxSolver(pybamm.BaseSolver):
             #  execution (SPMD) using pmap on multiple XLAs)
 
             # convert inputs (array of dict) to a dict of arrays for vmap
-            inputs_v = {key: jnp.array([dic[key] for dic in inputs])
-                        for key in inputs[0]}
+            inputs_v = {
+                key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
+            }
             y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
         else:
             # Unknown platform, use serial execution as fallback
-            print(f"Unknown platform requested: \"{platform}\", "
-                  "falling back to serial execution")
+            print(
+                f'Unknown platform requested: "{platform}", '
+                "falling back to serial execution"
+            )
             for inputs_v in inputs:
                 y.append(self._cached_solves[model](inputs_v))
 
@@ -289,7 +294,7 @@ class JaxSolver(pybamm.BaseSolver):
                 inputs_dict,
                 t_event,
                 y_event,
-                termination
+                termination,
             )
             sol.integration_time = integration_time
             solutions.append(sol)

@@ -857,7 +857,7 @@ class BaseSolver(object):
                 )
                 new_solutions = [new_solution]
             else:
-                if model.convert_to_format == 'jax':
+                if model.convert_to_format == "jax":
                     # Jax can parallelize over the inputs efficiently
                     new_solutions = self._integrate(
                         model,
