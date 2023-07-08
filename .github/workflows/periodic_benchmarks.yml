@@ -30,7 +30,7 @@ jobs:
           sudo apt-get install gfortran gcc libopenblas-dev
       - name: Install python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
+          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy anytree autograd scikit-fem imageio pybtex sympy bpx tqdm matplotlib
       - name: Install SuiteSparse and Sundials
         run: python scripts/install_KLU_Sundials.py
       - name: Run benchmarks
