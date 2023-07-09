@@ -603,44 +603,55 @@ class ElectrodeSOHSolver:
         """
         x0_min, x100_max, y100_min, y0_max = self._get_lims(inputs)
 
-        if self.options["open-circuit potential"] == "MSMR":
-            Un0, Un100, Up100, Up0 = self._get_ocp_msmr(
-                x0_min, x100_max, y100_min, y0_max
+        # Parameterize the OCP functions
+        if self.OCV_function is None:
+            self.V_max = self.parameter_values.evaluate(
+                self.param.opc_soc_100_dimensional
             )
-            V_lower_bound = float(Up0 - Un0)
-            V_upper_bound = float(Up100 - Un100)
-        else:
-            # Parameterize the OCP functions
-            if self.OCV_function is None:
+            self.V_min = self.parameter_values.evaluate(
+                self.param.opc_soc_0_dimensional
+            )
+            if self.options["open-circuit potential"] == "MSMR":
+                # will solve for potentials at the sto limits, so no need
+                # to store a function
+                self.OCV_function = "MSMR"
+            else:
                 T = self.parameter_values["Reference temperature [K]"]
                 x = pybamm.InputParameter("x")
                 y = pybamm.InputParameter("y")
-                self.V_max = self.parameter_values.evaluate(
-                    self.param.opc_soc_100_dimensional
-                )
-                self.V_min = self.parameter_values.evaluate(
-                    self.param.opc_soc_0_dimensional
-                )
                 self.OCV_function = self.parameter_values.process_symbol(
                     self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
                 )
+
+        # Evaluate OCP function
+        if self.options["open-circuit potential"] == "MSMR":
+            msmr_pot_model = _get_msmr_potential_model(
+                self.parameter_values, self.param
+            )
+            sol0 = pybamm.AlgebraicSolver(tol=1e-4).solve(
+                msmr_pot_model, inputs={"x": x0_min, "y": y0_max}
+            )
+            sol100 = pybamm.AlgebraicSolver(tol=1e-4).solve(
+                msmr_pot_model, inputs={"x": x100_max, "y": y100_min}
+            )
+            Up0 = sol0["Up"].data[0]
+            Un0 = sol0["Un"].data[0]
+            Up100 = sol100["Up"].data[0]
+            Un100 = sol100["Un"].data[0]
+            V_lower_bound = float(Up0 - Un0)
+            V_upper_bound = float(Up100 - Un100)
+        else:
+            # address numpy 1.25 deprecation warning: array should have ndim=0
+            # before conversion
             V_lower_bound = float(
-                self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max})
+                self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
             )
             V_upper_bound = float(
-                self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min})
+                self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
             )
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
-        # address numpy 1.25 deprecation warning: array should have ndim=0
-        # before conversion
-        V_lower_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
-        )
-        V_upper_bound = float(
-            self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
-        )
         if V_lower_bound > self.V_min:
             raise (
                 ValueError(

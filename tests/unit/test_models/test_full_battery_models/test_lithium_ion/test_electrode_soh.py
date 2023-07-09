@@ -182,11 +182,17 @@ class TestElectrodeSOHMSMR(TestCase):
         self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
         # Solve with split esoh and check outputs
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, options=options
+        )
         ics = esoh_solver._set_up_solve(inputs)
         sol_split = esoh_solver._solve_split(inputs, ics)
         for key in sol:
             if key != "Maximum theoretical energy [W.h]":
                 self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
+
+        # Check feasibility checks can be performed successfully
+        esoh_solver._check_esoh_feasible(inputs)
 
     def test_known_solution_cell_capacity(self):
         options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
@@ -293,6 +299,22 @@ class TestGetInitialSOC(TestCase):
         self.assertAlmostEqual(V, 4.2)
         V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         self.assertAlmostEqual(V, 2.8)
+
+    def test_get_initial_ocp(self):
+        with self.assertRaises(NotImplementedError):
+            param = pybamm.LithiumIonParameters()
+            parameter_values = pybamm.ParameterValues("Mohtat2020")
+            Un, Up = pybamm.lithium_ion.get_initial_ocps(parameter_values, param)
+
+    def test_min_max_ocp(self):
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+
+        Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_stoichiometries(
+            parameter_values, param
+        )
+        self.assertAlmostEqual(Up_100 - Un_100, 4.2)
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
 
     def test_initial_soc_cell_capacity(self):
         param = pybamm.LithiumIonParameters()

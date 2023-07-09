@@ -1,6 +1,5 @@
 import pybamm
 
-pybamm.set_logging_level("DEBUG")
 model = pybamm.lithium_ion.SPM(
     {
         "open-circuit potential": "MSMR",
