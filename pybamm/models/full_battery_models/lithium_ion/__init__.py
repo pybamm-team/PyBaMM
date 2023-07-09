@@ -6,6 +6,7 @@ from .electrode_soh import (
     ElectrodeSOHSolver,
     get_initial_stoichiometries,
     get_min_max_stoichiometries,
+    get_initial_ocps,
     get_min_max_ocps,
 )
 from .electrode_soh_half_cell import ElectrodeSOHHalfCell

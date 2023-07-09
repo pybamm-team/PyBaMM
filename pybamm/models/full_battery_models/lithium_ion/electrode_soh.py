@@ -113,8 +113,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.opc_soc_100_dimensional
-        V_min = param.opc_soc_0_dimensional
+        V_max = param.ocp_soc_100_dimensional
+        V_min = param.ocp_soc_0_dimensional
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -308,7 +308,6 @@ class ElectrodeSOHSolver:
         if self.options["open-circuit potential"] == "MSMR":
             OCPp_data = False
             OCPn_data = False
-
         else:
             OCPp_data = isinstance(
                 parameter_values["Positive electrode OCP [V]"], tuple
@@ -606,10 +605,10 @@ class ElectrodeSOHSolver:
         # Parameterize the OCP functions
         if self.OCV_function is None:
             self.V_max = self.parameter_values.evaluate(
-                self.param.opc_soc_100_dimensional
+                self.param.ocp_soc_100_dimensional
             )
             self.V_min = self.parameter_values.evaluate(
-                self.param.opc_soc_0_dimensional
+                self.param.ocp_soc_0_dimensional
             )
             if self.options["open-circuit potential"] == "MSMR":
                 # will solve for potentials at the sto limits, so no need
@@ -695,14 +694,9 @@ class ElectrodeSOHSolver:
         x_0, x_100, y_100, y_0 = self.get_min_max_stoichiometries()
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
-            if self.options["open-circuit potential"] == "MSMR":
-                raise NotImplementedError(
-                    "Getting initial stoichiometries from voltage not implemented "
-                    "for MSMR models"
-                )
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.opc_soc_0_dimensional)
-            V_max = parameter_values.evaluate(param.opc_soc_100_dimensional)
+            V_min = parameter_values.evaluate(param.ocp_soc_0_dimensional)
+            V_max = parameter_values.evaluate(param.ocp_soc_100_dimensional)
 
             if not V_min < V_init < V_max:
                 raise ValueError(
@@ -713,13 +707,23 @@ class ElectrodeSOHSolver:
             # Solve simple model for initial soc based on target voltage
             soc_model = pybamm.BaseModel()
             soc = pybamm.Variable("soc")
-            Up = param.p.prim.U
-            Un = param.n.prim.U
-            T_ref = parameter_values["Reference temperature [K]"]
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
-
-            soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
+            if self.options["open-circuit potential"] == "MSMR":
+                Xn = param.n.prim.X
+                Xp = param.p.prim.X
+                Up = pybamm.Variable("Up")
+                Un = pybamm.Variable("Un")
+                soc_model.algebraic[Up] = x - Xn(Un)
+                soc_model.algebraic[Un] = y - Xp(Up)
+                soc_model.initial_conditions[Un] = 0
+                soc_model.initial_conditions[Up] = V_max
+                soc_model.algebraic[soc] = Up - Un - V_init
+            else:
+                Up = param.p.prim.U
+                Un = param.n.prim.U
+                T_ref = parameter_values["Reference temperature [K]"]
+                soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
             soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
@@ -784,10 +788,23 @@ class ElectrodeSOHSolver:
         Un, Up
             The initial open-circuit potentials at the desired initial state of charge
         """
-        # TODO: For "normal" model get init sto and eval OCP. For msmr get init sto and
-        # use _get_msmr_potential_model to get OCP. This is to be consistent with
-        # linearly interpolating in sto to define soc
-        raise NotImplementedError
+        parameter_values = self.parameter_values
+        param = self.param
+        x, y = self.get_initial_stoichiometries(initial_value)
+        if self.options["open-circuit potential"] == "MSMR":
+            msmr_pot_model = _get_msmr_potential_model(
+                self.parameter_values, self.param
+            )
+            sol = pybamm.AlgebraicSolver().solve(
+                msmr_pot_model, inputs={"x": x, "y": y}
+            )
+            Un = sol["Un"].data[0]
+            Up = sol["Up"].data[0]
+        else:
+            T_ref = parameter_values["Reference temperature [K]"]
+            Un = parameter_values.evaluate(param.n.prim.U(x, T_ref))
+            Up = parameter_values.evaluate(param.p.prim.U(y, T_ref))
+        return Un, Up
 
     def get_min_max_ocps(self):
         """

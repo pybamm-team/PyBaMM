@@ -1,5 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+- Implement the MSMR model ([#3116](https://github.com/pybamm-team/PyBaMM/pull/3116))
+## Bug fixes
+
+- Rename `param.opc_soc_0_dimensional` and `param.opc_soc_100_dimensional` to `param.ocp_soc_0_dimensional` and `param.ocp_soc_100_dimensional` (`opc` to `ocp`) ([#3116](https://github.com/pybamm-team/PyBaMM/pull/3116))
+
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 
 ## Features
