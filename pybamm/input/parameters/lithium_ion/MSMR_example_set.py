@@ -143,6 +143,7 @@ def get_parameter_values():
         "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode stoichiometry": x_n,
+        "Number of reactions in negative electrode": 6,
         "U0_n_0": 0.08843,
         "Xj_n_0": 0.43336,
         "w_n_0": 0.08611,
@@ -173,6 +174,7 @@ def get_parameter_values():
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
         # positive electrode
         "Positive electrode stoichiometry": x_p,
+        "Number of reactions in positive electrode": 4,
         "U0_p_0": 3.62274,
         "Xj_p_0": 0.13442,
         "w_p_0": 0.96710,

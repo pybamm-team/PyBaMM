@@ -413,3 +413,34 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels[
             "through-cell convection"
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
+
+    def set_msmr_reaction_variables(self, parameter_values):
+        """
+        Set variables for the individual MSMR reactions in the negative and
+        positive electrodes.
+
+        Parameters
+        ----------
+        parameter_values : :class:`pybamm.ParameterValues`
+            The parameter values to use for the model.
+        """
+        if self.options["open-circuit potential"] != "MSMR":
+            raise pybamm.OptionError(
+                "'open-circuit potential' must be 'MSMR' to add MSMR reaction variables"
+            )
+
+        for Domain in ["Negative", "Positive"]:
+            domain = Domain.lower()
+            suffix = domain[0]
+            U = self.variables[f"{Domain} electrode open-circuit potential [V]"]
+            T = self.variables[f"{Domain} electrode temperature [K]"]
+            N = parameter_values[f"Number of reactions in {domain} electrode"]
+            f = pybamm.constants.F / (pybamm.constants.R * T)
+            for i in range(N):
+                U0 = pybamm.Parameter(f"U0_{suffix}_{i}")
+                w = pybamm.Parameter(f"w_{suffix}_{i}")
+                Xj = pybamm.Parameter(f"Xj_{suffix}_{i}")
+
+                x = Xj / (1 + pybamm.exp(f * (U - U0) / w))
+                self.variables[f"x{i}_{suffix}"] = x
+                self.variables[f"X-averaged x{i}_{suffix}"] = pybamm.x_average(x)

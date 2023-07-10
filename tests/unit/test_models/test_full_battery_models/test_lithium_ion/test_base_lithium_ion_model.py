@@ -29,6 +29,23 @@ class TestBaseLithiumIonModel(TestCase):
         )
         os.chdir(cwd)
 
+    def test_set_msmr_variables(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.lithium_ion.BaseModel().set_msmr_reaction_variables(None)
+
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+        model.set_msmr_reaction_variables(parameter_values)
+        xn_2 = model.variables["x2_n"]
+        # For SPM, xn_2 will be a broadcast of the reaction formula, whose child should
+        # be the parameter "Xj_n_2"
+        self.assertIsInstance(xn_2.children[0].children[0], pybamm.Parameter)
+        self.assertEqual(xn_2.children[0].children[0].name, "Xj_n_2")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
