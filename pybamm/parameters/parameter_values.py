@@ -65,7 +65,7 @@ class ParameterValues:
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
             else:
-                print("Invalid Parameter Set Value")
+                raise ValueError("Invalid Parameter Value")
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
