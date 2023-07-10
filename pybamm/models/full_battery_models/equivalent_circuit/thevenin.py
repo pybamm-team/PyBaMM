@@ -192,6 +192,16 @@ class Thevenin(pybamm.BaseModel):
         if build:
             self.build_model()
 
+    def set_standard_output_variables(self):
+    # Time
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t,
+                "Time [min]": pybamm.t / 60,
+                "Time [h]": pybamm.t / 3600,
+            }
+        )
+
     def build_model(self):
         # Build model variables and equations
         self._build_model()
