@@ -63,7 +63,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc libopenblas-dev graphviz
+          sudo apt install gfortran gcc libopenblas-dev graphviz pandoc
           sudo apt install texlive-full
 
       # Added fixes to homebrew installs:
@@ -87,13 +87,13 @@ jobs:
       - name: Install standard python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools nox
-  
-      - name: Install SuiteSparse and Sundials
+
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11
+      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
+        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: nox -s unit
 
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
@@ -107,10 +107,6 @@ jobs:
       - name: Run integration tests
         run: nox -s integration
 
-      - name: Run unit tests for Windows and MacOS
-        if: matrix.os != 'ubuntu-latest'
-        run: nox -s unit
-
       - name: Install docs dependencies and run doctests
         if: matrix.os == 'ubuntu-latest'
         run: nox -s doctests
@@ -118,3 +114,45 @@ jobs:
       - name: Install dev dependencies and run example tests
         if: matrix.os == 'ubuntu-latest'
         run: nox -s examples
+
+  #M-series Mac Mini
+  build-apple-mseries:
+    needs: style
+    runs-on: [self-hosted, macOS, ARM64]
+    env: 
+      GITHUB_PATH: ${PYENV_ROOT/bin:$PATH}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install python & create virtualenv
+        shell: bash
+        run: |
+          eval "$(pyenv init -)"
+          pyenv install ${{ matrix.python-version }} -s
+          pyenv virtualenv ${{ matrix.python-version }} pybamm-${{ matrix.python-version }}
+
+      - name: Install dependencies & run unit tests for Windows and MacOS
+        shell: bash
+        run: |
+          eval "$(pyenv init -)"
+          pyenv activate pybamm-${{ matrix.python-version }}
+          python -m pip install --upgrade pip wheel setuptools nox
+          python -m nox -s unit
+
+      - name: Run integration tests for Windows and MacOS
+        run: |
+          eval "$(pyenv init -)"
+          pyenv activate pybamm-${{ matrix.python-version }}
+          python -m nox -s integration
+
+      - name: Uninstall pyenv-virtualenv & python
+        if: always()
+        shell: bash
+        run: |
+          eval "$(pyenv init -)"
+          pyenv activate pybamm-${{ matrix.python-version }}
+          pyenv uninstall -f $( python --version )

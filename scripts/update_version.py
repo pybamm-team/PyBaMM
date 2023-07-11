@@ -50,10 +50,11 @@ def update_version():
         json_data.insert(
             2,
             {
-                "version": f"v{release_version}",
-                "url": f"https://pybamm.readthedocs.io/en/v{release_version}/",
+                "name": f"v{release_version}",
+                "version": f"{release_version}",
+                "url": f"https://docs.pybamm.org/en/v{release_version}/",
             },
-        )  # noqa: E501
+        )
         file.truncate(0)
         file.seek(0)
         file.write(json.dumps(json_data, indent=4))
