@@ -68,6 +68,7 @@ class Thevenin(pybamm.BaseModel):
         self.param = pybamm.EcmParameters()
         self.element_counter = 0
 
+        self.set_standard_output_variables()
         self.set_submodels(build)
 
     def set_options(self, extra_options=None):
@@ -193,7 +194,7 @@ class Thevenin(pybamm.BaseModel):
             self.build_model()
 
     def set_standard_output_variables(self):
-    # Time
+        # Time
         self.variables.update(
             {
                 "Time [s]": pybamm.t,
