@@ -97,7 +97,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
                 "quadratic profile", "quartic profile", or "MSMR". If "MSMR" then the 
-                "open-circuit potential" must also be "MSMR". A 2-tuple can be 
+                "open-circuit potential" option must also be "MSMR". A 2-tuple can be 
                 provided for different behaviour in negative and positive electrodes. 
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle

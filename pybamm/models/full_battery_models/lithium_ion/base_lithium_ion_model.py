@@ -432,7 +432,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         for Domain in ["Negative", "Positive"]:
             domain = Domain.lower()
             suffix = domain[0]
-            U = self.variables[f"{Domain} electrode open-circuit potential [V]"]
+            U = self.variables[f"{Domain} particle potential [V]"]
             T = self.variables[f"{Domain} electrode temperature [K]"]
             N = parameter_values[f"Number of reactions in {domain} electrode"]
             f = pybamm.constants.F / (pybamm.constants.R * T)
@@ -442,5 +442,18 @@ class BaseModel(pybamm.BaseBatteryModel):
                 Xj = pybamm.Parameter(f"Xj_{suffix}_{i}")
 
                 x = Xj / (1 + pybamm.exp(f * (U - U0) / w))
-                self.variables[f"x{i}_{suffix}"] = x
-                self.variables[f"X-averaged x{i}_{suffix}"] = pybamm.x_average(x)
+                x_surf = pybamm.surf(x)
+                x_surf_av = pybamm.x_average(x_surf)
+                x_xav = pybamm.x_average(x)
+                x_rav = pybamm.r_average(x)
+                x_av = pybamm.r_average(x_xav)
+                self.variables.update(
+                    {
+                        f"x{i}_{suffix}": x,
+                        f"X-averaged x{i}_{suffix}": x_xav,
+                        f"R-averaged x{i}_{suffix}": x_rav,
+                        f"Average x{i}_{suffix}": x_av,
+                        f"Surface x{i}_{suffix}": x_surf,
+                        f"X-averaged surface x{i}_{suffix}": x_surf_av,
+                    }
+                )
