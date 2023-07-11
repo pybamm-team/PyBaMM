@@ -273,18 +273,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         extra_options = extra_options or {}
 
         half_cell_option = extra_options.get("half-cell", "false")
+        SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
+        SEI_cr_option = extra_options.get("SEI on cracks", "false")
+        plating_option = extra_options.get("lithium plating", "none")
         # For the full cell model, if "SEI", "SEI on cracks" and "lithium plating"
         # options are not provided as tuples, change them to tuples with "none" or
         # "false" on the positive electrode. To use these options on the positive
         # electrode of a full cell, the tuple must be provided by the user
         if half_cell_option == "false":
-            SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
-            if not (isinstance(SEI_option, tuple)):
+            if not (isinstance(SEI_option, tuple)) and SEI_option != "none":
                 extra_options["SEI"] = (SEI_option, "none")
-            SEI_on_cracks_option = extra_options.get("SEI on cracks", "false")
-            if not (isinstance(SEI_on_cracks_option, tuple)):
-                extra_options["SEI on cracks"] = (SEI_on_cracks_option, "false")
-            plating_option = extra_options.get("lithium plating", "none")
+            if not (isinstance(SEI_cr_option, tuple)) and SEI_cr_option != "false":
+                extra_options["SEI on cracks"] = (SEI_cr_option, "false")
             if not (isinstance(plating_option, tuple)) and plating_option != "none":
                 extra_options["lithium plating"] = (plating_option, "none")
 
