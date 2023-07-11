@@ -650,6 +650,16 @@
         "code",
         "ideas"
       ]
+    },
+    {
+      "login": "tommaull",
+      "name": "Tom Maull",
+      "avatar_url": "https://avatars.githubusercontent.com/u/101814207?v=4",
+      "profile": "https://github.com/tommaull",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
