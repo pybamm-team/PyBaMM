@@ -130,7 +130,7 @@ html[data-theme="dark"] .sd-shadow-sm {
 
 html[data-theme="dark"] .sd-card .sd-card-header {
   background-color: var(--pst-color-background);
-  color: #150458 !important;
+  color: #459db9 !important;
 }
 
 html[data-theme="dark"] .sd-card .sd-card-footer {
@@ -143,4 +143,27 @@ html[data-theme="dark"] h1 {
 
 html[data-theme="dark"] h3 {
   color: #0a6774;
+}
+
+/* Overrides for sphinx-hoverxref since it does not support a native dark theme, see */
+/* https://github.com/readthedocs/sphinx-hoverxref/issues/231 */
+
+/* These will ensure that the tooltip inherits the PyData colours */
+
+.tooltipster-sidetip.tooltipster-shadow .tooltipster-box {
+  background: var(--pst-color-background) !important;
+}
+
+.tooltipster-sidetip.tooltipster-shadow .tooltipster-arrow {
+  background: none !important;
+  overflow: hidden;
+  position: absolute;
+}
+
+.tooltipster-sidetip.tooltipster-shadow.tooltipster-right .tooltipster-arrow-border {
+  border-right-color: var(--pst-color-background) !important;
+}
+
+.tooltipster-sidetip.tooltipster-shadow.tooltipster-left .tooltipster-arrow-border {
+  border-left-color: var(--pst-color-background) !important;
 }
