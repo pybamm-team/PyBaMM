@@ -8,12 +8,6 @@ else:
     nox.options.sessions = ["pre-commit", "unit"]
 
 
-if sys.platform == "linux":
-    nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
-else:
-    nox.options.sessions = ["pre-commit", "unit"]
-
-
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
@@ -99,15 +93,14 @@ def run_examples(session):
 
 @nox.session(name="dev", reuse_venv=True)
 def set_dev(session):
-    homedir = os.getenv("HOME")
-    LD_LIBRARY_PATH = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     envbindir = session.bin
     session.install("-e", ".[all]")
     session.install("cmake")
     session.run(
         "echo",
         "export",
-        f"LD_LIBRARY_PATH={LD_LIBRARY_PATH}",  # noqa: F821
+        f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",  # noqa: F821
         ">>",
         f"{envbindir}/activate",
     )
