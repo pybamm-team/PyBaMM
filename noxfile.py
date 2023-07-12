@@ -2,16 +2,29 @@ import nox
 import os
 import sys
 
+homedir = os.getenv("HOME")
+PYBAMM_ENV = {
+    "SUNDIALS_INST" : f"{homedir}/.local",
+    "LD_LIBRARY_PATH" : f"{homedir}/.local/lib:"
+}
 
-def set_environment_variables(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = f"{homedir}/.local"
-    session.env["LD_LIBRARY_PATH"] = f"{homedir}/.local/lib:"
+def set_environment_variables(env_dict, session):
+    """
+    Sets environment variables for a nox session object.
+
+    Args:
+        session (nox.session): The session to set the environment
+            variables for.
+        env_dict (dict): A dictionary of environment variable names and values.
+
+    """
+    for key, value in env_dict.items():
+        session.env[key] = value
 
 
 @nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
-    set_environment_variables(session=session)
+    set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
@@ -29,7 +42,7 @@ def run_pybamm_requires(session):
 
 @nox.session(name="coverage", reuse_venv=True)
 def run_coverage(session):
-    set_environment_variables(session=session)
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage")
     session.install("-e", ".")
     if sys.platform != "win32":
@@ -42,7 +55,7 @@ def run_coverage(session):
 
 @nox.session(name="integration", reuse_venv=True)
 def run_integration(session):
-    set_environment_variables(session=session)
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[dev]")
     if sys.platform == "linux":
         session.install("scikits.odes")
@@ -57,7 +70,7 @@ def run_doctests(session):
 
 @nox.session(name="unit", reuse_venv=True)
 def run_unit(session):
-    set_environment_variables(session=session)
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".")
     if sys.platform == "linux":
         session.install("scikits.odes")
@@ -89,7 +102,7 @@ def set_dev(session):
 
 @nox.session(name="tests", reuse_venv=True)
 def run_tests(session):
-    set_environment_variables(session=session)
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[dev]")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.install("scikits.odes")
