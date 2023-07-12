@@ -2,6 +2,11 @@ import nox
 import os
 import sys
 
+if sys.platform == "linux":
+    nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
+else:
+    nox.options.sessions = ["pre-commit", "unit"]
+
 
 if sys.platform == "linux":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
