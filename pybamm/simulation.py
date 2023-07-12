@@ -368,12 +368,19 @@ class Simulation:
             self.op_conds_to_built_models = None
             self.op_conds_to_built_solvers = None
 
+        options = self.model.options
         param = self.model.param
-        self.parameter_values = (
-            self._unprocessed_parameter_values.set_initial_stoichiometries(
-                initial_soc, param=param, inplace=False
+        if options["open-circuit potential"] == "MSMR":
+            self.parameter_values = self._unprocessed_parameter_values.set_initial_ocps(
+                initial_soc, param=param, inplace=False, options=options
             )
-        )
+        else:
+            self.parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometries(
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 

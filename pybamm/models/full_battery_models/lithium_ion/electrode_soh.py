@@ -937,8 +937,8 @@ def get_initial_ocps(
 
     Returns
     -------
-    x, y
-        The initial stoichiometries that give the desired initial state of charge
+    Un, Up
+        The initial electrode OCPs that give the desired initial state of charge
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
     return esoh_solver.get_initial_ocps(initial_value)
@@ -969,7 +969,7 @@ def get_min_max_ocps(
     Returns
     -------
     Un_0, Un_100, Up_100, Up_0
-        The min/max ocps
+        The min/max OCPs
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
     return esoh_solver.get_min_max_ocps()

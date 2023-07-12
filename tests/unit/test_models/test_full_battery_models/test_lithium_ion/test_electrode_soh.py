@@ -166,7 +166,7 @@ class TestElectrodeSOHMSMR(TestCase):
             parameter_values, param, options=options
         )
 
-        Vmin = 2.5
+        Vmin = 2.8
         Vmax = 4.2
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
@@ -203,7 +203,7 @@ class TestElectrodeSOHMSMR(TestCase):
             parameter_values, param, known_value="cell capacity", options=options
         )
 
-        Vmin = 2.5
+        Vmin = 2.8
         Vmax = 4.2
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
@@ -360,7 +360,7 @@ class TestGetInitialOCPMSMR(TestCase):
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
             0, parameter_values, param, options=options
         )
-        self.assertAlmostEqual(Up - Un, 2.5, places=5)
+        self.assertAlmostEqual(Up - Un, 2.8, places=5)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
             "4 V", parameter_values, param, options=options
         )
@@ -375,7 +375,7 @@ class TestGetInitialOCPMSMR(TestCase):
             parameter_values, param, options=options
         )
         self.assertAlmostEqual(Up_100 - Un_100, 4.2)
-        self.assertAlmostEqual(Up_0 - Un_0, 2.5)
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
 
 
 if __name__ == "__main__":
