@@ -300,6 +300,16 @@ class TestGetInitialSOC(TestCase):
         V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         self.assertAlmostEqual(V, 2.8)
 
+        x0, x100, y100, y0 = pybamm.lithium_ion.get_min_max_stoichiometries(
+            parameter_values,
+            param,
+            known_value="cell capacity",
+        )
+        V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
+        self.assertAlmostEqual(V, 4.2)
+        V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
+        self.assertAlmostEqual(V, 2.8)
+
     def test_initial_soc_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -373,6 +383,12 @@ class TestGetInitialOCPMSMR(TestCase):
 
         Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
             parameter_values, param, options=options
+        )
+        self.assertAlmostEqual(Up_100 - Un_100, 4.2)
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
+
+        Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
+            parameter_values, param, known_value="cell capacity", options=options
         )
         self.assertAlmostEqual(Up_100 - Un_100, 4.2)
         self.assertAlmostEqual(Up_0 - Un_0, 2.8)

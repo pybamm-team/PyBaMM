@@ -43,6 +43,14 @@ class TestDFN(BaseUnitTestLithiumIon, TestCase):
         options = {"operating mode": "explicit resistance"}
         self.check_well_posedness(options)
 
+    def test_well_posed_msmr_with_psd(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "particle size": "distribution",
+        }
+        self.check_well_posedness(options)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -121,9 +121,9 @@ class TestParameterValues(TestCase):
 
     def test_set_initial_ocps(self):
         options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
-        param = pybamm.ParameterValues("MSMR_Example")
-        param_0 = param.set_initial_ocps(0, inplace=False, options=options)
-        param_100 = param.set_initial_ocps(1, inplace=False, options=options)
+        param_100 = pybamm.ParameterValues("MSMR_Example")
+        param_100.set_initial_ocps(1, inplace=True, options=options)
+        param_0 = param_100.set_initial_ocps(0, inplace=False, options=options)
 
         Un_0 = param_0["Initial voltage in negative electrode [V]"]
         Up_0 = param_0["Initial voltage in positive electrode [V]"]
