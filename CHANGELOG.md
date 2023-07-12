@@ -6,7 +6,8 @@
 ## Bug fixes
 
 - Rename `param.opc_soc_0_dimensional` and `param.opc_soc_100_dimensional` to `param.ocp_soc_0_dimensional` and `param.ocp_soc_100_dimensional` (`opc` to `ocp`) ([#3116](https://github.com/pybamm-team/PyBaMM/pull/3116))
-- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
+- Error generated when invalid parameter values are passed ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
+- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019. ([#3096](https://github.com/pybamm-team/PyBaMM/pull/3096))
 
 ## Breaking changes
 
