@@ -19,10 +19,12 @@ def set_environment_variables(env_dict, session):
     """
     Sets environment variables for a nox session object.
 
-    Args:
-        session (nox.session): The session to set the environment
-            variables for.
-        env_dict (dict): A dictionary of environment variable names and values.
+    Parameters
+    -----------
+        session : nox.Session
+            The session to set the environment variables for.
+        env_dict : dict
+            A dictionary of environment variable names and values.
 
     """
     for key, value in env_dict.items():
@@ -100,7 +102,7 @@ def set_dev(session):
     session.run(
         "echo",
         "export",
-        f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",  # noqa: F821
+        f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
         ">>",
         f"{envbindir}/activate",
     )
