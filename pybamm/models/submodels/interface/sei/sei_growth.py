@@ -38,40 +38,51 @@ class SEIGrowth(BaseModel):
             pybamm.citations.register("Marquis2020")
 
     def get_fundamental_variables(self):
-        Ls = []
+        cs = []
         for pos in ["inner", "outer"]:
             Pos = pos.capitalize()
-            scale = self.phase_param.L_sei_0
             if self.reaction_loc == "x-average":
-                L_av = pybamm.Variable(
-                    f"X-averaged {pos} {self.reaction_name}thickness [m]",
-                    domain="current collector",
-                    scale=scale,
+                c_sei_0 = self.phase_param.a_typ * (
+                    self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
+                    + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
                 )
-                L_av.print_name = f"L_{pos}_av"
-                L = pybamm.PrimaryBroadcast(L_av, "negative electrode")
+                c_av = pybamm.Variable(
+                    f"X-averaged {pos} {self.reaction_name}concentration [mol.m-3]",
+                    domain="current collector",
+                    scale=c_sei_0,
+                )
+                c_av.print_name = f"c_{pos}_av"
+                c = pybamm.PrimaryBroadcast(c_av, "negative electrode")
             elif self.reaction_loc == "full electrode":
-                L = pybamm.Variable(
-                    f"{Pos} {self.reaction_name}thickness [m]",
+                c_sei_0 = self.phase_param.a_typ * (
+                    self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
+                    + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
+                )
+                c = pybamm.Variable(
+                    f"{Pos} {self.reaction_name}concentration [mol.m-3]",
                     domain="negative electrode",
                     auxiliary_domains={"secondary": "current collector"},
-                    scale=scale,
+                    scale=c_sei_0,
                 )
             elif self.reaction_loc == "interface":
-                L = pybamm.Variable(
-                    f"{Pos} {self.reaction_name}thickness [m]",
-                    domain="current collector",
-                    scale=scale,
+                c_sei_0 = (
+                    self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
+                    + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
                 )
-            L.print_name = f"L_{pos}"
-            Ls.append(L)
+                c = pybamm.Variable(
+                    f"{Pos} {self.reaction_name}concentration [mol.m-2]",
+                    domain="current collector",
+                    scale=c_sei_0,
+                )
+            c.print_name = f"c_{pos}"
+            cs.append(c)
 
-        L_inner, L_outer = Ls
+        c_inner, c_outer = cs
 
         if self.options["SEI"].startswith("ec reaction limited"):
-            L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
+            c_inner = 0 * c_inner  # Set c_inner to zero, copying domains
 
-        variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        variables = self._get_standard_concentration_variables(c_inner, c_outer)
 
         return variables
 
@@ -103,9 +114,23 @@ class SEIGrowth(BaseModel):
                 "interfacial current density [A.m-2]"
             ]
 
-        L_sei_inner = variables[f"Inner {self.reaction_name}thickness [m]"]
-        L_sei_outer = variables[f"Outer {self.reaction_name}thickness [m]"]
-        L_sei = variables[f"Total {self.reaction_name}thickness [m]"]
+        a = variables["Negative electrode surface area to volume ratio [m-1]"]
+        if self.reaction == "SEI on cracks":
+            roughness = variables["Negative electrode roughness ratio"]
+            a *= roughness - 1  # Replace surface area with crack area
+
+        if self.reaction_loc == "interface":
+            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-2]"]
+            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-2]"]
+            L_inner = c_inner * self.phase_param.V_bar_inner
+            L_outer = c_outer * self.phase_param.V_bar_outer
+            L_sei = L_inner + L_outer
+        else:
+            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-3]"]
+            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-3]"]
+            L_inner = c_inner * self.phase_param.V_bar_inner / a
+            L_outer = c_outer * self.phase_param.V_bar_outer / a
+            L_sei = L_inner + L_outer
 
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
@@ -126,17 +151,17 @@ class SEIGrowth(BaseModel):
         elif self.options["SEI"] == "electron-migration limited":
             # Scott Marquis thesis (eq. 5.94)
             eta_inner = delta_phi - phase_param.U_inner
-            j_sei = phase_param.kappa_inner * eta_inner / L_sei_inner
+            j_sei = phase_param.kappa_inner * eta_inner / L_inner
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)
             j_sei = -(
-                phase_param.D_li * phase_param.c_li_0 * param.F / L_sei_outer
+                phase_param.D_li * phase_param.c_li_0 * param.F / L_outer
             ) * pybamm.exp(-F_RT * delta_phi)
 
         elif self.options["SEI"] == "solvent-diffusion limited":
             # Scott Marquis thesis (eq. 5.91)
-            j_sei = -phase_param.D_sol * phase_param.c_sol * param.F / L_sei_outer
+            j_sei = -phase_param.D_sol * phase_param.c_sol * param.F / L_outer
 
         elif self.options["SEI"].startswith("ec reaction limited"):
             # we have a linear system for j and c
@@ -175,7 +200,7 @@ class SEIGrowth(BaseModel):
         j_inner = inner_sei_proportion * Arrhenius * j_sei
         j_outer = (1 - inner_sei_proportion) * Arrhenius * j_sei
 
-        variables.update(self._get_standard_concentration_variables(variables))
+        variables.update(self._get_standard_thickness_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
         # Add other standard coupled variables
@@ -187,9 +212,23 @@ class SEIGrowth(BaseModel):
         phase_param = self.phase_param
         param = self.param
 
-        if self.reaction_loc == "x-average":
-            L_inner = variables[f"X-averaged inner {self.reaction_name}thickness [m]"]
-            L_outer = variables[f"X-averaged outer {self.reaction_name}thickness [m]"]
+        if self.reaction_loc == "interface":
+            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-2]"]
+            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-2]"]
+            j_inner = variables[
+                f"Inner {self.reaction_name}interfacial current density [A.m-2]"
+            ]
+            j_outer = variables[
+                f"Outer {self.reaction_name}interfacial current density [A.m-2]"
+            ]
+            a = 1
+        elif self.reaction_loc == "x-average":
+            c_inner = variables[
+                f"X-averaged inner {self.reaction_name}concentration [mol.m-3]"
+            ]
+            c_outer = variables[
+                f"X-averaged outer {self.reaction_name}thickness [mol.m-3]"
+            ]
             j_inner = variables[
                 f"X-averaged inner {self.reaction_name}"
                 "interfacial current density [A.m-2]"
@@ -198,73 +237,72 @@ class SEIGrowth(BaseModel):
                 f"X-averaged outer {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
-
+            a = variables[
+                "X-averaged negative electrode surface area to volume ratio [m-1]"
+            ]
         else:
-            L_inner = variables[f"Inner {self.reaction_name}thickness [m]"]
-            L_outer = variables[f"Outer {self.reaction_name}thickness [m]"]
+            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-3]"]
+            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-3]"]
             j_inner = variables[
                 f"Inner {self.reaction_name}interfacial current density [A.m-2]"
             ]
             j_outer = variables[
                 f"Outer {self.reaction_name}interfacial current density [A.m-2]"
             ]
+            a = variables["Negative electrode surface area to volume ratio"]
 
-        # The spreading term acts to spread out SEI along the cracks as they grow.
-        # For SEI on initial surface (as opposed to cracks), it is zero.
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
-                l_cr = variables["X-averaged negative particle crack length [m]"]
-                dl_cr = variables["X-averaged negative particle cracking rate [m.s-1]"]
+                roughness = variables["X-averaged negative electrode roughness ratio"]
             else:
-                l_cr = variables["Negative particle crack length [m]"]
-                dl_cr = variables["Negative particle cracking rate [m.s-1]"]
-            spreading_outer = (
-                dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)
-            )
-            spreading_inner = (
-                dl_cr / l_cr * (self.phase_param.L_inner_crack_0 - L_inner)
-            )
-        else:
-            spreading_outer = 0
-            spreading_inner = 0
+                roughness = variables["Negative electrode roughness ratio"]
+            a *= roughness - 1  # Replace surface area with crack area
 
         # a * j_sei / F is the rate of consumption of li moles by SEI reaction
         # 1/z_sei converts from li moles to SEI moles (z_sei=li mol per sei mol)
         # a * j_sei / (F * z_sei) is the rate of consumption of SEI moles by SEI
         # reaction
-        # V_bar / a converts from SEI moles to SEI thickness
-        # V_bar * j_sei / (F * z_sei) is the rate of SEI thickness change
-        dLdt_SEI_inner = (
-            phase_param.V_bar_inner * j_inner / (param.F * phase_param.z_sei)
-        )
-        dLdt_SEI_outer = (
-            phase_param.V_bar_outer * j_outer / (param.F * phase_param.z_sei)
-        )
+        dLdt_SEI_inner = a * j_inner / (param.F * phase_param.z_sei)
+        dLdt_SEI_outer = a * j_outer / (param.F * phase_param.z_sei)
 
-        # we have to add the spreading rate to account for cracking
         if self.options["SEI"].startswith("ec reaction limited"):
-            self.rhs = {L_outer: -dLdt_SEI_outer + spreading_outer}
+            self.rhs = {c_outer: -dLdt_SEI_outer}
         else:
-            self.rhs = {
-                L_inner: -dLdt_SEI_inner + spreading_inner,
-                L_outer: -dLdt_SEI_outer + spreading_outer,
-            }
+            self.rhs = {c_inner: -dLdt_SEI_inner, c_outer: -dLdt_SEI_outer}
 
     def set_initial_conditions(self, variables):
-        if self.reaction_loc == "x-average":
-            L_inner = variables[f"X-averaged inner {self.reaction_name}thickness [m]"]
-            L_outer = variables[f"X-averaged outer {self.reaction_name}thickness [m]"]
+        if self.reaction_loc == "interface":
+            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-2]"]
+            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-2]"]
+            a = 1
+        elif self.reaction_loc == "x-average":
+            c_inner = variables[
+                f"X-averaged inner {self.reaction_name}concentration [mol.m-3]"
+            ]
+            c_outer = variables[
+                f"X-averaged outer {self.reaction_name}concentration [mol.m-3]"
+            ]
+            a = self.phase_param.a_typ
         else:
-            L_inner = variables[f"Inner {self.reaction_name}thickness [m]"]
-            L_outer = variables[f"Outer {self.reaction_name}thickness [m]"]
+            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-3]"]
+            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-3]"]
+            a = self.phase_param.a_typ
 
         if self.reaction == "SEI on cracks":
             L_inner_0 = self.phase_param.L_inner_crack_0
             L_outer_0 = self.phase_param.L_outer_crack_0
+            roughness_init = 1 + 2 * (
+                self.param.n.l_cr_0 * self.param.n.rho_cr * self.param.n.w_cr
+            )
+            a *= roughness_init - 1  # Replace surface area with crack area
         else:
             L_inner_0 = self.phase_param.L_inner_0
             L_outer_0 = self.phase_param.L_outer_0
+
+        c_inner_0 = a * L_inner_0 / self.phase_param.V_bar_inner
+        c_outer_0 = a * L_outer_0 / self.phase_param.V_bar_outer
+
         if self.options["SEI"].startswith("ec reaction limited"):
-            self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
+            self.initial_conditions = {c_outer: c_inner_0 + c_outer_0}
         else:
-            self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}
+            self.initial_conditions = {c_inner: c_inner_0, c_outer: c_outer_0}
