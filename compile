@@ -1,0 +1,12 @@
+source .nox/dev/bin/activate
+rm pybamm/solvers/idaklu.*.so
+# rm -rf build/*
+mkdir build
+python compile.py
+cd build
+cmake --build .
+cp idaklu* ../pybamm/solvers
+cd ..
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/jsb/.local/lib
+python test.py
