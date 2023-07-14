@@ -16,7 +16,11 @@ import os
 import sys
 import pybamm
 
+# Path for repository root
 sys.path.insert(0, os.path.abspath("../"))
+
+# Path for local Sphinx extensions
+sys.path.append(os.path.abspath("./sphinxext/"))
 
 
 # -- Project information -----------------------------------------------------
@@ -43,16 +47,21 @@ dropdown_version = "latest"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # Sphinx extensions
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.inheritance_diagram",
+    # Local and custom extensions
+    "extend_parent",
+    "inheritance_diagram",
+    # Third-party extensions
     "sphinx_design",
     "sphinx_copybutton",
     "myst_parser",
-    "sphinx_extend_parent",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
     "sphinx_last_updated_by_git",
@@ -61,13 +70,6 @@ extensions = [
     "sphinx_gallery.load_style",
     "hoverxref.extension",
 ]
-
-# -- sphinxcontrib-bibtex configuration --------------------------------------
-bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
-bibtex_style = "unsrt"
-bibtex_footbibliography_header = """.. rubric:: References"""
-bibtex_reference_style = "author_year"
-bibtex_tooltips = True
 
 
 napoleon_use_rtype = True
@@ -275,6 +277,14 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
+# -- sphinxcontrib-bibtex configuration --------------------------------------
+
+bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_style = "unsrt"
+bibtex_footbibliography_header = """.. rubric:: References"""
+bibtex_reference_style = "author_year"
+bibtex_tooltips = True
+
 # -- nbsphinx configuration options ------------------------------------------
 
 nbsphinx_prolog = r"""
@@ -312,6 +322,57 @@ env.doc2path(env.docname, base=None) %}
     </div>
 
 """
+
+# -- Options for sphinx-hoverxref --------------------------------------------
+
+# Hoverxref settings
+
+hoverxref_default_type = "tooltip"
+hoverxref_auto_ref = True
+
+hoverxref_roles = ["class", "meth", "func", "ref", "term"]
+hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
+
+hoverxref_domains = ["py"]
+
+# Currently, only projects that are hosted on readthedocs + CPython, NumPy, and
+# SymPy are supported
+hoverxref_intersphinx = list(intersphinx_mapping.keys())
+
+# Tooltips settings
+hoverxref_tooltip_lazy = False
+hoverxref_tooltip_maxwidth = 750
+hoverxref_tooltip_animation = "fade"
+hoverxref_tooltip_animation_duration = 1
+hoverxref_tooltip_content = "Loading information..."
+hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
+
+
+# -- sphinxext/inheritance_diagram.py options --------------------------------
+
+graphviz_output_format = "svg"
+inheritance_graph_attrs = dict(
+    rankdir="TB",
+    size='"10.0, 10.0"',
+    fontsize=10,
+    ratio="auto",
+    center="true",
+    nodesep=5,
+    ranksep=0.35,
+    bgcolor="white",
+)
+inheritance_node_attrs = dict(
+    shape="box",
+    fontsize=14,
+    fontname="monospace",
+    height=0.20,
+    color="black",
+    style="filled",
+)
+inheritance_edge_attrs = dict(
+    arrowsize=0.75,
+    style='"setlinewidth(0.5)"',
+)
 
 # -- Options for sphinx-hoverxref --------------------------------------------
 

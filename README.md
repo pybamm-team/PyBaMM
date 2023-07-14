@@ -8,13 +8,13 @@
 [![Scheduled](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml/badge.svg?branch=develop)](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/main/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/)
 [![DOI](https://zenodo.org/badge/DOI/10.5334/jors.309.svg)](https://doi.org/10.5334/jors.309)
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-59-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-60-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -257,6 +257,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://www.aboutenergy.io/"><img src="https://avatars.githubusercontent.com/u/91731499?v=4?s=100" width="100px;" alt="darryl-ad"/><br /><sub><b>darryl-ad</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=darryl-ad" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Adarryl-ad" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/julian-evers"><img src="https://avatars.githubusercontent.com/u/133691040?v=4?s=100" width="100px;" alt="julian-evers"/><br /><sub><b>julian-evers</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=julian-evers" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://batterycontrolgroup.engin.umich.edu/"><img src="https://avatars.githubusercontent.com/u/633873?v=4?s=100" width="100px;" alt="Jason Siegel"/><br /><sub><b>Jason Siegel</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=js1tr3" title="Code">💻</a> <a href="#ideas-js1tr3" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/tommaull"><img src="https://avatars.githubusercontent.com/u/101814207?v=4?s=100" width="100px;" alt="Tom Maull"/><br /><sub><b>Tom Maull</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=tommaull" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tommaull" title="Tests">⚠️</a></td>
     </tr>
   </tbody>
 </table>
