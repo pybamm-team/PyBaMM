@@ -8,7 +8,7 @@ cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
 build_dir = 'build'
 
 cmake_args = [
-    "-DCMAKE_BUILD_TYPE=DEBUG",
+    "-DCMAKE_BUILD_TYPE=RELEASE",
     "-DPYTHON_EXECUTABLE={}".format(sys.executable),
     "-DUSE_PYTHON_CASADI=TRUE",
 ]

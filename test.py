@@ -1,6 +1,12 @@
 solver_opt = 2
 jacobian = 'sparse'  # sparse, dense, band, none
 num_threads = 1
+output_variables = [
+    "Time [min]",
+    "Voltage [V]",
+    "Current [A]",
+]
+#output_variables = []
 
 import pybamm
 import numpy as np
@@ -44,9 +50,16 @@ if solver_opt == 8:
     linear_solver = 'SUNLinSol_cuSolverSp_batchQR'
     jacobian = 'cuSparse_'
 
-options = {'linear_solver': linear_solver, 'jacobian': jacobian, 'num_threads': num_threads}
-klu_sol = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8, options=options).solve(model, t_eval)
-print(f"Solve time: {klu_sol.solve_time.value*1000} msecs")
+options = {
+    'linear_solver': linear_solver,
+    'jacobian': jacobian,
+    'num_threads': num_threads,
+}
 
-# plot = pybamm.QuickPlot(klu_sol)
-# plot.dynamic_plot()
+klu_sol = pybamm.IDAKLUSolver(
+    atol=1e-8, rtol=1e-8,
+    options=options,
+    output_variables=output_variables,
+).solve(model, t_eval)
+
+print(f"Solve time: {klu_sol.solve_time.value*1000} msecs")

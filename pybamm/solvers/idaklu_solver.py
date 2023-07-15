@@ -43,6 +43,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    output_variables : list[str], optional
+        List of variables to calculate and return. If none are specified then
+        the complete state vector is returned (can be very large) (default is [])
     options: dict, optional
         Addititional options to pass to the solver, by default:
 
@@ -91,6 +94,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=None,
+        output_variables=[],
         options=None,
     ):
         # set default options,
@@ -112,6 +116,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 if key not in options:
                     options[key] = value
         self._options = options
+
+        self.output_variables = output_variables
 
         if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
@@ -181,6 +187,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # only casadi solver needs sensitivity ics
         if model.convert_to_format != "casadi":
             y0S = None
+            if self.output_variables:
+                raise SolverError(
+                    "output_variables can only be specified "
+                    'with convert_to_format="casadi"'
+                )
         if y0S is not None:
             if isinstance(y0S, casadi.DM):
                 y0S = (y0S,)
@@ -217,6 +228,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError("KLU requires the Jacobian")
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
+        self.var_casadi_fcns = []
         if model.convert_to_format == "casadi":
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
@@ -257,6 +269,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_action = casadi.Function(
                 "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
             )
+
+            # convert 'variable' expressions to casadi functions
+            for key in self.output_variables:
+                var_casadi = casadi.Function(
+                    "variable",
+                    [t_casadi, y_casadi, p_casadi_stacked],
+                    [
+                        model.variables_and_events[key].to_casadi(
+                            t_casadi, y_casadi, p_casadi_stacked
+                        )
+                    ],
+                )
+                self.var_casadi_fcns.append(
+                    idaklu.generate_function(var_casadi.serialize())
+                )
 
         else:
             t0 = 0 if t_eval is None else t_eval[0]
@@ -428,28 +455,32 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "ids": ids,
                 "sensitivity_names": sensitivity_names,
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
+                "output_variables": self.output_variables,
+                "var_casadi_fcns": self.var_casadi_fcns,
             }
 
             solver = idaklu.create_casadi_solver(
-                len(y0),
-                self._setup["number_of_sensitivity_parameters"],
-                self._setup["rhs_algebraic"],
-                self._setup["jac_times_cjmass"],
-                self._setup["jac_times_cjmass_colptrs"],
-                self._setup["jac_times_cjmass_rowvals"],
-                self._setup["jac_times_cjmass_nnz"],
-                jac_bw_lower,
-                jac_bw_upper,
-                self._setup["jac_rhs_algebraic_action"],
-                self._setup["mass_action"],
-                self._setup["sensfn"],
-                self._setup["rootfn"],
-                self._setup["num_of_events"],
-                self._setup["ids"],
-                atol,
-                rtol,
-                len(inputs),
-                self._options,
+                number_of_states=len(y0),
+                number_of_parameters=self._setup["number_of_sensitivity_parameters"],
+                rhs_alg=self._setup["rhs_algebraic"],
+                jac_times_cjmass=self._setup["jac_times_cjmass"],
+                jac_times_cjmass_colptrs=self._setup["jac_times_cjmass_colptrs"],
+                jac_times_cjmass_rowvals=self._setup["jac_times_cjmass_rowvals"],
+                jac_times_cjmass_nnz=self._setup["jac_times_cjmass_nnz"],
+                jac_bandwidth_lower=jac_bw_lower,
+                jac_bandwidth_upper=jac_bw_upper,
+                jac_action=self._setup["jac_rhs_algebraic_action"],
+                mass_action=self._setup["mass_action"],
+                sens=self._setup["sensfn"],
+                events=self._setup["rootfn"],
+                number_of_events=self._setup["num_of_events"],
+                rhs_alg_id=self._setup["ids"],
+                atol=atol,
+                rtol=rtol,
+                inputs=len(inputs),
+                extra_fcn=self._setup["var_casadi_fcns"][0],
+                var_casadi_fcns=self._setup["var_casadi_fcns"],
+                options=self._options,
             )
 
             self._setup["solver"] = solver

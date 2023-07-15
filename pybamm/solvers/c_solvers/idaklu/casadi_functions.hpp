@@ -5,6 +5,7 @@
 #include "options.hpp"
 #include "solution.hpp"
 #include <casadi/casadi.hpp>
+#include <memory>
 
 // Utility function for compressed-sparse-column (CSC) to/from
 // compressed-sparse-row (CSR) matrix representation.
@@ -47,7 +48,7 @@ public:
   std::vector<double *> m_res;
   void operator()();
 
-private:
+//private:
   const Function &m_func;
   std::vector<casadi_int> m_iw;
   std::vector<double> m_w;
@@ -62,29 +63,46 @@ public:
   int number_of_nnz;
   int jac_bandwidth_lower;
   int jac_bandwidth_upper;
+
   CasadiFunction rhs_alg;
   CasadiFunction sens;
   CasadiFunction jac_times_cjmass;
-  std::vector<int64_t> jac_times_cjmass_rowvals;
-  std::vector<int64_t> jac_times_cjmass_colptrs;
-  std::vector<realtype> inputs;
   CasadiFunction jac_action;
   CasadiFunction mass_action;
   CasadiFunction events;
+  CasadiFunction extra_fcn;
+  std::vector<CasadiFunction> var_casadi_fcns;
+  
+  std::vector<int64_t> jac_times_cjmass_rowvals;
+  std::vector<int64_t> jac_times_cjmass_colptrs;
+  std::vector<realtype> inputs;
+  
   Options options;
-
-  CasadiFunctions(const Function &rhs_alg, const Function &jac_times_cjmass,
-                  const int jac_times_cjmass_nnz,
-                  const int jac_bandwidth_lower, const int jac_bandwidth_upper,
-                  const np_array_int &jac_times_cjmass_rowvals,
-                  const np_array_int &jac_times_cjmass_colptrs,
-                  const int inputs_length, const Function &jac_action,
-                  const Function &mass_action, const Function &sens,
-                  const Function &events, const int n_s, int n_e,
-                  const int n_p, const Options& options);
-
+  
   realtype *get_tmp_state_vector();
   realtype *get_tmp_sparse_jacobian_data();
+
+public:
+  CasadiFunctions(
+    const Function &rhs_alg,
+    const Function &jac_times_cjmass,
+    const int jac_times_cjmass_nnz,
+    const int jac_bandwidth_lower,
+    const int jac_bandwidth_upper,
+    const np_array_int &jac_times_cjmass_rowvals,
+    const np_array_int &jac_times_cjmass_colptrs,
+    const int inputs_length,
+    const Function &jac_action,
+    const Function &mass_action,
+    const Function &sens,
+    const Function &events,
+    const int n_s,
+    const int n_e,
+    const int n_p,
+    const Function &extra_fcn,
+    const std::vector<Function*> var_casadi_fcns,
+    const Options& options
+  );
 
 private:
   std::vector<realtype> tmp_state_vector;

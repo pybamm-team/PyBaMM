@@ -225,209 +225,229 @@ Solution CasadiSolverOpenMP::solve(
     np_array_dense inputs
 )
 {
-    DEBUG("CasadiSolver::solve");
+  DEBUG("CasadiSolver::solve");
 
-    int number_of_timesteps = t_np.request().size;
-    auto t = t_np.unchecked<1>();
-    realtype t0 = RCONST(t(0));
-    auto y0 = y0_np.unchecked<1>();
-    auto yp0 = yp0_np.unchecked<1>();
-    auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
+  int number_of_timesteps = t_np.request().size;
+  auto t = t_np.unchecked<1>();
+  realtype t0 = RCONST(t(0));
+  auto y0 = y0_np.unchecked<1>();
+  auto yp0 = yp0_np.unchecked<1>();
+  auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
 
-    if (y0.size() != n_coeffs)
-      throw std::domain_error(
-        "y0 has wrong size. Expected " + std::to_string(n_coeffs) +
-        " but got " + std::to_string(y0.size())
-      );
+  if (y0.size() != n_coeffs)
+    throw std::domain_error(
+      "y0 has wrong size. Expected " + std::to_string(n_coeffs) +
+      " but got " + std::to_string(y0.size()));
 
-    if (yp0.size() != n_coeffs)
-      throw std::domain_error(
-        "yp0 has wrong size. Expected " + std::to_string(n_coeffs) +
-        " but got " + std::to_string(yp0.size()));
+  if (yp0.size() != n_coeffs)
+    throw std::domain_error(
+      "yp0 has wrong size. Expected " + std::to_string(n_coeffs) +
+      " but got " + std::to_string(yp0.size()));
 
-    // set inputs
-    auto p_inputs = inputs.unchecked<2>();
-    for (int i = 0; i < functions->inputs.size(); i++)
-      functions->inputs[i] = p_inputs(i, 0);
+  // set inputs
+  auto p_inputs = inputs.unchecked<2>();
+  for (uint i = 0; i < functions->inputs.size(); i++)
+    functions->inputs[i] = p_inputs(i, 0);
 
-    // set initial conditions
-    realtype *yval = N_VGetArrayPointer(yy);
-    realtype *ypval = N_VGetArrayPointer(yp);
-    std::vector<realtype *> ySval(number_of_parameters);
-    std::vector<realtype *> ypSval(number_of_parameters);
-    for (int p = 0 ; p < number_of_parameters; p++) {
-      ySval[p] = N_VGetArrayPointer(yyS[p]);
-      ypSval[p] = N_VGetArrayPointer(ypS[p]);
-      for (int i = 0; i < number_of_states; i++) {
-        ySval[p][i] = y0[i + (p + 1) * number_of_states];
-        ypSval[p][i] = yp0[i + (p + 1) * number_of_states];
-      }
+  // set initial conditions
+  realtype *yval = N_VGetArrayPointer(yy);
+  realtype *ypval = N_VGetArrayPointer(yp);
+  std::vector<realtype *> ySval(number_of_parameters);
+  std::vector<realtype *> ypSval(number_of_parameters);
+  for (int p = 0 ; p < number_of_parameters; p++) {
+    ySval[p] = N_VGetArrayPointer(yyS[p]);
+    ypSval[p] = N_VGetArrayPointer(ypS[p]);
+    for (int i = 0; i < number_of_states; i++) {
+      ySval[p][i] = y0[i + (p + 1) * number_of_states];
+      ypSval[p][i] = yp0[i + (p + 1) * number_of_states];
     }
+  }
 
-    for (int i = 0; i < number_of_states; i++)
-    {
-      yval[i] = y0[i];
-      ypval[i] = yp0[i];
+  for (int i = 0; i < number_of_states; i++)
+  {
+    yval[i] = y0[i];
+    ypval[i] = yp0[i];
+  }
+
+  IDAReInit(ida_mem, t0, yy, yp);
+  if (number_of_parameters > 0)
+    IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
+
+  // correct initial values
+  DEBUG("IDACalcIC");
+  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+  if (number_of_parameters > 0)
+    IDAGetSens(ida_mem, &t0, yyS);
+
+  int t_i = 1;
+  realtype tret;
+  realtype t_next;
+  realtype t_final = t(number_of_timesteps - 1);
+
+  // set return vectors
+  realtype *t_return = new realtype[number_of_timesteps];
+  realtype *y_return = new realtype[number_of_timesteps *
+                                    number_of_states];
+  realtype *yS_return = new realtype[number_of_parameters *
+                                     number_of_timesteps *
+                                     number_of_states];
+
+  py::capsule free_t_when_done(
+    t_return,
+    [](void *f) {
+      realtype *vect = reinterpret_cast<realtype *>(f);
+      delete[] vect;
     }
-
-    IDAReInit(ida_mem, t0, yy, yp);
-    if (number_of_parameters > 0)
-      IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
-
-    // correct initial values
-    DEBUG("IDACalcIC");
-    IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
-    if (number_of_parameters > 0)
-      IDAGetSens(ida_mem, &t0, yyS);
-
-    int t_i = 1;
-    realtype tret;
-    realtype t_next;
-    realtype t_final = t(number_of_timesteps - 1);
-
-    // set return vectors
-    realtype *t_return = new realtype[number_of_timesteps];
-    realtype *y_return = new realtype[number_of_timesteps *
-                                      number_of_states];
-    realtype *yS_return = new realtype[number_of_parameters *
-                                       number_of_timesteps *
-                                       number_of_states];
-
-    py::capsule free_t_when_done(
-      t_return,
-      [](void *f) {
-        realtype *vect = reinterpret_cast<realtype *>(f);
-        delete[] vect;
-      }
-    );
-    py::capsule free_y_when_done(
-      y_return,
-      [](void *f) {
-        realtype *vect = reinterpret_cast<realtype *>(f);
-        delete[] vect;
-      }
-    );
-    py::capsule free_yS_when_done(
-      yS_return,
-      [](void *f) {
-        realtype *vect = reinterpret_cast<realtype *>(f);
-        delete[] vect;
-      }
-    );
-
-    t_return[0] = t(0);
-    for (int j = 0; j < number_of_states; j++)
-      y_return[j] = yval[j];
-    for (int j = 0; j < number_of_parameters; j++)
-    {
-      const int base_index = j * number_of_timesteps * number_of_states;
-      for (int k = 0; k < number_of_states; k++)
-        yS_return[base_index + k] = ySval[j][k];
+  );
+  py::capsule free_y_when_done(
+    y_return,
+    [](void *f) {
+      realtype *vect = reinterpret_cast<realtype *>(f);
+      delete[] vect;
     }
+  );
+  py::capsule free_yS_when_done(
+    yS_return,
+    [](void *f) {
+      realtype *vect = reinterpret_cast<realtype *>(f);
+      delete[] vect;
+    }
+  );
 
-    int retval;
-    while (true)
+  t_return[0] = t(0);
+  for (int j = 0; j < number_of_states; j++)
+    y_return[j] = yval[j];
+  for (int j = 0; j < number_of_parameters; j++)
+  {
+    const int base_index = j * number_of_timesteps * number_of_states;
+    for (int k = 0; k < number_of_states; k++)
+      yS_return[base_index + k] = ySval[j][k];
+  }
+
+  int retval;
+  while (true)
+  {
+    t_next = t(t_i);
+    IDASetStopTime(ida_mem, t_next);
+    DEBUG("IDASolve");
+    retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
+
+    if (retval == IDA_TSTOP_RETURN ||
+        retval == IDA_SUCCESS ||
+        retval == IDA_ROOT_RETURN)
     {
-      t_next = t(t_i);
-      IDASetStopTime(ida_mem, t_next);
-      DEBUG("IDASolve");
-      retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
+      if (number_of_parameters > 0)
+        IDAGetSens(ida_mem, &tret, yyS);
 
-      if (retval == IDA_TSTOP_RETURN ||
-          retval == IDA_SUCCESS ||
+      t_return[t_i] = tret;
+      for (int j = 0; j < number_of_states; j++)
+        y_return[t_i * number_of_states + j] = yval[j];
+      for (int j = 0; j < number_of_parameters; j++)
+      {
+        const int base_index =
+          j * number_of_timesteps * number_of_states +
+          t_i * number_of_states;
+        for (int k = 0; k < number_of_states; k++)
+          yS_return[base_index + k] = ySval[j][k];
+      }
+
+      // Try evaluating one of the variable casadi functions
+      realtype *res = new realtype[number_of_states];
+        functions->extra_fcn.m_arg[0] = &t_return[t_i];
+        functions->extra_fcn.m_arg[1] = &y_return[t_i * number_of_states];
+        functions->extra_fcn.m_arg[2] = functions->inputs.data();
+        functions->extra_fcn.m_res[0] = res;
+        functions->extra_fcn();
+        std::cout << "Calculated value [extra]: " << *res <<  std::endl;
+      int k = 0;
+      for (auto& var_fcn : functions->var_casadi_fcns) {
+        var_fcn.m_arg[0] = &t_return[t_i];
+        var_fcn.m_arg[1] = &y_return[t_i * number_of_states];
+        var_fcn.m_arg[2] = functions->inputs.data();
+        var_fcn.m_res[0] = res;
+        var_fcn();
+        std::cout << "Calculated value [" << k << "]: " << *res << std::endl;
+        k++;
+      }
+
+      t_i += 1;
+
+      if (retval == IDA_SUCCESS ||
           retval == IDA_ROOT_RETURN)
-      {
-        if (number_of_parameters > 0)
-          IDAGetSens(ida_mem, &tret, yyS);
-
-        t_return[t_i] = tret;
-        for (int j = 0; j < number_of_states; j++)
-          y_return[t_i * number_of_states + j] = yval[j];
-        for (int j = 0; j < number_of_parameters; j++)
-        {
-          const int base_index =
-            j * number_of_timesteps * number_of_states +
-            t_i * number_of_states;
-          for (int k = 0; k < number_of_states; k++)
-            yS_return[base_index + k] = ySval[j][k];
-        }
-        t_i += 1;
-        if (retval == IDA_SUCCESS ||
-            retval == IDA_ROOT_RETURN)
-          break;
-      }
-      else
-      {
-        // failed
         break;
-      }
     }
-
-    np_array t_ret = np_array(
-      t_i,
-      &t_return[0],
-      free_t_when_done
-    );
-    np_array y_ret = np_array(
-      t_i * number_of_states,
-      &y_return[0],
-      free_y_when_done
-    );
-    np_array yS_ret = np_array(
-      std::vector<ptrdiff_t> {
-        number_of_parameters,
-        number_of_timesteps,
-        number_of_states
-      },
-      &yS_return[0],
-      free_yS_when_done
-    );
-
-    Solution sol(retval, t_ret, y_ret, yS_ret);
-
-    if (options.print_stats)
+    else
     {
-      long nsteps, nrevals, nlinsetups, netfails;
-      int klast, kcur;
-      realtype hinused, hlast, hcur, tcur;
-
-      IDAGetIntegratorStats(
-        ida_mem,
-        &nsteps,
-        &nrevals,
-        &nlinsetups,
-        &netfails,
-        &klast,
-        &kcur,
-        &hinused,
-        &hlast,
-        &hcur,
-        &tcur
-      );
-
-      long nniters, nncfails;
-      IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
-
-      long int ngevalsBBDP = 0;
-      if (options.using_iterative_solver)
-        IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP);
-
-      py::print("Solver Stats:");
-      py::print("\tNumber of steps =", nsteps);
-      py::print("\tNumber of calls to residual function =", nrevals);
-      py::print("\tNumber of calls to residual function in preconditioner =",
-                ngevalsBBDP);
-      py::print("\tNumber of linear solver setup calls =", nlinsetups);
-      py::print("\tNumber of error test failures =", netfails);
-      py::print("\tMethod order used on last step =", klast);
-      py::print("\tMethod order used on next step =", kcur);
-      py::print("\tInitial step size =", hinused);
-      py::print("\tStep size on last step =", hlast);
-      py::print("\tStep size on next step =", hcur);
-      py::print("\tCurrent internal time reached =", tcur);
-      py::print("\tNumber of nonlinear iterations performed =", nniters);
-      py::print("\tNumber of nonlinear convergence failures =", nncfails);
+      // failed
+      break;
     }
+  }
 
-    return sol;
+  np_array t_ret = np_array(
+    t_i,
+    &t_return[0],
+    free_t_when_done
+  );
+  np_array y_ret = np_array(
+    t_i * number_of_states,
+    &y_return[0],
+    free_y_when_done
+  );
+  np_array yS_ret = np_array(
+    std::vector<ptrdiff_t> {
+      number_of_parameters,
+      number_of_timesteps,
+      number_of_states
+    },
+    &yS_return[0],
+    free_yS_when_done
+  );
+
+  Solution sol(retval, t_ret, y_ret, yS_ret);
+
+  if (options.print_stats)
+  {
+    long nsteps, nrevals, nlinsetups, netfails;
+    int klast, kcur;
+    realtype hinused, hlast, hcur, tcur;
+
+    IDAGetIntegratorStats(
+      ida_mem,
+      &nsteps,
+      &nrevals,
+      &nlinsetups,
+      &netfails,
+      &klast,
+      &kcur,
+      &hinused,
+      &hlast,
+      &hcur,
+      &tcur
+    );
+
+    long nniters, nncfails;
+    IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
+
+    long int ngevalsBBDP = 0;
+    if (options.using_iterative_solver)
+      IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP);
+
+    py::print("Solver Stats:");
+    py::print("\tNumber of steps =", nsteps);
+    py::print("\tNumber of calls to residual function =", nrevals);
+    py::print("\tNumber of calls to residual function in preconditioner =",
+              ngevalsBBDP);
+    py::print("\tNumber of linear solver setup calls =", nlinsetups);
+    py::print("\tNumber of error test failures =", netfails);
+    py::print("\tMethod order used on last step =", klast);
+    py::print("\tMethod order used on next step =", kcur);
+    py::print("\tInitial step size =", hinused);
+    py::print("\tStep size on last step =", hlast);
+    py::print("\tStep size on next step =", hcur);
+    py::print("\tCurrent internal time reached =", tcur);
+    py::print("\tNumber of nonlinear iterations performed =", nniters);
+    py::print("\tNumber of nonlinear convergence failures =", nncfails);
+  }
+
+  return sol;
 }
