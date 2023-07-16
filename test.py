@@ -6,7 +6,7 @@ output_variables = [
     "Voltage [V]",
     "Current [A]",
 ]
-#output_variables = []
+output_variables = []
 
 import pybamm
 import numpy as np

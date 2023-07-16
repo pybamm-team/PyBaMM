@@ -200,7 +200,10 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution, EmptySolution, make_cycle_solution
+from .solvers.solution_base import SolutionBase, EmptySolution, make_cycle_solution
+from .solvers.solution_full import SolutionFull
+from .solvers.solution_vars import SolutionVars
+from .solvers.solution import Solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver

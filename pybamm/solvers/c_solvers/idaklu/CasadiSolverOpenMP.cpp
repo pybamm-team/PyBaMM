@@ -279,18 +279,29 @@ Solution CasadiSolverOpenMP::solve(
   if (number_of_parameters > 0)
     IDAGetSens(ida_mem, &t0, yyS);
 
-  int t_i = 1;
   realtype tret;
   realtype t_next;
   realtype t_final = t(number_of_timesteps - 1);
 
   // set return vectors
+  int length_of_return_vector = 0;
+  size_t max_res_size = 0;  // maximum result size (for common result buffer)
+  if (functions->var_casadi_fcns.size() > 0) {
+    // return only the requested variables list after computation
+    for (auto& var_fcn : functions->var_casadi_fcns) {
+      max_res_size = std::max(max_res_size, var_fcn.m_res.size());
+      length_of_return_vector += max_res_size - 1;
+    }
+  } else {
+    // Return full y state-vector
+    length_of_return_vector = number_of_states;
+  }
   realtype *t_return = new realtype[number_of_timesteps];
   realtype *y_return = new realtype[number_of_timesteps *
-                                    number_of_states];
+                                    length_of_return_vector];
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
-                                     number_of_states];
+                                     length_of_return_vector];
 
   py::capsule free_t_when_done(
     t_return,
@@ -314,17 +325,37 @@ Solution CasadiSolverOpenMP::solve(
     }
   );
 
+  // Initial state (t_i=0)
   t_return[0] = t(0);
-  for (int j = 0; j < number_of_states; j++)
-    y_return[j] = yval[j];
-  for (int j = 0; j < number_of_parameters; j++)
-  {
-    const int base_index = j * number_of_timesteps * number_of_states;
-    for (int k = 0; k < number_of_states; k++)
-      yS_return[base_index + k] = ySval[j][k];
+  realtype *res = new realtype[max_res_size];
+  if (functions->var_casadi_fcns.size() > 0) {
+    // Evaluate casadi functions for each requested variable and store
+    size_t j = 0;
+    for (auto& var_fcn : functions->var_casadi_fcns) {
+      var_fcn.m_arg[0] = &tret;
+      var_fcn.m_arg[1] = yval;
+      var_fcn.m_arg[2] = functions->inputs.data();
+      var_fcn.m_res[0] = res;
+      var_fcn();
+      // store in return vector
+      for (size_t jj=0; jj<var_fcn.m_res.size()-1; jj++)
+        y_return[j++] = res[jj];
+    }
+  } else {
+    // Retain complete copy of the state vector
+    for (int j = 0; j < number_of_states; j++)
+      y_return[j] = yval[j];
+    for (int j = 0; j < number_of_parameters; j++)
+    {
+      const int base_index = j * number_of_timesteps * number_of_states;
+      for (int k = 0; k < number_of_states; k++)
+        yS_return[base_index + k] = ySval[j][k];
+    }
   }
 
+  // Subsequent states (t_i>0)
   int retval;
+  int t_i = 1;
   while (true)
   {
     t_next = t(t_i);
@@ -339,37 +370,36 @@ Solution CasadiSolverOpenMP::solve(
       if (number_of_parameters > 0)
         IDAGetSens(ida_mem, &tret, yyS);
 
+      // Evaluate and store results for the time step
       t_return[t_i] = tret;
-      for (int j = 0; j < number_of_states; j++)
-        y_return[t_i * number_of_states + j] = yval[j];
-      for (int j = 0; j < number_of_parameters; j++)
-      {
-        const int base_index =
-          j * number_of_timesteps * number_of_states +
-          t_i * number_of_states;
-        for (int k = 0; k < number_of_states; k++)
-          yS_return[base_index + k] = ySval[j][k];
+      size_t j = 0;
+      std::cout << "Timestep " << t_return[t_i] << std::endl;
+      if (functions->var_casadi_fcns.size() > 0) {
+        // Evaluate casadi functions for each requested variable and store
+        for (auto& var_fcn : functions->var_casadi_fcns) {
+          var_fcn.m_arg[0] = &tret;
+          var_fcn.m_arg[1] = yval;
+          var_fcn.m_arg[2] = functions->inputs.data();
+          var_fcn.m_res[0] = res;
+          var_fcn();
+          // store in return vector
+          for (size_t jj=0; jj<var_fcn.m_res.size()-1; jj++)
+            y_return[t_i*length_of_return_vector + j++] = res[jj];
+          std::cout << "Calculated value: " << *res << std::endl;
+        }
+      } else {
+        // Retain complete copy of the state vector
+        for (int j = 0; j < number_of_states; j++)
+          y_return[t_i * number_of_states + j] = yval[j];
+        for (int j = 0; j < number_of_parameters; j++)
+        {
+          const int base_index =
+            j * number_of_timesteps * number_of_states +
+            t_i * number_of_states;
+          for (int k = 0; k < number_of_states; k++)
+            yS_return[base_index + k] = ySval[j][k];
+        }
       }
-
-      // Try evaluating one of the variable casadi functions
-      realtype *res = new realtype[number_of_states];
-        functions->extra_fcn.m_arg[0] = &t_return[t_i];
-        functions->extra_fcn.m_arg[1] = &y_return[t_i * number_of_states];
-        functions->extra_fcn.m_arg[2] = functions->inputs.data();
-        functions->extra_fcn.m_res[0] = res;
-        functions->extra_fcn();
-        std::cout << "Calculated value [extra]: " << *res <<  std::endl;
-      int k = 0;
-      for (auto& var_fcn : functions->var_casadi_fcns) {
-        var_fcn.m_arg[0] = &t_return[t_i];
-        var_fcn.m_arg[1] = &y_return[t_i * number_of_states];
-        var_fcn.m_arg[2] = functions->inputs.data();
-        var_fcn.m_res[0] = res;
-        var_fcn();
-        std::cout << "Calculated value [" << k << "]: " << *res << std::endl;
-        k++;
-      }
-
       t_i += 1;
 
       if (retval == IDA_SUCCESS ||
@@ -389,7 +419,7 @@ Solution CasadiSolverOpenMP::solve(
     free_t_when_done
   );
   np_array y_ret = np_array(
-    t_i * number_of_states,
+    t_i * length_of_return_vector,
     &y_return[0],
     free_y_when_done
   );
@@ -397,7 +427,7 @@ Solution CasadiSolverOpenMP::solve(
     std::vector<ptrdiff_t> {
       number_of_parameters,
       number_of_timesteps,
-      number_of_states
+      length_of_return_vector
     },
     &yS_return[0],
     free_yS_when_done

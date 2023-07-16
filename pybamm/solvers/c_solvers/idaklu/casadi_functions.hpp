@@ -3,7 +3,6 @@
 
 #include "common.hpp"
 #include "options.hpp"
-#include "solution.hpp"
 #include <casadi/casadi.hpp>
 #include <memory>
 
@@ -42,13 +41,13 @@ class CasadiFunction
 {
 public:
   explicit CasadiFunction(const Function &f);
+  void operator()();
 
 public:
   std::vector<const double *> m_arg;
   std::vector<double *> m_res;
-  void operator()();
 
-//private:
+private:
   const Function &m_func;
   std::vector<casadi_int> m_iw;
   std::vector<double> m_w;
@@ -56,32 +55,6 @@ public:
 
 class CasadiFunctions
 {
-public:
-  int number_of_states;
-  int number_of_parameters;
-  int number_of_events;
-  int number_of_nnz;
-  int jac_bandwidth_lower;
-  int jac_bandwidth_upper;
-
-  CasadiFunction rhs_alg;
-  CasadiFunction sens;
-  CasadiFunction jac_times_cjmass;
-  CasadiFunction jac_action;
-  CasadiFunction mass_action;
-  CasadiFunction events;
-  CasadiFunction extra_fcn;
-  std::vector<CasadiFunction> var_casadi_fcns;
-  
-  std::vector<int64_t> jac_times_cjmass_rowvals;
-  std::vector<int64_t> jac_times_cjmass_colptrs;
-  std::vector<realtype> inputs;
-  
-  Options options;
-  
-  realtype *get_tmp_state_vector();
-  realtype *get_tmp_sparse_jacobian_data();
-
 public:
   CasadiFunctions(
     const Function &rhs_alg,
@@ -99,10 +72,34 @@ public:
     const int n_s,
     const int n_e,
     const int n_p,
-    const Function &extra_fcn,
     const std::vector<Function*> var_casadi_fcns,
     const Options& options
   );
+
+public:
+  int number_of_states;
+  int number_of_parameters;
+  int number_of_events;
+  int number_of_nnz;
+  int jac_bandwidth_lower;
+  int jac_bandwidth_upper;
+
+  CasadiFunction rhs_alg;
+  CasadiFunction sens;
+  CasadiFunction jac_times_cjmass;
+  CasadiFunction jac_action;
+  CasadiFunction mass_action;
+  CasadiFunction events;
+  std::vector<CasadiFunction> var_casadi_fcns;
+  
+  std::vector<int64_t> jac_times_cjmass_rowvals;
+  std::vector<int64_t> jac_times_cjmass_colptrs;
+  std::vector<realtype> inputs;
+  
+  Options options;
+  
+  realtype *get_tmp_state_vector();
+  realtype *get_tmp_sparse_jacobian_data();
 
 private:
   std::vector<realtype> tmp_state_vector;

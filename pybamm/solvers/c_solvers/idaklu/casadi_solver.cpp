@@ -25,7 +25,6 @@ CasadiSolver *create_casadi_solver(
   np_array atol_np,
   double rel_tol,
   int inputs_length,
-  const Function &extra_fcn,
   const std::vector<Function*> var_casadi_fcns,
   py::dict options
 ) { 
@@ -46,7 +45,6 @@ CasadiSolver *create_casadi_solver(
     number_of_states,
     number_of_events,
     number_of_parameters,
-    extra_fcn,
     var_casadi_fcns,
     options_cpp
   );

@@ -80,7 +80,6 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("atol"),
     py::arg("rtol"),
     py::arg("inputs"),
-    py::arg("extra_fcn"),
     py::arg("var_casadi_fcns"),
     py::arg("options"),
     py::return_value_policy::take_ownership);

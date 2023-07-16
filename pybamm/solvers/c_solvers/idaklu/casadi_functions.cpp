@@ -40,7 +40,6 @@ CasadiFunctions::CasadiFunctions(
   const int inputs_length, const Function &jac_action,
   const Function &mass_action, const Function &sens, const Function &events,
   const int n_s, int n_e, const int n_p,
-  const Function &extra_fcn,
   const std::vector<Function*> var_casadi_fcns,
   const Options& options)
   : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
@@ -51,7 +50,6 @@ CasadiFunctions::CasadiFunctions(
     mass_action(mass_action), sens(sens), events(events),
     tmp_state_vector(number_of_states),
     tmp_sparse_jacobian_data(jac_times_cjmass_nnz),
-    extra_fcn(extra_fcn),
     options(options)
 {
   // convert casadi::Function list to CasadiFunction list

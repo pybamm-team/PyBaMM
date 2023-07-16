@@ -478,7 +478,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 atol=atol,
                 rtol=rtol,
                 inputs=len(inputs),
-                extra_fcn=self._setup["var_casadi_fcns"][0],
                 var_casadi_fcns=self._setup["var_casadi_fcns"],
                 options=self._options,
             )
