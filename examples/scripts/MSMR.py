@@ -1,15 +1,7 @@
 import pybamm
 
-model = pybamm.lithium_ion.SPM(
-    {
-        "open-circuit potential": "MSMR",
-        "particle": "MSMR",
-        "number of MSMR reactions": ("6", "4"),
-    }
-)
+model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
 
-
-parameter_values = pybamm.ParameterValues("MSMR_Example")
 experiment = pybamm.Experiment(
     [
         (
@@ -21,6 +13,6 @@ experiment = pybamm.Experiment(
         ),
     ]
 )
-sim = pybamm.Simulation(model, parameter_values=parameter_values, experiment=experiment)
+sim = pybamm.Simulation(model, experiment=experiment)
 sim.solve(initial_soc=0.9)
 sim.plot()
