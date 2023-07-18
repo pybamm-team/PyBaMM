@@ -20,6 +20,19 @@ if idaklu_spec is not None:
 
 def have_idaklu():
     return idaklu_spec is not None
+            
+def wrangle_name(name):
+    return name.casefold() \
+        .replace(" ", "_") \
+        .replace("[", "") \
+        .replace("]", "") \
+        .replace(".", "_") \
+        .replace("-", "_") \
+        .replace("(", "") \
+        .replace(")", "") \
+        .replace("%", "prc") \
+        .replace(",", "") \
+        .replace(".", "")
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -270,16 +283,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
             )
 
-            # convert 'variable' expressions to casadi functions
+            # if output_variables specified then convert functions to casadi
+            # expressions for evaluation within the idaklu solver
             for key in self.output_variables:
                 var_casadi = casadi.Function(
-                    "variable",
+                    wrangle_name(key),
                     [t_casadi, y_casadi, p_casadi_stacked],
-                    [
-                        model.variables_and_events[key].to_casadi(
-                            t_casadi, y_casadi, p_casadi_stacked
-                        )
-                    ],
+                    [model.variables_and_events[key].to_casadi(
+                        t_casadi, y_casadi, inputs=p_casadi)],
                 )
                 self.var_casadi_fcns.append(
                     idaklu.generate_function(var_casadi.serialize())
@@ -514,7 +525,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs_dict or {}
         # stack inputs
         if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
+            arrays_to_stack = [np.array(x).reshape(-1, 1)
+                               for x in inputs_dict.values()]
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])

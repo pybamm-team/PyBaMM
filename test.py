@@ -1,16 +1,21 @@
+import pybamm
+import numpy as np
+import matplotlib.pylab as plt
+import importlib
+
 solver_opt = 2
 jacobian = 'sparse'  # sparse, dense, band, none
 num_threads = 1
 output_variables = [
-    "Time [min]",
     "Voltage [V]",
+    "Time [min]",
     "Current [A]",
 ]
-output_variables = []
+#output_variables = []
 
-import pybamm
-import numpy as np
-import importlib
+input_parameters = {
+    "Current function [A]": 0.15652,
+}
 
 # check for loading errors
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
@@ -23,6 +28,7 @@ model = pybamm.lithium_ion.DFN()
 # model.convert_to_format = 'jax'
 geometry = model.default_geometry
 param = model.default_parameter_values
+param.update({key: "[input]" for key in input_parameters})
 param.process_model(model)
 param.process_geometry(geometry)
 n = 100  # control the complexity of the geometry (increases number of solver states)
@@ -56,10 +62,47 @@ options = {
     'num_threads': num_threads,
 }
 
-klu_sol = pybamm.IDAKLUSolver(
+if True:
+    output_variables = [m for m, (k, v) in
+                        zip(model.variable_names(), model.variables.items())
+                        if not isinstance(v, pybamm.ExplicitTimeIntegral)]
+    left_out = [m for m, (k, v) in
+                zip(model.variable_names(), model.variables.items())
+                if isinstance(v, pybamm.ExplicitTimeIntegral)]
+    print("ExplicitTimeIntegral variables:")
+    print(left_out)
+
+print("output_variables:")
+print(output_variables)
+print("\nInput parameters:")
+print(input_parameters)
+
+solver = pybamm.IDAKLUSolver(
     atol=1e-8, rtol=1e-8,
     options=options,
     output_variables=output_variables,
-).solve(model, t_eval)
+)
 
-print(f"Solve time: {klu_sol.solve_time.value*1000} msecs")
+sol = solver.solve(
+    model,
+    t_eval,
+    inputs=input_parameters,
+    calculate_sensitivities=True,
+)
+
+print(f"Solve time: {sol.solve_time.value*1000} msecs")
+
+if output_variables:
+    var = output_variables[0]
+    print(sol[var].data)
+else:
+    var = "Current [A]"
+if input_parameters:
+    param = list(input_parameters.keys())[0]
+    print(sol[var].sensitivities[param])
+    if False:
+        fig, axs = plt.subplots(1, 2)
+        axs[0].plot(t_eval, sol[var](t_eval))
+        axs[1].plot(t_eval, sol[var].sensitivities[param])
+        plt.tight_layout()
+        plt.show()

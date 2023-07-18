@@ -327,7 +327,7 @@ Solution CasadiSolverOpenMP::solve(
 
   // Initial state (t_i=0)
   t_return[0] = t(0);
-  realtype *res = new realtype[max_res_size];
+  realtype *res = new realtype[number_of_states]; // TODO: Crashes if set to max_res_size
   if (functions->var_casadi_fcns.size() > 0) {
     // Evaluate casadi functions for each requested variable and store
     size_t j = 0;
@@ -373,7 +373,6 @@ Solution CasadiSolverOpenMP::solve(
       // Evaluate and store results for the time step
       t_return[t_i] = tret;
       size_t j = 0;
-      std::cout << "Timestep " << t_return[t_i] << std::endl;
       if (functions->var_casadi_fcns.size() > 0) {
         // Evaluate casadi functions for each requested variable and store
         for (auto& var_fcn : functions->var_casadi_fcns) {
@@ -385,7 +384,6 @@ Solution CasadiSolverOpenMP::solve(
           // store in return vector
           for (size_t jj=0; jj<var_fcn.m_res.size()-1; jj++)
             y_return[t_i*length_of_return_vector + j++] = res[jj];
-          std::cout << "Calculated value: " << *res << std::endl;
         }
       } else {
         // Retain complete copy of the state vector
