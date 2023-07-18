@@ -12,4 +12,4 @@ repos:
     rev: "v0.0.278"
     hooks:
       - id: ruff
-        args: [--ignore=E741, --exclude=__init__.py]
+        args: [--ignore=E741, --exclude=__init__.py, --fix]
