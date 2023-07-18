@@ -175,11 +175,12 @@ version_match = os.environ.get("READTHEDOCS_VERSION")
 # Check the version type on readthedocs
 version_type = os.environ.get("READTHEDOCS_VERSION_TYPE")
 
-# We want to use the local versions.json if building locally and on PRs
-# In this case, the version type is "external", and we set the versions accordingly
+# We want to use the local versions.json if building locally and on PRs (in which case
+# the version type is "external"), and we set the versions accordingly
 
-if version_match is None:
+if version_match is None or version_type == "external":
     # Use local versions.json if not building on readthedocs
+    # or if building on readthedocs but on PRs
     html_theme_options["switcher"]["json_url"] = "_static/versions.json"
 
 if version_type == "external":
