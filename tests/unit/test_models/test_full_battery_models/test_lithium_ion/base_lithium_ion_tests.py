@@ -361,5 +361,9 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_msmr(self):
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         self.check_well_posedness(options)

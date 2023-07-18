@@ -158,7 +158,11 @@ class TestElectrodeSOH(TestCase):
 
 class TestElectrodeSOHMSMR(TestCase):
     def test_known_solution(self):
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         param = pybamm.LithiumIonParameters(options=options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
@@ -195,7 +199,11 @@ class TestElectrodeSOHMSMR(TestCase):
         esoh_solver._check_esoh_feasible(inputs)
 
     def test_known_solution_cell_capacity(self):
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
@@ -360,7 +368,11 @@ class TestGetInitialOCP(TestCase):
 
 class TestGetInitialOCPMSMR(TestCase):
     def test_get_initial_ocp(self):
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
@@ -377,7 +389,11 @@ class TestGetInitialOCPMSMR(TestCase):
         self.assertAlmostEqual(Up - Un, 4)
 
     def test_min_max_ocp(self):
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 

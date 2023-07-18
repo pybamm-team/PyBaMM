@@ -48,6 +48,7 @@ class TestDFN(BaseUnitTestLithiumIon, TestCase):
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "particle size": "distribution",
+            "number of MSMR reactions": ("6", "4"),
         }
         self.check_well_posedness(options)
 

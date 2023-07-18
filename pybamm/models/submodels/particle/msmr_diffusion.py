@@ -146,11 +146,17 @@ class MSMRDiffusion(BaseParticle):
         # Standard potential variables
         variables.update(self._get_standard_potential_variables(U))
 
-        # Calculate the stoichiometry from the potential
+        # Standard fractional occupancy variables (these are indexed by reaction number)
+        variables.update(self._get_standard_fractional_occupancy_variables(U))
+        variables.update(
+            self._get_standard_differential_fractional_occupancy_variables(U)
+        )
+
+        # Calculate the (total) stoichiometry from the potential
         x = self.phase_param.x(U)
         dxdU = self.phase_param.dxdU(U)
 
-        # Standard stoichiometry and concentration variables (size-independent)
+        # Standard (total) stoichiometry and concentration variables (size-independent)
         c_s = x * c_max
         variables.update(self._get_standard_concentration_variables(c_s))
         variables.update(self._get_standard_differential_stoichiometry_variables(dxdU))
@@ -486,6 +492,58 @@ class MSMRDiffusion(BaseParticle):
             f"X-averaged {domain} {phase_name}particle surface potential "
             "distribution [V]": U_surf_xav_distribution,
         }
+        return variables
+
+    def _get_standard_fractional_occupancy_variables(self, U):
+        options = self.options
+        domain = self.domain
+        subscript = domain[0]
+        variables = {}
+        # Loop over all reactions
+        N = int(getattr(options, domain)["number of MSMR reactions"])
+        for i in range(N):
+            x = self.phase_param.x_j(U, i)
+            x_surf = pybamm.surf(x)
+            x_surf_av = pybamm.x_average(x_surf)
+            x_xav = pybamm.x_average(x)
+            x_rav = pybamm.r_average(x)
+            x_av = pybamm.r_average(x_xav)
+            variables.update(
+                {
+                    f"x_{subscript}_{i}": x,
+                    f"X-averaged x_{subscript}_{i}": x_xav,
+                    f"R-averaged x_{subscript}_{i}": x_rav,
+                    f"Average x_{subscript}_{i}": x_av,
+                    f"Surface x_{subscript}_{i}": x_surf,
+                    f"X-averaged surface x_{subscript}_{i}": x_surf_av,
+                }
+            )
+        return variables
+
+    def _get_standard_differential_fractional_occupancy_variables(self, U):
+        options = self.options
+        domain = self.domain
+        subscript = domain[0]
+        variables = {}
+        # Loop over all reactions
+        N = int(getattr(options, domain)["number of MSMR reactions"])
+        for i in range(N):
+            dxdU = self.phase_param.dxdU_j(U, i)
+            dxdU_surf = pybamm.surf(dxdU)
+            dxdU_surf_av = pybamm.x_average(dxdU_surf)
+            dxdU_xav = pybamm.x_average(dxdU)
+            dxdU_rav = pybamm.r_average(dxdU)
+            dxdU_av = pybamm.r_average(dxdU_xav)
+            variables.update(
+                {
+                    f"dxdU_{subscript}_{i}": dxdU,
+                    f"X-averaged dxdU_{subscript}_{i}": dxdU_xav,
+                    f"R-averaged dxdU_{subscript}_{i}": dxdU_rav,
+                    f"Average dxdU_{subscript}_{i}": dxdU_av,
+                    f"Surface dxdU_{subscript}_{i}": dxdU_surf,
+                    f"X-averaged surface dxdU_{subscript}_{i}": dxdU_surf_av,
+                }
+            )
         return variables
 
     def _get_standard_differential_stoichiometry_variables(self, dxdU):

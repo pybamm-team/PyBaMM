@@ -112,6 +112,7 @@ class TestMPM(TestCase):
         options = {
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()

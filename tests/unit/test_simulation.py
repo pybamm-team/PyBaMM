@@ -204,7 +204,11 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 0.5)
 
         # test with MSMR
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         model = pybamm.lithium_ion.SPM(options)
         param = pybamm.ParameterValues("MSMR_Example")
         sim = pybamm.Simulation(model, parameter_values=param)

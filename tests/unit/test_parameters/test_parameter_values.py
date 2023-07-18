@@ -120,7 +120,11 @@ class TestParameterValues(TestCase):
         self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
 
     def test_set_initial_ocps(self):
-        options = {"open-circuit potential": "MSMR", "particle": "MSMR"}
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
         param_100 = pybamm.ParameterValues("MSMR_Example")
         param_100.set_initial_ocps(1, inplace=True, options=options)
         param_0 = param_100.set_initial_ocps(0, inplace=False, options=options)
