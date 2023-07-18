@@ -226,6 +226,7 @@ setup(
             "ipywidgets",
             "sphinx-gallery",
             "sphinx-hoverxref",
+            "sphinx-docsearch",
         ],  # For doc generation
         "examples": [
             "jupyter",  # For example notebooks
