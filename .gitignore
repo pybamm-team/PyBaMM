@@ -134,5 +134,8 @@ results/
 !docs/source/examples/notebooks/models/spm1.png
 !docs/source/examples/notebooks/models/spm2.png
 
+# do not ignore images in _static folder in docs
+!docs/source/_static/*.png
+
 # tests
 test_callback.log
