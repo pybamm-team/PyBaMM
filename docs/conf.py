@@ -33,8 +33,6 @@ author = "The PyBaMM Team"
 version = pybamm.__version__
 # The full version, including alpha/beta/rc tags
 release = version
-# Load the latest version by default
-dropdown_version = "latest"
 
 
 # -- General configuration ---------------------------------------------------
@@ -110,15 +108,15 @@ suppress_warnings = ["git.too_shallow"]
 
 html_theme = "pydata_sphinx_theme"
 
-html_static_path = ["source/_static"]
+html_static_path = ["_static"]
 
 # Theme
 
 # pydata theme options (see
 # https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
 # mostly copied from numpy, scipy, pandas
-html_logo = "source/_static/pybamm_logo.png"
-html_favicon = "source/_static/favicon/favicon.png"
+html_logo = "_static/pybamm_logo.png"
+html_favicon = "_static/favicon/favicon.png"
 
 html_theme_options = {
     "logo": {
@@ -150,7 +148,7 @@ html_theme_options = {
         },
     ],
     "switcher": {
-        "version_match": dropdown_version,
+        "version_match": version,
         "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
     },
     # turn to False to not fail build if json_url is not found
@@ -169,6 +167,24 @@ html_theme_options = {
         "last-updated",
     ],
 }
+
+# Version swticher configuration
+
+# Check if building on readthedocs
+version_match = os.environ.get("READTHEDOCS_VERSION")
+# Check the version type on readthedocs
+version_type = os.environ.get("READTHEDOCS_VERSION_TYPE")
+
+# We want to use the local versions.json if building locally and on PRs
+# In this case, the version type is "external", and we set the versions accordingly
+
+if version_match is None:
+    # Use local versions.json if not building on readthedocs
+    html_theme_options["switcher"]["json_url"] = "_static/versions.json"
+
+if version_type == "external":
+    # Set the version to latest on readthedocs PRs
+    html_theme_options["switcher"]["version_match"] = "latest"
 
 html_title = "%s v%s Manual" % (project, version)
 html_last_updated_fmt = "%Y-%m-%d"
