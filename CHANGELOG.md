@@ -5,6 +5,7 @@
 
 ## Bug fixes
 
+- `Thevenin` model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143)) 
 - Rename `param.opc_soc_0_dimensional` and `param.opc_soc_100_dimensional` to `param.ocp_soc_0_dimensional` and `param.ocp_soc_100_dimensional` (`opc` to `ocp`) ([#3116](https://github.com/pybamm-team/PyBaMM/pull/3116))
 - Error generated when invalid parameter values are passed ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
 - Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019. ([#3096](https://github.com/pybamm-team/PyBaMM/pull/3096))
@@ -12,6 +13,7 @@
 ## Breaking changes
 
 - PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
+
 
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 
