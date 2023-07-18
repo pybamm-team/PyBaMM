@@ -374,6 +374,16 @@ hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
 
 # -- Options for Algolia DocSearch (sphinx-docsearch) ------------------------
 
+# DocSearch settings
+docsearch_app_id = "BXYTEF2JI8"
+docsearch_api_key = "b7e7f1fc1a7c40a1587e52e8f4ff3b45"  # search API key, safe to use
+docsearch_index_name = "pybamm"
+
+# Searchbox settings
+docsearch_container = "search-button__search-container"
+docsearch_placeholder = "Search PyBaMM `Ctrl` + `K`"
+docsearch_initial_query = "API"
+
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
 
