@@ -361,6 +361,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.geo = domain_param.geo.prim
         elif self.phase == "secondary":
             self.geo = domain_param.geo.sec
+        self.options = getattr(self.main_param.options, self.domain)
 
     def _set_parameters(self):
         main = self.main_param
@@ -483,11 +484,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.c_max = pybamm.Parameter(
             f"{pref}Maximum concentration in {domain} electrode [mol.m-3]"
         )
-        if main.options["open-circuit potential"] == "MSMR":
+        if self.options["open-circuit potential"] == "MSMR":
             self.U_init = pybamm.Parameter(
                 f"{pref}Initial voltage in {domain} electrode [V]",
             )
-            self.c_init = self.X(self.U_init) * self.c_max
+            self.c_init = self.x(self.U_init) * self.c_max
         else:
             self.c_init = pybamm.FunctionParameter(
                 f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
@@ -504,7 +505,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
 
-        if main.options["open-circuit potential"] != "MSMR":
+        if self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
 
         # Electrode loading and capacity
@@ -515,7 +516,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.Q_Li_init = self.n_Li_init * main.F / 3600
         self.Q_init = self.elec_loading * main.A_cc
 
-        if main.options["particle shape"] == "spherical":
+        if self.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
     def D(self, c_s, T):
@@ -591,30 +592,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
         return out
 
-    def X(self, U):
-        "Stoichiometry as a function of potential (for use with MSMR models)"
-        Domain = self.domain.capitalize()
-        inputs = {
-            f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U
-        }
-        return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode stoichiometry", inputs
-        )
-
-    def dXdU(self, U):
-        """
-        Differential stoichiometry as a function of potential (for use with MSMR models)
-        """
-        Domain = self.domain.capitalize()
-        inputs = {
-            f"{self.phase_prefactor}{Domain} particle open-circuit potential [V]": U
-        }
-        return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode stoichiometry",
-            inputs,
-            diff_variable=U,
-        )
-
     def dUdT(self, sto):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
@@ -629,6 +606,53 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} electrode OCP entropic change [V.K-1]",
             inputs,
         )
+
+    def x_j(self, U, index):
+        "Fractional occupancy of site j as a function of potential"
+        domain = self.domain
+        subscript = domain[0]
+        T = self.main_param.T_ref
+        f = self.main_param.F / (self.main_param.R * T)
+        U0 = pybamm.Parameter(f"U0_{subscript}_{index}")
+        w = pybamm.Parameter(f"w_{subscript}_{index}")
+        Xj = pybamm.Parameter(f"Xj_{subscript}_{index}")
+        # Equation 5, Baker et al 2018
+        xj = Xj / (1 + pybamm.exp(f * (U - U0) / w))
+        return xj
+
+    def dxdU_j(self, U, index):
+        "Derivative of fractional occupancy of site j as a function of potential"
+        domain = self.domain
+        subscript = domain[0]
+        T = self.main_param.T_ref
+        f = self.main_param.F / (self.main_param.R * T)
+        U0 = pybamm.Parameter(f"U0_{subscript}_{index}")
+        w = pybamm.Parameter(f"w_{subscript}_{index}")
+        Xj = pybamm.Parameter(f"Xj_{subscript}_{index}")
+        e = pybamm.exp(f * (U - U0) / w)
+        # Equation 25, Baker et al 2018
+        dxjdU = -(f / w) * (Xj * e) / (1 + e) ** 2
+        return dxjdU
+
+    def x(self, U):
+        "Stoichiometry as a function of potential (for use with MSMR models)"
+        N = int(self.options["number of MSMR reactions"])
+        # Equation 6, Baker et al 2018
+        x = 0
+        for i in range(N):
+            x += self.x_j(U, i)
+        return x
+
+    def dxdU(self, U):
+        """
+        Differential stoichiometry as a function of potential (for use with MSMR models)
+        """
+        N = int(self.options["number of MSMR reactions"])
+        # Equation 25, Baker et al 2018
+        dxdU = 0
+        for i in range(N):
+            dxdU += self.dxdU_j(U, i)
+        return dxdU
 
     def t_change(self, sto):
         """

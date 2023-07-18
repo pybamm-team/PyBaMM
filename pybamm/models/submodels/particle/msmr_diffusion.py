@@ -8,7 +8,9 @@ from .base_particle import BaseParticle
 class MSMRDiffusion(BaseParticle):
     """
     Class for molar conservation in particles within the Multi-Species Multi-Reaction
-    framework :footcite:t:`Baker2018`.
+    framework :footcite:t:`Baker2018`. The thermodynamic model is presented in
+    :footcite:t:`Verbrugge2017`, along with parameter values for a number of
+    substitutional materials.
 
     Parameters
     ----------
@@ -30,6 +32,7 @@ class MSMRDiffusion(BaseParticle):
         self.x_average = x_average
 
         pybamm.citations.register("Baker2018")
+        pybamm.citations.register("Verbrugge2017")
 
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
@@ -115,12 +118,12 @@ class MSMRDiffusion(BaseParticle):
             )
 
             # Calculate the stoichiometry distribution from the potential distribution
-            X_distribution = self.phase_param.X(U_distribution)
-            dXdU_distribution = self.phase_param.dXdU(U_distribution)
+            x_distribution = self.phase_param.x(U_distribution)
+            dxdU_distribution = self.phase_param.dxdU(U_distribution)
 
             # Standard stoichiometry and concentration distribution variables
             # (size-dependent)
-            c_s_distribution = X_distribution * c_max
+            c_s_distribution = x_distribution * c_max
             variables.update(
                 self._get_standard_concentration_distribution_variables(
                     c_s_distribution
@@ -128,7 +131,7 @@ class MSMRDiffusion(BaseParticle):
             )
             variables.update(
                 self._get_standard_differential_stoichiometry_distribution_variables(
-                    dXdU_distribution
+                    dxdU_distribution
                 )
             )
 
@@ -144,13 +147,13 @@ class MSMRDiffusion(BaseParticle):
         variables.update(self._get_standard_potential_variables(U))
 
         # Calculate the stoichiometry from the potential
-        X = self.phase_param.X(U)
-        dXdU = self.phase_param.dXdU(U)
+        x = self.phase_param.x(U)
+        dxdU = self.phase_param.dxdU(U)
 
         # Standard stoichiometry and concentration variables (size-independent)
-        c_s = X * c_max
+        c_s = x * c_max
         variables.update(self._get_standard_concentration_variables(c_s))
-        variables.update(self._get_standard_differential_stoichiometry_variables(dXdU))
+        variables.update(self._get_standard_differential_stoichiometry_variables(dxdU))
 
         return variables
 
@@ -161,8 +164,8 @@ class MSMRDiffusion(BaseParticle):
 
         if self.size_distribution is False:
             if self.x_average is False:
-                X = variables[f"{Domain} {phase_name}particle stoichiometry"]
-                dXdU = variables[
+                x = variables[f"{Domain} {phase_name}particle stoichiometry"]
+                dxdU = variables[
                     f"{Domain} {phase_name}particle differential stoichiometry [V-1]"
                 ]
                 U = variables[f"{Domain} {phase_name}particle potential [V]"]
@@ -176,8 +179,8 @@ class MSMRDiffusion(BaseParticle):
                     "interfacial current density [A.m-2]"
                 ]
             else:
-                X = variables[f"X-averaged {domain} {phase_name}particle stoichiometry"]
-                dXdU = variables[
+                x = variables[f"X-averaged {domain} {phase_name}particle stoichiometry"]
+                dxdU = variables[
                     f"X-averaged {domain} {phase_name}particle differential "
                     "stoichiometry [V-1]"
                 ]
@@ -200,10 +203,10 @@ class MSMRDiffusion(BaseParticle):
                 R_nondim, [f"{domain} {phase_name}particle"]
             )
             if self.x_average is False:
-                X = variables[
+                x = variables[
                     f"{Domain} {phase_name}particle stoichiometry distribution"
                 ]
-                dXdU = variables[
+                dxdU = variables[
                     f"{Domain} {phase_name}particle differential stoichiometry "
                     "distribution [V-1]"
                 ]
@@ -221,11 +224,11 @@ class MSMRDiffusion(BaseParticle):
                     "current density distribution [A.m-2]"
                 ]
             else:
-                X = variables[
+                x = variables[
                     f"X-averaged {domain} {phase_name}particle "
                     "stoichiometry distribution"
                 ]
-                dXdU = variables[
+                dxdU = variables[
                     f"X-averaged {domain} {phase_name}particle "
                     "differential stoichiometry distribution [V-1]"
                 ]
@@ -247,9 +250,9 @@ class MSMRDiffusion(BaseParticle):
         # Note: diffusivity is given as a function of concentration here,
         # not stoichiometry
         c_max = self.phase_param.c_max
-        D_eff = self._get_effective_diffusivity(X * c_max, T)
+        D_eff = self._get_effective_diffusivity(x * c_max, T)
         f = self.param.F / (self.param.R * T)
-        N_s = c_max * X * (1 - X) * f * D_eff * pybamm.grad(U)
+        N_s = c_max * x * (1 - x) * f * D_eff * pybamm.grad(U)
         variables.update(
             {
                 f"{Domain} {phase_name}particle rhs [V.s-1]": -(
@@ -257,11 +260,11 @@ class MSMRDiffusion(BaseParticle):
                 )
                 * pybamm.div(N_s)
                 / c_max
-                / dXdU,
+                / dxdU,
                 f"{Domain} {phase_name}particle bc [V.m-1]": j
                 * R_nondim
                 / param.F
-                / pybamm.surf(c_max * X * (1 - X) * f * D_eff),
+                / pybamm.surf(c_max * x * (1 - x) * f * D_eff),
             }
         )
 
@@ -485,93 +488,93 @@ class MSMRDiffusion(BaseParticle):
         }
         return variables
 
-    def _get_standard_differential_stoichiometry_variables(self, dXdU):
+    def _get_standard_differential_stoichiometry_variables(self, dxdU):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        dXdU_surf = pybamm.surf(dXdU)
-        dXdU_surf_av = pybamm.x_average(dXdU_surf)
-        dXdU_xav = pybamm.x_average(dXdU)
-        dXdU_rav = pybamm.r_average(dXdU)
-        dXdU_av = pybamm.r_average(dXdU_xav)
+        dxdU_surf = pybamm.surf(dxdU)
+        dxdU_surf_av = pybamm.x_average(dxdU_surf)
+        dxdU_xav = pybamm.x_average(dxdU)
+        dxdU_rav = pybamm.r_average(dxdU)
+        dxdU_av = pybamm.r_average(dxdU_xav)
 
         variables = {
-            f"{Domain} {phase_name}particle differential stoichiometry [V-1]": dXdU,
+            f"{Domain} {phase_name}particle differential stoichiometry [V-1]": dxdU,
             f"X-averaged {domain} {phase_name}particle "
-            "differential stoichiometry [V-1]": dXdU_xav,
+            "differential stoichiometry [V-1]": dxdU_xav,
             f"R-averaged {domain} {phase_name}particle "
-            "differential stoichiometry [V-1]": dXdU_rav,
+            "differential stoichiometry [V-1]": dxdU_rav,
             f"Average {domain} {phase_name}particle differential "
-            "stoichiometry [V-1]": dXdU_av,
+            "stoichiometry [V-1]": dxdU_av,
             f"{Domain} {phase_name}particle surface differential "
-            "stoichiometry [V-1]": dXdU_surf,
+            "stoichiometry [V-1]": dxdU_surf,
             f"X-averaged {domain} {phase_name}particle "
-            "surface differential stoichiometry [V-1]": dXdU_surf_av,
+            "surface differential stoichiometry [V-1]": dxdU_surf_av,
         }
 
         return variables
 
-    def _get_standard_differential_stoichiometry_distribution_variables(self, dXdU):
+    def _get_standard_differential_stoichiometry_distribution_variables(self, dxdU):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         # Broadcast and x-average when necessary
-        if dXdU.domain == [f"{domain} {phase_name}particle size"] and dXdU.domains[
+        if dxdU.domain == [f"{domain} {phase_name}particle size"] and dxdU.domains[
             "secondary"
         ] != [f"{domain} electrode"]:
             # X-avg differential stoichiometry distribution
-            dXdU_xav_distribution = pybamm.PrimaryBroadcast(
-                dXdU, [f"{domain} {phase_name}particle"]
+            dxdU_xav_distribution = pybamm.PrimaryBroadcast(
+                dxdU, [f"{domain} {phase_name}particle"]
             )
 
             # Surface differential stoichiometry distribution variables
-            dXdU_surf_xav_distribution = dXdU
-            dXdU_surf_distribution = pybamm.SecondaryBroadcast(
-                dXdU_surf_xav_distribution, [f"{domain} electrode"]
+            dxdU_surf_xav_distribution = dxdU
+            dxdU_surf_distribution = pybamm.SecondaryBroadcast(
+                dxdU_surf_xav_distribution, [f"{domain} electrode"]
             )
 
             # Differential stoichiometry distribution in all domains.
-            dXdU_distribution = pybamm.PrimaryBroadcast(
-                dXdU_surf_distribution, [f"{domain} {phase_name}particle"]
+            dxdU_distribution = pybamm.PrimaryBroadcast(
+                dxdU_surf_distribution, [f"{domain} {phase_name}particle"]
             )
-        elif dXdU.domain == [f"{domain} {phase_name}particle"] and (
-            dXdU.domains["tertiary"] != [f"{domain} electrode"]
+        elif dxdU.domain == [f"{domain} {phase_name}particle"] and (
+            dxdU.domains["tertiary"] != [f"{domain} electrode"]
         ):
             # X-avg differential stoichiometry distribution
-            dXdU_xav_distribution = dXdU
+            dxdU_xav_distribution = dxdU
 
             # Surface differential stoichiometry distribution variables
-            dXdU_surf_xav_distribution = pybamm.surf(dXdU_xav_distribution)
-            dXdU_surf_distribution = pybamm.SecondaryBroadcast(
-                dXdU_surf_xav_distribution, [f"{domain} electrode"]
+            dxdU_surf_xav_distribution = pybamm.surf(dxdU_xav_distribution)
+            dxdU_surf_distribution = pybamm.SecondaryBroadcast(
+                dxdU_surf_xav_distribution, [f"{domain} electrode"]
             )
 
             # Differential stoichiometry distribution in all domains.
-            dXdU_distribution = pybamm.TertiaryBroadcast(
-                dXdU_xav_distribution, [f"{domain} electrode"]
+            dxdU_distribution = pybamm.TertiaryBroadcast(
+                dxdU_xav_distribution, [f"{domain} electrode"]
             )
-        elif dXdU.domain == [f"{domain} {phase_name}particle size"] and dXdU.domains[
+        elif dxdU.domain == [f"{domain} {phase_name}particle size"] and dxdU.domains[
             "secondary"
         ] == [f"{domain} electrode"]:
             # Surface differential stoichiometry distribution variables
-            dXdU_surf_distribution = dXdU
-            dXdU_surf_xav_distribution = pybamm.x_average(dXdU)
+            dxdU_surf_distribution = dxdU
+            dxdU_surf_xav_distribution = pybamm.x_average(dxdU)
 
             # X-avg differential stoichiometry distribution
-            dXdU_xav_distribution = pybamm.PrimaryBroadcast(
-                dXdU_surf_xav_distribution, [f"{domain} {phase_name}particle"]
+            dxdU_xav_distribution = pybamm.PrimaryBroadcast(
+                dxdU_surf_xav_distribution, [f"{domain} {phase_name}particle"]
             )
 
             # Differential stoichiometry distribution in all domains
-            dXdU_distribution = pybamm.PrimaryBroadcast(
-                dXdU_surf_distribution, [f"{domain} {phase_name}particle"]
+            dxdU_distribution = pybamm.PrimaryBroadcast(
+                dxdU_surf_distribution, [f"{domain} {phase_name}particle"]
             )
         else:
-            dXdU_distribution = dXdU
+            dxdU_distribution = dxdU
 
             # x-average the *tertiary* domain.
             # NOTE: not yet implemented. Make 0.5 everywhere
-            dXdU_xav_distribution = pybamm.FullBroadcast(
+            dxdU_xav_distribution = pybamm.FullBroadcast(
                 0.5,
                 [f"{domain} {phase_name}particle"],
                 {
@@ -581,24 +584,24 @@ class MSMRDiffusion(BaseParticle):
             )
 
             # Surface differential stoichiometry distribution variables
-            dXdU_surf_distribution = pybamm.surf(dXdU)
-            dXdU_surf_xav_distribution = pybamm.x_average(dXdU_surf_distribution)
+            dxdU_surf_distribution = pybamm.surf(dxdU)
+            dxdU_surf_xav_distribution = pybamm.x_average(dxdU_surf_distribution)
 
-        dXdU_rav_distribution = pybamm.r_average(dXdU_distribution)
-        dXdU_av_distribution = pybamm.x_average(dXdU_rav_distribution)
+        dxdU_rav_distribution = pybamm.r_average(dxdU_distribution)
+        dxdU_av_distribution = pybamm.x_average(dxdU_rav_distribution)
 
         variables = {
             f"{Domain} {phase_name}particle differential stoichiometry distribution "
-            "[V-1]": dXdU_distribution,
+            "[V-1]": dxdU_distribution,
             f"X-averaged {domain} {phase_name}particle differential stoichiometry "
-            "distribution [V-1]": dXdU_xav_distribution,
+            "distribution [V-1]": dxdU_xav_distribution,
             f"R-averaged {domain} {phase_name}particle differential stoichiometry "
-            "distribution [V-1]": dXdU_rav_distribution,
+            "distribution [V-1]": dxdU_rav_distribution,
             f"Average {domain} {phase_name}particle differential stoichiometry "
-            "distribution [V-1]": dXdU_av_distribution,
+            "distribution [V-1]": dxdU_av_distribution,
             f"{Domain} {phase_name}particle surface differential stoichiometry"
-            " distribution [V-1]": dXdU_surf_distribution,
+            " distribution [V-1]": dxdU_surf_distribution,
             f"X-averaged {domain} {phase_name}particle surface differential "
-            "stoichiometry distribution [V-1]": dXdU_surf_xav_distribution,
+            "stoichiometry distribution [V-1]": dxdU_surf_xav_distribution,
         }
         return variables

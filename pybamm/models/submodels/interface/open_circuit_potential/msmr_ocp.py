@@ -8,7 +8,9 @@ from . import BaseOpenCircuitPotential
 class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
     """
     Class for open-circuit potential within the Multi-Species Multi-Reaction
-    framework :footcite:t:`Baker2018`.
+    framework :footcite:t:`Baker2018`. The thermodynamic model is presented in
+    :footcite:t:`Verbrugge2017`, along with parameter values for a number of
+    substitutional materials.
     """
 
     def get_coupled_variables(self, variables):

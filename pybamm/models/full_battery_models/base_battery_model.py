@@ -72,6 +72,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
+            * "number of MSMR reactions" : int
+                Sets the number of reactions to use in the MSMR model in each electrode.
+                A 2-tuple can be provided to give a different number of reactions in 
+                the negative and positive electrodes. Default is "none".
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single" 
                 (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
@@ -227,6 +231,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
+            "number of MSMR reactions": ["none", "1", "2", "3", "4", "5", "6"],
             "open-circuit potential": ["single", "current sigmoid", "MSMR"],
             "operating mode": [
                 "current",
@@ -572,6 +577,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",
+                                "number of MSMR reactions",
                                 "open-circuit potential",
                                 "particle",
                                 "particle mechanics",

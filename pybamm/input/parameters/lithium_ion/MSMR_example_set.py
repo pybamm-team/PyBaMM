@@ -1,6 +1,3 @@
-import pybamm
-
-
 def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
@@ -65,64 +62,19 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     return sigma_e
 
 
-def x_n(U):
-    """
-    Graphite stoichiometry as a function of potential.
-
-    Parameters
-    ----------
-    :class:`pybamm.Symbol`
-        Potential [V]
-
-    Returns
-    -------
-    sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
-    """
-    T = 298.15
-    f = pybamm.constants.F / (pybamm.constants.R * T)
-    xj = 0
-    for i in range(6):
-        U0 = pybamm.Parameter(f"U0_n_{i}")
-        w = pybamm.Parameter(f"w_n_{i}")
-        Xj = pybamm.Parameter(f"Xj_n_{i}")
-
-        xj += Xj / (1 + pybamm.exp(f * (U - U0) / w))
-
-    return xj
-
-
-def x_p(U):
-    """
-    NMC stoichiometry as a function of potential.
-
-    Parameters
-    ----------
-    :class:`pybamm.Symbol`
-        Potential [V]
-
-    Returns
-    -------
-    sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
-    """
-    T = 298.15
-    f = pybamm.constants.F / (pybamm.constants.R * T)
-    xj = 0
-    for i in range(4):
-        U0 = pybamm.Parameter(f"U0_p_{i}")
-        w = pybamm.Parameter(f"w_p_{i}")
-        Xj = pybamm.Parameter(f"Xj_p_{i}")
-
-        xj += Xj / (1 + pybamm.exp(f * (U - U0) / w))
-
-    return xj
-
-
 def get_parameter_values():
     """
-    Example parameter values for use with MSMR models. The values are loosely based on
-    the LG M50 cell, from the paper
+    Example parameter values for use with MSMR models. The thermodynamic parameters
+    are for Graphite and NMC622, and are taken from Table 1 of the paper
+
+        Mark Verbrugge, Daniel Baker, Brian Koch, Xingcheng Xiao and Wentian Gu.
+        Thermodynamic Model for Substitutional Materials: Application to Lithiated
+        Graphite, Spinel Manganese Oxide, Iron Phosphate, and Layered
+        Nickel-Manganese-Cobalt Oxide. Journal of The Electrochemical Society,
+        164(11):3243-3253, 2017. doi:10.1149/2.0341708jes.
+
+    The remaining value are based on a parameterization of the LG M50 cell, from the
+    paper
 
         Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
@@ -142,7 +94,6 @@ def get_parameter_values():
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
         # negative electrode
-        "Negative electrode stoichiometry": x_n,
         "Number of reactions in negative electrode": 6,
         "U0_n_0": 0.08843,
         "Xj_n_0": 0.43336,
@@ -173,7 +124,6 @@ def get_parameter_values():
         "Negative electrode exchange-current density [A.m-2]" "": 2.7,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
         # positive electrode
-        "Positive electrode stoichiometry": x_p,
         "Number of reactions in positive electrode": 4,
         "U0_p_0": 3.62274,
         "Xj_p_0": 0.13442,
@@ -219,4 +169,6 @@ def get_parameter_values():
         "Initial temperature [K]": 298.15,
         "Initial voltage in negative electrode [V]": 0.01,
         "Initial voltage in positive electrode [V]": 4.19,
+        # citations
+        "citations": ["Verbrugge2017", "Baker2018", "Chen2020"],
     }

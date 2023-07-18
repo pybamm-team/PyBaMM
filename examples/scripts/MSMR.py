@@ -4,6 +4,7 @@ model = pybamm.lithium_ion.SPM(
     {
         "open-circuit potential": "MSMR",
         "particle": "MSMR",
+        "number of MSMR reactions": ("6", "4"),
     }
 )
 

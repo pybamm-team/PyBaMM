@@ -196,8 +196,8 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
             )
 
         # Define parameters and input parameters
-        X_n = param.n.prim.X
-        X_p = param.p.prim.X
+        x_n = param.n.prim.x
+        x_p = param.p.prim.x
 
         V_max = param.voltage_high_cut
         V_min = param.voltage_low_cut
@@ -214,21 +214,21 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         if "Un_0" in solve_for:
             Un_0 = pybamm.Variable("Un(x_0)")
             Up_0 = V_min + Un_0
-            x_0 = X_n(Un_0)
-            y_0 = X_p(Up_0)
+            x_0 = x_n(Un_0)
+            y_0 = x_p(Up_0)
 
         # Define variables for 100% state of charge
         # TODO: thermal effects (include dU/dT)
         if "Un_100" in solve_for:
             Un_100 = pybamm.Variable("Un(x_100)")
             Up_100 = V_max + Un_100
-            x_100 = X_n(Un_100)
-            y_100 = X_p(Up_100)
+            x_100 = x_n(Un_100)
+            y_100 = x_p(Up_100)
         else:
             Un_100 = pybamm.InputParameter("Un(x_100)")
             Up_100 = pybamm.InputParameter("Up(y_100)")
-            x_100 = X_n(Un_100)
-            y_100 = X_p(Up_100)
+            x_100 = x_n(Un_100)
+            y_100 = x_p(Up_100)
 
         # Define equations for 100% state of charge
         if "Un_100" in solve_for:
@@ -710,12 +710,12 @@ class ElectrodeSOHSolver:
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
             if self.options["open-circuit potential"] == "MSMR":
-                Xn = param.n.prim.X
-                Xp = param.p.prim.X
+                xn = param.n.prim.x
+                xp = param.p.prim.x
                 Up = pybamm.Variable("Up")
                 Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - Xn(Un)
-                soc_model.algebraic[Un] = y - Xp(Up)
+                soc_model.algebraic[Up] = x - xn(Un)
+                soc_model.algebraic[Un] = y - xp(Up)
                 soc_model.initial_conditions[Un] = 0
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
@@ -1052,16 +1052,16 @@ def _get_msmr_potential_model(parameter_values, param):
     """
     V_max = param.voltage_high_cut
     V_min = param.voltage_low_cut
-    X_n = param.n.prim.X
-    X_p = param.p.prim.X
+    x_n = param.n.prim.x
+    x_p = param.p.prim.x
     model = pybamm.BaseModel()
     Un = pybamm.Variable("Un")
     Up = pybamm.Variable("Up")
     x = pybamm.InputParameter("x")
     y = pybamm.InputParameter("y")
     model.algebraic = {
-        Un: X_n(Un) - x,
-        Up: X_p(Up) - y,
+        Un: x_n(Un) - x,
+        Up: x_p(Up) - y,
     }
     model.initial_conditions = {
         Un: 1 - x,
