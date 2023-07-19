@@ -56,7 +56,7 @@ def run_coverage(session):
     session.install("-e", ".[all]")
     if sys.platform != "win32":
         session.install("-e", ".[odes]")
-        session.run("-e", ".[jax]")
+        session.install("-e", ".[jax]")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -83,7 +83,7 @@ def run_unit(session):
     session.install("-e", ".[all]")
     if sys.platform == "linux":
         session.install("-e", ".[odes]")
-        session.run("-e", ".[jax]")
+        session.install("-e", ".[jax]")
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -114,7 +114,7 @@ def run_tests(session):
     session.install("-e", ".[all]")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.install("-e", ".[odes]")
-        session.run("-e", ".[jax]")
+        session.install("-e", ".[jax]")
     session.run("python", "run-tests.py", "--all")
 
 
