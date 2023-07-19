@@ -555,8 +555,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}Maximum {domain} particle "
             "surface concentration [mol.m-3]": self.c_max,
             "Temperature [K]": T,
-            f"{self.phase_prefactor}Maximum {domain} particle "
-            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode "
