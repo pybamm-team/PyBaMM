@@ -32,6 +32,9 @@ public:
   SUNMatrix J;
   SUNLinearSolver LS;
   std::unique_ptr<CasadiFunctions> functions;
+  realtype *res;
+  realtype *res_dvar_dy;
+  realtype *res_dvar_dp;
   Options options;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -51,6 +54,21 @@ public:
     std::unique_ptr<CasadiFunctions> functions,
     const Options& options);
   ~CasadiSolverOpenMP();
+  void CalcVars(
+    realtype *y_return,
+    size_t length_of_return_vector,
+    size_t t_i,
+    realtype *tret,
+    realtype *yval,
+    std::vector<realtype*> ySval,
+    realtype *yS_return,
+    size_t *ySk);
+  void CalcVarsSensitivities(
+    realtype *tret,
+    realtype *yval,
+    std::vector<realtype*> ySval,
+    realtype *yS_return,
+    size_t *ySk);
   Solution solve(
     np_array t_np,
     np_array y0_np,

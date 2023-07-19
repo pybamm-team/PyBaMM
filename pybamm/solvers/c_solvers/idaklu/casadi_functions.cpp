@@ -31,6 +31,18 @@ void CasadiFunction::operator()()
   m_func.release(mem);
 }
 
+void CasadiFunction::operator()(std::vector<realtype*> inputs,
+                                std::vector<realtype*> results)
+{
+  // Set-up input arguments, provide result vector, then execute function
+  // Example call: fcn({in1, in2, in3}, {out1})
+  for(size_t k=0; k<inputs.size(); k++)
+    m_arg[k] = inputs[k];
+  for(size_t k=0; k<results.size(); k++)
+    m_res[k] = results[k];
+  operator()();
+}
+
 CasadiFunctions::CasadiFunctions(
   const Function &rhs_alg, const Function &jac_times_cjmass,
   const int jac_times_cjmass_nnz,
@@ -41,6 +53,8 @@ CasadiFunctions::CasadiFunctions(
   const Function &mass_action, const Function &sens, const Function &events,
   const int n_s, int n_e, const int n_p,
   const std::vector<Function*> var_casadi_fcns,
+  const std::vector<Function*> dvar_dy_fcns,
+  const std::vector<Function*> dvar_dp_fcns,
   const Options& options)
   : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
     number_of_nnz(jac_times_cjmass_nnz),
@@ -53,9 +67,14 @@ CasadiFunctions::CasadiFunctions(
     options(options)
 {
   // convert casadi::Function list to CasadiFunction list
-  this->var_casadi_fcns.clear();
   for (auto& var : var_casadi_fcns) {
     this->var_casadi_fcns.push_back(CasadiFunction(*var));
+  }
+  for (auto& var : dvar_dy_fcns) {
+    this->dvar_dy_fcns.push_back(CasadiFunction(*var));
+  }
+  for (auto& var : dvar_dp_fcns) {
+    this->dvar_dp_fcns.push_back(CasadiFunction(*var));
   }
   
   // copy across numpy array values

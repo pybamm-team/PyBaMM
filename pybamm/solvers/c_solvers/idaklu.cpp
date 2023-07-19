@@ -81,6 +81,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("rtol"),
     py::arg("inputs"),
     py::arg("var_casadi_fcns"),
+    py::arg("dvar_dy_fcns"),
+    py::arg("dvar_dp_fcns"),
     py::arg("options"),
     py::return_value_policy::take_ownership);
 

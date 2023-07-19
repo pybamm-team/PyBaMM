@@ -12,9 +12,11 @@ output_variables = [
     "Current [A]",
 ]
 #output_variables = []
+all_vars = False
 
 input_parameters = {
     "Current function [A]": 0.15652,
+    "Separator porosity": 0.47,
 }
 
 # check for loading errors
@@ -62,7 +64,7 @@ options = {
     'num_threads': num_threads,
 }
 
-if True:
+if all_vars:
     output_variables = [m for m, (k, v) in
                         zip(model.variable_names(), model.variables.items())
                         if not isinstance(v, pybamm.ExplicitTimeIntegral)]
@@ -92,17 +94,21 @@ sol = solver.solve(
 
 print(f"Solve time: {sol.solve_time.value*1000} msecs")
 
-if output_variables:
-    var = output_variables[0]
-    print(sol[var].data)
-else:
-    var = "Current [A]"
-if input_parameters:
-    param = list(input_parameters.keys())[0]
-    print(sol[var].sensitivities[param])
-    if False:
-        fig, axs = plt.subplots(1, 2)
-        axs[0].plot(t_eval, sol[var](t_eval))
-        axs[1].plot(t_eval, sol[var].sensitivities[param])
-        plt.tight_layout()
-        plt.show()
+if True:
+    #output_variables = [
+    #    "Voltage [V]",
+    #    "Time [min]",
+    #    "Current [A]",
+    #]
+    fig, axs = plt.subplots(len(output_variables), len(input_parameters)+1)
+    for k, var in enumerate(output_variables):
+        if False:
+            axs[k,0].plot(t_eval, sol[var](t_eval))
+            for paramk, param in enumerate(list(input_parameters.keys())):
+                axs[k,paramk+1].plot(t_eval, sol[var].sensitivities[param]) # time, param, var
+        else:
+            axs[k,0].plot(t_eval, sol[var][:,0])
+            for paramk, param in enumerate(list(input_parameters.keys())):
+                axs[k,paramk+1].plot(t_eval, sol.yS[:,k,paramk]) # time, param, var
+    plt.tight_layout()
+    plt.show()

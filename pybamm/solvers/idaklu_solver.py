@@ -21,7 +21,7 @@ if idaklu_spec is not None:
 def have_idaklu():
     return idaklu_spec is not None
             
-def wrangle_name(name):
+def wrangle_name(name: str) -> str:
     return name.casefold() \
         .replace(" ", "_") \
         .replace("[", "") \
@@ -285,16 +285,42 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             # if output_variables specified then convert functions to casadi
             # expressions for evaluation within the idaklu solver
+            self.var_casadi_fcns = []
+            self.dvar_dy_fcns = []
+            self.dvar_dp_fcns = []
             for key in self.output_variables:
-                var_casadi = casadi.Function(
-                    wrangle_name(key),
+                # variable functions
+                fcn_name = wrangle_name(key)
+                var_casadi = model.variables_and_events[key].to_casadi(
+                             t_casadi, y_casadi, inputs=p_casadi)
+                var_casadi_fcn = casadi.Function(
+                    fcn_name,
                     [t_casadi, y_casadi, p_casadi_stacked],
-                    [model.variables_and_events[key].to_casadi(
-                        t_casadi, y_casadi, inputs=p_casadi)],
+                    [var_casadi]
                 )
                 self.var_casadi_fcns.append(
-                    idaklu.generate_function(var_casadi.serialize())
+                    idaklu.generate_function(var_casadi_fcn.serialize())
                 )
+                # Generate derivative functions for sensitivities
+                if len(inputs) > 0:
+                    dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+                    dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+                    dvar_dy_fcn = casadi.Function(
+                        f"d{fcn_name}_dy",
+                        [t_casadi, y_casadi, p_casadi_stacked],
+                        [dvar_dy]
+                    )
+                    dvar_dp_fcn = casadi.Function(
+                        f"d{fcn_name}_dp",
+                        [t_casadi, y_casadi, p_casadi_stacked],
+                        [dvar_dp]
+                    )
+                    self.dvar_dy_fcns.append(
+                        idaklu.generate_function(dvar_dy_fcn.serialize())
+                    )
+                    self.dvar_dp_fcns.append(
+                        idaklu.generate_function(dvar_dp_fcn.serialize())
+                    )
 
         else:
             t0 = 0 if t_eval is None else t_eval[0]
@@ -468,6 +494,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
                 "output_variables": self.output_variables,
                 "var_casadi_fcns": self.var_casadi_fcns,
+                "dvar_dy_fcns": self.dvar_dy_fcns,
+                "dvar_dp_fcns": self.dvar_dp_fcns,
             }
 
             solver = idaklu.create_casadi_solver(
@@ -490,6 +518,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 rtol=rtol,
                 inputs=len(inputs),
                 var_casadi_fcns=self._setup["var_casadi_fcns"],
+                dvar_dy_fcns=self._setup["dvar_dy_fcns"],
+                dvar_dp_fcns=self._setup["dvar_dp_fcns"],
                 options=self._options,
             )
 
@@ -604,7 +634,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t = sol.t
         number_of_timesteps = t.size
         number_of_states = y0.size
-        y_out = sol.y.reshape((number_of_timesteps, number_of_states))
+        if self.output_variables:
+            # Substitute empty vectors for state vector 'y'
+            y_out = np.zeros((number_of_timesteps*number_of_states, 0))
+        else:
+            y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -628,7 +662,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             elif sol.flag == 2:
                 termination = "event"
 
-            sol = pybamm.Solution(
+            newsol = pybamm.Solution(
                 sol.t,
                 np.transpose(y_out),
                 model,
@@ -638,7 +672,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 termination,
                 sensitivities=yS_out,
             )
-            sol.integration_time = integration_time
-            return sol
+            newsol.integration_time = integration_time
+            if self.output_variables:
+                # Populate variables and sensititivies dictionaries directly
+                number_of_samples = sol.y.shape[0] // number_of_timesteps
+                sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
+                newsol._variables = {}
+                newsol.yS = sol.yS  # TODO: Replace
+                startk = 0
+                for name in self.output_variables:
+                    len_of_var = 1
+                    newsol._variables[name] = sol.y[:, startk:(startk+len_of_var)]
+                    startk += len_of_var
+            return newsol
         else:
             raise pybamm.SolverError("idaklu solver failed")

@@ -466,9 +466,12 @@ class ProcessedVariable(object):
                     dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
                     dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
+        print(dvar_dy_eval)
+        print(dvar_dp_eval)
         # Compute sensitivity
         dy_dp = self.solution_sensitivities["all"]
         S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+        print(S_var)
 
         sensitivities = {"all": S_var}
 

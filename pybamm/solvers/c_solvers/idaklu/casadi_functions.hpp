@@ -42,12 +42,14 @@ class CasadiFunction
 public:
   explicit CasadiFunction(const Function &f);
   void operator()();
+  void operator()(std::vector<realtype*> inputs,
+                  std::vector<realtype*> results);
 
 public:
   std::vector<const double *> m_arg;
   std::vector<double *> m_res;
 
-private:
+//private:
   const Function &m_func;
   std::vector<casadi_int> m_iw;
   std::vector<double> m_w;
@@ -73,6 +75,8 @@ public:
     const int n_e,
     const int n_p,
     const std::vector<Function*> var_casadi_fcns,
+    const std::vector<Function*> dvar_dy_fcns,
+    const std::vector<Function*> dvar_dp_fcns,
     const Options& options
   );
 
@@ -91,6 +95,8 @@ public:
   CasadiFunction mass_action;
   CasadiFunction events;
   std::vector<CasadiFunction> var_casadi_fcns;
+  std::vector<CasadiFunction> dvar_dy_fcns;
+  std::vector<CasadiFunction> dvar_dp_fcns;
   
   std::vector<int64_t> jac_times_cjmass_rowvals;
   std::vector<int64_t> jac_times_cjmass_colptrs;
