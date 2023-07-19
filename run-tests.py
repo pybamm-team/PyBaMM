@@ -371,12 +371,6 @@ if __name__ == "__main__":
         metavar=("in", "out"),
         help="Export a Jupyter notebook to a Python file for manual testing.",
     )
-    # Flake8 (deprecated)
-    parser.add_argument(
-        "--flake8",
-        action="store_true",
-        help="Run flake8 to check for style issues (deprecated, use pre-commit)",
-    )
     # Doctests
     parser.add_argument(
         "--doctest",
@@ -418,9 +412,6 @@ if __name__ == "__main__":
     if args.nosub:
         has_run = True
         run_code_tests(folder="unit", interpreter=interpreter)
-    # Flake8
-    if args.flake8:
-        raise NotImplementedError("flake8 is no longer used. Use pre-commit instead.")
     # Doctests
     if args.doctest:
         has_run = True

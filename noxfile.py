@@ -138,3 +138,9 @@ def build_docs(session):
 def lint(session):
     session.install("pre-commit")
     session.run("pre-commit", "run", "--all-files")
+
+
+@nox.session(name="quick", reuse_venv=True)
+def run_quick(session):
+    run_tests(session)
+    run_doctests(session)

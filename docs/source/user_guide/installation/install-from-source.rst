@@ -239,6 +239,7 @@ Doctests, examples, and coverage
 - ``nox -s examples``: Run the example scripts in ``examples/scripts``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
+- ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
 Extra tips while using Nox
 --------------------------
