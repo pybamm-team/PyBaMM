@@ -258,6 +258,9 @@ setup(
             "jax",
             "jaxlib",
         ],
+        "odes": [
+            "scikits.odes"
+        ],      
         "all": [
             "anytree>=2.4.3",
             "autograd>=1.2",
