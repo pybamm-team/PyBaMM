@@ -133,3 +133,6 @@ results/
 # do not ignore SPM images for notebooks in docs
 !docs/source/examples/notebooks/models/spm1.png
 !docs/source/examples/notebooks/models/spm2.png
+
+# tests
+test_callback.log
