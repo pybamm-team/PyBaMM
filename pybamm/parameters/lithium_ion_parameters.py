@@ -664,9 +664,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         c_e = pybamm.maximum(c_e, tol)
         c_e_ref = self.main_param.c_e_init
         tol = pybamm.settings.tolerances["j0__c_s"]
-        c_s_j_surf = pybamm.maximum(
-            pybamm.minimum(c_s_j_surf, (1 - tol) * self.c_max), tol * self.c_max
-        )
         c_max = self.c_max
 
         domain = self.domain

@@ -25,21 +25,21 @@ class MSMR(DFN):
                     options["particle"]
                 )
             )
-        # elif (
-        #    "intercalation kinetics" in options
-        #    and options["intercalation kinetics"] == "MSMR"
-        # ):
-        #    raise pybamm.OptionError(
-        #        "'intercalation kinetics' must be 'MSMR' for MSMR not '{}'".format(
-        #            options["intercalation kinetics"]
-        #        )
-        #    )
+        elif (
+            "intercalation kinetics" in options
+            and options["intercalation kinetics"] == "MSMR"
+        ):
+            raise pybamm.OptionError(
+                "'intercalation kinetics' must be 'MSMR' for MSMR not '{}'".format(
+                    options["intercalation kinetics"]
+                )
+            )
         else:
             options.update(
                 {
                     "open-circuit potential": "MSMR",
                     "particle": "MSMR",
-                    # "intercalation kinetics": "MSMR",
+                    "intercalation kinetics": "MSMR",
                 }
             )
         super().__init__(options=options, name=name)
