@@ -2,7 +2,6 @@
 # Functions to process parameter data (for Interpolants)
 #
 import os
-import pandas as pd
 import json
 import numpy as np
 
@@ -39,9 +38,7 @@ def process_1D_data(name, path=None):
     """
     filename, name = _process_name(name, path, ".csv")
 
-    data = pd.read_csv(
-        filename, comment="#", skip_blank_lines=True, header=None
-    ).to_numpy()
+    data = np.loadtxt(filename, comments="#", delimiter=",", skiprows=1)
     # Save name and data
     return (name, ([data[:, 0]], data[:, 1]))
 
@@ -91,7 +88,7 @@ def process_2D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    df = pd.read_csv(filename)
+    df = np.genfromtxt(filename)
 
     x1 = np.array(list(set(df.iloc[:, 0])))
     x2 = np.array(list(set(df.iloc[:, 1])))
@@ -145,7 +142,7 @@ def process_3D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    df = pd.read_csv(filename)
+    df = np.genfromtxt(filename)
 
     x1 = np.array(list(set(df.iloc[:, 0])))
     x2 = np.array(list(set(df.iloc[:, 1])))
