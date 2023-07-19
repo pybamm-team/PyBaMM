@@ -2,6 +2,7 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
 
+repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.0.277"
     hooks:
