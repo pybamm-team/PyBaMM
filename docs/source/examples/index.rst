@@ -19,7 +19,7 @@ For more detailed notebooks, please see the examples listed below.
 
 .. _google-colab:
 
-You may run the notebooks in `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_. 
+You may run the notebooks in `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/>`_. 
 
 This page contains a number of examples showing how to use PyBaMM. Each example was created as a `Jupyter notebook <https://jupyter.org/>`_.
 These notebooks can be downloaded and used locally by running
@@ -28,7 +28,7 @@ These notebooks can be downloaded and used locally by running
 
     $ jupyter notebook
 
-from your local PyBaMM repository or used online through `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_.
+from your local PyBaMM repository or used online through `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/>`_.
 Alternatively, you can simply copy/paste the relevant code.
 
 Using PyBaMM
