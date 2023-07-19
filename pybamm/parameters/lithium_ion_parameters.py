@@ -607,32 +607,86 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
+    def X_j(self, index):
+        "Available host sites indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        Xj = pybamm.Parameter(f"X_{d}_{index}")
+        return Xj
+
+    def U0_j(self, index):
+        "Equilibrium potential indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        U0j = pybamm.Parameter(f"U0_{d}_{index}")
+        return U0j
+
+    def w_j(self, index):
+        "Order parameter indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        wj = pybamm.Parameter(f"w_{d}_{index}")
+        return wj
+
+    def alpha_bv_j(self, index):
+        "Dimensional Butler-Volmer exchange-current density indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        alpha_bv_j = pybamm.Parameter(f"a_{d}_{index}")
+        return alpha_bv_j
+
     def x_j(self, U, index):
         "Fractional occupancy of site j as a function of potential"
-        domain = self.domain
-        subscript = domain[0]
         T = self.main_param.T_ref
         f = self.main_param.F / (self.main_param.R * T)
-        U0 = pybamm.Parameter(f"U0_{subscript}_{index}")
-        w = pybamm.Parameter(f"w_{subscript}_{index}")
-        Xj = pybamm.Parameter(f"Xj_{subscript}_{index}")
+        U0j = self.U0_j(index)
+        wj = self.w_j(index)
+        Xj = self.X_j(index)
         # Equation 5, Baker et al 2018
-        xj = Xj / (1 + pybamm.exp(f * (U - U0) / w))
+        xj = Xj / (1 + pybamm.exp(f * (U - U0j) / wj))
         return xj
 
     def dxdU_j(self, U, index):
-        "Derivative of fractional occupancy of site j as a function of potential"
-        domain = self.domain
-        subscript = domain[0]
+        "Derivative of fractional occupancy of site j as a function of potential [V-1]"
         T = self.main_param.T_ref
         f = self.main_param.F / (self.main_param.R * T)
-        U0 = pybamm.Parameter(f"U0_{subscript}_{index}")
-        w = pybamm.Parameter(f"w_{subscript}_{index}")
-        Xj = pybamm.Parameter(f"Xj_{subscript}_{index}")
-        e = pybamm.exp(f * (U - U0) / w)
+        U0j = self.U0_j(index)
+        wj = self.w_j(index)
+        Xj = self.X_j(index)
+        e = pybamm.exp(f * (U - U0j) / wj)
         # Equation 25, Baker et al 2018
-        dxjdU = -(f / w) * (Xj * e) / (1 + e) ** 2
+        dxjdU = -(f / wj) * (Xj * e) / (1 + e) ** 2
         return dxjdU
+
+    def j0_j(self, c_e, c_s_j_surf, T, index):
+        "Exchange-current density index by reaction j [A.m-2]"
+        tol = pybamm.settings.tolerances["j0__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
+        c_e_ref = self.main_param.c_e_init
+        tol = pybamm.settings.tolerances["j0__c_s"]
+        c_s_j_surf = pybamm.maximum(
+            pybamm.minimum(c_s_j_surf, (1 - tol) * self.c_max), tol * self.c_max
+        )
+        c_max = self.c_max
+
+        domain = self.domain
+        d = domain[0]
+        wj = self.w_j(index)
+        Xj = self.X_j(index)
+        aj = self.alpha_bv_j(index)
+        xj = c_s_j_surf / c_max
+
+        j0_ref_j = pybamm.FunctionParameter(
+            f"j0_ref_{d}_{index}", {"Temperature [K]": T}
+        )
+
+        j0_j = (
+            j0_ref_j
+            * xj ** (wj * aj)
+            * (Xj - xj) ** (wj * (1 - aj))
+            * (c_e / c_e_ref) ** (1 - aj)
+        )
+        return j0_j
 
     def x(self, U):
         "Stoichiometry as a function of potential (for use with MSMR models)"

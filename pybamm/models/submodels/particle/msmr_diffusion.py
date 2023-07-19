@@ -497,7 +497,7 @@ class MSMRDiffusion(BaseParticle):
     def _get_standard_fractional_occupancy_variables(self, U):
         options = self.options
         domain = self.domain
-        subscript = domain[0]
+        d = domain[0]
         variables = {}
         # Loop over all reactions
         N = int(getattr(options, domain)["number of MSMR reactions"])
@@ -510,12 +510,12 @@ class MSMRDiffusion(BaseParticle):
             x_av = pybamm.r_average(x_xav)
             variables.update(
                 {
-                    f"x_{subscript}_{i}": x,
-                    f"X-averaged x_{subscript}_{i}": x_xav,
-                    f"R-averaged x_{subscript}_{i}": x_rav,
-                    f"Average x_{subscript}_{i}": x_av,
-                    f"Surface x_{subscript}_{i}": x_surf,
-                    f"X-averaged surface x_{subscript}_{i}": x_surf_av,
+                    f"x_{d}_{i}": x,
+                    f"X-averaged x_{d}_{i}": x_xav,
+                    f"R-averaged x_{d}_{i}": x_rav,
+                    f"Average x_{d}_{i}": x_av,
+                    f"Surface x_{d}_{i}": x_surf,
+                    f"X-averaged surface x_{d}_{i}": x_surf_av,
                 }
             )
         return variables
@@ -523,7 +523,7 @@ class MSMRDiffusion(BaseParticle):
     def _get_standard_differential_fractional_occupancy_variables(self, U):
         options = self.options
         domain = self.domain
-        subscript = domain[0]
+        d = domain[0]
         variables = {}
         # Loop over all reactions
         N = int(getattr(options, domain)["number of MSMR reactions"])
@@ -536,12 +536,12 @@ class MSMRDiffusion(BaseParticle):
             dxdU_av = pybamm.r_average(dxdU_xav)
             variables.update(
                 {
-                    f"dxdU_{subscript}_{i}": dxdU,
-                    f"X-averaged dxdU_{subscript}_{i}": dxdU_xav,
-                    f"R-averaged dxdU_{subscript}_{i}": dxdU_rav,
-                    f"Average dxdU_{subscript}_{i}": dxdU_av,
-                    f"Surface dxdU_{subscript}_{i}": dxdU_surf,
-                    f"X-averaged surface dxdU_{subscript}_{i}": dxdU_surf_av,
+                    f"dxdU_{d}_{i}": dxdU,
+                    f"X-averaged dxdU_{d}_{i}": dxdU_xav,
+                    f"R-averaged dxdU_{d}_{i}": dxdU_rav,
+                    f"Average dxdU_{d}_{i}": dxdU_av,
+                    f"Surface dxdU_{d}_{i}": dxdU_surf,
+                    f"X-averaged surface dxdU_{d}_{i}": dxdU_surf_av,
                 }
             )
         return variables

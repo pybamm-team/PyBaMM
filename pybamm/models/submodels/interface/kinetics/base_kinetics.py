@@ -77,8 +77,19 @@ class BaseKinetics(BaseInterface):
         ):
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, [f"{domain} particle size"])
 
-        # Get exchange-current density
+        # Get exchange-current density. For MSMR models we calculate the exchange
+        # current density for each reaction, then sum these to give a total exchange
+        # current density. Note: this is only used for the "exchange current density"
+        # variables. For the interfacial current density variables, we sum the
+        # interfacial currents from each reaction.
+        if self.options["intercalation kinetics"] == "MSMR":
+            N = int(domain_options["number of MSMR reactions"])
+            for i in range(N):
+                variables.update(
+                    self._get_exchange_current_density_by_reaction(variables, i)
+                )
         j0 = self._get_exchange_current_density(variables)
+
         # Get open-circuit potential variables and reaction overpotential
         if (
             domain_options["particle size"] == "distribution"
@@ -155,7 +166,18 @@ class BaseKinetics(BaseInterface):
         # Update j, except in the "distributed SEI resistance" model, where j will be
         # found by solving an algebraic equation.
         # (In the "distributed SEI resistance" model, we have already defined j)
-        j = self._get_kinetics(j0, ne, eta_r, T, u)
+        # For MSMR model we calculate the total current density by summing the current
+        # densities from each reaction
+        if self.options["intercalation kinetics"] == "MSMR":
+            d = domain[0]
+            j = 0
+            for i in range(N):
+                j0 = variables[f"j0_{d}_{i} [A.m-2]"]
+                j_j = self._get_kinetics_by_reaction(j0, ne, eta_r, T, u, i)
+                variables.update(self._get_standard_icd_by_reaction_variables(j_j, i))
+                j += j_j
+        else:
+            j = self._get_kinetics(j0, ne, eta_r, T, u)
 
         if j.domain == [f"{domain} particle size"]:
             # If j depends on particle size, get size-dependent "distribution"
