@@ -1,3 +1,5 @@
+.. _pybamm_examples:
+
 Examples
 ========
 
