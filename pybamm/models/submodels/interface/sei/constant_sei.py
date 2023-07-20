@@ -54,12 +54,3 @@ class ConstantSEI(BaseModel):
         variables.update(self._get_standard_reaction_variables(zero, zero))
 
         return variables
-
-    def get_coupled_variables(self, variables):
-        # thicknesses (derived from concentrations)
-        variables.update(self._get_standard_thickness_variables(variables))
-
-        # Add other standard coupled variables
-        variables.update(super().get_coupled_variables(variables))
-
-        return variables

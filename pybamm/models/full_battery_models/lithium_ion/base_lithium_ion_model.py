@@ -261,6 +261,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                     self.param, reaction_loc, self.options, phase, cracks=False
                 )
             self.submodels[f"{phase} sei"] = submodel
+            self.submodels[f"{phase} sei thickness"] = pybamm.sei.SEIThickness(
+                self.param, reaction_loc, self.options, phase, cracks=False
+            )
             # Do not set "sei on cracks" submodel for half-cells
             # For full cells, "sei on cracks" submodel must be set, even if it is zero
             if reaction_loc != "interface":
@@ -276,6 +279,11 @@ class BaseModel(pybamm.BaseBatteryModel):
                         self.param, reaction_loc, self.options, phase, cracks=True
                     )
                 self.submodels[f"{phase} sei on cracks"] = submodel
+                self.submodels[
+                    f"{phase} sei on cracks thickness"
+                ] = pybamm.sei.SEIThickness(
+                    self.param, reaction_loc, self.options, phase, cracks=True
+                )
 
         if len(phases) > 1:
             self.submodels["total sei"] = pybamm.sei.TotalSEI(self.param, self.options)

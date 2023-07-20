@@ -200,7 +200,6 @@ class SEIGrowth(BaseModel):
         j_inner = inner_sei_proportion * Arrhenius * j_sei
         j_outer = (1 - inner_sei_proportion) * Arrhenius * j_sei
 
-        variables.update(self._get_standard_thickness_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
         # Add other standard coupled variables
@@ -249,7 +248,7 @@ class SEIGrowth(BaseModel):
             j_outer = variables[
                 f"Outer {self.reaction_name}interfacial current density [A.m-2]"
             ]
-            a = variables["Negative electrode surface area to volume ratio"]
+            a = variables["Negative electrode surface area to volume ratio [m-1]"]
 
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
