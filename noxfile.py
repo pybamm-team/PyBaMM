@@ -8,13 +8,32 @@ else:
     nox.options.sessions = ["pre-commit", "unit"]
 
 
+homedir = os.getenv("HOME")
+PYBAMM_ENV = {
+    "SUNDIALS_INST": f"{homedir}/.local",
+    "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
+}
+
+
+def set_environment_variables(env_dict, session):
+    """
+    Sets environment variables for a nox session object.
+
+    Parameters
+    -----------
+        session : nox.Session
+            The session to set the environment variables for.
+        env_dict : dict
+            A dictionary of environment variable names and values.
+
+    """
+    for key, value in env_dict.items():
+        session.env[key] = value
+
+
 @nox.session(name="pybamm-requires", reuse_venv=True)
 def run_pybamm_requires(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
@@ -32,11 +51,7 @@ def run_pybamm_requires(session):
 
 @nox.session(name="coverage", reuse_venv=True)
 def run_coverage(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage")
     session.install("-e", ".[all]")
     if sys.platform != "win32":
@@ -49,11 +64,7 @@ def run_coverage(session):
 
 @nox.session(name="integration", reuse_venv=True)
 def run_integration(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]")
     if sys.platform == "linux":
         session.install("scikits.odes")
@@ -68,15 +79,11 @@ def run_doctests(session):
 
 @nox.session(name="unit", reuse_venv=True)
 def run_unit(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]")
     if sys.platform == "linux":
-        session.run("pybamm_install_jax")
         session.install("scikits.odes")
+        session.run("pybamm_install_jax")
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -88,15 +95,14 @@ def run_examples(session):
 
 @nox.session(name="dev", reuse_venv=True)
 def set_dev(session):
-    homedir = os.getenv("HOME")
-    LD_LIBRARY_PATH = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     envbindir = session.bin
     session.install("-e", ".[all]")
     session.install("cmake")
     session.run(
         "echo",
         "export",
-        f"LD_LIBRARY_PATH={LD_LIBRARY_PATH}",
+        f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
         ">>",
         f"{envbindir}/activate",
     )
@@ -104,15 +110,11 @@ def set_dev(session):
 
 @nox.session(name="tests", reuse_venv=True)
 def run_tests(session):
-    homedir = os.getenv("HOME")
-    session.env["SUNDIALS_INST"] = session.env.get("SUNDIALS_INST", f"{homedir}/.local")
-    session.env[
-        "LD_LIBRARY_PATH"
-    ] = f"{homedir}/.local/lib:{session.env.get('LD_LIBRARY_PATH')}"
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]")
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.run("pybamm_install_jax")
         session.install("scikits.odes")
+        session.run("pybamm_install_jax")
     session.run("python", "run-tests.py", "--all")
 
 
