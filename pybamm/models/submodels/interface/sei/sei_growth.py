@@ -114,24 +114,9 @@ class SEIGrowth(BaseModel):
                 "interfacial current density [A.m-2]"
             ]
 
-        a = variables["Negative electrode surface area to volume ratio [m-1]"]
-        if self.reaction == "SEI on cracks":
-            roughness = variables["Negative electrode roughness ratio"]
-            a *= roughness - 1  # Replace surface area with crack area
-
-        if self.reaction_loc == "interface":
-            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-2]"]
-            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-2]"]
-            L_inner = c_inner * self.phase_param.V_bar_inner
-            L_outer = c_outer * self.phase_param.V_bar_outer
-            L_sei = L_inner + L_outer
-        else:
-            c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-3]"]
-            c_outer = variables[f"Outer {self.reaction_name}concentration [mol.m-3]"]
-            L_inner = c_inner * self.phase_param.V_bar_inner / a
-            L_outer = c_outer * self.phase_param.V_bar_outer / a
-            L_sei = L_inner + L_outer
-
+        L_inner = variables[f"Inner {self.reaction_name}thickness [m]"]
+        L_outer = variables[f"Outer {self.reaction_name}thickness [m]"]
+        L_sei = variables[f"Total {self.reaction_name}thickness [m]"]
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
         # Thermal prefactor for reaction, interstitial and EC models
@@ -226,7 +211,7 @@ class SEIGrowth(BaseModel):
                 f"X-averaged inner {self.reaction_name}concentration [mol.m-3]"
             ]
             c_outer = variables[
-                f"X-averaged outer {self.reaction_name}thickness [mol.m-3]"
+                f"X-averaged outer {self.reaction_name}concentration [mol.m-3]"
             ]
             j_inner = variables[
                 f"X-averaged inner {self.reaction_name}"
@@ -237,7 +222,8 @@ class SEIGrowth(BaseModel):
                 "interfacial current density [A.m-2]"
             ]
             a = variables[
-                "X-averaged negative electrode surface area to volume ratio [m-1]"
+                f"X-averaged negative electrode {self.phase_name}"
+                "surface area to volume ratio [m-1]"
             ]
         else:
             c_inner = variables[f"Inner {self.reaction_name}concentration [mol.m-3]"]
@@ -248,7 +234,10 @@ class SEIGrowth(BaseModel):
             j_outer = variables[
                 f"Outer {self.reaction_name}interfacial current density [A.m-2]"
             ]
-            a = variables["Negative electrode surface area to volume ratio [m-1]"]
+            a = variables[
+                f"Negative electrode {self.phase_name}"
+                "surface area to volume ratio [m-1]"
+            ]
 
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
