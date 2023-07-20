@@ -167,3 +167,5 @@ html[data-theme="dark"] h3 {
 .tooltipster-sidetip.tooltipster-shadow.tooltipster-left .tooltipster-arrow-border {
   border-left-color: var(--pst-color-background) !important;
 }
+
+#site-navigation { overflow: visible; }
