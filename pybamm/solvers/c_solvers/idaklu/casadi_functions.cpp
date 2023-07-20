@@ -7,16 +7,10 @@ CasadiFunction::CasadiFunction(const Function &f) : m_func(f)
   size_t sz_iw;
   size_t sz_w;
   m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
+  int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
   //std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = "
-  //  << sz_res << " iw = " << sz_iw << " w = " << sz_w << std::endl;
-  // for (int i = 0; i < sz_arg; i++) {
-  //   std::cout << "Sparsity for input " << i << std::endl;
-  //   const Sparsity& sparsity = m_func.sparsity_in(i);
-  // }
-  // for (int i = 0; i < sz_res; i++) {
-  //   std::cout << "Sparsity for output " << i << std::endl;
-  //   const Sparsity& sparsity = m_func.sparsity_out(i);
-  // }
+  //  << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz <<
+  //  std::endl;
   m_arg.resize(sz_arg, nullptr);
   m_res.resize(sz_res, nullptr);
   m_iw.resize(sz_iw, 0);

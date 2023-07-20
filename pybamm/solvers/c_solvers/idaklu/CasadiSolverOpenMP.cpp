@@ -236,7 +236,7 @@ void CasadiSolverOpenMP::CalcVars(
   for (auto& var_fcn : functions->var_casadi_fcns) {
     var_fcn({tret, yval, functions->inputs.data()}, {res});
     // store in return vector
-    for (size_t jj=0; jj<var_fcn.m_res.size()-1; jj++)
+    for (size_t jj=0; jj<var_fcn.m_func.nnz_out(); jj++)
       y_return[t_i*length_of_return_vector + j++] = res[jj];
   }
   // calculate sensitivities
@@ -350,13 +350,12 @@ Solution CasadiSolverOpenMP::solve(
   if (functions->var_casadi_fcns.size() > 0) {
     // return only the requested variables list after computation
     for (auto& var_fcn : functions->var_casadi_fcns) {
-      max_res_size = std::max(max_res_size, var_fcn.m_res.size());
-      if (var_fcn.m_res.size() > 0)
-        length_of_return_vector += var_fcn.m_res.size() - 1;
+      max_res_size = std::max(max_res_size, size_t(var_fcn.m_func.nnz_out()));
+      length_of_return_vector += var_fcn.m_func.nnz_out();
       for (auto& dvar_fcn : functions->dvar_dy_fcns)
-        max_res_dvar_dy = std::max(max_res_dvar_dy, dvar_fcn.m_res.size());
+        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn.m_func.nnz_out()));
       for (auto& dvar_fcn : functions->dvar_dp_fcns)
-        max_res_dvar_dp = std::max(max_res_dvar_dp, dvar_fcn.m_res.size());
+        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn.m_func.nnz_out()));
     }
   } else {
     // Return full y state-vector
@@ -369,7 +368,7 @@ Solution CasadiSolverOpenMP::solve(
                                      number_of_timesteps *
                                      length_of_return_vector];
   
-  res = new realtype[number_of_states]; // TODO: Crashes if set to max_res_size
+  res = new realtype[max_res_size];
   res_dvar_dy = new realtype[max_res_dvar_dy];
   res_dvar_dp = new realtype[max_res_dvar_dp];
 

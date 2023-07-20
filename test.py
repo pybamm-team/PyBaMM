@@ -7,8 +7,12 @@ output_variables = [
     "Voltage [V]",
     "Time [min]",
     "Current [A]",
+    "r_n [m]",
+    "x [m]",
+    "Gradient of negative electrolyte potential [V.m-1]",
+    "Negative particle flux [mol.m-2.s-1]",
 ]
-#output_variables = []
+output_variables = []
 all_vars = False
 
 input_parameters = {
@@ -16,15 +20,12 @@ input_parameters = {
     "Separator porosity": 1.0,
 }
 
-# check for loading errors
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 idaklu = importlib.util.module_from_spec(idaklu_spec)
 idaklu_spec.loader.exec_module(idaklu)
 
 # construct model
-# pybamm.set_logging_level("INFO")
 model = pybamm.lithium_ion.DFN()
-# model.convert_to_format = 'jax'
 geometry = model.default_geometry
 param = model.default_parameter_values
 param.update({key: "[input]" for key in input_parameters})
@@ -53,28 +54,33 @@ if all_vars:
     print("ExplicitTimeIntegral variables:")
     print(left_out)
 
-print("output_variables:")
-print(output_variables)
-print("\nInput parameters:")
-print(input_parameters)
+#var_names = [[]]
+var_names = [output_variables]
+#var_names = [[m] for m in model.variable_names()]
+#var_names = [[m] for m in output_variables]
+for output_vars in var_names:
+    output_variables = output_vars
+    print("Output variables:")
+    print(output_variables)
+    print("\nInput parameters:")
+    print(input_parameters)
 
-solver = pybamm.IDAKLUSolver(
-    atol=1e-8, rtol=1e-8,
-    options=options,
-    output_variables=output_variables,
-)
+    solver = pybamm.IDAKLUSolver(
+        atol=1e-8, rtol=1e-8,
+        options=options,
+        output_variables=output_variables,
+    )
 
-sol = solver.solve(
-    model,
-    t_eval,
-    inputs=input_parameters,
-    calculate_sensitivities=True,
-)
+    sol = solver.solve(
+        model,
+        t_eval,
+        inputs=input_parameters,
+        calculate_sensitivities=True,
+    )
 
-print(f"Solve time: {sol.solve_time.value*1000} msecs")
+    print(f"Solve time: {sol.solve_time.value*1000} msecs")
 
 if True:
-    plot_allvars = False
     if not output_variables:
         plot_allvars = True
         output_variables = [
