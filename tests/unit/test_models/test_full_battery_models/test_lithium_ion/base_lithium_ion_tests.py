@@ -365,5 +365,7 @@ class BaseUnitTestLithiumIon:
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+            "surface form": "differential",
         }
         self.check_well_posedness(options)

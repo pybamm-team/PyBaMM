@@ -81,7 +81,15 @@ def get_parameter_values():
         Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
 
-    and references therein.
+    and references therein. Verbrugge et al. (2017) does not provide kinetic parameters
+    so we set the reference exchange current density to 5 A.m-2 for the positive
+    electrode reactions and 2.7 A.m-2 for the negative electrode reactions, which are
+    the values used in the Chen et al. (2020) paper. We also assume that the
+    exchange-current density is symmetric. Note: the 4th reaction in the positive
+    electrode gave unphysical results so we set the reference exchange current density
+    and symmetry factor to 1e6 and 1, respectively. The parameter values are intended
+    to serve as an example set to use with the MSMR model and do not claim to match any
+    experimental cycling data.
     """
     return {
         # cell
@@ -134,7 +142,6 @@ def get_parameter_values():
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
-        "Negative electrode exchange-current density [A.m-2]" "": 2.7,
         # positive electrode
         "Number of reactions in positive electrode": 4,
         "U0_p_0": 3.62274,
@@ -155,8 +162,8 @@ def get_parameter_values():
         "U0_p_3": 4.22955,
         "X_p_3": 0.32980,
         "w_p_3": 5.52757,
-        "a_p_3": 0.5,
-        "j0_ref_p_3": 5,
+        "a_p_3": 1,
+        "j0_ref_p_3": 1e6,
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
         "Positive electrode diffusivity [m2.s-1]": 4e-15,
@@ -166,7 +173,6 @@ def get_parameter_values():
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0,
         "Positive electrode OCP entropic change [V.K-1]": 0.0,
-        "Positive electrode exchange-current density [A.m-2]" "": 5,
         # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,

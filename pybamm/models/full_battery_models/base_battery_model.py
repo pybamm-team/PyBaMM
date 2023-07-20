@@ -72,10 +72,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
-            * "number of MSMR reactions" : int
+            * "number of MSMR reactions" : str
                 Sets the number of reactions to use in the MSMR model in each electrode.
                 A 2-tuple can be provided to give a different number of reactions in 
-                the negative and positive electrodes. Default is "none".
+                the negative and positive electrodes. Default is "none". Can be any 
+                2-tuple of strings of integers. For example, set to ("6", "4") for a
+                negative electrode with 6 reactions and a positive electrode with 4
+                reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single" 
                 (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
@@ -232,7 +235,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
-            "number of MSMR reactions": ["none", "1", "2", "3", "4", "5", "6"],
+            "number of MSMR reactions": [
+                "none",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+            ],
             "open-circuit potential": ["single", "current sigmoid", "MSMR"],
             "operating mode": [
                 "current",
@@ -382,23 +397,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         )
                     )
 
-        # IF "open-circuit potential" is "MSMR" then "particle" must be "MSMR" too
-        # and vice-versa
-        if (
-            options["open-circuit potential"] == "MSMR"
-            and options["particle"] != "MSMR"
-        ):
+        # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
+        # "MSMR" then all of them must be "MSMR".
+        msmr_check_list = [
+            options[opt] == "MSMR"
+            for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
+        ]
+        if any(msmr_check_list) and not all(msmr_check_list):
             raise pybamm.OptionError(
-                "If 'open-circuit potential' is 'MSMR' then 'particle' must be 'MSMR' "
-                "too"
-            )
-        if (
-            options["particle"] == "MSMR"
-            and options["open-circuit potential"] != "MSMR"
-        ):
-            raise pybamm.OptionError(
-                "If 'particle' is 'MSMR' then 'open-circuit potential' must be 'MSMR' "
-                "too"
+                "If any of 'open-circuit potential', 'particle' or "
+                "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
             )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current

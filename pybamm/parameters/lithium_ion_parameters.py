@@ -665,6 +665,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         c_e_ref = self.main_param.c_e_init
         tol = pybamm.settings.tolerances["j0__c_s"]
         c_max = self.c_max
+        c_s_j_surf = pybamm.maximum(
+            pybamm.minimum(c_s_j_surf, (1 - tol) * c_max), tol * c_max
+        )
 
         domain = self.domain
         d = domain[0]
@@ -677,10 +680,11 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"j0_ref_{d}_{index}", {"Temperature [K]": T}
         )
 
+        # Use tolerances to avoid division by zero in the Jacobian
         j0_j = (
             j0_ref_j
             * xj ** (wj * aj)
-            * (Xj - xj) ** (wj * (1 - aj))
+            * (pybamm.maximum(Xj - xj, tol)) ** (wj * (1 - aj))
             * (c_e / c_e_ref) ** (1 - aj)
         )
         return j0_j
