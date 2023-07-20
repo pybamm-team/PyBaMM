@@ -12,7 +12,7 @@ output_variables = [
     "Gradient of negative electrolyte potential [V.m-1]",
     "Negative particle flux [mol.m-2.s-1]",
 ]
-output_variables = []
+#output_variables = []
 all_vars = False
 
 input_parameters = {
@@ -31,8 +31,7 @@ param = model.default_parameter_values
 param.update({key: "[input]" for key in input_parameters})
 param.process_model(model)
 param.process_geometry(geometry)
-n = 100  # control the complexity of the geometry (increases number of solver states)
-var_pts = {"x_n": n, "x_s": n, "x_p": n, "r_n": 10, "r_p": 10}
+var_pts = {"x_n": 100, "x_s": 100, "x_p": 100, "r_n": 10, "r_p": 10}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)

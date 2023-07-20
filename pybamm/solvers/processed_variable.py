@@ -77,10 +77,7 @@ class ProcessedVariable(object):
 
         # check variable shape
         else:
-            if (
-                len(self.base_eval_shape) == 0
-                or self.base_eval_shape[0] == 1
-            ):
+            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
                 self.initialise_0D()
             else:
                 n = self.mesh.npts

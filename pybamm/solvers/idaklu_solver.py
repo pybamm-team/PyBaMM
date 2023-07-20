@@ -20,19 +20,22 @@ if idaklu_spec is not None:
 
 def have_idaklu():
     return idaklu_spec is not None
-            
+
+
 def wrangle_name(name: str) -> str:
-    return name.casefold() \
-        .replace(" ", "_") \
-        .replace("[", "") \
-        .replace("]", "") \
-        .replace(".", "_") \
-        .replace("-", "_") \
-        .replace("(", "") \
-        .replace(")", "") \
-        .replace("%", "prc") \
-        .replace(",", "") \
+    return (
+        name.casefold()
+        .replace(" ", "_")
+        .replace("[", "")
+        .replace("]", "")
+        .replace(".", "_")
+        .replace("-", "_")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("%", "prc")
+        .replace(",", "")
         .replace(".", "")
+    )
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -293,11 +296,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # variable functions
                 fcn_name = wrangle_name(key)
                 var_casadi = model.variables_and_events[key].to_casadi(
-                             t_casadi, y_casadi, inputs=p_casadi)
+                    t_casadi, y_casadi, inputs=p_casadi
+                )
                 self.var_casadi_fcns[key] = casadi.Function(
-                    fcn_name,
-                    [t_casadi, y_casadi, p_casadi_stacked],
-                    [var_casadi]
+                    fcn_name, [t_casadi, y_casadi, p_casadi_stacked], [var_casadi]
                 )
                 self.var_casadi_idaklu_fcns.append(
                     idaklu.generate_function(self.var_casadi_fcns[key].serialize())
@@ -309,12 +311,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     dvar_dy_fcn = casadi.Function(
                         f"d{fcn_name}_dy",
                         [t_casadi, y_casadi, p_casadi_stacked],
-                        [dvar_dy]
+                        [dvar_dy],
                     )
                     dvar_dp_fcn = casadi.Function(
                         f"d{fcn_name}_dp",
                         [t_casadi, y_casadi, p_casadi_stacked],
-                        [dvar_dp]
+                        [dvar_dp],
                     )
                     self.dvar_dy_fcns.append(
                         idaklu.generate_function(dvar_dy_fcn.serialize())
@@ -557,8 +559,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs_dict or {}
         # stack inputs
         if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1)
-                               for x in inputs_dict.values()]
+            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])
@@ -638,7 +639,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_states = y0.size
         if self.output_variables:
             # Substitute empty vectors for state vector 'y'
-            y_out = np.zeros((number_of_timesteps*number_of_states, 0))
+            y_out = np.zeros((number_of_timesteps * number_of_states, 0))
         else:
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
@@ -681,19 +682,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
                 for vark, var in enumerate(self.output_variables):
-                    len_of_var = self._setup["var_casadi_fcns"][var](0,0,0).sparsity().nnz()
+                    len_of_var = (
+                        self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
+                    )
                     newsol._variables[var] = pybamm.ProcessedVariableVar(
                         [model.variables_and_events[var]],
                         [self._setup["var_casadi_fcns"][var]],
-                        [sol.y[:, startk:(startk+len_of_var)]],
+                        [sol.y[:, startk : (startk + len_of_var)]],
                         newsol,
                     )
-                    startk += len_of_var
-
                     # Add sensitivities
                     newsol[var]._sensitivities = {}
                     for paramk, param in enumerate(inputs_dict.keys()):
-                        newsol[var]._sensitivities[param] = sol.yS[:, vark, paramk]
+                        newsol[var].add_sensitivity(
+                            param,
+                            [sol.yS[:, startk : (startk + len_of_var), paramk]]
+                        )
+                    startk += len_of_var
             return newsol
         else:
             raise pybamm.SolverError("idaklu solver failed")

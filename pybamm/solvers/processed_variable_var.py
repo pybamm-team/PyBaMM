@@ -24,9 +24,11 @@ class ProcessedVariableVar(object):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :numpy:array
-        A list of numpy arrays; the returns from casadi evaluation. the same thing as
-        `base_Variable.evaluate` (but more efficient).
+    base_variable_casadis : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    base_variable_data : list of :numpy:array
+        A list of numpy arrays, the returned evaluations.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     warn : bool, optional
@@ -68,6 +70,7 @@ class ProcessedVariableVar(object):
         # Evaluate base variable at initial time
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
+        self.unroll_params = {}
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -79,10 +82,7 @@ class ProcessedVariableVar(object):
 
         # check variable shape
         else:
-            if (
-                len(self.base_eval_shape) == 0
-                or self.base_eval_shape[0] == 1
-            ):
+            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
                 self.initialise_0D()
             else:
                 n = self.mesh.npts
@@ -107,9 +107,80 @@ class ProcessedVariableVar(object):
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 
+    def add_sensitivity(self, param, data):
+        self._sensitivities[param] = self.unroll(data)
+
+    def _unroll_nnz(self, realdata=None):
+        # unroll in nnz != numel, otherwise copy
+        if realdata is None:
+            realdata = self.base_variables_data
+        sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
+        if sp.nnz() != sp.numel():
+            data = [None] * len(realdata)
+            for datak in range(len(realdata)):
+                data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
+                var_data = realdata[0].flatten()
+                k = 0
+                for t_i in range(len(self.t_pts)):
+                    base = t_i * sp.numel()
+                    for r in sp.row():
+                        data[datak][base + r] = var_data[k]
+                        k = k + 1
+        else:
+            data = realdata
+        return data
+
+    def unroll_0D(self, realdata=None):
+        if realdata is None:
+            realdata = self.base_variables_data
+        return np.concatenate(realdata, axis=0).flatten()
+    
+    def unroll_1D(self, realdata=None):
+        len_space = self.base_eval_shape[0]
+        return (
+            np.concatenate(self._unroll_nnz(realdata), axis=0)
+            .flatten()
+            .reshape((len(self.t_pts), len_space))
+            .transpose()
+        )
+
+    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=[]):
+        # initialise settings on first run
+        if not self.unroll_params:
+            self.unroll_params["n_dim1"] = n_dim1
+            self.unroll_params["n_dim2"]= n_dim2
+            self.unroll_params["axis_swaps"] = axis_swaps
+        # use stored settings on subsequent runs
+        if not n_dim1:
+            n_dim1 = self.unroll_params["n_dim1"]
+            n_dim2 = self.unroll_params["n_dim2"]
+            axis_swaps = self.unroll_params["axis_swaps"]
+        len_space = self.base_eval_shape[0]
+        entries = (
+            np.concatenate(self._unroll_nnz(realdata), axis=0)
+            .flatten()
+            .reshape((len(self.t_pts), n_dim1, n_dim2))
+        )
+        for a, b in axis_swaps:
+            entries = np.moveaxis(entries, a, b)
+        return entries
+    
+    def unroll(self, realdata=None):
+        if self.dimensions == 0:
+            return self.unroll_0D(realdata=realdata)
+        elif self.dimensions == 1:
+            return self.unroll_1D(realdata=realdata)
+        elif self.dimensions == 2:
+            return self.unroll_2D(realdata=realdata)
+        else:
+            # Raise error for 3D variable
+            raise NotImplementedError(
+                "Unsupported data dimension: {self.dimensions}"
+            )
+
     def initialise_0D(self):
-        entries = np.concatenate(self.base_variables_data, axis=0).flatten()
-        
+        entries = self.unroll_0D()
+
         if self.cumtrapz_ic is not None:
             entries = cumulative_trapezoid(
                 entries, self.t_pts, initial=float(self.cumtrapz_ic)
@@ -121,31 +192,9 @@ class ProcessedVariableVar(object):
         self.entries = entries
         self.dimensions = 0
 
-    def _unroll_nnz(self):
-        # unroll in nnz != numel, otherwise copy
-        sp = self.base_variables_casadi[0](0,0,0).sparsity()
-        if sp.nnz() != sp.numel():
-            data = [None]*len(self.base_variables_data)
-            for datak in range(len(self.base_variables_data)):
-                data[datak] = np.zeros(self.base_eval_shape[0]*len(self.t_pts))
-                var_data = self.base_variables_data[0].flatten()
-                k = 0
-                for t_i in range(len(self.t_pts)):
-                    base = t_i*sp.numel()
-                    for r in sp.row():
-                        data[datak][base + r] = var_data[k]
-                        k = k + 1
-        else:
-            data = self.base_variables_data
-        return data
-
     def initialise_1D(self, fixed_t=False):
         len_space = self.base_eval_shape[0]
-        # reshape
-        entries = np.concatenate(self._unroll_nnz(), axis=0)\
-            .flatten()\
-            .reshape((len(self.t_pts),len_space))\
-            .transpose()
+        entries = self.unroll_1D()
 
         # Get node and edge values
         nodes = self.mesh.nodes
@@ -219,11 +268,12 @@ class ProcessedVariableVar(object):
         second_dim_size = len(second_dim_pts)
 
         len_space = self.base_eval_shape[0]
-        entries = np.concatenate(self._unroll_nnz(), axis=0)\
-            .flatten()\
-            .reshape((len(self.t_pts), second_dim_size, first_dim_size))
-        entries = np.moveaxis(entries, 0, 2)
-        entries = np.moveaxis(entries, 0, 1)
+        entries = self.unroll_2D(
+            realdata=None,
+            n_dim1=second_dim_size,
+            n_dim2=first_dim_size,
+            axis_swaps=[(0, 2), (0, 1)],
+        )
 
         # add points outside first dimension domain for extrapolation to
         # boundaries
@@ -340,10 +390,12 @@ class ProcessedVariableVar(object):
         len_y = len(y_sol)
         z_sol = self.mesh.edges["z"]
         len_z = len(z_sol)
-        entries = np.concatenate(self._unroll_nnz(), axis=0)\
-            .flatten()\
-            .reshape((len(self.t_pts), len_y, len_z))
-        entries = np.moveaxis(entries, 0, 2)
+        entries = self.unroll_2D(
+            realdata=None,
+            n_dim1=len_y,
+            n_dim2=len_z,
+            axis_swaps=[(0, 2)],
+        )
 
         # assign attributes for reference
         self.entries = entries
