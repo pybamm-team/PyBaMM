@@ -37,7 +37,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 1. Create an [issue](https://guides.github.com/features/issues/) where new proposals can be discussed before any coding is done.
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
-4. [Install](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
+4. [Install](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
 5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
 
 You now have everything you need to start making changes!
@@ -52,7 +52,7 @@ You now have everything you need to start making changes!
 ### C. Merging your changes with PyBaMM
 
 10. [Test your code!](#testing)
-11. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
+11. PyBaMM has online documentation at http://docs.pybamm.org/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
 13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
 14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
@@ -307,7 +307,7 @@ These docstrings can be fairly simple, but can also make use of [reStructuredTex
 
 In addition, we write a (very) small bit of documentation in separate reStructuredText files in the `docs` directory. Most of what these files do is simply import docstrings from the source code. But they also do things like add tables and indexes. If you've added a new class to a module, search the `docs` directory for that module's `.rst` file and add your class (in alphabetical order) to its index. If you've added a whole new module, copy-paste another module's file and add a link to your new file in the appropriate `index.rst` file.
 
-Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs` can be converted to HTML, PDF, and other formats. In particular, we use it to generate the documentation on http://pybamm.readthedocs.io/
+Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs` can be converted to HTML, PDF, and other formats. In particular, we use it to generate the documentation on http://docs.pybamm.org/
 
 ### Building the documentation
 
@@ -385,7 +385,7 @@ Configuration files:
 
 ### Read the Docs
 
-Documentation is built using https://readthedocs.org/ and published on http://pybamm.readthedocs.io/.
+Documentation is built using https://readthedocs.org/ and published on http://docs.pybamm.org/.
 
 ### Google Colab
 
