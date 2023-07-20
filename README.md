@@ -84,7 +84,7 @@ However, much greater customisation is available. It is possible to change the p
 
 For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/getting_started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop).
 
-Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/README.md), hosted here on
+Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/tree/develop/examples), hosted here on
 github. In addition, there is a [full API documentation](https://docs.pybamm.org/en/latest/source/api/index.html),
 hosted on [Read The Docs](https://readthedocs.org/).
 Additional supporting material can be found
