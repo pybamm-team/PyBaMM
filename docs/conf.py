@@ -67,7 +67,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
     "hoverxref.extension",
-    # "sphinx_docsearch",
+    "sphinx_docsearch",
 ]
 
 
@@ -171,17 +171,7 @@ html_theme_options = {
 
 html_title = "%s v%s Manual" % (project, version)
 html_last_updated_fmt = "%Y-%m-%d"
-html_css_files = [
-    "pybamm.css",
-    "https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css",
-]
-html_js_files = [
-    (
-        "https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js",
-        {"defer": "defer"},
-    ),  # noqa: E501
-    ("algolia.js", {"defer": "defer"}),
-]
+html_css_files = ["pybamm.css"]
 html_context = {"default_mode": "light"}
 html_use_modindex = True
 html_copy_source = False
@@ -384,13 +374,15 @@ hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
 
 # -- Options for Algolia DocSearch (sphinx-docsearch) ------------------------
 
-# # DocSearch settings
-# docsearch_app_id = "BXYTEF2JI8"
-# docsearch_api_key = "b7e7f1fc1a7c40a1587e52e8f4ff3b45"  # search API key, safe to use
-# docsearch_index_name = "pybamm"
+# DocSearch settings
+docsearch_app_id = "BXYTEF2JI8"
+docsearch_api_key = "b7e7f1fc1a7c40a1587e52e8f4ff3b45"  # search API key, safe to use
+docsearch_index_name = "pybamm"
 
-# # Searchbox settings
-# docsearch_container = "#searchbox"
+# Searchbox settings
+docsearch_container = "search-button__search-container"
+docsearch_placeholder = "Search PyBaMM `Ctrl` + `K`"
+docsearch_initial_query = "API"
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
