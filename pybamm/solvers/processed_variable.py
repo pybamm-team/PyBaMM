@@ -64,9 +64,8 @@ class ProcessedVariable(object):
         self.t_pts = solution.t
 
         # Evaluate base variable at initial time
-        self.base_eval = self.base_variables_casadi[0](
-            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
-        ).full()
+        self.base_eval_shape = self.base_variables[0].shape
+        self.base_eval_size = self.base_variables[0].size
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -79,14 +78,13 @@ class ProcessedVariable(object):
         # check variable shape
         else:
             if (
-                isinstance(self.base_eval, numbers.Number)
-                or len(self.base_eval.shape) == 0
-                or self.base_eval.shape[0] == 1
+                len(self.base_eval_shape) == 0
+                or self.base_eval_shape[0] == 1
             ):
                 self.initialise_0D()
             else:
                 n = self.mesh.npts
-                base_shape = self.base_eval.shape[0]
+                base_shape = self.base_eval_shape[0]
                 # Try some shapes that could make the variable a 1D variable
                 if base_shape in [n, n + 1]:
                     self.initialise_1D()
@@ -95,7 +93,7 @@ class ProcessedVariable(object):
                     first_dim_nodes = self.mesh.nodes
                     first_dim_edges = self.mesh.edges
                     second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-                    if self.base_eval.size // len(second_dim_pts) in [
+                    if self.base_eval_size // len(second_dim_pts) in [
                         len(first_dim_nodes),
                         len(first_dim_edges),
                     ]:
@@ -109,9 +107,6 @@ class ProcessedVariable(object):
 
     def initialise_0D(self):
         # initialise empty array of the correct size
-        entries = np.empty(len(self.t_pts))
-        idx = 0
-
         entries = np.empty(len(self.t_pts))
         idx = 0
         # Evaluate the base_variable index-by-index
@@ -137,7 +132,7 @@ class ProcessedVariable(object):
         self.dimensions = 0
 
     def initialise_1D(self, fixed_t=False):
-        len_space = self.base_eval.shape[0]
+        len_space = self.base_eval_shape[0]
         entries = np.empty((len_space, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
@@ -213,9 +208,9 @@ class ProcessedVariable(object):
         first_dim_edges = self.mesh.edges
         second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
         second_dim_edges = self.base_variables[0].secondary_mesh.edges
-        if self.base_eval.size // len(second_dim_nodes) == len(first_dim_nodes):
+        if self.base_eval_size // len(second_dim_nodes) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
-        elif self.base_eval.size // len(second_dim_nodes) == len(first_dim_edges):
+        elif self.base_eval_size // len(second_dim_nodes) == len(first_dim_edges):
             first_dim_pts = first_dim_edges
 
         second_dim_pts = second_dim_nodes
@@ -466,12 +461,9 @@ class ProcessedVariable(object):
                     dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
                     dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
-        print(dvar_dy_eval)
-        print(dvar_dp_eval)
         # Compute sensitivity
         dy_dp = self.solution_sensitivities["all"]
         S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
-        print(S_var)
 
         sensitivities = {"all": S_var}
 

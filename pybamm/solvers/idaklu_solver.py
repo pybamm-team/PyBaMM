@@ -677,13 +677,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Populate variables and sensititivies dictionaries directly
                 number_of_samples = sol.y.shape[0] // number_of_timesteps
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-                newsol._variables = {}
-                newsol.yS = sol.yS  # TODO: Replace
                 startk = 0
-                for name in self.output_variables:
-                    len_of_var = 1
-                    newsol._variables[name] = sol.y[:, startk:(startk+len_of_var)]
+                for vark, var in enumerate(self.output_variables):
+                    len_of_var = int(model.variables_and_events[var].size)
+                    newsol._variables[var] = pybamm.ProcessedVariableVar(
+                        [model.variables_and_events[var]],
+                        [sol.y[:, startk:(startk+len_of_var)]],
+                        newsol,
+                    )
                     startk += len_of_var
+
+                    # Add sensitivities
+                    newsol[var]._sensitivities = {}
+                    for paramk, param in enumerate(inputs_dict.keys()):
+                        newsol[var]._sensitivities[param] = sol.yS[:, vark, paramk]
             return newsol
         else:
             raise pybamm.SolverError("idaklu solver failed")

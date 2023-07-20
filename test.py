@@ -3,9 +3,6 @@ import numpy as np
 import matplotlib.pylab as plt
 import importlib
 
-solver_opt = 2
-jacobian = 'sparse'  # sparse, dense, band, none
-num_threads = 1
 output_variables = [
     "Voltage [V]",
     "Time [min]",
@@ -15,8 +12,8 @@ output_variables = [
 all_vars = False
 
 input_parameters = {
-    "Current function [A]": 0.15652,
-    "Separator porosity": 0.47,
+    "Current function [A]": 0.680616,
+    "Separator porosity": 1.0,
 }
 
 # check for loading errors
@@ -40,28 +37,10 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 t_eval = np.linspace(0, 3600, 100)
 
-if solver_opt == 1:
-    linear_solver = 'SUNLinSol_Dense'
-if solver_opt == 2:
-    linear_solver = 'SUNLinSol_KLU'
-if solver_opt == 3:
-    linear_solver = 'SUNLinSol_Band'
-if solver_opt == 4:
-    linear_solver = 'SUNLinSol_SPBCGS'
-if solver_opt == 5:
-    linear_solver = 'SUNLinSol_SPFGMR'
-if solver_opt == 6:
-    linear_solver = 'SUNLinSol_SPGMR'
-if solver_opt == 7:
-    linear_solver = 'SUNLinSol_SPTFQMR'
-if solver_opt == 8:
-    linear_solver = 'SUNLinSol_cuSolverSp_batchQR'
-    jacobian = 'cuSparse_'
-
 options = {
-    'linear_solver': linear_solver,
-    'jacobian': jacobian,
-    'num_threads': num_threads,
+    'linear_solver': 'SUNLinSol_KLU',
+    'jacobian': 'sparse',
+    'num_threads': 4,
 }
 
 if all_vars:
@@ -95,20 +74,22 @@ sol = solver.solve(
 print(f"Solve time: {sol.solve_time.value*1000} msecs")
 
 if True:
-    #output_variables = [
-    #    "Voltage [V]",
-    #    "Time [min]",
-    #    "Current [A]",
-    #]
+    plot_allvars = False
+    if not output_variables:
+        plot_allvars = True
+        output_variables = [
+            "Voltage [V]",
+            "Time [min]",
+            "Current [A]",
+        ]
     fig, axs = plt.subplots(len(output_variables), len(input_parameters)+1)
     for k, var in enumerate(output_variables):
-        if False:
+        # Solution variables currently use different classes/calls
+        if not input_parameters:
+            axs[k].plot(t_eval, sol[var](t_eval))
+        else:
             axs[k,0].plot(t_eval, sol[var](t_eval))
             for paramk, param in enumerate(list(input_parameters.keys())):
-                axs[k,paramk+1].plot(t_eval, sol[var].sensitivities[param]) # time, param, var
-        else:
-            axs[k,0].plot(t_eval, sol[var][:,0])
-            for paramk, param in enumerate(list(input_parameters.keys())):
-                axs[k,paramk+1].plot(t_eval, sol.yS[:,k,paramk]) # time, param, var
+                axs[k,paramk+1].plot(t_eval, sol[var].sensitivities[param])
     plt.tight_layout()
     plt.show()

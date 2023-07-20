@@ -243,13 +243,6 @@ void CasadiSolverOpenMP::CalcVars(
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
 }
 
-void print(CasadiFunction dvar, realtype* res_dvar) {
-  std::cout << dvar.m_func.n_out() << "[" << dvar.m_res.size() << "] (";
-  for (int k=0; k<dvar.m_res.size(); k++)
-    std::cout << res_dvar[k] << ", ";
-  std::cout << ")" << " [nnz=" << dvar.m_func.nnz_out() << "]" << std::endl;
-}
-
 void CasadiSolverOpenMP::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
@@ -375,7 +368,6 @@ Solution CasadiSolverOpenMP::solve(
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
                                      length_of_return_vector];
-  std::cout << number_of_timesteps << " " << length_of_return_vector << std::endl;
   
   res = new realtype[number_of_states]; // TODO: Crashes if set to max_res_size
   res_dvar_dy = new realtype[max_res_dvar_dy];
@@ -473,13 +465,6 @@ Solution CasadiSolverOpenMP::solve(
       break;
     }
   }
-
-  std::cout << functions->dvar_dy_fcns.size() << ", " << ySk <<  ", "
-    << (length_of_return_vector*number_of_timesteps*number_of_parameters)
-    << std::endl;
-  if (ySk != (length_of_return_vector*number_of_timesteps*number_of_parameters))
-    // throw std::runtime_error("Sensitivities vector has become misaligned.");
-    std::cout << "WARNING: Sensitivities vector has become misaligned.";
 
   np_array t_ret = np_array(
     t_i,
