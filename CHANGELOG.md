@@ -6,6 +6,7 @@
 
 ## Bug fixes
 
+- Rewritten SEI submodel so that concentration, not thickness, is the fundamental variable. This change ensures lithium is always conserved. ([#3171](https://github.com/pybamm-team/PyBaMM/pull/3171))
 - Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
 
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
