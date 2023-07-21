@@ -177,9 +177,6 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 
   if (p_python_functions->options.using_banded_matrix) 
   {
-    if (SUNSparseMatrix_SparseType(JJ) != CSC_MAT)
-      throw std::runtime_error("Banded matrix only tested with CSC format");
-
     // copy data from temporary matrix to the banded matrix
     auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
     auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();

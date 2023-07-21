@@ -24,7 +24,7 @@ def have_idaklu():
 
 def wrangle_name(name: str) -> str:
     return (
-        name.casefold()
+        "v_" + name.casefold()
         .replace(" ", "_")
         .replace("[", "")
         .replace("]", "")
@@ -204,7 +204,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format != "casadi":
             y0S = None
             if self.output_variables:
-                raise SolverError(
+                raise pybamm.SolverError(
                     "output_variables can only be specified "
                     'with convert_to_format="casadi"'
                 )
@@ -305,7 +305,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     idaklu.generate_function(self.var_casadi_fcns[key].serialize())
                 )
                 # Generate derivative functions for sensitivities
-                if len(inputs) > 0:
+                if (len(inputs) > 0) and (model.calculate_sensitivities):
                     dvar_dy = casadi.jacobian(var_casadi, y_casadi)
                     dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
                     dvar_dy_fcn = casadi.Function(
@@ -693,11 +693,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     )
                     # Add sensitivities
                     newsol[var]._sensitivities = {}
-                    for paramk, param in enumerate(inputs_dict.keys()):
-                        newsol[var].add_sensitivity(
-                            param,
-                            [sol.yS[:, startk : (startk + len_of_var), paramk]]
-                        )
+                    if model.calculate_sensitivities:
+                        for paramk, param in enumerate(inputs_dict.keys()):
+                            newsol[var].add_sensitivity(
+                                param,
+                                [sol.yS[:, startk : (startk + len_of_var), paramk]]
+                            )
                     startk += len_of_var
             return newsol
         else:
