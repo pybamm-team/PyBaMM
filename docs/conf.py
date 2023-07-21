@@ -64,7 +64,7 @@ extensions = [
     "sphinxcontrib.bibtex",
     "sphinx_docsearch",
     "sphinx_last_updated_by_git",
-    "nbsphinx",  # to be kept below JS-enabled extensions always
+    "nbsphinx",  # to be kept below JavaScript-enabled extensions, always
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
     "hoverxref.extension",
@@ -387,8 +387,7 @@ docsearch_index_name = "pybamm"
 
 # Searchbox settings
 docsearch_container = "#algolia-docsearch"
-docsearch_placeholder = "Search PyBaMM `Ctrl` + `K`"
-# docsearch_initial_query = "API"
+docsearch_placeholder = "Search the PyBaMM documentation"
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
