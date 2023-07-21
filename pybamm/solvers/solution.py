@@ -131,6 +131,9 @@ class Solution(object):
         # Initialize empty summary variables
         self._summary_variables = None
 
+        # Initialise initial start time
+        self.initial_start_time = None
+
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
@@ -420,6 +423,15 @@ class Solution(object):
     @property
     def summary_variables(self):
         return self._summary_variables
+
+    @property
+    def initial_start_time(self):
+        return self._initial_start_time
+
+    @initial_start_time.setter
+    def initial_start_time(self, value):
+        """Updates the reason for termination"""
+        self._initial_start_time = value
 
     def set_summary_variables(self, all_summary_variables):
         summary_variables = {var: [] for var in all_summary_variables[0]}

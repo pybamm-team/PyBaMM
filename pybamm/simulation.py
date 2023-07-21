@@ -638,6 +638,21 @@ class Simulation:
                     starting_solution.all_first_states.copy()
                 )
 
+            # set simulation initial_start_time
+            if starting_solution is None:
+                initial_start_time = self.experiment.initial_start_time
+            else:
+                initial_start_time = starting_solution.initial_start_time
+
+            if (
+                initial_start_time is None
+                and self.experiment.initial_start_time is not None
+            ):
+                raise ValueError(
+                    "When using experiments with `start_time`, the starting_solution "
+                    "must have a `start_time` too."
+                )
+
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
             all_summary_variables = starting_solution_summary_variables
@@ -702,7 +717,7 @@ class Simulation:
                             (
                                 op_conds.end_time
                                 - (
-                                    self.experiment.initial_start_time
+                                    initial_start_time
                                     + timedelta(seconds=float(start_time))
                                 )
                             ).total_seconds(),
@@ -757,7 +772,7 @@ class Simulation:
                         rest_time = (
                             op_conds.next_start_time
                             - (
-                                self.experiment.initial_start_time
+                                initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
                             )
                         ).total_seconds()
@@ -894,6 +909,9 @@ class Simulation:
                 self.solution.all_first_states = all_first_states
 
             callbacks.on_experiment_end(logs)
+
+            # record initial_start_time of the solution
+            self.solution.initial_start_time = initial_start_time
 
         return self.solution
 
