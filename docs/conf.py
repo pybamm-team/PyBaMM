@@ -62,12 +62,12 @@ extensions = [
     "myst_parser",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
+    "sphinx_docsearch",
     "sphinx_last_updated_by_git",
-    "nbsphinx",
+    "nbsphinx",  # to be kept below JS-enabled extensions always
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
     "hoverxref.extension",
-    "sphinx_docsearch",
 ]
 
 
@@ -156,6 +156,8 @@ html_theme_options = {
     "check_switcher": True,
     # for dark mode toggle, version switcher, and social media links
     "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
+    # add Algolia to the persistent navbar, this removes the default search icon
+    "navbar_persistent": "algolia-searchbox",
     "use_edit_page_button": True,
     "pygment_light_style": "xcode",
     "pygment_dark_style": "monokai",
@@ -286,6 +288,10 @@ bibtex_tooltips = True
 
 # -- nbsphinx configuration options ------------------------------------------
 
+# Important: ensure require.js is not loaded. this is needed to avoid
+# a conflict with the sphinx-docsearch extension for Algolia search
+
+nbsphinx_requirejs_path = ""
 nbsphinx_prolog = r"""
 
 {% set github_docname =
@@ -380,9 +386,9 @@ docsearch_api_key = "b7e7f1fc1a7c40a1587e52e8f4ff3b45"  # search API key, safe t
 docsearch_index_name = "pybamm"
 
 # Searchbox settings
-docsearch_container = "search-button__search-container"
+docsearch_container = "#algolia-docsearch"
 docsearch_placeholder = "Search PyBaMM `Ctrl` + `K`"
-docsearch_initial_query = "API"
+# docsearch_initial_query = "API"
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
