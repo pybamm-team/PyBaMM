@@ -124,6 +124,7 @@ class TestParameterValues(TestCase):
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
         }
         param_100 = pybamm.ParameterValues("MSMR_Example")
         param_100.set_initial_ocps(1, inplace=True, options=options)

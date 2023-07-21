@@ -162,6 +162,7 @@ class TestElectrodeSOHMSMR(TestCase):
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
         }
         param = pybamm.LithiumIonParameters(options=options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
@@ -203,6 +204,7 @@ class TestElectrodeSOHMSMR(TestCase):
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
         }
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
@@ -372,6 +374,7 @@ class TestGetInitialOCPMSMR(TestCase):
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
         }
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
@@ -393,6 +396,7 @@ class TestGetInitialOCPMSMR(TestCase):
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
         }
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")

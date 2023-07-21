@@ -49,6 +49,7 @@ class TestDFN(BaseUnitTestLithiumIon, TestCase):
             "particle": "MSMR",
             "particle size": "distribution",
             "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
         }
         self.check_well_posedness(options)
 

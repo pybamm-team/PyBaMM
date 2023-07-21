@@ -84,11 +84,15 @@ class BaseKinetics(BaseInterface):
         # interfacial currents from each reaction.
         if self.options["intercalation kinetics"] == "MSMR":
             N = int(domain_options["number of MSMR reactions"])
+            j0 = 0
             for i in range(N):
+                j0_j = self._get_exchange_current_density_by_reaction(variables, i)
                 variables.update(
-                    self._get_exchange_current_density_by_reaction(variables, i)
+                    self._get_standard_exchange_current_by_reaction_variables(j0_j, i)
                 )
-        j0 = self._get_exchange_current_density(variables)
+                j0 += j0_j
+        else:
+            j0 = self._get_exchange_current_density(variables)
 
         # Get open-circuit potential variables and reaction overpotential
         if (
@@ -169,11 +173,10 @@ class BaseKinetics(BaseInterface):
         # For MSMR model we calculate the total current density by summing the current
         # densities from each reaction
         if self.options["intercalation kinetics"] == "MSMR":
-            d = domain[0]
             j = 0
             for i in range(N):
-                j0 = variables[f"j0_{d}_{i} [A.m-2]"]
-                j_j = self._get_kinetics_by_reaction(j0, ne, eta_r, T, u, i)
+                j0_j = self._get_exchange_current_density_by_reaction(variables, i)
+                j_j = self._get_kinetics_by_reaction(j0_j, ne, eta_r, T, u, i)
                 variables.update(self._get_standard_icd_by_reaction_variables(j_j, i))
                 j += j_j
         else:

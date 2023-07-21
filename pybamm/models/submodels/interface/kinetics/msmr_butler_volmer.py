@@ -95,46 +95,42 @@ class MSMRButlerVolmer(BaseKinetics):
 
             j0 = phase_param.j0_j(c_e, c_s_surf, T, index)
 
-            # Size average. For j0 variables that depend on particle size, see
-            # "_get_standard_size_distribution_exchange_current_variables"
-            if j0.domain in [["negative particle size"], ["positive particle size"]]:
-                j0 = pybamm.size_average(j0)
-            # Average, and broadcast if necessary
-            j0_av = pybamm.x_average(j0)
+        return j0
 
-            # X-average, and broadcast if necessary
-            if j0.domain == []:
-                j0 = pybamm.FullBroadcast(
-                    j0, f"{domain} electrode", "current collector"
-                )
-            elif j0.domain == ["current collector"]:
-                j0 = pybamm.PrimaryBroadcast(j0, f"{domain} electrode")
+    def _get_standard_exchange_current_by_reaction_variables(self, j0, index):
+        domain = self.domain
+        # Size average. For j0 variables that depend on particle size, see
+        # "_get_standard_size_distribution_exchange_current_variables"
+        if j0.domain in [["negative particle size"], ["positive particle size"]]:
+            j0 = pybamm.size_average(j0)
+        # Average, and broadcast if necessary
+        j0_av = pybamm.x_average(j0)
 
-            d = domain[0]
-            variables = {
-                f"j0_{d}_{index} [A.m-2]": j0,
-                f"X-averaged j0_{d}_{index} [A.m-2]": j0_av,
-            }
+        # X-average, and broadcast if necessary
+        if j0.domain == []:
+            j0 = pybamm.FullBroadcast(j0, f"{domain} electrode", "current collector")
+        elif j0.domain == ["current collector"]:
+            j0 = pybamm.PrimaryBroadcast(j0, f"{domain} electrode")
+
+        d = domain[0]
+        variables = {
+            f"j0_{d}_{index} [A.m-2]": j0,
+            f"X-averaged j0_{d}_{index} [A.m-2]": j0_av,
+        }
 
         return variables
-
-    def _get_exchange_current_density(self, variables):
-        options = self.options
-        domain = self.domain
-        d = domain[0]
-        j0 = 0
-        # Loop over all reactions
-        N = int(getattr(options, domain)["number of MSMR reactions"])
-        for i in range(N):
-            j0 += variables[f"j0_{d}_{i} [A.m-2]"]
-        return j0
 
     def _get_kinetics_by_reaction(self, j0, ne, eta_r, T, u, index):
         alpha = self.phase_param.alpha_bv_j(index)
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
-        arg_ox = ne * alpha * Feta_RT
-        arg_red = -ne * (1 - alpha) * Feta_RT
-        return u * j0 * (pybamm.exp(arg_ox) - pybamm.exp(arg_red))
+        return (
+            u
+            * j0
+            * (
+                pybamm.exp(ne * (1 - alpha) * Feta_RT)
+                - pybamm.exp(-ne * alpha * Feta_RT)
+            )
+        )
 
     def _get_standard_icd_by_reaction_variables(self, j, index):
         domain = self.domain
