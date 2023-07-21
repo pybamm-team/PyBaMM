@@ -142,7 +142,6 @@ class ProcessedVariableVar(object):
         len_space = self.base_eval_shape[0]
         return (
             np.concatenate(self._unroll_nnz(realdata), axis=0)
-            .flatten()
             .reshape((len(self.t_pts), len_space))
             .transpose()
         )
@@ -151,7 +150,7 @@ class ProcessedVariableVar(object):
         # initialise settings on first run
         if not self.unroll_params:
             self.unroll_params["n_dim1"] = n_dim1
-            self.unroll_params["n_dim2"]= n_dim2
+            self.unroll_params["n_dim2"]=  n_dim2
             self.unroll_params["axis_swaps"] = axis_swaps
         # use stored settings on subsequent runs
         if not n_dim1:
@@ -161,7 +160,6 @@ class ProcessedVariableVar(object):
         len_space = self.base_eval_shape[0]
         entries = (
             np.concatenate(self._unroll_nnz(realdata), axis=0)
-            .flatten()
             .reshape((len(self.t_pts), n_dim1, n_dim2))
         )
         for a, b in axis_swaps:
