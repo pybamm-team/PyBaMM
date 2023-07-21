@@ -78,7 +78,16 @@
       "numpy": [],
       "casadi": [],
       "wget": [],
-      "cmake": []
+      "cmake": [],
+      "anytree": [],
+      "autograd": [],
+      "scikit-fem": [],
+      "imageio": [],
+      "pybtex": [],
+      "sympy": [],
+      "bpx": [],
+      "tqdm": [],
+      "matplotlib": [],
     },
     "env": {
       "LD_LIBRARY_PATH": "/home/runner/.local/lib"
