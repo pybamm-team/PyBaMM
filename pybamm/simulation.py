@@ -673,6 +673,8 @@ class Simulation:
                 save_this_cycle = (
                     # always save cycle 1
                     cycle_num == 1
+                    # always save last cycle
+                    or cycle_num == num_cycles
                     # None: save all cycles
                     or save_at_cycles is None
                     # list: save all cycles in the list
