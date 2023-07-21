@@ -26,7 +26,7 @@ fundamentals/index
 # Example notebooks
 
 The notebooks below provide a good introduction to PyBaMM and how to use it. For more
-examples, see the [Examples](../examples/index) section.
+examples, see the [Examples](../examples/index.rst) section.
 
 
 ```{nbgallery}
