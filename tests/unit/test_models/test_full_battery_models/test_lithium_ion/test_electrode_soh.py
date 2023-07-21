@@ -187,9 +187,6 @@ class TestElectrodeSOHMSMR(TestCase):
         self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
         # Solve with split esoh and check outputs
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, param, options=options
-        )
         ics = esoh_solver._set_up_solve(inputs)
         sol_split = esoh_solver._solve_split(inputs, ics)
         for key in sol:
@@ -227,6 +224,22 @@ class TestElectrodeSOHMSMR(TestCase):
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
         self.assertAlmostEqual(sol["Q"], Q, places=5)
+
+    def test_error(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, known_value="cell capacity", options=options
+        )
+        with self.assertRaisesRegex(ValueError, "solve_for must be "):
+            esoh_solver._get_electrode_soh_sims_split()
 
 
 class TestElectrodeSOHHalfCell(TestCase):
