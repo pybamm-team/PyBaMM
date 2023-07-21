@@ -206,21 +206,8 @@ setup(
         "numpy>=1.16",
         "scipy>=1.3",
         "pandas>=0.24",
-        "anytree>=2.4.3",
-        "autograd>=1.2",
-        "scikit-fem>=0.2.0",
         "casadi>=3.6.0",
-        "imageio>=2.9.0",
-        "pybtex>=0.24.0",
-        "sympy>=1.8",
         "xarray",
-        "bpx",
-        "tqdm",
-        # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
-        # on systems without an attached display, it should never be imported
-        # outside of plot() methods.
-        # Should not be imported
-        "matplotlib>=2.0",
     ],
     extras_require={
         "docs": [
@@ -240,10 +227,44 @@ setup(
             "sphinx-gallery",
             "sphinx-hoverxref",
         ],  # For doc generation
+        "examples": [
+            "jupyter",  # For example notebooks
+        ],
+        "plot": [
+            "imageio>=2.9.0",
+            # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
+            # on systems without an attached display, it should never be imported
+            # outside of plot() methods.
+            # Should not be imported
+            "matplotlib>=2.0",
+        ],
+        "cite": [
+            "pybtex>=0.24.0",
+        ],
+        "latexify": [
+            "sympy>=1.8",
+        ],
+        "bpx": [
+            "bpx",
+        ],
+        "tqdm": [
+            "tqdm",
+        ],
         "dev": [
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
-            "jupyter",  # For example notebooks
+        ],
+        "all": [
+            "anytree>=2.4.3",
+            "autograd>=1.2",
+            "scikit-fem>=0.2.0",
+            "imageio>=2.9.0",
+            "pybtex>=0.24.0",
+            "sympy>=1.8",
+            "bpx",
+            "tqdm",
+            "matplotlib>=2.0",
+            "jupyter",
         ],
     },
     entry_points={
