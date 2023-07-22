@@ -4,12 +4,19 @@ ci:
 
 repos:
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.7.0
     hooks:
       - id: black
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.0.277"
+    rev: "v0.0.278"
     hooks:
       - id: ruff
         args: [--ignore=E741, --exclude=__init__.py]
+
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.0
+    hooks:
+      - id: nbqa-ruff
+        additional_dependencies: [ruff==0.0.276]
+        args: ["--fix","--ignore=E501,E402"]
