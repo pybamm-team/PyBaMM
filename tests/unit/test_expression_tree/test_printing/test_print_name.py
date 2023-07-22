@@ -21,7 +21,7 @@ class TestPrintName(TestCase):
         )
 
         # Test subscripts
-        self.assertEqual(param.n.C_dl.print_name, r"C_{\mathrm{dl,n}}")
+        self.assertEqual(param.n.C_dl(0).print_name, r"C_{\mathrm{dl,n}}")
 
         # Test bar
         c_e_av = pybamm.Variable("c_e_av")
