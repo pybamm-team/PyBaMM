@@ -20,3 +20,10 @@ repos:
       - id: nbqa-ruff
         additional_dependencies: [ruff==0.0.276]
         args: ["--fix","--ignore=E501,E402"]
+
+  -   repo: https://github.com/adamchainz/blacken-docs
+      rev: "1.15.0"
+      hooks:
+      -   id: blacken-docs
+          additional_dependencies:
+          - black==22.12.0
