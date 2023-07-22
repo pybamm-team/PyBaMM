@@ -13,3 +13,10 @@ repos:
     hooks:
       - id: ruff
         args: [--ignore=E741, --exclude=__init__.py]
+
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.0
+    hooks:
+      - id: nbqa-ruff
+        additional_dependencies: [ruff==0.0.276]
+        args: ["--fix","--ignore=E501,E402"]
