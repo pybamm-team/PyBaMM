@@ -139,7 +139,7 @@ Installable with ``pip install "pybamm[dev]"``
 Dependency                                                                       Minimum Version    pip extra          Notes
 ================================================================================ ================== ================== =============================================================
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
-`black <https://black.readthedocs.io/en/stable/>`__                              \-                 dev                For code formatting.
+`ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:
