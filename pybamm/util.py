@@ -4,16 +4,13 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import argparse
 import importlib.util
 import numbers
 import os
 import pathlib
 import pickle
 import subprocess
-import sys
 import timeit
-from platform import system
 import difflib
 
 import numpy as np
