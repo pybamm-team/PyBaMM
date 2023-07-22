@@ -219,13 +219,20 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 2. Set break points, either in your IDE or using the Python debugging module. To use the latter, add the following line where you want to set the break point
 
    ```python
-   import ipdb; ipdb.set_trace()
+   import ipdb
+
+   ipdb.set_trace()
    ```
 
    This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
 
    ```python
-   from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+   from IPython import embed
+
+   embed()
+   import ipdb
+
+   ipdb.set_trace()
    ```
 
    at the break point instead.
@@ -237,7 +244,9 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       try:
           do_something_complicated()
       except ValueError:
-          import ipdb; ipdb.set_trace()
+          import ipdb
+
+          ipdb.set_trace()
       ```
 
       This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
@@ -245,6 +254,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 
       ```python
       import warnings
+
       warnings.simplefilter("error")
       ```
 
@@ -270,7 +280,12 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 Sometimes, a bit of code will take much longer than you expect to run. In this case, you can set
 
 ```python
-from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+from IPython import embed
+
+embed()
+import ipdb
+
+ipdb.set_trace()
 ```
 
 as above, and then use some of the profiling tools. In order of increasing detail:
