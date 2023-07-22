@@ -167,3 +167,71 @@ html[data-theme="dark"] h3 {
 .tooltipster-sidetip.tooltipster-shadow.tooltipster-left .tooltipster-arrow-border {
   border-left-color: var(--pst-color-background) !important;
 }
+
+/* Custom styles for Algolia DocSearch v3 items and modals */
+/* to make them congruous with PST on light and dark themes */
+
+.DocSearch-Modal {
+  margin: 150px auto auto;
+  background: var(--pst-color-background);
+}
+
+.DocSearch-Container {
+  z-index: 2000;
+}
+
+kbd.DocSearch-Commands-Key {
+  border: 0;
+  box-shadow: var(--docsearch-key-shadow);
+  margin: 1px 5px 1px 0px;
+  padding: inherit;
+}
+
+html[data-theme="dark"] kbd.DocSearch-Commands-Key {
+  color: var(--pst-color-border);
+}
+
+html[data-theme="dark"] .DocSearch-Commands-Key {
+  background: linear-gradient(-26.5deg,#30474f,#31355b)
+}
+
+.DocSearch-Hit-source {
+  background: var(--pst-color-background);
+}
+.DocSearch-Button {
+  border-radius: 6px;
+}
+
+.DocSearch-Footer {
+  background: var(--pst-color-background);
+}
+
+/* Should be for both light and dark */
+
+:root {
+  --docsearch-primary-color: var(--pst-color-info);
+  --docsearch-searchbox-focus-background: var(--pst-color-background);
+  --docsearch-footer-background: var(--pst-color-on-background)
+}
+
+/* Logo in dark theme */
+
+html[data-theme="dark"] .DocSearch-Logo svg path.cls-1,
+html[data-theme="dark"] .DocSearch-Logo svg path.cls-2,
+html[data-theme="dark"] .DocSearch-Logo svg rect.cls-1 {
+ fill: var(--pst-color-white);
+}
+
+/* Logo in light theme */
+
+html[data-theme="light"] .DocSearch-Logo svg path.cls-1,
+html[data-theme="light"] .DocSearch-Logo svg path.cls-2,
+html[data-theme="light"] .DocSearch-Logo svg rect.cls-1 {
+  fill: var(--pst-color-primary);
+}
+
+/* Search field dark theme corrections */
+
+html[data-theme="dark"] .DocSearch-Button {
+  background: var(--pst-color-on-surface);
+}
