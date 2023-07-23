@@ -74,23 +74,7 @@ pre-commit run ruff
 
 ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
-When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
-
-### Black
-
-We use [black](https://black.readthedocs.io/en/stable/) to automatically configure our code to adhere to PEP8. Black can be used in two ways:
-
-1. Command line: navigate to the PyBaMM directory in a console and type
-
-```bash
-black {source_file_or_directory}
-```
-
-2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a Python script each time the script is saved in an editor.
-
-If you want to use black in your editor, you may need to change the max line length in your editor settings.
-
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [ruff](#ruff).
+When you commit your changes they will be checked against ruff automatically (see [Pre-commit checks](#pre-commit-checks)).
 
 ### Naming
 
