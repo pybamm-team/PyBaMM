@@ -16,6 +16,9 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
 }
+# Do not stdout ANSI colours on GitHub Actions
+if os.getenv("CI") == "true":
+    os.environ["NO_COLOR"] = "1"
 
 
 def set_environment_variables(env_dict, session):
