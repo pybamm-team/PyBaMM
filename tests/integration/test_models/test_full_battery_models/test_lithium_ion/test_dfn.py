@@ -34,6 +34,36 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
         param["Current function [A]"] = 0.5 * param["Nominal cell capacity [A.h]"]
         self.run_basic_processing_test({}, parameter_values=param)
 
+    def test_conservation_coupled_degradation(self):
+        # Test that lithium is conserved when all degradation mechanisms are enabled
+        model = pybamm.lithium_ion.DFN(
+            {
+                "SEI": "reaction limited",
+                "SEI porosity change": "true",
+                "lithium plating": "partially reversible",
+                "particle mechanics": ("swelling and cracking", "swelling only"),
+                "SEI on cracks": "true",
+                "loss of active material": "stress and reaction-driven",
+            }
+        )
+        param = pybamm.ParameterValues("OKane2022")
+
+        # optimize mesh size for mechanical degradation
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 30, "r_p": 20}
+        solver = pybamm.CasadiSolver(mode="fast")
+
+        # solve
+        sim = pybamm.Simulation(
+            model, parameter_values=param, var_pts=var_pts, solver=solver
+        )
+        solution = sim.solve([0, 3500])
+        BOD = solution["Total lithium [mol]"].entries[0]
+        EOD = solution["Total lithium [mol]"].entries[-1]
+        loss = solution["Total lithium lost [mol]"].entries[-1]
+
+        # compare
+        np.testing.assert_array_almost_equal(BOD, EOD + loss, decimal=12)
+
 
 class TestDFNWithSizeDistribution(TestCase):
     def setUp(self):

@@ -250,13 +250,13 @@ class SEIGrowth(BaseModel):
         # 1/z_sei converts from li moles to SEI moles (z_sei=li mol per sei mol)
         # a * j_sei / (F * z_sei) is the rate of consumption of SEI moles by SEI
         # reaction
-        dLdt_SEI_inner = a * j_inner / (param.F * phase_param.z_sei)
-        dLdt_SEI_outer = a * j_outer / (param.F * phase_param.z_sei)
+        dcdt_SEI_inner = a * j_inner / (param.F * phase_param.z_sei)
+        dcdt_SEI_outer = a * j_outer / (param.F * phase_param.z_sei)
 
         if self.options["SEI"].startswith("ec reaction limited"):
-            self.rhs = {c_outer: -dLdt_SEI_outer}
+            self.rhs = {c_outer: -dcdt_SEI_outer}
         else:
-            self.rhs = {c_inner: -dLdt_SEI_inner, c_outer: -dLdt_SEI_outer}
+            self.rhs = {c_inner: -dcdt_SEI_inner, c_outer: -dcdt_SEI_outer}
 
     def set_initial_conditions(self, variables):
         if self.reaction_loc == "interface":
