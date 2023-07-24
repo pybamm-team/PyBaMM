@@ -2,6 +2,9 @@ import nox
 import os
 import sys
 
+
+# Options to modify nox behaviour
+nox.options.reuse_existing_virtualenvs = True
 if sys.platform == "linux":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
 else:
@@ -31,7 +34,7 @@ def set_environment_variables(env_dict, session):
         session.env[key] = value
 
 
-@nox.session(name="pybamm-requires", reuse_venv=True)
+@nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -50,7 +53,7 @@ def run_pybamm_requires(session):
         session.error("nox -s pybamm-requires is only available on Linux & MacOS.")
 
 
-@nox.session(name="coverage", reuse_venv=True)
+@nox.session(name="coverage")
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -64,7 +67,7 @@ def run_coverage(session):
     session.run("coverage", "xml")
 
 
-@nox.session(name="integration", reuse_venv=True)
+@nox.session(name="integration")
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -74,14 +77,14 @@ def run_integration(session):
     session.run("python", "run-tests.py", "--integration")
 
 
-@nox.session(name="doctests", reuse_venv=True)
+@nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
     session.install("-e", ".[all,docs]")
     session.run("python", "run-tests.py", "--doctest")
 
 
-@nox.session(name="unit", reuse_venv=True)
+@nox.session(name="unit")
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -92,14 +95,14 @@ def run_unit(session):
     session.run("python", "run-tests.py", "--unit")
 
 
-@nox.session(name="examples", reuse_venv=True)
+@nox.session(name="examples")
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks and Python scripts."""
     session.install("-e", ".[all]")
     session.run("python", "run-tests.py", "--examples")
 
 
-@nox.session(name="dev", reuse_venv=True)
+@nox.session(name="dev")
 def set_dev(session):
     """Install PyBaMM in editable mode."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -117,7 +120,7 @@ def set_dev(session):
     )
 
 
-@nox.session(name="tests", reuse_venv=True)
+@nox.session(name="tests")
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -128,7 +131,7 @@ def run_tests(session):
     session.run("python", "run-tests.py", "--all")
 
 
-@nox.session(name="docs", reuse_venv=True)
+@nox.session(name="docs")
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
@@ -145,7 +148,7 @@ def build_docs(session):
         )
 
 
-@nox.session(name="pre-commit", reuse_venv=True)
+@nox.session(name="pre-commit")
 def lint(session):
     """Check all files against the defined pre-commit hooks."""
     session.install("pre-commit")
