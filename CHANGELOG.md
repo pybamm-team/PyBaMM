@@ -6,6 +6,7 @@
 
 ## Bug fixes
 
+- Fix to simulate c_rate steps with drive cycles ([#3186](https://github.com/pybamm-team/PyBaMM/pull/3186))
 - Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
 - Error generated when invalid parameter values are passed.
 - Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
