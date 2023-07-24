@@ -670,6 +670,44 @@ class TestSimulationExperiment(TestCase):
         # test that the final time is correct (i.e. starting solution correctly set)
         self.assertEqual(new_solution["Time [s]"].entries[-1], 3600)
 
+    def test_experiment_start_time_starting_solution(self):
+        model = pybamm.lithium_ion.SPM()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 8, 20, 0),
+                ),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        solution = sim.solve()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 9, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 9, 20, 0),
+                ),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        new_solution = sim.solve(calc_esoh=False, starting_solution=solution)
+
+        # test that the final time is correct (i.e. starting solution correctly set)
+        self.assertEqual(new_solution["Time [s]"].entries[-1], 3600)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
