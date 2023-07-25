@@ -130,6 +130,21 @@ Currently, only GNU/Linux and macOS are supported.
 
    Assuming that SUNDIALS was installed as described :ref:`above<user-install-label>`.
 
+Optional - JaxSolver
+--------------------
+
+Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
+Currently, only GNU/Linux and macOS are supported.
+
+GNU/Linux and macOS
+~~~~~~~~~~~~~~~~~~~
+
+.. code:: bash
+
+	  pip install "pybamm[jax]"
+
+The ``pip install "pybamm[jax]"`` command is installed with PyBaMM. It automatically downloads and installs jax and jaxlib on your system.
+
 Developer install
 -----------------
 
