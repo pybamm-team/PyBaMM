@@ -253,7 +253,7 @@ setup(
         ],
         "dev": [
             "pre-commit",  # For code style checking
-            "black",  # For code style auto-formatting
+            "ruff",  # For code style auto-formatting
         ],
         "all": [
             "anytree>=2.4.3",
