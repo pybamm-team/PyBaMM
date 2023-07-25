@@ -194,6 +194,20 @@ Dependency                                                  Minimum Version    p
 `tqdm <https://tqdm.github.io/>`__                          \-                 tqdm               For logging loops.
 =========================================================== ================== ================== ==================
 
+.. _install.jax_dependencies:
+
+Jax dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[jax]"``
+
+========================================================================= ================== ================== ===========================================================
+Dependency                                                                Minimum Version    pip extra          Notes
+========================================================================= ================== ================== ===========================================================
+`jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.8              jax                Enables NumPy code on not only CPU but GPU and TPU as well.
+`jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
+========================================================================= ================== ================== ===========================================================
+
 Full installation guide
 -----------------------             
 
