@@ -189,6 +189,9 @@ kbd.DocSearch-Commands-Key {
   padding: inherit;
 }
 
+.DocSearch-Button-Key {
+  width: 24px;
+}
 /* Do not add custom padding for keyboard buttons */
 
 kbd:not(.compound) {
