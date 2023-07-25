@@ -57,12 +57,19 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
             model, parameter_values=param, var_pts=var_pts, solver=solver
         )
         solution = sim.solve([0, 3500])
-        BOD = solution["Total lithium [mol]"].entries[0]
-        EOD = solution["Total lithium [mol]"].entries[-1]
-        loss = solution["Total lithium lost [mol]"].entries[-1]
+        BOD = solution["Total lithium in particles [mol]"].entries[0]
+        particles = solution["Total lithium in particles [mol]"].entries[-1]
+        neg = solution[
+            "Loss of lithium due to loss of active material in negative electrode [mol]"
+        ].entries[-1]
+        pos = solution[
+            "Loss of lithium due to loss of active material in positive electrode [mol]"
+        ].entries[-1]
+        side = solution["Loss of lithium to side reactions [mol]"].entries[-1]
+        EOD = particles + neg + pos + side
 
         # compare
-        np.testing.assert_array_almost_equal(BOD, EOD + loss, decimal=12)
+        np.testing.assert_array_almost_equal(BOD, EOD, decimal=12)
 
 
 class TestDFNWithSizeDistribution(TestCase):
