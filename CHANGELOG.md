@@ -1,13 +1,5 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Features
-
-- `nbqa` added as pre-commit hook for formatting of jupyter notebooks. ([#3110](https://github.com/pybamm-team/PyBaMM/pull/3110))
-
-## Optimizations
-
-- Improved `Nox` CI - Packed `ENV_VARS` in a function ([#3082](https://github.com/pybamm-team/PyBaMM/pull/3082)), default & `pre-commit` sessions ([#3084](https://github.com/pybamm-team/PyBaMM/pull/3084))
-
 ## Breaking changes
 
 - PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
