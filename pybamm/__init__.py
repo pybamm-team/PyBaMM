@@ -46,6 +46,7 @@ from .util import (
 from .util import (
     get_parameters_filepath,
     have_jax,
+    install_jax,
     is_jax_compatible,
     get_git_commit_info,
 )

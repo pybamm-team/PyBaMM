@@ -278,6 +278,7 @@ setup(
             "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
+            "pybamm_install_jax = pybamm.util:install_jax",
         ],
         "pybamm_parameter_sets": [
             "Sulzer2019 = pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values",  # noqa: E501
