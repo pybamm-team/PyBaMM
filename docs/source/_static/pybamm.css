@@ -171,6 +171,8 @@ html[data-theme="dark"] h3 {
 /* Custom styles for Algolia DocSearch v3 items and modals */
 /* to make them congruous with PST on light and dark themes */
 
+@import url("https://cdn.jsdelivr.net/npm/@docsearch/css@3");
+
 .DocSearch-Modal {
   margin: 150px auto auto;
   background: var(--pst-color-background);
@@ -185,6 +187,12 @@ kbd.DocSearch-Commands-Key {
   box-shadow: var(--docsearch-key-shadow);
   margin: 1px 5px 1px 0px;
   padding: inherit;
+}
+
+/* Do not add custom padding for keyboard buttons */
+
+kbd:not(.compound) {
+  padding: 0rem 0rem;
 }
 
 html[data-theme="dark"] kbd.DocSearch-Commands-Key {
