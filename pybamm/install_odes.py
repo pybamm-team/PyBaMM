@@ -5,6 +5,7 @@ import argparse
 import sys
 import logging
 import subprocess
+import time
 
 from pybamm.util import root_dir
 
@@ -110,9 +111,9 @@ def update_LD_LIBRARY_PATH(install_dir):
 def main(arguments=None):
     CYELLOW = '\33[33m'
     CEND = '\033[0m'
-    print(CYELLOW + "The pybamm_install_odes command is now deprecated & will be removed in future release, please install jax using pybamm[jax]" + CEND)
+    print(CYELLOW + "The pybamm_install_odes command is now deprecated & will be removed in future release, please install jax using pybamm[jax]" + CEND) # noqa: E501S
     time.sleep(2)
-    
+
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logger = logging.getLogger("scikits.odes setup")
 
