@@ -332,7 +332,7 @@ def install_jax(arguments=None):  # pragma: no cover
 
     CYELLOW = '\33[33m'
     CEND = '\033[0m'
-    print(CYELLOW + "The pybamm_install_jax command is now deprecated & will be removed in future release, please install jax using pybamm[jax]" + CEND)
+    print(CYELLOW + "The pybamm_install_jax command is now deprecated & will be removed in future release, please install jax using pybamm[jax]" + CEND) # noqa: E501
     time.sleep(2)
     subprocess.check_call(
         [
