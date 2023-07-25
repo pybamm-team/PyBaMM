@@ -37,7 +37,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 1. Create an [issue](https://guides.github.com/features/issues/) where new proposals can be discussed before any coding is done.
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
-4. [Install](https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
+4. [Install](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
 5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
 
 You now have everything you need to start making changes!
@@ -52,7 +52,7 @@ You now have everything you need to start making changes!
 ### C. Merging your changes with PyBaMM
 
 10. [Test your code!](#testing)
-11. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
+11. PyBaMM has online documentation at http://docs.pybamm.org/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
 13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
 14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
@@ -74,23 +74,7 @@ pre-commit run ruff
 
 ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
-When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
-
-### Black
-
-We use [black](https://black.readthedocs.io/en/stable/) to automatically configure our code to adhere to PEP8. Black can be used in two ways:
-
-1. Command line: navigate to the PyBaMM directory in a console and type
-
-```bash
-black {source_file_or_directory}
-```
-
-2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a Python script each time the script is saved in an editor.
-
-If you want to use black in your editor, you may need to change the max line length in your editor settings.
-
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [ruff](#ruff).
+When you commit your changes they will be checked against ruff automatically (see [Pre-commit checks](#pre-commit-checks)).
 
 ### Naming
 
@@ -184,7 +168,7 @@ or refer to the [Pandoc installation instructions](https://pandoc.org/installing
 If notebooks fail because of changes to PyBaMM, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
 
 ```bash
-python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
+python run-tests.py --debook docs/source/examples/notebooks/notebook-name.ipynb script.py
 ```
 
 ### Debugging
@@ -219,13 +203,20 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 2. Set break points, either in your IDE or using the Python debugging module. To use the latter, add the following line where you want to set the break point
 
    ```python
-   import ipdb; ipdb.set_trace()
+   import ipdb
+
+   ipdb.set_trace()
    ```
 
    This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
 
    ```python
-   from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+   from IPython import embed
+
+   embed()
+   import ipdb
+
+   ipdb.set_trace()
    ```
 
    at the break point instead.
@@ -237,7 +228,9 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       try:
           do_something_complicated()
       except ValueError:
-          import ipdb; ipdb.set_trace()
+          import ipdb
+
+          ipdb.set_trace()
       ```
 
       This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
@@ -245,11 +238,12 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 
       ```python
       import warnings
+
       warnings.simplefilter("error")
       ```
 
       Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
 
       ```python
       expression_tree.render()
@@ -270,7 +264,12 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 Sometimes, a bit of code will take much longer than you expect to run. In this case, you can set
 
 ```python
-from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+from IPython import embed
+
+embed()
+import ipdb
+
+ipdb.set_trace()
 ```
 
 as above, and then use some of the profiling tools. In order of increasing detail:
@@ -307,7 +306,7 @@ These docstrings can be fairly simple, but can also make use of [reStructuredTex
 
 In addition, we write a (very) small bit of documentation in separate reStructuredText files in the `docs` directory. Most of what these files do is simply import docstrings from the source code. But they also do things like add tables and indexes. If you've added a new class to a module, search the `docs` directory for that module's `.rst` file and add your class (in alphabetical order) to its index. If you've added a whole new module, copy-paste another module's file and add a link to your new file in the appropriate `index.rst` file.
 
-Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs` can be converted to HTML, PDF, and other formats. In particular, we use it to generate the documentation on http://pybamm.readthedocs.io/
+Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs` can be converted to HTML, PDF, and other formats. In particular, we use it to generate the documentation on http://docs.pybamm.org/
 
 ### Building the documentation
 
@@ -321,9 +320,9 @@ And then visit the webpage served at http://127.0.0.1:8000. Each time a change t
 
 ### Example notebooks
 
-Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
+Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](docs/source/examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [docs/sourceexamples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
 
 All the notebooks are tested daily.
 
@@ -385,7 +384,7 @@ Configuration files:
 
 ### Read the Docs
 
-Documentation is built using https://readthedocs.org/ and published on http://pybamm.readthedocs.io/.
+Documentation is built using https://readthedocs.org/ and published on http://docs.pybamm.org/.
 
 ### Google Colab
 
