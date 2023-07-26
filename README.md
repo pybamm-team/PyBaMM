@@ -33,6 +33,7 @@ Together, these enable flexible model definitions and fast battery simulations, 
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
 [//]: # "numfocus-fiscal-sponsor-attribution"
+
 PyBaMM uses an [open governance model](./GOVERNANCE.md)
 and is fiscally sponsored by [NumFOCUS](https://numfocus.org/). Consider making
 a [tax-deductible donation](https://numfocus.org/donate-for-pybamm) to help the project
