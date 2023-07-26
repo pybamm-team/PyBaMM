@@ -331,7 +331,8 @@ def install_jax(arguments=None):  # pragma: no cover
             )
 
     msg = (
-        "pybamm_install_jax is deprecated, use 'pip install pybamm[jax]' to install jax & jaxlib"
+        "pybamm_install_jax is deprecated,"
+        " use 'pip install pybamm[jax]' to install jax & jaxlib"
     )
     warn(msg, DeprecationWarning)
     subprocess.check_call(

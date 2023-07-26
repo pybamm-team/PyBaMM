@@ -110,7 +110,8 @@ def update_LD_LIBRARY_PATH(install_dir):
 
 def main(arguments=None):
     msg = (
-        "pybamm_install_odes is deprecated, use 'pip install pybamm[odes]' to install scikits.odes"
+        "pybamm_install_odes is deprecated,"
+        " use 'pip install pybamm[odes]' to install scikits.odes"
     )
     warn(msg, DeprecationWarning)
 
