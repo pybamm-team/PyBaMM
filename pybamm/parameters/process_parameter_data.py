@@ -142,7 +142,7 @@ def process_3D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    df = np.loadtxt(filename, skiprows=1)
+    df = np.loadtxt(filename, skiprows=1, delimiter=',')
 
     x1 = np.array(list(set(df.iloc[:, 0])))
     x2 = np.array(list(set(df.iloc[:, 1])))
