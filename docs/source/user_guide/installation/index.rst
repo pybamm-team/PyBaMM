@@ -208,6 +208,23 @@ Dependency                                                                Minimu
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
 ========================================================================= ================== ================== ===========================================================
 
+.. _install.odes_dependencies:
+
+odes dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[odes]"``
+
+================================================================== ================== ================== ==================
+Dependency                                                         Minimum Version    pip extra          Notes
+================================================================== ================== ================== ==================
+`scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`__  \-                 odes               For ODE solvers
+================================================================== ================== ================== ==================
+
+.. note::
+
+   Before installing `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_  make sure to install it's build-time requirements by running ``nox -s pybamm-requires``.
+
 Full installation guide
 -----------------------             
 

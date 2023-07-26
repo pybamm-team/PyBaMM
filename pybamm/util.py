@@ -12,10 +12,10 @@ import pathlib
 import pickle
 import subprocess
 import sys
-import time
 import timeit
 from platform import system
 import difflib
+from warnings import warn
 
 import numpy as np
 import pkg_resources
@@ -330,10 +330,10 @@ def install_jax(arguments=None):  # pragma: no cover
                 " following command: \npybamm_install_jax --force"
             )
 
-    CYELLOW = '\33[33m'
-    CEND = '\033[0m'
-    print(CYELLOW + "The pybamm_install_jax command is now deprecated & will be removed in future release, please install jax using pybamm[jax]" + CEND) # noqa: E501
-    time.sleep(2)
+    msg = (
+        "pybamm_install_jax is deprecated, use 'pip install pybamm[jax]' to install jax & jaxlib"
+    )
+    warn(msg, DeprecationWarning)
     subprocess.check_call(
         [
             sys.executable,
