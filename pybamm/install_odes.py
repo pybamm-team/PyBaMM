@@ -5,7 +5,6 @@ import argparse
 import sys
 import logging
 import subprocess
-from warnings import warn
 
 from pybamm.util import root_dir
 
