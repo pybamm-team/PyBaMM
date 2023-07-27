@@ -23,7 +23,7 @@ class TestPlotSummaryVariables(TestCase):
         output_variables = [
             "Capacity [A.h]",
             "Loss of lithium inventory [%]",
-            "Loss of capacity to SEI [A.h]",
+            "Total capacity lost to side reactions [A.h]",
             "Loss of active material in negative electrode [%]",
             "Loss of active material in positive electrode [%]",
             "x_100",

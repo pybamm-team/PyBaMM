@@ -204,11 +204,11 @@ class SEIGrowth(BaseModel):
                 f"X-averaged {domain} outer {self.reaction_name}thickness [m]"
             ]
             j_inner = variables[
-                f"X-averaged {domain} inner {self.reaction_name}"
+                f"X-averaged {domain} electrode inner {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
             j_outer = variables[
-                f"X-averaged {domain} outer {self.reaction_name}"
+                f"X-averaged {domain} electrode outer {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
 

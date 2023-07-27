@@ -137,13 +137,10 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             f"X-averaged {domain} electrode total interfacial current density [A.m-2]"
         ]
         j_sei = variables[f"{Domain} electrode SEI interfacial current density [A.m-2]"]
-        j_sei_cracks = variables[
-            f"{Domain} electrode SEI on cracks interfacial current density [A.m-2]"
-        ]
         j_stripping = variables[
             f"{Domain} electrode lithium plating interfacial current density [A.m-2]"
         ]
-        j = j_tot - j_sei - j_sei_cracks - j_stripping
+        j = j_tot - j_sei - j_stripping
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(
