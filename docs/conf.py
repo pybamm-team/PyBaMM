@@ -62,8 +62,9 @@ extensions = [
     "myst_parser",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
+    "sphinx_docsearch",
     "sphinx_last_updated_by_git",
-    "nbsphinx",
+    "nbsphinx",  # to be kept below JavaScript-enabled extensions, always
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
     "hoverxref.extension",
@@ -155,6 +156,8 @@ html_theme_options = {
     "check_switcher": True,
     # for dark mode toggle, version switcher, and social media links
     "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
+    # add Algolia to the persistent navbar, this removes the default search icon
+    "navbar_persistent": "algolia-searchbox",
     "use_edit_page_button": True,
     "pygment_light_style": "xcode",
     "pygment_dark_style": "monokai",
@@ -285,6 +288,10 @@ bibtex_tooltips = True
 
 # -- nbsphinx configuration options ------------------------------------------
 
+# Important: ensure require.js is not loaded. this is needed to avoid
+# a conflict with the sphinx-docsearch extension for Algolia search
+
+nbsphinx_requirejs_path = ""
 nbsphinx_prolog = r"""
 
 {% set github_docname =
@@ -320,31 +327,6 @@ env.doc2path(env.docname, base=None) %}
     </div>
 
 """
-
-# -- Options for sphinx-hoverxref --------------------------------------------
-
-# Hoverxref settings
-
-hoverxref_default_type = "tooltip"
-hoverxref_auto_ref = True
-
-hoverxref_roles = ["class", "meth", "func", "ref", "term"]
-hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
-
-hoverxref_domains = ["py"]
-
-# Currently, only projects that are hosted on readthedocs + CPython, NumPy, and
-# SymPy are supported
-hoverxref_intersphinx = list(intersphinx_mapping.keys())
-
-# Tooltips settings
-hoverxref_tooltip_lazy = False
-hoverxref_tooltip_maxwidth = 750
-hoverxref_tooltip_animation = "fade"
-hoverxref_tooltip_animation_duration = 1
-hoverxref_tooltip_content = "Loading information..."
-hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
-
 
 # -- sphinxext/inheritance_diagram.py options --------------------------------
 
@@ -396,6 +378,16 @@ hoverxref_tooltip_animation_duration = 1
 hoverxref_tooltip_content = "Loading information..."
 hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
 
+# -- Options for Algolia DocSearch (sphinx-docsearch) ------------------------
+
+# DocSearch settings
+docsearch_app_id = "BXYTEF2JI8"
+docsearch_api_key = "b7e7f1fc1a7c40a1587e52e8f4ff3b45"  # search API key, safe to use
+docsearch_index_name = "pybamm"
+
+# Searchbox settings
+docsearch_container = "#algolia-docsearch"
+docsearch_placeholder = "Search the PyBaMM documentation"
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
