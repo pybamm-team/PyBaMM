@@ -1,0 +1,203 @@
+# Use the interactive window to run code. need to restart jupyter server? kernal? whenever a change is made to the pybamm module? 
+import sys
+import os
+import numpy as np
+import pandas as pd
+import os
+from scipy import integrate
+import matplotlib.pyplot as plt
+os.chdir(sys.path[0] + '\..') # change our working directory to the root of the pybamm folder
+import pybamm
+print(pybamm.__path__[0])
+import inspect
+
+class ExternalCircuitResistanceFunction():
+    def __call__(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        R_ext = pybamm.FunctionParameter("External resistance [Ohm]",  {"Time [s]": pybamm.t}) 
+        R_tab = pybamm.FunctionParameter("Tabbing resistance [Ohm]",  {"Time [s]": pybamm.t})
+        return V/I - (R_ext + R_tab)
+    
+from pybamm import exp, constants, Parameter
+
+
+def modified_graphite_diffusivity_PeymanMPM(sto, T):
+    # D_ref =  Parameter("Negative electrode diffusion coefficient [m2.s-1]")
+    D_ref = 8e-14
+    E_D_s = 42770/10
+    soc = (sto - 0)/(0.8321-0)
+    k = 1.12070451*soc + 0.09209274 # Ds_restart_rmseV_11_simultaneous_rest (updated exp C-rate) only exclude kn>9
+    return D_ref*k 
+
+def modified_NMC_diffusivity_PeymanMPM(sto, T):
+    D_ref =  8e-15
+    E_D_s = 18550/10
+    soc = (0.837-sto)/(0.837-0.034)
+    k =  4.7302281*soc**2  -4.5023245*soc + 1.26466141 # # Ds_restart_rmseV_11_simultaneous_rest (updated exp C-rate)
+    return D_ref *k
+
+solutions = []
+SOC_0 = [1,0.75]
+SOC_name = SOC_0
+Q_nom = 4.6
+h = 0.72753047-0.05 #0.77996386
+Cp = 1.51997699 #1.94584251
+R_tab = pybamm.Parameter("Tabbing resistance [Ohm]")
+R_ext = pybamm.Parameter("External resistance [Ohm]")
+data_sets = []
+R_tab_list =  [0.0086,0.0086, 0.007] # 0.0085 (100%), 0.0078 (75%), 0.007? (50%)
+R_ext_list =  [0.0067,0.0145-R_tab_list[1], 0.0067] # 0.0085 (100%), 0.0078 (75%), 0.007? (50%)
+
+for j, soc in enumerate(SOC_0):
+
+    # load data import ESC data from file
+    raw_data = pd.read_csv("./fast_discharge/ESC_"+  str(int(SOC_name[j]*100)) + "SOC_full.csv")
+    esc_start = raw_data[-raw_data['Current Shunt']>1].index[0]
+    esc_end = len(raw_data)
+    # T_amb = np.mean(raw_data['Cell Temperature'][(raw_data.index < esc_start) & (raw_data['Cell Temperature'] >0)])
+    data = raw_data[['Time (s)', 'Voltage (V)', 'Cell Temperature', 'Current Shunt', 'Force']].loc[esc_start:esc_end].copy()
+    data['Current Shunt'] = -data['Current Shunt']
+    data['Time (s)'] = data['Time (s)'] - data['Time (s)'].loc[esc_start]
+    data['Force'] = data['Force'] - data['Force'].loc[esc_start]
+    df_labels = ['t', 'V', 'Temp','I', 'F']
+    data.set_axis(df_labels, axis=1, inplace=True)
+    data['I_C'] = data.I/Q_nom 
+    AhT_calculated = integrate.cumtrapz(abs(data.I), data.t-data.t.iloc[0])/3600
+    AhT_calculated = np.append(AhT_calculated,AhT_calculated[-1])
+    data['SOC'] = soc - AhT_calculated/Q_nom 
+    T_amb = data.Temp.iloc[0]
+    data_sets.append(data)
+
+    options = {
+        # "thermal": "x-lumped",
+#         "side reactions": "decomposition", 
+        "operating mode": ExternalCircuitResistanceFunction(),
+    }
+    model = pybamm.lithium_ion.SPMe(options = options)
+    chemistry = pybamm.parameter_sets.Mohtat2020
+    # chemistry["electrolyte"] = "lipf6_Nyman2008"
+    # chemistry["electrolyte"] = "LiPF6_Mohtat2020"
+    param = pybamm.ParameterValues(chemistry)
+    
+    param.update({
+        "Tabbing resistance [Ohm]":  R_tab_list[j],#0.0041,D
+        "External resistance [Ohm]":  R_ext_list[j], # 0.0067
+        "Cell capacity [A.h]": 4.6, #nominal
+        "Typical current [A]": 4.6,
+        "Negative electrode thickness [m]":62E-06*4.2/5,
+        "Positive electrode thickness [m]":67E-06*4.2/5,
+        "Lower voltage cut-off [V]": 0,
+        "Ambient temperature [K]":T_amb + 273.15,
+        "Initial temperature [K]": T_amb + 273.15,
+        "Negative tab width [m]":2.5e-2,
+        "Positive tab width [m]":2.5e-2,
+        "Negative electrode diffusivity [m2.s-1]": modified_graphite_diffusivity_PeymanMPM,
+        "Positive electrode diffusivity [m2.s-1]": modified_NMC_diffusivity_PeymanMPM,
+
+    }, check_already_exists = False)
+
+    V = model.variables["Terminal voltage [V]"]
+    I = model.variables["Current [A]"]
+    model.variables.update({
+        "Terminal voltage [V]": V - I*R_tab,
+        "Actual resistance [Ohm]":V/I,
+        }
+    )
+    
+    dt = 0.1
+    t_eval = np.arange(0, 15*60, dt)
+    solver = pybamm.CasadiSolver(mode="safe", dt_max = 1) #, extra_options_setup={"max_num_steps": 10000}
+    sim = pybamm.Simulation(model, parameter_values = param, solver=solver) 
+    solution = sim.solve( initial_soc=soc, t_eval = t_eval)
+    solutions.append(solution)
+
+
+
+# plot solutions 
+labels = [str(round(soc*100)) + '% SOC' for soc in SOC_name]
+
+fig, ax = plt.subplots(5,1, figsize=(4,8), sharex=True)
+ax = ax.flatten()
+linestyles = ['--','--','-.']*2
+data_colors = ['k','r','b','m']
+sim_colors = data_colors #['dimgray','lightcoral','b','m']
+T_colors = data_colors #['dimgray','lightcoral','b','m']
+
+for l, (solution,data) in enumerate(zip(solutions, data_sets)):
+    # data = data_sets[l]
+    t = solution["Time [s]"].entries
+    x = solution["x [m]"].entries[:, 0]
+    # AhT = solution["Discharge capacity [A.h]"].entries
+    x_plot = t
+    xlabel = "Time [s]"
+
+    data_color = data_colors[l] 
+    sim_color = sim_colors[l]
+    sim_ls = linestyles[l]
+
+    I = solution['C-rate']
+    ax[0].semilogx(data.t,data.I/param['Nominal cell capacity [A.h]'], label=labels[l] + ' Data',color = data_color)
+    ax[0].semilogx(x_plot, I(t), linestyle=sim_ls, color = sim_color, label=labels[l] + ' Model')
+    ax[0].set_xlabel(xlabel)
+    ax[0].set_ylabel('C-rate')
+    # ax[0].legend()
+
+    V = solution['Terminal voltage [V]']
+    ax[1].semilogx(data.t, data.V,color = data_color)
+    ax[1].semilogx(x_plot, V(t),linestyle=sim_ls, color = sim_color)
+    ax[1].set_xlabel(xlabel)
+    ax[1].set_ylabel('Terminal voltage [V]')
+    ax[1].set_ylim([-0.1, 2.1])
+    # ax[1].grid()
+
+    ax2 = ax[1].twinx()
+    ax2.semilogx(data.t,data.Temp, color = T_colors[l], linestyle = ':')
+    ax2.set_ylabel('Temperature [$^\circ$C]')
+    ax2.set_ylim([20,125])
+    # ax2.tick_params(axis='y')
+    # ax2.spines['right'].set_color(data_color)
+    # ax2.grid()
+
+    c_n_avg = solution['R-averaged negative particle concentration'](t=t, x=x[0])
+    soc = (c_n_avg - 0)/(0.8321-0)
+    e_soc = (solution['R-averaged negative particle concentration'](t=data.t, x=x[0])- 0)/(0.8321-0) -  data.SOC
+    x = solution["x [m]"].entries[:, 0]
+    ax[2].semilogx(data.t, data.SOC,color = data_color)
+    ax[2].semilogx(x_plot, soc,linestyle=sim_ls, color = sim_color, label = labels[l] + ": SOC" )  # can evaluate at arbitrary x (single representative particle)
+    ax[2].set_xlabel(xlabel)
+    ax[2].set_ylabel('SOC')
+
+    ax[3].semilogx(data.t, abs(e_soc),color = data_color)  # ,label = 'RMSE = ' + str(np.round(rmse_soc,3) can evaluate at arbitrary x (single representative particle)
+    ax[3].set_xlabel(xlabel)
+    ax[3].set_ylabel('|$e_{\mathrm{SOC}}$|')
+    ax[3].set_ylim([0,0.25])
+
+    ax[4].semilogx(data.t,data.F, color = data_color)
+    ax[4].set_xlabel(xlabel)
+    ax[4].set_ylabel('$\Delta\sigma$ [kPa]')
+    ax[4].set_ylim([0,41])
+
+    # plot venting line 
+    c = 'm'
+    for i, axs in enumerate(fig.get_axes()[0:-2]):
+        ylims = axs.get_ylim()
+        # if i <(len(fig.get_axes())-1):
+        axs.semilogx([80]*2, list(ylims), color = c, linestyle = ':', label = '_nolegend_')
+        if axs.yaxis.get_label().get_text() in ['Temperature [$^\\circ$C]','Terminal voltage [V]'] :
+            axs.annotate('Vent', xy=(90, np.diff(ylims)*0.50+ ylims[0]), color = c, rotation=-90) #
+        else:
+            axs.annotate('Vent', xy=(90, np.diff(ylims)*0.60+ ylims[0]), color = c, rotation=-90) #
+        axs.set_ylim(ylims) # keep original limits
+        # axs.grid()
+
+
+handles, labels = ax[0].get_legend_handles_labels()
+ax[0].legend(labels, fancybox=True, ncol=2, bbox_to_anchor=(0.43, 1.6),loc='upper center') 
+# fig.legend(handles, labels, loc='upper center', prop={'size': 10}, ncol = 2, bbox_to_anchor=(0.5, 1.05), fancybox=True) #ncol=len(labels)
+plt.xlim([t_eval[0],t_eval[-1]])
+plt.tight_layout()
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['ps.fonttype'] = 42
+plt.savefig('./fast_discharge/figs/100_75.pdf', format='pdf')
+plt.show()
