@@ -668,7 +668,6 @@ class Simulation:
 
             # Add initial padding rest if current time is earlier than first start time
             # This could be the case when using a starting solution
-            # TODO: not running, think better how to proceed!
             if starting_solution is not None:
                 op_conds = self.experiment.operating_conditions_steps[0]
                 if op_conds.start_time is not None:
@@ -691,18 +690,23 @@ class Simulation:
                             "start time": current_solution.t[-1],
                         }
                         steps = current_solution.cycles[-1].steps
-                        step_solution = steps[-1]
+                        step_solution = current_solution.cycles[-1].steps[-1]
 
                         step_solution_with_rest = self.run_padding_rest(
                             kwargs, rest_time, step_solution
                         )
-                        step_solution += step_solution_with_rest
+                        steps[-1] = step_solution + step_solution_with_rest
 
                         cycle_solution, _, _ = pybamm.make_cycle_solution(
                             steps, esoh_solver=esoh_solver, save_this_cycle=True
                         )
-                        current_solution.cycles[-1] = cycle_solution
-                        current_solution.plot()
+                        old_cycles = current_solution.cycles.copy()
+                        old_cycles[-1] = cycle_solution
+                        current_solution += step_solution_with_rest
+                        current_solution.cycles = old_cycles
+
+                        # Update _solution
+                        self._solution = current_solution
 
             for cycle_num, cycle_length in enumerate(
                 # tqdm is the progress bar.

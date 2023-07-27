@@ -703,10 +703,10 @@ class TestSimulationExperiment(TestCase):
         )
 
         sim = pybamm.Simulation(model, experiment=experiment)
-        new_solution = sim.solve(calc_esoh=False, starting_solution=solution)
+        new_solution = sim.solve(starting_solution=solution)
 
         # test that the final time is correct (i.e. starting solution correctly set)
-        self.assertEqual(new_solution["Time [s]"].entries[-1], 3600)
+        self.assertEqual(new_solution["Time [s]"].entries[-1], 5400)
 
 
 if __name__ == "__main__":
