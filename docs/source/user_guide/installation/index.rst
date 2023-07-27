@@ -47,8 +47,8 @@ Optional solvers
 
 Following GNU/Linux and macOS solvers are optionally available:
 
-*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_.
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver>`_.
+*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_.
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver>`_.
 
 Dependencies
 ------------
@@ -139,7 +139,7 @@ Installable with ``pip install "pybamm[dev]"``
 Dependency                                                                       Minimum Version    pip extra          Notes
 ================================================================================ ================== ================== =============================================================
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
-`black <https://black.readthedocs.io/en/stable/>`__                              \-                 dev                For code formatting.
+`ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:

@@ -1,10 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Breaking changes
+## Features
 
 - Option `working electrode` has been replaced with `half-cell`, which can only be `true` or `false`. The positive electrode is always considered to be the working electrode. For negative half-cells, lithium metal is now considered the negative electrode and the negative electrode material to be the positive electrode. ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198))
 - If `options["half-cell"] == "false"` and either `SEI`, `SEI on cracks` or `lithium plating` are not provided as tuples, they are automatically made into tuples. This directly modifies `extra_options`, not `default_options` to ensure the other changes `default_options` still happen when required. ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198)) 
 - PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
+- Double-layer capacity can now be provided as a function of temperature ([#3174](https://github.com/pybamm-team/PyBaMM/pull/3174))
 
 ## Features
 - Half-cell models where graphite - or other negative electrode material of choice - is treated as the positive electrode ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198))
@@ -13,7 +14,14 @@
 ## Bug fixes
 
 - Negative half-cell models now work, but the procedure to run them has changed ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198))
+- Fix to simulate c_rate steps with drive cycles ([#3186](https://github.com/pybamm-team/PyBaMM/pull/3186))
 - Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
+- Error generated when invalid parameter values are passed.
+- Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
+
+## Breaking changes
+
+- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 
@@ -32,7 +40,7 @@
 
 ## Bug fixes
 
-- Realign 'count' increment in CasadiSolver._integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
+- Realign 'count' increment in CasadiSolver.\_integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
 - Fix `pybamm_install_odes` and update the required SUNDIALS version ([#2958](https://github.com/pybamm-team/PyBaMM/pull/2958))
 - Fixed a bug where all data included in a BPX was incorrectly assumed to be given as a function of time.([#2957](https://github.com/pybamm-team/PyBaMM/pull/2957))
 - Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))

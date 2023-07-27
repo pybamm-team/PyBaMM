@@ -309,10 +309,6 @@ class DomainLithiumIonParameters(BaseParameters):
         # Tortuosity parameters
         self.b_s = self.geo.b_s
 
-        self.C_dl = pybamm.Parameter(
-            f"{Domain} electrode double-layer capacity [F.m-2]"
-        )
-
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
         self.E = pybamm.Parameter(f"{Domain} electrode Young's modulus [Pa]")
@@ -351,6 +347,14 @@ class DomainLithiumIonParameters(BaseParameters):
         )
         self.beta_utilisation = pybamm.Parameter(
             f"{Domain} electrode current-driven interface utilisation factor [m3.mol-1]"
+        )
+
+    def C_dl(self, T):
+        """Dimensional double-layer capacity [F.m-2]"""
+        inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
     def sigma(self, T):
@@ -557,8 +561,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}Maximum {domain} particle "
             "surface concentration [mol.m-3]": self.c_max,
             "Temperature [K]": T,
-            f"{self.phase_prefactor}Maximum {domain} particle "
-            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode "

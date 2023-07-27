@@ -88,8 +88,12 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
             delta_phi = variables[
                 "Lithium metal interface surface potential difference [V]"
             ]
+            # temperature at the interface of the negative electrode with the separator
+            T = pybamm.boundary_value(
+                variables["Negative electrode temperature [K]"], "right"
+            )
 
-            C_dl = self.domain_param.C_dl
+            C_dl = self.domain_param.C_dl(T)
 
             self.rhs[delta_phi] = 1 / C_dl * (i_cc - sum_j)
 
