@@ -208,6 +208,10 @@ Dependency                                                                Minimu
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
 ========================================================================= ================== ================== =======================
 
+.. note::
+
+   ``pybamm_install_jax`` is deprecated, use ``pip install pybamm[jax]`` to install jax and jaxlib
+
 .. _install.odes_dependencies:
 
 odes dependencies
@@ -215,15 +219,15 @@ odes dependencies
 
 Installable with ``pip install "pybamm[odes]"``
 
-================================================================== ================== ================== =============================
-Dependency                                                         Minimum Version    pip extra          Notes
-================================================================== ================== ================== =============================
-`scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`__  \-                 odes               For scikits ODE & DAE solvers
-================================================================== ================== ================== =============================
+================================================================================================================================ ================== ================== =============================
+Dependency                                                                                                                       Minimum Version    pip extra          Notes
+================================================================================================================================ ================== ================== =============================
+`scikits.odes <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`__  \-                 odes               For scikits ODE & DAE solvers
+================================================================================================================================ ================== ================== =============================
 
 .. note::
 
-   Before installing `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_  make sure to install it's build-time requirements by running ``nox -s pybamm-requires``.
+   Before running ``pip install "pybamm[odes]"`` make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_ .
 
 Full installation guide
 -----------------------             
