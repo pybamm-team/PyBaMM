@@ -118,7 +118,7 @@ Currently, only GNU/Linux and macOS are supported.
 	   pybamm_install_odes
 
    The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
-   system (under ``~/.local``), before installing ``scikits.odes`` (by running ``pip install pybamm[odes]``).
+   system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 .. tab:: macOS
 
@@ -143,8 +143,7 @@ GNU/Linux and macOS
 
 	  pip install "pybamm[jax]"
 
-``pybamm_install_jax`` is deprecated, use ``pip install pybamm[jax]`` to install jax and jaxlib
-The ``pip install "pybamm[jax]"`` command automatically downloads and installs the compatible versions of jax and jaxlib on your system.
+The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
 
 Developer install
 -----------------

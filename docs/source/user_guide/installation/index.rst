@@ -204,13 +204,9 @@ Installable with ``pip install "pybamm[jax]"``
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes
 ========================================================================= ================== ================== =======================
-`jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.8              jax                For JAX solvers
+`JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.8              jax                For JAX solvers
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
 ========================================================================= ================== ================== =======================
-
-.. note::
-
-   ``pybamm_install_jax`` is deprecated, use ``pip install pybamm[jax]`` to install jax and jaxlib
 
 .. _install.odes_dependencies:
 
@@ -227,7 +223,7 @@ Dependency                                                                      
 
 .. note::
 
-   Before running ``pip install "pybamm[odes]"`` make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_ .
+   Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_ .
 
 Full installation guide
 -----------------------             
