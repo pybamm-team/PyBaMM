@@ -673,6 +673,27 @@ class TestSimulationExperiment(TestCase):
     def test_experiment_start_time_starting_solution(self):
         model = pybamm.lithium_ion.SPM()
 
+        # Test error raised if starting_solution does not have start_time
+        experiment = pybamm.Experiment(
+            [pybamm.step.string("Discharge at C/2 for 10 minutes")]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        solution = sim.solve()       
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 9, 0, 0),
+                )
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        with self.assertRaisesRegex(ValueError, "experiments with `start_time`"):
+            sim.solve(starting_solution=solution)
+
+        # Test starting_solution works well with start_time
         experiment = pybamm.Experiment(
             [
                 pybamm.step.string(
