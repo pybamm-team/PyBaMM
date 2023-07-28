@@ -148,14 +148,16 @@ html_theme_options = {
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
     ],
+    # should be kept versioned to use for the version warning bar
     "switcher": {
         "version_match": version,
         "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
     },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
-    # for dark mode toggle, version switcher, and social media links
-    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
+    # for dark mode toggle and social media links
+    # Note: the version switcher was removed in favour of the readthedocs one
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
     # add Algolia to the persistent navbar, this removes the default search icon
     "navbar_persistent": "algolia-searchbox",
     "use_edit_page_button": True,
@@ -170,25 +172,6 @@ html_theme_options = {
         "last-updated",
     ],
 }
-
-# Version swticher configuration
-
-# Check if building on readthedocs
-version_match = os.environ.get("READTHEDOCS_VERSION")
-# Check the version type on readthedocs
-version_type = os.environ.get("READTHEDOCS_VERSION_TYPE")
-
-# We want to use the local versions.json if building locally and on PRs (in which case
-# the version type is "external"), and we set the versions accordingly
-
-if version_match is None or version_type == "external":
-    # Use local versions.json if not building on readthedocs
-    # or if building on readthedocs but on PRs
-    html_theme_options["switcher"]["json_url"] = "_static/versions.json"
-
-if version_type == "external":
-    # Set the version to latest on readthedocs PRs
-    html_theme_options["switcher"]["version_match"] = "latest"
 
 html_title = "%s v%s Manual" % (project, version)
 html_last_updated_fmt = "%Y-%m-%d"
