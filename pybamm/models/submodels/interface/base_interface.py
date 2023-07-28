@@ -64,6 +64,7 @@ class BaseInterface(pybamm.BaseSubModel):
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
+        domain_options = getattr(self.options, domain)
 
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
@@ -108,8 +109,23 @@ class BaseInterface(pybamm.BaseSubModel):
                     c_s_surf = c_s_surf.orphans[0]
                     c_e = c_e.orphans[0]
                     T = T.orphans[0]
-
-            j0 = phase_param.j0(c_e, c_s_surf, T)
+            # Get main reaction exchange-current density (may have empirical hysteresis)
+            if domain_options["exchange-current density"] == "single":
+                j0 = phase_param.j0(c_e, c_s_surf, T)
+            elif domain_options["exchange-current density"] == "current sigmoid":
+                current = variables["Total current density [A.m-2]"]
+                k = 100
+                if Domain == "Positive":
+                    lithiation_current = current
+                elif Domain == "Negative":
+                    lithiation_current = -current
+                m_lith = pybamm.sigmoid(
+                    0, lithiation_current, k
+                )  # lithiation_current > 0
+                m_delith = 1 - m_lith  # lithiation_current < 0
+                j0_lith = phase_param.j0(c_e, c_s_surf, T, "lithiation")
+                j0_delith = phase_param.j0(c_e, c_s_surf, T, "delithiation")
+                j0 = m_lith * j0_lith + m_delith * j0_delith
 
         elif self.reaction == "lithium metal plating":
             # compute T on the surface of the anode (interface with separator)

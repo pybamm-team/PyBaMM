@@ -1,11 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Features
+## Breaking changes
 
 - Option `working electrode` has been replaced with `half-cell`, which can only be `true` or `false`. The positive electrode is always considered to be the working electrode. For negative half-cells, lithium metal is now considered the negative electrode and the negative electrode material to be the positive electrode. ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198))
-- If `options["half-cell"] == "false"` and either `SEI`, `SEI on cracks` or `lithium plating` are not provided as tuples, they are automatically made into tuples. This directly modifies `extra_options`, not `default_options` to ensure the other changes `default_options` still happen when required. ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198)) 
+- If `options["half-cell"] == "false"` and either `SEI`, `SEI on cracks` or `lithium plating` are not provided as tuples, they are automatically made into tuples. This directly modifies `extra_options`, not `default_options` to ensure the other changes `default_options` still happen when required. ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198))
+- Added option to use an empirical hysteresis model for the diffusivity and exchange-current density ([#3194](https://github.com/pybamm-team/PyBaMM/pull/3194))
 - PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 - Double-layer capacity can now be provided as a function of temperature ([#3174](https://github.com/pybamm-team/PyBaMM/pull/3174))
+- `pybamm_install_jax` is deprecated. It is now replaced with `pip install pybamm[jax]` ([#3163](https://github.com/pybamm-team/PyBaMM/pull/3163))
+- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
 ## Features
 - Half-cell models where graphite - or other negative electrode material of choice - is treated as the positive electrode ([#3198](https://github.com/pybamm-team/PyBaMM/pull/3198))
@@ -18,10 +21,7 @@
 - Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
 - Error generated when invalid parameter values are passed.
 - Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
-
-## Breaking changes
-
-- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
+- Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
 
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 
