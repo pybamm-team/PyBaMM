@@ -92,9 +92,16 @@ class BaseKinetics(BaseInterface):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open-circuit potential [V]"
             ]
-        # If ocp was broadcast, take only the orphan.
+        # If ocp was broadcast, take only the orphan unless its domain is
+        # "particle size" and delta_phi's secondary domain "electrode"
         if isinstance(ocp, pybamm.Broadcast):
-            ocp = ocp.orphans[0]
+            if (
+                "particle size" in ocp.domain[0]
+                and "electrode" in delta_phi.domains["secondary"][0]
+            ):
+                pass
+            else:
+                ocp = ocp.orphans[0]
         eta_r = delta_phi - ocp
 
         # Get average interfacial current density
