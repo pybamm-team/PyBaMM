@@ -109,15 +109,15 @@ suppress_warnings = ["git.too_shallow"]
 
 html_theme = "pydata_sphinx_theme"
 
-html_static_path = ["source/_static"]
+html_static_path = ["_static"]
 
 # Theme
 
 # pydata theme options (see
 # https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
 # mostly copied from numpy, scipy, pandas
-html_logo = "source/_static/pybamm_logo.png"
-html_favicon = "source/_static/favicon/favicon.png"
+html_logo = "_static/pybamm_logo.png"
+html_favicon = "_static/favicon/favicon.png"
 
 html_theme_options = {
     "logo": {
@@ -148,14 +148,16 @@ html_theme_options = {
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
     ],
+    # should be kept versioned to use for the version warning bar
     "switcher": {
-        "version_match": release,
-        "json_url": "https://pybamm.readthedocs.io/en/latest/_static/versions.json",  # noqa: E501
+        "version_match": version,
+        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
     },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
-    # for dark mode toggle, version switcher, and social media links
-    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
+    # for dark mode toggle and social media links
+    # Note: the version switcher was removed in favour of the readthedocs one
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
     # add Algolia to the persistent navbar, this removes the default search icon
     "navbar_persistent": "algolia-searchbox",
     "use_edit_page_button": True,

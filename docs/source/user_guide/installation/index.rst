@@ -194,6 +194,37 @@ Dependency                                                  Minimum Version    p
 `tqdm <https://tqdm.github.io/>`__                          \-                 tqdm               For logging loops.
 =========================================================== ================== ================== ==================
 
+.. _install.jax_dependencies:
+
+Jax dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[jax]"``
+
+========================================================================= ================== ================== =======================
+Dependency                                                                Minimum Version    pip extra          Notes
+========================================================================= ================== ================== =======================
+`JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.8              jax                For JAX solvers
+`jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
+========================================================================= ================== ================== =======================
+
+.. _install.odes_dependencies:
+
+odes dependencies
+^^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[odes]"``
+
+================================================================================================================================ ================== ================== =============================
+Dependency                                                                                                                       Minimum Version    pip extra          Notes
+================================================================================================================================ ================== ================== =============================
+`scikits.odes <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`__  \-                 odes               For scikits ODE & DAE solvers
+================================================================================================================================ ================== ================== =============================
+
+.. note::
+
+   Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_ .
+
 Full installation guide
 -----------------------             
 
