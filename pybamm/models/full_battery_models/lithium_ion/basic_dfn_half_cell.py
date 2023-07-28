@@ -225,7 +225,7 @@ class BasicDFNHalfCell(BaseModel):
         # reference potential
         L_Li = param.p.L
         sigma_Li = param.p.sigma
-        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), c_w_max, T)
+        j_Li = param.j0_Li_metal(pybamm.boundary_value(c_e, "left"), c_w_max, T)
         eta_Li = 2 * RT_F * pybamm.arcsinh(i_cell / (2 * j_Li))
 
         phi_s_cn = 0

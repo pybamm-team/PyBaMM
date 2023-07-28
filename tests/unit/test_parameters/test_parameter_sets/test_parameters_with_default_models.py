@@ -20,10 +20,20 @@ class TestParameterValuesWithModel(TestCase):
                 }
             ),
             "Ecker2015": pybamm.lithium_ion.DFN(),
+            "Ecker2015_graphite_halfcell": pybamm.lithium_ion.DFN(
+                {"half-cell": "true"}
+            ),
             "Mohtat2020": pybamm.lithium_ion.DFN(),
             "NCA_Kim2011": pybamm.lithium_ion.DFN(),
             "OKane2022": pybamm.lithium_ion.DFN(
                 {
+                    "SEI": "solvent-diffusion limited",
+                    "lithium plating": "partially reversible",
+                }
+            ),
+            "OKane2022_negative_halfcell": pybamm.lithium_ion.DFN(
+                {
+                    "half-cell": "true",
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "partially reversible",
                 }
