@@ -54,6 +54,8 @@ class TestBinaryOperators(TestCase):
         summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
         self.assertEqual(summ2, pybamm.Scalar(4))
 
+    def test_addition_numpy_array(self):
+        a = pybamm.Symbol("a")
         # test adding symbol and numpy array
         # converts numpy array to vector
         array = np.array([1, 2, 3])
@@ -64,6 +66,13 @@ class TestBinaryOperators(TestCase):
 
         summ4 = array + a
         self.assertIsInstance(summ4.children[0], pybamm.Vector)
+
+        # should error if numpy array is not 1D
+        array = np.array([[1, 2, 3], [4, 5, 6]])
+        with self.assertRaisesRegex(ValueError, "left must be a 1D array"):
+            pybamm.Addition(array, a)
+        with self.assertRaisesRegex(ValueError, "right must be a 1D array"):
+            pybamm.Addition(a, array)
 
     def test_power(self):
         a = pybamm.Symbol("a")

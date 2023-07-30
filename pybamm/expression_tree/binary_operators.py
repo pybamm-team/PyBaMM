@@ -17,8 +17,12 @@ def _preprocess_binary(left, right):
     if isinstance(right, numbers.Number):
         right = pybamm.Scalar(right)
     elif isinstance(left, np.ndarray):
+        if left.ndim > 1:
+            raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
     elif isinstance(right, np.ndarray):
+        if right.ndim > 1:
+            raise ValueError("right must be a 1D array")
         right = pybamm.Vector(right)
 
     # Check both left and right are pybamm Symbols

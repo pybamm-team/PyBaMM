@@ -14,10 +14,10 @@ def lead_ocp_Bode1977(m):
     """
     U = (
         -0.294
-        - 0.074 * pybamm.log10(m)
-        - 0.030 * pybamm.log10(m) ** 2
-        - 0.031 * pybamm.log10(m) ** 3
-        - 0.012 * pybamm.log10(m) ** 4
+        - 0.074 * np.log10(m)
+        - 0.030 * np.log10(m) ** 2
+        - 0.031 * np.log10(m) ** 3
+        - 0.012 * np.log10(m) ** 4
     )
     return U
 
@@ -66,10 +66,10 @@ def lead_dioxide_ocp_Bode1977(m):
     """
     U = (
         1.628
-        + 0.074 * pybamm.log10(m)
-        + 0.033 * pybamm.log10(m) ** 2
-        + 0.043 * pybamm.log10(m) ** 3
-        + 0.022 * pybamm.log10(m) ** 4
+        + 0.074 * np.log10(m)
+        + 0.033 * np.log10(m) ** 2
+        + 0.043 * np.log10(m) ** 3
+        + 0.022 * np.log10(m) ** 4
     )
     return U
 
