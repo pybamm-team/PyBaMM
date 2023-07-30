@@ -54,6 +54,17 @@ class TestBinaryOperators(TestCase):
         summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
         self.assertEqual(summ2, pybamm.Scalar(4))
 
+        # test adding symbol and numpy array
+        # converts numpy array to vector
+        array = np.array([1, 2, 3])
+        summ3 = pybamm.Addition(a, array)
+        self.assertIsInstance(summ3, pybamm.Addition)
+        self.assertIsInstance(summ3.children[0], pybamm.Symbol)
+        self.assertIsInstance(summ3.children[1], pybamm.Vector)
+
+        summ4 = array + a
+        self.assertIsInstance(summ4.children[0], pybamm.Vector)
+
     def test_power(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

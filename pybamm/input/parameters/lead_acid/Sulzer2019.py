@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def lead_ocp_Bode1977(m):
@@ -161,7 +162,7 @@ def conductivity_Gu1997(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return c_e * pybamm.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
+    return c_e * np.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
 
 
 def darken_thermodynamic_factor_Chapman1968(c_e):
