@@ -453,7 +453,6 @@ def get_parameter_values():
         "Negative electrode OCP [V]": 0.0,
         "Negative electrode conductivity [S.m-1]": 10776000.0,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
-        "Lithium metal partial molar volume [mol.m-3]": 1.3e-05,
         "Exchange-current density for lithium metal electrode [A.m-2]"
         "": li_metal_electrolyte_exchange_current_density_Xu2019,
         "Negative electrode charge transfer coefficient": 0.5,

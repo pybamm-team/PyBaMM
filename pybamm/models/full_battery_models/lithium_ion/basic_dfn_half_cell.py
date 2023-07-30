@@ -16,9 +16,7 @@ class BasicDFNHalfCell(BaseModel):
     the full functionality.
 
     The electrode labeled "positive electrode" is the working electrode, and the
-    electrode labeled "negative electrode" is the counter electrode. If the "negative
-    electrode" is the working electrode, then the parameters for the "negative
-    electrode" are used to define the "positive electrode".
+    electrode labeled "negative electrode" is the counter electrode.
     This facilitates compatibility with the full-cell models.
 
     Parameters

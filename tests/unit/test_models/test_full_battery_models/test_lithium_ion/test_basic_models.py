@@ -37,9 +37,7 @@ class TestBasicModels(TestCase):
 
     def test_basic_dfn_half_cell_simulation(self):
         model = pybamm.lithium_ion.BasicDFNHalfCell(options={"half-cell": "true"})
-        param = pybamm.ParameterValues("OKane2022")
-        param["Current function [A]"] = 2.5
-        sim = pybamm.Simulation(model=model, parameter_values=param)
+        sim = pybamm.Simulation(model=model)
         sim.solve([0, 100])
         self.assertTrue(isinstance(sim.solution, pybamm.solvers.solution.Solution))
 
