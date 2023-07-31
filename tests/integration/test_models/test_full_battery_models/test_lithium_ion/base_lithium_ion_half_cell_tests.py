@@ -50,8 +50,9 @@ class BaseIntegrationTestLithiumIonHalfCell:
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        param = pybamm.ParameterValues("OKane2022_negative_halfcell")
-        self.run_basic_processing_test(options, parameter_values=param)
+        parameter_values = pybamm.ParameterValues("OKane2022_negative_halfcell")
+        parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_constant(self):
         options = {"SEI": "constant"}
@@ -65,7 +66,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2},
+            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826},
             check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -90,7 +91,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "ec reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2},
+            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826},
             check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -98,6 +99,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
     def test_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
         parameter_values = pybamm.ParameterValues("OKane2022_negative_halfcell")
+        parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_constant_utilisation(self):
