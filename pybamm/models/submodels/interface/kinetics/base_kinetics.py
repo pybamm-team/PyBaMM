@@ -94,12 +94,14 @@ class BaseKinetics(BaseInterface):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open-circuit potential [V]"
             ]
-        # If ocp was broadcast, and delta_phi's secondary domain is "current collector",
-        # then take only the orphan.
-        if isinstance(ocp, pybamm.Broadcast) and delta_phi.domains["secondary"] == [
-            "current collector"
-        ]:
-            ocp = ocp.orphans[0]
+        # If ocp was broadcast, and the reaction is lithium metal plating OR
+        # delta_phi's secondary domain is "current collector", then take only the
+        # orphan.
+        if isinstance(ocp, pybamm.Broadcast):
+            if self.reaction == "lithium metal plating":
+                ocp = ocp.orphans[0]
+            elif delta_phi.domains["secondary"] == ["current collector"]:
+                ocp = ocp.orphans[0]
 
         # Get reaction overpotential
         eta_r = delta_phi - ocp
