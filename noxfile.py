@@ -114,13 +114,13 @@ def set_dev(session):
     session.install("cmake")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run(
-        "echo",
-        "export",
-        f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
-        ">>",
-        f"{envbindir}/activate",
-        external=True,  # silence warning about echo being an external command
-    )
+            "echo",
+            "export",
+            f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
+            ">>",
+            f"{envbindir}/activate",
+            external=True,  # silence warning about echo being an external command
+        )
 
 
 @nox.session(name="tests")
