@@ -367,3 +367,7 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_current_sigmoid_diffusivity(self):
         options = {"diffusivity": "current sigmoid"}
         self.check_well_posedness(options)
+
+    def test_well_posed_psd(self):
+        options = {"particle size": "distribution", "surface form": "algebraic"}
+        self.check_well_posedness(options)
