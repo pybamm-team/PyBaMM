@@ -1,7 +1,7 @@
 import pybamm as pb
 
 pb.set_logging_level("NOTICE")
-model = pb.lithium_ion.DFN(
+model = pb.lithium_ion.SPM(
     {
         "SEI": "ec reaction limited",
         "SEI film resistance": "distributed",
