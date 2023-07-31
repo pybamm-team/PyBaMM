@@ -283,6 +283,15 @@ class TestBaseBatteryModel(TestCase):
             ("swelling and cracking", "swelling only"),
         )
         self.assertEqual(model.options["stress-induced diffusion"], "true")
+        model = pybamm.BaseBatteryModel(
+            {
+                "half-cell": "true",
+                "loss of active material": "stress-driven",
+                "SEI on cracks": "true",
+            }
+        )
+        self.assertEqual(model.options["particle mechanics"], "swelling and cracking")
+        self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
