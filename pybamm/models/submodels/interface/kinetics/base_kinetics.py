@@ -57,6 +57,7 @@ class BaseKinetics(BaseInterface):
         reaction_name = self.reaction_name
         phase_name = self.phase_name
 
+        # Get surface potential difference
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
                 "Lithium metal interface surface potential difference [V]"
@@ -79,7 +80,8 @@ class BaseKinetics(BaseInterface):
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
-        # Get open-circuit potential variables and reaction overpotential
+
+        # Get open-circuit potential
         if (
             domain_options["particle size"] == "distribution"
             and self.options.electrode_types[domain] == "porous"
@@ -92,16 +94,14 @@ class BaseKinetics(BaseInterface):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open-circuit potential [V]"
             ]
-        # If ocp was broadcast, take only the orphan unless its domain is
-        # "particle size" and delta_phi's secondary domain "electrode"
-        if isinstance(ocp, pybamm.Broadcast):
-            if (
-                "particle size" in ocp.domain[0]
-                and "electrode" in delta_phi.domains["secondary"][0]
-            ):
-                pass
-            else:
-                ocp = ocp.orphans[0]
+        # If ocp was broadcast, and delta_phi's secondary domain is "current collector",
+        # then take only the orphan.
+        if isinstance(ocp, pybamm.Broadcast) and delta_phi.domains["secondary"] == [
+            "current collector"
+        ]:
+            ocp = ocp.orphans[0]
+
+        # Get reaction overpotential
         eta_r = delta_phi - ocp
 
         # Get average interfacial current density
@@ -136,8 +136,15 @@ class BaseKinetics(BaseInterface):
                 eta_sei = pybamm.Scalar(0)
             eta_r += eta_sei
 
+        # Broadcast j0 to match eta_r's domain, if necessary
+        if j0.secondary_domain == ["current collector"] and eta_r.secondary_domain == [
+            f"{domain} electrode"
+        ]:
+            j0 = pybamm.SecondaryBroadcast(j0, [f"{domain} electrode"])
+
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
+
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
             T = variables["X-averaged cell temperature [K]"]
