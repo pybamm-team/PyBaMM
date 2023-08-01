@@ -19,6 +19,7 @@ gmproj/extra/
 !pybamm/CITATIONS.txt
 !pybamm/input/**/*.csv
 !benchmarks/benchmark_images/*.png
+!fast_discharge/**/*.csv
 
 # running files
 *.pyc
