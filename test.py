@@ -11,13 +11,15 @@ output_variables = [
     "x [m]",
     "Gradient of negative electrolyte potential [V.m-1]",
     "Negative particle flux [mol.m-2.s-1]",
+    "Discharge capacity [A.h]",
+    "Throughput capacity [A.h]",
 ]
 #output_variables = []
-all_vars = False
+all_vars = True
 
 input_parameters = {
-    "Current function [A]": 0.680616,
-    "Separator porosity": 1.0,
+#    "Current function [A]": 0.680616,
+#    "Separator porosity": 1.0,
 }
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
@@ -47,16 +49,23 @@ if all_vars:
     output_variables = [m for m, (k, v) in
                         zip(model.variable_names(), model.variables.items())
                         if not isinstance(v, pybamm.ExplicitTimeIntegral)]
-    left_out = [m for m, (k, v) in
-                zip(model.variable_names(), model.variables.items())
-                if isinstance(v, pybamm.ExplicitTimeIntegral)]
-    print("ExplicitTimeIntegral variables:")
-    print(left_out)
+
+solver_all = pybamm.IDAKLUSolver(
+    atol=1e-8, rtol=1e-8,
+    options=options,
+)
+sol_all = solver_all.solve(
+    model,
+    t_eval,
+    inputs=input_parameters,
+    calculate_sensitivities=True,
+)
+print(f"Solve time [all]: {sol_all.solve_time.value*1000} msecs")
 
 #var_names = [[]]
-var_names = [output_variables]
+#var_names = [output_variables]
 #var_names = [[m] for m in model.variable_names()]
-#var_names = [[m] for m in output_variables]
+var_names = [[m] for m in output_variables]
 for output_vars in var_names:
     output_variables = output_vars
     print("Output variables:")
@@ -76,6 +85,18 @@ for output_vars in var_names:
         inputs=input_parameters,
         calculate_sensitivities=True,
     )
+
+    # Compare output to sol_all
+    for v in output_variables:
+        print(f"Comparison variable: {v}:")
+        print(f"  Inidividual size {sol[v].data.shape}")
+        print(f"  All size {sol_all[v].data.shape}")
+        print(sol_all[v].data)
+        print(sol[v].data)
+        rms = np.sqrt(np.mean((sol_all[v].data - sol[v].data)**2))
+        print(f"  RMS: {rms}")
+        assert sol[v].data.shape == sol_all[v].data.shape
+        assert np.allclose(sol[v].data, sol_all[v].data)
 
     print(f"Solve time: {sol.solve_time.value*1000} msecs")
 
