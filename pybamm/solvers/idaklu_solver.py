@@ -294,6 +294,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             self.dvar_dp_fcns = []
             for key in self.output_variables:
                 # variable functions
+                if isinstance(model.variables_and_events[key],
+                              pybamm.ExplicitTimeIntegral):
+                    continue
                 fcn_name = wrangle_name(key)
                 var_casadi = model.variables_and_events[key].to_casadi(
                     t_casadi, y_casadi, inputs=p_casadi
@@ -682,6 +685,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
                 for vark, var in enumerate(self.output_variables):
+                    if isinstance(model.variables_and_events[var], pybamm.ExplicitTimeIntegral):
+                        continue
                     len_of_var = (
                         self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
                     )
