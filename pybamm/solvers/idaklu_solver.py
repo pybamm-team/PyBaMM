@@ -66,32 +66,25 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options = {
                 # print statistics of the solver after every solve
                 "print_stats": False,
-
                 # jacobian form, can be "none", "dense",
                 # "banded", "sparse", "matrix-free"
                 "jacobian": "sparse",
-
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
                 # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
                 # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
                 "linear_solver": "SUNLinSol_KLU",
-
                 # preconditioner for iterative solvers, can be "none", "BBDP"
                 "preconditioner": "BBDP",
-
                 # for iterative linear solvers, max number of iterations
                 "linsol_max_iterations": 5,
-
                 # for iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian
                 "precon_half_bandwidth": 5,
-
                 # for iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian that is kept
-                "precon_half_bandwidth_keep": 5
-
+                "precon_half_bandwidth_keep": 5,
                 # Number of threads available for OpenMP
-                "num_threads": 1
+                "num_threads": 1,
             }
 
         Note: These options only have an effect if model.convert_to_format == 'casadi'

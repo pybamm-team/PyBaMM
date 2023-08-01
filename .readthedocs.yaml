@@ -11,6 +11,11 @@ sphinx:
   configuration: docs/conf.py
   fail_on_warning: false
 
+formats:
+  - pdf
+  - epub
+  - htmlzip
+
 # Set the version of Python and other tools you might need
 build:
   # Install Graphviz to build SVG files
