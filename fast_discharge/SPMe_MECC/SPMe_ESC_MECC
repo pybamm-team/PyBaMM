@@ -7,7 +7,8 @@ import pandas as pd
 import os
 from scipy import integrate
 import matplotlib.pyplot as plt
-os.chdir(sys.path[0] + '\..') # change our working directory to the root of the pybamm folder
+sys.path.insert(0, r'c:\Users\Vivian\Dropbox (University of Michigan)\from_box\Research\PyBaMM\PyBaMM')
+print(sys.path[0])
 import pybamm
 print(pybamm.__path__[0])
 import inspect
@@ -51,7 +52,7 @@ data_sets = []
 # R_tab_list =  [0.0085]#, 0.015] # 0.0085 (100%), 0.0078 (75%), 0.007? (50%)
 
 # load data import ESC data from file
-raw_data = pd.read_csv("./fast_discharge/ESC_"+  str(int(SOC_name*100)) + "SOC_full.csv")
+raw_data = pd.read_csv("./fast_discharge/SPMe_MECC/ESC_"+  str(int(SOC_name*100)) + "SOC_full.csv")
 esc_start = raw_data[-raw_data['Current Shunt']>1].index[0]
 esc_end = len(raw_data)
 # T_amb = np.mean(raw_data['Cell Temperature'][(raw_data.index < esc_start) & (raw_data['Cell Temperature'] >0)])
@@ -294,5 +295,5 @@ plt.xlim([t_eval[0],t_eval[-1]])
 plt.tight_layout()
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
-plt.savefig('./fast_discharge/figs/effect_D_c_long.pdf', format='pdf')
+plt.savefig('./fast_discharge/SPMe_MECC/figs/effect_D_c_long.pdf', format='pdf')
 plt.show()
