@@ -23,18 +23,14 @@ def have_idaklu():
 
 
 def wrangle_name(name: str) -> str:
-    return (
-        "v_" + name.casefold()
-        .replace(" ", "_")
-        .replace("[", "")
-        .replace("]", "")
-        .replace(".", "_")
-        .replace("-", "_")
-        .replace("(", "")
-        .replace(")", "")
-        .replace("%", "prc")
-        .replace(",", "")
-        .replace(".", "")
+    return "v_" + name.casefold().replace(" ", "_").replace("[", "").replace(
+        "]", ""
+    ).replace(".", "_").replace("-", "_").replace("(", "").replace(")", "").replace(
+        "%", "prc"
+    ).replace(
+        ",", ""
+    ).replace(
+        ".", ""
     )
 
 
@@ -294,8 +290,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             self.dvar_dp_fcns = []
             for key in self.output_variables:
                 # variable functions
-                if isinstance(model.variables_and_events[key],
-                              pybamm.ExplicitTimeIntegral):
+                if isinstance(
+                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                ):
                     continue
                 fcn_name = wrangle_name(key)
                 var_casadi = model.variables_and_events[key].to_casadi(
@@ -685,7 +682,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
                 for vark, var in enumerate(self.output_variables):
-                    if isinstance(model.variables_and_events[var], pybamm.ExplicitTimeIntegral):
+                    if isinstance(
+                        model.variables_and_events[var], pybamm.ExplicitTimeIntegral
+                    ):
                         continue
                     len_of_var = (
                         self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
@@ -702,7 +701,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         for paramk, param in enumerate(inputs_dict.keys()):
                             newsol[var].add_sensitivity(
                                 param,
-                                [sol.yS[:, startk : (startk + len_of_var), paramk]]
+                                [sol.yS[:, startk : (startk + len_of_var), paramk]],
                             )
                     startk += len_of_var
             return newsol

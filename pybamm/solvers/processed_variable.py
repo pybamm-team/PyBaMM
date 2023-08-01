@@ -2,7 +2,6 @@
 # Processed Variable class
 #
 import casadi
-import numbers
 import numpy as np
 import pybamm
 from scipy.integrate import cumulative_trapezoid

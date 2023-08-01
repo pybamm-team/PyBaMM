@@ -2,7 +2,6 @@
 # Processed Variable class
 #
 import casadi
-import numbers
 import numpy as np
 import pybamm
 from scipy.integrate import cumulative_trapezoid
@@ -137,7 +136,7 @@ class ProcessedVariableVar(object):
         if realdata is None:
             realdata = self.base_variables_data
         return np.concatenate(realdata, axis=0).flatten()
-    
+
     def unroll_1D(self, realdata=None):
         len_space = self.base_eval_shape[0]
         return (
@@ -150,22 +149,20 @@ class ProcessedVariableVar(object):
         # initialise settings on first run
         if not self.unroll_params:
             self.unroll_params["n_dim1"] = n_dim1
-            self.unroll_params["n_dim2"]=  n_dim2
+            self.unroll_params["n_dim2"] = n_dim2
             self.unroll_params["axis_swaps"] = axis_swaps
         # use stored settings on subsequent runs
         if not n_dim1:
             n_dim1 = self.unroll_params["n_dim1"]
             n_dim2 = self.unroll_params["n_dim2"]
             axis_swaps = self.unroll_params["axis_swaps"]
-        len_space = self.base_eval_shape[0]
-        entries = (
-            np.concatenate(self._unroll_nnz(realdata), axis=0)
-            .reshape((len(self.t_pts), n_dim1, n_dim2))
+        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
+            (len(self.t_pts), n_dim1, n_dim2)
         )
         for a, b in axis_swaps:
             entries = np.moveaxis(entries, a, b)
         return entries
-    
+
     def unroll(self, realdata=None):
         if self.dimensions == 0:
             return self.unroll_0D(realdata=realdata)
@@ -175,9 +172,7 @@ class ProcessedVariableVar(object):
             return self.unroll_2D(realdata=realdata)
         else:
             # Raise error for 3D variable
-            raise NotImplementedError(
-                "Unsupported data dimension: {self.dimensions}"
-            )
+            raise NotImplementedError("Unsupported data dimension: {self.dimensions}")
 
     def initialise_0D(self):
         entries = self.unroll_0D()
@@ -194,7 +189,6 @@ class ProcessedVariableVar(object):
         self.dimensions = 0
 
     def initialise_1D(self, fixed_t=False):
-        len_space = self.base_eval_shape[0]
         entries = self.unroll_1D()
 
         # Get node and edge values
@@ -268,7 +262,6 @@ class ProcessedVariableVar(object):
         first_dim_size = len(first_dim_pts)
         second_dim_size = len(second_dim_pts)
 
-        len_space = self.base_eval_shape[0]
         entries = self.unroll_2D(
             realdata=None,
             n_dim1=second_dim_size,

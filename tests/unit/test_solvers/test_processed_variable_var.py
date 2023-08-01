@@ -69,7 +69,6 @@ def process_and_check_2D_variable(
 class TestProcessedVariableVar(TestCase):
     def test_processed_variable_0D(self):
         # without space
-        t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = y
         var.mesh = None
@@ -129,17 +128,14 @@ class TestProcessedVariableVar(TestCase):
         assert processed_var.sensitivities is None
 
     def test_processed_variable_1D(self):
-        t = pybamm.t
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
-        eqn = t * var + x
 
         # On nodes
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
-        eqn_sol = disc.process_symbol(eqn)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
@@ -158,8 +154,6 @@ class TestProcessedVariableVar(TestCase):
         y_sol = y_sol.reshape((y_sol.shape[1], y_sol.shape[0])).transpose()
         np.testing.assert_array_equal(processed_var.entries, y_sol)
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
-        eqn_casadi = to_casadi(eqn_sol, y_sol)
-
 
     def test_processed_variable_1D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")

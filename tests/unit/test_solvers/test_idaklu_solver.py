@@ -206,7 +206,9 @@ class TestIDAKLUSolver(TestCase):
             )
 
             np.testing.assert_array_almost_equal(
-                sol["2v"].sensitivities["a"].full().flatten(), np.exp(-sol.t) * 2, decimal=4
+                sol["2v"].sensitivities["a"].full().flatten(),
+                np.exp(-sol.t) * 2,
+                decimal=4,
             )
 
     def test_ida_roberts_klu_sensitivities(self):
