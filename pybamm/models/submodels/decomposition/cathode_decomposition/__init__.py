@@ -1,2 +1,3 @@
 from .cathode_decomposition import CathodeDecomposition
 from .no_cathode_decomposition import NoCathodeDecomposition
+from .three_state_cathode_decomposition import ThreeStateCathodeDecomposition

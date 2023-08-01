@@ -22,7 +22,7 @@ class SeiDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        x_sei = pybamm.Variable("Fraction of Li in SEI", domain="negative electrode", auxiliary_domains={"secondary": "current collector"},)
+        x_sei = pybamm.Variable("Fraction of Li in SEI", domain="current collector")
 
         variables = {"Fraction of Li in SEI": x_sei}
         return variables
@@ -30,19 +30,21 @@ class SeiDecomposition(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
         param = self.param
         k_b = pybamm.Scalar(constants.k)
-        T = variables["Negative electrode temperature"]
-        T_dimensional = param.Delta_T * T + param.T_ref
-        x_sei = variables["Fraction of Li in SEI"]
+        T_av = variables["X-averaged negative electrode temperature"]
+        T_av_dimensional = param.Delta_T * T_av + param.T_ref
+        x_sei = variables["Fraction of Li in SEI"] # Mol Li in SEI per mol negative electrode active material
         rho_n_dim = pybamm.Parameter("Negative electrode density [kg.m-3]")
 
         r_sei_dimensional = (
             -param.therm.A_sei
             * x_sei
-            * pybamm.exp(-param.therm.E_sei / (k_b * T_dimensional))
+            * pybamm.exp(-param.therm.E_sei / (k_b * T_av_dimensional))
         )  # units 1/s
 
-        Q_scale = param.i_typ * param.potential_scale / param.L_x
-        Q_exo_sei = -rho_n_dim * param.therm.h_sei * r_sei_dimensional / Q_scale
+        m_an = rho_n_dim * param.L_y * param.L_z * param.n.L
+
+        Q_scale = param.i_typ * param.potential_scale / param.L_x 
+        Q_exo_sei = -m_an * param.therm.h_sei * r_sei_dimensional / Q_scale 
 
         variables = {
             "SEI decomposition reaction rate [s-1]": r_sei_dimensional,
@@ -60,7 +62,4 @@ class SeiDecomposition(pybamm.BaseSubModel):
 
     def set_initial_conditions(self, variables):
         x_sei = variables["Fraction of Li in SEI"]
-        x_sei_0 = pybamm.FullBroadcast(
-                     self.param.therm.x_sei_0, ["negative electrode"], "current collector"
-                )
-        self.initial_conditions = {x_sei: x_sei_0}
+        self.initial_conditions = {x_sei: self.param.therm.x_sei_0}

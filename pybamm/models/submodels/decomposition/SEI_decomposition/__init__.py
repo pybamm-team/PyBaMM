@@ -1,2 +1,3 @@
 from .SEI_decomposition import SeiDecomposition
 from .no_SEI_decomposition import NoSeiDecomposition
+from .three_state_SEI_decomposition import ThreeStateSeiDecomposition

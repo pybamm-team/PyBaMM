@@ -21,20 +21,28 @@ class NoCathodeDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-
+        default = pybamm.Scalar(0)
         variables = {
-            "Degree of conversion of cathode decomposition": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
-            "Cathode decomposition reaction rate [s-1]": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
-            "Cathode decomposition reaction rate": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
-            "Cathode decomposition heating": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
-            "Cathode decomposition heating [W.m-3]": pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
-        }
-        # variables = {
-        #     "Degree of conversion of cathode decomposition": pybamm.Scalar(0),
-        #     "Cathode decomposition reaction rate [s-1]": pybamm.Scalar(0),
-        #     "Cathode decomposition reaction rate": pybamm.Scalar(0),
-        #     "Cathode decomposition heating": pybamm.Scalar(0),
-        #     "Cathode decomposition heating [W.m-3]": pybamm.Scalar(0),
+            "Degree of conversion of cathode decomposition": default,
+            "Cathode decomposition reaction rate [s-1]": default,
+            "Cathode decomposition reaction rate": default,
+            "Cathode decomposition heating": default,
+            "Cathode decomposition heating [W.m-3]": default,
 
-        # }
+            "Core section cathode decomposition reaction rate [s-1]": default,
+            "Core section cathode decomposition reaction rate": default,
+            "Core section cathode decomposition heating": default,
+            "Core section cathode decomposition heating [W.m-3]": default,
+
+            "Middle section cathode decomposition reaction rate [s-1]": default,
+            "Middle section cathode decomposition reaction rate": default,
+            "Middle section cathode decomposition heating": default,
+            "Middle section cathode decomposition heating [W.m-3]": default,
+
+            "Outer section cathode decomposition reaction rate [s-1]": default,
+            "Outer section cathode decomposition reaction rate": default,
+            "Outer section cathode decomposition heating": default,
+            "Outer section cathode decomposition heating [W.m-3]": default,
+
+        }
         return variables

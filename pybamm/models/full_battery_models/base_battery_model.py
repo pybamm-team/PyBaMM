@@ -165,7 +165,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (default), "differential" or "algebraic".
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-lumped", or "x-full".
+                "x-lumped", "x-full", or "two-state-lumped".
             * "timescale" : str or number
                 Sets the timescale of the model. If "default", the discharge timescale,
                 as defined by other parameters, is used. Otherwise, the number is used.
@@ -269,7 +269,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "SEI porosity change": ["false", "true"],
             "stress-induced diffusion": ["false", "true"],
             "surface form": ["false", "differential", "algebraic"],
-            "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
+            "thermal": ["isothermal", "lumped", "x-lumped", "x-full", "two-state lumped", "three-state lumped"],
             "total interfacial current density as a state": ["false", "true"],
             "working electrode": ["both", "negative", "positive"],
             "x-average side reactions": ["false", "true"],
@@ -1110,6 +1110,17 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.Lumped(
                 self.param,
                 self.options,
+            )
+
+        elif self.options["thermal"] == "two-state lumped":
+            thermal_submodel = pybamm.thermal.ThreeStateLumped(
+                self.param, 
+                self.options
+            )
+        elif self.options["thermal"] == "three-state lumped":
+            thermal_submodel = pybamm.thermal.ThreeStateLumped(
+                self.param, 
+                self.options
             )
 
         elif self.options["thermal"] == "x-lumped":

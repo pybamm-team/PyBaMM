@@ -395,15 +395,26 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_decomposition_submodel(self):
         if "true" in self.options["decomposition"]:
-            self.submodels[
-                "anode decomposition"
-            ] = pybamm.decomposition.AnodeDecomposition(self.param)
-            self.submodels[
-                "cathode decomposition"
-            ] = pybamm.decomposition.CathodeDecomposition(self.param)
-            self.submodels["SEI decomposition"] = pybamm.decomposition.SeiDecomposition(
-                self.param
-            )
+            if "three-state lumped"in self.options["thermal"]:
+                self.submodels[
+                    "anode decomposition"
+                ] = pybamm.decomposition.ThreeStateAnodeDecomposition(self.param)
+                self.submodels[
+                    "cathode decomposition"
+                ] = pybamm.decomposition.ThreeStateCathodeDecomposition(self.param)
+                self.submodels["SEI decomposition"] = pybamm.decomposition.ThreeStateSeiDecomposition(
+                    self.param
+                )
+            else:
+                self.submodels[
+                    "anode decomposition"
+                ] = pybamm.decomposition.AnodeDecomposition(self.param)
+                self.submodels[
+                    "cathode decomposition"
+                ] = pybamm.decomposition.CathodeDecomposition(self.param)
+                self.submodels["SEI decomposition"] = pybamm.decomposition.SeiDecomposition(
+                    self.param
+                )
         else:
             self.submodels[
                 "anode decomposition"

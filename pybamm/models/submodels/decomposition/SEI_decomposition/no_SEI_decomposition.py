@@ -22,19 +22,32 @@ class NoSeiDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        # variables = {
-        #     "Fraction of Li in SEI": pybamm.Scalar(0),
-        #     "SEI decomposition reaction rate [s-1]": pybamm.Scalar(0),
-        #     "SEI decomposition reaction rate": pybamm.Scalar(0),
-        #     "SEI decomposition heating": pybamm.Scalar(0),
-        #     "SEI decomposition heating [W.m-3]": pybamm.Scalar(0),
-        # }
+        default = pybamm.Scalar(0)
         variables = {
-            "Fraction of Li in SEI": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "SEI decomposition reaction rate [s-1]": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "SEI decomposition reaction rate": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "SEI decomposition heating": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "SEI decomposition heating [W.m-3]": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
+            "Fraction of Li in SEI": default,
+            "Fraction of Li in SEI in the core section": default,
+            "Fraction of Li in SEI in the middle section": default,
+            "Fraction of Li in SEI in the outer section": default,
+
+            "SEI decomposition reaction rate [s-1]": default,
+            "SEI decomposition reaction rate": default,
+            "SEI decomposition heating": default,
+            "SEI decomposition heating [W.m-3]": default,
+
+            "Core section SEI decomposition reaction rate [s-1]": default,
+            "Core section SEI decomposition reaction rate": default,
+            "Core section SEI decomposition heating": default,
+            "Core section SEI decomposition heating [W.m-3]": default,
+
+            "Middle section SEI decomposition reaction rate [s-1]": default,
+            "Middle section SEI decomposition reaction rate": default,
+            "Middle section SEI decomposition heating": default,
+            "Middle section SEI decomposition heating [W.m-3]": default,
+
+            "Outer section SEI decomposition reaction rate [s-1]": default,
+            "Outer section SEI decomposition reaction rate": default,
+            "Outer section SEI decomposition heating": default,
+            "Outer section SEI decomposition heating [W.m-3]": default,
         }
 
         return variables

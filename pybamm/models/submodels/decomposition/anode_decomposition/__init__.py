@@ -1,2 +1,3 @@
 from .anode_decomposition import AnodeDecomposition
 from .no_anode_decomposition import NoAnodeDecomposition
+from .three_state_anode_decomposition import ThreeStateAnodeDecomposition

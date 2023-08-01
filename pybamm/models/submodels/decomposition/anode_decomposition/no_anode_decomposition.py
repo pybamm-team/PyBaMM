@@ -22,19 +22,28 @@ class NoAnodeDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
+        default = pybamm.Scalar(0)
         variables = {
-            "Relative SEI thickness": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "Anode decomposition reaction rate [s-1]": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "Anode decomposition reaction rate": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "Anode decomposition heating": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            "Anode decomposition heating [W.m-3]": pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
+            "Relative SEI thickness": default,
+            "Anode decomposition reaction rate [s-1]": default,
+            "Anode decomposition reaction rate": default,
+            "Anode decomposition heating": default,
+            "Anode decomposition heating [W.m-3]": default,
+            
+            "Core section anode decomposition reaction rate [s-1]": default,
+            "Core section anode decomposition reaction rate": default,
+            "Core section anode decomposition heating": default,
+            "Core section anode decomposition heating [W.m-3]": default,
+
+            "Middle section anode decomposition reaction rate [s-1]": default,
+            "Middle section anode decomposition reaction rate": default,
+            "Middle section anode decomposition heating": default,
+            "Middle section anode decomposition heating [W.m-3]": default,
+
+            "Outer section anode decomposition reaction rate [s-1]": default,
+            "Outer section anode decomposition reaction rate": default,
+            "Outer section anode decomposition heating": default,
+            "Outer section anode decomposition heating [W.m-3]": default,
         }
-        # variables = {
-        #     "Relative SEI thickness": pybamm.Scalar(0),
-        #     "Anode decomposition reaction rate [s-1]": pybamm.Scalar(0),
-        #     "Anode decomposition reaction rate": pybamm.Scalar(0),
-        #     "Anode decomposition heating": pybamm.Scalar(0),
-        #     "Anode decomposition heating [W.m-3]": pybamm.Scalar(0),
-        # }
 
         return variables

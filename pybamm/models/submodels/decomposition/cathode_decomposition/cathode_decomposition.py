@@ -21,7 +21,7 @@ class CathodeDecomposition(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        alpha = pybamm.Variable("Degree of conversion of cathode decomposition", domain="positive electrode", auxiliary_domains={"secondary": "current collector"},)
+        alpha = pybamm.Variable("Degree of conversion of cathode decomposition", domain="current collector")
         
         variables = {"Degree of conversion of cathode decomposition": alpha}
         return variables
@@ -29,8 +29,8 @@ class CathodeDecomposition(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
         param = self.param
         k_b = pybamm.Scalar(constants.k) 
-        T = variables["Positive electrode temperature"]
-        T_dimensional = param.Delta_T * T + param.T_ref
+        T_av = variables["X-averaged positive electrode temperature"]
+        T_av_dimensional = param.Delta_T * T_av + param.T_ref
         alpha = variables["Degree of conversion of cathode decomposition"]
         rho_p_dim = pybamm.Parameter("Positive electrode density [kg.m-3]")
 
@@ -38,11 +38,12 @@ class CathodeDecomposition(pybamm.BaseSubModel):
             alpha
             * (1-alpha) 
             * param.therm.A_ca 
-            * pybamm.exp(-param.therm.E_ca/(k_b*T_dimensional))
+            * pybamm.exp(-param.therm.E_ca/(k_b*T_av_dimensional))
         ) # units 1/s
 
-        Q_scale = param.i_typ * param.potential_scale / param.L_x
-        Q_exo_ca = rho_p_dim * param.therm.h_ca * r_ca_dimensional / Q_scale
+        m_ca = rho_p_dim * param.L_y * param.L_z * param.p.L
+        Q_scale = param.i_typ * param.potential_scale /param.L_x
+        Q_exo_ca = m_ca * param.therm.h_ca * r_ca_dimensional / Q_scale 
 
         variables = {
             "Cathode decomposition reaction rate [s-1]": r_ca_dimensional,
@@ -60,7 +61,4 @@ class CathodeDecomposition(pybamm.BaseSubModel):
 
     def set_initial_conditions(self, variables):
         alpha = variables["Degree of conversion of cathode decomposition"]
-        alpha_0 = pybamm.FullBroadcast(
-                     self.param.therm.alpha_0, ["positive electrode"], "current collector"
-                )        
-        self.initial_conditions = {alpha: alpha_0}
+        self.initial_conditions = {alpha: self.param.therm.alpha_0}

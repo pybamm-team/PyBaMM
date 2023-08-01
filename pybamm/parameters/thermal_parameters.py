@@ -73,6 +73,11 @@ class ThermalParameters(BaseParameters):
         self.x_sei_0 = pybamm.Parameter("Initial fraction of Li in SEI")
         self.z_0 = pybamm.Parameter("Initial SEI thickness")
 
+        # Three-state yz-plane thermal parameters  
+        self.gamma_core = pybamm.Parameter("Ratio of core section to cell length")
+        self.gamma_mid = pybamm.Parameter("Ratio of middle section to cell length")
+        self.gamma_outer = pybamm.Parameter("Ratio of outer section to cell length")
+
     def T_amb_dim(self, t):
         """Dimensional ambient temperature"""
         return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
