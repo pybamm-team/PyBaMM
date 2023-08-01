@@ -33,3 +33,4 @@ ipykernel
 ipywidgets
 sphinx-gallery
 sphinx-hoverxref
+sphinx-docsearch

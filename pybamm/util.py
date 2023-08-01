@@ -15,6 +15,7 @@ import sys
 import timeit
 from platform import system
 import difflib
+from warnings import warn
 
 import numpy as np
 import pkg_resources
@@ -328,6 +329,11 @@ def install_jax(arguments=None):  # pragma: no cover
                 " following command: \npybamm_install_jax --force"
             )
 
+    msg = (
+        "pybamm_install_jax is deprecated,"
+        " use 'pip install pybamm[jax]' to install jax & jaxlib"
+    )
+    warn(msg, DeprecationWarning)
     subprocess.check_call(
         [
             sys.executable,

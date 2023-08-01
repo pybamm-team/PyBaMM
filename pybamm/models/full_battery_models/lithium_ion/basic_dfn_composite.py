@@ -219,15 +219,24 @@ class BasicDFNComposite(BaseModel):
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n_p1] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-j_n_p1 / param.F / param.n.prim.D(c_s_surf_n_p1, T), "Neumann"),
+            "right": (
+                -j_n_p1 / param.F / pybamm.surf(param.n.prim.D(c_s_n_p1, T)),
+                "Neumann",
+            ),
         }
         self.boundary_conditions[c_s_n_p2] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-j_n_p2 / param.F / param.n.sec.D(c_s_surf_n_p2, T), "Neumann"),
+            "right": (
+                -j_n_p2 / param.F / pybamm.surf(param.n.sec.D(c_s_n_p2, T)),
+                "Neumann",
+            ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-j_p / param.F / param.p.prim.D(c_s_surf_p, T), "Neumann"),
+            "right": (
+                -j_p / param.F / pybamm.surf(param.p.prim.D(c_s_p, T)),
+                "Neumann",
+            ),
         }
         self.initial_conditions[c_s_n_p1] = param.n.prim.c_init
         self.initial_conditions[c_s_n_p2] = param.n.sec.c_init
