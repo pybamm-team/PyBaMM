@@ -160,5 +160,6 @@ def lint(session):
 
 @nox.session(name="quick", reuse_venv=True)
 def run_quick(session):
+    """Run integration tests, unit tests, and doctests sequentially"""
     run_tests(session)
     run_doctests(session)
