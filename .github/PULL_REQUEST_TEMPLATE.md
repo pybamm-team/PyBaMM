@@ -18,7 +18,7 @@ Please add a line in the relevant section of [CHANGELOG.md](https://github.com/p
 - [ ] All tests pass: `$ python run-tests.py --all` (or `$ nox -s tests`)
 - [ ] The documentation builds: `$ python run-tests.py --doctest` (or `$ nox -s doctests`)
 
-You can run unit and doctests together at once, using `$ python run-tests.py --quick` (or `$ nox -s quick`).
+You can run integration tests, unit tests, and doctests together at once, using `$ python run-tests.py --quick` (or `$ nox -s quick`).
 
 ## Further checks:
 
