@@ -5,7 +5,7 @@ WORKDIR /PyBaMM
 
 # Install the necessary dependencies
 RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y git
+RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git
 
 # Copy project files into the container
 COPY . .
