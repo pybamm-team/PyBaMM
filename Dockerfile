@@ -1,27 +1,17 @@
-# Base Image
-FROM python:3.8-slim-buster
+FROM python:3.11-slim
 
 # Set the working directory
-WORKDIR /app
+WORKDIR /PyBaMM
 
 # Install the necessary dependencies
-RUN apt-get update \
-    && apt-get install -y build-essential \
-    && apt-get install -y libgmp3-dev libmpfr-dev libmpc-dev \
-    && apt-get install -y libffi-dev libssl-dev
+RUN apt-get update && apt-get -y upgrade
+RUN apt-get install -y build-essential
 
-# Copy necessary files into the container
-COPY setup.py  .
-COPY CMakeBuild.py .
-COPY README.md .
-COPY pybamm/version.py ./pybamm/version.py
+# Copy project files into the container
+COPY . .
 
 # Install PyBaMM
-RUN pip install -e ".[dev]"
+RUN python -m pip install --upgrade pip
+RUN pip install -e ".[all]"
 
-
-# Expose the default Jupyter notebook port
-EXPOSE 8888
-
-# Start Jupyter notebook on container start
-CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+CMD ["/bin/bash"]
