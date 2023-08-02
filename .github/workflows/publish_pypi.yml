@@ -1,8 +1,8 @@
 name: Build and publish package to PyPI
 
 on:
-  push:
-    branches: main
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       target:
