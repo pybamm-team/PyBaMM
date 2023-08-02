@@ -1,9 +1,5 @@
-#
-# Functions to process parameter data (for Interpolants)
-#
 import os
 import json
-import csv
 import numpy as np
 
 
@@ -39,17 +35,12 @@ def process_1D_data(name, path=None):
     """
     filename, name = _process_name(name, path, ".csv")
 
-    data = []
-    with open(filename, "r") as csvfile:
-        csvreader = csv.reader(csvfile, delimiter=",")
-        for row in csvreader:
-            if not row or row[0].startswith("#"):
-                continue
-            data.append(row)
+    data = np.genfromtxt(filename, delimiter=',')
+    x = data[:, 0]
+    y = data[:, 1]
 
-    data = np.array(data, dtype=float)
     # Save name and data
-    return (name, ([data[:, 0]], data[:, 1]))
+    return (name, ([x], y))
 
 
 def process_2D_data(name, path=None):
@@ -97,23 +88,16 @@ def process_2D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    df = np.genfromtxt(filename, delimiter=',')
+    data = np.genfromtxt(filename, delimiter=',')
 
-    x1 = np.array(list(set(df.iloc[:, 0])))
-    x2 = np.array(list(set(df.iloc[:, 1])))
+    x1 = np.unique(data[:, 0])
+    x2 = np.unique(data[:, 1])
 
-    value = df.iloc[:, 2].to_numpy()
-
-    x1.sort()
-    x2.sort()
+    value = data[:, 2]
 
     x = (x1, x2)
 
-    value_data = np.reshape(
-        value,
-        (len(x1), len(x2)),
-        order="C",  # use the C convention
-    )
+    value_data = value.reshape(len(x1), len(x2), order="C")
 
     formatted_data = (name, (x, value_data))
 
@@ -151,25 +135,17 @@ def process_3D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    df = np.loadtxt(filename, skiprows=1, delimiter=',')
+    data = np.genfromtxt(filename, delimiter=',')
 
-    x1 = np.array(list(set(df.iloc[:, 0])))
-    x2 = np.array(list(set(df.iloc[:, 1])))
-    x3 = np.array(list(set(df.iloc[:, 2])))
+    x1 = np.unique(data[:, 0])
+    x2 = np.unique(data[:, 1])
+    x3 = np.unique(data[:, 2])
 
-    value = df.iloc[:, 3].to_numpy()
-
-    x1.sort()
-    x2.sort()
-    x3.sort()
+    value = data[:, 3]
 
     x = (x1, x2, x3)
 
-    value_data = np.reshape(
-        value,
-        (len(x1), len(x2), len(x3)),
-        order="C",
-    )
+    value_data = value.reshape(len(x1), len(x2), len(x3), order="C")
 
     formatted_data = (name, (x, value_data))
 
