@@ -74,23 +74,7 @@ pre-commit run ruff
 
 ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
-When you commit your changes they will be checked against ruff automatically (see [infrastructure](#infrastructure)).
-
-### Black
-
-We use [black](https://black.readthedocs.io/en/stable/) to automatically configure our code to adhere to PEP8. Black can be used in two ways:
-
-1. Command line: navigate to the PyBaMM directory in a console and type
-
-```bash
-black {source_file_or_directory}
-```
-
-2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a Python script each time the script is saved in an editor.
-
-If you want to use black in your editor, you may need to change the max line length in your editor settings.
-
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [ruff](#ruff).
+When you commit your changes they will be checked against ruff automatically (see [Pre-commit checks](#pre-commit-checks)).
 
 ### Naming
 
@@ -219,13 +203,20 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 2. Set break points, either in your IDE or using the Python debugging module. To use the latter, add the following line where you want to set the break point
 
    ```python
-   import ipdb; ipdb.set_trace()
+   import ipdb
+
+   ipdb.set_trace()
    ```
 
    This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
 
    ```python
-   from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+   from IPython import embed
+
+   embed()
+   import ipdb
+
+   ipdb.set_trace()
    ```
 
    at the break point instead.
@@ -237,7 +228,9 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       try:
           do_something_complicated()
       except ValueError:
-          import ipdb; ipdb.set_trace()
+          import ipdb
+
+          ipdb.set_trace()
       ```
 
       This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
@@ -245,6 +238,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 
       ```python
       import warnings
+
       warnings.simplefilter("error")
       ```
 
@@ -270,7 +264,12 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 Sometimes, a bit of code will take much longer than you expect to run. In this case, you can set
 
 ```python
-from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+from IPython import embed
+
+embed()
+import ipdb
+
+ipdb.set_trace()
 ```
 
 as above, and then use some of the profiling tools. In order of increasing detail:
@@ -389,7 +388,7 @@ Documentation is built using https://readthedocs.org/ and published on http://do
 
 ### Google Colab
 
-Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/).
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/).
 
 ### GitHub
 
