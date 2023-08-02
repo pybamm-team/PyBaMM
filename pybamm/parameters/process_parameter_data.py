@@ -3,6 +3,7 @@
 #
 import os
 import json
+import csv
 import numpy as np
 
 
@@ -38,7 +39,15 @@ def process_1D_data(name, path=None):
     """
     filename, name = _process_name(name, path, ".csv")
 
-    data = np.loadtxt(filename, comments="#", delimiter=",", skiprows=1)
+    data = []
+    with open(filename, "r") as csvfile:
+        csvreader = csv.reader(csvfile, delimiter=",")
+        for row in csvreader:
+            if not row or row[0].startswith("#"):
+                continue
+            data.append(row)
+
+    data = np.array(data, dtype=float)
     # Save name and data
     return (name, ([data[:, 0]], data[:, 1]))
 
@@ -88,7 +97,7 @@ def process_2D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    df = np.genfromtxt(filename)
+    df = np.genfromtxt(filename, delimiter=',')
 
     x1 = np.array(list(set(df.iloc[:, 0])))
     x2 = np.array(list(set(df.iloc[:, 1])))
