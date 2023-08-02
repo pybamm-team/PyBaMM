@@ -97,16 +97,18 @@ class OneDimensionalX(BaseThermal):
 
         # N.B only y-z surface cooling is implemented for this thermal model.
         # Tab and edge cooling is not accounted for.
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
         self.boundary_conditions = {
             T: {
                 "left": (
-                    self.param.n.h_cc
+                    self.param.n.h_cc(y, z)
                     * (T_n_left - T_amb)
                     / self.param.n.lambda_(T_n_left),
                     "Neumann",
                 ),
                 "right": (
-                    -self.param.p.h_cc
+                    -self.param.p.h_cc(y, z)
                     * (T_p_right - T_amb)
                     / self.param.p.lambda_(T_p_right),
                     "Neumann",

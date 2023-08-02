@@ -70,12 +70,22 @@ class DomainThermalParameters(BaseParameters):
 
     def _set_parameters(self):
         Domain = self.domain.capitalize()
-        self.h_cc = pybamm.Parameter(
-            f"{Domain} current collector surface heat transfer coefficient "
-            "[W.m-2.K-1]"
-        )
+
         self.h_tab = pybamm.Parameter(
             f"{Domain} tab heat transfer coefficient [W.m-2.K-1]"
+        )
+
+    def h_cc(self, y, z):
+        """Current collector surface heat transfer coefficient [W.m-2.K-1]"""
+        inputs = {
+            "Distance across electrode width [m]": y,
+            "Distance across electrode height [m]": z,
+        }
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{Domain} current collector surface heat transfer coefficient "
+            "[W.m-2.K-1]",
+            inputs,
         )
 
     def c_p(self, T):

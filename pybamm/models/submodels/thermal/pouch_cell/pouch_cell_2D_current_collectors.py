@@ -55,17 +55,21 @@ class CurrentCollector2D(BaseThermal):
         T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating [W.m-3]"]
         T_amb = variables["Ambient temperature [K]"]
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
 
         # Account for surface area to volume ratio of pouch cell in cooling
-        # coefficient. Note: the factor 1/delta^2 comes from the choice of
-        # non-dimensionalisation
-        yz_surface_area = self.param.L_y * self.param.L_z
+        # coefficient
         cell_volume = self.param.L * self.param.L_y * self.param.L_z
+
+        yz_surface_area = self.param.L_y * self.param.L_z
         yz_surface_cooling_coefficient = (
-            -(self.param.n.h_cc + self.param.p.h_cc) * yz_surface_area / cell_volume
+            -(self.param.n.h_cc(y, z) + self.param.p.h_cc(y, z))
+            * yz_surface_area
+            / cell_volume
         )
 
-        edge_cooling_coefficient = self.param.h_edge
+        edge_cooling_coefficient = -self.param.h_edge
 
         # Governing equations contain:
         #   - source term for y-z surface cooling
@@ -77,7 +81,7 @@ class CurrentCollector2D(BaseThermal):
                 pybamm.laplacian(T_av)
                 + pybamm.source(Q_av, T_av)
                 + yz_surface_cooling_coefficient * pybamm.source(T_av - T_amb, T_av)
-                - edge_cooling_coefficient
+                + edge_cooling_coefficient
                 * pybamm.source(T_av - T_amb, T_av, boundary=True)
             )
             / self.param.rho_c_p_eff(T_av)

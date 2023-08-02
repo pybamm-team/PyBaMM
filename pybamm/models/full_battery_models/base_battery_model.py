@@ -284,11 +284,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
 
-        # Change the default for cell geometry based on which thermal option is provided
+        # Change the default for cell geometry based on the current collector
+        # dimensionality
         extra_options = extra_options or {}
         # return "none" if option not given
-        thermal_option = extra_options.get("thermal", "none")
-        if thermal_option in ["none", "isothermal", "lumped"]:
+        current_collector_option = extra_options.get("current collector", "none")
+        if current_collector_option == 0:
             default_options["cell geometry"] = "arbitrary"
         else:
             default_options["cell geometry"] = "pouch"

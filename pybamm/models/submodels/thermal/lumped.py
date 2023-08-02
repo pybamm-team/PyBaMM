@@ -54,13 +54,14 @@ class Lumped(BaseThermal):
         T_amb = variables["Volume-averaged ambient temperature [K]"]
 
         # Account for surface area to volume ratio in cooling coefficient
-        # The factor 1/delta^2 comes from the choice of non-dimensionalisation.
         if self.options["cell geometry"] == "pouch":
+            y = pybamm.standard_spatial_vars.y
+            z = pybamm.standard_spatial_vars.z
             cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
             yz_cell_surface_area = self.param.L_y * self.param.L_z
             yz_surface_cooling_coefficient = -(
-                self.param.n.h_cc + self.param.p.h_cc
+                self._yz_average(self.param.n.h_cc(y, z) + self.param.p.h_cc(y, z))
             ) * (yz_cell_surface_area / cell_volume)
 
             negative_tab_area = self.param.n.L_tab * self.param.n.L_cc
