@@ -524,7 +524,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         if main.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
-    def D(self, c_s, T):
+    def D(self, c_s, T, lithiation=None):
         """
         Dimensional diffusivity in particle. In the parameter sets this is defined as
         a function of stoichiometry (dimensionless), but in the models we use it as a
@@ -535,16 +535,21 @@ class ParticleLithiumIonParameters(BaseParameters):
         sto = c_s / self.c_max
         tol = pybamm.settings.tolerances["D__c_s"]
         sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
+        if lithiation is None:
+            lithiation = ""
+        else:
+            lithiation = lithiation + " "
         inputs = {
             f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode diffusivity [m2.s-1]",
+            f"{self.phase_prefactor}{Domain} electrode {lithiation}"
+            "diffusivity [m2.s-1]",
             inputs,
         )
 
-    def j0(self, c_e, c_s_surf, T):
+    def j0(self, c_e, c_s_surf, T, lithiation=None):
         """Dimensional exchange-current density [A.m-2]"""
         tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
@@ -553,6 +558,10 @@ class ParticleLithiumIonParameters(BaseParameters):
             pybamm.minimum(c_s_surf, (1 - tol) * self.c_max), tol * self.c_max
         )
         domain, Domain = self.domain_Domain
+        if lithiation is None:
+            lithiation = ""
+        else:
+            lithiation = lithiation + " "
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             f"{Domain} particle surface concentration [mol.m-3]": c_s_surf,
@@ -561,7 +570,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode "
+            f"{self.phase_prefactor}{Domain} electrode {lithiation}"
             "exchange-current density [A.m-2]",
             inputs,
         )
