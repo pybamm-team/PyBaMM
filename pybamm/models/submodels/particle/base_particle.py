@@ -187,7 +187,6 @@ class BaseParticle(pybamm.BaseSubModel):
         R_a_mean = pybamm.Integral(R * f_a_dist, R)
         R_v_mean = pybamm.Integral(R * f_v_dist, R)
         sd_num = pybamm.sqrt(pybamm.Integral((R - R_num_mean) ** 2 * f_num_dist, R))
-        sd_a = pybamm.sqrt(pybamm.Integral((R - R_a_mean) ** 2 * f_a_dist, R))
         sd_v = pybamm.sqrt(pybamm.Integral((R - R_v_mean) ** 2 * f_v_dist, R))
 
         # X-average the means and standard deviations to give scalars
@@ -196,7 +195,6 @@ class BaseParticle(pybamm.BaseSubModel):
         R_a_mean = pybamm.x_average(R_a_mean)
         R_v_mean = pybamm.x_average(R_v_mean)
         sd_num = pybamm.x_average(sd_num)
-        sd_a = pybamm.x_average(sd_a)
         sd_v = pybamm.x_average(sd_v)
 
         # X-averaged distributions, or broadcast
@@ -228,8 +226,6 @@ class BaseParticle(pybamm.BaseSubModel):
             f"{Domain} area-weighted mean particle radius [m]": R_a_mean,
             f"{Domain} volume-weighted mean particle radius [m]": R_v_mean,
             f"{Domain} number-based mean particle radius [m]": R_num_mean,
-            f"{Domain} area-weighted {phase_name}particle-size"
-            " standard deviation [m]": sd_a,
             f"{Domain} volume-weighted {phase_name}particle-size"
             " standard deviation [m]": sd_v,
             f"{Domain} number-based {phase_name}particle-size"
