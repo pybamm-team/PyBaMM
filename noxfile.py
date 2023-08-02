@@ -63,8 +63,8 @@ def run_coverage(session):
     session.install("coverage")
     session.install("-e", ".[all]")
     if sys.platform != "win32":
-        session.install("scikits.odes")
-        session.run("pybamm_install_jax")
+        session.install("-e", ".[odes]")
+        session.install("-e", ".[jax]")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -76,7 +76,7 @@ def run_integration(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]")
     if sys.platform == "linux":
-        session.install("scikits.odes")
+        session.install("-e", ".[odes]")
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -93,8 +93,8 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]")
     if sys.platform == "linux":
-        session.install("scikits.odes")
-        session.run("pybamm_install_jax")
+        session.install("-e", ".[odes]")
+        session.install("-e", ".[jax]")
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -114,13 +114,13 @@ def set_dev(session):
     session.install("cmake")
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run(
-        "echo",
-        "export",
-        f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
-        ">>",
-        f"{envbindir}/activate",
-        external=True,  # silence warning about echo being an external command
-    )
+            "echo",
+            "export",
+            f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
+            ">>",
+            f"{envbindir}/activate",
+            external=True,  # silence warning about echo being an external command
+        )
 
 
 @nox.session(name="tests")
@@ -129,8 +129,8 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]")
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("scikits.odes")
-        session.run("pybamm_install_jax")
+        session.install("-e", ".[odes]")
+        session.install("-e", ".[jax]")
     session.run("python", "run-tests.py", "--all")
 
 

@@ -41,7 +41,7 @@ explore the effect of different battery designs and modeling assumptions under a
 .. grid:: 2
 
    .. grid-item-card::
-      :img-top: source/_static/index-images/getting_started.svg
+      :img-top: _static/index-images/getting_started.svg
 
       User Guide
       ^^^^^^^^^^
@@ -59,7 +59,7 @@ explore the effect of different battery designs and modeling assumptions under a
          To the user guide
     
    .. grid-item-card::
-      :img-top: source/_static/index-images/examples.svg
+      :img-top: _static/index-images/examples.svg
 
       Examples
       ^^^^^^^^
@@ -77,7 +77,7 @@ explore the effect of different battery designs and modeling assumptions under a
          To the examples
 
    .. grid-item-card::
-      :img-top: source/_static/index-images/api.svg
+      :img-top: _static/index-images/api.svg
 
       API Documentation
       ^^^^^^^^^^^^^^^^^
@@ -96,7 +96,7 @@ explore the effect of different battery designs and modeling assumptions under a
          To the API documentation
 
    .. grid-item-card::
-      :img-top: source/_static/index-images/contributor.svg
+      :img-top: _static/index-images/contributor.svg
 
       Contributor's Guide
       ^^^^^^^^^^^^^^^^^^^

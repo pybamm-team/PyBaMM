@@ -388,7 +388,7 @@ Documentation is built using https://readthedocs.org/ and published on http://do
 
 ### Google Colab
 
-Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/).
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/).
 
 ### GitHub
 
