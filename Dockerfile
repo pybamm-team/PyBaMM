@@ -5,7 +5,7 @@ WORKDIR /PyBaMM
 
 # Install the necessary dependencies
 RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y build-essential
+RUN apt-get install -y git
 
 # Copy project files into the container
 COPY . .
