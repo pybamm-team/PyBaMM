@@ -8,6 +8,7 @@ import copy
 import warnings
 import sys
 from functools import lru_cache
+from datetime import timedelta
 import tqdm
 
 
@@ -36,8 +37,11 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
-    experiment : :class:`pybamm.Experiment` (optional)
-        The experimental conditions under which to solve the model
+    experiment : :class:`pybamm.Experiment` or string or list (optional)
+        The experimental conditions under which to solve the model. If a string is
+        passed, the experiment is constructed as `pybamm.Experiment([experiment])`. If
+        a list is passed, the experiment is constructed as
+        `pybamm.Experiment(experiment)`.
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
     parameter_values: :class:`pybamm.ParameterValues` (optional)
@@ -95,8 +99,15 @@ class Simulation:
                         }
                     )
         else:
-            if not isinstance(experiment, pybamm.Experiment):
-                raise TypeError("experiment must be a pybamm `Experiment` instance")
+            if isinstance(experiment, (str, pybamm.step._Step)):
+                experiment = pybamm.Experiment([experiment])
+            elif isinstance(experiment, list):
+                experiment = pybamm.Experiment(experiment)
+            elif not isinstance(experiment, pybamm.Experiment):
+                raise TypeError(
+                    "experiment must be a pybamm `Experiment` instance, a single "
+                    "experiment step, or a list of experiment steps"
+                )
 
             self.operating_mode = "with experiment"
             # Save the experiment
@@ -158,60 +169,32 @@ class Simulation:
         """
         # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-        for op_conds in self.experiment.operating_conditions:
-            op_type = op_conds["type"]
-            if op_conds["dc_data"] is not None:
-                # If operating condition includes a drive cycle, define the interpolant
-                drive_cycle_interpolant = pybamm.Interpolant(
-                    op_conds["dc_data"][:, 0],
-                    op_conds["dc_data"][:, 1],
-                    pybamm.t - pybamm.InputParameter("start time"),
-                )
-                if op_type == "current":
-                    op_conds["Current input [A]"] = drive_cycle_interpolant
-                if op_type == "voltage":
-                    op_conds["Voltage input [V]"] = drive_cycle_interpolant
-                if op_type == "power":
-                    op_conds["Power input [W]"] = drive_cycle_interpolant
-            else:
-                if op_type == "C-rate":
-                    Crate = op_conds.pop("C-rate input [-]")
-                    op_conds["type"] = "current"
-                    op_conds["Current input [A]"] = Crate * capacity
-                elif op_type == "current":
-                    Crate = op_conds["Current input [A]"] / capacity
+        for op_conds in self.experiment.operating_conditions_steps:
+            if op_conds.type == "C-rate":
+                op_conds.type = "current"
+                op_conds.value = op_conds.value * capacity
 
-            # Update events
-            events = op_conds.pop("events")
-            if events is not None:
-                event_type = events.pop("type")
-                if event_type == "C-rate":
+            # Update terminations
+            termination = op_conds.termination
+            for term in termination:
+                term_type = term["type"]
+                if term_type == "C-rate":
+                    # Change type to current
+                    term["type"] = "current"
                     # Scale C-rate with capacity to obtain current
-                    events["Current input [A]"] = (
-                        events.pop("C-rate input [-]") * capacity
-                    )
-                # Update the dictionary of operating conditions, replacing
-                # "xxx input [unit]" with "xxx cut-off [unit]"
-                op_conds.update(
-                    {
-                        key.replace("input", "cut-off"): value
-                        for key, value in events.items()
-                    }
-                )
+                    term["value"] = term["value"] * capacity
 
             # Add time to the experiment times
-            dt = op_conds["time"]
+            dt = op_conds.duration
             if dt is None:
-                if op_conds["type"] in ["current", "CCCV"]:
-                    # Current control: max simulation time: 3 * max simulation time
-                    # based on C-rate
+                if op_conds.type == "current":
+                    # Current control: max simulation time: 3h / C-rate
+                    Crate = op_conds.value / capacity
                     dt = 3 / abs(Crate) * 3600  # seconds
-                    if op_conds["type"] == "CCCV":
-                        dt *= 5  # 5x longer for CCCV
                 else:
                     # max simulation time: 1 day
                     dt = 24 * 3600  # seconds
-            op_conds["time"] = dt
+                op_conds.duration = dt
 
         # Set up model for experiment
         self.set_up_and_parameterise_model_for_experiment()
@@ -224,134 +207,114 @@ class Simulation:
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
-        self.op_type_to_model = {}
-        self.op_string_to_model = {}
-        for op_number, op in enumerate(self.experiment.operating_conditions):
-            # Create model for this operating condition type (current/voltage/power)
-            # if it has not already been seen before
-            if op["type"] not in self.op_type_to_model:
-                if op["type"] == "current":
-                    new_model, submodel = self.model, None
-                else:
-                    # Voltage or power control
-                    # Create a new model where the current density is now a variable
-                    # To do so, we replace all instances of the current density in the
-                    # model with a current density variable, which is obtained from the
-                    # FunctionControl submodel
-                    # check which kind of external circuit model we need (differential
-                    # or algebraic)
-                    if op["type"] == "voltage":
-                        submodel_class = pybamm.external_circuit.VoltageFunctionControl
-                    elif op["type"] == "power":
-                        submodel_class = pybamm.external_circuit.PowerFunctionControl
-                    elif op["type"] == "CCCV":
-                        submodel_class = pybamm.external_circuit.CCCVFunctionControl
+        self.experiment_unique_steps_to_model = {}
+        for op_number, op in enumerate(self.experiment.unique_steps):
+            new_model = self.model.new_copy()
+            new_parameter_values = self.parameter_values.copy()
 
-                    new_model = self.model.new_copy()
-                    # Build the new submodel and update the model with it
-                    submodel = submodel_class(new_model.param, new_model.options)
-                    variables = new_model.variables
-                    submodel.variables = submodel.get_fundamental_variables()
-                    variables.update(submodel.variables)
-                    submodel.variables.update(submodel.get_coupled_variables(variables))
-                    variables.update(submodel.variables)
-                    submodel.set_rhs(variables)
-                    submodel.set_algebraic(variables)
-                    submodel.set_initial_conditions(variables)
-                    new_model.rhs.update(submodel.rhs)
-                    new_model.algebraic.update(submodel.algebraic)
-                    new_model.initial_conditions.update(submodel.initial_conditions)
+            if op.type != "current":
+                # Voltage or power control
+                # Create a new model where the current density is now a variable
+                # To do so, we replace all instances of the current density in the
+                # model with a current density variable, which is obtained from the
+                # FunctionControl submodel
+                # check which kind of external circuit model we need (differential
+                # or algebraic)
+                if op.type == "voltage":
+                    submodel_class = pybamm.external_circuit.VoltageFunctionControl
+                elif op.type == "power":
+                    submodel_class = pybamm.external_circuit.PowerFunctionControl
 
-                self.op_type_to_model[op["type"]] = (new_model, submodel)
+                # Build the new submodel and update the model with it
+                submodel = submodel_class(new_model.param, new_model.options)
+                variables = new_model.variables
+                submodel.variables = submodel.get_fundamental_variables()
+                variables.update(submodel.variables)
+                submodel.variables.update(submodel.get_coupled_variables(variables))
+                variables.update(submodel.variables)
+                submodel.set_rhs(variables)
+                submodel.set_algebraic(variables)
+                submodel.set_initial_conditions(variables)
+                new_model.rhs.update(submodel.rhs)
+                new_model.algebraic.update(submodel.algebraic)
+                new_model.initial_conditions.update(submodel.initial_conditions)
 
-            if op["string"] not in self.op_string_to_model:
-                model, submodel = self.op_type_to_model[op["type"]]
-                # Create a new model for this operating condition, since we will update
-                # the events differently (based on parameter values and inputs) for
-                # different models of the same type (current/voltage/power)
-                new_model = model.new_copy()
-                self.update_new_model_events(new_model, op)
-                # Update parameter values
-                new_parameter_values = self.parameter_values.copy()
-                self._original_temperature = new_parameter_values[
-                    "Ambient temperature [K]"
-                ]
-                experiment_parameter_values = self.get_experiment_parameter_values(
-                    op, op_number
-                )
-                new_parameter_values.update(
-                    experiment_parameter_values, check_already_exists=False
-                )
                 # Set the "current function" to be the variable defined in the submodel
-                if submodel is not None:
-                    new_parameter_values["Current function [A]"] = submodel.variables[
-                        "Current [A]"
-                    ]
-                parameterised_model = new_parameter_values.process_model(
-                    new_model, inplace=False
-                )
-                self.op_string_to_model[op["string"]] = parameterised_model
+                new_parameter_values["Current function [A]"] = submodel.variables[
+                    "Current [A]"
+                ]
+            self.update_new_model_events(new_model, op)
+            # Update parameter values
+            self._original_temperature = new_parameter_values["Ambient temperature [K]"]
+            experiment_parameter_values = self.get_experiment_parameter_values(
+                op, op_number
+            )
+            new_parameter_values.update(
+                experiment_parameter_values, check_already_exists=False
+            )
+            parameterised_model = new_parameter_values.process_model(
+                new_model, inplace=False
+            )
+            self.experiment_unique_steps_to_model[repr(op)] = parameterised_model
+
+        # Set up rest model if experiment has start times
+        if self.experiment.initial_start_time:
+            new_model = self.model.new_copy()
+            # Update parameter values
+            new_parameter_values = self.parameter_values.copy()
+            self._original_temperature = new_parameter_values["Ambient temperature [K]"]
+            new_parameter_values.update(
+                {"Current function [A]": 0, "Ambient temperature [K]": "[input]"},
+                check_already_exists=False,
+            )
+            parameterised_model = new_parameter_values.process_model(
+                new_model, inplace=False
+            )
+            self.experiment_unique_steps_to_model[
+                "Rest for padding"
+            ] = parameterised_model
 
     def update_new_model_events(self, new_model, op):
-        if "Current cut-off [A]" in op:
-            if op["type"] == "CCCV":
-                # for the CCCV model we need to make sure that the current
-                # cut-off is only reached at the end of the CV phase
-                # Current is negative for a charge so this event will be
-                # negative until it is zero
-                # So we take away a large number times a heaviside switch
-                # for the CV phase to make sure that the event can only be
-                # hit during CV
-                new_model.events.append(
-                    pybamm.Event(
-                        "Current cut-off (CCCV) [A] [experiment]",
-                        -new_model.variables["Current [A]"]
-                        - abs(pybamm.InputParameter("Current cut-off [A]"))
-                        + 1e4
-                        * (
-                            new_model.variables["Battery voltage [V]"]
-                            < (pybamm.InputParameter("Voltage input [V]") - 1e-4)
-                        ),
-                    )
-                )
-            else:
+        for term in op.termination:
+            if term["type"] == "current":
                 new_model.events.append(
                     pybamm.Event(
                         "Current cut-off [A] [experiment]",
-                        abs(new_model.variables["Current [A]"])
-                        - pybamm.InputParameter("Current cut-off [A]"),
+                        abs(new_model.variables["Current [A]"]) - term["value"],
                     )
                 )
 
-        # add voltage events to the model
-        if "Voltage cut-off [V]" in op:
-            # The voltage event should be positive at the start of charge/
-            # discharge. We use the sign of the current or power input to
-            # figure out whether the voltage event is greater than the starting
-            # voltage (charge) or less (discharge) and set the sign of the
-            # event accordingly
-            if op["type"] == "power":
-                inp = op["Power input [W]"]
-            else:
-                inp = op["Current input [A]"]
-            sign = np.sign(inp)
-            if sign > 0:
-                name = "Discharge"
-            else:
-                name = "Charge"
-            if sign != 0:
-                # Event should be positive at initial conditions for both
-                # charge and discharge
-                new_model.events.append(
-                    pybamm.Event(
-                        f"{name} voltage cut-off [V] [experiment]",
-                        sign
-                        * (
-                            new_model.variables["Battery voltage [V]"]
-                            - pybamm.InputParameter("Voltage cut-off [V]")
-                        ),
+            # add voltage events to the model
+            if term["type"] == "voltage":
+                # The voltage event should be positive at the start of charge/
+                # discharge. We use the sign of the current or power input to
+                # figure out whether the voltage event is greater than the starting
+                # voltage (charge) or less (discharge) and set the sign of the
+                # event accordingly
+                if (isinstance(op.value, pybamm.Interpolant) or
+                    isinstance(op.value, pybamm.Multiplication)):
+                    inpt = {"start time":0}
+                    init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
+                    sign = np.sign(init_curr)
+                else:
+                    sign = np.sign(op.value)
+                if sign > 0:
+                    name = "Discharge"
+                else:
+                    name = "Charge"
+                if sign != 0:
+                    # Event should be positive at initial conditions for both
+                    # charge and discharge
+                    new_model.events.append(
+                        pybamm.Event(
+                            f"{name} voltage cut-off [V] [experiment]",
+                            sign
+                            * (
+                                new_model.variables["Battery voltage [V]"]
+                                - term["value"]
+                            ),
+                        )
                     )
-                )
 
         # Keep the min and max voltages as safeguards but add some tolerances
         # so that they are not triggered before the voltage limits in the
@@ -363,26 +326,12 @@ class Simulation:
                 )
 
     def get_experiment_parameter_values(self, op, op_number):
-        experiment_parameter_values = {}
-        if op["type"] == "current":
-            experiment_parameter_values.update(
-                {"Current function [A]": op["Current input [A]"]}
-            )
-        if op["type"] == "CCCV":
-            experiment_parameter_values.update(
-                {"CCCV current function [A]": op["Current input [A]"]}
-            )
-        if op["type"] in ["voltage", "CCCV"]:
-            experiment_parameter_values.update(
-                {"Voltage function [V]": op["Voltage input [V]"]}
-            )
-        if op["type"] == "power":
-            experiment_parameter_values.update(
-                {"Power function [W]": op["Power input [W]"]}
-            )
+        experiment_parameter_values = {
+            f"{op.type.capitalize()} function {op.unit}": op.value
+        }
 
-        if op["temperature"] is not None:
-            ambient_temperature = op["temperature"] + 273.15
+        if op.temperature is not None:
+            ambient_temperature = op.temperature
             experiment_parameter_values.update(
                 {"Ambient temperature [K]": ambient_temperature}
             )
@@ -391,9 +340,7 @@ class Simulation:
             # should be the ambient temperature.
             if op_number == 0:
                 experiment_parameter_values.update(
-                    {
-                        "Initial temperature [K]": ambient_temperature,
-                    }
+                    {"Initial temperature [K]": ambient_temperature}
                 )
         else:
             experiment_parameter_values.update(
@@ -491,7 +438,10 @@ class Simulation:
             # Process all the different models
             self.op_conds_to_built_models = {}
             self.op_conds_to_built_solvers = {}
-            for op_cond, model_with_set_params in self.op_string_to_model.items():
+            for (
+                op_cond,
+                model_with_set_params,
+            ) in self.experiment_unique_steps_to_model.items():
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
@@ -742,24 +692,38 @@ class Simulation:
                 for step_num in range(1, cycle_length + 1):
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
-                    op_conds = self.experiment.operating_conditions[idx]
-                    dt = op_conds["time"]
-                    op_conds_str = op_conds["string"]
-                    model = self.op_conds_to_built_models[op_conds_str]
-                    solver = self.op_conds_to_built_solvers[op_conds_str]
+                    op_conds = self.experiment.operating_conditions_steps[idx]
+
+                    start_time = current_solution.t[-1]
+
+                    # If step has an end time, dt must take that into account
+                    if op_conds.end_time:
+                        dt = min(
+                            op_conds.duration,
+                            (
+                                op_conds.end_time
+                                - (
+                                    self.experiment.initial_start_time
+                                    + timedelta(seconds=float(start_time))
+                                )
+                            ).total_seconds(),
+                        )
+                    else:
+                        dt = op_conds.duration
+                    op_conds_str = str(op_conds)
+                    model = self.op_conds_to_built_models[repr(op_conds)]
+                    solver = self.op_conds_to_built_solvers[repr(op_conds)]
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = op_conds_str
                     callbacks.on_step_start(logs)
 
-                    start_time = current_solution.t[-1]
                     kwargs["inputs"] = {
                         **user_inputs,
-                        **op_conds,
                         "start time": start_time,
                     }
                     # Make sure we take at least 2 timesteps
-                    npts = max(int(round(dt / op_conds["period"])) + 1, 2)
+                    npts = max(int(round(dt / op_conds.period)) + 1, 2)
                     try:
                         step_solution = solver.step(
                             current_solution,
@@ -787,6 +751,51 @@ class Simulation:
                             # Otherwise, just stop this cycle
                             break
 
+                    step_termination = step_solution.termination
+
+                    # Add a padding rest step if necessary
+                    if op_conds.next_start_time is not None:
+                        rest_time = (
+                            op_conds.next_start_time
+                            - (
+                                self.experiment.initial_start_time
+                                + timedelta(seconds=float(step_solution.t[-1]))
+                            )
+                        ).total_seconds()
+                        if rest_time > pybamm.settings.step_start_offset:
+                            start_time = step_solution.t[-1]
+                            # Let me know if you have a better name
+                            op_conds_str = "Rest for padding"
+                            model = self.op_conds_to_built_models[op_conds_str]
+                            solver = self.op_conds_to_built_solvers[op_conds_str]
+
+                            logs["step number"] = (step_num, cycle_length)
+                            logs["step operating conditions"] = op_conds_str
+                            callbacks.on_step_start(logs)
+
+                            ambient_temp = (
+                                op_conds.temperature or self._original_temperature
+                            )
+                            kwargs["inputs"] = {
+                                **user_inputs,
+                                "Ambient temperature [K]": ambient_temp,
+                                "start time": start_time,
+                            }
+                            # Make sure we take at least 2 timesteps
+                            # The period is hardcoded to 10 minutes, the user can
+                            # always override it by adding a rest step
+                            npts = max(int(round(rest_time / 600)) + 1, 2)
+
+                            step_solution_with_rest = solver.step(
+                                step_solution,
+                                model,
+                                rest_time,
+                                npts=npts,
+                                save=False,
+                                **kwargs,
+                            )
+                            step_solution += step_solution_with_rest
+
                     steps.append(step_solution)
 
                     cycle_solution = cycle_solution + step_solution
@@ -798,8 +807,8 @@ class Simulation:
                     # Only allow events specified by experiment
                     if not (
                         isinstance(step_solution, pybamm.EmptySolution)
-                        or step_solution.termination == "final time"
-                        or "[experiment]" in step_solution.termination
+                        or step_termination == "final time"
+                        or "[experiment]" in step_termination
                     ):
                         callbacks.on_experiment_infeasible(logs)
                         feasible = False
@@ -1092,6 +1101,15 @@ class Simulation:
             and self._solver.integrator_specs != {}
         ):
             self._solver.integrator_specs = {}
+
+        if self.op_conds_to_built_solvers is not None:
+            for solver in self.op_conds_to_built_solvers.values():
+                if (
+                    isinstance(solver, pybamm.CasadiSolver)
+                    and solver.integrator_specs != {}
+                ):
+                    solver.integrator_specs = {}
+
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

@@ -500,28 +500,13 @@ def graphite_LGM50_ocp_Chen2020(sto):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for an LG M50 cell, from the paper
+    Parameters for an LG M50 cell, from the paper :footcite:t:`OKane2022`, based on the
+    paper :footcite:t:`Chen2020` and references therein.
 
-        Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert
-        Timms, Valentin Sulzer, Jacqueline Sophie Edge, Billy Wu, Gregory J. Offer, and
-        Monica Marinescu. Lithium-ion battery degradation: how to model it. Phys. Chem.
-        Chem. Phys., 24:7909-7922, 2022. URL: http://dx.doi.org/10.1039/D2CP00417H,
-        doi:10.1039/D2CP00417H.
-
-
-    based on the paper
-
-        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-
-
-    and references therein.
-
-    Note: the SEI and plating parameters do not claim to be representative of the true
-    parameter values. These are merely the parameter values that were used in the
-    referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -671,6 +656,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.5,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.5,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 29866.0,
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,

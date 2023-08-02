@@ -5,6 +5,8 @@
     - `docs/conf.py`
     - `CITATION.cff`
     - `vcpkg.json`
+    - `docs/source/_static/versions.json`, and check if any links fail
+
   - Update baseline of registries in `vcpkg-configuration.json` as the latest commit id from [pybamm-team/sundials-vcpkg-registry](https://github.com/pybamm-team/sundials-vcpkg-registry)
   - Update `CHANGELOG.md` with a summary of the release
 

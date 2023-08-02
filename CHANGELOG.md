@@ -1,16 +1,49 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Features
+## Breaking changes
 
-- If a solution contains cycles and steps, the cycle number and step number are now saved when `solution.save_data()` is called ([#2931](https://github.com/pybamm-team/PyBaMM/pull/2931))
-
-## Optimizations
-
-- Update Jax (0.4.8) and JaxLib (0.4.7) compatibility ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2927))
+- Added option to use an empirical hysteresis model for the diffusivity and exchange-current density ([#3194](https://github.com/pybamm-team/PyBaMM/pull/3194))
+- Double-layer capacity can now be provided as a function of temperature ([#3174](https://github.com/pybamm-team/PyBaMM/pull/3174))
+- `pybamm_install_jax` is deprecated. It is now replaced with `pip install pybamm[jax]` ([#3163](https://github.com/pybamm-team/PyBaMM/pull/3163))
+- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
 ## Bug fixes
 
+- Fixed a bug where the "basic" lithium-ion models gave incorrect results when using nonlinear particle diffusivity ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
+- Particle size distributions now work with SPMe and NewmanTobias models ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
+- Fix to simulate c_rate steps with drive cycles ([#3186](https://github.com/pybamm-team/PyBaMM/pull/3186))
+- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
+- Error generated when invalid parameter values are passed. ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
+- Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
+- Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
+
+# [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
+
+## Features
+
+- Enable multithreading in IDAKLU solver ([#2947](https://github.com/pybamm-team/PyBaMM/pull/2947))
+- If a solution contains cycles and steps, the cycle number and step number are now saved when `solution.save_data()` is called ([#2931](https://github.com/pybamm-team/PyBaMM/pull/2931))
+- Experiments can now be given a `start_time` to define when each step should be triggered ([#2616](https://github.com/pybamm-team/PyBaMM/pull/2616))
+
+## Optimizations
+
+- Test `JaxSolver`'s compatibility with Python `3.8`, `3.9`, `3.10`, and `3.11` ([#2958](https://github.com/pybamm-team/PyBaMM/pull/2958))
+- Update Jax (0.4.8) and JaxLib (0.4.7) compatibility ([#2927](https://github.com/pybamm-team/PyBaMM/pull/2927))
+- Migrate from `tox=3.28` to `nox` ([#3005](https://github.com/pybamm-team/PyBaMM/pull/3005))
+- Removed `importlib_metadata` as a required dependency for user installations ([#3050](https://github.com/pybamm-team/PyBaMM/pull/3050))
+
+## Bug fixes
+
+- Realign 'count' increment in CasadiSolver.\_integrate() ([#2986](https://github.com/pybamm-team/PyBaMM/pull/2986))
+- Fix `pybamm_install_odes` and update the required SUNDIALS version ([#2958](https://github.com/pybamm-team/PyBaMM/pull/2958))
+- Fixed a bug where all data included in a BPX was incorrectly assumed to be given as a function of time.([#2957](https://github.com/pybamm-team/PyBaMM/pull/2957))
 - Remove brew install for Mac from the recommended developer installation options for SUNDIALS ([#2925](https://github.com/pybamm-team/PyBaMM/pull/2925))
+- Fix `bpx.py` to correctly generate parameters for "lumped" thermal model ([#2860](https://github.com/pybamm-team/PyBaMM/issues/2860))
+
+## Breaking changes
+
+- Deprecate functionality to load parameter set from a csv file. Parameter sets must now be provided as python dictionaries ([#2959](https://github.com/pybamm-team/PyBaMM/pull/2959))
+- Tox support for Installation & testing has now been replaced by Nox ([#3005](https://github.com/pybamm-team/PyBaMM/pull/3005))
 
 # [v23.4.1](https://github.com/pybamm-team/PyBaMM/tree/v23.4) - 2023-05-01
 
@@ -23,9 +56,9 @@
 ## Features
 
 - Added verbose logging to `pybamm.print_citations()` and citation tags for the `pybamm.Citations` class so that users can now see where the citations were registered when running simulations ([#2862](https://github.com/pybamm-team/PyBaMM/pull/2862))
+- Updated to casadi 3.6, which required some changes to the casadi integrator ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
 - PyBaMM is now natively supported on Apple silicon chips (`M1/M2`) ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
 - PyBaMM is now supported on Python `3.10` and `3.11` ([#2435](https://github.com/pybamm-team/PyBaMM/pull/2435))
-- Updated to casadi 3.6, which required some changes to the casadi integrator. ([#2859](https://github.com/pybamm-team/PyBaMM/pull/2859))
 
 ## Optimizations
 
@@ -33,9 +66,10 @@
 
 ## Bug fixes
 
+- Initial conditions for sensitivity equations calculated correctly ([#2920](https://github.com/pybamm-team/PyBaMM/pull/2920))
 - Parameter sets can now contain the key "chemistry", and will ignore its value (this previously would give errors in some cases) ([#2901](https://github.com/pybamm-team/PyBaMM/pull/2901))
-- Fixed a bug in the discretisation of initial conditions of a scaled variable ([#2856](https://github.com/pybamm-team/PyBaMM/pull/2856))
 - Fixed keyerror on "all" when getting sensitivities from IDAKLU solver([#2883](https://github.com/pybamm-team/PyBaMM/pull/2883))
+- Fixed a bug in the discretisation of initial conditions of a scaled variable ([#2856](https://github.com/pybamm-team/PyBaMM/pull/2856))
 
 ## Breaking changes
 
@@ -57,7 +91,7 @@
 
 - Fix non-deteministic outcome of some tests in the test suite ([#2844](https://github.com/pybamm-team/PyBaMM/pull/2844))
 - Fixed excessive RAM consumption when running multiple simulations ([#2823](https://github.com/pybamm-team/PyBaMM/pull/2823))
-- Fixed use of last_state as starting_solution in Simulation.solve() ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
+- Fixed use of `last_state` as `starting_solution` in `Simulation.solve()` ([#2822](https://github.com/pybamm-team/PyBaMM/pull/2822))
 - Fixed a bug where variable bounds could not contain `InputParameters` ([#2795](https://github.com/pybamm-team/PyBaMM/pull/2795))
 - Improved `model.latexify()` to have a cleaner and more readable output ([#2764](https://github.com/pybamm-team/PyBaMM/pull/2764))
 - Fixed electrolyte conservation in the case of concentration-dependent transference number ([#2758](https://github.com/pybamm-team/PyBaMM/pull/2758))
@@ -900,7 +934,7 @@ This release introduces many new features and optimizations. All models can now 
 - Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
 - Moved `results` to separate repositories ([#761](https://github.com/pybamm-team/PyBaMM/pull/761))
 - The parameters "Bruggeman coefficient" must now be specified separately as "Bruggeman coefficient (electrolyte)" and "Bruggeman coefficient (electrode)"
-- The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/main/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
+- The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
 - Parameter functions must now use pybamm functions instead of numpy functions (e.g. `pybamm.exp` instead of `numpy.exp`), as these are then used to construct the expression tree directly. Generally, pybamm syntax follows numpy syntax; please get in touch if a function you need is missing.
 - The current must now be updated by changing "Current function [A]" or "C-rate" instead of "Typical current [A]"
 

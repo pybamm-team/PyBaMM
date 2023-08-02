@@ -318,53 +318,23 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for a graphite/NMC532 pouch cell from the paper
-
-        Peyman Mohtat, Suhak Lee, Valentin Sulzer, Jason B. Siegel, and Anna G.
-        Stefanopoulou. Differential Expansion and Voltage Model for Li-ion Batteries at
-        Practical Charging Rates. Journal of The Electrochemical Society,
-        167(11):110561, 2020. doi:10.1149/1945-7111/aba5d1.
-
+    Parameters for a graphite/NMC532 pouch cell from the paper :footcite:t:`Mohtat2020`
     and references therein.
 
-    Some example parameters for SEI growth from the papers:
-
-        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-        Development of first principles capacity fade model for Li-ion cells. Journal of
-        the Electrochemical Society, 151(2), A196-A203.
-
-        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
-        151(3), A456-A462.
-
-        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-        continued growth of the solid-electrolyte interphase. ChemSusChem, 11(12),
-        1950-1955.
-
-        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
-        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
-        The Electrochemical Society, 156(3),
-
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
 
     SEI parameters
     ^^^^^^^^^^^^^^
 
-    Parameters for lithium plating are from the paper:
+    Parameters for lithium plating are from the paper :footcite:t:`Yang2017`
 
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -492,6 +462,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.8,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.8,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 48.8682,
         "Initial concentration in positive electrode [mol.m-3]": 31513.0,
         "Initial temperature [K]": 298.15,
