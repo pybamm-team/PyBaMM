@@ -41,9 +41,16 @@ class ThermalParameters(BaseParameters):
         # Initial temperature
         self.T_init = pybamm.Parameter("Initial temperature [K]")
 
-    def T_amb(self, t):
+    def T_amb(self, y, z, t):
         """Dimensional ambient temperature"""
-        return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
+        return pybamm.FunctionParameter(
+            "Ambient temperature [K]",
+            {
+                "Distance across electrode width [m]": y,
+                "Distance across electrode height [m]": z,
+                "Time [s]": t,
+            },
+        )
 
     def rho_c_p_eff(self, T):
         """Effective volumetric heat capacity [J.m-3.K-1]"""

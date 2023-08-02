@@ -51,7 +51,7 @@ class Lumped(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
-        T_amb = variables["Ambient temperature [K]"]
+        T_amb = variables["Volume-averaged ambient temperature [K]"]
 
         # Account for surface area to volume ratio in cooling coefficient
         # The factor 1/delta^2 comes from the choice of non-dimensionalisation.

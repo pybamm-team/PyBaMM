@@ -22,8 +22,11 @@ class Isothermal(BaseThermal):
         super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
-        T_amb = self.param.T_amb(pybamm.t)
-        T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
+        # Set the x-averaged temperature to the ambient temperature, which can be
+        # specified as a function of space (y, z) only and time
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        T_x_av = self.param.T_amb(y, z, pybamm.t)
 
         T_dict = {
             "negative current collector": T_x_av,
