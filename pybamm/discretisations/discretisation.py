@@ -241,6 +241,10 @@ class Discretisation(object):
             model_disc
         )
 
+        # Save geometry
+        pybamm.logger.verbose("Save geometry for {}".format(model.name))
+        model_disc.geometry = getattr(self.mesh, "_geometry", None)
+
         # Check that resulting model makes sense
         if check_model:
             pybamm.logger.verbose("Performing model checks for {}".format(model.name))

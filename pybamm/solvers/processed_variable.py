@@ -56,6 +56,20 @@ class ProcessedVariable(object):
         self.warn = warn
         self.cumtrapz_ic = cumtrapz_ic
 
+        # Process spatial variables
+        geometry = solution.all_models[0].geometry
+        self.spatial_variables = {}
+        for domain_level, domain_names in self.domains.items():
+            variables = []
+            for domain in domain_names:
+                variables += list(geometry[domain].keys())
+            self.spatial_variables[domain_level] = variables
+
+        self.spatial_variable_names = {
+            k: self._process_spatial_variable_names(v)
+            for k, v in self.spatial_variables.items()
+        }
+
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -172,25 +186,7 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0].endswith("particle"):
-            self.first_dimension = "r"
-            self.r_sol = space
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ]:
-            self.first_dimension = "x"
-            self.x_sol = space
-        elif self.domain == ["current collector"]:
-            self.first_dimension = "z"
-            self.z_sol = space
-        elif self.domain[0].endswith("particle size"):
-            self.first_dimension = "R"
-            self.R_sol = space
-        else:
-            self.first_dimension = "x"
-            self.x_sol = space
+        self.first_dimension = self.spatial_variable_names["primary"]
 
         # assign attributes for reference
         pts_for_interp = space
@@ -289,44 +285,33 @@ class ProcessedVariable(object):
         if self.domain[0].endswith("particle") and self.domains["secondary"][
             0
         ].endswith("electrode"):
-            self.first_dimension = "r"
-            self.second_dimension = "x"
-            self.r_sol = first_dim_pts
-            self.x_sol = second_dim_pts
+            self.first_dimension = self.spatial_variable_names["primary"]
+            self.second_dimension = self.spatial_variable_names["secondary"]
         elif self.domain[0] in [
             "negative electrode",
             "separator",
             "positive electrode",
         ] and self.domains["secondary"] == ["current collector"]:
-            self.first_dimension = "x"
-            self.second_dimension = "z"
-            self.x_sol = first_dim_pts
-            self.z_sol = second_dim_pts
+            self.first_dimension = self.spatial_variable_names["primary"]
+            self.second_dimension = self.spatial_variable_names["secondary"]
         elif self.domain[0].endswith("particle") and self.domains["secondary"][
             0
         ].endswith("particle size"):
-            self.first_dimension = "r"
-            self.second_dimension = "R"
-            self.r_sol = first_dim_pts
-            self.R_sol = second_dim_pts
+            self.first_dimension = self.spatial_variable_names["primary"]
+            self.second_dimension = self.spatial_variable_names["secondary"]
         elif self.domain[0].endswith("particle size") and self.domains["secondary"][
             0
         ].endswith("electrode"):
             self.first_dimension = "R"
             self.second_dimension = "x"
-            self.R_sol = first_dim_pts
-            self.x_sol = second_dim_pts
         elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
             "current collector"
         ]:
             self.first_dimension = "R"
             self.second_dimension = "z"
-            self.R_sol = first_dim_pts
-            self.z_sol = second_dim_pts
-        else:  # pragma: no cover
-            raise pybamm.DomainError(
-                f"Cannot process 2D object with domains '{self.domains}'."
-            )
+        else:
+            self.first_dimension = self.spatial_variable_names["primary"]
+            self.second_dimension = self.spatial_variable_names["secondary"]
 
         # assign attributes for reference
         self.entries = entries
@@ -385,6 +370,26 @@ class ProcessedVariable(object):
             entries,
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
+
+    def _process_spatial_variable_names(self, spatial_variable):
+        if len(spatial_variable) == 0:
+            return None
+        elif spatial_variable in [["r_n"], ["r_p"]]:
+            return "r"
+        elif spatial_variable in [["x_n"], ["x_s"], ["x_p"], ["x_n", "x_s", "x_p"]]:
+            return "x"
+        elif spatial_variable in [["R_n"], ["R_p"]]:
+            return "R"
+        elif len(spatial_variable) == 1:
+            if isinstance(spatial_variable[0], str):
+                return spatial_variable[0]
+            else:
+                return spatial_variable[0].name
+        else:  # pragma: no cover
+            # should not be reached
+            raise NotImplementedError(
+                "Spatial variable name not recognized for {}".format(spatial_variable)
+            )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
