@@ -113,6 +113,7 @@ class BaseModel:
         self._input_parameters = None
         self._parameter_info = None
         self._variables_casadi = {}
+        self._geometry = pybamm.Geometry({})
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
@@ -311,6 +312,14 @@ class BaseModel:
         raise NotImplementedError(
             "length_scales has been removed since models are now dimensional"
         )
+
+    @property
+    def geometry(self):
+        return self._geometry
+
+    @geometry.setter
+    def geometry(self, geometry):
+        self._geometry = geometry
 
     @property
     def default_var_pts(self):
