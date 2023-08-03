@@ -149,21 +149,23 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol)
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_eqn = pybamm.ProcessedVariable(
             [eqn_sol],
             [eqn_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_almost_equal(
@@ -180,11 +182,12 @@ class TestProcessedVariable(TestCase):
         x_s_edge = pybamm.Matrix(disc.mesh["separator"].edges, domain="separator")
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_x_s_edge = pybamm.ProcessedVariable(
             [x_s_edge],
             [x_s_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(
@@ -197,11 +200,12 @@ class TestProcessedVariable(TestCase):
         t_sol = np.array([0])
         y_sol = np.ones_like(x_sol)[:, np.newaxis]
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_eqn2 = pybamm.ProcessedVariable(
             [eqn_sol],
             [eqn_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(
@@ -346,11 +350,12 @@ class TestProcessedVariable(TestCase):
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_x_s_edge = pybamm.ProcessedVariable(
             [x_s_edge],
             [x_s_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(
@@ -381,11 +386,12 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(
@@ -406,11 +412,12 @@ class TestProcessedVariable(TestCase):
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, u_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, u_sol, model, {}),
+            pybamm.Solution(
+                t_sol, u_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(
@@ -455,11 +462,12 @@ class TestProcessedVariable(TestCase):
         t_sol = np.linspace(0, 1, 1000)
         y_sol = np.array([np.linspace(0, 5, 1000)])
         var_casadi = to_casadi(var, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # vector
@@ -469,11 +477,12 @@ class TestProcessedVariable(TestCase):
         np.testing.assert_array_equal(processed_var(0.7), 3.5)
 
         eqn_casadi = to_casadi(eqn, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_eqn = pybamm.ProcessedVariable(
             [eqn],
             [eqn_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol[0])
@@ -518,11 +527,12 @@ class TestProcessedVariable(TestCase):
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 2 vectors
@@ -537,11 +547,12 @@ class TestProcessedVariable(TestCase):
             processed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1]
         )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_eqn = pybamm.ProcessedVariable(
             [eqn_sol],
             [eqn_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 2 vectors
@@ -558,11 +569,12 @@ class TestProcessedVariable(TestCase):
         x_disc = disc.process_symbol(x)
         x_casadi = to_casadi(x_disc, y_sol)
 
-        model = tests.get_base_model_with_battery_geometry()
         processed_x = pybamm.ProcessedVariable(
             [x_disc],
             [x_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_almost_equal(processed_x(t=0, x=x_sol), x_sol)
@@ -573,11 +585,12 @@ class TestProcessedVariable(TestCase):
         )
         r_n.mesh = disc.mesh["negative particle"]
         r_n_casadi = to_casadi(r_n, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_r_n = pybamm.ProcessedVariable(
             [r_n],
             [r_n_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
@@ -616,11 +629,12 @@ class TestProcessedVariable(TestCase):
         y_sol = x_sol[:, np.newaxis]
 
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [eqn_sol],
             [eqn_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
 
@@ -655,11 +669,12 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 3 vectors
@@ -704,11 +719,12 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 3 vectors
@@ -740,11 +756,12 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 2 vectors
@@ -772,11 +789,12 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 3 vectors
@@ -812,11 +830,12 @@ class TestProcessedVariable(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, y_sol, model, {}),
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 3 vectors
@@ -837,11 +856,12 @@ class TestProcessedVariable(TestCase):
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, u_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, u_sol, model, {}),
+            pybamm.Solution(
+                t_sol, u_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 3 vectors
@@ -882,11 +902,12 @@ class TestProcessedVariable(TestCase):
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, u_sol)
-        model = tests.get_base_model_with_battery_geometry()
         processed_var = pybamm.ProcessedVariable(
             [var_sol],
             [var_casadi],
-            pybamm.Solution(t_sol, u_sol, model, {}),
+            pybamm.Solution(
+                t_sol, u_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
             warn=False,
         )
         # 2 vectors
@@ -985,13 +1006,13 @@ class TestProcessedVariable(TestCase):
         u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
         var_casadi = to_casadi(var_sol, u_sol)
 
-        model = tests.get_base_model_with_battery_geometry()
-
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
             pybamm.ProcessedVariable(
                 [var_sol],
                 [var_casadi],
-                pybamm.Solution(t_sol, u_sol, model, {}),
+                pybamm.Solution(
+                    t_sol, u_sol, tests.get_base_model_with_battery_geometry(), {}
+                ),
                 warn=False,
             )
 
