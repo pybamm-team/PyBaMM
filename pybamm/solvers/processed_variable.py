@@ -285,37 +285,8 @@ class ProcessedVariable(object):
             for k, v in self.spatial_variables.items()
         }
 
-        # Process r-x, x-z, r-R, R-x, or R-z
-        if self.domain[0].endswith("particle") and self.domains["secondary"][
-            0
-        ].endswith("electrode"):
-            self.first_dimension = self.spatial_variable_names["primary"]
-            self.second_dimension = self.spatial_variable_names["secondary"]
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and self.domains["secondary"] == ["current collector"]:
-            self.first_dimension = self.spatial_variable_names["primary"]
-            self.second_dimension = self.spatial_variable_names["secondary"]
-        elif self.domain[0].endswith("particle") and self.domains["secondary"][
-            0
-        ].endswith("particle size"):
-            self.first_dimension = self.spatial_variable_names["primary"]
-            self.second_dimension = self.spatial_variable_names["secondary"]
-        elif self.domain[0].endswith("particle size") and self.domains["secondary"][
-            0
-        ].endswith("electrode"):
-            self.first_dimension = "R"
-            self.second_dimension = "x"
-        elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
-            "current collector"
-        ]:
-            self.first_dimension = "R"
-            self.second_dimension = "z"
-        else:
-            self.first_dimension = self.spatial_variable_names["primary"]
-            self.second_dimension = self.spatial_variable_names["secondary"]
+        self.first_dimension = self.spatial_variable_names["primary"]
+        self.second_dimension = self.spatial_variable_names["secondary"]
 
         # assign attributes for reference
         self.entries = entries
