@@ -65,11 +65,6 @@ class ProcessedVariable(object):
                 variables += list(geometry[domain].keys())
             self.spatial_variables[domain_level] = variables
 
-        self.spatial_variable_names = {
-            k: self._process_spatial_variable_names(v)
-            for k, v in self.spatial_variables.items()
-        }
-
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -186,6 +181,10 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
+        self.spatial_variable_names = {
+            k: self._process_spatial_variable_names(v)
+            for k, v in self.spatial_variables.items()
+        }
         self.first_dimension = self.spatial_variable_names["primary"]
 
         # assign attributes for reference
@@ -281,6 +280,11 @@ class ProcessedVariable(object):
             axis=1,
         )
 
+        self.spatial_variable_names = {
+            k: self._process_spatial_variable_names(v)
+            for k, v in self.spatial_variables.items()
+        }
+
         # Process r-x, x-z, r-R, R-x, or R-z
         if self.domain[0].endswith("particle") and self.domains["secondary"][
             0
@@ -374,19 +378,25 @@ class ProcessedVariable(object):
     def _process_spatial_variable_names(self, spatial_variable):
         if len(spatial_variable) == 0:
             return None
-        elif spatial_variable in [["r_n"], ["r_p"]]:
-            return "r"
-        elif spatial_variable in [["x_n"], ["x_s"], ["x_p"], ["x_n", "x_s", "x_p"]]:
-            return "x"
-        elif spatial_variable in [["R_n"], ["R_p"]]:
-            return "R"
-        elif len(spatial_variable) == 1:
-            if isinstance(spatial_variable[0], str):
-                return spatial_variable[0]
+        
+        # Extract names
+        raw_names = []
+        for var in spatial_variable:
+            if isinstance(var, str):
+                raw_names.append(var)
             else:
-                return spatial_variable[0].name
-        else:  # pragma: no cover
-            # should not be reached
+                raw_names.append(var.name)
+            
+        # Rename battery variables to match PyBaMM convention
+        if all([var.startswith("r") for var in raw_names]):
+            return "r"
+        elif all([var.startswith("x") for var in raw_names]):
+            return "x"
+        elif all([var.startswith("R") for var in raw_names]):
+            return "R"
+        elif len(raw_names) == 1:
+            return spatial_variable[0]
+        else:
             raise NotImplementedError(
                 "Spatial variable name not recognized for {}".format(spatial_variable)
             )

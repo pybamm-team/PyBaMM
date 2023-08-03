@@ -270,11 +270,7 @@ def get_cylindrical_discretisation_for_testing(
     )
 
 
-def get_base_model_with_battery_geometry(
-    include_particles=True, options=None, form_factor="pouch"
-):
+def get_base_model_with_battery_geometry(**kwargs):
     model = pybamm.BaseModel()
-    model.geometry = pybamm.battery_geometry(
-        include_particles=include_particles, options=options, form_factor=form_factor
-    )
+    model.geometry = pybamm.battery_geometry(**kwargs)
     return model
