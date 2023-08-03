@@ -253,6 +253,9 @@ setup(
             "pre-commit",  # For code style checking
             "black",  # For code style auto-formatting
         ],
+        "pandas": [
+            "pandas>=0.24",
+        ],
         "all": [
             "anytree>=2.4.3",
             "autograd>=1.2",
