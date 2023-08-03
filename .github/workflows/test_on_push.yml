@@ -111,18 +111,40 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/noxfile.py', '**/install_KLU_Sundials.py') }}
+          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
+
+      - name: Restore pip cache on GNU/Linux
+        uses: actions/cache@v3
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          path: ${{ env.HOME }}/.cache/pip
+          key: pip-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+
+      - name: Restore pip cache on macOS
+        uses: actions/cache@v3
+        if: matrix.os == 'macos-latest'
+        with:
+          path: ${{ env.HOME }}/Library/Caches/pip
+          key: pip-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+
+      - name: Restore pip cache on Windows
+        uses: actions/cache@v3
+        if: matrix.os == 'windows-latest'
+        with:
+          path: ${{ env.HOME }}\AppData\Local\pip\Cache
+          key: pip-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
 
       - name: Cache unit tests nox environment for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
         uses: actions/cache@v3
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         with:
           path: ${{ github.workspace }}/.nox/unit/
-          key: ${{ runner.os }}-nox-unit-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
+          key: ${{ runner.os }}-nox-unit-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+          restore-keys: ${{ runner.os }}-nox-unit-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
@@ -133,7 +155,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         with:
           path: ${{ github.workspace }}/.nox/coverage/
-          key: ${{ runner.os }}-nox-coverage-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py', '**/.coveragerc') }}
+          key: ${{ runner.os }}-nox-coverage-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+          restore-keys: ${{ runner.os }}-nox-coverage-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
@@ -148,7 +171,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         with:
           path: ${{ github.workspace }}/.nox/integration/
-          key: ${{ runner.os }}-nox-integration-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
+          key: ${{ runner.os }}-nox-integration-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+          restore-keys: ${{ runner.os }}-nox-integration-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Run integration tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
@@ -159,7 +183,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         with:
           path: ${{ github.workspace }}/.nox/doctests/
-          key: ${{ runner.os }}-nox-doctests-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py', '**/docs/requirements.txt') }}
+          key: ${{ runner.os }}-nox-doctests-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+          restore-keys: ${{ runner.os }}-nox-doctests-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
@@ -170,7 +195,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         with:
           path: ${{ github.workspace }}/.nox/examples/
-          key: ${{ runner.os }}-nox-examples-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
+          key: ${{ runner.os }}-nox-examples-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
+          restore-keys: ${{ runner.os }}-nox-examples-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
