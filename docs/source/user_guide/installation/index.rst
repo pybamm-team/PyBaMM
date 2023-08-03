@@ -97,7 +97,7 @@ Dependency                                                  Minimum Version    p
 .. _install.plot_dependencies:
 
 Pandas dependencies
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[pandas]"``
 
