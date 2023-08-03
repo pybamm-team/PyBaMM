@@ -645,6 +645,53 @@ class TestProcessedVariable(TestCase):
         # scalar
         np.testing.assert_array_almost_equal(processed_var(x=0.5), 1)
 
+    def test_processed_var_wrong_spatial_variable_names(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["domain A", "domain B"],
+        )
+        a = pybamm.SpatialVariable("a", domain=["domain A"])
+        b = pybamm.SpatialVariable("b", domain=["domain B"])
+        geometry = {
+            "domain A": {a: {"min": 0, "max": 1}},
+            "domain B": {b: {"min": 1, "max": 2}},
+        }
+        submesh_types = {
+            "domain A": pybamm.Uniform1DSubMesh,
+            "domain B": pybamm.Uniform1DSubMesh,
+        }
+        var_pts = {a: 10, b: 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {
+            "domain A": pybamm.FiniteVolume(),
+            "domain B": pybamm.FiniteVolume(),
+        }
+
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.set_variable_slices([var])
+        a_sol = disc.process_symbol(a).entries[:, 0]
+        b_sol = disc.process_symbol(b).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(a_sol) * len(b_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        model = pybamm.BaseModel()
+        model.geometry = pybamm.Geometry(
+            {
+                "domain A": {a: {"min": 0, "max": 1}},
+                "domain B": {b: {"min": 0, "max": 1}},
+            }
+        )
+        with self.assertRaisesRegex(NotImplementedError, "Spatial variable name"):
+            pybamm.ProcessedVariable(
+                [var_sol],
+                [var_casadi],
+                pybamm.Solution(t_sol, y_sol, model, {}),
+                warn=False,
+            )
+
     def test_processed_var_2D_interpolation(self):
         var = pybamm.Variable(
             "var",
