@@ -156,3 +156,10 @@ def lint(session):
     """Check all files against the defined pre-commit hooks."""
     session.install("pre-commit")
     session.run("pre-commit", "run", "--all-files")
+
+
+@nox.session(name="quick", reuse_venv=True)
+def run_quick(session):
+    """Run integration tests, unit tests, and doctests sequentially"""
+    run_tests(session)
+    run_doctests(session)

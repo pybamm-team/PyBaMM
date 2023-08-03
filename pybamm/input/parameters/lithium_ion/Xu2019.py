@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
@@ -59,7 +60,7 @@ def nmc_ocp_Xu2019(sto):
         - 2.0843 * (sto**3)
         + 3.5146 * (sto**4)
         - 2.2166 * (sto**5)
-        - 0.5623e-4 * pybamm.exp(109.451 * sto - 100.006)
+        - 0.5623e-4 * np.exp(109.451 * sto - 100.006)
     )
 
     # # only valid in range ~(0.25,0.95)
@@ -74,7 +75,7 @@ def nmc_ocp_Xu2019(sto):
     #     - 9578.599274 * sto ** 2
     #     + 1409.309503 * sto
     #     - 85.31153081
-    #     - 0.0003 * pybamm.exp(7.657 * sto ** 115)
+    #     - 0.0003 * np.exp(7.657 * sto ** 115)
     # )
 
     return u_eq
