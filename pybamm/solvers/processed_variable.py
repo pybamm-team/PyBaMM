@@ -366,7 +366,7 @@ class ProcessedVariable(object):
         elif all([var.startswith("R") for var in raw_names]):
             return "R"
         elif len(raw_names) == 1:
-            return spatial_variable[0]
+            return raw_names[0]
         else:
             raise NotImplementedError(
                 "Spatial variable name not recognized for {}".format(spatial_variable)
