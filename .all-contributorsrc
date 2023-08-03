@@ -610,7 +610,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/104268427?v=4",
       "profile": "https://github.com/arjxn-py",
       "contributions": [
-        "infra"
+        "infra",
+        "code",
+        "doc"
       ]
     },
     {
