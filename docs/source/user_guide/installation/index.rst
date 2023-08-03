@@ -94,7 +94,7 @@ Dependency                                                  Minimum Version    p
 `matplotlib <https://matplotlib.org/stable/>`__             2.0.0              plot               To plot various battery models, and analyzing battery performance.
 =========================================================== ================== ================== ================================================================== 
 
-.. _install.plot_dependencies:
+.. _install.pandas_dependencies:
 
 Pandas dependencies
 ^^^^^^^^^^^^^^^^^^^
