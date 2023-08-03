@@ -197,7 +197,8 @@ class FickianDiffusion(BaseParticle):
                     "current density distribution [A.m-2]"
                 ]
 
-        D_eff = self._get_effective_diffusivity(c_s, T)
+        current = variables["Total current density [A.m-2]"]
+        D_eff = self._get_effective_diffusivity(c_s, T, current)
         N_s = -D_eff * pybamm.grad(c_s)
 
         variables.update(

@@ -108,6 +108,7 @@ def update_LD_LIBRARY_PATH(install_dir):
 
 
 def main(arguments=None):
+
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logger = logging.getLogger("scikits.odes setup")
 
