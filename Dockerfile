@@ -20,12 +20,17 @@ RUN python -m pip install --upgrade pip
 RUN pip install -e ".[all]"
 
 ARG ODES
+ARG JAX
 
 
 RUN if [ "$ODES" = "true" ]; then \
     apt-get install -y cmake && \
     pip install wget && \
     pybamm_install_odes; \
+    fi
+
+RUN if [ "$JAX" = "true" ]; then \
+    pip install -e ".[jax,all]";\
     fi
 
 CMD ["/bin/bash"]
