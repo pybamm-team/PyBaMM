@@ -16,4 +16,10 @@ WORKDIR /PyBaMM/
 RUN python -m pip install --upgrade pip
 RUN pip install -e ".[all]"
 
+ARG ODES
+
+RUN if [ "$ODES" = "true" ]; then \
+    pybamm_install_odes; \
+    fi
+
 CMD ["/bin/bash"]
