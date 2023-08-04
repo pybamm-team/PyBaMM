@@ -2,7 +2,7 @@ Installation
 ============
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
-It can be installed using `pip` or `conda`, or from source.
+It can be installed using ``pip`` or ``conda``, or from source.
 
 .. tab:: GNU/Linux and Windows
 
@@ -92,7 +92,7 @@ Dependency                                                  Minimum Version    p
 =========================================================== ================== ================== ==================================================================
 `imageio <https://imageio.readthedocs.io/en/stable/>`__     2.9.0              plot               For generating simulation GIFs.
 `matplotlib <https://matplotlib.org/stable/>`__             2.0.0              plot               To plot various battery models, and analyzing battery performance.
-=========================================================== ================== ================== ================================================================== 
+=========================================================== ================== ================== ==================================================================
 
 .. _install.pandas_dependencies:
 
@@ -127,7 +127,7 @@ Dependency                                                                      
 `sphinx-autobuild <https://sphinx-extensions.readthedocs.io/en/latest/sphinx-autobuild.html>`__   \-                 docs               For re-building docs once triggered.
 ================================================================================================= ================== ================== =======================================================================
 
-.. _install.examples_dependencies:                 
+.. _install.examples_dependencies:
 
 Examples dependencies
 ^^^^^^^^^^^^^^^^^^^^^
@@ -238,7 +238,7 @@ Dependency                                                                      
    Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_ .
 
 Full installation guide
------------------------             
+-----------------------
 
 Installing a specific version? Installing from source? Check the advanced installation pages below
 

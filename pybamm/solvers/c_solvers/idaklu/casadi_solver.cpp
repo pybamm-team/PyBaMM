@@ -10,8 +10,8 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &rhs_alg, const Function &jac_times_cjmass,
                      const np_array_int &jac_times_cjmass_colptrs,
                      const np_array_int &jac_times_cjmass_rowvals,
-                     const int jac_times_cjmass_nnz, 
-                     const int jac_bandwidth_lower, const int jac_bandwidth_upper, 
+                     const int jac_times_cjmass_nnz,
+                     const int jac_bandwidth_lower, const int jac_bandwidth_upper,
                      const Function &jac_action,
                      const Function &mass_action, const Function &sens,
                      const Function &events, const int number_of_events,
@@ -26,7 +26,7 @@ create_casadi_solver(int number_of_states, int number_of_parameters,
       options_cpp);
 
   return new CasadiSolver(atol_np, rel_tol, rhs_alg_id, number_of_parameters,
-                          number_of_events, jac_times_cjmass_nnz, 
+                          number_of_events, jac_times_cjmass_nnz,
                           jac_bandwidth_lower, jac_bandwidth_upper,
                           std::move(functions), options_cpp);
 }
@@ -169,7 +169,7 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   }
   else if (options.linear_solver == "SUNLinSol_Band")
   {
-    DEBUG("\tsetting SUNLinSol_Band linear solver");  
+    DEBUG("\tsetting SUNLinSol_Band linear solver");
 #if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_Band(yy, J, sunctx);
 #else
@@ -302,15 +302,15 @@ Solution CasadiSolver::solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   if (y0.size() != number_of_states + number_of_parameters * number_of_states) {
     throw std::domain_error(
-      "y0 has wrong size. Expected " + 
-      std::to_string(number_of_states + number_of_parameters * number_of_states) + 
+      "y0 has wrong size. Expected " +
+      std::to_string(number_of_states + number_of_parameters * number_of_states) +
       " but got " + std::to_string(y0.size()));
   }
 
   if (yp0.size() != number_of_states + number_of_parameters * number_of_states) {
     throw std::domain_error(
-      "yp0 has wrong size. Expected " + 
-      std::to_string(number_of_states + number_of_parameters * number_of_states) + 
+      "yp0 has wrong size. Expected " +
+      std::to_string(number_of_states + number_of_parameters * number_of_states) +
       " but got " + std::to_string(yp0.size()));
   }
 

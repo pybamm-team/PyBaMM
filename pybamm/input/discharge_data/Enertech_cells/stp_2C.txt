@@ -1,4 +1,4 @@
-# Positive particle surface tangetial stress close to the separator 
+# Positive particle surface tangetial stress close to the separator
 # for the Enertech cells Ai2020 JES
 # time [s] and normalised stress sigma_t_surf_p/E_p
 0,2.207e-18
