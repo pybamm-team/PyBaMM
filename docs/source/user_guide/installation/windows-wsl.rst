@@ -1,5 +1,5 @@
-Windows Subsystem for Linux (WSL)
-======================================
+Install from source (Windows)
+=============================
 
 We recommend the use of Windows Subsystem for Linux (WSL) to install
 PyBaMM, see the instructions below to get PyBaMM working using Windows,

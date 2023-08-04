@@ -1,4 +1,4 @@
-Install from source (developer install)
+Install from source (GNU Linux and macOS)
 =========================================
 
 .. contents::
