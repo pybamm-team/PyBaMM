@@ -145,58 +145,6 @@ GNU/Linux and macOS
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
 
-Developer install
------------------
-
-If you wish to contribute to PyBaMM, you should get the latest version
-from the GitHub repository. To do so, you must have ``Git`` and ``graphviz``
-installed. For instance, run
-
-   .. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
-
-      In a terminal, run the following command:
-
-      .. code:: bash
-
-         sudo apt install git graphviz
-
-   .. tab:: macOS
-
-      In a terminal, run the following command:
-
-      .. code:: bash
-
-         brew install git graphviz
-
-To install PyBaMM, the first step is to get the code by cloning this
-repository
-
-.. code:: bash
-
-   git clone https://github.com/pybamm-team/PyBaMM.git
-   cd PyBaMM
-
-Then, to install PyBaMM as a `developer <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__, type
-
-.. code:: bash
-
-   pip install -e .[dev,docs]
-
-or on ``zsh`` shells, type
-
-.. code:: bash
-   
-   pip install -e .'[dev,docs]'
-
-To check whether PyBaMM has installed properly, you can run the tests:
-
-.. code:: bash
-
-   python3 run-tests.py --unit
-
-Before you start contributing to PyBaMM, please read the `contributing
-guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
-
 Uninstall PyBaMM
 ================
 
