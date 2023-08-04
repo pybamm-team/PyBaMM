@@ -314,7 +314,7 @@ env.doc2path(env.docname, base=None) %}
         <p>
             An interactive online version of this notebook is available, which can be
             accessed via
-            <a href="https://colab.research.google.com/{{ github_docname | e }}" 
+            <a href="https://colab.research.google.com/{{ github_docname | e }}"
             target="_blank">
             <img src="https://colab.research.google.com/assets/colab-badge.svg"
             alt="Open this notebook in Google Colab"/></a>
