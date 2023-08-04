@@ -8,13 +8,11 @@ pybamm.set_logging_level("INFO")
 
 # load model
 model = pybamm.lithium_ion.SPM(
-    {"current collector": "potential pair", "dimensionality": 2, "thermal": "x-lumped"}
+    {"current collector": "potential pair", "dimensionality": 2}
 )
 
 # update parameter values, to use:
 # 1) a spatially-varying ambient temperature
-# 2) a spatially-varying surface heat transfer coefficient
-# 3) a spatially-varying edge heat transfer coefficient
 param = model.param
 L_y = param.L_y
 L_z = param.L_z
@@ -25,27 +23,13 @@ def T_amb(y, z, t):
     return 300 + 20 * pybamm.sin(np.pi * y / L_y) * pybamm.sin(np.pi * z / L_z)
 
 
-def h_edge(y, z):
-    return pybamm.InputParameter("h_right") * (y >= L_y)
-
-
-parameter_values.update(
-    {
-        "Current function [A]": 2 * 0.680616,
-        "Ambient temperature [K]": 298,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0,
-        "Negative tab heat transfer coefficient [W.m-2.K-1]": 10000,
-        "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
-        "Edge heat transfer coefficient [W.m-2.K-1]": h_edge,
-    }
-)
+parameter_values.update({"Ambient temperature [K]": T_amb})
 
 # create and solve simulation
 var_pts = {"x_n": 4, "x_s": 4, "x_p": 4, "r_n": 4, "r_p": 4, "y": 16, "z": 16}
 sim = pybamm.Simulation(model, parameter_values=parameter_values, var_pts=var_pts)
 sim.build()
-sim.solve([0, 600], inputs={"h_right": 5})
+sim.solve([0, 3600])
 
 # plot
 output_variables = [
