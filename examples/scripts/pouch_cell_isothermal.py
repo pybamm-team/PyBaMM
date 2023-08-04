@@ -1,7 +1,6 @@
 #
 # Example showing how to customize thermal boundary conditions in a pouch cell model
 #
-import numpy as np
 import pybamm
 
 pybamm.set_logging_level("INFO")
@@ -20,7 +19,11 @@ parameter_values = model.default_parameter_values
 
 
 def T_amb(y, z, t):
-    return 300 + 20 * pybamm.sin(np.pi * y / L_y) * pybamm.sin(np.pi * z / L_z)
+    return (
+        300
+        + pybamm.InputParameter("T_top") * (z >= L_z)
+        + pybamm.InputParameter("T_right") * (y >= L_y)
+    )
 
 
 parameter_values.update({"Ambient temperature [K]": T_amb})

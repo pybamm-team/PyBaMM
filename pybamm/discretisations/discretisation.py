@@ -688,8 +688,6 @@ class Discretisation(object):
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             processed_eqn = self.process_symbol(eqn)
-            if eqn_key == "X-averaged cell temperature [K]":
-                print("hi")
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
             if ics:

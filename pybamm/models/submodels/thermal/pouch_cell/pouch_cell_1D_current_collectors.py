@@ -58,8 +58,8 @@ class CurrentCollector1D(BaseThermal):
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
-        # Account for surface area to volume ratio of pouch cell in cooling
-        # coefficient.
+        # Account for surface area to volume ratio of pouch cell in surface and side
+        # cooling terms
         cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
         yz_surface_area = self.param.L_y * self.param.L_z
@@ -69,9 +69,11 @@ class CurrentCollector1D(BaseThermal):
             / cell_volume
         )
 
-        side_edge_area = 2 * self.param.L_z * self.param.L
+        side_edge_area = self.param.L_z * self.param.L
         side_edge_cooling_coefficient = (
-            -self.param.h_edge * side_edge_area / cell_volume
+            -(self.param.h_edge(0, z) + self.param.h_edge(self.param.L_y, z))
+            * side_edge_area
+            / cell_volume
         )
 
         total_cooling_coefficient = (
@@ -93,8 +95,10 @@ class CurrentCollector1D(BaseThermal):
         T_av = variables["X-averaged cell temperature [K]"]
         T_av_top = pybamm.boundary_value(T_av, "right")
         T_av_bottom = pybamm.boundary_value(T_av, "left")
+        z = pybamm.standard_spatial_vars.z
 
         # find tab locations (top vs bottom)
+        L_y = param.L_y
         L_z = param.L_z
         neg_tab_z = param.n.centre_z_tab
         pos_tab_z = param.p.centre_z_tab
@@ -120,15 +124,17 @@ class CurrentCollector1D(BaseThermal):
         )
 
         # calculate effective cooling coefficients
+        # Note: can't do y-average of h_edge here since y isn't meshed. Evaluate at
+        # midpoint.
         top_cooling_coefficient = (
             param.n.h_tab * neg_tab_area * neg_tab_top_bool
             + param.p.h_tab * pos_tab_area * pos_tab_top_bool
-            + param.h_edge * non_tab_top_area
+            + param.h_edge(L_y / 2, z) * non_tab_top_area
         ) / total_area
         bottom_cooling_coefficient = (
             param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
             + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
-            + param.h_edge * non_tab_bottom_area
+            + param.h_edge(L_y / 2, z) * non_tab_bottom_area
         ) / total_area
 
         # just use left and right for clarity

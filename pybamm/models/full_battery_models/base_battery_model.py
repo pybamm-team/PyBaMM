@@ -26,8 +26,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "true" or "false". "false" is the default, since calculating discharge
                 energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
-                Sets the geometry of the cell. Can be "pouch" (default) or
-                "arbitrary". The arbitrary geometry option solves a 1D electrochemical
+                Sets the geometry of the cell. Can be "arbitrary" (default) or
+                "pouch". The arbitrary geometry option solves a 1D electrochemical
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
@@ -283,15 +283,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         default_options = {
             name: options[0] for name, options in self.possible_options.items()
         }
+        extra_options = extra_options or {}
 
         # Change the default for cell geometry based on the current collector
         # dimensionality
-        extra_options = extra_options or {}
         # return "none" if option not given
-        current_collector_option = extra_options.get("current collector", "none")
-        if current_collector_option == 0:
-            default_options["cell geometry"] = "arbitrary"
-        else:
+        dimensionality_option = extra_options.get("dimensionality", "none")
+        if dimensionality_option in [1, 2]:
+            default_options["cell geometry"] = "pouch"
+        # The "cell geometry" option will still be overridden by extra_options if
+        # provided
+
+        # Change the default for cell geometry based on the thermal model
+        # return "none" if option not given
+        thermal_option = extra_options.get("thermal", "none")
+        if thermal_option == "x-full":
             default_options["cell geometry"] = "pouch"
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
