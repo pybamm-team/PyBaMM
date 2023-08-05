@@ -84,16 +84,18 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco install graphviz --version=8.0.5
 
-      - name: Set up Python ${{ matrix.python-version }} and install standard Python dependencies
+      - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: setup.py
+      
+      - name: Install PyBaMM dependencies
       - run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .'[all,docs]'
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
