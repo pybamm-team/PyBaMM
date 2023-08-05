@@ -19,6 +19,10 @@ PYBAMM_ENV = {
 # Do not stdout ANSI colours on GitHub Actions
 if os.getenv("CI") == "true":
     os.environ["NO_COLOR"] = "1"
+    # The setup-python action installs and caches dependencies by default, so we skip
+    # installing them again in nox environments. The dev and docs sessions will still
+    # require a virtual environment, but we don't run them in the CI
+    nox.options.default_venv_backend = "none"
 
 
 def set_environment_variables(env_dict, session):
@@ -42,7 +46,7 @@ def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        session.install("wget", "cmake")
+        session.run_always("pip", "install", "wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
         if not os.path.exists("./pybind11"):
             session.run(
@@ -60,11 +64,11 @@ def run_pybamm_requires(session):
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("coverage")
-    session.install("-e", ".[all]")
+    session.run_always("pip", "install", "coverage")
+    session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform != "win32":
-        session.install("-e", ".[odes]")
-        session.install("-e", ".[jax]")
+        session.run_always("pip", "install", "-e", ".[odes]")
+        session.run_always("pip", "install", "-e", ".[jax]")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -74,16 +78,16 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]")
+    session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform == "linux":
-        session.install("-e", ".[odes]")
+        session.run_always("pip", "install", "-e", ".[odes]")
     session.run("python", "run-tests.py", "--integration")
 
 
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.install("-e", ".[all,docs]")
+    session.run_always("pip", "install", "-e", ".[all,docs]")
     session.run("python", "run-tests.py", "--doctest")
 
 
@@ -91,17 +95,17 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]")
+    session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform == "linux":
-        session.install("-e", ".[odes]")
-        session.install("-e", ".[jax]")
+        session.run_always("pip", "install", "-e", ".[odes]")
+        session.run_always("pip", "install", "-e", ".[jax]")
     session.run("python", "run-tests.py", "--unit")
 
 
 @nox.session(name="examples")
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks and Python scripts."""
-    session.install("-e", ".[all]")
+    session.run_always("pip", "install", "-e", ".[all]")
     session.run("python", "run-tests.py", "--examples")
 
 
@@ -127,10 +131,10 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]")
+    session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("-e", ".[odes]")
-        session.install("-e", ".[jax]")
+        session.run_always("pip", "install", "-e", ".[odes]")
+        session.run_always("pip", "install", "-e", ".[jax]")
     session.run("python", "run-tests.py", "--all")
 
 
