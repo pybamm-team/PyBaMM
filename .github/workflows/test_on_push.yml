@@ -95,7 +95,7 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
+          pip install -e .[all,docs,odes]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
