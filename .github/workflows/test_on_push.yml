@@ -93,7 +93,7 @@ jobs:
           cache-dependency-path: setup.py
 
       - name: Install PyBaMM dependencies
-      - run: |
+        run: |
           pip install --upgrade pip wheel setuptools nox
           pip install -e .[all,docs]
 
@@ -116,25 +116,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Cache unit tests nox environment for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
-        uses: actions/cache@v3
-        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
-        with:
-          path: ${{ github.workspace }}/.nox/unit/
-          key: ${{ runner.os }}-nox-unit-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
-          restore-keys: ${{ runner.os }}-nox-unit-${{ steps.setup-python.outputs.python-version }}-
-
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: nox -s unit
-
-      - name: Cache coverage nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/coverage/
-          key: ${{ runner.os }}-nox-coverage-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
-          restore-keys: ${{ runner.os }}-nox-coverage-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
@@ -144,37 +128,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v2.1.0
 
-      - name: Cache integration tests nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/integration/
-          key: ${{ runner.os }}-nox-integration-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
-          restore-keys: ${{ runner.os }}-nox-integration-${{ steps.setup-python.outputs.python-version }}-
-
       - name: Run integration tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s integration
 
-      - name: Cache doctests nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/doctests/
-          key: ${{ runner.os }}-nox-doctests-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
-          restore-keys: ${{ runner.os }}-nox-doctests-${{ steps.setup-python.outputs.python-version }}-
-
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s doctests
-
-      - name: Cache examples nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/examples/
-          key: ${{ runner.os }}-nox-examples-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/setup.py') }}
-          restore-keys: ${{ runner.os }}-nox-examples-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
