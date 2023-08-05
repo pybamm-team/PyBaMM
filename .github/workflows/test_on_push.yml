@@ -92,6 +92,11 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
+      - name: Install PyBaMM dependencies
+        run: |
+          pip install --upgrade pip wheel setuptools nox
+          pip install -e .[all,docs,odes]
+
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
         if: matrix.os == 'ubuntu-latest'
@@ -109,11 +114,6 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
-
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
 
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
