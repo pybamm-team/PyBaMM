@@ -66,22 +66,16 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      # Added fixes to homebrew installs:
-      # rm -f /usr/local/bin/2to3
-      # (see https://github.com/actions/virtual-environments/issues/2322)
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-latest'
         env:
           # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
         run: |
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
           brew analytics off
           brew update
           brew install graphviz openblas
