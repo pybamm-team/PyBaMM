@@ -47,8 +47,6 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
