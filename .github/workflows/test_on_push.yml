@@ -103,7 +103,6 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/.nox/pybamm-requires/
             ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
