@@ -6,4 +6,3 @@ transport_efficiency
 
   base_transport_efficiency
   bruggeman_transport_efficiency
-
