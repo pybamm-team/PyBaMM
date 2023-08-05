@@ -91,7 +91,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: setup.py
-      
+
       - name: Install PyBaMM dependencies
       - run: |
           pip install --upgrade pip wheel setuptools nox
