@@ -105,6 +105,7 @@ def run_unit(session):
 @nox.session(name="examples")
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks and Python scripts."""
+    set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
     session.run("python", "run-tests.py", "--examples")
 
