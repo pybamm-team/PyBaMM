@@ -6,5 +6,3 @@ Event
 
 .. autoclass:: pybamm.EventType
     :members:
-
-

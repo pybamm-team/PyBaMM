@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_diffusivity_PeymanMPM(sto, T):
@@ -25,7 +26,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
     D_ref = 5.0 * 10 ** (-15)
     E_D_s = 42770
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -42,13 +43,13 @@ def graphite_ocp_PeymanMPM(sto):
 
     u_eq = (
         0.063
-        + 0.8 * pybamm.exp(-75 * (sto + 0.001))
-        - 0.0120 * pybamm.tanh((sto - 0.127) / 0.016)
-        - 0.0118 * pybamm.tanh((sto - 0.155) / 0.016)
-        - 0.0035 * pybamm.tanh((sto - 0.220) / 0.020)
-        - 0.0095 * pybamm.tanh((sto - 0.190) / 0.013)
-        - 0.0145 * pybamm.tanh((sto - 0.490) / 0.020)
-        - 0.0800 * pybamm.tanh((sto - 1.030) / 0.055)
+        + 0.8 * np.exp(-75 * (sto + 0.001))
+        - 0.0120 * np.tanh((sto - 0.127) / 0.016)
+        - 0.0118 * np.tanh((sto - 0.155) / 0.016)
+        - 0.0035 * np.tanh((sto - 0.220) / 0.020)
+        - 0.0095 * np.tanh((sto - 0.190) / 0.013)
+        - 0.0145 * np.tanh((sto - 0.490) / 0.020)
+        - 0.0800 * np.tanh((sto - 1.030) / 0.055)
     )
 
     return u_eq
@@ -83,7 +84,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
     m_ref = 1.061 * 10 ** (-6)  # unit has been converted
     # units are (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 37480
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -144,7 +145,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 
     D_ref = 8 * 10 ** (-15)
     E_D_s = 18550
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -172,7 +173,7 @@ def NMC_ocp_PeymanMPM(sto):
         - 2.0843 * (sto**3)
         + 3.5146 * (sto**4)
         - 2.2166 * (sto**5)
-        - 0.5623e-4 * pybamm.exp(109.451 * sto - 100.006)
+        - 0.5623e-4 * np.exp(109.451 * sto - 100.006)
     )
 
     return u_eq
@@ -205,7 +206,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
     """
     m_ref = 4.824 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 39570
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -240,7 +241,7 @@ def NMC_entropic_change_PeymanMPM(sto, c_s_max):
         + 1.6225 * sto**2
         - 2.0843 * sto**3
         + 3.5146 * sto**4
-        - 0.5623 * 10 ** (-4) * pybamm.exp(109.451 * sto - 100.006)
+        - 0.5623 * 10 ** (-4) * np.exp(109.451 * sto - 100.006)
     )
 
     du_dT = (
@@ -278,7 +279,7 @@ def electrolyte_diffusivity_PeymanMPM(c_e, T):
 
     D_c_e = 5.35 * 10 ** (-10)
     E_D_e = 37040
-    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
 
@@ -310,7 +311,7 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
 
     sigma_e = 1.3
     E_k_e = 34700
-    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius
 
