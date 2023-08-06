@@ -41,6 +41,7 @@ jobs:
             --exclude-loopback
             --exclude https://twitter.com/pybamm_
             --exclude "https://doi\.org|www.sciencedirect\.com/*"
+            --exclude https://www.rse.ox.ac.uk
             --accept 200,429
             --exclude-path ./CHANGELOG.md
             --exclude-path ./scripts/update_version.py
