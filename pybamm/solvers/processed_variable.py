@@ -353,6 +353,9 @@ class ProcessedVariable(object):
         # Extract names
         raw_names = []
         for var in spatial_variable:
+            # Ignore tabs in domain names
+            if var == "tabs":
+                continue
             if isinstance(var, str):
                 raw_names.append(var)
             else:
