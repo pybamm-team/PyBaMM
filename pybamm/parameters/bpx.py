@@ -260,7 +260,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     k_n_norm = pybamm_dict[
         negative_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
     ]
-    E_a_n = pybamm_dict.get(
+    Ea_k_n = pybamm_dict.get(
         negative_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
     # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
@@ -270,7 +270,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     def _negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_n  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
-        arrhenius = exp(E_a_n / constants.R * (1 / T_ref - 1 / T))
+        arrhenius = exp(Ea_k_n / constants.R * (1 / T_ref - 1 / T))
         return (
             k_ref
             * arrhenius
@@ -290,7 +290,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     k_p_norm = pybamm_dict[
         positive_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
     ]
-    E_a_p = pybamm_dict.get(
+    Ea_k_p = pybamm_dict.get(
         positive_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
     )
     # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
@@ -300,7 +300,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     def _positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
         k_ref = k_p  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
-        arrhenius = exp(E_a_p / constants.R * (1 / T_ref - 1 / T))
+        arrhenius = exp(Ea_k_p / constants.R * (1 / T_ref - 1 / T))
         return (
             k_ref
             * arrhenius
@@ -316,7 +316,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # diffusivity
 
     # negative electrode
-    E_a = pybamm_dict.get(
+    Ea_D_n = pybamm_dict.get(
         negative_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
     D_n_ref = pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"]
@@ -324,13 +324,13 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     if callable(D_n_ref):
 
         def _negative_electrode_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_n / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_n_ref(sto)
 
     elif isinstance(D_n_ref, tuple):
 
         def _negative_electrode_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_n / constants.R * (1 / T_ref - 1 / T))
             name, (x, y) = D_n_ref
             return arrhenius * pybamm.Interpolant(
                 x, y, sto, name=name, interpolator="linear"
@@ -339,7 +339,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     else:
 
         def _negative_electrode_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_n / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_n_ref
 
     pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
@@ -347,7 +347,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # positive electrode
-    E_a = pybamm_dict.get(
+    Ea_D_p = pybamm_dict.get(
         positive_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
     D_p_ref = pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"]
@@ -355,13 +355,13 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     if callable(D_p_ref):
 
         def _positive_electrode_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_p / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_p_ref(sto)
 
     elif isinstance(D_p_ref, tuple):
 
         def _positive_electrode_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_p / constants.R * (1 / T_ref - 1 / T))
             name, (x, y) = D_p_ref
             return arrhenius * pybamm.Interpolant(
                 x, y, sto, name=name, interpolator="linear"
@@ -370,7 +370,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     else:
 
         def _positive_electrode_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_p / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_p_ref
 
     pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
@@ -378,7 +378,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # electrolyte
-    E_a = pybamm_dict.get(
+    Ea_D_e = pybamm_dict.get(
         electrolyte.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
     D_e_ref = pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"]
@@ -386,13 +386,13 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     if callable(D_e_ref):
 
         def _electrolyte_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_e / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_e_ref(sto)
 
     elif isinstance(D_e_ref, tuple):
 
         def _electrolyte_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_e / constants.R * (1 / T_ref - 1 / T))
             name, (x, y) = D_e_ref
             return arrhenius * pybamm.Interpolant(
                 x, y, sto, name=name, interpolator="linear"
@@ -401,7 +401,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     else:
 
         def _electrolyte_diffusivity(sto, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
+            arrhenius = exp(Ea_D_e / constants.R * (1 / T_ref - 1 / T))
             return arrhenius * D_e_ref
 
     pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
@@ -409,22 +409,22 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     )
 
     # conductivity
-    E_a = pybamm_dict.get(
+    Ea_sigma_e = pybamm_dict.get(
         electrolyte.pre_name + "conductivity activation energy [J.mol-1]", 0.0
     )
-    C_e_ref = pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"]
+    sigma_e_ref = pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"]
 
-    if callable(C_e_ref):
-
-        def _conductivity(c_e, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-            return arrhenius * C_e_ref(c_e)
-
-    elif isinstance(C_e_ref, tuple):
+    if callable(sigma_e_ref):
 
         def _conductivity(c_e, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-            name, (x, y) = C_e_ref
+            arrhenius = exp(Ea_sigma_e / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * sigma_e_ref(c_e)
+
+    elif isinstance(sigma_e_ref, tuple):
+
+        def _conductivity(c_e, T):
+            arrhenius = exp(Ea_sigma_e / constants.R * (1 / T_ref - 1 / T))
+            name, (x, y) = sigma_e_ref
             return arrhenius * pybamm.Interpolant(
                 x, y, c_e, name=name, interpolator="linear"
             )
@@ -432,8 +432,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     else:
 
         def _conductivity(c_e, T):
-            arrhenius = exp(E_a / constants.R * (1 / T_ref - 1 / T))
-            return arrhenius * C_e_ref
+            arrhenius = exp(Ea_sigma_e / constants.R * (1 / T_ref - 1 / T))
+            return arrhenius * sigma_e_ref
 
     pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = _copy_func(
         _conductivity
