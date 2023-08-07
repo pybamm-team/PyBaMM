@@ -13,7 +13,7 @@
 - Error generated when invalid parameter values are passed. ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
 - Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
 - Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
-- Fixed bug causing incorrect activation energies using `create_from_bpx()` ([#3051](https://github.com/pybamm-team/PyBaMM/issues/3051))
+- Fixed bug causing incorrect activation energies using `create_from_bpx()` ([#3242](https://github.com/pybamm-team/PyBaMM/pull/3242))
 
 ## Breaking changes
 
