@@ -261,7 +261,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         negative_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
     ]
     Ea_k_n = pybamm_dict.get(
-        negative_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
+        negative_electrode.pre_name + "reaction rate constant activation energy [J.mol-1]", 0.0
     )
     # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
     # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
@@ -291,7 +291,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         positive_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
     ]
     Ea_k_p = pybamm_dict.get(
-        positive_electrode.pre_name + "reaction rate activation energy [J.mol-1]", 0.0
+        positive_electrode.pre_name + "reaction rate constant activation energy [J.mol-1]", 0.0
     )
     # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
     # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
