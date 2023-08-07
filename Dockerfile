@@ -21,6 +21,7 @@ RUN pip install -e ".[all]"
 
 ARG ODES
 ARG JAX
+ARG IDAKLU
 
 
 RUN if [ "$ODES" = "true" ]; then \
@@ -31,6 +32,11 @@ RUN if [ "$ODES" = "true" ]; then \
 
 RUN if [ "$JAX" = "true" ]; then \
     pip install -e ".[jax,all]";\
+    fi
+
+RUN if [ "$IDAKLU" = "true" ]; then \
+    python scripts/install_KLU_Sundials.py;\
+    git clone https://github.com/pybind/pybind11.git pybind11/ \
     fi
 
 CMD ["/bin/bash"]
