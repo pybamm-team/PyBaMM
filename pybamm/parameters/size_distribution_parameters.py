@@ -79,9 +79,6 @@ def get_size_distribution_parameters(
 
         param.update(
             {
-                "Negative area-weighted mean particle radius [m]": R_n_av,
-                "Negative area-weighted particle-size "
-                + "standard deviation [m]": sd_n * R_n_av,
                 "Negative minimum particle radius [m]": R_min_n * R_n_av,
                 "Negative maximum particle radius [m]": R_max_n * R_n_av,
                 "Negative area-weighted "
@@ -108,9 +105,6 @@ def get_size_distribution_parameters(
 
         param.update(
             {
-                "Positive area-weighted mean particle radius [m]": R_p_av,
-                "Positive area-weighted particle-size "
-                + "standard deviation [m]": sd_p * R_p_av,
                 "Positive minimum particle radius [m]": R_min_p * R_p_av,
                 "Positive maximum particle radius [m]": R_max_p * R_p_av,
                 "Positive area-weighted "
