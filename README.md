@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-60-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-61-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -41,8 +41,8 @@ pay for developer time, professional services, travel, workshops, and a variety 
 
 <div align="center">
   <a href="https://numfocus.org/project/pybamm">
-    <img height="60px" 
-         src="https://raw.githubusercontent.com/numfocus/templates/master/images/numfocus-logo.png" 
+    <img height="60px"
+         src="https://raw.githubusercontent.com/numfocus/templates/master/images/numfocus-logo.png"
          align="center">
   </a>
 </div>
@@ -250,7 +250,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/jeromtom"><img src="https://avatars.githubusercontent.com/u/83979298?v=4?s=100" width="100px;" alt="Jerom Palimattom Tom"/><br /><sub><b>Jerom Palimattom Tom</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=jeromtom" title="Documentation">📖</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=jeromtom" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=jeromtom" title="Tests">⚠️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://bradyplanden.github.io"><img src="https://avatars.githubusercontent.com/u/55357039?v=4?s=100" width="100px;" alt="Brady Planden"/><br /><sub><b>Brady Planden</b></sub></a><br /><a href="#example-BradyPlanden" title="Examples">💡</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://www.jsbrittain.com/"><img src="https://avatars.githubusercontent.com/u/98161205?v=4?s=100" width="100px;" alt="jsbrittain"/><br /><sub><b>jsbrittain</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=jsbrittain" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=jsbrittain" title="Tests">⚠️</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/arjxn-py"><img src="https://avatars.githubusercontent.com/u/104268427?v=4?s=100" width="100px;" alt="Arjun"/><br /><sub><b>Arjun</b></sub></a><br /><a href="#infra-arjxn-py" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/arjxn-py"><img src="https://avatars.githubusercontent.com/u/104268427?v=4?s=100" width="100px;" alt="Arjun"/><br /><sub><b>Arjun</b></sub></a><br /><a href="#infra-arjxn-py" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=arjxn-py" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=arjxn-py" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/chenzhao-py"><img src="https://avatars.githubusercontent.com/u/75906533?v=4?s=100" width="100px;" alt="CHEN ZHAO"/><br /><sub><b>CHEN ZHAO</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Achenzhao-py" title="Bug reports">🐛</a></td>
     </tr>
     <tr>
@@ -258,6 +258,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/julian-evers"><img src="https://avatars.githubusercontent.com/u/133691040?v=4?s=100" width="100px;" alt="julian-evers"/><br /><sub><b>julian-evers</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=julian-evers" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://batterycontrolgroup.engin.umich.edu/"><img src="https://avatars.githubusercontent.com/u/633873?v=4?s=100" width="100px;" alt="Jason Siegel"/><br /><sub><b>Jason Siegel</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=js1tr3" title="Code">💻</a> <a href="#ideas-js1tr3" title="Ideas, Planning, & Feedback">🤔</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/tommaull"><img src="https://avatars.githubusercontent.com/u/101814207?v=4?s=100" width="100px;" alt="Tom Maull"/><br /><sub><b>Tom Maull</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=tommaull" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tommaull" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ejfdickinson"><img src="https://avatars.githubusercontent.com/u/116663050?v=4?s=100" width="100px;" alt="ejfdickinson"/><br /><sub><b>ejfdickinson</b></sub></a><br /><a href="#ideas-ejfdickinson" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Aejfdickinson" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
