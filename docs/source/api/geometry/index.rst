@@ -5,4 +5,3 @@ Geometry
 
   geometry
   battery_geometry
- 
