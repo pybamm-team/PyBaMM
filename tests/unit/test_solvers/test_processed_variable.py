@@ -1069,6 +1069,62 @@ class TestProcessedVariable(TestCase):
                 warn=False,
             )
 
+    def test_process_spatial_variable_names(self):
+        # initialise dummy variable to access method
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        var.mesh = None
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.ProcessedVariable(
+            [var],
+            [var_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+
+        # Test empty list returns None
+        self.assertIsNone(processed_var._process_spatial_variable_names([]))
+
+        # Test tabs is ignored
+        self.assertEqual(
+            processed_var._process_spatial_variable_names(["tabs", "var"]),
+            "var",
+        )
+
+        # Test strings stay strings
+        self.assertEqual(
+            processed_var._process_spatial_variable_names(["y"]),
+            "y",
+        )
+
+        # Test spatial variables are converted to strings
+        x = pybamm.SpatialVariable("x", domain=["domain"])
+        self.assertEqual(
+            processed_var._process_spatial_variable_names([x]),
+            "x",
+        )
+
+        # Test renaming for PyBaMM convention
+        self.assertEqual(
+            processed_var._process_spatial_variable_names(["x_a", "x_b"]),
+            "x",
+        )
+        self.assertEqual(
+            processed_var._process_spatial_variable_names(["r_a", "r_b"]),
+            "r",
+        )
+        self.assertEqual(
+            processed_var._process_spatial_variable_names(["R_a", "R_b"]),
+            "R",
+        )
+
+        # Test error raised if spatial variable name not recognised
+        with self.assertRaisesRegex(NotImplementedError, "Spatial variable name"):
+            processed_var._process_spatial_variable_names(["var1", "var2"])
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
