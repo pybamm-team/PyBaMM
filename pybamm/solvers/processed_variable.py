@@ -349,7 +349,7 @@ class ProcessedVariable(object):
     def _process_spatial_variable_names(self, spatial_variable):
         if len(spatial_variable) == 0:
             return None
-        
+
         # Extract names
         raw_names = []
         for var in spatial_variable:
@@ -360,7 +360,7 @@ class ProcessedVariable(object):
                 raw_names.append(var)
             else:
                 raw_names.append(var.name)
-            
+
         # Rename battery variables to match PyBaMM convention
         if all([var.startswith("r") for var in raw_names]):
             return "r"
