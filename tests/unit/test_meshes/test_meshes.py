@@ -37,7 +37,7 @@ class TestMesh(TestCase):
 
         # check geometry
         self.assertEqual(mesh.geometry, geometry)
-        
+
         # check boundary locations
         self.assertEqual(mesh["negative particle"].edges[0], 0)
         self.assertEqual(mesh["negative particle"].edges[-1], 1)
