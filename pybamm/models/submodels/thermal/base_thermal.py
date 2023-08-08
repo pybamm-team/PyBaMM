@@ -183,6 +183,8 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Total heating [W.m-3]": Q,
                 "X-averaged total heating [W.m-3]": Q_av,
                 "Volume-averaged total heating [W.m-3]": Q_vol_av,
+                "Negative current collector Ohmic heating [W.m-3]": Q_ohm_s_cn,
+                "Positive current collector Ohmic heating [W.m-3]": Q_ohm_s_cp,
             }
         )
         return variables

@@ -610,7 +610,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/104268427?v=4",
       "profile": "https://github.com/arjxn-py",
       "contributions": [
-        "infra"
+        "infra",
+        "code",
+        "doc"
       ]
     },
     {
@@ -629,7 +631,8 @@
       "profile": "https://www.aboutenergy.io/",
       "contributions": [
         "code",
-        "bug"
+        "bug",
+        "ideas"
       ]
     },
     {
@@ -659,6 +662,16 @@
       "contributions": [
         "code",
         "test"
+      ]
+    },
+    {
+      "login": "ejfdickinson",
+      "name": "ejfdickinson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/116663050?v=4",
+      "profile": "https://github.com/ejfdickinson",
+      "contributions": [
+        "ideas",
+        "bug"
       ]
     }
   ],
