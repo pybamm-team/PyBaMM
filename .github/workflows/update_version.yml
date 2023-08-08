@@ -2,31 +2,39 @@ name: Update version
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type. Leave blank for an actual release or "rc2", "rc3", ..., for release candidates."'
+        default: ""
+  schedule:
+     # Run at 10 am UTC on 1st every 4th month from January through December
+     - cron: 0 10 1 1-12/4 *
 
 jobs:
   update-version:
     # This workflow is only of value to PyBaMM and would always be skipped in forks
-    if: github.repository_owner == 'pybamm-team'
+    # if: github.repository_owner == 'pybamm-team'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.11
 
       - name: Install dependencies
         run: |
           pip install wheel
           pip install --editable .
 
-      - name: Get current date
-        run: echo "VERSION=$(date +'v%y.%-m')" >> $GITHUB_ENV
+      - name: Get current date for the first release candidate
+        if: github.event_name == 'schedule'
+        run: echo "VERSION=$(date +'v%y.%-m')rc1" >> $GITHUB_ENV
+
+      - name: Get current date for a manual release
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "VERSION=$(date +'v%y.%-m')${{ github.event.inputs.release_type }}" >> $GITHUB_ENV
 
       - name: Update version
         run: python scripts/update_version.py

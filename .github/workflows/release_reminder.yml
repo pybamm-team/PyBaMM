@@ -1,0 +1,21 @@
+name: Create a release reminder
+
+on:
+  schedule:
+     # Run at 10 am UTC on 28th every 4th month from January through December
+     - cron: 0 10 28 1-12/4 *
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/release_reminder.md
