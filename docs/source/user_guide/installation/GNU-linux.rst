@@ -105,7 +105,7 @@ Optional - scikits.odes solver
 
 Users can install `scikits.odes <https://github.com/bmcage/odes>`__ in
 order to use the wrapped SUNDIALS ODE and DAE
-`solvers <https://pybamm.readthedocs.io/en/latest/source/api/solvers/scikits_solvers.html>`__.
+`solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__.
 Currently, only GNU/Linux and macOS are supported.
 
 .. tab:: GNU/Linux
@@ -118,7 +118,7 @@ Currently, only GNU/Linux and macOS are supported.
 	   pybamm_install_odes
 
    The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
-   system (under ``~/.local``), before installing ``scikits.odes`` (by running ``pip install scikits.odes``).
+   system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 .. tab:: macOS
 
@@ -141,9 +141,9 @@ GNU/Linux and macOS
 
 .. code:: bash
 
-	  pybamm_install_jax
+	  pip install "pybamm[jax]"
 
-The ``pybamm_install_jax`` command is installed with PyBaMM. It automatically downloads and installs jax and jaxlib on your system.
+The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
 
 Developer install
 -----------------
@@ -185,7 +185,7 @@ Then, to install PyBaMM as a `developer <https://github.com/pybamm-team/PyBaMM/b
 or on ``zsh`` shells, type
 
 .. code:: bash
-   
+
    pip install -e .'[dev,docs]'
 
 To check whether PyBaMM has installed properly, you can run the tests:

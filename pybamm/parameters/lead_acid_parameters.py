@@ -310,9 +310,6 @@ class DomainLeadAcidParameters(BaseParameters):
         self.DeltaV = self.DeltaVsurf + self.DeltaVliq
 
         self.Q_max = pybamm.Parameter(f"{Domain} electrode volumetric capacity [C.m-3]")
-        self.C_dl = pybamm.Parameter(
-            f"{Domain} electrode double-layer capacity [F.m-2]"
-        )
 
         # In lead-acid the current collector and electrodes are the same (same
         # conductivity) but we correct here for Bruggeman. Note that because for
@@ -321,8 +318,17 @@ class DomainLeadAcidParameters(BaseParameters):
         # T_ref.
         self.sigma_cc = self.sigma(main.T_ref) * (1 - self.eps_max) ** self.b_s
 
+    def C_dl(self, T):
+        """Dimensional double-layer capacity [F.m-2]"""
+        inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode double-layer capacity [F.m-2]", inputs
+        )
+
     def sigma(self, T):
-        """Dimensional electrical conductivity"""
+        """Dimensional electrical conductivity [S.m-1]"""
+
         inputs = {"Temperature [K]": T}
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(

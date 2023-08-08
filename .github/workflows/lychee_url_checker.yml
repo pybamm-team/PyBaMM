@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      # cache Lychee results to avoid hitting rate limits  
+      # cache Lychee results to avoid hitting rate limits
       - name: Restore lychee cache
         uses: actions/cache@v3
         with:
@@ -41,8 +41,9 @@ jobs:
             --exclude-loopback
             --exclude https://twitter.com/pybamm_
             --exclude "https://doi\.org|www.sciencedirect\.com/*"
+            --exclude https://www.rse.ox.ac.uk
             --accept 200,429
-            --exclude-path ./CHANGELOG.md 
+            --exclude-path ./CHANGELOG.md
             --exclude-path ./scripts/update_version.py
             './**/*.rst'
             './**/*.md'

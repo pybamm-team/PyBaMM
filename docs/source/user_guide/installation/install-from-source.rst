@@ -30,6 +30,7 @@ To install PyBaMM, you will need:
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
+- ``graphviz`` (optional), if you wish to build the documentation locally.
 
 You can install the above with
 
@@ -37,7 +38,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
 
 	Where ``X`` is the version sub-number.
 
@@ -45,14 +46,19 @@ You can install the above with
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran libomp
+		brew install python openblas gcc gfortran graphviz libomp
 
-Finally, we recommend using `Tox <https://tox.readthedocs.io/en/latest/>`_.
+.. note::
+
+	On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
+	follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+
+Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
 You can install it with
 
 .. code:: bash
 
-	  python3.X -m pip install --user "tox<4"
+	  python3.X -m pip install --user nox
 
 Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
@@ -70,7 +76,7 @@ If you are running windows, you can simply skip this section and jump to :ref:`p
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  tox -e pybamm-requires
+	  nox -s pybamm-requires
 
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
 Both libraries are installed in ``~/.local``.
@@ -84,7 +90,7 @@ If you'd rather do things yourself,
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
-	 
+
 
 PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
 
@@ -99,26 +105,19 @@ Installing PyBaMM
 
 You should now have everything ready to build and install PyBaMM successfully.
 
-Using Tox (recommended)
+Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. tab:: GNU/Linux and MacOS
+.. code:: bash
 
-	.. code:: bash
+	# in the PyBaMM/ directory
+	nox -s dev
 
-		# in the PyBaMM/ directory
-		tox -e dev
+.. note::
+    It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
 
-.. tab:: Windows
-
-	.. code:: bash
-
-		# in the PyBaMM/ directory
-	  	python -m tox -e windows-dev
-
-
-This creates a virtual environment ``.tox/dev`` (or ``windows-dev``) inside the ``PyBaMM/`` directory.
-It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
+This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
+It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `ruff <https://beta.ruff.rs/docs/>`_.
 
 You can now activate the environment with
 
@@ -126,77 +125,75 @@ You can now activate the environment with
 
 	.. code:: bash
 
-		source .tox/dev/bin/activate
+		source .nox/dev/bin/activate
 
 .. tab:: Windows
 
 	.. code:: bash
 
-	  	.tox\windows-dev\Scripts\activate.bat # (Windows)
+	  	.nox\dev\Scripts\activate.bat
 
 and run the tests to check your installation.
 
 Manual install
 ~~~~~~~~~~~~~~
 
-From the ``PyBaMM/`` directory, you can install PyBaMM using ``python setup.py install`` or 
+From the ``PyBaMM/`` directory, you can install PyBaMM using
 
 .. code:: bash
 
 	  pip install .
 
-If you intend to contribute to the development of PyBaMM, it is convenient to install in "editable mode", along with useful tools for development and documentation:
+If you intend to contribute to the development of PyBaMM, it is convenient to
+install in "editable mode", along with all the optional dependencies and useful
+tools for development and documentation:
 
 .. code:: bash
 
-	  pip install -e .[dev,docs]
+	  pip install -e .[all,dev,docs]
 
 If you are using ``zsh``, you would need to use different pattern matching:
 
 .. code:: bash
 
-	  pip install -e .'[dev,docs]'
+	  pip install -e '.[all,dev,docs]'
 
 Running the tests
---------------------
+-----------------
 
-Using Tox (recommended)
+Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-You can use Tox to run the unit tests and example notebooks in isolated virtual environments.
+You can use Nox to run the unit tests and example notebooks in isolated virtual environments.
 
 The default command
 
-.. tab:: GNU/Linux and MacOS
+.. code:: bash
 
-	.. code:: bash
+	nox
 
-		tox -e tests
-
-.. tab:: Windows
-
-	.. code:: bash
-
-	  	python -m tox -e windows-tests
-
-will run the full test suite (integration and unit tests).
+will run pre-commit, install ``Linux`` dependencies, and run the unit tests.
 This can take several minutes.
 
-It is often sufficient to run the unit tests only. To do so, use
+To just run the unit tests, use
 
-.. tab:: GNU/Linux and MacOS
+.. code:: bash
 
-   .. code:: bash
+	nox -s unit
 
-    	tox -e unit
+Similarly, to run the integration tests, use
 
-.. tab:: Windows
+.. code:: bash
 
-   .. code:: bash
+	nox -s integration
 
-		python -m tox -e windows-unit
+Finally, to run the unit and the integration suites sequentially, use
 
-Using the test runner 
+.. code:: bash
+
+	nox -s tests
+
+Using the test runner
 ~~~~~~~~~~~~~~~~~~~~~~
 
 You can run unit tests for PyBaMM using
@@ -229,26 +226,29 @@ The documentation is built using
 
 .. code:: bash
 
-	  tox -e docs
+	  nox -s docs
 
 This will build the documentation and serve it locally (thanks to `sphinx-autobuild <https://github.com/GaretJax/sphinx-autobuild>`_) for preview.
 The preview will be updated automatically following changes.
 
-Doctests, examples, style and coverage
---------------------------------------
+Doctests, examples, and coverage
+--------------------------------
 
-.. tab:: GNU/Linux and MacOS
+``Nox`` can also be used to run doctests, run examples, and generate a coverage report using:
 
-	``Tox`` can also be used to run the following commands:
+- ``nox -s examples``: Run the example scripts in ``examples/scripts``.
+- ``nox -s doctests``: Run doctests.
+- ``nox -s coverage``: Measure current test coverage and generate a coverage report.
+- ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
-	- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
-	- ``tox -e doctests``: Run doctests.
+Extra tips while using Nox
+--------------------------
+Here are some additional useful commands you can run with ``Nox``:
 
-.. tab:: Windows
-
-	``Tox`` can also be used to run the following commands:
-
-	- ``python -m tox -e windows-examples``: Run the example scripts in ``examples/scripts``.
-	- ``python -m tox -e windows-doctests``: Run doctests.
-
-Use ``tox -e coverage`` to measure current test coverage on all platforms.
+- ``--verbose or -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
+- ``--list or -l``: Lists all available Nox sessions and their descriptions.
+- ``--stop-on-first-error``: Stops the execution of Nox sessions immediately after the first error or failure occurs.
+- ``--envdir <path>``: Specifies the directory where Nox creates and manages the virtual environments used by the sessions. In this case, the directory is set to ``<path>``.
+- ``--install-only``: Skips the test execution and only performs the installation step defined in the Nox sessions.
+- ``--nocolor``: Disables the color output in the console during the execution of Nox sessions.
+- ``--report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".

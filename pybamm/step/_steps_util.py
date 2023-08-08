@@ -3,6 +3,7 @@
 #
 import pybamm
 import numpy as np
+from datetime import datetime
 
 _examples = """
 
@@ -50,6 +51,8 @@ class _Step:
         the value should be a valid temperature string, e.g. "25 oC".
     tags : str or list, optional
         A string or list of strings indicating the tags associated with the step.
+    datetime : str or datetime, optional
+        A string or list of strings indicating the tags associated with the step.
     description : str, optional
         A description of the step.
     """
@@ -63,6 +66,7 @@ class _Step:
         period=None,
         temperature=None,
         tags=None,
+        start_time=None,
         description=None,
     ):
         self.type = typ
@@ -79,6 +83,8 @@ class _Step:
             self.args += f", temperature={temperature}"
         if tags:
             self.args += f", tags={tags}"
+        if start_time:
+            self.args += f", start_time={start_time}"
         if description:
             self.args += f", description={description}"
 
@@ -138,6 +144,13 @@ class _Step:
             tags = [tags]
         self.tags = tags
 
+        if start_time is None or isinstance(start_time, datetime):
+            self.start_time = start_time
+        else:
+            raise TypeError("`start_time` should be a datetime.datetime object")
+        self.next_start_time = None
+        self.end_time = None
+
     def __str__(self):
         if self.description is not None:
             return self.description
@@ -164,11 +177,17 @@ class _Step:
             "period": self.period,
             "temperature": self.temperature,
             "tags": self.tags,
+            "start_time": self.start_time,
             "description": self.description,
         }
 
     def __eq__(self, other):
-        return isinstance(other, _Step) and self.__repr__() == other.__repr__()
+        return (
+            isinstance(other, _Step)
+            and self.__repr__() == other.__repr__()
+            and self.next_start_time == other.next_start_time
+            and self.end_time == other.end_time
+        )
 
     def __hash__(self):
         return hash(repr(self))

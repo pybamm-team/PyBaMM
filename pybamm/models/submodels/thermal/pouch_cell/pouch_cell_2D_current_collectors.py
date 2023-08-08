@@ -10,7 +10,8 @@ class CurrentCollector2D(BaseThermal):
     """
     Class for two-dimensional thermal submodel for use in the "2+1D" pouch cell
     model. The thermal model is averaged in the x-direction and is therefore referred
-    to as 'x-lumped'. For more information see [1]_ and [2]_.
+    to as 'x-lumped'. For more information see :footcite:t:`Timms2021` and
+    :footcite:t:`Marquis2020`.
 
     Parameters
     ----------
@@ -19,14 +20,6 @@ class CurrentCollector2D(BaseThermal):
     options : dict, optional
         A dictionary of options to be passed to the model.
 
-    References
-    ----------
-    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
-           Mathematics, 81(3), 765--788, 2021
-    .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
-           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
-           of The Electrochemical Society, 167(14):140513, 2020
     """
 
     def __init__(self, param, options=None):

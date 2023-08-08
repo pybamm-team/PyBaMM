@@ -42,7 +42,7 @@ type:
 
 You can then “activate” the environment using:
 
-.. code:: cmd
+.. code::
 
    env\Scripts\activate.bat
 

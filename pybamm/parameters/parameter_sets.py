@@ -1,5 +1,5 @@
 import warnings
-import importlib_metadata
+import importlib.metadata
 import textwrap
 from collections.abc import Mapping
 
@@ -26,7 +26,8 @@ class ParameterSets(Mapping):
         >>> import pybamm
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
         <BLANKLINE>
-        Parameters for the Enertech cell (Ai2020), from the papers:
+        Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
+        :footcite:t:`rieger2016new` and references therein.
         ...
 
     See also: :ref:`adding-parameter-sets`
@@ -36,9 +37,7 @@ class ParameterSets(Mapping):
     def __init__(self):
         # Dict of entry points for parameter sets, lazily load entry points as
         self.__all_parameter_sets = dict()
-        for entry_point in importlib_metadata.entry_points(
-            group="pybamm_parameter_sets"
-        ):
+        for entry_point in importlib.metadata.entry_points()["pybamm_parameter_sets"]:
             self.__all_parameter_sets[entry_point.name] = entry_point
 
     def __new__(cls):

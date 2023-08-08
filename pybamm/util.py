@@ -15,6 +15,7 @@ import sys
 import timeit
 from platform import system
 import difflib
+from warnings import warn
 
 import numpy as np
 import pkg_resources
@@ -72,6 +73,18 @@ class FuzzyDict(dict):
                     "variable called 'Bulk open-circuit voltage [V]' which is the"
                     "open-circuit voltage evaluated at the average particle "
                     "concentrations."
+                )
+            if "Open-circuit voltage at 0% SOC [V]" in key:
+                raise KeyError(
+                    "Parameter 'Open-circuit voltage at 0% SOC [V]' not found."
+                    "In most cases this should be set to be equal to "
+                    "'Lower voltage cut-off [V]'"
+                )
+            if "Open-circuit voltage at 100% SOC [V]" in key:
+                raise KeyError(
+                    "Parameter 'Open-circuit voltage at 100% SOC [V]' not found."
+                    "In most cases this should be set to be equal to "
+                    "'Upper voltage cut-off [V]'"
                 )
             best_matches = self.get_best_matches(key)
             for k in best_matches:
@@ -317,6 +330,11 @@ def install_jax(arguments=None):  # pragma: no cover
                 " following command: \npybamm_install_jax --force"
             )
 
+    msg = (
+        "pybamm_install_jax is deprecated,"
+        " use 'pip install pybamm[jax]' to install jax & jaxlib"
+    )
+    warn(msg, DeprecationWarning)
     subprocess.check_call(
         [
             sys.executable,

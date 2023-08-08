@@ -4,6 +4,7 @@
 import pybamm
 import unittest
 import numpy as np
+from datetime import datetime
 
 
 class TestExperimentSteps(unittest.TestCase):
@@ -16,6 +17,9 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.period, None)
         self.assertEqual(step.temperature, None)
         self.assertEqual(step.tags, [])
+        self.assertEqual(step.start_time, None)
+        self.assertEqual(step.end_time, None)
+        self.assertEqual(step.next_start_time, None)
 
         step = pybamm.step._Step(
             "voltage",
@@ -25,6 +29,7 @@ class TestExperimentSteps(unittest.TestCase):
             period="1 minute",
             temperature=298.15,
             tags="test",
+            start_time=datetime(2020, 1, 1, 0, 0, 0),
         )
         self.assertEqual(step.type, "voltage")
         self.assertEqual(step.value, 1)
@@ -33,6 +38,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.period, 60)
         self.assertEqual(step.temperature, 298.15)
         self.assertEqual(step.tags, ["test"])
+        self.assertEqual(step.start_time, datetime(2020, 1, 1, 0, 0, 0))
 
         step = pybamm.step._Step("current", 1, temperature="298K")
         self.assertEqual(step.temperature, 298)
@@ -172,7 +178,6 @@ class TestExperimentSteps(unittest.TestCase):
         ]
 
         for step, expected in zip(steps, expected_result):
-            print(step)
             actual = pybamm.step.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging
@@ -247,6 +252,17 @@ class TestExperimentSteps(unittest.TestCase):
             pybamm.step.string("Discharge at 1 B for 2 hours")
         with self.assertRaisesRegex(ValueError, "time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
+
+    def test_start_times(self):
+        # Test start_times
+        step = pybamm.step._Step(
+            "current", 1, duration=3600, start_time=datetime(2020, 1, 1, 0, 0, 0)
+        )
+        self.assertEqual(step.start_time, datetime(2020, 1, 1, 0, 0, 0))
+
+        # Test bad start_times
+        with self.assertRaisesRegex(TypeError, "`start_time` should be"):
+            pybamm.step._Step("current", 1, duration=3600, start_time="bad start_time")
 
 
 if __name__ == "__main__":

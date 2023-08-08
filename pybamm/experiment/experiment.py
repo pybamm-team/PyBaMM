@@ -68,6 +68,11 @@ class Experiment:
             termination,
         )
 
+        self.datetime_formats = [
+            "Day %j %H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+        ]
+
         operating_conditions_cycles = []
         for cycle in operating_conditions:
             # Check types and convert to list
@@ -78,9 +83,9 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
 
-        operating_conditions_steps_unprocessed = [
-            cond for cycle in operating_conditions_cycles for cond in cycle
-        ]
+        operating_conditions_steps_unprocessed = self._set_next_start_time(
+            [cond for cycle in operating_conditions_cycles for cond in cycle]
+        )
 
         # Convert strings to pybamm.step._Step objects
         # We only do this once per unique step, do avoid unnecessary conversions
@@ -89,11 +94,7 @@ class Experiment:
         for step in unique_steps_unprocessed:
             if isinstance(step, str):
                 processed_steps[step] = pybamm.step.string(step)
-            elif not isinstance(step, pybamm.step._Step):
-                raise TypeError(
-                    "Operating conditions should be strings or _Step objects"
-                )
-            else:
+            elif isinstance(step, pybamm.step._Step):
                 processed_steps[step] = step
 
         # Save the processed unique steps and the processed operating conditions
@@ -102,6 +103,17 @@ class Experiment:
         self.operating_conditions_steps = [
             processed_steps[step] for step in operating_conditions_steps_unprocessed
         ]
+
+        self.initial_start_time = self.operating_conditions_steps[0].start_time
+
+        if (
+            self.operating_conditions_steps[0].end_time is not None
+            and self.initial_start_time is None
+        ):
+            raise ValueError(
+                "When using experiments with `start_time`, the first step must have a "
+                "`start_time`."
+            )
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
@@ -182,3 +194,27 @@ class Experiment:
                     break
 
         return cycles
+
+    def _set_next_start_time(self, operating_conditions):
+        if all(isinstance(i, str) for i in operating_conditions):
+            return operating_conditions
+
+        end_time = None
+        next_start_time = None
+
+        for op in reversed(operating_conditions):
+            if isinstance(op, str):
+                op = pybamm.step.string(op)
+            elif not isinstance(op, pybamm.step._Step):
+                raise TypeError(
+                    "Operating conditions should be strings or _Step objects"
+                )
+
+            op.next_start_time = next_start_time
+            op.end_time = end_time
+
+            next_start_time = op.start_time
+            if next_start_time:
+                end_time = next_start_time
+
+        return operating_conditions

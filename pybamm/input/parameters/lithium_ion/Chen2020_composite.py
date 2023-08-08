@@ -1,5 +1,6 @@
 import pybamm
 import os
+import numpy as np
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -34,7 +35,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     """
     m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -164,7 +165,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
         6.48e-7 * 28700 / 278000
     )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -197,9 +198,9 @@ def nmc_LGM50_ocp_Chen2020(sto):
     u_eq = (
         -0.8090 * sto
         + 4.4875
-        - 0.0428 * pybamm.tanh(18.5138 * (sto - 0.5542))
-        - 17.7326 * pybamm.tanh(15.7890 * (sto - 0.3117))
-        + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.3120))
+        - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
+        + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
     )
 
     return u_eq
@@ -235,7 +236,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     """
     m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 17800
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -322,30 +323,11 @@ def graphite_ocp_Enertech_Ai2020(sto):
 def get_parameter_values():
     """
     Parameters for a composite graphite/silicon negative electrode, from the paper
-
-        Weilong Ai, Niall Kirkaldy, Yang Jiang, Gregory Offer, Huizhi Wang, and Billy
-        Wu. A composite electrode model for lithium-ion batteries with silicon/graphite
-        negative electrodes. Journal of Power Sources, 527:231142, 2022. URL:
-        https://www.sciencedirect.com/science/article/pii/S0378775322001604,
-        doi:https://doi.org/10.1016/j.jpowsour.2022.231142.
-
-    based on the paper
-
-        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-
-    and references therein.
+    :footcite:t:`Ai2022`, based on the paper :footcite:t:`Chen2020`, and references
+    therein.
 
     SEI parameters are example parameters for composite SEI on silicon/graphite. Both
-    phases use the same values, from the paper.
-
-        Xiao Guang Yang, Yongjun Leng, Guangsheng Zhang, Shanhai Ge, and Chao Yang Wang.
-        Modeling of lithium plating induced aging of lithium-ion batteries: transition
-        from linear to nonlinear aging. Journal of Power Sources, 360:28–40, 2017.
-        doi:10.1016/j.jpowsour.2017.05.110.
-
+    phases use the same values, from the paper :footcite:t:`Yang2017`
     """
 
     return {
@@ -465,6 +447,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.5,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.5,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 29866.0,
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
