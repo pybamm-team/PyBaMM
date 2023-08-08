@@ -2,17 +2,17 @@ name: Build and publish package to PyPI
 
 on:
   release:
-     types: [published]
+    types: [published]
   workflow_dispatch:
     inputs:
       target:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
         default: "pypi"
       debug_enabled:
-          type: boolean
-          description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-          required: false
-          default: false
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
 
 jobs:
   build_windows_wheels:
