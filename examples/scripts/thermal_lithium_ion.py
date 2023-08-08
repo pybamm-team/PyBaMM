@@ -25,9 +25,9 @@ full_params.update(
         "": 5,
         "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
         "": 5,
-        "Negative tab heat transfer coefficient [W.m-2.K-1]": 10,
-        "Positive tab heat transfer coefficient [W.m-2.K-1]": 10,
-        "Edge heat transfer coefficient [W.m-2.K-1]": 5,
+        "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
+        "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
+        "Edge heat transfer coefficient [W.m-2.K-1]": 0,
     }
 )
 # for the lumped model we set the "Total heat transfer coefficient [W.m-2.K-1]"
