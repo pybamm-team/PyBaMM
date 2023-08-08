@@ -317,10 +317,6 @@ class BaseModel:
     def geometry(self):
         return self._geometry
 
-    @geometry.setter
-    def geometry(self, geometry):
-        self._geometry = geometry
-
     @property
     def default_var_pts(self):
         return {}

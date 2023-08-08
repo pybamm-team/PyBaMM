@@ -226,7 +226,7 @@ class TestProcessedVariable(TestCase):
 
         y_sol = np.zeros((var_pts[x], nt))
         model = tests.get_base_model_with_battery_geometry()
-        model.geometry = geometry
+        model._geometry = geometry
         solution = pybamm.Solution(
             np.linspace(0, 1, nt),
             y_sol,
@@ -678,7 +678,7 @@ class TestProcessedVariable(TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         model = pybamm.BaseModel()
-        model.geometry = pybamm.Geometry(
+        model._geometry = pybamm.Geometry(
             {
                 "domain A": {a: {"min": 0, "max": 1}},
                 "domain B": {b: {"min": 0, "max": 1}},
@@ -1008,7 +1008,7 @@ class TestProcessedVariable(TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         model = pybamm.BaseModel()
-        model.geometry = pybamm.Geometry(
+        model._geometry = pybamm.Geometry(
             {
                 "domain A": {x: {"min": 0, "max": 1}},
                 "domain B": {z: {"min": 0, "max": 1}},
