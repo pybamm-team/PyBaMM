@@ -93,9 +93,6 @@ class CurrentCollector1D(BaseThermal):
         param = self.param
         T_amb = variables["Ambient temperature [K]"]
         T_av = variables["X-averaged cell temperature [K]"]
-        T_av_top = pybamm.boundary_value(T_av, "right")
-        T_av_bottom = pybamm.boundary_value(T_av, "left")
-        z = pybamm.standard_spatial_vars.z
 
         # find tab locations (top vs bottom)
         L_y = param.L_y
@@ -129,12 +126,12 @@ class CurrentCollector1D(BaseThermal):
         top_cooling_coefficient = (
             param.n.h_tab * neg_tab_area * neg_tab_top_bool
             + param.p.h_tab * pos_tab_area * pos_tab_top_bool
-            + param.h_edge(L_y / 2, z) * non_tab_top_area
+            + param.h_edge(L_y / 2, L_z) * non_tab_top_area
         ) / total_area
         bottom_cooling_coefficient = (
             param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
             + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
-            + param.h_edge(L_y / 2, z) * non_tab_bottom_area
+            + 10 * non_tab_bottom_area
         ) / total_area
 
         # just use left and right for clarity
@@ -143,11 +140,16 @@ class CurrentCollector1D(BaseThermal):
         self.boundary_conditions = {
             T_av: {
                 "left": (
-                    bottom_cooling_coefficient * (T_av_bottom - T_amb),
+                    bottom_cooling_coefficient
+                    * pybamm.boundary_value(
+                        T_av - T_amb,
+                        "left",
+                    ),
                     "Neumann",
                 ),
                 "right": (
-                    -top_cooling_coefficient * (T_av_top - T_amb),
+                    -top_cooling_coefficient
+                    * pybamm.boundary_value(T_av - T_amb, "right"),
                     "Neumann",
                 ),
             }

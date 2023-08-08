@@ -11,10 +11,9 @@ model = pybamm.lithium_ion.SPM(
     {"current collector": "potential pair", "dimensionality": 2, "thermal": "x-lumped"}
 )
 
-# update parameter values, to use:
-# 1) a spatially-varying ambient temperature
-# 2) a spatially-varying surface heat transfer coefficient
-# 3) a spatially-varying edge heat transfer coefficient
+# update parameter values, to use a spatially-varying ambient temperature and a
+# spatially-varying edge heat transfer coefficient that is zero everywhere except
+# at the right edge of the cell
 param = model.param
 L_y = param.L_y
 L_z = param.L_z
@@ -35,7 +34,7 @@ parameter_values.update(
         "Ambient temperature [K]": 298,
         "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0,
         "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0,
-        "Negative tab heat transfer coefficient [W.m-2.K-1]": 10000,
+        "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
         "Edge heat transfer coefficient [W.m-2.K-1]": h_edge,
     }
