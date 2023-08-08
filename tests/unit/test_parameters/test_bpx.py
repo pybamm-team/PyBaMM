@@ -9,7 +9,6 @@ import json
 import pybamm
 import copy
 
-
 class TestBPX(TestCase):
     def setUp(self):
         self.base = {
@@ -222,6 +221,66 @@ class TestBPX(TestCase):
         with self.assertRaisesRegex(ValueError, "Target SOC"):
             pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
 
+    def test_bpx_arrhenius(self):
+        bpx_obj = copy.copy(self.base)
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+
+        def arrhenius_assertion(pv, param_key, Ea_key):
+            sto = 0.5
+            T = 300
+            c_e = 1000
+            c_s_surf = 15000
+            c_s_max = 20000
+            T_ref = pv["Reference temperature [K]"]
+            Ea = pv[Ea_key]
+
+            if "exchange-current" in param_key:
+                eval_ratio = (
+                    pv[param_key](c_e, c_s_surf, c_s_max, T).value
+                    / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).value
+                    )
+            else:
+                eval_ratio = (
+                    pv[param_key](sto, T).value
+                    / pv[param_key](sto, T_ref).value
+                )
+
+            calc_ratio = pybamm.exp(Ea / pybamm.constants.R * (1 / T_ref - 1 / T)).value
+
+            self.assertAlmostEqual(eval_ratio, calc_ratio)
+
+        param_keys = [
+            "Electrolyte conductivity [S.m-1]",
+            "Electrolyte diffusivity [m2.s-1]",
+            "Negative electrode diffusivity [m2.s-1]",
+            "Positive electrode diffusivity [m2.s-1]",
+            "Positive electrode exchange-current density [A.m-2]",
+            "Negative electrode exchange-current density [A.m-2]",
+        ]
+
+        Ea_keys = [
+            "Electrolyte conductivity activation energy [J.mol-1]",
+            "Electrolyte diffusivity activation energy [J.mol-1]",
+            "Negative electrode diffusivity activation energy [J.mol-1]",
+            "Positive electrode diffusivity activation energy [J.mol-1]",
+            "Positive electrode reaction rate constant activation energy [J.mol-1]",
+            "Negative electrode reaction rate constant activation energy [J.mol-1]",
+        ]
+
+        for param_key, Ea_key in zip(param_keys, Ea_keys):
+            arrhenius_assertion(pv, param_key, Ea_key)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
