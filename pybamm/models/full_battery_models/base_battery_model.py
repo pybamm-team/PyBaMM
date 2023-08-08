@@ -1061,7 +1061,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.OneDimensionalX
+                thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
         self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
