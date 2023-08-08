@@ -14,7 +14,7 @@ def update_version():
     """
     Opens file and updates the version number
     """
-    release_version = os.getenv("VERSION")
+    release_version = os.getenv("VERSION")[1:]
 
     # pybamm/version.py
     with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
