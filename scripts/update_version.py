@@ -36,7 +36,7 @@ def update_version():
 
     # docs/source/_static/versions.json for readthedocs build
     with open(
-        os.path.join(pybamm.root_dir(), "docs", "source", "_static", "versions.json"),
+        os.path.join(pybamm.root_dir(), "docs", "_static", "versions.json"),
         "r+",
     ) as file:
         output = file.read()
