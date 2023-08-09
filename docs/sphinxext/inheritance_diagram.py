@@ -25,7 +25,7 @@ def add_diagram(app, what, name, obj, options, lines):
             # are not supported by Read the Docs.
             # https://github.com/readthedocs/readthedocs.org/issues/2045
             lines.append("\n")
-            lines.append(".. only:: html\n")
+            lines.append(".. only:: not latex\n")
             lines.append("\n")
             lines.append("    .. dropdown:: View inheritance diagram for this model")
             lines.append("        :animate: fade-in-slide-down")
