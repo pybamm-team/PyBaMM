@@ -73,7 +73,7 @@ sim.plot(
         "X-averaged negative total SEI thickness [m]",
         [
             "Total lithium lost [mol]",
-            "Loss of lithium to SEI [mol]",
+            "Loss of lithium to negative SEI [mol]",
         ],
     ]
 )
