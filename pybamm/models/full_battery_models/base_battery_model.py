@@ -4,6 +4,7 @@
 
 import pybamm
 from functools import cached_property
+import warnings
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -498,7 +499,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             and options["cell geometry"] != "pouch"
         ):
             raise pybamm.OptionError(
-                options["thermal"] + " model must have pouch geometry."
+                options["thermal"] + " model must have pouch cell geometry."
             )
         if options["thermal"] == "x-full" and options["dimensionality"] != 0:
             n = options["dimensionality"]
@@ -602,6 +603,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 f"Possible values are {self.possible_options[option]}"
                             )
 
+        # Issue a warning to let users know that the 'lumped' thermal option now uses
+        # the total heat transfer coefficient, surface area for cooling, and cell
+        # volume parameters, regardless of the 'cell geometry option' chosen.
+        if options["thermal"] == "lumped":
+            message = (
+                "The 'lumped' thermal option now uses the parameters "
+                "'Cell cooling surface area [m2]', 'Cell volume [m3]' and "
+                "'Total heat transfer coefficient [W.m-2.K-1]' to compute the cell "
+                "cooling term, regardless of the value of the the 'cell geometry' "
+                "option. Please update your parameters accordingly."
+            )
+            warnings.warn(message, pybamm.OptionWarning, stacklevel=2)
         super().__init__(options.items())
 
     @property
