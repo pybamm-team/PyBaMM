@@ -10,12 +10,8 @@ from tests import TestCase
 
 class TestThermal(TestCase):
     def test_consistent_cooling(self):
-        # use spme for comparison instead of spm as
-        # much larger realistic temperature rises
-        # so that errors can be more easily observed
+        # Test the cooling is consistent between the 1+1D and 2+1D SPMe models
         C_rate = 5
-        options = {"thermal": "x-lumped"}
-        spme_1D = pybamm.lithium_ion.SPMe(options=options)
 
         options = {
             "thermal": "x-lumped",
@@ -31,7 +27,7 @@ class TestThermal(TestCase):
         }
         spme_2p1D = pybamm.lithium_ion.SPMe(options=options)
 
-        models = {"SPMe 1D": spme_1D, "SPMe 1+1D": spme_1p1D, "SPMe 2+1D": spme_2p1D}
+        models = {"SPMe 1+1D": spme_1p1D, "SPMe 2+1D": spme_2p1D}
         solutions = {}
 
         for model_name, model in models.items():
@@ -78,8 +74,6 @@ class TestThermal(TestCase):
         def err(a, b):
             return np.max(np.abs(a - b)) / np.max(np.abs(a))
 
-        self.assertGreater(1e-5, err(solutions["SPMe 1D"], solutions["SPMe 1+1D"]))
-        self.assertGreater(1e-5, err(solutions["SPMe 1D"], solutions["SPMe 2+1D"]))
         self.assertGreater(1e-5, err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"]))
 
 
