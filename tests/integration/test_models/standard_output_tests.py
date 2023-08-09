@@ -452,7 +452,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             decimal = 13
         elif "current-driven" in self.model.options["loss of active material"]:
             # current driven LAM model doesn't perfectly conserve lithium, not sure why
-            decimal = 10
+            decimal = 12
         else:
             decimal = 14
         np.testing.assert_array_almost_equal(diff, 0, decimal=decimal)

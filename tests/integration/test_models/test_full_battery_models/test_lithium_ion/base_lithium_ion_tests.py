@@ -239,7 +239,7 @@ class BaseIntegrationTestLithiumIon:
         parameter_values = pybamm.ParameterValues("Chen2020")
 
         def current_LAM(i, T):
-            return -1e-8 * abs(i)
+            return -1e-10 * abs(i)
 
         parameter_values.update(
             {"Negative electrode current-driven LAM rate": current_LAM},
@@ -253,7 +253,7 @@ class BaseIntegrationTestLithiumIon:
         parameter_values = pybamm.ParameterValues("Chen2020")
 
         def current_LAM(i, T):
-            return -1e-8 * abs(i)
+            return -1e-10 * abs(i)
 
         parameter_values.update(
             {"Positive electrode current-driven LAM rate": current_LAM},
