@@ -175,7 +175,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (default), "differential" or "algebraic".
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-lumped", or "x-full".
+                "x-lumped", or "x-full". The 'cell geometry' option must be set to
+                'pouch' for 'x-lumped' or 'x-full' to be valid. Using the 'x-lumped'
+                option with 'dimensionality' set to 0 is equivalent to using the
+                'lumped' option.
             * "total interfacial current density as a state" : str
                 Whether to make a state for the total interfacial current density and
                 solve an algebraic equation for it. Default is "false", unless "SEI film
@@ -603,12 +606,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 f"Possible values are {self.possible_options[option]}"
                             )
 
-        # Issue a warning to let users know that the 'lumped' thermal option now uses
-        # the total heat transfer coefficient, surface area for cooling, and cell
-        # volume parameters, regardless of the 'cell geometry option' chosen.
-        if options["thermal"] == "lumped":
+        # Issue a warning to let users know that the 'lumped' thermal option (or
+        # equivalently 'x-lumped' with 0D current collectors) now uses the total heat
+        # transfer coefficient, surface area for cooling, and cell volume parameters,
+        # regardless of the 'cell geometry option' chosen.
+        thermal_option = options["thermal"]
+        dimensionality_option = options["dimensionality"]
+        if thermal_option == "lumped" or (
+            thermal_option == "x-lumped" and dimensionality_option == 0
+        ):
             message = (
-                "The 'lumped' thermal option now uses the parameters "
+                f"The '{thermal_option}' thermal option with "
+                f"'dimensionality' {dimensionality_option} now uses the parameters "
                 "'Cell cooling surface area [m2]', 'Cell volume [m3]' and "
                 "'Total heat transfer coefficient [W.m-2.K-1]' to compute the cell "
                 "cooling term, regardless of the value of the the 'cell geometry' "
