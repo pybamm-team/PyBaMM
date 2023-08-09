@@ -640,6 +640,30 @@ class TestSimulationExperiment(TestCase):
         sol = sim.solve(calc_esoh=False)
         self.assertEqual(sol["Time [s]"].entries[-1], 10800)
 
+    def test_experiment_start_time_identical_steps(self):
+        # Test that if we have the same step twice, with different start times,
+        # they get processed only once
+        model = pybamm.lithium_ion.SPM()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string("Discharge at C/3 for 10 minutes"),
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(2023, 1, 1, 10, 0, 0),
+                ),
+                pybamm.step.string("Discharge at C/3 for 10 minutes"),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(calc_esoh=False)
+        2 + 2
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
