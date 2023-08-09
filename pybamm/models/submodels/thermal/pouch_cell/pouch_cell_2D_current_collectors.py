@@ -57,8 +57,7 @@ class CurrentCollector2D(BaseThermal):
         T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio of pouch cell in cooling
-        # coefficient. Note: the factor 1/delta^2 comes from the choice of
-        # non-dimensionalisation
+        # coefficient.
         yz_surface_area = self.param.L_y * self.param.L_z
         cell_volume = self.param.L * self.param.L_y * self.param.L_z
         yz_surface_cooling_coefficient = (
