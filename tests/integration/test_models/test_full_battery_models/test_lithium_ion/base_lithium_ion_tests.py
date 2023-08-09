@@ -236,11 +236,31 @@ class BaseIntegrationTestLithiumIon:
 
     def test_well_posed_loss_active_material_current_negative(self):
         options = {"loss of active material": ("current-driven", "none")}
-        self.run_basic_processing_test(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def current_LAM(i, T):
+            return -1e-8 * abs(i)
+
+        parameter_values.update(
+            {"Negative electrode current-driven LAM rate": current_LAM},
+            check_already_exists=False,
+        )
+
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_well_posed_loss_active_material_current_positive(self):
         options = {"loss of active material": ("none", "current-driven")}
-        self.run_basic_processing_test(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def current_LAM(i, T):
+            return -1e-8 * abs(i)
+
+        parameter_values.update(
+            {"Positive electrode current-driven LAM rate": current_LAM},
+            check_already_exists=False,
+        )
+
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
