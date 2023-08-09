@@ -234,6 +234,14 @@ class BaseIntegrationTestLithiumIon:
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_well_posed_loss_active_material_current_negative(self):
+        options = {"loss of active material": ("current-driven", "none")}
+        self.run_basic_processing_test(options)
+
+    def test_well_posed_loss_active_material_current_positive(self):
+        options = {"loss of active material": ("none", "current-driven")}
+        self.run_basic_processing_test(options)
+
     def test_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         parameter_values = pybamm.ParameterValues("Ai2020")
