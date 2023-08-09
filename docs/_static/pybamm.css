@@ -109,6 +109,12 @@ details.sd-dropdown {
 
 @import url("https://cdn.jsdelivr.net/npm/@docsearch/css@3");
 
+/* Remove the default PST search */
+
+div.search-button__wrapper.show {
+  visibility: hidden;
+}
+
 .DocSearch-Modal {
   margin: 150px auto auto;
   background: var(--pst-color-background);
