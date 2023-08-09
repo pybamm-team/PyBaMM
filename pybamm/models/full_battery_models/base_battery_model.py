@@ -26,8 +26,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "true" or "false". "false" is the default, since calculating discharge
                 energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
-                Sets the geometry of the cell. Can be "pouch" (default) or
-                "arbitrary". The arbitrary geometry option solves a 1D electrochemical
+                Sets the geometry of the cell. Can be "arbitrary" (default) or
+                "pouch". The arbitrary geometry option solves a 1D electrochemical
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
@@ -44,9 +44,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair" or "potential pair quite conductive".
             * "diffusivity" : str
-                Sets the model for the diffusivity. Can be "single" 
-                (default) or "current sigmoid". A 2-tuple can be provided for different 
-                behaviour in negative and positive electrodes.                    
+                Sets the model for the diffusivity. Can be "single"
+                (default) or "current sigmoid". A 2-tuple can be provided for different
+                behaviour in negative and positive electrodes.
             * "dimensionality" : int
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
@@ -54,11 +54,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Can be "default" (default), "full", "leading order", "composite" or
                 "integrated".
             * "exchange-current density" : str
-                Sets the model for the exchange-current density. Can be "single" 
-                (default) or "current sigmoid". A 2-tuple can be provided for different 
+                Sets the model for the exchange-current density. Can be "single"
+                (default) or "current sigmoid". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
             * "half-cell" : str
-                Can be "false" (default) for a standard battery or "true" for a 
+                Can be "false" (default) for a standard battery or "true" for a
                 half-cell where the negative electrode is replaced with a lithium metal
                 counter electrode.
             * "hydrolysis" : str
@@ -85,9 +85,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
             * "open-circuit potential" : str
-                Sets the model for the open circuit potential. Can be "single" 
-                (default) or "current sigmoid". A 2-tuple can be provided for different 
-                behaviour in negative and positive electrodes.                
+                Sets the model for the open circuit potential. Can be "single"
+                (default) or "current sigmoid". A 2-tuple can be provided for different
+                behaviour in negative and positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -107,7 +107,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", or "quartic profile". A 2-tuple can be provided 
+                "quadratic profile", or "quartic profile". A 2-tuple can be provided
                 for different behaviour in negative and positive electrodes.
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle
@@ -283,7 +283,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         default_options = {
             name: options[0] for name, options in self.possible_options.items()
         }
-
         extra_options = extra_options or {}
 
         half_cell_option = extra_options.get("half-cell", "false")

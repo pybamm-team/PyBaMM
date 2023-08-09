@@ -78,4 +78,3 @@ cmake -DENABLE_LAPACK=ON\
       -DCMAKE_INSTALL_PREFIX=/usr\
       ../$SUNDIALS_DIR
 make install
-

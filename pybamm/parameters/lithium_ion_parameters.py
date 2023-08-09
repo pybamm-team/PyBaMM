@@ -491,7 +491,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Particle-size distribution parameters
         self.R_min = self.geo.R_min
         self.R_max = self.geo.R_max
-        self.sd_a = self.geo.sd_a
         self.f_a_dist = self.geo.f_a_dist
 
         self.epsilon_s = pybamm.FunctionParameter(

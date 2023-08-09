@@ -185,7 +185,7 @@ Then, to install PyBaMM as a `developer <https://github.com/pybamm-team/PyBaMM/b
 or on ``zsh`` shells, type
 
 .. code:: bash
-   
+
    pip install -e .'[dev,docs]'
 
 To check whether PyBaMM has installed properly, you can run the tests:

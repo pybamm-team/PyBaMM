@@ -54,7 +54,6 @@ class Lumped(BaseThermal):
         T_amb = variables["Ambient temperature [K]"]
 
         # Account for surface area to volume ratio in cooling coefficient
-        # The factor 1/delta^2 comes from the choice of non-dimensionalisation.
         if self.options["cell geometry"] == "pouch":
             cell_volume = self.param.L * self.param.L_y * self.param.L_z
 
