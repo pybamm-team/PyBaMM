@@ -157,7 +157,7 @@ class SEIThickness(BaseModel):
             # Multiply by z_sei to get total lithium moles consumed by SEI
             V_n = L_n * self.param.L_y * self.param.L_z
             Q_sei = delta_c_SEI * V_n * z_sei
-        
+
         variables.update(
             {
                 f"Loss of lithium to {self.reaction_name}[mol]": Q_sei,
