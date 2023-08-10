@@ -5,7 +5,7 @@ on:
   pull_request:
 
 concurrency:
-  # Cancel intermediate builds
+  # Cancel intermediate builds always
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
