@@ -24,12 +24,6 @@ model.submodels[
     "electrolyte conductivity"
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
 
-model.submodels["sei"] = pybamm.sei.NoSEI(model.param, model.options)
-model.submodels["sei on cracks"] = pybamm.sei.NoSEI(
-    model.param, model.options, cracks=True
-)
-model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
-
 # Loop over negative and positive electrode domains for some submodels
 for domain in ["negative", "positive"]:
     model.submodels[f"{domain} active material"] = pybamm.active_material.Constant(
@@ -78,6 +72,15 @@ for domain in ["negative", "positive"]:
     model.submodels[
         f"{domain} particle mechanics"
     ] = pybamm.particle_mechanics.NoMechanics(model.param, domain, model.options)
+    model.submodels[f"{domain} sei"] = pybamm.sei.NoSEI(
+        model.param, domain, model.options
+    )
+    model.submodels[f"{domain} sei on cracks"] = pybamm.sei.NoSEI(
+        model.param, domain, model.options, cracks=True
+    )
+    model.submodels[f"{domain} lithium plating"] = pybamm.lithium_plating.NoPlating(
+        model.param, domain
+    )
 
 # build model
 model.build_model()
