@@ -458,7 +458,11 @@ class Discretisation(object):
             # check if the boundary condition at the origin for sphere domains is other
             # than no flux
             for subdomain in key.domain:
-                if self.mesh[subdomain].coord_sys == "spherical polar":
+                if (
+                    self.mesh[subdomain].coord_sys
+                    in ["spherical polar", "cylindrical polar"]
+                    and list(self.mesh.geometry[subdomain].values())[0]["min"] == 0
+                ):
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
                             "Boundary condition at r = 0 must be a homogeneous "

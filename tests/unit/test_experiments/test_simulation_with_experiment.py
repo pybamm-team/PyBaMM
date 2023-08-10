@@ -382,9 +382,9 @@ class TestSimulationExperiment(TestCase):
             solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=[3, 4, 5, 9]
         )
         # Note offset by 1 (0th cycle is cycle 1)
-        for cycle_num in [1, 5, 6, 7, 9]:
+        for cycle_num in [1, 5, 6, 7]:
             self.assertIsNone(sol.cycles[cycle_num])
-        for cycle_num in [0, 2, 3, 4, 8]:
+        for cycle_num in [0, 2, 3, 4, 8, 9]:  # first & last cycle always saved
             self.assertIsNotNone(sol.cycles[cycle_num])
         # Summary variables are not None
         self.assertIsNotNone(sol.summary_variables["Capacity [A.h]"])
@@ -605,7 +605,7 @@ class TestSimulationExperiment(TestCase):
             pybamm.lithium_ion.SPM,
         )
 
-    def test_run_time_stamped_experiment(self):
+    def test_run_start_time_experiment(self):
         model = pybamm.lithium_ion.SPM()
 
         # Test experiment is cut short if next_start_time is early
@@ -639,6 +639,95 @@ class TestSimulationExperiment(TestCase):
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve(calc_esoh=False)
         self.assertEqual(sol["Time [s]"].entries[-1], 10800)
+
+    def test_starting_solution(self):
+        model = pybamm.lithium_ion.SPM()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Discharge at C/2 for 10 minutes"),
+                pybamm.step.string("Rest for 5 minutes"),
+                pybamm.step.string("Rest for 5 minutes"),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        solution = sim.solve(save_at_cycles=[1])
+
+        # test that the last state is correct (i.e. final cycle is saved)
+        self.assertEqual(solution.last_state.t[-1], 1200)
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Discharge at C/2 for 20 minutes"),
+                pybamm.step.string("Rest for 20 minutes"),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        new_solution = sim.solve(calc_esoh=False, starting_solution=solution)
+
+        # test that the final time is correct (i.e. starting solution correctly set)
+        self.assertEqual(new_solution["Time [s]"].entries[-1], 3600)
+
+    def test_experiment_start_time_starting_solution(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # Test error raised if starting_solution does not have start_time
+        experiment = pybamm.Experiment(
+            [pybamm.step.string("Discharge at C/2 for 10 minutes")]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        solution = sim.solve()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 9, 0, 0),
+                )
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        with self.assertRaisesRegex(ValueError, "experiments with `start_time`"):
+            sim.solve(starting_solution=solution)
+
+        # Test starting_solution works well with start_time
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 8, 20, 0),
+                ),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        solution = sim.solve()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 9, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(1, 1, 1, 9, 20, 0),
+                ),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        new_solution = sim.solve(starting_solution=solution)
+
+        # test that the final time is correct (i.e. starting solution correctly set)
+        self.assertEqual(new_solution["Time [s]"].entries[-1], 5400)
 
     def test_experiment_start_time_identical_steps(self):
         # Test that if we have the same step twice, with different start times,
