@@ -5,6 +5,8 @@ import pickle
 import pybamm
 import numpy as np
 import copy
+import warnings
+import sys
 from functools import lru_cache
 from datetime import timedelta
 import tqdm
@@ -539,6 +541,49 @@ class Simulation:
                         "\tsim.solve([0, 3700])\n\n"
                         "for a 1C discharge."
                     )
+                # For drive cycles (current provided as data) we perform additional
+                # tests on t_eval (if provided) to ensure the returned solution
+                # captures the input.
+                time_data = self._parameter_values["Current function [A]"].x[0]
+                # If no t_eval is provided, we use the times provided in the data.
+                if t_eval is None:
+                    pybamm.logger.info("Setting t_eval as specified by the data")
+                    t_eval = time_data
+                # If t_eval is provided we first check if it contains all of the
+                # times in the data to within 10-12. If it doesn't, we then check
+                # that the largest gap in t_eval is smaller than the smallest gap in
+                # the time data (to ensure the resolution of t_eval is fine enough).
+                # We only raise a warning here as users may genuinely only want
+                # the solution returned at some specified points.
+                elif (
+                    set(np.round(time_data, 12)).issubset(set(np.round(t_eval, 12)))
+                ) is False:
+                    warnings.warn(
+                        """
+                        t_eval does not contain all of the time points in the data
+                        set. Note: passing t_eval = None automatically sets t_eval
+                        to be the points in the data.
+                        """,
+                        pybamm.SolverWarning,
+                    )
+                    dt_data_min = np.min(np.diff(time_data))
+                    dt_eval_max = np.max(np.diff(t_eval))
+                    if dt_eval_max > dt_data_min + sys.float_info.epsilon:
+                        warnings.warn(
+                            """
+                            The largest timestep in t_eval ({}) is larger than
+                            the smallest timestep in the data ({}). The returned
+                            solution may not have the correct resolution to accurately
+                            capture the input. Try refining t_eval. Alternatively,
+                            passing t_eval = None automatically sets t_eval to be the
+                            points in the data.
+                            """.format(
+                                dt_eval_max, dt_data_min
+                            ),
+                            pybamm.SolverWarning,
+                        )
+
+            self._solution = solver.solve(self.built_model, t_eval, **kwargs)
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
