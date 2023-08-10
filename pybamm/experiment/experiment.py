@@ -68,11 +68,6 @@ class Experiment:
             termination,
         )
 
-        self.datetime_formats = [
-            "Day %j %H:%M:%S",
-            "%Y-%m-%d %H:%M:%S",
-        ]
-
         operating_conditions_cycles = []
         for cycle in operating_conditions:
             # Check types and convert to list
