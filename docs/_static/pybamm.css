@@ -1,39 +1,9 @@
+/* Font */
+
 @import url("https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Open+Sans:ital,wght@0,400;0,600;1,400;1,600&display=swap");
-
-.navbar-brand img {
-  height: 50px;
-}
-
-.navbar-brand {
-  height: 50px;
-}
 
 body {
   font-family: "Open Sans", sans-serif;
-}
-
-pre,
-code {
-  font-size: 100%;
-  line-height: 155%;
-}
-
-h1 {
-  font-family: "Lato", sans-serif;
-  color: #013243;
-  /* warm black */
-}
-
-h2 {
-  color: #4d77cf;
-  /* han blue */
-  letter-spacing: -0.03em;
-}
-
-h3 {
-  color: #013243;
-  /* warm black */
-  letter-spacing: -0.03em;
 }
 
 /* Main page overview cards */
@@ -81,18 +51,18 @@ h3 {
 }
 
 /* Dark theme tweaking */
+
 html[data-theme="dark"] .sd-card img[src*=".svg"] {
   filter: invert(0.82) brightness(0.8) contrast(1.2);
 }
 
 /* Main index page overview cards */
+
 html[data-theme="dark"] .sd-card {
   background-color: var(--pst-color-background);
 }
 
-html[data-theme="dark"] .sd-shadow-sm {
-  box-shadow: 0 0.1rem 1rem rgba(250, 250, 250, 0.6) !important;
-}
+/* Inheritance diagram dropdown options */
 
 html[data-theme="dark"] .sd-card .sd-card-header {
   background-color: var(--pst-color-background);
@@ -103,12 +73,12 @@ html[data-theme="dark"] .sd-card .sd-card-footer {
   background-color: var(--pst-color-background);
 }
 
-html[data-theme="dark"] h1 {
-  color: var(--pst-color-primary);
+details.sd-dropdown {
+  box-shadow: none !important;
 }
 
-html[data-theme="dark"] h3 {
-  color: #0a6774;
+.sd-summary-content blockquote {
+  border-left: 0 !important;
 }
 
 /* Overrides for sphinx-hoverxref since it does not support a native dark theme, see */
@@ -139,6 +109,12 @@ html[data-theme="dark"] h3 {
 
 @import url("https://cdn.jsdelivr.net/npm/@docsearch/css@3");
 
+/* Remove the default PST search */
+
+div.search-button__wrapper.show {
+  visibility: hidden;
+}
+
 .DocSearch-Modal {
   margin: 150px auto auto;
   background: var(--pst-color-background);
@@ -158,6 +134,7 @@ kbd.DocSearch-Commands-Key {
 .DocSearch-Button-Key {
   width: 24px;
 }
+
 /* Do not add custom padding for keyboard buttons */
 
 kbd:not(.compound) {
