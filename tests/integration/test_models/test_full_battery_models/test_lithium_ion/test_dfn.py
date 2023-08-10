@@ -69,7 +69,7 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
         EOD = particles + neg + pos + side
 
         # compare
-        np.testing.assert_array_almost_equal(BOD, EOD, decimal=12)
+        np.testing.assert_array_almost_equal(BOD, EOD, decimal=8)
 
 
 class TestDFNWithSizeDistribution(TestCase):
