@@ -292,7 +292,7 @@ jobs:
         run: nox -s doctests
 
   run_examples_tests:
-    needs: style
+    needs: run_doctests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
