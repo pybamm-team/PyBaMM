@@ -116,12 +116,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
-        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
+      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: nox -s unit
 
-      - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }} and generate coverage report
         run: nox -s coverage
 
       - name: Upload coverage report
@@ -207,8 +205,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Run integration tests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: nox -s integration
 
   run_doctests:
@@ -291,8 +288,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Install docs dependencies and run doctests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: nox -s doctests
 
   run_examples_tests:
@@ -374,6 +370,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
+      - name: Install dev dependencies and run example tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s examples
