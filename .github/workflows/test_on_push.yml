@@ -19,6 +19,8 @@ jobs:
           cancel_others: "true"
           paths_ignore: '["**/README.md"]'
 
+# TODO: add concurrency syntax for groups and cancelling in-progress jobs
+
   style:
     needs: pre_job
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
@@ -35,7 +37,7 @@ jobs:
           python -m pip install pre-commit
           pre-commit run ruff
 
-  build:
+  install_requirements:
     needs: style
     runs-on: ${{ matrix.os }}
     strategy:
@@ -43,6 +45,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+    name: Install dependencies on ${{ matrix.os }} with Python ${{ matrix.python-version }}
 
     steps:
       - name: Check out PyBaMM repository
@@ -113,6 +116,14 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
+  unit_and_coverage_tests:
+    needs: install_requirements
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+    name: Run unit and coverage tests on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+
+    steps:
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: nox -s unit
@@ -125,14 +136,48 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v2.1.0
 
+  integration_tests:
+    needs: unit_and_coverage_tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    name: Run integration tests on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+
+    steps:
       - name: Run integration tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s integration
 
+  doctests:
+    needs: install_requirements
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # THe doctests take the least time to run, so we can fail other jobs quickly if they fail
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    name: Run doctests on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+
+    steps:
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s doctests
 
+  examples-tests:
+    needs: install_requirements
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    name: Run example tests on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+
+    steps:
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s examples
