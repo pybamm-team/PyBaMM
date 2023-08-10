@@ -256,7 +256,8 @@ class MSMRDiffusion(BaseParticle):
         # Note: diffusivity is given as a function of concentration here,
         # not stoichiometry
         c_max = self.phase_param.c_max
-        D_eff = self._get_effective_diffusivity(x * c_max, T)
+        current = variables["Total current density [A.m-2]"]
+        D_eff = self._get_effective_diffusivity(x * c_max, T, current)
         f = self.param.F / (self.param.R * T)
         N_s = c_max * x * (1 - x) * f * D_eff * pybamm.grad(U)
         variables.update(
