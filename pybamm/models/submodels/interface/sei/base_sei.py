@@ -109,68 +109,18 @@ class BaseModel(BaseInterface):
     def _get_standard_total_concentration_variables(self, c_sei):
         """Update variables related to total SEI concentration."""
         if self.reaction_loc == "interface":  # c is an interfacial quantity [mol.m-2]
-            c_sei_av = pybamm.yz_average(c_sei)
-            c_sei_0 = (
-                self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
-                + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
-            )
-            L_n = 1
             variables = {
                 f"{self.reaction_name}concentration [mol.m-2]": c_sei,
                 f"Total {self.reaction_name}concentration [mol.m-2]": c_sei,
             }
         else:  # c is a bulk quantity [mol.m-3]
             c_xav = pybamm.x_average(c_sei)
-            c_sei_av = pybamm.yz_average(c_xav)
-            if isinstance(self, pybamm.sei.NoSEI):
-                c_sei_0 = 0 * c_sei_av  # Set initial SEI to zero, copying domains
-            else:
-                c_sei_0 = self.phase_param.a_typ * (
-                    self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
-                    + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
-                )
-            L_n = self.param.n.L
             variables = {
                 f"{self.reaction_name}concentration [mol.m-3]": c_sei,
                 f"Total {self.reaction_name}concentration [mol.m-3]": c_sei,
                 f"X-averaged {self.reaction_name}concentration [mol.m-3]": c_xav,
                 f"X-averaged total {self.reaction_name}concentration [mol.m-3]": c_xav,
             }
-        # Calculate change in SEI concentration with respect to initial state
-        # If there is no SEI, skip this step because parameters may be undefined
-        if isinstance(self, pybamm.sei.NoSEI):
-            z_sei = 1
-            delta_c_SEI = c_sei_av
-        else:
-            z_sei = self.phase_param.z_sei
-            if self.reaction == "SEI":
-                delta_c_SEI = c_sei_av - c_sei_0
-            elif self.reaction == "SEI on cracks":
-                roughness_init = 1 + 2 * (
-                    self.param.n.l_cr_0 * self.param.n.rho_cr * self.param.n.w_cr
-                )
-                c_sei_cracks_0 = (
-                    (roughness_init - 1)
-                    * self.phase_param.a_typ
-                    * (
-                        self.phase_param.L_inner_crack_0 / self.phase_param.V_bar_inner
-                        + self.phase_param.L_outer_crack_0
-                        / self.phase_param.V_bar_outer
-                    )
-                )
-                delta_c_SEI = c_sei_av - c_sei_cracks_0
-        # Multiply delta_n_SEI by V_n to get total moles of SEI formed
-        # Multiply by z_sei to get total lithium moles consumed by SEI
-        V_n = L_n * self.param.L_y * self.param.L_z
-        Q_sei = delta_c_SEI * V_n * z_sei
-        variables.update(
-            {
-                f"Loss of lithium to {self.reaction_name}[mol]": Q_sei,
-                f"Loss of capacity to {self.reaction_name}[A.h]": Q_sei
-                * self.param.F
-                / 3600,
-            }
-        )
         return variables
 
     def _get_standard_reaction_variables(self, j_inner, j_outer):

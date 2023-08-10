@@ -107,4 +107,64 @@ class SEIThickness(BaseModel):
                 f"X-averaged total {reaction_name}thickness [m]": L_SEI_av,
             }
         )
+
+        # Calculate change in total SEI moles with respect to initial state
+        # If there is no SEI, skip and return 0 because parameters may be undefined
+        crack_opt = self.options["SEI on cracks"]
+        if self.reaction == "SEI" and self.options["SEI"] == "none":
+            Q_sei = pybamm.Scalar(0)
+        elif self.reaction == "SEI on cracks" and crack_opt == "false":
+            Q_sei = pybamm.Scalar(0)
+        else:
+            if self.reaction_loc == "interface":
+                # c is an interfacial quantity [mol.m-2]
+                c_sei = variables[f"Total {self.reaction_name}concentration [mol.m-2]"]
+                c_sei_av = pybamm.yz_average(c_sei)
+                c_sei_0 = (
+                    self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
+                    + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
+                )
+                L_n = 1
+            else:
+                # c is a bulk quantity [mol.m-3]
+                c_sei = variables[
+                    f"X-averaged total {self.reaction_name}concentration [mol.m-3]"
+                ]
+                c_sei_av = pybamm.yz_average(c_sei)
+                c_sei_0 = self.phase_param.a_typ * (
+                    self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
+                    + self.phase_param.L_outer_0 / self.phase_param.V_bar_outer
+                )
+                L_n = self.param.n.L
+            z_sei = self.phase_param.z_sei
+            if self.reaction == "SEI":
+                delta_c_SEI = c_sei_av - c_sei_0
+            elif self.reaction == "SEI on cracks":
+                roughness_init = 1 + 2 * (
+                    self.param.n.l_cr_0 * self.param.n.rho_cr * self.param.n.w_cr
+                )
+                c_sei_cracks_0 = (
+                    (roughness_init - 1)
+                    * self.phase_param.a_typ
+                    * (
+                        self.phase_param.L_inner_crack_0 / self.phase_param.V_bar_inner
+                        + self.phase_param.L_outer_crack_0
+                        / self.phase_param.V_bar_outer
+                    )
+                )
+                delta_c_SEI = c_sei_av - c_sei_cracks_0
+            # Multiply delta_n_SEI by V_n to get total moles of SEI formed
+            # Multiply by z_sei to get total lithium moles consumed by SEI
+            V_n = L_n * self.param.L_y * self.param.L_z
+            Q_sei = delta_c_SEI * V_n * z_sei
+        
+        variables.update(
+            {
+                f"Loss of lithium to {self.reaction_name}[mol]": Q_sei,
+                f"Loss of capacity to {self.reaction_name}[A.h]": Q_sei
+                * self.param.F
+                / 3600,
+            }
+        )
+
         return variables
