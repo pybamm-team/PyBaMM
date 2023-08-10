@@ -65,7 +65,7 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
         pos = solution[
             "Loss of lithium due to loss of active material in positive electrode [mol]"
         ].entries[-1]
-        side = solution["Loss of lithium to side reactions [mol]"].entries[-1]
+        side = solution["Total lithium lost to side reactions [mol]"].entries[-1]
         EOD = particles + neg + pos + side
 
         # compare
