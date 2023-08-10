@@ -41,7 +41,7 @@ CasadiFunctions::CasadiFunctions(
     const Function &mass_action, const Function &sens, const Function &events,
     const int n_s, int n_e, const int n_p, const Options& options)
     : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
-      number_of_nnz(jac_times_cjmass_nnz), 
+      number_of_nnz(jac_times_cjmass_nnz),
       jac_bandwidth_lower(jac_bandwidth_lower), jac_bandwidth_upper(jac_bandwidth_upper),
       rhs_alg(rhs_alg),
       jac_times_cjmass(jac_times_cjmass), jac_action(jac_action),
@@ -67,7 +67,7 @@ CasadiFunctions::CasadiFunctions(
   }
 
   inputs.resize(inputs_length);
-  
+
 }
 
 realtype *CasadiFunctions::get_tmp_state_vector() { return tmp_state_vector.data(); }

@@ -22,9 +22,9 @@ class TestMPM(TestCase):
         model = pybamm.lithium_ion.MPM({"working electrode": "positive"})
         self.assertEqual(
             model.default_parameter_values[
-                "Positive area-weighted mean particle radius [m]"
+                "Positive minimum particle radius [m]"
             ],
-            5.3e-06,
+            0.0,
         )
 
     def test_lumped_thermal_model_1D(self):

@@ -170,14 +170,14 @@ class BasicDFN(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_n / (param.F * param.n.prim.D(c_s_surf_n, T)),
+                -j_n / (param.F * pybamm.surf(param.n.prim.D(c_s_n, T))),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_p / (param.F * param.p.prim.D(c_s_surf_p, T)),
+                -j_p / (param.F * pybamm.surf(param.p.prim.D(c_s_p, T))),
                 "Neumann",
             ),
         }

@@ -1093,7 +1093,7 @@ class Simulation:
 
     @geometry.setter
     def geometry(self, geometry):
-        self._geometry = geometry.copy()
+        self._geometry = geometry
 
     @property
     def parameter_values(self):
