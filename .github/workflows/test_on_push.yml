@@ -19,8 +19,6 @@ jobs:
           cancel_others: "true"
           paths_ignore: '["**/README.md"]'
 
-# TODO: add concurrency syntax for groups and cancelling in-progress jobs
-
   style:
     needs: pre_job
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
@@ -98,9 +96,9 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           pip install -e .[all,docs]
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
@@ -110,10 +108,10 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{matrix.os}}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        if: matrix.os != 'windows-latest'
         run: nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
