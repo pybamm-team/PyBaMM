@@ -678,7 +678,7 @@ class TestSimulationExperiment(TestCase):
             [pybamm.step.string("Discharge at C/2 for 10 minutes")]
         )
         sim = pybamm.Simulation(model, experiment=experiment)
-        solution = sim.solve()       
+        solution = sim.solve()
 
         experiment = pybamm.Experiment(
             [
