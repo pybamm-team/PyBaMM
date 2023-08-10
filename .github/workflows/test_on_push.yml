@@ -88,7 +88,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           pip install -e .[all,docs]
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
+      - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
         if: matrix.os != 'windows-latest'
         with:
@@ -100,9 +100,9 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-${{matrix.os}}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os != 'windows-latest'
         run: nox -s pybamm-requires
 
