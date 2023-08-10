@@ -255,7 +255,7 @@ class Simulation:
             parameterised_model = new_parameter_values.process_model(
                 new_model, inplace=False
             )
-            self.experiment_unique_steps_to_model[repr(op)] = parameterised_model
+            self.experiment_unique_steps_to_model[op.basic_repr()] = parameterised_model
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
@@ -771,8 +771,8 @@ class Simulation:
                     else:
                         dt = op_conds.duration
                     op_conds_str = str(op_conds)
-                    model = self.op_conds_to_built_models[repr(op_conds)]
-                    solver = self.op_conds_to_built_solvers[repr(op_conds)]
+                    model = self.op_conds_to_built_models[op_conds.basic_repr()]
+                    solver = self.op_conds_to_built_solvers[op_conds.basic_repr()]
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = op_conds_str

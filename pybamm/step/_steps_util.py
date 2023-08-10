@@ -163,6 +163,14 @@ class _Step:
     def __repr__(self):
         return f"_Step({self.repr_args})"
 
+    def basic_repr(self):
+        """
+        Return a basic representation of the step, only with type, value, termination
+        and temperature, which are the variables involved in processing the model. Also
+        used for hashing.
+        """
+        return f"_Step({self.hash_args})"
+
     def to_dict(self):
         """
         Convert the step to a dictionary.
@@ -191,7 +199,7 @@ class _Step:
         )
 
     def __hash__(self):
-        return hash(f"_Step({self.hash_args})")
+        return hash(self.basic_repr())
 
     @property
     def unit(self):
