@@ -363,6 +363,17 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode cracking rate", {"Temperature [K]": T}
         )
 
+    def LAM_rate_current(self, i, T):
+        """
+        Dimensional rate of loss of active material as a function of applied current
+        density
+        """
+        Domain = self.domain.capitalize()
+        inputs = {"Total current density [A.m-2]": i, "Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode current-driven LAM rate", inputs
+        )
+
 
 class ParticleLithiumIonParameters(BaseParameters):
     def __init__(self, phase, domain_param):
