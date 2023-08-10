@@ -90,7 +90,7 @@ If you'd rather do things yourself,
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
-	 
+
 
 PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
 
@@ -117,7 +117,7 @@ Using Nox (recommended)
     It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
 
 This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
-It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
+It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `ruff <https://beta.ruff.rs/docs/>`_.
 
 You can now activate the environment with
 
@@ -193,7 +193,7 @@ Finally, to run the unit and the integration suites sequentially, use
 
 	nox -s tests
 
-Using the test runner 
+Using the test runner
 ~~~~~~~~~~~~~~~~~~~~~~
 
 You can run unit tests for PyBaMM using
@@ -239,6 +239,7 @@ Doctests, examples, and coverage
 - ``nox -s examples``: Run the example scripts in ``examples/scripts``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
+- ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
 Extra tips while using Nox
 --------------------------

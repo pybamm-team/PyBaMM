@@ -241,6 +241,10 @@ class Discretisation(object):
             model_disc
         )
 
+        # Save geometry
+        pybamm.logger.verbose("Save geometry for {}".format(model.name))
+        model_disc._geometry = getattr(self.mesh, "_geometry", None)
+
         # Check that resulting model makes sense
         if check_model:
             pybamm.logger.verbose("Performing model checks for {}".format(model.name))
@@ -454,7 +458,11 @@ class Discretisation(object):
             # check if the boundary condition at the origin for sphere domains is other
             # than no flux
             for subdomain in key.domain:
-                if self.mesh[subdomain].coord_sys == "spherical polar":
+                if (
+                    self.mesh[subdomain].coord_sys
+                    in ["spherical polar", "cylindrical polar"]
+                    and list(self.mesh.geometry[subdomain].values())[0]["min"] == 0
+                ):
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
                             "Boundary condition at r = 0 must be a homogeneous "

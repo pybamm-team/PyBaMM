@@ -62,8 +62,9 @@ extensions = [
     "myst_parser",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
+    "sphinx_docsearch",
     "sphinx_last_updated_by_git",
-    "nbsphinx",
+    "nbsphinx",  # to be kept below JavaScript-enabled extensions, always
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
     "hoverxref.extension",
@@ -108,15 +109,15 @@ suppress_warnings = ["git.too_shallow"]
 
 html_theme = "pydata_sphinx_theme"
 
-html_static_path = ["source/_static"]
+html_static_path = ["_static"]
 
 # Theme
 
 # pydata theme options (see
 # https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html# for more information)
 # mostly copied from numpy, scipy, pandas
-html_logo = "source/_static/pybamm_logo.png"
-html_favicon = "source/_static/favicon/favicon.png"
+html_logo = "_static/pybamm_logo.png"
+html_favicon = "_static/favicon/favicon.png"
 
 html_theme_options = {
     "logo": {
@@ -147,14 +148,18 @@ html_theme_options = {
             "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
         },
     ],
+    # should be kept versioned to use for the version warning bar
     "switcher": {
-        "version_match": release,
-        "json_url": "https://pybamm.readthedocs.io/en/latest/_static/versions.json",  # noqa: E501
+        "version_match": version,
+        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
     },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
-    # for dark mode toggle, version switcher, and social media links
-    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
+    # for dark mode toggle and social media links
+    # Note: the version switcher was removed in favour of the readthedocs one
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    # add Algolia to the persistent navbar, this removes the default search icon
+    "navbar_persistent": "algolia-searchbox",
     "use_edit_page_button": True,
     "pygment_light_style": "xcode",
     "pygment_dark_style": "monokai",
@@ -285,6 +290,10 @@ bibtex_tooltips = True
 
 # -- nbsphinx configuration options ------------------------------------------
 
+# Important: ensure require.js is not loaded. this is needed to avoid
+# a conflict with the sphinx-docsearch extension for Algolia search
+
+nbsphinx_requirejs_path = ""
 nbsphinx_prolog = r"""
 
 {% set github_docname =
@@ -305,7 +314,7 @@ env.doc2path(env.docname, base=None) %}
         <p>
             An interactive online version of this notebook is available, which can be
             accessed via
-            <a href="https://colab.research.google.com/{{ github_docname | e }}" 
+            <a href="https://colab.research.google.com/{{ github_docname | e }}"
             target="_blank">
             <img src="https://colab.research.google.com/assets/colab-badge.svg"
             alt="Open this notebook in Google Colab"/></a>
@@ -320,31 +329,6 @@ env.doc2path(env.docname, base=None) %}
     </div>
 
 """
-
-# -- Options for sphinx-hoverxref --------------------------------------------
-
-# Hoverxref settings
-
-hoverxref_default_type = "tooltip"
-hoverxref_auto_ref = True
-
-hoverxref_roles = ["class", "meth", "func", "ref", "term"]
-hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
-
-hoverxref_domains = ["py"]
-
-# Currently, only projects that are hosted on readthedocs + CPython, NumPy, and
-# SymPy are supported
-hoverxref_intersphinx = list(intersphinx_mapping.keys())
-
-# Tooltips settings
-hoverxref_tooltip_lazy = False
-hoverxref_tooltip_maxwidth = 750
-hoverxref_tooltip_animation = "fade"
-hoverxref_tooltip_animation_duration = 1
-hoverxref_tooltip_content = "Loading information..."
-hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
-
 
 # -- sphinxext/inheritance_diagram.py options --------------------------------
 
@@ -396,6 +380,16 @@ hoverxref_tooltip_animation_duration = 1
 hoverxref_tooltip_content = "Loading information..."
 hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
 
+# -- Options for Algolia DocSearch (sphinx-docsearch) ------------------------
+
+# DocSearch settings
+docsearch_app_id = "BXYTEF2JI8"
+docsearch_api_key = "b7e7f1fc1a7c40a1587e52e8f4ff3b45"  # search API key, safe to use
+docsearch_index_name = "pybamm"
+
+# Searchbox settings
+docsearch_container = "#algolia-docsearch"
+docsearch_placeholder = "Search the PyBaMM documentation"
 
 # -- Jinja templating --------------------------------------------------------
 # Credit to: https://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/

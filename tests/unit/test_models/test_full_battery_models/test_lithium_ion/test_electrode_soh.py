@@ -36,12 +36,12 @@ class TestElectrodeSOH(TestCase):
                 self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
             else:
                 # theoretical_energy is not present in sol_split
-                x_0 = sol_split["x_0"].data[0]
-                y_0 = sol_split["y_0"].data[0]
-                x_100 = sol_split["x_100"].data[0]
-                y_100 = sol_split["y_100"].data[0]
+                inputs = {
+                    k: sol_split[k].data[0]
+                    for k in ["x_0", "y_0", "x_100", "y_100", "Q_p"]
+                }
                 energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                    parameter_values, x_100, x_0, y_100, y_0
+                    parameter_values, inputs
                 )
                 self.assertAlmostEqual(sol[key], energy, places=5)
 

@@ -26,8 +26,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "true" or "false". "false" is the default, since calculating discharge
                 energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
-                Sets the geometry of the cell. Can be "pouch" (default) or
-                "arbitrary". The arbitrary geometry option solves a 1D electrochemical
+                Sets the geometry of the cell. Can be "arbitrary" (default) or
+                "pouch". The arbitrary geometry option solves a 1D electrochemical
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
@@ -43,12 +43,20 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "current collector" : str
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair" or "potential pair quite conductive".
+            * "diffusivity" : str
+                Sets the model for the diffusivity. Can be "single"
+                (default) or "current sigmoid". A 2-tuple can be provided for different
+                behaviour in negative and positive electrodes.
             * "dimensionality" : int
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
             * "electrolyte conductivity" : str
                 Can be "default" (default), "full", "leading order", "composite" or
                 "integrated".
+            * "exchange-current density" : str
+                Sets the model for the exchange-current density. Can be "single"
+                (default) or "current sigmoid". A 2-tuple can be provided for different
+                behaviour in negative and positive electrodes.
             * "hydrolysis" : str
                 Whether to include hydrolysis in the model. Only implemented for
                 lead-acid models. Can be "false" (default) or "true". If "true", then
@@ -57,7 +65,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
                 (default), "asymmetric Butler-Volmer", "linear", "Marcus",
                 "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014),
-                or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be 
+                or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be
                 provided for different behaviour in negative and positive electrodes.
             * "interface utilisation": str
                 Can be "full" (default), "constant", or "current-driven".
@@ -69,20 +77,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "false" (default) or "true".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
-                "stress-driven", "reaction-driven", or "stress and reaction-driven".
+                "stress-driven", "reaction-driven", "current-driven", or
+                "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
             * "number of MSMR reactions" : str
                 Sets the number of reactions to use in the MSMR model in each electrode.
-                A 2-tuple can be provided to give a different number of reactions in 
-                the negative and positive electrodes. Default is "none". Can be any 
+                A 2-tuple can be provided to give a different number of reactions in
+                the negative and positive electrodes. Default is "none". Can be any
                 2-tuple of strings of integers. For example, set to ("6", "4") for a
                 negative electrode with 6 reactions and a positive electrode with 4
                 reactions.
             * "open-circuit potential" : str
-                Sets the model for the open circuit potential. Can be "single" 
+                Sets the model for the open circuit potential. Can be "single"
                 (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
-                option must also be "MSMR". A 2-tuple can be provided for different 
+                option must also be "MSMR". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
@@ -103,9 +112,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", "quartic profile", or "MSMR". If "MSMR" then the 
-                "open-circuit potential" option must also be "MSMR". A 2-tuple can be 
-                provided for different behaviour in negative and positive electrodes. 
+                "quadratic profile", "quartic profile", or "MSMR". If "MSMR" then the
+                "open-circuit potential" option must also be "MSMR". A 2-tuple can be
+                provided for different behaviour in negative and positive electrodes.
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle
                 swelling and cracking. Can be "none" (default), "swelling only",
@@ -204,6 +213,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair",
                 "potential pair quite conductive",
             ],
+            "diffusivity": ["single", "current sigmoid"],
             "dimensionality": [0, 1, 2],
             "electrolyte conductivity": [
                 "default",
@@ -212,6 +222,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "composite",
                 "integrated",
             ],
+            "exchange-current density": ["single", "current sigmoid"],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -233,6 +244,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "none",
                 "stress-driven",
                 "reaction-driven",
+                "current-driven",
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": [
@@ -297,9 +309,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         default_options = {
             name: options[0] for name, options in self.possible_options.items()
         }
+        extra_options = extra_options or {}
 
         # Change the default for cell geometry based on which thermal option is provided
-        extra_options = extra_options or {}
         # return "none" if option not given
         thermal_option = extra_options.get("thermal", "none")
         if thermal_option in ["none", "isothermal", "lumped"]:
@@ -583,6 +595,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         (
                             option
                             in [
+                                "diffusivity",
+                                "exchange-current density",
                                 "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",

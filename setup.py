@@ -205,7 +205,6 @@ setup(
     install_requires=[
         "numpy>=1.16",
         "scipy>=1.3",
-        "pandas>=0.24",
         "casadi>=3.6.0",
         "xarray",
     ],
@@ -226,6 +225,7 @@ setup(
             "ipywidgets",
             "sphinx-gallery",
             "sphinx-hoverxref",
+            "sphinx-docsearch",
         ],  # For doc generation
         "examples": [
             "jupyter",  # For example notebooks
@@ -252,11 +252,20 @@ setup(
         ],
         "dev": [
             "pre-commit",  # For code style checking
-            "black",  # For code style auto-formatting
+            "ruff",  # For code style auto-formatting
         ],
+        "pandas": [
+            "pandas>=0.24",
+        ],
+        "jax": [
+            "jax==0.4.8",
+            "jaxlib==0.4.7",
+        ],
+        "odes": ["scikits.odes"],
         "all": [
             "anytree>=2.4.3",
             "autograd>=1.2",
+            "pandas>=0.24",
             "scikit-fem>=0.2.0",
             "imageio>=2.9.0",
             "pybtex>=0.24.0",

@@ -291,8 +291,11 @@ class Simulation:
                 # figure out whether the voltage event is greater than the starting
                 # voltage (charge) or less (discharge) and set the sign of the
                 # event accordingly
-                if isinstance(op.value, pybamm.Interpolant):
-                    sign = np.sign(op.value.y[0])
+                if (isinstance(op.value, pybamm.Interpolant) or
+                    isinstance(op.value, pybamm.Multiplication)):
+                    inpt = {"start time":0}
+                    init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
+                    sign = np.sign(init_curr)
                 else:
                     sign = np.sign(op.value)
                 if sign > 0:
@@ -1031,7 +1034,7 @@ class Simulation:
 
     @geometry.setter
     def geometry(self, geometry):
-        self._geometry = geometry.copy()
+        self._geometry = geometry
 
     @property
     def parameter_values(self):
