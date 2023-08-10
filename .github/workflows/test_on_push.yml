@@ -4,24 +4,16 @@ on:
   workflow_dispatch:
   pull_request:
 
-jobs:
-  pre_job:
-    runs-on: ubuntu-latest
-    # Map a step output to a job output
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@master
-        with:
-          # All of these options are optional, so you can remove them if you are happy with the defaults
-          concurrent_skipping: "never"
-          cancel_others: "true"
-          paths_ignore: '["**/README.md"]'
+concurrency:
+  # github.workflow: name of the workflow, so that we don't cancel other workflows
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  # This avoids workflow runs on both pushes and PRs
+  cancel-in-progress: true
 
+jobs:
   style:
-    needs: pre_job
-    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
