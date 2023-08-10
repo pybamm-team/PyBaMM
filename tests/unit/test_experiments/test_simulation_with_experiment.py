@@ -38,8 +38,12 @@ class TestSimulationExperiment(TestCase):
             [3600, 3 / Crate * 3600, 24 * 3600, 24 * 3600],
         )
 
-        model_I = sim.experiment_unique_steps_to_model[repr(op_conds[1])]  # CC charge
-        model_V = sim.experiment_unique_steps_to_model[repr(op_conds[2])]  # CV hold
+        model_I = sim.experiment_unique_steps_to_model[
+            op_conds[1].basic_repr()
+        ]  # CC charge
+        model_V = sim.experiment_unique_steps_to_model[
+            op_conds[2].basic_repr()
+        ]  # CV hold
         self.assertIn(
             "Current cut-off [A] [experiment]",
             [event.name for event in model_V.events],
