@@ -751,7 +751,15 @@ class TestSimulationExperiment(TestCase):
 
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve(calc_esoh=False)
-        2 + 2
+
+        # Check that there are 4 steps
+        self.assertEqual(len(experiment.operating_conditions_steps), 4)
+
+        # Check that there are only 2 unique steps
+        self.assertEqual(len(sim.experiment.unique_steps), 2)
+
+        # Check that there are only 3 built models (unique steps + padding rest)
+        self.assertEqual(len(sim.op_conds_to_built_models), 3)
 
 
 if __name__ == "__main__":
