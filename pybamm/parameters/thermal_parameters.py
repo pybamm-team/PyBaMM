@@ -59,6 +59,20 @@ class ThermalParameters(BaseParameters):
             self.rho_eff_dim_ref * (self.geo.L_z ** 2) / self.lambda_eff_dim_ref
         )
 
+        # Thermal runaway species decomposition parameters
+        self.A_an = pybamm.Parameter("Frequency factor for anode decomposition [s-1]")
+        self.A_ca = pybamm.Parameter("Frequency factor for cathode decomposition [s-1]")
+        self.A_sei = pybamm.Parameter("Frequency factor for SEI decomposition [s-1]")
+        self.E_an = pybamm.Parameter("Activation energy for anode decomposition [J]")
+        self.E_ca = pybamm.Parameter("Activation energy for cathode decomposition [J]")
+        self.E_sei = pybamm.Parameter("Activation energy for SEI decomposition [J]")
+        self.h_an = pybamm.Parameter("Enthalpy of anode decomposition [J.kg-1]")
+        self.h_ca = pybamm.Parameter("Enthalpy of cathode decomposition [J.kg-1]")
+        self.h_sei = pybamm.Parameter("Enthalpy of SEI decomposition [J.kg-1]")
+        self.alpha_0 = pybamm.Parameter("Initial degree of conversion of cathode decomposition")
+        self.x_sei_0 = pybamm.Parameter("Initial fraction of Li in SEI")
+        self.z_0 = pybamm.Parameter("Initial SEI thickness")
+
     def T_amb_dim(self, t):
         """Dimensional ambient temperature"""
         return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})

@@ -32,3 +32,4 @@ Positive current collector thermal conductivity [W.m-1.K-1],237,,
 Nominal cell capacity [A.h],3.5,Siegel 2022,
 Typical current [A],3.5,,1C current
 Current function [A],3,default current function,
+Tabbing resistance [Ohm], 0, default,

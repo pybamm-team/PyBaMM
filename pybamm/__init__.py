@@ -130,6 +130,7 @@ from .models.submodels import (
     particle,
     porosity,
     thermal,
+    decomposition,
     transport_efficiency,
     particle_mechanics,
 )

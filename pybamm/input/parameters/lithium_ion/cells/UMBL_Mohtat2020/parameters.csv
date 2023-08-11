@@ -32,3 +32,4 @@ Positive current collector thermal conductivity [W.m-1.K-1],237,,
 Nominal cell capacity [A.h],5,Peyman MPM,
 Typical current [A],5,,1C current
 Current function [A],5,default current function,
+Tabbing resistance [Ohm], 0, default,

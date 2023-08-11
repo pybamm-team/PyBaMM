@@ -183,6 +183,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
+            * "decomposition": str
+                High temperature SEI, anode, and cathode decompostion. For modeling 
+                battery abuse and thermal runaway. Default is "false".
 
     **Extends:** :class:`dict`
     """
@@ -270,6 +273,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "total interfacial current density as a state": ["false", "true"],
             "working electrode": ["both", "negative", "positive"],
             "x-average side reactions": ["false", "true"],
+            "decomposition": ["false", "true"],
         }
 
         default_options = {

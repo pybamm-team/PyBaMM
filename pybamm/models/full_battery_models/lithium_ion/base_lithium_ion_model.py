@@ -72,6 +72,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
         self.set_total_interface_submodel()
+        self.set_decomposition_submodel()
 
         if self.half_cell:
             # This also removes "negative electrode" submodels, so should be done last
@@ -394,6 +395,27 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
         
 
+    def set_decomposition_submodel(self):
+        if "true" in self.options["decomposition"]:
+            self.submodels[
+                "anode decomposition"
+            ] = pybamm.decomposition.AnodeDecomposition(self.param)
+            self.submodels[
+                "cathode decomposition"
+            ] = pybamm.decomposition.CathodeDecomposition(self.param)
+            self.submodels["SEI decomposition"] = pybamm.decomposition.SeiDecomposition(
+                self.param
+            )
+        else:
+            self.submodels[
+                "anode decomposition"
+            ] = pybamm.decomposition.NoAnodeDecomposition(self.param)
+            self.submodels[
+                "cathode decomposition"
+            ] = pybamm.decomposition.NoCathodeDecomposition(self.param)
+            self.submodels[
+                "SEI decomposition"
+            ] = pybamm.decomposition.NoSeiDecomposition(self.param)
 
     def set_li_metal_counter_electrode_submodels(self):
         self.submodels[
