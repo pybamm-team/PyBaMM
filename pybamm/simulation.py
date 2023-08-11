@@ -74,8 +74,8 @@ class Simulation:
         output_variables=None,
         C_rate=None,
     ):
-        self.parameter_values = parameter_values or model.default_parameter_values
-        self._unprocessed_parameter_values = self.parameter_values
+        self._parameter_values = parameter_values or model.default_parameter_values
+        self._unprocessed_parameter_values = self._parameter_values
 
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
             if experiment is not None:
@@ -210,7 +210,7 @@ class Simulation:
         self.experiment_unique_steps_to_model = {}
         for op_number, op in enumerate(self.experiment.unique_steps):
             new_model = self.model.new_copy()
-            new_parameter_values = self.parameter_values.copy()
+            new_parameter_values = self._parameter_values.copy()
 
             if op.type != "current":
                 # Voltage or power control
@@ -261,7 +261,7 @@ class Simulation:
         if self.experiment.initial_start_time:
             new_model = self.model.new_copy()
             # Update parameter values
-            new_parameter_values = self.parameter_values.copy()
+            new_parameter_values = self._parameter_values.copy()
             self._original_temperature = new_parameter_values["Ambient temperature [K]"]
             new_parameter_values.update(
                 {"Current function [A]": 0, "Ambient temperature [K]": "[input]"},
@@ -372,7 +372,7 @@ class Simulation:
             self.op_conds_to_built_solvers = None
 
         param = self.model.param
-        self.parameter_values = (
+        self._parameter_values = (
             self._unprocessed_parameter_values.set_initial_stoichiometries(
                 initial_soc, param=param, inplace=False
             )
@@ -857,7 +857,7 @@ class Simulation:
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
                     # Note capacity_start could be defined as
-                    # self.parameter_values["Nominal cell capacity [A.h]"] instead
+                    # self._parameter_values["Nominal cell capacity [A.h]"] instead
                     if "capacity" in self.experiment.termination:
                         capacity_start = all_summary_variables[0]["Capacity [A.h]"]
                         logs["start capacity"] = capacity_start
@@ -948,7 +948,7 @@ class Simulation:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self.parameter_values, self.model.param
+            self._parameter_values, self.model.param
         )
 
     def plot(self, output_variables=None, **kwargs):
@@ -1032,10 +1032,6 @@ class Simulation:
     @property
     def parameter_values(self):
         return self._parameter_values
-
-    @parameter_values.setter
-    def parameter_values(self, parameter_values):
-        self._parameter_values = parameter_values.copy()
 
     @property
     def submesh_types(self):
