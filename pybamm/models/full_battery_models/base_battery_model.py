@@ -81,7 +81,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "false" (default) or "true".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
-                "stress-driven", "reaction-driven", or "stress and reaction-driven".
+                "stress-driven", "reaction-driven", "current-driven", or
+                "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
             * "open-circuit potential" : str
@@ -234,6 +235,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "none",
                 "stress-driven",
                 "reaction-driven",
+                "current-driven",
                 "stress and reaction-driven",
             ],
             "open-circuit potential": ["single", "current sigmoid"],

@@ -109,6 +109,19 @@ class LossActiveMaterial(BaseModel):
 
             j_stress_reaction = beta_LAM_sei * a_j_sei / self.param.F
             deps_solid_dt += j_stress_reaction
+
+        if "current" in lam_option:
+            # obtain the rate of loss of active materials (LAM) driven by current
+            if self.x_average is True:
+                T = variables[f"X-averaged {domain} electrode temperature [K]"]
+            else:
+                T = variables[f"{Domain} electrode temperature [K]"]
+
+            j_current_LAM = self.domain_param.LAM_rate_current(
+                self.param.current_density_with_time, T
+            )
+            deps_solid_dt += j_current_LAM
+
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )
