@@ -4,7 +4,6 @@
 import pickle
 import pybamm
 import numpy as np
-import copy
 import warnings
 import sys
 from functools import lru_cache
@@ -114,13 +113,13 @@ class Simulation:
             self.experiment = experiment.copy()
 
         self._unprocessed_model = model
-        self.model = model
+        self._model = model
 
-        self._geometry = geometry or self.model.default_geometry
-        self._submesh_types = submesh_types or self.model.default_submesh_types
-        self._var_pts = var_pts or self.model.default_var_pts
-        self._spatial_methods = spatial_methods or self.model.default_spatial_methods
-        self._solver = solver or self.model.default_solver
+        self._geometry = geometry or self._model.default_geometry
+        self._submesh_types = submesh_types or self._model.default_submesh_types
+        self._var_pts = var_pts or self._model.default_var_pts
+        self._spatial_methods = spatial_methods or self._model.default_spatial_methods
+        self._solver = solver or self._model.default_solver
         self._output_variables = output_variables
 
         # Initialize empty built states
@@ -201,7 +200,7 @@ class Simulation:
 
     def set_up_and_parameterise_model_for_experiment(self):
         """
-        Set up self.model to be able to run the experiment (new version).
+        Set up self._model to be able to run the experiment (new version).
         In this version, a new model is created for each step.
 
         This increases set-up time since several models to be processed, but
@@ -209,7 +208,7 @@ class Simulation:
         """
         self.experiment_unique_steps_to_model = {}
         for op_number, op in enumerate(self.experiment.unique_steps):
-            new_model = self.model.new_copy()
+            new_model = self._model.new_copy()
             new_parameter_values = self._parameter_values.copy()
 
             if op.type != "current":
@@ -259,7 +258,7 @@ class Simulation:
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
-            new_model = self.model.new_copy()
+            new_model = self._model.new_copy()
             # Update parameter values
             new_parameter_values = self._parameter_values.copy()
             self._original_temperature = new_parameter_values["Ambient temperature [K]"]
@@ -361,7 +360,7 @@ class Simulation:
             self._unprocessed_model, inplace=False
         )
         self._parameter_values.process_geometry(self._geometry)
-        self.model = self._model_with_set_params
+        self._model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):
         if self._built_initial_soc != initial_soc:
@@ -371,7 +370,7 @@ class Simulation:
             self.op_conds_to_built_models = None
             self.op_conds_to_built_solvers = None
 
-        param = self.model.param
+        param = self._model.param
         self._parameter_values = (
             self._unprocessed_parameter_values.set_initial_stoichiometries(
                 initial_soc, param=param, inplace=False
@@ -403,9 +402,9 @@ class Simulation:
 
         if self.built_model:
             return
-        elif self.model.is_discretised:
-            self._model_with_set_params = self.model
-            self._built_model = self.model
+        elif self._model.is_discretised:
+            self._model_with_set_params = self._model
+            self._built_model = self._model
         else:
             self.set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
@@ -537,7 +536,7 @@ class Simulation:
                 )
             if (
                 self.operating_mode == "without experiment"
-                or self.model.name == "ElectrodeSOH model"
+                or self._model.name == "ElectrodeSOH model"
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -941,14 +940,14 @@ class Simulation:
     def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
-            or isinstance(self.model, pybamm.lead_acid.BaseModel)
-            or isinstance(self.model, pybamm.equivalent_circuit.Thevenin)
-            or self.model.options["working electrode"] != "both"
+            or isinstance(self._model, pybamm.lead_acid.BaseModel)
+            or isinstance(self._model, pybamm.equivalent_circuit.Thevenin)
+            or self._model.options["working electrode"] != "both"
         ):
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self._parameter_values, self.model.param
+            self._parameter_values, self._model.param
         )
 
     def plot(self, output_variables=None, **kwargs):
@@ -1009,10 +1008,6 @@ class Simulation:
     def model(self):
         return self._model
 
-    @model.setter
-    def model(self, model):
-        self._model = copy.copy(model)
-
     @property
     def model_with_set_params(self):
         return self._model_with_set_params
@@ -1059,7 +1054,7 @@ class Simulation:
 
     def save(self, filename):
         """Save simulation using pickle"""
-        if self.model.convert_to_format == "python":
+        if self._model.convert_to_format == "python":
             # We currently cannot save models in the 'python' format
             raise NotImplementedError(
                 """
