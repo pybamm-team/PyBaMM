@@ -118,7 +118,7 @@ class Simulation:
 
         self._geometry = geometry or self.model.default_geometry
         self._submesh_types = submesh_types or self.model.default_submesh_types
-        self.var_pts = var_pts or self.model.default_var_pts
+        self._var_pts = var_pts or self.model.default_var_pts
         self.spatial_methods = spatial_methods or self.model.default_spatial_methods
         self.solver = solver or self.model.default_solver
         self.output_variables = output_variables
@@ -1040,10 +1040,6 @@ class Simulation:
     @property
     def var_pts(self):
         return self._var_pts
-
-    @var_pts.setter
-    def var_pts(self, var_pts):
-        self._var_pts = var_pts.copy()
 
     @property
     def spatial_methods(self):
