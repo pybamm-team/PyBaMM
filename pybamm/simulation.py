@@ -119,9 +119,9 @@ class Simulation:
         self._geometry = geometry or self.model.default_geometry
         self._submesh_types = submesh_types or self.model.default_submesh_types
         self._var_pts = var_pts or self.model.default_var_pts
-        self.spatial_methods = spatial_methods or self.model.default_spatial_methods
+        self._spatial_methods = spatial_methods or self.model.default_spatial_methods
         self.solver = solver or self.model.default_solver
-        self.output_variables = output_variables
+        self._output_variables = output_variables
 
         # Initialize empty built states
         self._model_with_set_params = None
@@ -973,7 +973,7 @@ class Simulation:
             )
 
         if output_variables is None:
-            output_variables = self.output_variables
+            output_variables = self._output_variables
 
         self.quick_plot = pybamm.dynamic_plot(
             self._solution, output_variables=output_variables, **kwargs
@@ -1045,10 +1045,6 @@ class Simulation:
     def spatial_methods(self):
         return self._spatial_methods
 
-    @spatial_methods.setter
-    def spatial_methods(self, spatial_methods):
-        self._spatial_methods = spatial_methods.copy()
-
     @property
     def solver(self):
         return self._solver
@@ -1060,10 +1056,6 @@ class Simulation:
     @property
     def output_variables(self):
         return self._output_variables
-
-    @output_variables.setter
-    def output_variables(self, output_variables):
-        self._output_variables = copy.copy(output_variables)
 
     @property
     def solution(self):
