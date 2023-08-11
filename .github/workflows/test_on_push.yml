@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Unit and coverage tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
+    name: Coverage tests (ubuntu-latest / Python 3.11)
 
     steps:
       - name: Check out PyBaMM repository
