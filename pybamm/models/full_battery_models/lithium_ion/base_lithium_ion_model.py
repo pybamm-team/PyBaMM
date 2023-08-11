@@ -215,6 +215,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Positive electrode capacity [A.h]",
             # LAM, LLI
             "Loss of active material in positive electrode [%]",
+            "X-averaged positive electrode active material volume fraction",
             "Loss of lithium inventory [%]",
             "Loss of lithium inventory, including electrolyte [%]",
             # Total lithium
@@ -238,6 +239,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             summary_variables += [
                 "Negative electrode capacity [A.h]",
                 "Loss of active material in negative electrode [%]",
+                "X-averaged negative electrode active material volume fraction",
                 "Total lithium in negative electrode [mol]",
                 "Loss of lithium to lithium plating [mol]",
                 "Loss of capacity to lithium plating [A.h]",

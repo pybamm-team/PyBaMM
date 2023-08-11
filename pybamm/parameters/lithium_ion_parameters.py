@@ -503,9 +503,21 @@ class DomainLithiumIonParameters(BaseParameters):
         self.beta_LAM_dimensional = pybamm.Parameter(
             f"{Domain} electrode LAM constant proportional term [s-1]"
         )
+        self.beta_LAM_dimensional2 = pybamm.Parameter(
+            f"{Domain} electrode LAM constant proportional term 2 [s-1]"
+        )
         self.stress_critical_dim = pybamm.Parameter(
             f"{Domain} electrode critical stress [Pa]"
         )
+
+        self.stress_LAM_min_dim = pybamm.Parameter(
+            f"{Domain} electrode LAM min stress [Pa]"
+        )
+
+        self.stress_LAM_max_dim = pybamm.Parameter(
+            f"{Domain} electrode LAM max stress [Pa]"
+        )
+
         self.beta_LAM_sei_dimensional = pybamm.Parameter(
             f"{Domain} electrode reaction-driven LAM factor [m3.mol-1]"
         )
@@ -584,8 +596,11 @@ class DomainLithiumIonParameters(BaseParameters):
         self.theta = self.theta_dim * self.prim.c_max / main.T_ref
         self.c_0 = self.c_0_dim / self.prim.c_max
         self.beta_LAM = self.beta_LAM_dimensional * main.timescale
+        self.beta_LAM2 = self.beta_LAM_dimensional2 * main.timescale
         # normalised typical time for one cycle
         self.stress_critical = self.stress_critical_dim / self.E
+        self.stress_LAM_min = self.stress_LAM_min_dim / self.E
+        self.stress_LAM_max = self.stress_LAM_max_dim / self.E
         # Reaction-driven LAM parameters
         self.beta_LAM_sei = (
             self.beta_LAM_sei_dimensional

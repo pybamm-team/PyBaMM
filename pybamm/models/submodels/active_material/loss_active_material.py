@@ -82,23 +82,37 @@ class LossActiveMaterial(BaseModel):
                 ]
 
             beta_LAM = self.domain_param.beta_LAM
+            beta_LAM2 = self.domain_param.beta_LAM2
             stress_critical = self.domain_param.stress_critical
+            stress_min = self.domain_param.stress_LAM_min
+            stress_max = self.domain_param.stress_LAM_max
             m_LAM = self.domain_param.m_LAM
 
             stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
             # compressive stress make no contribution
-            # stress_h_surf1 = stress_h_surf
-            # stress_h_surf2 = stress_h_surf
-            # stress_h_surf1 *= stress_h_surf1 > 0
-            # stress_h_surf2 *= stress_h_surf2 < 0
+            stress_h_surf1 = 1*stress_h_surf
+            stress_h_surf2 = 1*stress_h_surf
+            stress_h_surf1 *= stress_h_surf1 > 0
+            stress_h_surf2 *= stress_h_surf2 < 0
             # stress_h_surf = (stress_h_surf1+stress_h_surf2)
             stress_h_surf *= stress_h_surf < 0
             # assuming the minimum hydrostatic stress is zero for full cycles
             stress_h_surf_min = stress_h_surf * 0
+            # j_stress_LAM = (
+            #     -beta_LAM * (abs(stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
+            # )
+            # j_stress_LAM = (
+            #     -beta_LAM*(abs(stress_h_surf2) / stress_critical) ** m_LAM + beta_LAM2*(abs(stress_h_surf1) / stress_critical) ** m_LAM
+            # )
+            # j_stress_LAM = (
+            #     -beta_LAM*(abs(stress_min) / stress_critical) ** m_LAM + beta_LAM2*(abs(stress_max) / stress_critical) ** m_LAM
+            # )
             j_stress_LAM = (
-                -beta_LAM
-                * (abs(stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
+                -beta_LAM*(abs(stress_min) / stress_critical) + beta_LAM2*(abs(stress_max) / stress_critical)
             )
+            # j_stress_LAM = (
+            #     -beta_LAM*(abs(stress_h_surf1) / stress_critical) ** m_LAM
+            # )
             deps_solid_dt += j_stress_LAM
 
         if "reaction" in lam_option:
