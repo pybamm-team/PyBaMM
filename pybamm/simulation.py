@@ -120,7 +120,7 @@ class Simulation:
         self._submesh_types = submesh_types or self.model.default_submesh_types
         self._var_pts = var_pts or self.model.default_var_pts
         self._spatial_methods = spatial_methods or self.model.default_spatial_methods
-        self.solver = solver or self.model.default_solver
+        self._solver = solver or self.model.default_solver
         self._output_variables = output_variables
 
         # Initialize empty built states
@@ -447,7 +447,7 @@ class Simulation:
                 built_model = self._disc.process_model(
                     model_with_set_params, inplace=True, check_model=check_model
                 )
-                solver = self.solver.copy()
+                solver = self._solver.copy()
                 self.op_conds_to_built_solvers[op_cond] = solver
                 self.op_conds_to_built_models[op_cond] = built_model
 
@@ -519,7 +519,7 @@ class Simulation:
         """
         # Setup
         if solver is None:
-            solver = self.solver
+            solver = self._solver
 
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
         logs = {}
@@ -927,7 +927,7 @@ class Simulation:
             self.build()
 
         if solver is None:
-            solver = self.solver
+            solver = self._solver
 
         if starting_solution is None:
             starting_solution = self._solution
@@ -1048,10 +1048,6 @@ class Simulation:
     @property
     def solver(self):
         return self._solver
-
-    @solver.setter
-    def solver(self, solver):
-        self._solver = solver.copy()
 
     @property
     def output_variables(self):
