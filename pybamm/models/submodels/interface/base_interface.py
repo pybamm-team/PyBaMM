@@ -372,7 +372,7 @@ class BaseInterface(pybamm.BaseSubModel):
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, f"{domain} electrode")
 
         variables = {
-            f"{Domain} electrode {Phase_name}SEI film overpotential [V]": eta_sei,
+            f"{Domain} electrode {phase_name}SEI film overpotential [V]": eta_sei,
             f"X-averaged {domain} electrode {phase_name}SEI"
             " film overpotential [V]": eta_sei_av,
         }

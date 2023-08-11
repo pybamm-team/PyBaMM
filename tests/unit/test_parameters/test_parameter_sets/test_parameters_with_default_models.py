@@ -31,7 +31,7 @@ class TestParameterValuesWithModel(TestCase):
                     "lithium plating": "partially reversible",
                 }
             ),
-            "OKane2022_negative_halfcell": pybamm.lithium_ion.DFN(
+            "OKane2022_graphite_SiOx_halfcell": pybamm.lithium_ion.DFN(
                 {
                     "half-cell": "true",
                     "SEI": "solvent-diffusion limited",

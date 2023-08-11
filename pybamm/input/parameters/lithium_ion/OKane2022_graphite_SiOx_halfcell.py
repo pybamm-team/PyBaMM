@@ -370,7 +370,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for an LG M50 cell, from the paper
+    Parameters for the graphite+SiOx negative electrode of a LG M50 cell, from the paper
 
         Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert
         Timms, Valentin Sulzer, Jacqueline Sophie Edge, Billy Wu, Gregory J. Offer, and
@@ -389,9 +389,9 @@ def get_parameter_values():
 
     and references therein.
 
-    Note: the SEI and plating parameters do not claim to be representative of the true
-    parameter values. These are merely the parameter values that were used in the
-    referenced papers.
+    Note: the SEI, plating and mechanical parameters do not claim to be representative
+    of the true parameter values. These are merely the parameter values that were used
+    in the referenced papers.
     """
 
     return {

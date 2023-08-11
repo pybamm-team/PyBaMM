@@ -47,7 +47,7 @@ class TestBasicHalfCellModels(TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        param = pybamm.ParameterValues("OKane2022_negative_halfcell")
+        param = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
 
         param["Current function [A]"] = -2.5  # C/2 charge
 

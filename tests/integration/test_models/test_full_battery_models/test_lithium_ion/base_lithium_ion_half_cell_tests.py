@@ -50,7 +50,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        parameter_values = pybamm.ParameterValues("OKane2022_negative_halfcell")
+        parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
         parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -98,7 +98,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
-        parameter_values = pybamm.ParameterValues("OKane2022_negative_halfcell")
+        parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
         parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 

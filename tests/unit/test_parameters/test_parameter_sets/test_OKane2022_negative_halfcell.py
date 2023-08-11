@@ -6,9 +6,9 @@ import pybamm
 import unittest
 
 
-class TestOKane2022_negative_halfcell(TestCase):
+class TestOKane2022_graphite_SiOx_halfcell(TestCase):
     def test_functions(self):
-        param = pybamm.ParameterValues("OKane2022_negative_halfcell")
+        param = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
         sto = pybamm.Scalar(0.9)
         T = pybamm.Scalar(298.15)
 

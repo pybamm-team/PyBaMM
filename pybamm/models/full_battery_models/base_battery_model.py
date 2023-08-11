@@ -563,59 +563,56 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            if option in ["half-cell"]:  # is this exception still necessary?
-                pass
+            if isinstance(value, str) or option in [
+                "dimensionality",
+                "operating mode",
+            ]:  # some options accept non-strings
+                value = (value,)
             else:
-                if isinstance(value, str) or option in [
-                    "dimensionality",
-                    "operating mode",
-                ]:  # some options accept non-strings
-                    value = (value,)
+                if not (
+                    (
+                        option
+                        in [
+                            "diffusivity",
+                            "exchange-current density",
+                            "intercalation kinetics",
+                            "interface utilisation",
+                            "lithium plating",
+                            "loss of active material",
+                            "open-circuit potential",
+                            "particle",
+                            "particle mechanics",
+                            "particle phases",
+                            "particle size",
+                            "SEI",
+                            "SEI on cracks",
+                            "stress-induced diffusion",
+                        ]
+                        and isinstance(value, tuple)
+                        and len(value) == 2
+                    )
+                ):
+                    # more possible options that can take 2-tuples to be added
+                    # as they come
+                    raise pybamm.OptionError(
+                        f"\n'{value}' is not recognized in option '{option}'. "
+                        "Values must be strings or (in some cases) "
+                        "2-tuples of strings"
+                    )
+            # flatten value
+            value_list = []
+            for val in value:
+                if isinstance(val, tuple):
+                    value_list.extend(list(val))
                 else:
-                    if not (
-                        (
-                            option
-                            in [
-                                "diffusivity",
-                                "exchange-current density",
-                                "intercalation kinetics",
-                                "interface utilisation",
-                                "lithium plating",
-                                "loss of active material",
-                                "open-circuit potential",
-                                "particle",
-                                "particle mechanics",
-                                "particle phases",
-                                "particle size",
-                                "SEI",
-                                "SEI on cracks",
-                                "stress-induced diffusion",
-                            ]
-                            and isinstance(value, tuple)
-                            and len(value) == 2
-                        )
-                    ):
-                        # more possible options that can take 2-tuples to be added
-                        # as they come
+                    value_list.append(val)
+            for val in value_list:
+                if val not in self.possible_options[option]:
+                    if not (option == "operating mode" and callable(val)):
                         raise pybamm.OptionError(
-                            f"\n'{value}' is not recognized in option '{option}'. "
-                            "Values must be strings or (in some cases) "
-                            "2-tuples of strings"
+                            f"\n'{val}' is not recognized in option '{option}'. "
+                            f"Possible values are {self.possible_options[option]}"
                         )
-                # flatten value
-                value_list = []
-                for val in value:
-                    if isinstance(val, tuple):
-                        value_list.extend(list(val))
-                    else:
-                        value_list.append(val)
-                for val in value_list:
-                    if val not in self.possible_options[option]:
-                        if not (option == "operating mode" and callable(val)):
-                            raise pybamm.OptionError(
-                                f"\n'{val}' is not recognized in option '{option}'. "
-                                f"Possible values are {self.possible_options[option]}"
-                            )
 
         super().__init__(options.items())
 

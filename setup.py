@@ -295,7 +295,7 @@ setup(
             "Mohtat2020 = pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values",  # noqa: E501
             "NCA_Kim2011 = pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values",  # noqa: E501
             "OKane2022 = pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values",  # noqa: E501
-            "OKane2022_negative_halfcell = pybamm.input.parameters.lithium_ion.OKane2022_negative_halfcell:get_parameter_values",  # noqa: E501
+            "OKane2022_graphite_SiOx_halfcell = pybamm.input.parameters.lithium_ion.OKane2022_graphite_SiOx_halfcell:get_parameter_values",  # noqa: E501
             "ORegan2022 = pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values",  # noqa: E501
             "Prada2013 = pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values",  # noqa: E501
             "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
