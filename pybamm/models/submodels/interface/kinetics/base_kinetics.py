@@ -83,7 +83,7 @@ class BaseKinetics(BaseInterface):
         # current density. Note: this is only used for the "exchange current density"
         # variables. For the interfacial current density variables, we sum the
         # interfacial currents from each reaction.
-        if self.options["intercalation kinetics"] == "MSMR":
+        if domain_options["intercalation kinetics"] == "MSMR":
             N = int(domain_options["number of MSMR reactions"])
             j0 = 0
             for i in range(N):
@@ -187,7 +187,7 @@ class BaseKinetics(BaseInterface):
         # (In the "distributed SEI resistance" model, we have already defined j)
         # For MSMR model we calculate the total current density by summing the current
         # densities from each reaction
-        if self.options["intercalation kinetics"] == "MSMR":
+        if domain_options["intercalation kinetics"] == "MSMR":
             j = 0
             for i in range(N):
                 j0_j = self._get_exchange_current_density_by_reaction(variables, i)
