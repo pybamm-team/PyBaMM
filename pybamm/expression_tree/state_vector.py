@@ -194,6 +194,29 @@ class StateVectorBase(pybamm.Symbol):
         """
         return np.nan * np.ones((self.size, 1))
 
+    def to_json(self):
+        """
+        Method to serialise a StateVector object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "y_slice": [
+                {
+                    "start": y.start,
+                    "stop": y.stop,
+                    "step": y.step,
+                }  # are there ever more than 1?
+                for y in self.y_slices
+            ],
+            "evaluation_array": list(self.evaluation_array),
+            # "children": self.children,  # might not need this, the anytree exporter handles children I think
+        }
+
+        return json_dict
+
 
 class StateVector(StateVectorBase):
     """

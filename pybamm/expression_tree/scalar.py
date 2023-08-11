@@ -74,3 +74,12 @@ class Scalar(pybamm.Symbol):
             return sympy.Symbol(self.print_name)
         else:
             return self.value
+
+    def to_json(self):
+        """
+        Method to serialise a Symbol object into JSON.
+        """
+
+        json_dict = {"name": self.name, "id": self.id, "value": self.value}
+
+        return json_dict

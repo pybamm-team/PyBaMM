@@ -129,6 +129,25 @@ class VariableBase(pybamm.Symbol):
         else:
             return self.name
 
+    def to_json(
+        self,
+    ):  # PL: This may never be touched if once discretised, it's turned into a statevector/statevectordot type.
+        """
+        Method to serialise a BoundaryOperator object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "bounds": self.bounds,  # tuple
+            "print_name": self.print_name,  # string
+            "scale": self.scale,  # float/symbol
+            "reference": self.reference,  # float/symbol
+        }
+
+        return json_dict
+
 
 class Variable(VariableBase):
     """

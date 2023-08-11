@@ -290,3 +290,22 @@ class Interpolant(pybamm.Function):
 
         else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
+
+    # PL: think I need something here. presumably I can serialise function methods using just their names, then rehydrate them at the point they're read back in?
+    def to_json(self):
+        """
+        Method to serialise an Interpolant object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            # "domains": self.domains,
+            "x": self.x.tolist(),
+            "y": self.y.tolist(),
+            "interpolator": self.interpolator,
+            "extrapolate": self.extrapolate,
+            # "entries_string": self.entries_string,
+        }
+
+        return json_dict

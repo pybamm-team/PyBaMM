@@ -50,6 +50,11 @@ class Broadcast(pybamm.SpatialOperator):
         # Differentiate the child and broadcast the result in the same way
         return self._unary_new_copy(self.child.diff(variable))
 
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Broadcast: Serialisation is only implemented for post-discretisation."  # PL: Come up with a better message!
+        )
+
 
 class PrimaryBroadcast(Broadcast):
     """

@@ -316,6 +316,20 @@ class Index(UnaryOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def to_json(self):
+        """
+        Method to serialise an Index object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "check_size": False,
+        }
+
+        return json_dict
+
 
 class SpatialOperator(UnaryOperator):
     """
@@ -581,6 +595,20 @@ class Integral(SpatialOperator):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         return sympy.Integral(child, sympy.Symbol("xn"))
 
+    def to_json(self):
+        """
+        Method to serialise an Integral object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "integration_variable": self.integration_variable,  # PL: This may be a (list of) symbols that need cycling through in a similar mannar to children
+        }
+
+        return json_dict
+
 
 class BaseIndefiniteIntegral(Integral):
     """
@@ -685,7 +713,8 @@ class DefiniteIntegralVector(SpatialOperator):
     Parameters
     ----------
     variable : :class:`pybamm.Symbol`
-        The variable whose basis will be integrated over the entire domain
+        The variable whose basis will be integrated over the entire domain (will
+        become self.children[0])
     vector_type : str, optional
         Whether to return a row or column vector (default is row)
     """
@@ -713,6 +742,20 @@ class DefiniteIntegralVector(SpatialOperator):
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
+
+    def to_json(self):
+        """
+        Method to serialise a DefiniteIntegralVector object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "vector_type": self.vector_type,
+        }
+
+        return json_dict
 
 
 class BoundaryIntegral(SpatialOperator):
@@ -771,6 +814,20 @@ class BoundaryIntegral(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def to_json(self):
+        """
+        Method to serialise a BoundaryIntegral object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,  # PL: Not sure if this exists, but might inherit from symbol
+            "region": self.region,
+        }
+
+        return json_dict
+
 
 class DeltaFunction(SpatialOperator):
     """
@@ -814,6 +871,20 @@ class DeltaFunction(SpatialOperator):
         vec = pybamm.evaluate_for_shape_using_domain(self.domains)
 
         return np.outer(child_eval, vec).reshape(-1, 1)
+
+    def to_json(self):
+        """
+        Method to serialise a DeltaFunction object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "side": self.side,
+        }
+
+        return json_dict
 
 
 class BoundaryOperator(SpatialOperator):
@@ -866,6 +937,20 @@ class BoundaryOperator(SpatialOperator):
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
+
+    def to_json(self):
+        """
+        Method to serialise a BoundaryOperator object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "side": self.side,
+        }
+
+        return json_dict
 
 
 class BoundaryValue(BoundaryOperator):

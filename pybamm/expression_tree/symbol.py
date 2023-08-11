@@ -985,3 +985,17 @@ class Symbol:
 
     def to_equation(self):
         return sympy.Symbol(str(self.name))
+
+    def to_json(self):
+        """
+        Method to serialise a Symbol object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            # "children": self.children,  # the encoder deals with the children itself.
+        }
+
+        return json_dict

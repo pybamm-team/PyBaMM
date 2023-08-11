@@ -49,6 +49,11 @@ class Parameter(pybamm.Symbol):
         else:
             return sympy.Symbol(self.name)
 
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Parameter: Serialisation is only implemented for post-discretisation."  # PL: Come up with a better message!
+        )
+
 
 class FunctionParameter(pybamm.Symbol):
     """
@@ -221,3 +226,8 @@ class FunctionParameter(pybamm.Symbol):
             return sympy.Symbol(self.print_name)
         else:
             return sympy.Symbol(self.name)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.FunctionParameter: Serialisation is only implemented for post-discretisation."  # PL: Come up with a better message!
+        )

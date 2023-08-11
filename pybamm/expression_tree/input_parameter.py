@@ -101,3 +101,17 @@ class InputParameter(pybamm.Symbol):
                     self._expected_size
                 )
             )
+
+    def to_json(self):
+        """
+        Method to serialise an InputParameter object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domain": self.domain,
+            "expected_size": self._expected_size,
+        }
+
+        return json_dict

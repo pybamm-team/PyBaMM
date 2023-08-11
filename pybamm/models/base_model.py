@@ -123,6 +123,50 @@ class BaseModel:
         self.is_discretised = False
         self.y_slices = None
 
+    @classmethod
+    def deserialise(cls, properties: dict):
+        """
+        Create a model instance from a serialised object.
+        """
+        instance = cls.__new__(cls)
+
+        instance.name = properties["name"]
+        instance._options = {}
+        instance._built = False
+        instance._built_fundamental = False
+
+        # Initialise model with stored variables
+        instance.submodels = {}
+        instance._rhs = {}
+        instance._algebraic = {}
+        instance._initial_conditions = {}
+        instance._boundary_conditions = {}
+        instance._variables = pybamm.FuzzyDict({})
+        instance._events = []
+        instance._concatenated_rhs = properties["concatenated_rhs"]
+        instance._concatenated_algebraic = properties["concatenated_algebraic"]
+        instance._concatenated_initial_conditions = properties[
+            "concatenated_initial_conditions"
+        ]
+        instance._mass_matrix = None
+        instance._mass_matrix_inv = None
+        instance._jacobian = None
+        instance._jacobian_algebraic = None
+        instance._parameters = None
+        instance._input_parameters = None
+        instance._parameter_info = None
+        instance._variables_casadi = {}
+
+        # Default behaviour is to use the jacobian
+        instance.use_jacobian = True
+        instance.convert_to_format = "casadi"
+
+        # Model has already been discretised
+        instance.is_discretised = True
+        instance.y_slices = None
+
+        return instance
+
     @property
     def name(self):
         return self._name

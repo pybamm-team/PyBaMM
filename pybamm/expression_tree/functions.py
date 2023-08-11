@@ -211,6 +211,28 @@ class Function(pybamm.Symbol):
                 eq_list.append(eq)
             return self._sympy_operator(*eq_list)
 
+    # PL: think I need something here. presumably I can serialise function methods using just their names, then rehydrate them at the point they're read back in?
+    def to_json(self):
+        """
+        Method to serialise a Function object into JSON.
+        """
+
+        try:
+            func_name = self.function.__name__
+        except:
+            raise Exception
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "function": func_name,  # PL: actually put name here
+            "derivative": self.derivative,
+            "differentiated_function": self.differentiated_function,  # PL: same here (although is this defined? or is it just written out...)
+        }
+
+        return json_dict
+
 
 def simplified_function(func_class, child):
     """
@@ -253,6 +275,19 @@ class SpecificFunction(Function):
         class_name = self.__class__.__name__.lower()
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
+
+    def to_json(self):
+        """
+        Method to serialise a SpecificFunction object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "function": self.function.__name__,
+        }
+
+        return json_dict
 
 
 class Arcsinh(SpecificFunction):

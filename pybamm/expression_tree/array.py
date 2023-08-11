@@ -128,6 +128,35 @@ class Array(pybamm.Symbol):
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 
+    def to_json(self):
+        """
+        Method to serialise an Array object into JSON.
+        """
+
+        if isinstance(self.entries, np.ndarray):
+            matrix = self.entries.tolist()
+        elif isinstance(self.entries, csr_matrix):
+            matrix = {
+                "shape": self.entries.shape,
+                "data": self.entries.data.tolist(),
+                "row_indices": self.entries.indices.tolist(),
+                "column_pointers": self.entries.indptr.tolist(),
+            }
+        else:
+            raise TypeError(
+                f"Ah! Dense matrix! {self.entries}"
+            )  # PL: Double check this
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "entries": matrix,
+            # "entries_string": self.entries_string.decode(),
+        }
+
+        return json_dict
+
 
 def linspace(start, stop, num=50, **kwargs):
     """
