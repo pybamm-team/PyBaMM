@@ -53,4 +53,4 @@ output_variables = [
     "X-averaged cell temperature [K]",
     "Voltage [V]",
 ]
-sim.plot(output_variables, variable_limits="tight", shading="gouraud")
+sim.plot(output_variables, variable_limits="tight", shading="auto")
