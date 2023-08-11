@@ -116,7 +116,7 @@ class Simulation:
         self._unprocessed_model = model
         self.model = model
 
-        self.geometry = geometry or self.model.default_geometry
+        self._geometry = geometry or self.model.default_geometry
         self.submesh_types = submesh_types or self.model.default_submesh_types
         self.var_pts = var_pts or self.model.default_var_pts
         self.spatial_methods = spatial_methods or self.model.default_spatial_methods
@@ -360,7 +360,7 @@ class Simulation:
         self._model_with_set_params = self._parameter_values.process_model(
             self._unprocessed_model, inplace=False
         )
-        self._parameter_values.process_geometry(self.geometry)
+        self._parameter_values.process_geometry(self._geometry)
         self.model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):
@@ -1024,10 +1024,6 @@ class Simulation:
     @property
     def geometry(self):
         return self._geometry
-
-    @geometry.setter
-    def geometry(self, geometry):
-        self._geometry = geometry
 
     @property
     def parameter_values(self):
