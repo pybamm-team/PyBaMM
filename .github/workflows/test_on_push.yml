@@ -170,6 +170,9 @@ jobs:
         run: nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
+        env:
+          SUNDIALS_INST: ${{ env.HOME }}/.local
+          LD_LIBRARY_PATH: ${{ env.HOME }}/.local/lib
         run: nox -s coverage
 
       - name: Upload coverage report
