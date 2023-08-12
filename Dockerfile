@@ -18,6 +18,13 @@ RUN git clone https://github.com/pybamm-team/PyBaMM.git
 
 WORKDIR /PyBaMM/
 
+# Install virtualenv
+RUN python -m pip install virtualenv
+
+# Create and activate virtual environment
+RUN virtualenv -p python3.9 venv
+RUN /bin/bash -c "source venv/bin/activate"
+
 # Install PyBaMM
 RUN python -m pip install --upgrade pip setuptools wheel nox wget
 RUN python scripts/install_KLU_Sundials.py 
