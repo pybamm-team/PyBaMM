@@ -342,5 +342,4 @@ jobs:
         run: nox -s doctests
 
       - name: Install dev dependencies and run example tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s examples
