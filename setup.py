@@ -258,6 +258,9 @@ setup(
         "pandas": [
             "pandas>=0.24",
         ],
+        "pandas": [
+            "pandas>=0.24",
+        ],
         "jax": [
             "jax==0.4.8",
             "jaxlib==0.4.7",
