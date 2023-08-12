@@ -134,7 +134,6 @@ jobs:
 
       # dot -c is for registering graphviz fonts and plugins
       - name: Install OpenBLAS and TeXLive for Linux
-        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo dot -c
@@ -155,7 +154,6 @@ jobs:
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
         with:
           path: |
             # Repository files
@@ -168,13 +166,9 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
-        env:
-          SUNDIALS_INST: ${{ env.HOME }}/.local
-          LD_LIBRARY_PATH: ${{ env.HOME }}/.local/lib
         run: nox -s coverage
 
       - name: Upload coverage report
