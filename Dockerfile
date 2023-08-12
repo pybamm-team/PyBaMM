@@ -43,11 +43,12 @@ RUN if [ "$IDAKLU" = "true" ]; then \
 RUN if [ "$ODES" = "true" ]; then \
     pip install cmake==3.22 && \
     pip install --upgrade --user pip wget && \
-    pybamm_install_odes; \
+    python scripts/install_KLU_Sundials.py && \
+    pip install --user -e ".[all,odes]"; \
     fi
 
 RUN if [ "$JAX" = "true" ]; then \
     pip install --user -e ".[jax,all]";\
     fi
 
-ENTRYPOINT ["/bin/bash", "-c", "conda activate pybamm && /bin/bash"]
+ENTRYPOINT ["/bin/bash"]
