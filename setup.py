@@ -253,7 +253,8 @@ setup(
         ],
         "dev": [
             "pre-commit",  # For code style checking
-            "ruff",  # For code style auto-formatting
+            "ruff", # For code style auto-formatting
+            "nox", # For running testing sessions
         ],
         "jax": [
             "jax==0.4.8",
