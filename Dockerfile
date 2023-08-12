@@ -51,6 +51,6 @@ RUN if [ "$JAX" = "true" ]; then \
     pip install --user -e ".[jax,all,dev]";\
     fi
 
-RUN pip install --user -e ".[all]
+RUN pip install --user -e ".[all]"
 
 ENTRYPOINT ["/bin/bash"]
