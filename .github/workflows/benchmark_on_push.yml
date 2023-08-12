@@ -1,7 +1,13 @@
 name: Run benchmarks on push
 on:
   push:
+    branches: [main, develop]
   pull_request:
+
+concurrency:
+  # Cancel intermediate builds always
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   benchmarks:

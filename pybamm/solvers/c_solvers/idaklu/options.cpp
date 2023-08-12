@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 
- 
+
 using namespace std::string_literals;
 
 Options::Options(py::dict options)
@@ -35,7 +35,7 @@ Options::Options(py::dict options)
   else
   {
     throw std::domain_error(
-      "Unknown jacobian type \""s + jacobian + 
+      "Unknown jacobian type \""s + jacobian +
       "\". Should be one of \"sparse\", \"banded\", \"dense\", \"matrix-free\" or \"none\"."s
     );
   }
@@ -97,7 +97,7 @@ Options::Options(py::dict options)
   {
     throw std::domain_error(
       "Unknown linear solver or incompatible options. "
-      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver + "\"" 
+      "jacobian = \"" + jacobian + "\" linear solver = \"" + linear_solver + "\""
     );
   }
 
@@ -106,7 +106,7 @@ Options::Options(py::dict options)
     if (preconditioner != "none" && preconditioner != "BBDP")
     {
       throw std::domain_error(
-        "Unknown preconditioner \""s + preconditioner + 
+        "Unknown preconditioner \""s + preconditioner +
         "\", use one of \"BBDP\" or \"none\""s
       );
     }

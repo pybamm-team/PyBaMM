@@ -1,11 +1,12 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+- Spherical and cylindrical shell domains can now be solved with any boundary conditions ([#3237](https://github.com/pybamm-team/PyBaMM/pull/3237))
+- Processed variables now get the spatial variables automatically, allowing plotting of more generic models ([#3234](https://github.com/pybamm-team/PyBaMM/pull/3234))
+
 ## Breaking changes
 
-- Added option to use an empirical hysteresis model for the diffusivity and exchange-current density ([#3194](https://github.com/pybamm-team/PyBaMM/pull/3194))
-- Double-layer capacity can now be provided as a function of temperature ([#3174](https://github.com/pybamm-team/PyBaMM/pull/3174))
-- `pybamm_install_jax` is deprecated. It is now replaced with `pip install pybamm[jax]` ([#3163](https://github.com/pybamm-team/PyBaMM/pull/3163))
-- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
+- Numpy functions now work with PyBaMM symbols (e.g. `np.exp(pybamm.Symbol("a"))` returns `pybamm.Exp(pybamm.Symbol("a"))`). This means that parameter functions can be specified using numpy functions instead of pybamm functions. Additionally, combining numpy arrays with pybamm objects now works (the numpy array is converted to a pybamm array) ([#3205](https://github.com/pybamm-team/PyBaMM/pull/3205))
 
 ## Bug fixes
 
@@ -16,6 +17,13 @@
 - Error generated when invalid parameter values are passed. ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
 - Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
 - Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
+
+## Breaking changes
+
+- Added option to use an empirical hysteresis model for the diffusivity and exchange-current density ([#3194](https://github.com/pybamm-team/PyBaMM/pull/3194))
+- Double-layer capacity can now be provided as a function of temperature ([#3174](https://github.com/pybamm-team/PyBaMM/pull/3174))
+- `pybamm_install_jax` is deprecated. It is now replaced with `pip install pybamm[jax]` ([#3163](https://github.com/pybamm-team/PyBaMM/pull/3163))
+- PyBaMM now has optional dependencies that can be installed with the pattern `pip install pybamm[option]` e.g. `pybamm[plot]` ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044))
 
 # [v23.5](https://github.com/pybamm-team/PyBaMM/tree/v23.5) - 2023-06-18
 

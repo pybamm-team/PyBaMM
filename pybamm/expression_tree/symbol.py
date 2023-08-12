@@ -540,43 +540,43 @@ class Symbol:
 
     def __add__(self, other):
         """return an :class:`Addition` object."""
-        return pybamm.simplified_addition(self, other)
+        return pybamm.add(self, other)
 
     def __radd__(self, other):
         """return an :class:`Addition` object."""
-        return pybamm.simplified_addition(other, self)
+        return pybamm.add(other, self)
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object."""
-        return pybamm.simplified_subtraction(self, other)
+        return pybamm.subtract(self, other)
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object."""
-        return pybamm.simplified_subtraction(other, self)
+        return pybamm.subtract(other, self)
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object."""
-        return pybamm.simplified_multiplication(self, other)
+        return pybamm.multiply(self, other)
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object."""
-        return pybamm.simplified_multiplication(other, self)
+        return pybamm.multiply(other, self)
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object."""
-        return pybamm.simplified_matrix_multiplication(self, other)
+        return pybamm.matmul(self, other)
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object."""
-        return pybamm.simplified_matrix_multiplication(other, self)
+        return pybamm.matmul(other, self)
 
     def __truediv__(self, other):
         """return a :class:`Division` object."""
-        return pybamm.simplified_division(self, other)
+        return pybamm.divide(self, other)
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object."""
-        return pybamm.simplified_division(other, self)
+        return pybamm.divide(other, self)
 
     def __pow__(self, other):
         """return a :class:`Power` object."""
@@ -647,6 +647,13 @@ class Symbol:
 
     def __bool__(self):
         raise NotImplementedError("Boolean operator not defined for Symbols.")
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """
+        If a numpy ufunc is applied to a symbol, call the corresponding pybamm function
+        instead.
+        """
+        return getattr(pybamm, ufunc.__name__)(*inputs, **kwargs)
 
     def diff(self, variable):
         """

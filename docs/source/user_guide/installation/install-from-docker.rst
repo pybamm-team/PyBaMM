@@ -47,5 +47,3 @@ To exit the Docker container's shell, you can simply type:
    exit
 
 This will return you to your host machine's terminal.
-
-

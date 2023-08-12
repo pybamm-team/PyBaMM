@@ -187,7 +187,7 @@ def test_notebook(path, executable="python"):
     print("Test " + path + " ... ", end="")
     sys.stdout.flush()
 
-    # Make sure the notebook has a 
+    # Make sure the notebook has a
     # "%pip install pybamm[plot,cite] -q" command, for using Google Colab
     with open(path, "r") as f:
         if "%pip install pybamm[plot,cite] -q" not in f.read():
@@ -374,12 +374,6 @@ if __name__ == "__main__":
         metavar=("in", "out"),
         help="Export a Jupyter notebook to a Python file for manual testing.",
     )
-    # Flake8 (deprecated)
-    parser.add_argument(
-        "--flake8",
-        action="store_true",
-        help="Run flake8 to check for style issues (deprecated, use pre-commit)",
-    )
     # Doctests
     parser.add_argument(
         "--doctest",
@@ -421,9 +415,6 @@ if __name__ == "__main__":
     if args.nosub:
         has_run = True
         run_code_tests(folder="unit", interpreter=interpreter)
-    # Flake8
-    if args.flake8:
-        raise NotImplementedError("flake8 is no longer used. Use pre-commit instead.")
     # Doctests
     if args.doctest:
         has_run = True

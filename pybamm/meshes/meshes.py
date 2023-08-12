@@ -25,6 +25,9 @@ class Mesh(dict):
     def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
 
+        # Save geometry
+        self.geometry = geometry
+
         # Preprocess var_pts
         var_pts_input = var_pts
         var_pts = {}
@@ -204,6 +207,14 @@ class Mesh(dict):
             self[domain[0] + "_right ghost cell"] = pybamm.SubMesh1D(
                 rgs_edges, submesh.coord_sys
             )
+
+    @property
+    def geometry(self):
+        return self._geometry
+
+    @geometry.setter
+    def geometry(self, geometry):
+        self._geometry = geometry
 
 
 class SubMesh:
