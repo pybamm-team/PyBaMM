@@ -21,7 +21,7 @@ RUN apt-get install -y python3.11-venv
 RUN python3.11 -m venv venv
 RUN /bin/bash -c "source venv/bin/activate"
 
-# Install PyBaMM
+# Install PyBaMMs
 RUN python3.11 -m pip install --upgrade pip setuptools wheel nox
 # RUN pip install -e ".[all]"
 
@@ -40,8 +40,8 @@ ARG IDAKLU
 #     pip install -e ".[jax,all]";\
 #     fi
 
-RUN pip install wget cmake 
-RUN python scripts/install_KLU_Sundials.py 
+RUN pip install wget cmake
+RUN python scripts/install_KLU_Sundials.py
 RUN git clone https://github.com/pybind/pybind11.git pybind11/
 RUN python3.11 -m pip install -e ".[all]"
 
