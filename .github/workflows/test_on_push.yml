@@ -35,6 +35,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+        # We check coverage on Ubuntu with Python 3.11, so we skip unit tests for it here
+        exclude:
+          - os: ubuntu-latest
+            python-version: "3.11"
     name: Unit tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
@@ -107,8 +111,6 @@ jobs:
         run: nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        # check coverage only with Python 3.11 on Ubuntu, so we skip it for other Python versions and platforms
-        if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest' || (matrix.os == 'ubuntu-latest' && matrix.python-version != '3.11')
         run: nox -s unit
 
   # Runs only on Ubuntu with Python 3.11
