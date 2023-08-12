@@ -297,14 +297,15 @@ jobs:
           NONINTERACTIVE: 1
         run: |
           brew analytics off
-          brew update
           brew install graphviz openblas pandoc
+          brew install --cask basictex
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
         run: |
           choco install graphviz --version=8.0.5
           choco install pandoc
+          choco install miktex
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
