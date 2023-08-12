@@ -14,10 +14,10 @@ public:
                   const jac_get_type &get_jac_data_in,
                   const jac_get_type &get_jac_row_vals_in,
                   const jac_get_type &get_jac_col_ptrs_in,
-                  const event_type &event, 
+                  const event_type &event,
                   const int n_s, int n_e, const int n_p,
                   const np_array &inputs)
-      : number_of_states(n_s), number_of_events(n_e), 
+      : number_of_states(n_s), number_of_events(n_e),
         number_of_parameters(n_p),
         py_res(res), py_jac(jac),
         py_sens(sens),
@@ -48,11 +48,11 @@ public:
 
   void sensitivities(
       std::vector<np_array>& resvalS,
-      const double t, const np_array& y, const np_array& yp, 
-      const std::vector<np_array>& yS, const std::vector<np_array>& ypS) 
+      const double t, const np_array& y, const np_array& yp,
+      const std::vector<np_array>& yS, const std::vector<np_array>& ypS)
   {
     // this function evaluates the sensitivity equations required by IDAS,
-    // returning them in resvalS, which is preallocated as a numpy array 
+    // returning them in resvalS, which is preallocated as a numpy array
     // of size (np, n), where n is the number of states and np is the number
     // of parameters
     //
@@ -199,11 +199,11 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
   return (0);
 }
 
-int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp, 
-    N_Vector resval, N_Vector *yS, N_Vector *ypS, N_Vector *resvalS, 
+int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
+    N_Vector resval, N_Vector *yS, N_Vector *ypS, N_Vector *resvalS,
     void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) {
-// This function computes the sensitivity residual for all sensitivity 
-// equations. It must compute the vectors 
+// This function computes the sensitivity residual for all sensitivity
+// equations. It must compute the vectors
 // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i ) and store them in resvalS[i].
 // Ns is the number of sensitivities.
 // t is the current value of the independent variable.
@@ -212,15 +212,15 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 // resval contains the current value F of the original DAE residual.
 // yS contains the current values of the sensitivities s i .
 // ypS contains the current values of the sensitivity derivatives ṡ i .
-// resvalS contains the output sensitivity residual vectors. 
+// resvalS contains the output sensitivity residual vectors.
 // Memory allocation for resvalS is handled within idas.
 // user data is a pointer to user data.
-// tmp1, tmp2, tmp3 are N Vectors of length N which can be used as 
+// tmp1, tmp2, tmp3 are N Vectors of length N which can be used as
 // temporary storage.
 //
-// Return value An IDASensResFn should return 0 if successful, 
+// Return value An IDASensResFn should return 0 if successful,
 // a positive value if a recoverable error
-// occurred (in which case idas will attempt to correct), 
+// occurred (in which case idas will attempt to correct),
 // or a negative value if it failed unrecoverably (in which case the integration is halted and IDA SRES FAIL is returned)
 //
   PybammFunctions *python_functions_ptr =
@@ -232,7 +232,7 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 
   // memory managed by sundials, so pass a destructor that does nothing
   auto state_vector_shape = std::vector<ptrdiff_t>{n, 1};
-  np_array y_np = np_array(state_vector_shape, N_VGetArrayPointer(yy), 
+  np_array y_np = np_array(state_vector_shape, N_VGetArrayPointer(yy),
                            py::capsule(&yy, [](void* p) {}));
   np_array yp_np = np_array(state_vector_shape, N_VGetArrayPointer(yp),
                            py::capsule(&yp, [](void* p) {}));
@@ -252,7 +252,7 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
   std::vector<np_array> resvalS_np(np);
   for (int i = 0; i < np; i++) {
     auto capsule = py::capsule(resvalS + i, [](void* p) {});
-    resvalS_np[i] = np_array(state_vector_shape, 
+    resvalS_np[i] = np_array(state_vector_shape,
                              N_VGetArrayPointer(resvalS[i]), capsule);
   }
 
@@ -266,12 +266,12 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 
 /* main program */
 Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
-               residual_type res, jacobian_type jac, 
+               residual_type res, jacobian_type jac,
                sensitivities_type sens,
-               jac_get_type gjd, jac_get_type gjrv, jac_get_type gjcp, 
+               jac_get_type gjd, jac_get_type gjrv, jac_get_type gjcp,
                int nnz, event_type event,
                int number_of_events, int use_jacobian, np_array rhs_alg_id,
-               np_array atol_np, double rel_tol, np_array inputs, 
+               np_array atol_np, double rel_tol, np_array inputs,
                int number_of_parameters)
 {
   auto t = t_np.unchecked<1>();
@@ -374,7 +374,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
 
   if (number_of_parameters > 0)
   {
-    IDASensInit(ida_mem, number_of_parameters, 
+    IDASensInit(ida_mem, number_of_parameters,
                 IDA_SIMULTANEOUS, sensitivities, yyS, ypS);
     IDASensEEtolerances(ida_mem);
   }
@@ -433,7 +433,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
         y_return[t_i * number_of_states + j] = yval[j];
       }
       for (int j = 0; j < number_of_parameters; j++) {
-        const int base_index = j * number_of_timesteps * number_of_states 
+        const int base_index = j * number_of_timesteps * number_of_states
                                + t_i * number_of_states;
         for (int k = 0; k < number_of_states; k++) {
           yS_return[base_index + k] = ySval[j][k];
@@ -468,11 +468,10 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   np_array y_ret = np_array(t_i * number_of_states, &y_return[0]);
   np_array yS_ret = np_array(
       std::vector<ptrdiff_t>{number_of_parameters, number_of_timesteps, number_of_states},
-      &yS_return[0] 
+      &yS_return[0]
       );
 
   Solution sol(retval, t_ret, y_ret, yS_ret);
 
   return sol;
 }
-
