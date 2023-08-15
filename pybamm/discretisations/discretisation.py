@@ -99,8 +99,8 @@ class Discretisation(object):
         check_model=True,
         remove_independent_variables_from_rhs=True,
     ):
-        """Discretise a model.
-        Currently inplace, could be changed to return a new model.
+        """
+        Discretise a model. Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
@@ -696,7 +696,6 @@ class Discretisation(object):
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             processed_eqn = self.process_symbol(eqn)
-
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
             if ics:
