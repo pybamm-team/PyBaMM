@@ -44,6 +44,35 @@ To exit the Docker container's shell, you can simply type:
 
 .. code-block:: bash
 
-   exit
+      exit
 
 This will return you to your host machine's terminal.
+
+Building Docker Image Locally from Source
+------------------------------------------
+
+If you want to build the PyBaMM Docker image locally from the PyBaMM source code, follow these steps:
+
+1. Clone the PyBaMM GitHub repository to your local machine if you haven't already:
+
+.. code-block:: bash
+
+      git clone https://github.com/pybamm-team/PyBaMM.git
+
+2. Change into the PyBaMM directory:
+
+.. code-block:: bash
+
+      cd PyBaMM
+
+3. Build the Docker image using the following command:
+
+.. code-block:: bash
+
+      docker build -t pybamm .
+
+4. Once the image is built, you can run a Docker container using:
+
+.. code-block:: bash
+
+      docker run -it pybamm
