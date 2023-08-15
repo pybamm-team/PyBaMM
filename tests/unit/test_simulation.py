@@ -1,7 +1,7 @@
 import pybamm
 import numpy as np
 import pandas as pd
-from tests import TestCase
+from tests import TestCase, NonBatteryModel
 import os
 import sys
 import unittest
@@ -82,7 +82,7 @@ class TestSimulation(TestCase):
         with self.assertRaisesRegex(ValueError, "starting_solution"):
             sim.solve(starting_solution=sol)
 
-    def test_solve_non_battery_model(self):
+    def test_solve_non_battery_model_ode(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
         model.rhs = {v: -v}
@@ -96,6 +96,20 @@ class TestSimulation(TestCase):
         np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
         np.testing.assert_array_almost_equal(
             sim.solution["v"].entries, np.exp(-np.linspace(0, 1, 100))
+        )
+
+    def test_solve_non_battery_model_pde(self):
+        model = NonBatteryModel()
+        sim = pybamm.Simulation(model)
+
+        solution = sim.solve(np.linspace(0, 1, 100))
+        np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
+        # Compare with analytical temperature (drop first few terms as agreement of
+        # early states is not great)
+        np.testing.assert_array_almost_equal(
+            solution["Temperature [K]"].entries[:, 2:],
+            solution["Analytical temperature [K]"].entries[:, 2:],
+            decimal=3,
         )
 
     def test_solve_already_partially_processed_model(self):
