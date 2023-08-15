@@ -70,6 +70,8 @@ class QuickPlot(object):
         default color loop defined by matplotlib style sheet or rcParams is used.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
+    shading : str, optional
+        The shading to use for 2D plots. Defaults to "auto".
     figsize : tuple of floats, optional
         The size of the figure to make
     n_rows : int, optional
@@ -97,6 +99,7 @@ class QuickPlot(object):
         labels=None,
         colors=None,
         linestyles=None,
+        shading="auto",
         figsize=None,
         n_rows=None,
         time_unit=None,
@@ -140,6 +143,7 @@ class QuickPlot(object):
         else:
             self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
+        self.shading = shading
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -572,7 +576,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        shading="auto",
+                        shading=self.shading,
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -725,7 +729,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        shading="auto",
+                        shading=self.shading,
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
