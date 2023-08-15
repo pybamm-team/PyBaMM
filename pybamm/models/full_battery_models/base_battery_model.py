@@ -4,6 +4,7 @@
 
 import pybamm
 from functools import cached_property
+import warnings
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -175,7 +176,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (default), "differential" or "algebraic".
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-lumped", or "x-full".
+                "x-lumped", or "x-full". The 'cell geometry' option must be set to
+                'pouch' for 'x-lumped' or 'x-full' to be valid. Using the 'x-lumped'
+                option with 'dimensionality' set to 0 is equivalent to using the
+                'lumped' option.
             * "total interfacial current density as a state" : str
                 Whether to make a state for the total interfacial current density and
                 solve an algebraic equation for it. Default is "false", unless "SEI film
@@ -287,12 +291,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         }
         extra_options = extra_options or {}
 
-        # Change the default for cell geometry based on which thermal option is provided
+        # Change the default for cell geometry based on the current collector
+        # dimensionality
+        # return "none" if option not given
+        dimensionality_option = extra_options.get("dimensionality", "none")
+        if dimensionality_option in [1, 2]:
+            default_options["cell geometry"] = "pouch"
+        # The "cell geometry" option will still be overridden by extra_options if
+        # provided
+
+        # Change the default for cell geometry based on the thermal model
         # return "none" if option not given
         thermal_option = extra_options.get("thermal", "none")
-        if thermal_option in ["none", "isothermal", "lumped"]:
-            default_options["cell geometry"] = "arbitrary"
-        else:
+        if thermal_option == "x-full":
             default_options["cell geometry"] = "pouch"
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
@@ -493,7 +504,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             and options["cell geometry"] != "pouch"
         ):
             raise pybamm.OptionError(
-                options["thermal"] + " model must have pouch geometry."
+                options["thermal"] + " model must have pouch cell geometry."
             )
         if options["thermal"] == "x-full" and options["dimensionality"] != 0:
             n = options["dimensionality"]
@@ -597,6 +608,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 f"Possible values are {self.possible_options[option]}"
                             )
 
+        # Issue a warning to let users know that the 'lumped' thermal option (or
+        # equivalently 'x-lumped' with 0D current collectors) now uses the total heat
+        # transfer coefficient, surface area for cooling, and cell volume parameters,
+        # regardless of the 'cell geometry option' chosen.
+        thermal_option = options["thermal"]
+        dimensionality_option = options["dimensionality"]
+        if thermal_option == "lumped" or (
+            thermal_option == "x-lumped" and dimensionality_option == 0
+        ):
+            message = (
+                f"The '{thermal_option}' thermal option with "
+                f"'dimensionality' {dimensionality_option} now uses the parameters "
+                "'Cell cooling surface area [m2]', 'Cell volume [m3]' and "
+                "'Total heat transfer coefficient [W.m-2.K-1]' to compute the cell "
+                "cooling term, regardless of the value of the the 'cell geometry' "
+                "option. Please update your parameters accordingly."
+            )
+            warnings.warn(message, pybamm.OptionWarning, stacklevel=2)
         super().__init__(options.items())
 
     @property
@@ -1056,7 +1085,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.OneDimensionalX
+                thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
         self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
