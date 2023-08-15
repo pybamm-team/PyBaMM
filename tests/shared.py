@@ -2,7 +2,6 @@
 # Shared methods and classes for testing
 #
 import pybamm
-import numpy as np
 from scipy.sparse import eye
 
 
@@ -40,79 +39,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             n += self.mesh[domain].npts
         mass_matrix = pybamm.Matrix(eye(n))
         return mass_matrix
-
-
-class NonBatteryModel(pybamm.BaseModel):
-    def __init__(self, name="heat equation"):
-        super().__init__(name=name)
-
-        x = pybamm.SpatialVariable("x [m]", domain="rod", coord_sys="cartesian")
-        T = pybamm.Variable("Temperature [K]", domain="rod")
-        k = pybamm.Parameter("Thermal diffusivity [m2.s-1]")
-        L = pybamm.Parameter("Rod length [m]")
-        T0 = pybamm.Parameter("Initial temperature [K]")
-
-        dTdt = pybamm.div(k * pybamm.grad(T))
-        self.rhs = {T: dTdt}
-
-        self.boundary_conditions = {
-            T: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
-            }
-        }
-        self.initial_conditions = {T: T0}
-
-        # Define analytical solution for comparison
-        def analytical_solution(N, x, t):
-            solution = 0
-            for n in range(N):
-                solution += (
-                    4
-                    * T0
-                    / np.pi / (2 * n + 1)
-                    * np.sin((2 * n + 1) * np.pi * x / L)
-                    * np.exp(-k * ((2 * n + 1) * np.pi / L) ** 2 * t)
-                )
-            return solution
-
-        T_an = analytical_solution(10, x, pybamm.t)
-
-        # Add desired output variables
-        self.variables = {"Temperature [K]": T, "Analytical temperature [K]": T_an}
-
-    @property
-    def default_geometry(self):
-        L = pybamm.Parameter("Rod length [m]")
-        x = pybamm.SpatialVariable("x [m]", domain="rod", coord_sys="cartesian")
-        return pybamm.Geometry({"rod": {x: {"min": pybamm.Scalar(0), "max": L}}})
-
-    @property
-    def default_parameter_values(self):
-        return pybamm.ParameterValues(
-            {
-                "Rod length [m]": 1,
-                "Initial temperature [K]": 1,
-                "Thermal diffusivity [m2.s-1]": 1,
-            }
-        )
-
-    @property
-    def default_submesh_types(self):
-        return {"rod": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
-
-    @property
-    def default_var_pts(self):
-        x = pybamm.SpatialVariable("x [m]", domain="rod", coord_sys="cartesian")
-        return {x: 50}
-
-    @property
-    def default_spatial_methods(self):
-        return {"rod": pybamm.FiniteVolume()}
-
-    @property
-    def default_solver(self):
-        return pybamm.CasadiSolver("fast")
 
 
 def get_mesh_for_testing(

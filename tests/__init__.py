@@ -23,7 +23,6 @@ from .integration.test_models.test_full_battery_models.test_lithium_ion.base_lit
 )
 
 from .shared import (
-    NonBatteryModel,
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_size_distribution_mesh_for_testing,
