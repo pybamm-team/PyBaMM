@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def lead_ocp_Bode1977(m):
@@ -13,10 +14,10 @@ def lead_ocp_Bode1977(m):
     """
     U = (
         -0.294
-        - 0.074 * pybamm.log10(m)
-        - 0.030 * pybamm.log10(m) ** 2
-        - 0.031 * pybamm.log10(m) ** 3
-        - 0.012 * pybamm.log10(m) ** 4
+        - 0.074 * np.log10(m)
+        - 0.030 * np.log10(m) ** 2
+        - 0.031 * np.log10(m) ** 3
+        - 0.012 * np.log10(m) ** 4
     )
     return U
 
@@ -65,10 +66,10 @@ def lead_dioxide_ocp_Bode1977(m):
     """
     U = (
         1.628
-        + 0.074 * pybamm.log10(m)
-        + 0.033 * pybamm.log10(m) ** 2
-        + 0.043 * pybamm.log10(m) ** 3
-        + 0.022 * pybamm.log10(m) ** 4
+        + 0.074 * np.log10(m)
+        + 0.033 * np.log10(m) ** 2
+        + 0.043 * np.log10(m) ** 3
+        + 0.022 * np.log10(m) ** 4
     )
     return U
 
@@ -161,7 +162,7 @@ def conductivity_Gu1997(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return c_e * pybamm.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
+    return c_e * np.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e**2) * 1e-4
 
 
 def darken_thermodynamic_factor_Chapman1968(c_e):
@@ -208,13 +209,7 @@ def diffusivity_Gu1997(c_e):
 def get_parameter_values():
     """
     Parameters for BBOXX lead-acid cells, from the paper
-
-        Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles W.
-        Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part
-        I. Physical Model. Journal of The Electrochemical Society, 166(12):A2363-A2371,
-        2019. doi:10.1149/2.0301910jes.
-
-    and references therein.
+    :footcite:t:`sulzer2019asymptotic` and references therein.
     """
 
     return {

@@ -39,7 +39,6 @@ PARAMETER_PATH = [
 from .util import Timer, TimerTime, FuzzyDict
 from .util import (
     root_dir,
-    load_function,
     rmse,
     load,
     is_constant_and_can_evaluate,
@@ -220,8 +219,9 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 # Experiments
 #
-from .experiments.experiment import Experiment
-from . import experiments
+from .experiment.experiment import Experiment
+from . import experiment
+
 
 #
 # Plotting

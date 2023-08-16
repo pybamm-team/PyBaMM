@@ -5,7 +5,8 @@ import pybamm
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH for a half-cell, adapted from [2]_.
+    """Model to calculate electrode-specific SOH for a half-cell, adapted from
+    :footcite:t:`Mohtat2019`.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
 
@@ -18,11 +19,6 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     Subscript w indicates working electrode and subscript c indicates counter electrode.
 
-    References
-    ----------
-    .. [2] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-           better estimability of electrode-specific state of health: Decoding the cell
-           expansion. Journal of Power Sources, 427, 101-111.
     """
 
     def __init__(self, working_electrode, name="Electrode-specific SOH model"):
@@ -41,8 +37,8 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             U_w = param.p.prim.U
             Q = Q_w * (x_100 - x_0)
 
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.opc_soc_100_dimensional
+        V_min = param.opc_soc_0_dimensional
 
         self.algebraic = {
             x_100: U_w(x_100, T_ref) - V_max,

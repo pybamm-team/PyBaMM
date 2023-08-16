@@ -24,9 +24,9 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   const int ns = p_python_functions->number_of_states;
   casadi::casadi_axpy(ns, -1., tmp, NV_DATA_OMP(rr));
 
-  DEBUG_VECTOR(yy);
-  DEBUG_VECTOR(yp);
-  DEBUG_VECTOR(rr);
+  //DEBUG_VECTOR(yy);
+  //DEBUG_VECTOR(yp);
+  //DEBUG_VECTOR(rr);
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
@@ -172,7 +172,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass();
 
 
-  if (p_python_functions->options.using_banded_matrix) 
+  if (p_python_functions->options.using_banded_matrix)
   {
     // copy data from temporary matrix to the banded matrix
     auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
@@ -187,7 +187,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
         SM_COLUMN_ELEMENT_B(banded_col, row_ij, col_ij) = value_ij;
       }
     }
-  } 
+  }
   else if (p_python_functions->options.using_sparse_matrix)
   {
 
@@ -263,6 +263,7 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector tmp2, N_Vector tmp3)
 {
 
+  DEBUG("sensitivities_casadi");
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 

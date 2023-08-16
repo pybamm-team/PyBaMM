@@ -7,26 +7,15 @@ from .dfn import DFN
 
 class NewmanTobias(DFN):
     """
-    Newman-Tobias model of a lithium-ion battery based on the formulation in [1]_.
-    This model assumes a uniform concentration profile in the electrolyte.
-    Unlike the model posed in [1]_, this model accounts for nonlinear Butler-Volmer
-    kinetics. It also tracks the average concentration in the solid phase in each
-    electrode, which is equivalent to including an equation for the local state of
-    charge as in [2]_. The user can pass the "particle" option to include mass
-    transport in the particles.
+    Newman-Tobias model of a lithium-ion battery based on the formulation in
+    :footcite:t:`Newman1962`. This model assumes a uniform concentration profile in the
+    electrolyte. Unlike the model posed in :footcite:t:`Newman1962`, this model accounts
+    for nonlinear Butler-Volmer kinetics. It also tracks the average concentration in
+    the solid phase in each electrode, which is equivalent to including an equation for
+    the local state of charge as in :footcite:t:`Chu2020`. The user can pass the
+    "particle" option to include mass transport in the particles.
 
     See :class:`pybamm.lithium_ion.BaseModel` for more details.
-
-
-    References
-    ----------
-    .. [1] JS Newman and CW Tobias. "Theoretical Analysis of Current Distribution
-           in Porous Electrodes". Journal of The Electrochemical Society,
-           109(12):A1183-A1191, 1962
-    .. [2] HN Chu, SU Kim, SK Rahimian, JB Siegel and CW Monroe. "Parameterization
-           of prismatic lithium–iron–phosphate cells through a streamlined
-           thermal/electrochemical model". Journal of Power Sources, 453, p.227787,
-           2020
 
     """
 

@@ -68,11 +68,12 @@ def install_sundials(download_dir, install_dir):
     subprocess.run(
         ["cmake", "../sundials-{}".format(sundials_version)] + cmake_args,
         cwd=build_directory,
+        check=True,
     )
 
     print("-" * 10, "Building the sundials", "-" * 40)
     make_cmd = ["make", "install"]
-    subprocess.run(make_cmd, cwd=build_directory)
+    subprocess.run(make_cmd, cwd=build_directory, check=True)
 
 
 def update_LD_LIBRARY_PATH(install_dir):
@@ -107,6 +108,7 @@ def update_LD_LIBRARY_PATH(install_dir):
 
 
 def main(arguments=None):
+
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logger = logging.getLogger("scikits.odes setup")
 
@@ -169,7 +171,7 @@ def main(arguments=None):
     # see https://scikits-odes.readthedocs.io/en/latest/installation.html#id1
     os.environ["SUNDIALS_INST"] = SUNDIALS_LIB_DIR
     env = os.environ.copy()
-    subprocess.run(["pip", "install", "scikits.odes"], env=env)
+    subprocess.run(["pip", "install", "scikits.odes"], env=env, check=True)
 
 
 if __name__ == "__main__":

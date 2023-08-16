@@ -6,13 +6,13 @@ from .ecm_model_options import NaturalNumberOption, OperatingModes
 class Thevenin(pybamm.BaseModel):
     """
     The classical Thevenin Equivalent Circuit Model of a battery as
-    described in, for example, [1]_.
+    described in, for example, :footcite:t:`Barletta2022thevenin`.
 
     This equivalent circuit model consists of an OCV element, a resistor
     element, and a number of RC elements (by default 1). The model is
     coupled to two lumped thermal models, one for the cell and
     one for the surrounding jig. Heat generation terms for each element
-    follow equation (1) of [2]_.
+    follow equation (1) of :footcite:t:`Nieto2012`.
 
     Parameters
     ----------
@@ -57,14 +57,6 @@ class Thevenin(pybamm.BaseModel):
     >>> model.name
     'Thevenin Equivalent Circuit Model'
 
-
-    References
-    ----------
-    .. [1] G Barletta, D Piera, and D Papurello. "Thévenin’s Battery Model
-           Parameter Estimation Based on Simulink." Energies 15.17 (2022): 6207.
-    .. [2] N Nieto, L Díaz, J Gastelurrutia, I Alava, F Blanco, JC Ramos, and
-           A Rivas "Thermal modeling of large format lithium-ion cells."
-           Journal of The Electrochemical Society, 160(2), (2012) A212.
     """
 
     def __init__(
@@ -76,6 +68,7 @@ class Thevenin(pybamm.BaseModel):
         self.param = pybamm.EcmParameters()
         self.element_counter = 0
 
+        self.set_standard_output_variables()
         self.set_submodels(build)
 
     def set_options(self, extra_options=None):
@@ -199,6 +192,16 @@ class Thevenin(pybamm.BaseModel):
 
         if build:
             self.build_model()
+
+    def set_standard_output_variables(self):
+        # Time
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t,
+                "Time [min]": pybamm.t / 60,
+                "Time [h]": pybamm.t / 3600,
+            }
+        )
 
     def build_model(self):
         # Build model variables and equations

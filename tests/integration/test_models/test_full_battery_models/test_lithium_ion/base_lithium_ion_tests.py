@@ -20,7 +20,13 @@ class BaseIntegrationTestLithiumIon:
     def test_sensitivities(self):
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        if pybamm.have_idaklu():
+            solver = pybamm.IDAKLUSolver()
+        else:
+            solver = pybamm.CasadiSolver()
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=param, solver=solver
+        )
         modeltest.test_sensitivities("Current function [A]", 0.15652)
 
     def test_basic_processing_1plus1D(self):
@@ -226,6 +232,34 @@ class BaseIntegrationTestLithiumIon:
     def test_loss_active_material_stress_and_reaction(self):
         options = {"loss of active material": "stress and reaction-driven"}
         parameter_values = pybamm.ParameterValues("Ai2020")
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_well_posed_loss_active_material_current_negative(self):
+        options = {"loss of active material": ("current-driven", "none")}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def current_LAM(i, T):
+            return -1e-10 * abs(i)
+
+        parameter_values.update(
+            {"Negative electrode current-driven LAM rate": current_LAM},
+            check_already_exists=False,
+        )
+
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_well_posed_loss_active_material_current_positive(self):
+        options = {"loss of active material": ("none", "current-driven")}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def current_LAM(i, T):
+            return -1e-10 * abs(i)
+
+        parameter_values.update(
+            {"Positive electrode current-driven LAM rate": current_LAM},
+            check_already_exists=False,
+        )
+
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_negative_cracking(self):
