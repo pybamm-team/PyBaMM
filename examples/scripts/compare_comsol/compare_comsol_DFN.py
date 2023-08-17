@@ -102,6 +102,7 @@ comsol_voltage.secondary_mesh = None
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.lithium_ion.BaseModel()
+comsol_model._geometry = pybamm_model.default_geometry
 comsol_model.variables = {
     "Negative particle surface concentration [mol.m-3]": comsol_c_n_surf,
     "Electrolyte concentration [mol.m-3]": comsol_c_e,

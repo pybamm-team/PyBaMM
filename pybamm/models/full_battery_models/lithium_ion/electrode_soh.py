@@ -268,12 +268,8 @@ class ElectrodeSOHSolver:
         sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
 
         # Calculate theoretical energy
-        x_0 = sol_dict["x_0"]
-        y_0 = sol_dict["y_0"]
-        x_100 = sol_dict["x_100"]
-        y_100 = sol_dict["y_100"]
         energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-            self.parameter_values, x_100, x_0, y_100, y_0
+            self.parameter_values, sol_dict
         )
         sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
@@ -598,7 +594,7 @@ def get_min_max_stoichiometries(
     return esoh_solver.get_min_max_stoichiometries()
 
 
-def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100):
+def theoretical_energy_integral(parameter_values, inputs, points=100):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
     given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -618,20 +614,27 @@ def theoretical_energy_integral(parameter_values, n_i, n_f, p_i, p_f, points=100
     E
         The total energy of the cell in Wh
     """
-    n_vals = np.linspace(n_i, n_f, num=points)
-    p_vals = np.linspace(p_i, p_f, num=points)
+    x_0 = inputs["x_0"]
+    y_0 = inputs["y_0"]
+    x_100 = inputs["x_100"]
+    y_100 = inputs["y_100"]
+    Q_p = inputs["Q_p"]
+    x_vals = np.linspace(x_100, x_0, num=points)
+    y_vals = np.linspace(y_100, y_0, num=points)
     # Calculate OCV at each stoichiometry
     param = pybamm.LithiumIonParameters()
-    T = param.T_amb(0)
-    Vs = np.empty(n_vals.shape)
-    for i in range(n_vals.size):
+    y = pybamm.standard_spatial_vars.y
+    z = pybamm.standard_spatial_vars.z
+    T = pybamm.yz_average(param.T_amb(y, z, 0))
+    Vs = np.empty(x_vals.shape)
+    for i in range(x_vals.size):
         Vs[i] = (
-            parameter_values.evaluate(param.p.prim.U(p_vals[i], T)).item()
-            - parameter_values.evaluate(param.n.prim.U(n_vals[i], T)).item()
+            parameter_values.evaluate(param.p.prim.U(y_vals[i], T)).item()
+            - parameter_values.evaluate(param.n.prim.U(x_vals[i], T)).item()
         )
     # Calculate dQ
-    Q_p = parameter_values.evaluate(param.p.prim.Q_init) * (p_f - p_i)
-    dQ = Q_p / (points - 1)
+    Q = Q_p * (y_0 - y_100)
+    dQ = Q / (points - 1)
     # Integrate and convert to W-h
     E = np.trapz(Vs, dx=dQ)
     return E
@@ -663,7 +666,10 @@ def calculate_theoretical_energy(
     # Get initial and final stoichiometric values.
     x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values)
     x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values)
+    Q_p = parameter_values.evaluate(pybamm.LithiumIonParameters().p.prim.Q_init)
     E = theoretical_energy_integral(
-        parameter_values, x_100, x_0, y_100, y_0, points=points
+        parameter_values,
+        {"x_100": x_100, "x_0": x_0, "y_100": y_100, "y_0": y_0, "Q_p": Q_p},
+        points=points,
     )
     return E

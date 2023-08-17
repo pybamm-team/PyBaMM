@@ -27,14 +27,27 @@ class BaseParticle(pybamm.BaseSubModel):
         domain_options = getattr(self.options, domain)
         self.size_distribution = domain_options["particle size"] == "distribution"
 
-    def _get_effective_diffusivity(self, c, T):
+    def _get_effective_diffusivity(self, c, T, current):
         param = self.param
-        domain = self.domain
+        domain, Domain = self.domain_Domain
         domain_param = self.domain_param
         phase_param = self.phase_param
+        domain_options = getattr(self.options, domain)
 
-        # Get diffusivity
-        D = phase_param.D(c, T)
+        # Get diffusivity (may have empirical hysteresis)
+        if domain_options["diffusivity"] == "single":
+            D = phase_param.D(c, T)
+        elif domain_options["diffusivity"] == "current sigmoid":
+            k = 100
+            if Domain == "Positive":
+                lithiation_current = current
+            elif Domain == "Negative":
+                lithiation_current = -current
+            m_lith = pybamm.sigmoid(0, lithiation_current, k)  # lithiation_current > 0
+            m_delith = 1 - m_lith  # lithiation_current < 0
+            D_lith = phase_param.D(c, T, "lithiation")
+            D_delith = phase_param.D(c, T, "delithiation")
+            D = m_lith * D_lith + m_delith * D_delith
 
         # Account for stress-induced difftusion by defining a multiplicative
         # "stress factor"
@@ -387,6 +400,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]": D_eff,
             f"X-averaged {domain} {phase_name}particle effective "
             "diffusivity [m2.s-1]": pybamm.x_average(D_eff),
+            f"Volume-averaged {domain} {phase_name}particle effective "
+            "diffusivity [m2.s-1]": pybamm.r_average(pybamm.x_average(D_eff)),
         }
         return variables
 

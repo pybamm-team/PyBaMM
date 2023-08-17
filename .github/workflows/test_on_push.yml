@@ -45,11 +45,8 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v3
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
@@ -67,24 +64,17 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      # Added fixes to homebrew installs:
-      # rm -f /usr/local/bin/2to3
-      # (see https://github.com/actions/virtual-environments/issues/2322)
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-latest'
         env:
           # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
-          HOMEBREW_NO_ANALYTICS: 1
-          HOMEBREW_NO_GOOGLE_ANALYTICS: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
         run: |
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
+          brew analytics off
           brew update
           brew install graphviz openblas
 
@@ -92,10 +82,18 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco install graphviz --version=8.0.5
 
-      - name: Install standard Python dependencies
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: setup.py
+
+      - name: Install PyBaMM dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools
-          python -m pip install nox
+          pip install --upgrade pip wheel setuptools nox
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -103,36 +101,21 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/.nox/pybamm-requires/
             ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/install_KLU_Sundials.py') }}
+          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
         run: nox -s pybamm-requires
 
-      - name: Cache unit tests nox environment for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
-        uses: actions/cache@v3
-        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
-        with:
-          path: ${{ github.workspace }}/.nox/unit/
-          key: ${{ runner.os }}-nox-unit-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
-
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10 and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: nox -s unit
-
-      - name: Cache coverage nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/coverage/
-          key: ${{ runner.os }}-nox-coverage-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py', '**/.coveragerc') }}
 
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
@@ -142,34 +125,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v2.1.0
 
-      - name: Cache integration tests nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/integration/
-          key: ${{ runner.os }}-nox-integration-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
-
       - name: Run integration tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s integration
 
-      - name: Cache doctests nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/doctests/
-          key: ${{ runner.os }}-nox-doctests-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py', '**/docs/requirements.txt') }}
-
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         run: nox -s doctests
-
-      - name: Cache examples nox environment for GNU/Linux with Python 3.11
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        with:
-          path: ${{ github.workspace }}/.nox/examples/
-          key: ${{ runner.os }}-nox-examples-${{ matrix.python-version }}-${{ hashFiles('**/noxfile.py', '**/setup.py') }}
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11

@@ -104,7 +104,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         R = variables[f"X-averaged {domain} particle radius [m]"]
 
         if self.name != "uniform profile":
-            D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
+            current = variables["Total current density [A.m-2]"]
+            D_eff_av = self._get_effective_diffusivity(c_s_av, T_av, current)
             i_boundary_cc = variables["Current collector current density [A.m-2]"]
             a_av = variables[
                 f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
@@ -183,7 +184,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # Set flux based on polynomial order
         if self.name != "uniform profile":
             T_xav = pybamm.PrimaryBroadcast(T_av, [f"{domain} particle"])
-            D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
+            current = variables["Total current density [A.m-2]"]
+            D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav, current)
             D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
             variables.update(self._get_standard_diffusivity_variables(D_eff))
         if self.name == "uniform profile":

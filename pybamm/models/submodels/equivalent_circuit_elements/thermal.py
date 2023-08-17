@@ -22,6 +22,7 @@ class ThermalSubModel(pybamm.BaseSubModel):
         T_cell = pybamm.Variable("Cell temperature [degC]")
         T_jig = pybamm.Variable("Jig temperature [degC]")
 
+        # Note this is defined in deg C
         T_amb = self.param.T_amb(pybamm.t)
 
         Q_cell_cool = -self.param.k_cell_jig * (T_cell - T_jig)

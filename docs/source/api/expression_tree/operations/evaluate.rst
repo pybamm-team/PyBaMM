@@ -1,6 +1,5 @@
-EvaluatorPython 
+EvaluatorPython
 ===============
 
 .. autoclass:: pybamm.EvaluatorPython
   :members:
-
