@@ -3,7 +3,7 @@
 #
 import numpy as np
 import sympy
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import csr_matrix, issparse, csr_array
 
 import pybamm
 
@@ -56,6 +56,30 @@ class Array(pybamm.Symbol):
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        if isinstance(snippet["entries"], dict):
+            matrix = csr_array(
+                (
+                    snippet["entries"]["data"],
+                    snippet["entries"]["row_indices"],
+                    snippet["entries"]["column_pointers"],
+                ),
+                shape=snippet["entries"]["shape"],
+            )
+        else:
+            matrix = snippet["entries"]
+
+        instance.__init__(
+            matrix,
+            name=snippet["name"],
+            domains=snippet["domains"],
+        )
+
+        return instance
 
     @property
     def entries(self):

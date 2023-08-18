@@ -234,6 +234,26 @@ class Symbol:
             ):
                 self.test_shape()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """
+        Reconstructs a Symbol instance during deserialisation of a JSON file.
+
+        Parameters
+        ----------
+        snippet: dict
+            Contains the information needed to reconstruct a specific instance.
+            At minimum, should contain "name", "children" and "domains".
+        """
+
+        instance = cls.__new__(cls)
+
+        instance.__init__(
+            snippet["name"], children=snippet["children"], domains=snippet["domains"]
+        )
+
+        return instance
+
     @property
     def children(self):
         """

@@ -353,6 +353,15 @@ class SpatialOperator(UnaryOperator):
     def __init__(self, name, child, domains=None):
         super().__init__(name, child, domains)
 
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # We shouldn't need this
+        raise NotImplementedError
+
+    def to_json(self):
+        # Will not be present in a discretised model
+        raise NotImplementedError
+
 
 class Gradient(SpatialOperator):
     """
@@ -814,20 +823,6 @@ class BoundaryIntegral(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
-    def to_json(self):
-        """
-        Method to serialise a BoundaryIntegral object into JSON.
-        """
-
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-            "domains": self.domains,  # PL: Not sure if this exists, but might inherit from symbol
-            "region": self.region,
-        }
-
-        return json_dict
-
 
 class DeltaFunction(SpatialOperator):
     """
@@ -871,20 +866,6 @@ class DeltaFunction(SpatialOperator):
         vec = pybamm.evaluate_for_shape_using_domain(self.domains)
 
         return np.outer(child_eval, vec).reshape(-1, 1)
-
-    def to_json(self):
-        """
-        Method to serialise a DeltaFunction object into JSON.
-        """
-
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-            "domains": self.domains,
-            "side": self.side,
-        }
-
-        return json_dict
 
 
 class BoundaryOperator(SpatialOperator):
@@ -937,20 +918,6 @@ class BoundaryOperator(SpatialOperator):
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
-
-    def to_json(self):
-        """
-        Method to serialise a BoundaryOperator object into JSON.
-        """
-
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-            "domains": self.domains,
-            "side": self.side,
-        }
-
-        return json_dict
 
 
 class BoundaryValue(BoundaryOperator):

@@ -34,6 +34,14 @@ class IndependentVariable(pybamm.Symbol):
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["name"], domains=snippet["domains"])
+
+        return instance
+
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
@@ -57,6 +65,14 @@ class Time(IndependentVariable):
 
     def __init__(self):
         super().__init__("time")
+
+    @classmethod
+    def _to_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__("time")
+
+        return instance
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

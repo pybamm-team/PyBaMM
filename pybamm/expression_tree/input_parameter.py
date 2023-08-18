@@ -35,6 +35,18 @@ class InputParameter(pybamm.Symbol):
         self._expected_size = expected_size
         super().__init__(name, domain=domain)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(
+            snippet["name"],
+            domain=snippet["domain"],
+            expected_size=snippet["expected_size"],
+        )
+
+        return instance
+
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_input_parameter = InputParameter(

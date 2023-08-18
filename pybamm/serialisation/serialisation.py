@@ -47,68 +47,9 @@ def reconstruct_symbol(dct):
 
     class_ = getattr(module, parts[-1])
     foo.__class__ = class_
+    # foo = foo._from_json(dct) -> PL: This is what we want eventually
 
-    # PL: Need to finish off the various options here.
-    if isinstance(foo, pybamm.Scalar):
-        foo.__init__(dct["value"], name=dct["name"])
-
-    elif isinstance(foo, pybamm.BinaryOperator):
-        foo = foo._from_json(dct["children"][0], dct["children"][1], dct["domains"])
-
-    elif isinstance(foo, pybamm.Array):
-        if isinstance(dct["entries"], dict):
-            matrix = csr_array(
-                (
-                    dct["entries"]["data"],
-                    dct["entries"]["row_indices"],
-                    dct["entries"]["column_pointers"],
-                ),
-                shape=dct["entries"]["shape"],
-            )
-        else:
-            matrix = dct["entries"]
-        foo.__init__(
-            matrix,
-            name=dct["name"],
-            domains=dct["domains"],
-            # entries_string=dct["entries_string"],
-        )
-
-    elif isinstance(foo, pybamm.StateVectorBase):
-        y_slices = [recreate_slice(d) for d in dct["y_slice"]]
-        foo.__init__(
-            *y_slices,
-            name=dct["name"],
-            domains=dct["domains"],
-            evaluation_array=dct["evaluation_array"],
-        )
-
-    elif isinstance(foo, pybamm.IndependentVariable):
-        if isinstance(foo, pybamm.Time):
-            foo.__init__()
-        else:
-            foo.__init__(dct["name"], domains=dct["domains"])
-
-    elif isinstance(foo, pybamm.InputParameter):
-        foo.__init__(
-            dct["name"], domain=dct["domain"], expected_size=dct["expected_size"]
-        )
-
-    elif isinstance(foo, pybamm.SpecificFunction):
-        foo.__init__(dct["children"][0])
-
-    elif isinstance(foo, pybamm.Function):
-        func = getattr(
-            np, dct["function"]
-        )  # don't think this will work for self-defined functions
-        foo.__init__(
-            func,
-            name=dct["name"],
-            derivative=dct["derivative"],
-            differentiated_function=dct["differentiated_function"],
-        )
-
-    elif isinstance(foo, pybamm.DomainConcatenation):
+    if isinstance(foo, pybamm.DomainConcatenation):
 
         def repack_defaultDict(slices):
             slices = defaultdict(list, slices)
@@ -134,12 +75,9 @@ def reconstruct_symbol(dct):
             dct["children"],
             dct["domains"],
         )
-    # interpolant
-    # check various Unary operators, they differ
-    # VariableBase
-    # ...
-    elif isinstance(foo, pybamm.Symbol):
-        foo.__init__(dct["name"], children=dct["children"], domains=dct["domains"])
+
+    else:
+        foo = foo._from_json(dct)
 
     return foo
 

@@ -29,6 +29,14 @@ class Scalar(pybamm.Symbol):
 
         super().__init__(name)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["value"], name=snippet["name"])
+
+        return instance
+
     def __str__(self):
         return str(self.value)
 

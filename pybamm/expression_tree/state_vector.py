@@ -73,6 +73,21 @@ class StateVectorBase(pybamm.Symbol):
             domains=domains,
         )
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        y_slices = [slice(s["start"], s["stop"], s["step"]) for s in snippet["y_slice"]]
+
+        instance.__init__(
+            *y_slices,
+            name=snippet["name"],
+            domains=snippet["domains"],
+            evaluation_array=snippet["evaluation_array"],
+        )
+
+        return instance
+
     @property
     def y_slices(self):
         return self._y_slices

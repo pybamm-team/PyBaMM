@@ -69,13 +69,16 @@ class BinaryOperator(pybamm.Symbol):
         self.right = self.children[1]
 
     @classmethod
-    def _from_json(cls, name, left, right, domains):
+    def _from_json(cls, name, snippet: dict):
         """Use to instantiate when deserialising; discretisation has
         already occured so pre-processing of binaries is not necessary."""
+
         instance = cls.__new__(cls)
 
         super(BinaryOperator, instance).__init__(
-            name, children=[left, right], domains=domains
+            name,
+            children=[snippet["children"][0], snippet["children"][1]],
+            domains=snippet["domains"],
         )
         instance.left = instance.children[0]
         instance.right = instance.children[1]
@@ -189,9 +192,9 @@ class Power(BinaryOperator):
         super().__init__("**", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("**", left, right, domains)
+        instance = super()._from_json("**", snippet)
         return instance
 
     def _diff(self, variable):
@@ -236,9 +239,9 @@ class Addition(BinaryOperator):
         super().__init__("+", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("+", left, right, domains)
+        instance = super()._from_json("+", snippet)
         return instance
 
     def _diff(self, variable):
@@ -265,9 +268,9 @@ class Subtraction(BinaryOperator):
         super().__init__("-", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("-", left, right, domains)
+        instance = super()._from_json("-", snippet)
         return instance
 
     def _diff(self, variable):
@@ -296,9 +299,9 @@ class Multiplication(BinaryOperator):
         super().__init__("*", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("*", left, right, domains)
+        instance = super()._from_json("*", snippet)
         return instance
 
     def _diff(self, variable):
@@ -338,10 +341,10 @@ class MatrixMultiplication(BinaryOperator):
         super().__init__("@", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
         # instance = super(MatrixMultiplication, cls)._from_json("@", left, right)
-        instance = super()._from_json("@", left, right, domains)
+        instance = super()._from_json("@", snippet)
         return instance
 
     def diff(self, variable):
@@ -392,9 +395,9 @@ class Division(BinaryOperator):
         super().__init__("/", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("/", left, right, domains)
+        instance = super()._from_json("/", snippet)
         return instance
 
     def _diff(self, variable):
@@ -442,9 +445,9 @@ class Inner(BinaryOperator):
         super().__init__("inner product", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("inner product", left, right, domains)
+        instance = super()._from_json("inner product", snippet)
         return instance
 
     def _diff(self, variable):
@@ -517,9 +520,9 @@ class Equality(BinaryOperator):
         super().__init__("==", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("==", left, right, domains)
+        instance = super()._from_json("==", snippet)
         return instance
 
     def diff(self, variable):
@@ -569,9 +572,11 @@ class _Heaviside(BinaryOperator):
         super().__init__(name, left, right)
 
     @classmethod
-    def _from_json(cls, name, left, right):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json(name, left, right)
+        instance = super()._from_json(
+            snippet["name"], snippet["children"][0], snippet["children"][1]
+        )
         return instance
 
     def diff(self, variable):
@@ -640,9 +645,9 @@ class Modulo(BinaryOperator):
         super().__init__("%", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("%", left, right, domains)
+        instance = super()._from_json("%", snippet)
         return instance
 
     def _diff(self, variable):
@@ -684,9 +689,9 @@ class Minimum(BinaryOperator):
         super().__init__("minimum", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("minimum", left, right, domains)
+        instance = super()._from_json("minimum", snippet)
         return instance
 
     def __str__(self):
@@ -726,9 +731,9 @@ class Maximum(BinaryOperator):
         super().__init__("maximum", left, right)
 
     @classmethod
-    def _from_json(cls, left, right, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json("maximum", left, right, domains)
+        instance = super()._from_json("maximum", snippet)
         return instance
 
     def __str__(self):

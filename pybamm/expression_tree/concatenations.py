@@ -45,6 +45,7 @@ class Concatenation(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, *children, name, domains, concat_fun=None):
+        # PL: update this one - I guess we still want it to take 'snippet' rather than the list? to be the same as the others?
         instance = cls.__new__(cls)
 
         super(Concatenation, instance).__init__(name, children, domains=domains)
@@ -193,12 +194,12 @@ class NumpyConcatenation(Concatenation):
         )
 
     @classmethod
-    def _from_json(cls, children, domains):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.Concatenation._from_json()`."""
         instance = super()._from_json(
-            *children,
+            *snippet["children"],
             name="numpy_concatenation",
-            domains=domains,
+            domains=snippet["domains"],
             concat_fun=np.concatenate
         )
 
@@ -273,18 +274,27 @@ class DomainConcatenation(Concatenation):
             self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
     @classmethod
-    def _from_json(
-        cls, children, size, slices, children_slices, secondary_dimensions_npts, domains
-    ):
+    def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.Concatenation._from_json()`."""
         instance = super()._from_json(
-            *children, name="domain_concatenation", domains=domains
+            *snippet["children"],
+            name="domain_concatenation",
+            domains=snippet["domains"]
         )
 
-        instance._size = size
-        instance._slices = slices
-        instance._children_slices = children_slices
-        instance.secondary_dimensions_npts = secondary_dimensions_npts
+        def repack_defaultDict(slices):
+            slices = defaultdict(list, slices)
+            for domain, sls in slices.items():
+                sls = [slice(s["start"], s["stop"], s["step"]) for s in sls]
+                slices[domain] = sls
+            return slices
+
+        instance._size = snippet["size"]
+        instance._slices = repack_defaultDict(snippet["slices"])
+        instance._children_slices = [
+            repack_defaultDict(s) for s in snippet["children_slices"]
+        ]
+        instance.secondary_dimensions_npts = snippet["secondary_dimensions_npts"]
 
         return instance
 
