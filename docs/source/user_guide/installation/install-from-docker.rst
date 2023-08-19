@@ -1,4 +1,4 @@
-Install using Docker (developer install)
+Install from source (Docker)
 =========================================
 
 .. contents::
@@ -14,8 +14,8 @@ Ensure Docker installation by running :
 
 	  docker --version
 
-Pulling the Docker Image
-------------------------
+Pulling the Docker Image (will be supported soon)
+-------------------------------------------------
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
 .. code:: bash
