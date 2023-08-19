@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Setup python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
@@ -311,8 +311,8 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: nox -s pybamm-requires
 
-      - name: Install docs dependencies and run doctests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         run: nox -s doctests
 
-      - name: Install dev dependencies and run example tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         run: nox -s examples
