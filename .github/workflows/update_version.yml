@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install wheel
-          pip install --editable .
+          pip install --editable ".[all]"
 
       - name: Update version
         run: python scripts/update_version.py
@@ -63,7 +63,7 @@ jobs:
         with:
           message: 'Bump to ${{ env.VERSION }}'
 
-      - name: Make a PR from ${{ env.VERSION }} to main
+      - name: Make a PR from ${{ env.NON_RC_VERSION }} to main
         if: github.event_name == 'workflow_dispatch' && !startsWith(github.event.inputs.append_to_tag, 'rc')
         uses: repo-sync/pull-request@v2
         with:
