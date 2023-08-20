@@ -64,7 +64,7 @@ jobs:
           message: 'Bump to ${{ env.VERSION }}'
 
       - name: Make a PR from ${{ env.VERSION }} to main
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.append_to_tag == ""
+        if: github.event_name == 'workflow_dispatch' && !startsWith(github.event.inputs.append_to_tag, "rc")
         uses: repo-sync/pull-request@v2
         with:
           destination_branch: "main"
