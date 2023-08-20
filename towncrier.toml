@@ -1,0 +1,19 @@
+[tool.towncrier]
+package = "PyBaMM"
+package_dir = "pybamm"
+directory = "./changelogs"
+type = "towncrier"
+version = "v23.5"
+
+[tool.towncrier.section."feature"]
+title = "Features"
+
+[tool.towncrier.section."optimizations"]
+title = "Optimizations"
+
+[tool.towncrier.section."bugfix"]
+title = "Bug Fixes"
+
+[tool.towncrier.section."breakingchanges"]
+title = "Breaking changes"
+
