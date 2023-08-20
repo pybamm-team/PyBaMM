@@ -67,7 +67,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && !startsWith(github.event.inputs.append_to_tag, 'rc')
         uses: repo-sync/pull-request@v2
         with:
+          source_branch: '${{ env.NON_RC_VERSION }}'
           destination_branch: "main"
-          pr_title: "Make release ${{ env.VERSION }}"
+          pr_title: "Make release ${{ env.NON_RC_VERSION }}"
           pr_body: "**Check the [release workflow](https://github.com/pybamm-team/PyBaMM/blob/develop/.github/release_workflow.md)"
           github_token: ${{ secrets.GITHUB_TOKEN }}
