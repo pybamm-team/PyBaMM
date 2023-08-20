@@ -2,8 +2,8 @@ name: Create a release reminder
 
 on:
   schedule:
-     # Run at 10 am UTC on 28th every 4th month from January through December
-     - cron: 0 10 28 1-12/4 *
+     # Run at 10 am UTC on 1st and 28th every 4th month from January through December
+     - cron: 0 10 1-28/27 1-12/4 *
 
 permissions:
   contents: read
