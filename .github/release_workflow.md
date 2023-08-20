@@ -11,6 +11,7 @@ This file contains the workflow required to make a `PyBaMM` release on GitHub an
    - `CITATION.cff`
    - `vcpkg.json`
    - `docs/_static/versions.json`
+   - `CHANGELOG.md`
 
       These changes will be automatically pushed to a new branch `YY.MM`.
 
@@ -33,6 +34,7 @@ If a new release candidate is required after the release of `rc0` -
    - `CITATION.cff`
    - `vcpkg.json`
    - `docs/_static/versions.json`
+   - `CHANGELOG.md`
 
       These changes will be automatically pushed to the existing branch `YY.MM`.
 
@@ -53,6 +55,7 @@ Once satisfied with the release candidates -
    - `CITATION.cff`
    - `vcpkg.json`
    - `docs/_static/versions.json`
+   - `CHANGELOG.md`
 
       These changes will be automatically pushed to the existing branch `YY.MM`.
 
@@ -67,6 +70,5 @@ Once satisfied with the release candidates -
 Some other essential things to check throughout the release process -
 
 - If updating our custom vcpkg registory entries [pybamm-team/sundials-vcpkg-registry](https://github.com/pybamm-team/sundials-vcpkg-registry) or [pybamm-team/casadi-vcpkg-registry](https://github.com/pybamm-team/casadi-vcpkg-registry) (used to build Windows wheels), make sure to update the baseline of the registories in vcpkg-configuration.json to the latest commit id.
-- Update `CHANGELOG.md` with a summary of the release
 - Update jax and jaxlib to the latest version in `pybamm.util` and `setup.py`, fixing any bugs that arise
 - Make sure the URLs in `docs/_static/versions.json` are valid
