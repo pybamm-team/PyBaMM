@@ -16,4 +16,3 @@ title = "Bug Fixes"
 
 [tool.towncrier.section."breakingchanges"]
 title = "Breaking changes"
-
