@@ -7,8 +7,8 @@ on:
         description: 'Leave blank for an actual release or "rc1", "rc2", ..., for release candidates."'
         default: ""
   schedule:
-     # Run at 10 am UTC on 1st every 4th month from January through December
-     - cron: 0 10 1 1-12/4 *
+     # Run at 10 am UTC on day-of-month 1 in January, May, and September.
+     - cron: "0 10 1 1,5,9 *"
 
 jobs:
   update-version:
