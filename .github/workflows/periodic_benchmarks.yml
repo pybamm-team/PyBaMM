@@ -63,7 +63,7 @@ jobs:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
       - name: Download results artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: asv_new_results
           path: new_results
