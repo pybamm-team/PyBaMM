@@ -236,7 +236,8 @@ Doctests, examples, and coverage
 
 ``Nox`` can also be used to run doctests, run examples, and generate a coverage report using:
 
-- ``nox -s examples``: Run the example scripts in ``examples/scripts``.
+- ``nox -s examples``: Run the Jupyter notebooks in ``docs/source/examples/notebooks/``.
+- ``nox -s scripts``: Run the example scripts in ``examples/scripts/``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
 - ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
