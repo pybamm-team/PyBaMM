@@ -19,16 +19,19 @@ Get PyBaMM's Source Code
 2. Install Git by typing the following command:
 
 .. code:: bash
+
      sudo apt install git-core
 
 3. Clone the PyBaMM repository::
 
 .. code:: bash
+
      git clone https://github.com/pybamm-team/PyBaMM.git
 
 4. Enter the PyBaMM Directory by running::
 
 .. code:: bash
+
      cd PyBaMM
 
 5. Follow the Installation Steps
