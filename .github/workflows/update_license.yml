@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Update year in license
-        uses: FantasticFiasco/action-update-license-year@v2
+        uses: FantasticFiasco/action-update-license-year@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: LICENSE.txt
@@ -32,7 +32,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Update year in docs
-        uses: FantasticFiasco/action-update-license-year@v2
+        uses: FantasticFiasco/action-update-license-year@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: docs/conf.py
