@@ -111,6 +111,7 @@ def run_notebooks(executable="python"):
         sys.exit(1)
     print("\nOK")
 
+
 def run_scripts(executable="python"):
     """
     Run example scripts tests. Exits if they fail.
