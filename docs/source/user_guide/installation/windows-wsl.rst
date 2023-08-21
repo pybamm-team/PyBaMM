@@ -21,12 +21,7 @@ Get PyBaMM's Source Code
 .. code:: bash
      sudo apt install git-core
 
-3. Clone the PyBaMM repository. To install PyBaMM in your Windows Documents folder, navigate to it using the command::
-
-.. code:: bash
-     cd /mnt/c/Users/USER_NAME/Documents
-
-   Replace ``USER_NAME`` with your Windows username. Clone the PyBaMM repository using the command:
+3. Clone the PyBaMM repository::
 
 .. code:: bash
      git clone https://github.com/pybamm-team/PyBaMM.git
