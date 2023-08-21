@@ -97,18 +97,27 @@ def run_doc_tests():
     shutil.rmtree("docs/build")
 
 
-def run_notebook_and_scripts(executable="python"):
+def run_notebooks(executable="python"):
     """
-    Runs Jupyter notebook and example scripts tests. Exits if they fail.
+    Runs Jupyter notebook tests. Exits if they fail.
     """
 
     # Scan and run
-    print("Testing notebooks and scripts with executable `" + str(executable) + "`")
+    print("Testing notebooks with executable `" + str(executable) + "`")
 
     # Test notebooks in docs/source/examples
     if not scan_for_notebooks("docs/source/examples", True, executable):
         print("\nErrors encountered in notebooks")
         sys.exit(1)
+    print("\nOK")
+
+def run_scripts(executable="python"):
+    """
+    Run example scripts tests. Exits if they fail.
+    """
+
+    # Scan and run
+    print("Testing scripts with executable `" + str(executable) + "`")
 
     # Test scripts in examples
     # TODO: add scripts to docs/source/examples
@@ -362,17 +371,24 @@ if __name__ == "__main__":
         action="store_true",
         help="Run unit tests without starting a subprocess.",
     )
-    # Notebook tests
+    # Example notebooks tests
     parser.add_argument(
         "--examples",
         action="store_true",
-        help="Test all Jupyter notebooks and scripts in `examples`.",
+        help="Test all Jupyter notebooks in `docs/source/examples/`.",
     )
     parser.add_argument(
         "-debook",
         nargs=2,
         metavar=("in", "out"),
         help="Export a Jupyter notebook to a Python file for manual testing.",
+    )
+    # Scripts tests
+    parser.add_argument(
+        "--scripts",
+        action="store_true",
+        help="Test all example scripts in `examples/`.",
+
     )
     # Doctests
     parser.add_argument(
@@ -422,10 +438,14 @@ if __name__ == "__main__":
     # Notebook tests
     elif args.examples:
         has_run = True
-        run_notebook_and_scripts(interpreter)
+        run_notebooks(interpreter)
     if args.debook:
         has_run = True
         export_notebook(*args.debook)
+    # Scripts tests
+    elif args.scripts:
+        has_run = True
+        run_scripts(interpreter)
     # Combined test sets
     if args.quick:
         has_run = True
