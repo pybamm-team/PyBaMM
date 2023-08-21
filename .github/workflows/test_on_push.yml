@@ -195,6 +195,8 @@ jobs:
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        uses: codecov/codecov-action@v3.1.4
 
       # dot -c is for registering graphviz fonts and plugins
       - name: Install OpenBLAS and TeXLive for Linux
