@@ -38,3 +38,16 @@ Get PyBaMM's Source Code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Follow the `installation instructions for PyBaMM on Linux <GNU-linux.html>`__.
+
+Using Visual Studio Code with the WSL
+---------------------------------------
+
+To use Visual Studio Code with the Windows Subsystem for Linux (WSL), follow these steps:
+
+1. Open Visual Studio Code.
+2. Install the "Remote - WSL" extension if not already installed.
+3. Open the PyBaMM directory in Visual Studio Code.
+4. In the bottom pane, select the "+" sign and choose "New WSL Window."
+5. This opens a WSL terminal in the PyBaMM directory within the WSL.
+
+Now you can develop and edit PyBaMM code using Visual Studio Code while utilizing the WSL environment.
