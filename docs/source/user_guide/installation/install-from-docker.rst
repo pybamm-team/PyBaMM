@@ -14,7 +14,7 @@ Ensure Docker installation by running :
 
 	  docker --version
 
-Pulling the Docker Image (will be supported soon)
+Pulling the Docker Image
 -------------------------------------------------
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
@@ -69,7 +69,7 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 
 .. code-block:: bash
 
-      docker build -t pybamm .
+      docker build -t pybamm -f scripts/Dockerfile .
 
 4. Once the image is built, you can run a Docker container using:
 
@@ -97,7 +97,7 @@ Build Docker Image with IDAKLU Solver
 
 .. code-block:: bash
 
-      docker build -t pybamm:idaklu --build-arg IDAKLU=true .
+      docker build -t pybamm:idaklu -f scripts/Dockerfile --build-arg IDAKLU=true .
 
 Build Docker Image with ODES Solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -108,7 +108,7 @@ Build Docker Image with ODES Solver
 
 .. code-block:: bash
 
-      docker build -t pybamm:odes --build-arg ODES=true .
+      docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
 
 Build Docker Image with JAX Solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -119,7 +119,7 @@ Build Docker Image with JAX Solver
 
 .. code-block:: bash
 
-      docker build -t pybamm:jax --build-arg JAX=true .
+      docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
 
 
 After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with IDAKLU solver:
