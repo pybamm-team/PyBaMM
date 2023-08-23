@@ -180,6 +180,12 @@ After building the Docker images with the desired solvers, use the ``docker run`
 
       docker run -it pybamm:idaklu
 
+If you want to exit the Docker container's shell, you can simply type:
+
+.. code-block:: bash
+
+      exit
+
 Using Visual Studio Code Inside a Running Docker Container
 ----------------------------------------------------------
 
