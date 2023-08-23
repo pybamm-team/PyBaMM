@@ -1,5 +1,5 @@
 Install from source (Docker)
-=========================================
+============================
 
 .. contents::
 
@@ -15,7 +15,7 @@ Ensure Docker installation by running :
 	  docker --version
 
 Pulling the Docker Image
--------------------------------------------------
+------------------------
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
 .. code:: bash
@@ -38,7 +38,7 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 3. You can execute PyBaMM-related commands, run tests develop & contribute from the container.
 
 Exiting the Docker Container
----------------------------
+----------------------------
 
 To exit the Docker container's shell, you can simply type:
 
@@ -49,7 +49,7 @@ To exit the Docker container's shell, you can simply type:
 This will return you to your host machine's terminal.
 
 Building Docker Image Locally from Source
-------------------------------------------
+-----------------------------------------
 
 If you want to build the PyBaMM Docker image locally from the PyBaMM source code, follow these steps:
 
