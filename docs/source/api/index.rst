@@ -1,5 +1,3 @@
-.. module:: pybamm
-
 .. _api_docs:
 
 #################
