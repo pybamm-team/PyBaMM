@@ -69,7 +69,7 @@ def get_parameter_values():
             "Negative electrode Poisson's ratio": 0.2,
             "Negative electrode Young's modulus [Pa]": 15e9,
             "Negative electrode reference concentration for free of deformation [mol.m-3]": 0,
-            "Negative electrode partial molar volume [m3.mol-1]": 3.1e-6,
+            "Negative electrode partial molar volume [m3.mol-1]": 3.1e-6,   
             "Negative electrode volume change": graphite_volume_change_mohtat,
             # Loss of active materials (LAM) model
             "Negative electrode LAM constant exponential term": 2,
@@ -139,6 +139,14 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
             * c_p_max,
             
         }
+    )
+    parameter_values.update(
+        {
+            "Negative electrode LAM min stress [Pa]": 0,
+            "Negative electrode LAM max stress [Pa]": 0,
+            "Positive electrode LAM min stress [Pa]": 0,
+            "Positive electrode LAM max stress [Pa]": 0,
+        },
     )
 
     sim_ode = pybamm.Simulation(
@@ -303,6 +311,333 @@ def cycle_adaptive_simulation(model, parameter_values, experiment,SOC_0=1, save_
     
     return all_sumvars_dict
 
+def cycle_adaptive_simulation_V2(model, parameter_values, experiment,SOC_0=1, save_at_cycles=None,drive_cycle=None):
+    experiment_one_cycle = pybamm.Experiment(
+        experiment.operating_conditions_cycles[:1],
+        termination=experiment.termination_string,
+        cccv_handling=experiment.cccv_handling,
+        drive_cycles={"DriveCycle": drive_cycle},
+    )
+    Vmin = 3.0
+    Vmax = 4.2
+    esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+    esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
+    param = model.param
+    esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+    Cn = parameter_values.evaluate(param.n.cap_init)
+    Cp = parameter_values.evaluate(param.p.cap_init)
+    eps_n = parameter_values["Negative electrode active material volume fraction"]
+    eps_p = parameter_values["Positive electrode active material volume fraction"]
+    C_over_eps_n = Cn / eps_n
+    C_over_eps_p = Cp / eps_p
+    c_n_max = parameter_values.evaluate(param.n.prim.c_max)
+    c_p_max = parameter_values.evaluate(param.p.prim.c_max)
+    n_Li_init = parameter_values.evaluate(param.n_Li_particles_init)
+    
+    esoh_sol = esoh_sim.solve(
+        [0],
+        inputs={"V_min": Vmin, "V_max": Vmax, "C_n": Cn, "C_p": Cp, "n_Li": n_Li_init},
+        solver=pybamm.AlgebraicSolver(),
+    )
+
+    parameter_values.update(
+        {
+            "Initial concentration in negative electrode [mol.m-3]": esoh_sol[
+                "x_100"
+            ].data[0]
+            * c_n_max,
+            "Initial concentration in positive electrode [mol.m-3]": esoh_sol[
+                "y_100"
+            ].data[0]
+            * c_p_max,
+            
+        }
+    )
+    model1 = model
+    sim_ode = pybamm.Simulation(
+        model, experiment=experiment_one_cycle, parameter_values=parameter_values,
+        solver=pybamm.CasadiSolver("safe")
+    )
+    sol0 = sim_ode.solve(initial_soc=SOC_0)
+    model = sim_ode.solution.all_models[0]
+    cap0 = sol0.summary_variables["Capacity [A.h]"]
+
+    Omega_n = param.n.Omega
+    R_n = parameter_values.evaluate(param.n.prim.R_typ)
+    E_n = param.n.E
+    nu_n = param.n.nu
+    CC_n = parameter_values.evaluate(2*E_n/(1-nu_n)/3)
+
+    Omega_p = param.n.Omega
+    R_p = parameter_values.evaluate(param.p.prim.R_typ)
+    E_p = param.p.E
+    nu_p = param.p.nu
+    CC_p = parameter_values.evaluate(2*E_p/(1-nu_p)/3)
+
+    def graphite_volume_change(sto):
+        stoichpoints = np.array([0,0.12,0.18,0.24,0.50,1])
+        thicknesspoints = np.array([0,2.406/100,3.3568/100,4.3668/100,5.583/100,13.0635/100])
+        x = [sto]
+        t_change = pybamm.Interpolant(stoichpoints, thicknesspoints, x, name=None, interpolator='linear', extrapolate=True, entries_string=None)
+        t_change = np.interp(x,stoichpoints,thicknesspoints)
+        return t_change
+
+    def nmc_volume_change(sto):
+        t_change = -1.10/100*(1-sto)
+        return t_change
+
+    def sigma_hfun(c_s_n,c_s_p):
+        Rvec_n = np.linspace(0,R_n,len(c_s_n))
+        Rvec_p = np.linspace(0,R_p,len(c_s_p))
+        sigma_h_n = []
+        sigma_h_p = []
+        for nn in range(np.size(c_s_n,1)):
+            c_s_n1 = c_s_n[:,nn]
+            y_s = np.vectorize(graphite_volume_change)(c_s_n1)
+            cube_n = Rvec_n[1:]**3-Rvec_n[:-1]**3
+            mul_n = (y_s[1:]+y_s[:-1])/2
+            sigma_h_s_n = CC_n*((1/R_n**3)*1/3*np.sum(cube_n*mul_n)-1/3*y_s[-1])
+            sigma_h_n.append(sigma_h_s_n)
+            c_s_p1 = c_s_p[:,nn]
+            x_s = np.vectorize(nmc_volume_change)(c_s_p1)
+            cube_p = Rvec_p[1:]**3-Rvec_p[:-1]**3
+            mul_p = (x_s[1:]+x_s[:-1])/2
+            sigma_h_s_p = CC_p*((1/R_p**3)*1/3*np.sum(cube_p*mul_p)-1/3*x_s[-1])
+            sigma_h_p.append(sigma_h_s_p)
+        sigma_h_n = np.array(sigma_h_n)
+        sigma_h_p = np.array(sigma_h_p)
+
+        return sigma_h_n,sigma_h_p
+
+    def sol_to_y(sol, loc="end"):
+        if loc == "start":
+            pos = 0
+        elif loc == "end":
+            pos = -1
+        model = sol.all_models[0]
+        n_Li = sol["Total lithium in particles [mol]"].data[pos].flatten()
+        Cn = sol["Negative electrode capacity [A.h]"].data[pos].flatten()
+        Cp = sol["Positive electrode capacity [A.h]"].data[pos].flatten()
+        # y = np.concatenate([n_Li, Cn, Cp])
+        y = n_Li
+        for var in model.initial_conditions:
+            if var.name not in [
+                "X-averaged negative particle concentration",
+                "X-averaged positive particle concentration",
+                "Discharge capacity [A.h]",
+                "Porosity times concentration",
+            ]:
+                value = sol[var.name].data
+                if value.ndim == 1:
+                    value = value[pos]
+                elif value.ndim == 2:
+                    value = np.average(value[:, pos])
+                elif value.ndim == 3:
+                    value = np.average(value[:, :, pos])
+                y = np.concatenate([y, value.flatten()])
+            elif var.name == "Porosity times concentration":
+                for child in var.children:
+                    value = sol[child.name].data
+                    if value.ndim == 1:
+                        value = value[pos]
+                    elif value.ndim == 2:
+                        value = np.average(value[:, pos])
+                    elif value.ndim == 3:
+                        value = np.average(value[:, :, pos])
+                    y = np.concatenate([y, value.flatten()])
+        return y
+
+    def y_to_sol(y, esoh_sim, model):
+        n_Li = y[0]
+        Cn = C_over_eps_n * y[1]
+        Cp = C_over_eps_p * y[2]
+
+        esoh_sol = esoh_sim.solve(
+            [0],
+            inputs={"V_min": Vmin, "V_max": Vmax, "C_n": Cn, "C_p": Cp, "n_Li": n_Li},
+        )
+        esoh_sim.built_model.set_initial_conditions_from(esoh_sol)
+        ics = {}
+        x_100 = esoh_sol["x_100"].data[0]
+        y_100 = esoh_sol["y_100"].data[0]
+        x_0 = esoh_sol["x_0"].data[0]
+        y_0 = esoh_sol["y_0"].data[0]
+        start = 1
+        for var in model.initial_conditions:
+            if var.name == "X-averaged negative particle concentration":
+                ics[var.name] = ((x_100-x_0)*SOC_0+x_0) * np.ones((model.variables[var.name].size, 2))
+            elif var.name == "X-averaged positive particle concentration":
+                ics[var.name] = ((y_100-y_0)*SOC_0+y_0)  * np.ones((model.variables[var.name].size, 2))
+            elif var.name == "Discharge capacity [A.h]":
+                ics[var.name] = np.zeros(1)
+            else:
+                if var.name == "Porosity times concentration":
+                    for child in var.children:
+                        # end = start + model.variables[child.name].size
+                        # ics[child.name] = y[start:end, np.newaxis]
+                        end = start + 1
+                        ics[child.name] = y[start] * np.ones((model.variables[var.name].size, 1))
+                        start = end
+                else:
+                    # end = start + model.variables[var.name].size
+                    # ics[var.name] = y[start:end, np.newaxis]
+                    end = start + 1
+                    ics[var.name] = y[start] * np.ones((model.variables[var.name].size, 1))
+                    start = end
+        model.set_initial_conditions_from(ics)
+        return pybamm.Solution(
+            [np.array([0])],
+            model.concatenated_initial_conditions.evaluate()[:, np.newaxis],
+            model,
+            {},
+        )
+
+    def dydt(t, y):
+        if y[0] < 0 or y[1] < 0 or y[2] < 0:
+            return 0 * y
+
+        # print(t)
+        # Set up based on current value of y
+        y_to_sol(
+            y,
+            esoh_sim,
+            sim_ode.op_conds_to_built_models[
+                experiment_one_cycle.operating_conditions[0]["electric"]
+            ],
+        )
+
+        # Simulate one cycle
+        sol = sim_ode.solve()
+        dy = sol_to_y(sol) - y
+        t =  sol["Time [s]"].entries
+        t = t/3600
+        c_s_n = sol["X-averaged negative particle concentration"].entries
+        c_s_p = sol["X-averaged positive particle concentration"].entries
+        # sigma_hs_n,sigma_hs_p = sigma_hfun(c_s_n,c_s_p)
+        sigma_ts_n = sol["X-averaged negative particle surface tangential stress [Pa]"].entries
+        sigma_rs_n = sol["X-averaged negative particle surface radial stress [Pa]"].entries
+        sigma_hs_n = (sigma_rs_n+2*sigma_ts_n)/2
+        sigma_ts_p = sol["X-averaged positive particle surface tangential stress [Pa]"].entries
+        sigma_rs_p = sol["X-averaged positive particle surface radial stress [Pa]"].entries
+        sigma_hs_p = (sigma_rs_p+2*sigma_ts_p)/2
+        dnli = dy[0]
+        beta_LAM_n = param.n.beta_LAM_dimensional
+        beta_LAM2_n = param.n.beta_LAM_dimensional2
+        m_LAM_n = param.n.m_LAM
+        stress_critical_n = param.n.stress_critical_dim
+        j_stress_LAM_n = parameter_values.evaluate(-beta_LAM_n*(abs(min(sigma_hs_n)) / stress_critical_n) ** m_LAM_n + beta_LAM2_n*(abs(max(sigma_hs_n)) / stress_critical_n) ** m_LAM_n)
+        act_n_loss = j_stress_LAM_n*t[-1]*3600
+        print(f"beta1= {parameter_values.evaluate(param.n.beta_LAM_dimensional)}")
+        print(f"beta2= {parameter_values.evaluate(param.n.beta_LAM_dimensional2)}")
+        print(f"min stress = {abs(min(sigma_hs_n))}")
+        print(f"max stress = {abs(max(sigma_hs_n))}")
+        print(f"j = {j_stress_LAM_n}")
+        print(f"loss = {act_n_loss}")
+        C_n_loss = parameter_values.evaluate(act_n_loss*(param.n.L * param.n.prim.c_max * param.F* param.A_cc)/3600)
+        dCn = act_n_loss+dy[1]
+        c_save_n1 = sol["R-averaged negative particle concentration"].entries
+        c_save_n = c_save_n1[1,:]
+        dnli += parameter_values.evaluate(3600/param.F)*C_n_loss*np.average(c_save_n)
+        beta_LAM_p = param.p.beta_LAM_dimensional
+        beta_LAM2_p = param.p.beta_LAM_dimensional2
+        m_LAM_p = param.p.m_LAM
+        stress_critical_p = param.p.stress_critical_dim
+        j_stress_LAM_p = parameter_values.evaluate(-beta_LAM_p*(abs(max(sigma_hs_p)) / stress_critical_p) ** m_LAM_p + beta_LAM2_p*(abs(min(sigma_hs_p)) / stress_critical_p) ** m_LAM_p)
+        act_p_loss = j_stress_LAM_p*t[-1]*3600
+        C_p_loss = parameter_values.evaluate(act_p_loss*(param.p.L * param.p.prim.c_max * param.F* param.A_cc)/3600)
+        dCp = act_p_loss+dy[1]
+        c_save_p1 = sol["R-averaged positive particle concentration"].entries
+        c_save_p = c_save_p1[1,:]
+        dnli += parameter_values.evaluate(3600/param.F)*C_p_loss*np.average(c_save_p)
+        dy2 = np.zeros(6)
+        dy2[0] = dnli
+        dy2[1] = dCn
+        dy2[2] = dCp
+        dy2[3] = dy[3]
+        dy2[4] = dy[4]
+        dy2[5] = dy[5]
+
+        # parameter_values.update(
+        #     {
+        #         "Negative electrode LAM min stress [Pa]": min(sigma_hs_n),
+        #         "Negative electrode LAM max stress [Pa]": max(sigma_hs_n),
+        #         "Positive electrode LAM min stress [Pa]": min(sigma_hs_p),
+        #         "Positive electrode LAM max stress [Pa]": max(sigma_hs_p),
+        #     },
+        # )
+
+        # sim_ode1 = pybamm.Simulation(
+        #     model1, experiment=experiment_one_cycle, parameter_values=parameter_values,
+        #     solver=pybamm.CasadiSolver("safe")
+        # )
+        # sol1 = sim_ode1.solve(initial_soc=SOC_0)
+        # # model1 = sim_ode1.solution.all_models[0]
+
+        # y_to_sol(
+        #     y,
+        #     esoh_sim,
+        #     sim_ode1.op_conds_to_built_models[
+        #         experiment_one_cycle.operating_conditions[0]["electric"]
+        #     ],
+        # )
+
+        # # # Simulate one cycle
+        # sol = sim_ode1.solve()
+
+        # dy = sol_to_y(sol) - y
+
+        return dy2
+
+    if experiment.termination == {}:
+        event = None
+    else:
+
+        def capacity_cutoff(t, y):
+            sol = y_to_sol(y, esoh_sim, model)
+            cap = pybamm.make_cycle_solution([sol], esoh_solver, True)[1]["Capacity [A.h]"]
+            return cap / cap0 - experiment_one_cycle.termination["capacity"][0] / 100
+
+        capacity_cutoff.terminal = True
+
+    num_cycles = len(experiment.operating_conditions_cycles)
+    if save_at_cycles is None:
+        t_eval = np.arange(1, num_cycles + 1)
+    elif save_at_cycles == -1:
+        t_eval = None
+    else:
+        t_eval = np.arange(1, num_cycles + 1, save_at_cycles)
+    y0 = sol_to_y(sol0, loc="start")
+    timer = pybamm.Timer()
+    sol = solve_ivp(
+        dydt,
+        [1, num_cycles],
+        y0,
+        t_eval=t_eval,
+        events=capacity_cutoff,
+        first_step=10,
+        method="RK23",
+        atol=1e-2,
+        rtol=1e-2,
+    )
+    time = timer.time()
+
+    all_sumvars = []
+    for idx in range(sol.y.shape[1]):
+        fullsol = y_to_sol(sol.y[:, idx], esoh_sim, model)
+        sumvars = pybamm.make_cycle_solution([fullsol], esoh_solver, True)[1]
+        all_sumvars.append(sumvars)
+
+    all_sumvars_dict = {
+        key: np.array([sumvars[key] for sumvars in all_sumvars])
+        for key in all_sumvars[0].keys()
+    }
+    all_sumvars_dict["Cycle number"] = sol.t
+    
+    all_sumvars_dict["cycles evaluated"] = sol.nfev
+    all_sumvars_dict["solution time"] = time
+    
+    return all_sumvars_dict
+
 def plot(all_sumvars_dict,esoh_data):
     esoh_vars = ["x_0", "y_0", "x_100", "y_100", "C_n", "C_p"]
     # esoh_vars = ["Capacity [A.h]", "Loss of lithium inventory [%]",
@@ -354,7 +689,7 @@ def plotc(all_sumvars_dict,esoh_data):
         if k>3:
             ax.set_xlabel("Cycle number")
     fig.legend(["Sim"] + ["Data"], 
-           loc="lower center",bbox_to_anchor=[0.5,-0.1], ncol=1, fontsize=11)
+           loc="lower center",bbox_to_anchor=[0.5,-0.05], ncol=1, fontsize=11)
     fig.tight_layout()
     return fig
 
