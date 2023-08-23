@@ -38,77 +38,80 @@ Broadly, PyBaMM consists of
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
-.. grid:: 2
+.. SVG images sometimes cause LaTeX build errors
+.. only:: not latex
 
-   .. grid-item-card::
-      :img-top: _static/index-images/getting_started.svg
+   .. grid:: 2
 
-      User Guide
-      ^^^^^^^^^^
+      .. grid-item-card::
+         :img-top: _static/index-images/getting_started.svg
 
-      The user guide is the best place to start learning PyBaMM. It contains an installation
-      guide, an introduction to the main concepts and links to additional tutorials.
+         User Guide
+         ^^^^^^^^^^
 
-      +++
+         The user guide is the best place to start learning PyBaMM. It contains an installation
+         guide, an introduction to the main concepts and links to additional tutorials.
 
-      .. button-ref:: source/user_guide/index
-         :expand:
-         :color: secondary
-         :click-parent:
+         +++
 
-         To the user guide
+         .. button-ref:: source/user_guide/index
+            :expand:
+            :color: secondary
+            :click-parent:
 
-   .. grid-item-card::
-      :img-top: _static/index-images/examples.svg
+            To the user guide
 
-      Examples
-      ^^^^^^^^
+      .. grid-item-card::
+         :img-top: _static/index-images/examples.svg
 
-      Examples and tutorials can be viewed on the GitHub examples page,
-      which also provides a link to run them online through Google Colab.
+         Examples
+         ^^^^^^^^
 
-      +++
+         Examples and tutorials can be viewed on the GitHub examples page,
+         which also provides a link to run them online through Google Colab.
 
-      .. button-ref:: source/examples/index
-         :expand:
-         :color: secondary
-         :click-parent:
+         +++
 
-         To the examples
+         .. button-ref:: source/examples/index
+            :expand:
+            :color: secondary
+            :click-parent:
 
-   .. grid-item-card::
-      :img-top: _static/index-images/api.svg
+            To the examples
 
-      API Documentation
-      ^^^^^^^^^^^^^^^^^
+      .. grid-item-card::
+         :img-top: _static/index-images/api.svg
 
-      The reference guide contains a detailed description of the functions,
-      modules, and objects included in PyBaMM. The reference describes how the
-      methods work and which parameters can be used.
+         API Documentation
+         ^^^^^^^^^^^^^^^^^
 
-      +++
+         The reference guide contains a detailed description of the functions,
+         modules, and objects included in PyBaMM. The reference describes how the
+         methods work and which parameters can be used.
 
-      .. button-ref:: source/api/index
-         :expand:
-         :color: secondary
-         :click-parent:
+         +++
 
-         To the API documentation
+         .. button-ref:: source/api/index
+            :expand:
+            :color: secondary
+            :click-parent:
 
-   .. grid-item-card::
-      :img-top: _static/index-images/contributor.svg
+            To the API documentation
 
-      Contributor's Guide
-      ^^^^^^^^^^^^^^^^^^^
+      .. grid-item-card::
+         :img-top: _static/index-images/contributor.svg
 
-      Contributions to PyBaMM and its development are welcome! If you have ideas for
-      features, bug fixes, models, spatial methods, or solvers, we would love to hear from you.
+         Contributor's Guide
+         ^^^^^^^^^^^^^^^^^^^
 
-      +++
+         Contributions to PyBaMM and its development are welcome! If you have ideas for
+         features, bug fixes, models, spatial methods, or solvers, we would love to hear from you.
 
-      .. button-link:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
-         :expand:
-         :color: secondary
-         :click-parent:
+         +++
 
-         To the contributor's guide
+         .. button-link:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the contributor's guide
