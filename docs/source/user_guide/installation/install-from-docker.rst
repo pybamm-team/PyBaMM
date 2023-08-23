@@ -18,9 +18,35 @@ Pulling the Docker Image
 ------------------------
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
-.. code:: bash
+.. tab:: Basic
 
-      docker pull pybamm/pybamm:latest
+      .. code:: bash
+
+            docker pull pybamm/pybamm:latest
+
+.. tab:: ODES Solver
+
+      .. code:: bash
+
+            docker pull pybamm/pybamm:odes
+
+.. tab:: JAX Solver
+
+      .. code:: bash
+
+            docker pull pybamm/pybamm:jax
+
+.. tab:: IDAKLU Solver
+
+      .. code:: bash
+
+            docker pull pybamm/pybamm:idaklu
+
+.. tab:: All Solver
+
+      .. code:: bash
+
+            docker pull pybamm/pybamm:all
 
 Running the Docker Container
 ----------------------------
@@ -29,9 +55,35 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
 1. In your terminal, use the following command to start a Docker container from the pulled image:
 
-.. code-block:: bash
+.. tab:: Basic
 
-      docker run -it pybamm/pybamm:latest
+      .. code:: bash
+
+            docker run -it pybamm/pybamm:latest
+
+.. tab:: ODES Solver
+
+      .. code:: bash
+
+            docker run -it pybamm/pybamm:odes
+
+.. tab:: JAX Solver
+
+      .. code:: bash
+
+            docker run -it pybamm/pybamm:jax
+
+.. tab:: IDAKLU Solver
+
+      .. code:: bash
+
+            docker run -it pybamm/pybamm:idaklu
+
+.. tab:: All Solver
+
+      .. code:: bash
+
+            docker run -it pybamm/pybamm:all
 
 2. You will now be inside the Docker container's shell. You can use PyBaMM and its dependencies as if you were in a virtual environment.
 
