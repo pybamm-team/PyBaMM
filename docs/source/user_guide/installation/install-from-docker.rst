@@ -127,3 +127,15 @@ After building the Docker images with the desired solvers, use the ``docker run`
 .. code-block:: bash
 
       docker run -it pybamm:idaklu
+
+Using Visual Studio Code Inside a Running Docker Container
+----------------------------------------------------------
+
+You can easily use Visual Studio Code inside a running Docker container by attaching it directly. This provides a seamless development environment within the container. Here's how:
+
+1. Install the "Docker" extension from Microsoft in your local Visual Studio Code if it's not already installed.
+2. Pull and run the Docker image containing PyBaMM development environment.
+3. In your local Visual Studio Code, open the "Docker" extension by clicking on the Docker icon in the sidebar.
+4. Under the "Containers" section, you'll see a list of running containers. Right-click the running PyBaMM container.
+5. Select "Attach Visual Studio Code" from the context menu.
+6. Visual Studio Code will now connect to the container, and a new VS Code window will open up, running inside the container. You can now edit, debug, and work on your code using VS Code as if you were working directly on your local machine.
