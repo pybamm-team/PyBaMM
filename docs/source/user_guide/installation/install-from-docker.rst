@@ -48,7 +48,7 @@ Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
             docker pull pybamm/pybamm:all
 
-Running the Docker Container
+Running the Docker container
 ----------------------------
 
 Once you have pulled the Docker image, you can run a Docker container with the PyBaMM environment:
@@ -89,7 +89,7 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
 3. You can execute PyBaMM-related commands, run tests develop & contribute from the container.
 
-Exiting the Docker Container
+Exiting the Docker container
 ----------------------------
 
 To exit the Docker container's shell, you can simply type:
@@ -100,7 +100,7 @@ To exit the Docker container's shell, you can simply type:
 
 This will return you to your host machine's terminal.
 
-Building Docker Image Locally from Source
+Building Docker image locally from source
 -----------------------------------------
 
 If you want to build the PyBaMM Docker image locally from the PyBaMM source code, follow these steps:
@@ -129,18 +129,18 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 
       docker run -it pybamm
 
-Building Docker Images with Optional Args
+Building Docker images with optional args
 -----------------------------------------
 
 When building the PyBaMM Docker images locally, you have the option to include specific solvers by using optional arguments. These solvers include:
 
-- IDAKLU: For IDA solver provided by the SUNDIALS plus KLU.
-- ODES: For scikits.odes solver for ODE & DAE problems.
-- JAX: For Jax solver.
+- ``IDAKLU``: For IDA solver provided by the SUNDIALS plus KLU.
+- ``ODES``: For scikits.odes solver for ODE & DAE problems.
+- ``JAX``: For Jax solver.
 
 To build the Docker images with optional arguments, you can follow these steps for each solver:
 
-Build Docker Image with IDAKLU Solver
+Build Docker image with IDAKLU solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
@@ -151,8 +151,8 @@ Build Docker Image with IDAKLU Solver
 
       docker build -t pybamm:idaklu -f scripts/Dockerfile --build-arg IDAKLU=true .
 
-Build Docker Image with ODES Solver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Build Docker image with Scikits.odes solvers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
 
@@ -162,7 +162,7 @@ Build Docker Image with ODES Solver
 
       docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
 
-Build Docker Image with JAX Solver
+Build Docker image with JAX solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
