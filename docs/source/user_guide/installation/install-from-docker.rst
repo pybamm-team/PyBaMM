@@ -14,7 +14,7 @@ Ensure Docker installation by running :
 
 	  docker --version
 
-Pulling the Docker Image
+Pulling the Docker image
 ------------------------
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
