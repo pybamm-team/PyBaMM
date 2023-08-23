@@ -152,7 +152,6 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo dot -c
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-full latexmk dvipng
 
       - name: Set up Python 3.11
