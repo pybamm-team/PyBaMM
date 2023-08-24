@@ -42,7 +42,7 @@ Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
             docker pull pybamm/pybamm:idaklu
 
-.. tab:: All Solver
+.. tab:: All Solvers
 
       .. code:: bash
 
@@ -79,7 +79,7 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
             docker run -it pybamm/pybamm:idaklu
 
-.. tab:: All Solver
+.. tab:: All Solvers
 
       .. code:: bash
 
@@ -143,6 +143,7 @@ When building the PyBaMM Docker images locally, you have the option to include s
 - ``IDAKLU``: For IDA solver provided by the SUNDIALS plus KLU.
 - ``ODES``: For scikits.odes solver for ODE & DAE problems.
 - ``JAX``: For Jax solver.
+- ``ALL``: For all the optional solvers.
 
 To build the Docker images with optional arguments, you can follow these steps for each solver:
 
@@ -179,8 +180,8 @@ Build Docker image with JAX solver
 
       docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
 
-Build Docker image with All solver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Build Docker image with all solvers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
 
@@ -194,7 +195,7 @@ After building the Docker images with the desired solvers, use the ``docker run`
 
 .. code-block:: bash
 
-      docker run -it pybamm:idaklu
+      docker run -it pybamm:all
 
 Activate PyBaMM development environment inside docker container using:
 
