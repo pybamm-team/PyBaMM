@@ -52,7 +52,13 @@ class Broadcast(pybamm.SpatialOperator):
 
     def to_json(self):
         raise NotImplementedError(
-            "pybamm.Broadcast: Serialisation is only implemented for post-discretisation."  # PL: Come up with a better message!
+            "pybamm.Broadcast: Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Broadcast: Please use a discretised model when reading in from JSON."
         )
 
 

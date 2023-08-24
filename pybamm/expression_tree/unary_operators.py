@@ -359,8 +359,15 @@ class SpatialOperator(UnaryOperator):
         raise NotImplementedError
 
     def to_json(self):
-        # Will not be present in a discretised model
-        raise NotImplementedError
+        raise NotImplementedError(
+            "pybamm.SpatialOperator: Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator: Please use a discretised model when reading in from JSON."
+        )
 
 
 class Gradient(SpatialOperator):
@@ -604,20 +611,6 @@ class Integral(SpatialOperator):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         return sympy.Integral(child, sympy.Symbol("xn"))
 
-    def to_json(self):
-        """
-        Method to serialise an Integral object into JSON.
-        """
-
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-            "domains": self.domains,
-            "integration_variable": self.integration_variable,  # PL: This may be a (list of) symbols that need cycling through in a similar mannar to children
-        }
-
-        return json_dict
-
 
 class BaseIndefiniteIntegral(Integral):
     """
@@ -751,20 +744,6 @@ class DefiniteIntegralVector(SpatialOperator):
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
-
-    def to_json(self):
-        """
-        Method to serialise a DefiniteIntegralVector object into JSON.
-        """
-
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-            "domains": self.domains,
-            "vector_type": self.vector_type,
-        }
-
-        return json_dict
 
 
 class BoundaryIntegral(SpatialOperator):

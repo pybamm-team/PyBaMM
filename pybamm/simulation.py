@@ -11,6 +11,8 @@ from functools import lru_cache
 from datetime import timedelta
 import tqdm
 
+from pybamm.expression_tree.operations.serialise import Serialise
+
 
 def is_notebook():
     try:
@@ -1185,6 +1187,26 @@ class Simulation:
 
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def save_model(self, filename: str = None):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        filename: str, optional
+        The desired name of the JSON file. If no name is provided, one will be created
+        based on the model name, and the current datetime.
+        """
+        if self.built_model:
+            Serialise().save_model(self.built_model, filename=filename)
+        else:
+            raise NotImplementedError(
+                """
+                PyBaMM can only serialise a discretised model.
+                Ensure the model has been built (e.g. run `solve()`) before saving.
+                """
+            )
 
 
 def load_sim(filename):

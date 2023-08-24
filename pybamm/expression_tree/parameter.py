@@ -51,7 +51,13 @@ class Parameter(pybamm.Symbol):
 
     def to_json(self):
         raise NotImplementedError(
-            "pybamm.Parameter: Serialisation is only implemented for post-discretisation."  # PL: Come up with a better message!
+            "pybamm.Parameter: Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Parameter: Please use a discretised model when reading in from JSON."
         )
 
 
@@ -229,5 +235,11 @@ class FunctionParameter(pybamm.Symbol):
 
     def to_json(self):
         raise NotImplementedError(
-            "pybamm.FunctionParameter: Serialisation is only implemented for post-discretisation."  # PL: Come up with a better message!
+            "pybamm.FunctionParameter: Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.FunctionParameter: Please use a discretised model when reading in from JSON."
         )
