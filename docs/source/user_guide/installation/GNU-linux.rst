@@ -1,11 +1,10 @@
-===================
- GNU-Linux & MacOS
-===================
+GNU-Linux & MacOS
+=================
 
 .. contents::
 
 Prerequisites
-=============
+-------------
 
 To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
@@ -42,12 +41,12 @@ To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11
       brew install python3
 
 Install PyBaMM
-==============
+--------------
 
 .. _user-install-label:
 
 User install
-------------
+~~~~~~~~~~~~
 
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution Python files.
@@ -75,7 +74,7 @@ the environment and go back to your original system, just type:
 PyBaMM can be installed via pip. On macOS, it is necessary to install the `SUNDIALS <https://computing.llnl.gov/projects/sundials/>`__
 library beforehand.
 
-.. tab:: GNU/Linux and Windows
+.. tab:: GNU/Linux
 
    In a terminal, run the following command:
 
@@ -92,7 +91,7 @@ library beforehand.
       brew install sundials
       pip install pybamm
 
-PyBaMM’s dependencies (such as ``numpy``, ``scipy``, etc) will be
+PyBaMM’s required dependencies (such as ``numpy``, ``casadi``, etc) will be
 installed automatically when you install PyBaMM using ``pip``.
 
 For an introduction to virtual environments, see
@@ -101,7 +100,7 @@ For an introduction to virtual environments, see
 .. _scikits.odes-label:
 
 Optional - scikits.odes solver
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Users can install `scikits.odes <https://github.com/bmcage/odes>`__ in
 order to use the wrapped SUNDIALS ODE and DAE
@@ -131,13 +130,10 @@ Currently, only GNU/Linux and macOS are supported.
    Assuming that SUNDIALS was installed as described :ref:`above<user-install-label>`.
 
 Optional - JaxSolver
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 Currently, only GNU/Linux and macOS are supported.
-
-GNU/Linux and macOS
-~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
@@ -146,7 +142,7 @@ GNU/Linux and macOS
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
 
 Uninstall PyBaMM
-================
+----------------
 
 PyBaMM can be uninstalled by running
 

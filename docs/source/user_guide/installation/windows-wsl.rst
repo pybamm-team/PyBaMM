@@ -1,5 +1,5 @@
 Install from source (Windows Subsystem for Linux)
-=================================
+=================================================
 
 To make it easier to install PyBaMM, we recommend using the Windows Subsystem for Linux (WSL) along with Visual Studio Code. This guide will walk you through the process.
 
