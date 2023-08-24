@@ -129,6 +129,12 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 
       docker run -it pybamm
 
+5. Activate PyBaMM development environment inside docker container using:
+
+.. code-block:: bash
+
+      conda activate pybamm
+
 Building Docker images with optional args
 -----------------------------------------
 
@@ -173,12 +179,28 @@ Build Docker image with JAX solver
 
       docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
 
+Build Docker image with All solver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
+
+2. Build the Docker image with all solvers pre-installed using the following command:
+
+.. code-block:: bash
+
+      docker build -t pybamm:all -f scripts/Dockerfile --build-arg ALL=true .
 
 After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with IDAKLU solver:
 
 .. code-block:: bash
 
       docker run -it pybamm:idaklu
+
+Activate PyBaMM development environment inside docker container using:
+
+.. code-block:: bash
+
+      conda activate pybamm
 
 If you want to exit the Docker container's shell, you can simply type:
 
