@@ -79,7 +79,7 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
             docker run -it pybamm/pybamm:idaklu
 
-.. tab:: All Solvers
+.. tab:: All Solver
 
       .. code:: bash
 
@@ -143,55 +143,35 @@ When building the PyBaMM Docker images locally, you have the option to include s
 - ``IDAKLU``: For IDA solver provided by the SUNDIALS plus KLU.
 - ``ODES``: For scikits.odes solver for ODE & DAE problems.
 - ``JAX``: For Jax solver.
-- ``ALL``: For all the optional solvers.
+- ``ALL``: For all the above solvers.
 
 To build the Docker images with optional arguments, you can follow these steps for each solver:
 
-Build Docker image with IDAKLU solver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. tab:: ODES Solver
 
-1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
+      .. code-block:: bash
 
-3. Build the Docker image for IDAKLU using the following command:
+            docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
 
-.. code-block:: bash
+.. tab:: JAX Solver
 
-      docker build -t pybamm:idaklu -f scripts/Dockerfile --build-arg IDAKLU=true .
+      .. code-block:: bash
 
-Build Docker image with Scikits.odes solvers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
 
-1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
+.. tab:: IDAKLU Solver
 
-2. Build the Docker image for ODES using the following command:
+      .. code-block:: bash
 
-.. code-block:: bash
+            docker build -t pybamm:idaklu -f scripts/Dockerfile --build-arg IDAKLU=true .
 
-      docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
+.. tab:: ALL Solver
 
-Build Docker image with JAX solver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      .. code-block:: bash
 
-1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
+            docker build -t pybamm:all -f scripts/Dockerfile --build-arg ALL=true .
 
-2. Build the Docker image for JAX using the following command:
-
-.. code-block:: bash
-
-      docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
-
-Build Docker image with all solvers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. Follow the same steps as above to clone the PyBaMM repository and navigate to the source code directory.
-
-2. Build the Docker image with all solvers pre-installed using the following command:
-
-.. code-block:: bash
-
-      docker build -t pybamm:all -f scripts/Dockerfile --build-arg ALL=true .
-
-After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with IDAKLU solver:
+After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with ALL solver:
 
 .. code-block:: bash
 
