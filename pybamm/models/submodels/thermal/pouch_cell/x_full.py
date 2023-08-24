@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from .base_thermal import BaseThermal
+from ..base_thermal import BaseThermal
 
 
 class OneDimensionalX(BaseThermal):
@@ -80,6 +80,8 @@ class OneDimensionalX(BaseThermal):
         Q_cn = variables["Negative current collector Ohmic heating [W.m-3]"]
         Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
         T_amb = variables["Ambient temperature [K]"]
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
 
         # Define volumetric heat capacity for electrode/separator/electrode sandwich
         rho_c_p = pybamm.concatenation(
@@ -100,10 +102,11 @@ class OneDimensionalX(BaseThermal):
         L_z = self.param.L_z
         L_cn = self.param.n.L_cc
         L_cp = self.param.p.L_cc
-        h_cn = self.param.n.h_cc
-        h_cp = self.param.p.h_cc
+        h_cn = self.param.n.h_cc(y, z)
+        h_cp = self.param.p.h_cc(y, z)
         lambda_n = self.param.n.lambda_(T_n)
         lambda_p = self.param.p.lambda_(T_p)
+        h_edge = self.param.h_edge(y, z)
         # Negative current collector
         volume_cn = L_cn * L_y * L_z
         negative_tab_area = self.param.n.L_tab * self.param.n.L_cc
@@ -111,7 +114,7 @@ class OneDimensionalX(BaseThermal):
         negative_tab_cooling_coefficient = (
             -self.param.n.h_tab * negative_tab_area / volume_cn
         )
-        edge_cooling_coefficient_cn = -self.param.h_edge * edge_area_cn / volume_cn
+        edge_cooling_coefficient_cn = -h_edge * edge_area_cn / volume_cn
         cooling_coefficient_cn = (
             negative_tab_cooling_coefficient + edge_cooling_coefficient_cn
         )
@@ -119,7 +122,7 @@ class OneDimensionalX(BaseThermal):
         area_to_volume = (
             2 * (self.param.L_y + self.param.L_z) / (self.param.L_y * self.param.L_z)
         )
-        cooling_coefficient = -self.param.h_edge * area_to_volume
+        cooling_coefficient = -h_edge * area_to_volume
         # Positive current collector
         volume_cp = L_cp * L_y * L_z
         positive_tab_area = self.param.p.L_tab * self.param.p.L_cc
@@ -127,7 +130,7 @@ class OneDimensionalX(BaseThermal):
         positive_tab_cooling_coefficient = (
             -self.param.p.h_tab * positive_tab_area / volume_cp
         )
-        edge_cooling_coefficient_cp = -self.param.h_edge * edge_area_cp / volume_cp
+        edge_cooling_coefficient_cp = -h_edge * edge_area_cp / volume_cp
         cooling_coefficient_cp = (
             positive_tab_cooling_coefficient + edge_cooling_coefficient_cp
         )
