@@ -18,31 +18,31 @@ Pulling the Docker image
 ------------------------
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
-.. tab:: Basic
+.. tab:: No optional solver
 
       .. code:: bash
 
             docker pull pybamm/pybamm:latest
 
-.. tab:: ODES Solver
+.. tab:: Scikits.odes solver
 
       .. code:: bash
 
             docker pull pybamm/pybamm:odes
 
-.. tab:: JAX Solver
+.. tab:: JAX solver
 
       .. code:: bash
 
             docker pull pybamm/pybamm:jax
 
-.. tab:: IDAKLU Solver
+.. tab:: IDAKLU solver
 
       .. code:: bash
 
             docker pull pybamm/pybamm:idaklu
 
-.. tab:: All Solvers
+.. tab:: All solvers
 
       .. code:: bash
 
@@ -147,31 +147,31 @@ When building the PyBaMM Docker images locally, you have the option to include s
 
 To build the Docker images with optional arguments, you can follow these steps for each solver:
 
-.. tab:: ODES Solver
+.. tab:: Scikits.odes solver
 
       .. code-block:: bash
 
             docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
 
-.. tab:: JAX Solver
+.. tab:: JAX solver
 
       .. code-block:: bash
 
             docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
 
-.. tab:: IDAKLU Solver
+.. tab:: IDAKLU solver
 
       .. code-block:: bash
 
             docker build -t pybamm:idaklu -f scripts/Dockerfile --build-arg IDAKLU=true .
 
-.. tab:: ALL Solver
+.. tab:: All solvers
 
       .. code-block:: bash
 
             docker build -t pybamm:all -f scripts/Dockerfile --build-arg ALL=true .
 
-After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with ALL solver:
+After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with all optional solvers:
 
 .. code-block:: bash
 
