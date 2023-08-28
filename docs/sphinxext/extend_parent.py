@@ -20,9 +20,7 @@ def process_docstring(app, what, name, obj, options, lines):
             # get the base class name
             base_cls_name = f"{getmro(obj)[1].__module__}.{getmro(obj)[1].__name__}"
             # add the extends keyword to the docstring
-            lines.append(".. only:: not latex\n")
-            lines.append("\n")
-            lines.append(f"    **Extends:** :class:`{base_cls_name}`")
+            lines.append(f"**Extends:** :class:`{base_cls_name}`")
 
 
 def setup(app):
