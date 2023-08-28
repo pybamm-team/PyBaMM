@@ -182,7 +182,7 @@ jobs:
 
       - name: Check if PDF docs can be built
         run: |
-          sphinx-build -M latexpdf docs/ docs/build/
+          sphinx-build -T -E -b latex -D language=en docs docs/build
           cd docs/build/
           rm -f *.log *.ind *.aux *.toc *.syn *.idx *.out *.ilg *.pla *.ps *.tar *.tar.gz *.tar.bz2 *.tar.xz PyBaMM.pdf PyBaMM.dvi  *.fls *.fdb_latexmk
           latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
