@@ -36,13 +36,13 @@ build:
     # https://stackoverflow.com/a/76992101/14001839
     post_build:
       - pwd
+      - ls
       - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
       # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
       - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
       - pwd
-      - cd docs/build/
       - ls
-      - cat latexmkrc
+      - cd docs/build/ && cat latexmkrc
       - pwd
       # Map non-zero exit codes to zero
       - latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
