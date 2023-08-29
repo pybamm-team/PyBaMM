@@ -35,16 +35,25 @@ build:
     # Altered PDF build and upload job, attributed to
     # https://stackoverflow.com/a/76992101/14001839
     post_build:
+      - pwd
       - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
       # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
       - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
+      - pwd
       - cd docs/build/
+      - ls
       - cat latexmkrc
+      - pwd
       # Map non-zero exit codes to zero
       - latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
+      - pwd
       # Check if pybamm.pdf exists
+      - pwd
       - test -f pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
+      - pwd
       - cd ../../ && cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
+      - pwd
+      - ls $READTHEDOCS_OUTPUT/pdf/
 
 # Optionally declare the Python requirements required to build your docs
 python:
