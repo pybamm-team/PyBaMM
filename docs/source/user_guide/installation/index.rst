@@ -249,3 +249,4 @@ Installing a specific version? Installing from source? Check the advanced instal
    windows
    windows-wsl
    install-from-source
+   install-from-docker
