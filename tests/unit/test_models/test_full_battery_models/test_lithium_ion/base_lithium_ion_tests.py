@@ -28,7 +28,7 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal_model_1D(self):
-        options = {"thermal": "x-lumped"}
+        options = {"thermal": "lumped"}
         self.check_well_posedness(options)
 
     def test_well_posed_x_full_thermal_model(self):
@@ -117,6 +117,14 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_loss_active_material_stress_reaction(self):
         options = {"loss of active material": "stress and reaction-driven"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_current_negative(self):
+        options = {"loss of active material": ("current-driven", "none")}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_current_positive(self):
+        options = {"loss of active material": ("none", "current-driven")}
         self.check_well_posedness(options)
 
     def test_well_posed_surface_form_differential(self):
