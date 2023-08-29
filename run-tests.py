@@ -199,7 +199,9 @@ def test_notebook(path, executable="python"):
 
     # Make sure the notebook has a
     # "%pip install pybamm[plot,cite] -q" command, for using Google Colab
-    with open(path, "r") as f:
+    # specify UTF-8 encoding otherwise Windows chooses CP1252 by default
+    # attributed to https://stackoverflow.com/a/49562606
+    with open(path, "r", encoding="UTF-8") as f:
         if "%pip install pybamm[plot,cite] -q" not in f.read():
             # print error and exit
             print("\n" + "-" * 70)
@@ -213,7 +215,9 @@ def test_notebook(path, executable="python"):
             return False
 
     # Make sure the notebook has "pybamm.print_citations()" to print the relevant papers
-    with open(path, "r") as f:
+    # specify UTF-8 encoding otherwise Windows chooses CP1252 by default
+    # attributed to https://stackoverflow.com/a/49562606
+    with open(path, "r", encoding="UTF-8") as f:
         if "pybamm.print_citations()" not in f.read():
             # print error and exit
             print("\n" + "-" * 70)
