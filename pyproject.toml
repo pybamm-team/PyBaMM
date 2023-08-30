@@ -1,0 +1,172 @@
+# From the pip documentation:
+
+# Fallback Behaviour
+# If a project does not have a pyproject.toml file containing a build-system section,
+# it will be assumed to have the following backend settings:
+
+# [build-system]
+# requires = ["setuptools>=40.8.0", "wheel"]
+# build-backend = "setuptools.build_meta:__legacy__"
+
+# TODO: add appropriate build-system section
+[build-system]
+# TODO: specify minimum version of setuptools otherwise scikits.odes, NumPy, and others
+# will fail to install
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybamm"
+# TODO: try picking up version from the package itself
+# dynamic = ["version", "readme"]
+# [tool.setuptools.dynamic]
+# version = {attr = "my_package.VERSION"}
+version = "23.5"
+# Unsure: specify BSD-3-Clause?
+# license = {text = "BSD-3-Clause"}
+license = { file = "LICENCE.txt" }
+
+# TODO: add appropriate long description
+description = "Python Battery Mathematical Modelling"
+
+# TODO: correctly specify all authors and maintainers
+# Note: these are currently missing when running `pip show pybamm`, so we should add
+# them in some form
+authors = [{name = "The PyBaMM Team"}]
+maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
+requires-python = ">=3.8, <3.12"
+readme = "README.md"
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "numpy>=1.16",
+    "scipy>=1.3",
+    "casadi>=3.6.0",
+    "xarray",
+]
+
+[project.optional-dependencies]
+# For the generation of documentation
+docs = [
+    "sphinx>=6",
+    "sphinx_rtd_theme>=0.5",
+    "pydata-sphinx-theme",
+    "sphinx_design",
+    "sphinx-copybutton",
+    "myst-parser",
+    "sphinx-inline-tabs",
+    "sphinxcontrib-bibtex",
+    "sphinx-autobuild",
+    "sphinx-last-updated-by-git",
+    "nbsphinx",
+    "ipykernel",
+    "ipywidgets",
+    "sphinx-gallery",
+    "sphinx-hoverxref",
+    "sphinx-docsearch",
+]
+# For example notebooks
+examples = [
+    "jupyter",
+]
+# Plotting functionality
+plot = [
+    "imageio>=2.9.0",
+    # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
+    # on systems without an attached display, it should never be imported
+    # outside of plot() methods.
+    "matplotlib>=2.0",
+]
+# For the Citations class
+cite = [
+    "pybtex>=0.24.0",
+]
+# To generate LaTeX strings
+latexify = [
+    "sympy>=1.8",
+]
+# Battery Parameter eXchange format
+bpx = [
+    "bpx",
+]
+# Low-overhead progress bars
+tqdm = [
+    "tqdm",
+]
+# Dependencies intended for use by developers
+dev = [
+    # For code style checking
+    "pre-commit",
+    # For code style auto-formatting
+    "ruff",
+    # For running testing sessions
+    "nox",
+]
+# Reading CSV files
+pandas =  [
+    "pandas>=0.24",
+]
+# For the Jax solver
+jax = [
+    "jax==0.4.8",
+    "jaxlib==0.4.7",
+]
+# For the scikits.odes solver
+odes = [
+    "scikits.odes"
+]
+# Contains all optional dependencies, except for odes, jax, and dev dependencies
+all = [
+    "anytree>=2.4.3",
+    "autograd>=1.2",
+    "pandas>=0.24",
+    "scikit-fem>=0.2.0",
+    "imageio>=2.9.0",
+    "matplotlib>=2.0",
+    "pybtex>=0.24.0",
+    "sympy>=1.8",
+    "bpx",
+    "tqdm",
+    "jupyter",
+]
+
+# Equivalent to the console scripts in the entry_points section of the setup()
+# function in setup.py
+[project.scripts]
+pybamm_edit_parameter = "pybamm.parameters_cli:edit_parameter"
+pybamm_add_parameter = "pybamm.parameters_cli:add_parameter"
+pybamm_rm_parameter = "pybamm.parameters_cli:remove_parameter"
+pybamm_install_odes = "pybamm.install_odes:main"
+pybamm_install_jax = "pybamm.util:install_jax"
+
+# Equivalent to the "pybamm_parameter_sets" entry_points section of the setup()
+# function in setup.py
+[project.entry-points."pybamm_parameter_sets"]
+Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
+Ai2020 = "pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values"
+Chen2020 = "pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values"
+Chen2020_composite = "pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values"
+Ecker2015 = "pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values"
+Marquis2019 = "pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values"
+Mohtat2020 = "pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values"
+NCA_Kim2011 = "pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values"
+OKane2022 = "pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values"
+ORegan2022 = "pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values"
+Prada2013 = "pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values"
+Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values"
+Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
+ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
