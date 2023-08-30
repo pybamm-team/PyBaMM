@@ -160,7 +160,26 @@ class TestBPX(TestCase):
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
-            pybamm.ParameterValues.create_from_bpx(tmp.name)
+            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+            # Function to check that functional parameters output constants
+            def check_constant_output(func):
+                stos = [0, 1]
+                T = 298.15
+                p_vals = [func(sto, T) for sto in stos]
+                self.assertEqual(p_vals[0], p_vals[1])
+
+            for electrode in ["Negative", "Positive"]:
+                D = param[f"{electrode} electrode diffusivity [m2.s-1]"]
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
+                check_constant_output(D)
+                check_constant_output(dUdT)
+
+            kappa = param["Electrolyte conductivity [S.m-1]"]
+            De = param["Electrolyte diffusivity [m2.s-1]"]
+            check_constant_output(kappa)
+            check_constant_output(De)
+
 
     def test_table_data(self):
         bpx_obj = copy.copy(self.base)
