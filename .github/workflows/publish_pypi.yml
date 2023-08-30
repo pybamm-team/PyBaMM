@@ -1,5 +1,5 @@
 # name: Build and publish package to PyPI
-name: Test building wheels on Windows, GNU/Linux and macOS
+name: Test building wheels
 # Temporarily disable publishing to PyPI and enable
 # building wheels on pull requests
 on:
