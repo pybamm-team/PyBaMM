@@ -508,6 +508,13 @@ class _Heaviside(BinaryOperator):
         # need to worry about shape
         return pybamm.Scalar(0)
 
+    def _evaluate_for_shape(self):
+        """
+        Returns the scalar 'NaN' to represent the shape of a Heaviside.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return np.nan
+
 
 class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
