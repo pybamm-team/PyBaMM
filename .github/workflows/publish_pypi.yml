@@ -1,13 +1,16 @@
-name: Build and publish package to PyPI
-
+# name: Build and publish package to PyPI
+name: Test building wheels on Windows, GNU/Linux and macOS
+# Temporarily disable publishing to PyPI and enable
+# building wheels on pull requests
 on:
-  push:
-    branches: main
+  # push:
+  #   branches: main
+  pull_request:
   workflow_dispatch:
     inputs:
-      target:
-        description: 'Deployment target. Can be "pypi" or "testpypi"'
-        default: "pypi"
+      # target:
+      #   description: 'Deployment target. Can be "pypi" or "testpypi"'
+      #   default: "pypi"
       debug_enabled:
           type: boolean
           description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
@@ -153,34 +156,34 @@ jobs:
           path: ./dist/*.tar.gz
           if-no-files-found: error
 
-  publish_pypi:
-    name: Upload package to PyPI
-    needs: [build_wheels, build_windows_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
+  # publish_pypi:
+  #   name: Upload package to PyPI
+  #   needs: [build_wheels, build_windows_wheels, build_sdist]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v3
 
-      - name: Move all package files to files/
-        run: |
-          mkdir files
-          mv windows_wheels/* wheels/* sdist/* files/
+  #     - name: Move all package files to files/
+  #       run: |
+  #         mkdir files
+  #         mv windows_wheels/* wheels/* sdist/* files/
 
-      - name: Publish on PyPI
-        if: |
-          github.event.inputs.target == 'pypi' ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: files/
+  #     - name: Publish on PyPI
+  #       if: |
+  #         github.event.inputs.target == 'pypi' ||
+  #         (github.event_name == 'push' && github.ref == 'refs/heads/main')
+  #       uses: pypa/gh-action-pypi-publish@release/v1
+  #       with:
+  #         user: __token__
+  #         password: ${{ secrets.PYPI_TOKEN }}
+  #         packages_dir: files/
 
-      - name: Publish on TestPyPI
-        if: github.event.inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.TESTPYPI_TOKEN }}
-          packages_dir: files/
-          repository_url: https://test.pypi.org/legacy/
+  #     - name: Publish on TestPyPI
+  #       if: github.event.inputs.target == 'testpypi'
+  #       uses: pypa/gh-action-pypi-publish@release/v1
+  #       with:
+  #         user: __token__
+  #         password: ${{ secrets.TESTPYPI_TOKEN }}
+  #         packages_dir: files/
+  #         repository_url: https://test.pypi.org/legacy/
