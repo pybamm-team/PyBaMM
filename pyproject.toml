@@ -12,7 +12,7 @@
 [build-system]
 # TODO: specify minimum version of setuptools otherwise scikits.odes, NumPy, and others
 # will fail to install
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "cmake"]
 build-backend = "setuptools.build_meta"
 
 [project]
