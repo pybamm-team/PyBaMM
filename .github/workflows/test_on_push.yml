@@ -90,6 +90,8 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
+          # For some reason casadi needs to be installed first
+          pip install casadi
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -150,6 +152,8 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
+          # For some reason casadi needs to be installed first
+          pip install casadi
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -233,6 +237,8 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
+          # For some reason casadi needs to be installed first
+          pip install casadi
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -293,6 +299,8 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
+          # For some reason casadi needs to be installed first
+          pip install casadi
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -354,6 +362,8 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
+          # For some reason casadi needs to be installed first
+          pip install casadi
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
