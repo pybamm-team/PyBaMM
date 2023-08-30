@@ -24,7 +24,7 @@ name = "pybamm"
 version = "23.5"
 # Unsure: specify BSD-3-Clause?
 # license = {text = "BSD-3-Clause"}
-license = { file = "LICENCE.txt" }
+license = { file = "LICENSE.txt" }
 
 # TODO: add appropriate long description
 description = "Python Battery Mathematical Modelling"
