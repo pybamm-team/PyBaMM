@@ -25,9 +25,13 @@ fundamentals/index
 
 # Example notebooks
 
-The notebooks below provide a good introduction to PyBaMM and how to use it. For more
-examples, see the [Examples](../examples/index.rst) section.
+PyBaMM ships with example notebooks that demonstrate how to use it and reveal some of its
+functionalities and its inner workings. For more examples, see the [Examples](../examples/index.rst) section.
 
+```{only} latex
+The notebooks are not included in PDF formats of the documentation. You may access them on PyBaMM's hosted
+documentation available at https://docs.pybamm.org/en/latest/source/examples/index.html
+```
 
 ```{nbgallery}
 ---

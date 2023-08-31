@@ -436,6 +436,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]": D_eff,
             f"X-averaged {domain} {phase_name}particle effective "
             "diffusivity [m2.s-1]": pybamm.x_average(D_eff),
+            f"Volume-averaged {domain} {phase_name}particle effective "
+            "diffusivity [m2.s-1]": pybamm.r_average(pybamm.x_average(D_eff)),
         }
         return variables
 

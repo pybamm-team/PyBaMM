@@ -206,7 +206,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Timms2021", citations._papers_to_cite)
-        pybamm.thermal.OneDimensionalX(param=None)
+        pybamm.thermal.pouch_cell.OneDimensionalX(param=None)
         self.assertIn("Timms2021", citations._papers_to_cite)
         self.assertIn("Timms2021", citations._citation_tags.keys())
 

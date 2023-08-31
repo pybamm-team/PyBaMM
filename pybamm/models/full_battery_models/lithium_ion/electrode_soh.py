@@ -1000,7 +1000,9 @@ def theoretical_energy_integral(parameter_values, inputs, points=100):
     y_vals = np.linspace(y_100, y_0, num=points)
     # Calculate OCV at each stoichiometry
     param = pybamm.LithiumIonParameters()
-    T = param.T_amb(0)
+    y = pybamm.standard_spatial_vars.y
+    z = pybamm.standard_spatial_vars.z
+    T = pybamm.yz_average(param.T_amb(y, z, 0))
     Vs = np.empty(x_vals.shape)
     for i in range(x_vals.size):
         Vs[i] = (

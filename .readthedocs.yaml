@@ -11,8 +11,9 @@ sphinx:
   configuration: docs/conf.py
   fail_on_warning: false
 
+# PDF builds are disabled here because they are built in a custom fashion
+# by extending the RTD build process, see below
 formats:
-  - pdf
   - epub
   - htmlzip
 
@@ -29,8 +30,21 @@ build:
     # rust: "1.64"
     # golang: "1.19"
   jobs:
+    # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
       - git fetch --unshallow
+    # Altered PDF build and upload job, attributed to
+    # https://stackoverflow.com/a/76992101/14001839
+    # This also runs on PR builds, but does not upload the PDF
+    post_build:
+      - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
+      # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
+      - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
+      - cd docs/build/ && cat latexmkrc
+      # Map non-zero exit codes to zero
+      - cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
+      - test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
+      - cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
 
 # Optionally declare the Python requirements required to build your docs
 python:
