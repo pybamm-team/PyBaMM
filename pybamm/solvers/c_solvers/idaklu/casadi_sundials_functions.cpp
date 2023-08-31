@@ -222,7 +222,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       realtype newjac[SUNSparseMatrix_NNZ(JJ)];
       sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
-      
+
       // args are t, y, cj, put result in jacobian data matrix
       p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
       p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);

@@ -70,7 +70,7 @@ CasadiFunctions::CasadiFunctions(
   for (auto& var : dvar_dp_fcns) {
     this->dvar_dp_fcns.push_back(CasadiFunction(*var));
   }
-  
+
   // copy across numpy array values
   const int n_row_vals = jac_times_cjmass_rowvals_arg.request().size;
   auto p_jac_times_cjmass_rowvals = jac_times_cjmass_rowvals_arg.unchecked<1>();

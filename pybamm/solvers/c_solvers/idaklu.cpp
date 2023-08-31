@@ -59,7 +59,7 @@ PYBIND11_MODULE(idaklu, m)
 
   //py::bind_vector<std::vector<Function>>(m, "VectorFunction");
   //py::implicitly_convertible<py::iterable, std::vector<Function>>();
-  
+
   m.def("create_casadi_solver", &create_casadi_solver,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),

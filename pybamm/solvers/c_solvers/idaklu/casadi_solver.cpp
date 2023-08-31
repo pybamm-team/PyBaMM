@@ -29,7 +29,7 @@ CasadiSolver *create_casadi_solver(
   const std::vector<Function*> dvar_dy_fcns,
   const std::vector<Function*> dvar_dp_fcns,
   py::dict options
-) { 
+) {
   auto options_cpp = Options(options);
   auto functions = std::make_unique<CasadiFunctions>(
     rhs_alg,
@@ -54,7 +54,7 @@ CasadiSolver *create_casadi_solver(
   );
 
   CasadiSolver *casadiSolver = nullptr;
-  
+
   // Instantiate solver class
   if (options_cpp.linear_solver == "SUNLinSol_Dense")
   {

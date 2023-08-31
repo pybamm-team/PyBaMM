@@ -10,7 +10,7 @@
  * are intended to be overriden to support alternative solver
  * approaches, as needed.
  */
-    
+
 /* Skeleton workflow:
    https://sundials.readthedocs.io/en/latest/ida/Usage/index.html
       1. (N/A) Initialize parallel or multi-threaded environment
@@ -135,7 +135,7 @@ void CasadiSolverOpenMP::Initialize() {
     N_VConst(RCONST(0.0), yyS[is]);
     N_VConst(RCONST(0.0), ypS[is]);
   }
-  
+
   // create Matrix objects
   SetMatrix();
 
@@ -210,7 +210,7 @@ CasadiSolverOpenMP::~CasadiSolverOpenMP()
   N_VDestroy(yy);
   N_VDestroy(yp);
   N_VDestroy(id);
-  
+
   if (number_of_parameters > 0)
   {
     N_VDestroyVectorArray(yyS, number_of_parameters);
@@ -367,7 +367,7 @@ Solution CasadiSolverOpenMP::solve(
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
                                      length_of_return_vector];
-  
+
   res = new realtype[max_res_size];
   res_dvar_dy = new realtype[max_res_dvar_dy];
   res_dvar_dp = new realtype[max_res_dvar_dp];

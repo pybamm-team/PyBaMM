@@ -14,7 +14,7 @@ void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int 
   int rr[N];
   for (int i=0; i<cols+1; i++)
     nc[i] = 0;
-  
+
   for (int k = 0, i = 0; i < cols+1; i++) {
     for (int j = 0; j < r[i+1] - r[i]; j++) {
       if (k == N)  // SUNDIALS indexing does not include the count element
@@ -97,13 +97,13 @@ public:
   std::vector<CasadiFunction> var_casadi_fcns;
   std::vector<CasadiFunction> dvar_dy_fcns;
   std::vector<CasadiFunction> dvar_dp_fcns;
-  
+
   std::vector<int64_t> jac_times_cjmass_rowvals;
   std::vector<int64_t> jac_times_cjmass_colptrs;
   std::vector<realtype> inputs;
-  
+
   Options options;
-  
+
   realtype *get_tmp_state_vector();
   realtype *get_tmp_sparse_jacobian_data();
 

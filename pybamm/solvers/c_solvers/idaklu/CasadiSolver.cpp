@@ -4,6 +4,6 @@
 /*
  * This is an abstract base class for the Idaklu solver
  */
-    
+
 CasadiSolver::CasadiSolver() {}
 CasadiSolver::~CasadiSolver() {}

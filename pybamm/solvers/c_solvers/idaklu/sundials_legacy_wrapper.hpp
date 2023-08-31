@@ -26,12 +26,12 @@
   {
     return N_VNew_Serial(vec_length);
   }
-  
+
   N_Vector N_VNew_OpenMP(sunindextype vec_length, SUNContext sunctx)
   {
     return N_VNew_OpenMP(vec_length);
   }
-  
+
   N_Vector N_VNew_Cuda(sunindextype vec_length, SUNContext sunctx)
   {
     return N_VNew_Cuda(vec_length);
