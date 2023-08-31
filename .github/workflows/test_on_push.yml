@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
 
+env:
+  FORCE_COLOR: 3
+
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
   # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
