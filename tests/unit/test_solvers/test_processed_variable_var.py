@@ -32,7 +32,7 @@ def to_casadi(var_pybamm, y, inputs=None):
 
 
 def process_and_check_2D_variable(
-    var, first_spatial_var, second_spatial_var, disc=None
+    var, first_spatial_var, second_spatial_var, disc=None, geometry_options={}
 ):
     # first_spatial_var should be on the "smaller" domain, i.e "r" for an "r-x" variable
     if disc is None:
@@ -49,20 +49,20 @@ def process_and_check_2D_variable(
     y_sol = np.ones(len(second_sol) * len(first_sol))[:, np.newaxis] * np.linspace(0, 5)
 
     var_casadi = to_casadi(var_sol, y_sol)
-    processed_var = pybamm.ProcessedVariableVar(
+    model = tests.get_base_model_with_battery_geometry(**geometry_options)
+    pybamm.ProcessedVariableVar(
         [var_sol],
         [var_casadi],
         [y_sol],
-        pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        pybamm.Solution(t_sol, y_sol, model, {}),
         warn=False,
     )
-    # Ordering from idaklu with output_variables set is different to
-    # the full solver
-    y_sol = y_sol.reshape((y_sol.shape[1], y_sol.shape[0])).transpose()
-    np.testing.assert_array_equal(
-        processed_var.entries,
-        np.reshape(y_sol, [len(first_sol), len(second_sol), len(t_sol)]),
-    )
+    # NB: ProcessedVariableVar does not interpret y in the same way as
+    #  ProcessedVariable; a better test of equivalence is to check that the
+    #  results are the same between IDAKLUSolver with (and without)
+    #  output_variables. This is implemented in the integration test:
+    #    tests/integration/test_solvers/test_idaklu_solver.py
+    #    ::test_output_variables
     return y_sol, first_sol, second_sol, t_sol
 
 
@@ -175,18 +175,17 @@ class TestProcessedVariableVar(TestCase):
         processed_var.mesh.nodes, processed_var.mesh.edges = \
             processed_var.mesh.edges, processed_var.mesh.nodes
 
-        # Check no errors with domain-specific attributes
-        # (see ProcessedVariableVar.initialise_2D() for details)
+        # Check that there are no errors with domain-specific attributes
+        #  (see ProcessedVariableVar.initialise_1D() for details)
         domain_list = [
-            ["particle", "electrode"],
-            ["separator", "current collector"],
-            ["particle", "particle size"],
-            ["particle size", "electrode"],
-            ["particle size", "current collector"]
+            "particle",
+            "separator",
+            "current collector",
+            "particle size",
+            "random-non-specific-domain",
         ]
-        for domain, secondary in domain_list:
+        for domain in domain_list:
             processed_var.domain[0] = domain
-            processed_var.domains["secondary"] = [secondary]
             processed_var.initialise_1D()
 
     def test_processed_variable_1D_unknown_domain(self):
@@ -216,6 +215,126 @@ class TestProcessedVariableVar(TestCase):
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
         pybamm.ProcessedVariableVar([c], [c_casadi], [y_sol], solution, warn=False)
+
+    def test_processed_variable_2D_x_r(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+
+        disc = tests.get_p2d_discretisation_for_testing()
+        process_and_check_2D_variable(var, r, x, disc=disc)
+
+    def test_processed_variable_2D_R_x(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        process_and_check_2D_variable(
+            var,
+            R,
+            x,
+            disc=disc,
+            geometry_options={"options": {"particle size": "distribution"}},
+        )
+
+    def test_processed_variable_2D_R_z(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        process_and_check_2D_variable(
+            var,
+            R,
+            z,
+            disc=disc,
+            geometry_options={"options": {"particle size": "distribution"}},
+        )
+
+    def test_processed_variable_2D_r_R(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative particle size"]},
+        )
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative particle size"]},
+        )
+        R = pybamm.SpatialVariable("R", domain=["negative particle size"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        process_and_check_2D_variable(
+            var,
+            r,
+            R,
+            disc=disc,
+            geometry_options={"options": {"particle size": "distribution"}},
+        )
+
+    def test_processed_variable_2D_x_z(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative electrode", "separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x = pybamm.SpatialVariable(
+            "x",
+            domain=["negative electrode", "separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_1p1d_discretisation_for_testing()
+        y_sol, x_sol, z_sol, t_sol = process_and_check_2D_variable(var, x, z, disc=disc)
+        del x_sol
+
+        # On edges
+        x_s_edge = pybamm.Matrix(
+            np.tile(disc.mesh["separator"].edges, len(z_sol)),
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_s_edge.mesh = disc.mesh["separator"]
+        x_s_edge.secondary_mesh = disc.mesh["current collector"]
+        x_s_casadi = to_casadi(x_s_edge, y_sol)
+        processed_x_s_edge = pybamm.ProcessedVariable(
+            [x_s_edge],
+            [x_s_casadi],
+            pybamm.Solution(
+                t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
+            ),
+            warn=False,
+        )
+        np.testing.assert_array_equal(
+            x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
+        )
 
     def test_processed_variable_2D_space_only(self):
         var = pybamm.Variable(

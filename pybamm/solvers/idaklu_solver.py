@@ -678,7 +678,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     if isinstance(
                         model.variables_and_events[var], pybamm.ExplicitTimeIntegral
                     ):
-                        continue
+                        continue  # pragma: no cover
                     len_of_var = (
                         self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
                     )

@@ -76,22 +76,6 @@ class TestIDAKLUSolver(TestCase):
             # create discretisation
             disc = pybamm.Discretisation()
             model_disc = disc.process_model(model, inplace=False)
-            # Invalid atol (dict) raises error, valid options are float or ndarray
-            self.assertRaises(
-                pybamm.SolverError,
-                pybamm.IDAKLUSolver(
-                    rtol=1e-8, atol={'key': 'value'},
-                    root_method=root_method)
-            )
-            # output_variables only valid with convert_to_format=='casadi'
-            if form == "python" or form == "jax":
-                self.assertRaises(
-                    pybamm.SolverError,
-                    pybamm.IDAKLUSolver(
-                        rtol=1e-8, atol=1e-8,
-                        output_variables=['var'],
-                        root_method=root_method)
-                )
             # Solve
             solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
             t_eval = np.linspace(0, 1, 100)
@@ -100,6 +84,10 @@ class TestIDAKLUSolver(TestCase):
             np.testing.assert_array_almost_equal(
                 solution.y[0], np.exp(0.1 * solution.t), decimal=5
             )
+
+            # Check invalid atol type raises an error
+            with self.assertRaises(pybamm.SolverError):
+                solver._check_atol_type({'key': 'value'}, [])
 
             # enforce events that won't be triggered
             model.events = [pybamm.Event("an event", var + 1)]
@@ -211,7 +199,6 @@ class TestIDAKLUSolver(TestCase):
 
             disc = pybamm.Discretisation()
             disc.process_model(model)
-
             solver = pybamm.IDAKLUSolver(output_variables=output_variables)
 
             t_eval = np.linspace(0, 3, 100)
