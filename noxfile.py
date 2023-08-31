@@ -16,9 +16,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
 }
-# Do not stdout ANSI colours on GitHub Actions
 if os.getenv("CI") == "true":
-    os.environ["NO_COLOR"] = "1"
     # The setup-python action installs and caches dependencies by default, so we skip
     # installing them again in nox environments. The dev and docs sessions will still
     # require a virtual environment, but we don't run them in the CI
