@@ -32,7 +32,7 @@ description = "Python Battery Mathematical Modelling"
 # TODO: correctly specify all authors and maintainers
 # Note: these are currently missing when running `pip show pybamm`, so we should add
 # them in some form
-authors = [{name = "The PyBaMM Team"}]
+authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 requires-python = ">=3.8, <3.12"
 readme = "README.md"
