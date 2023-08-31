@@ -12,7 +12,12 @@
 [build-system]
 # TODO: specify minimum version of setuptools otherwise scikits.odes, NumPy, and others
 # will fail to install
-requires = ["setuptools", "wheel", "casadi>=3.6.0"]
+requires = [
+    "setuptools",
+    "wheel",
+    "casadi>=3.6.0; platform_system!='Windows'",
+    "cmake; platform_system=='Linux'",
+    ]
 build-backend = "setuptools.build_meta"
 
 [project]
