@@ -90,10 +90,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
+      - name: Install standard Python dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -150,10 +149,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
+      - name: Install standard Python dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -233,10 +231,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
+      - name: Install standard Python dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -293,10 +290,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
+      - name: Install standard Python dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -354,10 +350,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
+      - name: Install standard Python dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
