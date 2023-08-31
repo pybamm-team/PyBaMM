@@ -679,33 +679,37 @@ class ParticleLithiumIonParameters(BaseParameters):
         dxjdU = -(f / wj) * (Xj * e) / (1 + e) ** 2
         return dxjdU
 
-    def j0_j(self, c_e, c_s_j_surf, T, index):
+    def j0_j(self, c_e, U, T, index):
         "Exchange-current density index by reaction j [A.m-2]"
+        domain = self.domain
+        d = domain[0]
+
         tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
         c_e_ref = self.main_param.c_e_init
-        tol = pybamm.settings.tolerances["j0__c_s"]
-        c_max = self.c_max
-        c_s_j_surf = pybamm.maximum(
-            pybamm.minimum(c_s_j_surf, (1 - tol) * c_max), tol * c_max
-        )
+        xj = self.x_j(U, index)
+        # xj = pybamm.maximum(pybamm.minimum(xj, (1 - tol)), tol)
 
-        domain = self.domain
-        d = domain[0]
+        f = self.main_param.F / (self.main_param.R * T)
         wj = self.w_j(index)
-        Xj = self.X_j(index)
+        self.X_j(index)
         aj = self.alpha_bv_j(index)
-        xj = c_s_j_surf / c_max
-
         j0_ref_j = pybamm.FunctionParameter(
             f"j0_ref_{d}_{index}", {"Temperature [K]": T}
         )
 
-        # Use tolerances to avoid division by zero in the Jacobian
+        # Equation 16, Baker et al 2018
+        # j0_j = (
+        #    j0_ref_j
+        #    * xj ** (wj * aj)
+        #    * (Xj - xj) ** (wj * (1 - aj))
+        #    * (c_e / c_e_ref) ** (1 - aj)
+        # )
+        # Reformulate in terms of potential to avoid singularity as x_j approaches X_j
         j0_j = (
             j0_ref_j
-            * xj ** (wj * aj)
-            * (pybamm.maximum(Xj - xj, tol)) ** (wj * (1 - aj))
+            * xj**wj
+            * pybamm.exp(f * (1 - aj) * (U - self.U0_j(index)))
             * (c_e / c_e_ref) ** (1 - aj)
         )
         return j0_j

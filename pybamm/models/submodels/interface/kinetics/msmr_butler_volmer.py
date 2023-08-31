@@ -47,7 +47,6 @@ class MSMRButlerVolmer(BaseKinetics):
         """
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
 
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
@@ -57,18 +56,17 @@ class MSMRButlerVolmer(BaseKinetics):
             # of c_s_surf that depends on particle size.
             domain_options = getattr(self.options, domain)
             if domain_options["particle size"] == "distribution":
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface "
-                    "concentration distribution [mol.m-3]"
+                ocp = variables[
+                    f"{Domain} electrode open-circuit potential distribution [V]"
                 ]
                 # If all variables were broadcast (in "x"), take only the orphans,
                 # then re-broadcast c_e
                 if (
-                    isinstance(c_s_surf, pybamm.Broadcast)
+                    isinstance(ocp, pybamm.Broadcast)
                     and isinstance(c_e, pybamm.Broadcast)
                     and isinstance(T, pybamm.Broadcast)
                 ):
-                    c_s_surf = c_s_surf.orphans[0]
+                    ocp = ocp.orphans[0]
                     c_e = c_e.orphans[0]
                     T = T.orphans[0]
 
@@ -80,20 +78,18 @@ class MSMRButlerVolmer(BaseKinetics):
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
 
             else:
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-                ]
+                ocp = variables[f"{Domain} electrode open-circuit potential [V]"]
                 # If all variables were broadcast, take only the orphans
                 if (
-                    isinstance(c_s_surf, pybamm.Broadcast)
+                    isinstance(ocp, pybamm.Broadcast)
                     and isinstance(c_e, pybamm.Broadcast)
                     and isinstance(T, pybamm.Broadcast)
                 ):
-                    c_s_surf = c_s_surf.orphans[0]
+                    ocp = ocp.orphans[0]
                     c_e = c_e.orphans[0]
                     T = T.orphans[0]
 
-            j0 = phase_param.j0_j(c_e, c_s_surf, T, index)
+            j0 = phase_param.j0_j(c_e, ocp, T, index)
 
         return j0
 

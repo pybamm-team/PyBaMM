@@ -422,11 +422,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
         # "MSMR" then all of them must be "MSMR".
+        # Note: this check is currently performed on full cells, but is loosened for
+        # half-cells where you must pass a tuple of options to only set MSMR models in
+        # the working electrode
         msmr_check_list = [
             options[opt] == "MSMR"
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
-        if any(msmr_check_list) and not all(msmr_check_list):
+        if (
+            options["working electrode"] == "both"
+            and any(msmr_check_list)
+            and not all(msmr_check_list)
+        ):
             raise pybamm.OptionError(
                 "If any of 'open-circuit potential', 'particle' or "
                 "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
