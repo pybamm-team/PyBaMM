@@ -483,4 +483,3 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
 
     return sol;
 }
-

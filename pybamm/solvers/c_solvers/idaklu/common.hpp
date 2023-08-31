@@ -12,7 +12,7 @@
 
 
 #if SUNDIALS_VERSION_MAJOR >= 6
-  #include <sundials/sundials_context.h> 
+  #include <sundials/sundials_context.h>
 #endif
 
 #include <sunlinsol/sunlinsol_klu.h> /* access to KLU linear solver          */
@@ -37,7 +37,7 @@ using np_array_dense = py::array_t<realtype, py::array::c_style | py::array::for
 using np_array_int = py::array_t<int64_t>;
 
 #ifdef NDEBUG
-#define DEBUG(x) 
+#define DEBUG(x)
 #else
 #define DEBUG(x) do { std::cerr << __FILE__ << ':' << __LINE__ << ' ' << x << std::endl; } while (0)
 #endif

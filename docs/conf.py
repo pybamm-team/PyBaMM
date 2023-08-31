@@ -203,6 +203,15 @@ htmlhelp_basename = "PyBaMMdoc"
 
 # -- Options for LaTeX output ------------------------------------------------
 
+# Note: we exclude the examples directory from the LaTeX build because it has
+# problems with the creation of PDFs on Read the Docs
+# https://github.com/readthedocs/readthedocs.org/issues/2045
+
+# Detect if we are building LaTeX output through the invocation of the build commands
+if any("latex" in arg for arg in sys.argv) or any("latexmk" in arg for arg in sys.argv):
+    exclude_patterns.append("source/examples/*")
+    print("Skipping compilation of .ipynb files for LaTeX build.")
+
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
@@ -314,7 +323,7 @@ env.doc2path(env.docname, base=None) %}
         <p>
             An interactive online version of this notebook is available, which can be
             accessed via
-            <a href="https://colab.research.google.com/{{ github_docname | e }}" 
+            <a href="https://colab.research.google.com/{{ github_docname | e }}"
             target="_blank">
             <img src="https://colab.research.google.com/assets/colab-badge.svg"
             alt="Open this notebook in Google Colab"/></a>

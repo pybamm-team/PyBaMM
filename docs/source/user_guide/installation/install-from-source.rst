@@ -1,4 +1,4 @@
-Install from source (developer install)
+Install from source (GNU Linux and macOS)
 =========================================
 
 .. contents::
@@ -90,7 +90,7 @@ If you'd rather do things yourself,
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
-	 
+
 
 PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
 
@@ -158,6 +158,9 @@ If you are using ``zsh``, you would need to use different pattern matching:
 
 	  pip install -e '.[all,dev,docs]'
 
+Before you start contributing to PyBaMM, please read the `contributing
+guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
+
 Running the tests
 -----------------
 
@@ -193,7 +196,7 @@ Finally, to run the unit and the integration suites sequentially, use
 
 	nox -s tests
 
-Using the test runner 
+Using the test runner
 ~~~~~~~~~~~~~~~~~~~~~~
 
 You can run unit tests for PyBaMM using
@@ -236,9 +239,11 @@ Doctests, examples, and coverage
 
 ``Nox`` can also be used to run doctests, run examples, and generate a coverage report using:
 
-- ``nox -s examples``: Run the example scripts in ``examples/scripts``.
+- ``nox -s examples``: Run the Jupyter notebooks in ``docs/source/examples/notebooks/``.
+- ``nox -s scripts``: Run the example scripts in ``examples/scripts/``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
+- ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
 Extra tips while using Nox
 --------------------------
@@ -251,3 +256,40 @@ Here are some additional useful commands you can run with ``Nox``:
 - ``--install-only``: Skips the test execution and only performs the installation step defined in the Nox sessions.
 - ``--nocolor``: Disables the color output in the console during the execution of Nox sessions.
 - ``--report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".
+
+Troubleshooting
+===============
+
+**Problem:** I’ve made edits to source files in PyBaMM, but these are
+not being used when I run my Python script.
+
+**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
+i.e. ``pip install -e .``. This sets the installed location of the
+source files to your current directory.
+
+**Problem:** Errors when solving model
+``ValueError: Integrator name ida does not exsist``, or
+``ValueError: Integrator name cvode does not exsist``.
+
+**Solution:** This could mean that you have not installed
+``scikits.odes`` correctly, check the instructions given above and make
+sure each command was successful.
+
+One possibility is that you have not set your ``LD_LIBRARY_PATH`` to
+point to the sundials library, type ``echo $LD_LIBRARY_PATH`` and make
+sure one of the directories printed out corresponds to where the
+sundials libraries are located.
+
+Another common reason is that you forget to install a BLAS library such
+as OpenBLAS before installing sundials. Check the cmake output when you
+configured Sundials, it might say:
+
+::
+
+   -- A library with BLAS API not found. Please specify library location.
+   -- LAPACK requires BLAS
+
+If this is the case, on a Debian or Ubuntu system you can install
+OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
+``brew install openblas`` for Mac OS) and then re-install sundials using
+the instructions above.

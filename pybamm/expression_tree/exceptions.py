@@ -15,6 +15,12 @@ class OptionError(Exception):
     pass
 
 
+class OptionWarning(UserWarning):
+    """Option warning: the chosen options may not give the desired output."""
+
+    pass
+
+
 class GeometryError(Exception):
     """Geometry error: Raised if the an unimplemented geometry is used."""
 

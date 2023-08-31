@@ -175,7 +175,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass();
 
 
-  if (p_python_functions->options.using_banded_matrix) 
+  if (p_python_functions->options.using_banded_matrix)
   {
     // copy data from temporary matrix to the banded matrix
     auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
@@ -190,7 +190,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
         SM_COLUMN_ELEMENT_B(banded_col, row_ij, col_ij) = value_ij;
       }
     }
-  } 
+  }
   else if (p_python_functions->options.using_sparse_matrix)
   {
     if (SUNSparseMatrix_SparseType(JJ) == CSC_MAT)
@@ -310,7 +310,7 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
   }
   // resvalsS now has (∂F/∂p i )
   p_python_functions->sens();
-  
+
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp

@@ -34,7 +34,7 @@ if(NOT PYBIND11_DIR)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
-pybind11_add_module(idaklu 
+pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp
@@ -62,7 +62,7 @@ if (NOT DEFINED USE_PYTHON_CASADI)
 endif()
 
 execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}" -c 
+    COMMAND "${PYTHON_EXECUTABLE}" -c
     "import casadi as _; print(_.__path__[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -73,7 +73,7 @@ endif()
 message("Found python casadi path: ${CASADI_DIR}")
 
 if(${USE_PYTHON_CASADI})
-  message("Trying to link against python casadi package")   
+  message("Trying to link against python casadi package")
   find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 else()
   message("Trying to link against any casadi package apart from the python one")
@@ -84,7 +84,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
-message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}") 
+message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
