@@ -310,8 +310,8 @@ pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
 
 idaklu_ext = Extension(
-    "pybamm.solvers.idaklu",
-    [
+    name="pybamm.solvers.idaklu",
+    sources=[
         "pybamm/solvers/c_solvers/idaklu.cpp"
         "pybamm/solvers/c_solvers/idaklu.hpp"
         "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
