@@ -116,21 +116,22 @@ class ProcessedVariableVar(object):
         # unroll in nnz != numel, otherwise copy
         if realdata is None:
             realdata = self.base_variables_data
-        sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
-        if sp.nnz() != sp.numel():
-            data = [None] * len(realdata)
-            for datak in range(len(realdata)):
-                data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
-                var_data = realdata[0].flatten()
-                k = 0
-                for t_i in range(len(self.t_pts)):
-                    base = t_i * sp.numel()
-                    for r in sp.row():
-                        data[datak][base + r] = var_data[k]
-                        k = k + 1
-        else:
-            data = realdata
-        return data
+        # sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
+        # if sp.nnz() != sp.numel():
+        #     data = [None] * len(realdata)
+        #     for datak in range(len(realdata)):
+        #         data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
+        #         var_data = realdata[0].flatten()
+        #         k = 0
+        #         for t_i in range(len(self.t_pts)):
+        #             base = t_i * sp.numel()
+        #             for r in sp.row():
+        #                 data[datak][base + r] = var_data[k]
+        #                 k = k + 1
+        # else:
+        #     data = realdata
+        # return data
+        return realdata
 
     def unroll_0D(self, realdata=None):
         if realdata is None:
@@ -172,7 +173,7 @@ class ProcessedVariableVar(object):
             return self.unroll_2D(realdata=realdata)
         else:
             # Raise error for 3D variable
-            raise NotImplementedError("Unsupported data dimension: {self.dimensions}")
+            raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
 
     def initialise_0D(self):
         entries = self.unroll_0D()

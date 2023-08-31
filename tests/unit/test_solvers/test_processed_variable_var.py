@@ -82,10 +82,19 @@ class TestProcessedVariableVar(TestCase):
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
             warn=False,
         )
+        # Assert that the processed variable is the same as the solution
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
+        # Check that 'data' produces the same output as 'entries'
+        np.testing.assert_array_equal(processed_var.entries, processed_var.data)
 
-        # check empty sensitivity works
+        # Check unroll function
+        np.testing.assert_array_equal(processed_var.unroll(), y_sol[0])
 
+        # Check cumtrapz workflow produces no errors
+        processed_var.cumtrapz_ic = 1
+        processed_var.initialise_0D()
+
+    # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
         # without space
         t = pybamm.t
@@ -153,7 +162,32 @@ class TestProcessedVariableVar(TestCase):
         # the full solver
         y_sol = y_sol.reshape((y_sol.shape[1], y_sol.shape[0])).transpose()
         np.testing.assert_array_equal(processed_var.entries, y_sol)
+        np.testing.assert_array_equal(processed_var.entries, processed_var.data)
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
+
+        # Check unroll function
+        np.testing.assert_array_equal(processed_var.unroll(), y_sol)
+
+        # Check no error when data dimension is transposed vs node/edge
+        processed_var.mesh.nodes, processed_var.mesh.edges = \
+            processed_var.mesh.edges, processed_var.mesh.nodes
+        processed_var.initialise_1D()
+        processed_var.mesh.nodes, processed_var.mesh.edges = \
+            processed_var.mesh.edges, processed_var.mesh.nodes
+
+        # Check no errors with domain-specific attributes
+        # (see ProcessedVariableVar.initialise_2D() for details)
+        domain_list = [
+            ["particle", "electrode"],
+            ["separator", "current collector"],
+            ["particle", "particle size"],
+            ["particle size", "electrode"],
+            ["particle size", "current collector"]
+        ]
+        for domain, secondary in domain_list:
+            processed_var.domain[0] = domain
+            processed_var.domains["secondary"] = [secondary]
+            processed_var.initialise_1D()
 
     def test_processed_variable_1D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
@@ -218,6 +252,18 @@ class TestProcessedVariableVar(TestCase):
             processed_var.entries,
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            processed_var.data,
+        )
+
+        # Check unroll function (2D)
+        np.testing.assert_array_equal(processed_var.unroll(), y_sol.reshape(10, 40, 1))
+
+        # Check unroll function (3D)
+        with self.assertRaises(NotImplementedError):
+            processed_var.dimensions = 3
+            processed_var.unroll()
 
     def test_processed_variable_2D_fixed_t_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
