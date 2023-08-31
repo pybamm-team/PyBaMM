@@ -134,7 +134,7 @@ class TestProcessedVariableVar(TestCase):
         )
 
         # test no sensitivity raises error
-        assert processed_var.sensitivities is None
+        self.assertIsNone(processed_var.sensitivities)
 
     def test_processed_variable_1D(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])

@@ -74,9 +74,9 @@ public:
     const int n_s,
     const int n_e,
     const int n_p,
-    const std::vector<Function*> var_casadi_fcns,
-    const std::vector<Function*> dvar_dy_fcns,
-    const std::vector<Function*> dvar_dp_fcns,
+    const std::vector<Function*>& var_casadi_fcns,
+    const std::vector<Function*>& dvar_dy_fcns,
+    const std::vector<Function*>& dvar_dp_fcns,
     const Options& options
   );
 

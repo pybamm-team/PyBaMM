@@ -60,6 +60,7 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
 {
   // Construction code moved to Initialize() which is called from the
   // (child) CasadiSolver_XXX class constructors.
+  ida_mem = nullptr;
 }
 
 void CasadiSolverOpenMP::AllocateVectors() {
@@ -227,7 +228,7 @@ void CasadiSolverOpenMP::CalcVars(
     size_t t_i,
     realtype *tret,
     realtype *yval,
-    std::vector<realtype*> ySval,
+    const std::vector<realtype*>& ySval,
     realtype *yS_return,
     size_t *ySk
 ) {
@@ -246,7 +247,7 @@ void CasadiSolverOpenMP::CalcVars(
 void CasadiSolverOpenMP::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
-    std::vector<realtype*> ySval,
+    const std::vector<realtype*>& ySval,
     realtype *yS_return,
     size_t *ySk
 ) {

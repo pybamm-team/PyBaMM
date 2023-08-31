@@ -22,9 +22,9 @@ CasadiSolver *create_casadi_solver(
   np_array atol_np,
   double rel_tol,
   int inputs_length,
-  const std::vector<Function*> var_casadi_fcns,
-  const std::vector<Function*> dvar_dy_fcns,
-  const std::vector<Function*> dvar_dp_fcns,
+  const std::vector<Function*>& var_casadi_fcns,
+  const std::vector<Function*>& dvar_dy_fcns,
+  const std::vector<Function*>& dvar_dp_fcns,
   py::dict options
 );
 

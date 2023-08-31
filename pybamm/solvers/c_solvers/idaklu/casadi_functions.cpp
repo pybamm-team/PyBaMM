@@ -7,7 +7,7 @@ CasadiFunction::CasadiFunction(const Function &f) : m_func(f)
   size_t sz_iw;
   size_t sz_w;
   m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
-  int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
+  //int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
   //std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = "
   //  << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz <<
   //  std::endl;
@@ -46,9 +46,9 @@ CasadiFunctions::CasadiFunctions(
   const int inputs_length, const Function &jac_action,
   const Function &mass_action, const Function &sens, const Function &events,
   const int n_s, int n_e, const int n_p,
-  const std::vector<Function*> var_casadi_fcns,
-  const std::vector<Function*> dvar_dy_fcns,
-  const std::vector<Function*> dvar_dp_fcns,
+  const std::vector<Function*>& var_casadi_fcns,
+  const std::vector<Function*>& dvar_dy_fcns,
+  const std::vector<Function*>& dvar_dp_fcns,
   const Options& options)
   : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
     number_of_nnz(jac_times_cjmass_nnz),

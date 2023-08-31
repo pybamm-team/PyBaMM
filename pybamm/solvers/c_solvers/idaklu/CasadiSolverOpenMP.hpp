@@ -60,13 +60,13 @@ public:
     size_t t_i,
     realtype *tret,
     realtype *yval,
-    std::vector<realtype*> ySval,
+    const std::vector<realtype*>& ySval,
     realtype *yS_return,
     size_t *ySk);
   void CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
-    std::vector<realtype*> ySval,
+    const std::vector<realtype*>& ySval,
     realtype *yS_return,
     size_t *ySk);
   Solution solve(
