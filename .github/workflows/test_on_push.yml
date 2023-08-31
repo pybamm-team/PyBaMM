@@ -92,7 +92,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           # For some reason casadi needs to be installed first
           pip install casadi
-          pip install -e .[all,docs] --no-build-isolation
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -154,7 +154,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           # For some reason casadi needs to be installed first
           pip install casadi
-          pip install -e .[all,docs] --no-build-isolation
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -239,7 +239,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           # For some reason casadi needs to be installed first
           pip install casadi
-          pip install -e .[all,docs] --no-build-isolation
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -301,7 +301,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           # For some reason casadi needs to be installed first
           pip install casadi
-          pip install -e .[all,docs] --no-build-isolation
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -364,7 +364,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           # For some reason casadi needs to be installed first
           pip install casadi
-          pip install -e .[all,docs] --no-build-isolation
+          pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
