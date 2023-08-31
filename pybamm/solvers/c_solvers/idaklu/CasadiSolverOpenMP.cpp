@@ -56,11 +56,11 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
   jac_bandwidth_lower(jac_bandwidth_lower),
   jac_bandwidth_upper(jac_bandwidth_upper),
   functions(std::move(functions_arg)),
+  ida_mem(nullptr),
   options(options)
 {
   // Construction code moved to Initialize() which is called from the
   // (child) CasadiSolver_XXX class constructors.
-  ida_mem = nullptr;
 }
 
 void CasadiSolverOpenMP::AllocateVectors() {
