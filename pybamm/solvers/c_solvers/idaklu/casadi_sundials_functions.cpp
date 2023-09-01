@@ -1,6 +1,7 @@
 #include "casadi_sundials_functions.hpp"
 #include "casadi_functions.hpp"
 #include "common.hpp"
+#include <type_traits>
 
 #define NV_DATA NV_DATA_OMP
 //#define NV_DATA NV_DATA_S
@@ -233,7 +234,10 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       p_python_functions->jac_times_cjmass();
 
       // convert (casadi's) CSC format to CSR
-      csc_csr<long, int>(
+      csc_csr<
+          std::remove_pointer_t<decltype(p_python_functions->jac_times_cjmass_rowvals.data())>,
+          std::remove_pointer_t<decltype(jac_vals)>
+      >(
         newjac,
         p_python_functions->jac_times_cjmass_rowvals.data(),
         p_python_functions->jac_times_cjmass_colptrs.data(),
