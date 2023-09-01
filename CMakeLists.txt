@@ -65,7 +65,6 @@ if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found python casadi path: ${CASADI_DIR}")
 endif()
-message("Could not find python casadi path")
 
 if(${USE_PYTHON_CASADI})
   message("Trying to link against python casadi package")

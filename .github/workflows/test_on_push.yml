@@ -76,7 +76,7 @@ jobs:
         run: |
           brew analytics off
           brew update
-          brew install graphviz openblas
+          brew install graphviz openblas cmake
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -217,7 +217,7 @@ jobs:
         run: |
           brew analytics off
           brew update
-          brew install graphviz openblas
+          brew install graphviz openblas cmake
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
