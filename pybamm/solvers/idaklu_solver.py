@@ -196,7 +196,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 raise pybamm.SolverError(
                     "output_variables can only be specified "
                     'with convert_to_format="casadi"'
-                )
+                )  # pragma: no cover
         if y0S is not None:
             if isinstance(y0S, casadi.DM):
                 y0S = (y0S,)
@@ -678,7 +678,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     if isinstance(
                         model.variables_and_events[var], pybamm.ExplicitTimeIntegral
                     ):
-                        continue  # pragma: no cover
+                        continue
                     len_of_var = (
                         self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
                     )

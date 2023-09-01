@@ -14,7 +14,7 @@ using Function = casadi::Function;
 class CasadiSolverOpenMP : public CasadiSolver
 {
 public:
-  void *ida_mem;            // pointer to memory
+  void *ida_mem = nullptr;            // pointer to memory
   np_array atol_np;
   double rel_tol;
   np_array rhs_alg_id;
