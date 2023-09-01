@@ -17,6 +17,9 @@ def represents_positive_integer(s):
         return val > 0
 
 
+from pybamm.expression_tree.operations.serialise import Serialise
+
+
 class BatteryModelOptions(pybamm.FuzzyDict):
     """
     Attributes
@@ -799,6 +802,66 @@ class BaseBatteryModel(pybamm.BaseModel):
         super().__init__(name)
         self.options = options
 
+    # PL: Next up, how to pass in the non-standard variables, if necessary.
+    @classmethod
+    def deserialise(
+        cls, properties: dict
+    ):  # PL: maybe option up here as output_mesh=true to output a tuple, (model, mesh) rather than just updating the variables and leaving it at that.
+        """
+        Create a model instance from a serialised object.
+        """
+        instance = cls.__new__(cls)
+
+        # append the model name with _saved to differentiate
+        instance.__init__(
+            options=properties["options"], name=properties["name"] + "_saved"
+        )
+
+        # Initialise model with stored variables that have already been discretised
+        instance._concatenated_rhs = properties["concatenated_rhs"]
+        instance._concatenated_algebraic = properties["concatenated_algebraic"]
+        instance._concatenated_initial_conditions = properties[
+            "concatenated_initial_conditions"
+        ]
+
+        instance.len_rhs = instance.concatenated_rhs.size
+        instance.len_alg = instance.concatenated_algebraic.size
+        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
+
+        instance.bounds = properties["bounds"]
+        instance.events = properties["events"]
+        instance.mass_matrix = properties["mass_matrix"]
+        instance.mass_matrix_inv = properties["mass_matrix_inv"]
+
+        # add optional properties not required for model to solve
+        if properties["variables"]:
+            instance._variables = pybamm.FuzzyDict(properties["variables"])
+
+            # assign meshes to each variable
+            for var in instance._variables.values():
+                if var.domain != []:
+                    var.mesh = properties["mesh"][var.domain]
+                else:
+                    var.mesh = None
+
+                if var.domains["secondary"] != []:
+                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
+                else:
+                    var.secondary_mesh = None
+
+            instance._geometry = pybamm.Geometry(properties["geometry"])
+        else:
+            # Delete the default variables which have not been discretised
+            instance._variables = pybamm.FuzzyDict({})
+
+        # PL: Simulation(new_model, new_mesh)
+        # doesn't work because the model is already discretised, you can't give it a new mesh.
+
+        # Model has already been discretised
+        instance.is_discretised = True
+
+        return instance
+
     @property
     def default_geometry(self):
         return pybamm.battery_geometry(options=self.options)
@@ -1379,3 +1442,36 @@ class BaseBatteryModel(pybamm.BaseModel):
         This function is overriden by the base battery models
         """
         pass
+
+    def save_model(self, filename=None, mesh=None, variables=None):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        filename: str, optional
+        The desired name of the JSON file. If no name is provided, one will be created
+        based on the model name, and the current datetime.
+        """
+        if variables and not mesh:
+            raise ValueError(
+                "Serialisation: Please provide the mesh if variables are required"
+            )
+
+        Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+
+def load_model(filename, battery_model: BaseBatteryModel = None):
+    """
+    Load in a saved model from a JSON file
+
+    Parameters
+    ----------
+    filename: str
+        Path to the JSON file containing the serialised model file
+    battery_model: :class: pybamm.BaseBatteryModel, optional
+            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
+            any model names within the file. If None, the function will look for the saved object
+            path, present if the original model came from PyBaMM.
+    """
+    return Serialise().load_model(filename, battery_model)

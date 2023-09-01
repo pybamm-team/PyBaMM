@@ -10,7 +10,6 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.latexify import Latexify
-from pybamm.expression_tree.operations.serialise import Serialise
 
 
 class BaseModel:
@@ -123,35 +122,6 @@ class BaseModel:
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None
-
-    # PL: Next up, how to pass in the non-standard variables, if necessary.
-    @classmethod
-    def deserialise(cls, properties: dict):
-        """
-        Create a model instance from a serialised object.
-        """
-        instance = cls.__new__(cls)
-
-        instance.__init__(name=properties["name"])
-
-        # Initialise model with stored variables
-        instance._options = properties["options"]  # For information only
-        instance._concatenated_rhs = properties["concatenated_rhs"]
-        instance._concatenated_algebraic = properties["concatenated_algebraic"]
-        instance._concatenated_initial_conditions = properties[
-            "concatenated_initial_conditions"
-        ]
-
-        # Model has already been discretised
-        instance.is_discretised = True
-
-        instance.len_rhs = instance.concatenated_rhs.size
-        instance.len_alg = instance.concatenated_algebraic.size
-        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
-
-        instance.bounds = properties["bounds"]
-
-        return instance
 
     @property
     def name(self):
@@ -1139,34 +1109,6 @@ class BaseModel:
         disc_symbol = disc.process_symbol(param_symbol)
 
         return disc_symbol
-
-    def save_model(self, filename=None):
-        """
-        Write out a discretised model to a JSON file
-
-        Parameters
-        ----------
-        filename: str, optional
-        The desired name of the JSON file. If no name is provided, one will be created
-        based on the model name, and the current datetime.
-        """
-        Serialise().save_model(self, filename=filename)
-
-
-def load_model(filename, battery_model: BaseModel = None):
-    """
-    Load in a saved model from a JSON file
-
-    Parameters
-    ----------
-    filename: str
-        Path to the JSON file containing the serialised model file
-    battery_model: :class: pybamm.BaseBatteryModel, optional
-            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
-            any model names within the file. If None, the function will look for the saved object
-            path, present if the original model came from PyBaMM.
-    """
-    return Serialise().load_model(filename, battery_model)
 
 
 # helper functions for finding symbols

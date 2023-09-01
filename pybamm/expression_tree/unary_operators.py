@@ -34,6 +34,21 @@ class UnaryOperator(pybamm.Symbol):
         super().__init__(name, children=[child], domains=domains)
         self.child = self.children[0]
 
+    @classmethod
+    def _from_json(cls, name, snippet: dict):
+        """Use to instantiate when deserialising"""
+
+        instance = cls.__new__(cls)
+
+        super(UnaryOperator, instance).__init__(
+            name,
+            snippet["children"],
+            domains=snippet["domains"],
+        )
+        instance.child = instance.children[0]
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}({!s})".format(self.name, self.child)
@@ -98,6 +113,12 @@ class Negate(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("-", child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = super()._from_json("-", snippet)
+        return instance
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -352,11 +373,6 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child, domains=None):
         super().__init__(name, child, domains)
-
-    def diff(self, variable):
-        """See :meth:`pybamm.Symbol.diff()`."""
-        # We shouldn't need this
-        raise NotImplementedError
 
     def to_json(self):
         raise NotImplementedError(
@@ -944,11 +960,33 @@ class ExplicitTimeIntegral(UnaryOperator):
         super().__init__("explicit time integral", children)
         self.initial_condition = initial_condition
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["children"][0], snippet["initial_condition"])
+
+        return instance
+
     def _unary_new_copy(self, child):
         return self.__class__(child, self.initial_condition)
 
     def is_constant(self):
         return False
+
+    def to_json(self):
+        """
+        Convert ExplicitTimeIntegral to json for serialisation.
+
+        Both `children` and `initial_condition` contain Symbols, and are therefore
+        dealt with by `pybamm.Serialise._SymbolEncoder.default()` directly.
+        """
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+        }
+
+        return json_dict
 
 
 class BoundaryGradient(BoundaryOperator):

@@ -70,6 +70,17 @@ class SubMesh1D(SubMesh):
 
         return spatial_var, spatial_lims, tabs
 
+    def to_json(self):
+        json_dict = {
+            "edges": self.edges.tolist(),
+            "coord_sys": self.coord_sys,
+        }
+
+        if hasattr(self, "tabs"):
+            json_dict["tabs"] = self.tabs
+
+        return json_dict
+
 
 class Uniform1DSubMesh(SubMesh1D):
     """
@@ -94,6 +105,18 @@ class Uniform1DSubMesh(SubMesh1D):
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        tabs = snippet["tabs"] if "tabs" in snippet.keys() else None
+
+        super(Uniform1DSubMesh, instance).__init__(
+            np.array(snippet["edges"]), snippet["coord_sys"], tabs=tabs
+        )
+
+        return instance
 
 
 class Exponential1DSubMesh(SubMesh1D):

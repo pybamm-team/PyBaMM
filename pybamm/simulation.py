@@ -1188,18 +1188,35 @@ class Simulation:
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
-    def save_model(self, filename: str = None):
+    def save_model(
+        self,
+        filename: str = None,
+        mesh: bool = False,
+        variables: bool = False,
+    ):
         """
         Write out a discretised model to a JSON file
 
         Parameters
         ----------
+        mesh: bool
+            The mesh used to discretise the model. If false, plotting tools will not
+            be available when the model is read back in and solved.
+        variables: bool
+            The discretised variables. Not required to solve a model, but if false
+            tools will not be availble. Will automatically save meshes as well, required
+            for plotting tools.
         filename: str, optional
-        The desired name of the JSON file. If no name is provided, one will be created
-        based on the model name, and the current datetime.
+            The desired name of the JSON file. If no name is provided, one will be created
+            based on the model name, and the current datetime.
         """
+        mesh = self.mesh if (mesh or variables) else None
+        variables = self.built_model.variables if variables else None
+
         if self.built_model:
-            Serialise().save_model(self.built_model, filename=filename)
+            Serialise().save_model(
+                self.built_model, filename=filename, mesh=mesh, variables=variables
+            )
         else:
             raise NotImplementedError(
                 """

@@ -32,9 +32,42 @@ class Serialise:
                 for c in node.children:
                     node_dict["children"].append(self.default(c))
 
+                if hasattr(node, "initial_condition"):  # for ExplicitTimeIntegral
+                    node_dict["initial_condition"] = self.default(
+                        node.initial_condition
+                    )
+
                 return node_dict
 
-            json_obj = json.JSONEncoder.default(self, node)
+            if isinstance(node, pybamm.Event):
+                node_dict.update(node.to_json())
+                node_dict["expression"] = self.default(node._expression)
+                return node_dict
+
+            json_obj = json.JSONEncoder.default(self, node)  # pragma: no cover
+            node_dict["json"] = json_obj
+            return node_dict
+
+    class _MeshEncoder(json.JSONEncoder):
+        """Converts PyBaMM meshes into a JSON-serialisable format"""
+
+        def default(self, node: dict):
+            node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
+            if isinstance(node, pybamm.Mesh):
+                node_dict.update(node.to_json())
+
+                node_dict["sub_meshes"] = {}
+                for k, v in node.items():
+                    if len(k) == 1 and "ghost cell" not in k[0]:
+                        node_dict["sub_meshes"][k[0]] = self.default(v)
+
+                return node_dict
+
+            if isinstance(node, pybamm.SubMesh):
+                node_dict.update(node.to_json())
+                return node_dict
+
+            json_obj = json.JSONEncoder.default(self, node)  # pragma: no cover
             node_dict["json"] = json_obj
             return node_dict
 
@@ -43,7 +76,18 @@ class Serialise:
 
         pass
 
-    def save_model(self, model, filename=None):
+    class _EmptyDict(dict):
+        """A dummy dictionary class to aid deserialisation"""
+
+        pass
+
+    def save_model(
+        self,
+        model: pybamm.BaseBatteryModel,
+        mesh: pybamm.Mesh = None,
+        variables: pybamm.FuzzyDict = None,
+        filename: str = None,
+    ):
         """
         Saves a discretised model to a JSON file.
 
@@ -52,8 +96,14 @@ class Serialise:
 
         Parameters
         ----------
-        model: : :class:`pybamm.BaseModel`
+        model: : :class:`pybamm.BaseBatteryModel`
             The discretised model to be saved
+        mesh: :class: `pybamm.Mesh`, optional
+            The mesh the model has been discretised over. Not neccesary to solve
+            the model when read in, but required to use pybamm's plotting tools.
+        variables: :class: `pybamm.FuzzyDict`, optional
+            The discretised model varaibles. Not necessary to solve a model, but
+            required to use pybamm's plotting tools.
         filename: str, optional
             The desired name of the JSON file. If no name is provided, one will be
             created based on the model name, and the current datetime.
@@ -76,7 +126,19 @@ class Serialise:
             "concatenated_initial_conditions": self._SymbolEncoder().default(
                 model._concatenated_initial_conditions
             ),
+            "events": [self._SymbolEncoder().default(event) for event in model.events],
+            "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
+            "mass_matrix_inv": self._SymbolEncoder().default(model.mass_matrix_inv),
         }
+
+        if mesh:
+            model_json["mesh"] = self._MeshEncoder().default(mesh)
+
+        if variables:
+            model_json["geometry"] = dict(model._geometry)
+            model_json["variables"] = {
+                k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
+            }
 
         if filename is None:
             filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S")
@@ -84,7 +146,9 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)
 
-    def load_model(self, filename: str, battery_model: BaseBatteryModel = None):
+    def load_model(
+        self, filename: str, battery_model: BaseBatteryModel = None
+    ) -> BaseBatteryModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
 
@@ -106,6 +170,11 @@ class Serialise:
             PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
             any model names within the file. If None, the function will look for the saved object
             path, present if the original model came from PyBaMM.
+
+        Returns
+        -------
+        :class: pybamm.BaseBatteryModel
+            A PyBaMM model object, of type specified either in the JSON or in `battery_model`.
         """
 
         with open(filename, "r") as f:
@@ -124,7 +193,34 @@ class Serialise:
             "concatenated_initial_conditions": self._reconstruct_epression_tree(
                 model_data["concatenated_initial_conditions"]
             ),
+            "events": [
+                self._reconstruct_epression_tree(event)
+                for event in model_data["events"]
+            ],
+            "mass_matrix": self._reconstruct_epression_tree(model_data["mass_matrix"]),
+            "mass_matrix_inv": self._reconstruct_epression_tree(
+                model_data["mass_matrix_inv"]
+            ),
         }
+
+        recon_model_dict["geometry"] = (
+            model_data["geometry"] if "geometry" in model_data.keys() else None
+        )
+
+        recon_model_dict["mesh"] = (
+            self._reconstruct_mesh(model_data["mesh"])
+            if "mesh" in model_data.keys()
+            else None
+        )
+
+        recon_model_dict["variables"] = (
+            {
+                k: self._reconstruct_epression_tree(v)
+                for k, v in model_data["variables"].items()
+            }
+            if "variables" in model_data.keys()
+            else None
+        )
 
         if battery_model:
             return battery_model.deserialise(recon_model_dict)
@@ -141,7 +237,6 @@ class Serialise:
 
     def _get_pybamm_class(self, snippet: dict):
         """Find a pybamm class to initialise from object path"""
-        empty_class = self._Empty()
         parts = snippet["py/object"].split(".")
         try:
             module = importlib.import_module(".".join(parts[:-1]))
@@ -149,7 +244,13 @@ class Serialise:
             print(ex)
 
         class_ = getattr(module, parts[-1])
-        empty_class.__class__ = class_
+
+        try:
+            empty_class = self._Empty()
+            empty_class.__class__ = class_
+        except:
+            empty_class = self._EmptyDict()
+            empty_class.__class__ = class_
 
         return empty_class
 
@@ -176,7 +277,21 @@ class Serialise:
             for i, c in enumerate(node["children"]):
                 child_obj = self._reconstruct_epression_tree(c)
                 node["children"][i] = child_obj
+        elif "expression" in node:
+            expression_obj = self._reconstruct_epression_tree(node["expression"])
+            node["expression"] = expression_obj
 
         obj = self._reconstruct_symbol(node)
 
         return obj
+
+    def _reconstruct_mesh(self, node: dict):
+        """Reconstructs a Mesh object"""
+        if "sub_meshes" in node:
+            for k, v in node["sub_meshes"].items():
+                sub_mesh = self._reconstruct_symbol(v)
+                node["sub_meshes"][k] = sub_mesh
+
+        new_mesh = self._reconstruct_symbol(node)
+
+        return new_mesh

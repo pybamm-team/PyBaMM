@@ -62,7 +62,7 @@ class Array(pybamm.Symbol):
         instance = cls.__new__(cls)
 
         if isinstance(snippet["entries"], dict):
-            matrix = csr_array(
+            matrix = csr_matrix(
                 (
                     snippet["entries"]["data"],
                     snippet["entries"]["row_indices"],

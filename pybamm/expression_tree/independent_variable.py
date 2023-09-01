@@ -67,10 +67,10 @@ class Time(IndependentVariable):
         super().__init__("time")
 
     @classmethod
-    def _to_json(cls, snippet: dict):
+    def _from_json(cls, snippet: dict):
         instance = cls.__new__(cls)
 
-        instance.__init__("time")
+        instance.__init__()
 
         return instance
 
