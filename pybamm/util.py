@@ -6,6 +6,7 @@
 #
 import argparse
 import importlib.util
+import importlib.metadata
 import numbers
 import os
 import pathlib
@@ -18,11 +19,10 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import pkg_resources
 
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM
+# versions of jax and jaxlib compatible with PyBaMM, also in noxfile.py
 JAX_VERSION = "0.4.8"
 JAXLIB_VERSION = "0.4.7"
 
@@ -272,8 +272,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        pkg_resources.get_distribution("jax").version == JAX_VERSION
-        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+        importlib.metadata.version("jax") == JAX_VERSION
+        and importlib.metadata.version("jaxlib") == JAXLIB_VERSION
     )
 
 
