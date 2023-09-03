@@ -99,7 +99,7 @@ jobs:
           brew update
           brew reinstall gcc
           brew install libomp
-          python -m pip install wget
+          python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on Linux and MacOS
@@ -113,7 +113,8 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
           CIBW_BEFORE_BUILD_MACOS: >
             python -m pip
-            install casadi numpy &&
+            install cmake casadi numpy &&
+            python scripts/fix_casadi_rpath_mac.py &&
             scripts/fix_suitesparse_rpath_mac.sh
           # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
           # it for mac
