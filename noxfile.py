@@ -5,7 +5,7 @@ import sys
 
 # Options to modify nox behaviour
 nox.options.reuse_existing_virtualenvs = True
-if sys.platform == "linux":
+if sys.platform != "win32":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
 else:
     nox.options.sessions = ["pre-commit", "unit"]
@@ -77,8 +77,9 @@ def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
-    if sys.platform == "linux":
+    if sys.platform != "win32":
         session.run_always("pip", "install", "-e", ".[odes]")
+        session.run_always("pip", "install", "-e", ".[jax]")
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -94,7 +95,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
-    if sys.platform == "linux":
+    if sys.platform != "win32":
         session.run_always("pip", "install", "-e", ".[odes]")
         session.run_always("pip", "install", "-e", ".[jax]")
     session.run("python", "run-tests.py", "--unit")
@@ -123,7 +124,7 @@ def set_dev(session):
     envbindir = session.bin
     session.install("-e", ".[all]")
     session.install("cmake")
-    if sys.platform == "linux" or sys.platform == "darwin":
+    if sys.platform != "win32":
         session.run(
             "echo",
             "export",
@@ -139,7 +140,7 @@ def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
-    if sys.platform == "linux" or sys.platform == "darwin":
+    if sys.platform != "win32":
         session.run_always("pip", "install", "-e", ".[odes]")
         session.run_always("pip", "install", "-e", ".[jax]")
     session.run("python", "run-tests.py", "--all")
