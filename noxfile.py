@@ -16,6 +16,12 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
 }
+# Versions compatible with the current version of PyBaMM. Installed directly in the
+# sessions to skip redundant installation of dependencies and building wheels both in
+# the CI and locally
+JAX_VERSION = "0.4.8"
+JAXLIB_VERSION = "0.4.7"
+
 if os.getenv("CI") == "true":
     # The setup-python action installs and caches dependencies by default, so we skip
     # installing them again in nox environments. The dev and docs sessions will still
@@ -65,8 +71,9 @@ def run_coverage(session):
     session.run_always("pip", "install", "coverage")
     session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform != "win32":
-        session.run_always("pip", "install", "-e", ".[odes]")
-        session.run_always("pip", "install", "-e", ".[jax]")
+        session.run_always("pip", "install", "scikits.odes")
+        session.run_always("pip", "install", f"jax=={JAX_VERSION}")
+        session.run_always("pip", "install", f"jaxlib=={JAXLIB_VERSION}")
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -78,8 +85,9 @@ def run_integration(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform != "win32":
-        session.run_always("pip", "install", "-e", ".[odes]")
-        session.run_always("pip", "install", "-e", ".[jax]")
+        session.run_always("pip", "install", "scikits.odes")
+        session.run_always("pip", "install", f"jax=={JAX_VERSION}")
+        session.run_always("pip", "install", f"jaxlib=={JAXLIB_VERSION}")
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -96,8 +104,9 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform != "win32":
-        session.run_always("pip", "install", "-e", ".[odes]")
-        session.run_always("pip", "install", "-e", ".[jax]")
+        session.run_always("pip", "install", "scikits.odes")
+        session.run_always("pip", "install", f"jax=={JAX_VERSION}")
+        session.run_always("pip", "install", f"jaxlib=={JAXLIB_VERSION}")
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -141,8 +150,9 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.run_always("pip", "install", "-e", ".[all]")
     if sys.platform != "win32":
-        session.run_always("pip", "install", "-e", ".[odes]")
-        session.run_always("pip", "install", "-e", ".[jax]")
+        session.run_always("pip", "install", "scikits.odes")
+        session.run_always("pip", "install", f"jax=={JAX_VERSION}")
+        session.run_always("pip", "install", f"jaxlib=={JAXLIB_VERSION}")
     session.run("python", "run-tests.py", "--all")
 
 
