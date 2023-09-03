@@ -76,7 +76,7 @@ jobs:
         run: |
           brew analytics off
           brew update
-          brew install graphviz openblas
+          brew install graphviz openblas gcc gfortran libomp
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -94,9 +94,9 @@ jobs:
         run: |
           pip install --upgrade pip wheel setuptools nox
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
@@ -217,7 +217,7 @@ jobs:
         run: |
           brew analytics off
           brew update
-          brew install graphviz openblas
+          brew install graphviz openblas gcc gfortran libomp
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -235,9 +235,9 @@ jobs:
         run: |
           pip install --upgrade pip wheel setuptools nox
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
