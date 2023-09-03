@@ -510,10 +510,14 @@ class _Heaviside(BinaryOperator):
 
     def _evaluate_for_shape(self):
         """
-        Returns the scalar 'NaN' to represent the shape of a Heaviside.
-        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        Returns an array of NaNs of the correct shape.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`.
         """
-        return np.nan
+        left = self.children[0].evaluate_for_shape()
+        right = self.children[1].evaluate_for_shape()
+        # _binary_evaluate will return an array of bools, so we multiply by NaN to get
+        # an array of NaNs
+        return self._binary_evaluate(left, right) * np.nan
 
 
 class EqualHeaviside(_Heaviside):
