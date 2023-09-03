@@ -176,5 +176,18 @@ Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_v
 Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 
-# [tool.setuptools.packages.find]
-# include = ["pybamm", "pybamm.*"]
+[tool.setuptools]
+include-package-data = true
+
+# List of files to include as package data. These are mainly the parameter CSV files in
+# the input/parameters/ subdirectories. Other files such as the  CITATIONS file, relevant
+# README.md files, and specific .txt files inside the pybamm/ directory are also included.
+[tool.setuptools.package-data]
+pybamm = [
+    "*.txt",
+    "*.md",
+    "*.csv",
+    "*.py",
+    "pybamm/CITATIONS.bib",
+    "pybamm/plotting/mplstyle",
+]

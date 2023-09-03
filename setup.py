@@ -1,6 +1,5 @@
 import os
 import sys
-import glob
 import logging
 import subprocess
 from pathlib import Path
@@ -13,8 +12,6 @@ try:
 except ImportError:
     from distutils.core import setup, find_packages
     from distutils.command.install import install
-
-# import CMakeBuild
 
 # ---------- cmakebuild was integrated into setup.py directly --------------------------
 
@@ -176,10 +173,6 @@ class CMakeBuild(build_ext):
 
 # ---------- end of cmakebuild steps ---------------------------------------------------
 
-# default_lib_dir = (
-#     "" if system() == "Windows" else os.path.join(os.getenv("HOME"), ".local")
-# )
-
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("PyBaMM setup")
 
@@ -281,33 +274,6 @@ def compile_KLU():
 
     return CMakeFound and PyBind11Found
 
-
-# Build the list of package data files to be included in the PyBaMM package.
-# These are mainly the parameter files located in the input/parameters/ subdirectories.
-# TODO: might be possible to include in pyproject.toml with data configuration values
-pybamm_data = []
-for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
-    # Get all the files ending in file_ext in pybamm/input dir.
-    # list_of_files = [
-    #    'pybamm/input/drive_cycles/car_current.csv',
-    #    'pybamm/input/drive_cycles/US06.csv',
-    # ...
-    list_of_files = glob.glob("pybamm/input/**/" + file_ext, recursive=True)
-
-    # Add these files to pybamm_data.
-    # The path must be relative to the package dir (pybamm/), so
-    # must process the content of list_of_files to take out the top
-    # pybamm/ dir, i.e.:
-    # ['input/drive_cycles/car_current.csv',
-    #  'input/drive_cycles/US06.csv',
-    # ...
-    pybamm_data.extend(
-        [os.path.join(*Path(filename).parts[1:]) for filename in list_of_files]
-    )
-pybamm_data.append("./CITATIONS.bib")
-pybamm_data.append("./plotting/pybamm.mplstyle")
-pybamm_data.append("../CMakeBuild.py")
-
 idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",
     sources=[
@@ -351,5 +317,4 @@ setup(
         "bdist_wheel": bdist_wheel,
         "install": CustomInstall,
     },
-    package_data={"pybamm": pybamm_data},
 )
