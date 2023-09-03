@@ -105,8 +105,8 @@ Installing PyBaMM
 
 You should now have everything ready to build and install PyBaMM successfully.
 
-Using Nox (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~
+Using ``Nox`` (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
@@ -164,7 +164,7 @@ guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`
 Running the tests
 -----------------
 
-Using ``Nox`` (recommended)
+Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 You can use ``Nox`` to run the unit tests and example notebooks in isolated virtual environments.
@@ -246,7 +246,7 @@ Doctests, examples, and coverage
 - ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
 Extra tips while using ``Nox``
---------------------------
+------------------------------
 Here are some additional useful commands you can run with ``Nox``:
 
 - ``--verbose or -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
@@ -258,9 +258,9 @@ Here are some additional useful commands you can run with ``Nox``:
 - ``--report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".
 
 Troubleshooting
-===============
+---------------
 
-**Problem:** I’ve made edits to source files in PyBaMM, but these are
+**Problem:** I have made edits to source files in PyBaMM, but these are
 not being used when I run my Python script.
 
 **Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
