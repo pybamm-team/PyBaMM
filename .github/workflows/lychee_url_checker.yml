@@ -49,6 +49,10 @@ jobs:
             './**/*.md'
             './**/*.py'
             './**/*.ipynb'
+            './**/*.yml'
+            './**/*.yaml'
+            './**/*.json'
+            './**/*.toml'
           # fail the action on broken links
           fail: true
         env:
