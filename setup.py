@@ -7,10 +7,10 @@ from platform import system
 import wheel.bdist_wheel as orig
 
 try:
-    from setuptools import setup, find_packages, Extension
+    from setuptools import setup, Extension
     from setuptools.command.install import install
 except ImportError:
-    from distutils.core import setup, find_packages
+    from distutils.core import setup
     from distutils.command.install import install
 
 # ---------- cmakebuild was integrated into setup.py directly --------------------------
@@ -173,6 +173,8 @@ class CMakeBuild(build_ext):
 
 # ---------- end of cmakebuild steps ---------------------------------------------------
 
+# ---------- configure setup logger ----------------------------------------------------
+
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("PyBaMM setup")
 
@@ -213,6 +215,7 @@ class CustomInstall(install):
     def run(self):
         install.run(self)
 
+# ---------- custom wheel build (non-Windows) ------------------------------------------
 
 class bdist_wheel(orig.bdist_wheel):
     """A custom install command to add 2 build options"""
@@ -289,28 +292,9 @@ idaklu_ext = Extension(
 )
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
-# Defines __version__
-# TODO: might not be needed anymore, because we define it in pyproject.toml
-# and can therefore access it with importlib.metadata.version("pybamm") (python 3.8+)
-# The version.py file can then be imported with attr: pybamm.__version__ dynamically
-root = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(root, "pybamm", "version.py")) as f:
-    exec(f.read())
-
-# Load text for description and license
-# TODO: might not be needed anymore, because we define the description and license
-# in pyproject.toml
-# TODO: add long description there and remove it from setup()
-with open("README.md", encoding="utf-8") as f:
-    readme = f.read()
-
-# Project metadata was moved to pyproject.toml (which is read by pip).
-# However, custom build commands and setuptools extension modules are still defined here
+# Project metadata was moved to pyproject.toml (which is read by pip). However, custom
+# build commands and setuptools extension modules are still defined here.
 setup(
-    long_description=readme,
-    long_description_content_type="text/markdown",
-    url="https://github.com/pybamm-team/PyBaMM",
-    packages=find_packages(include=("pybamm", "pybamm.*")),
     ext_modules=ext_modules,
     cmdclass={
         "build_ext": CMakeBuild,
