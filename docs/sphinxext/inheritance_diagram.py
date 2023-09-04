@@ -20,16 +20,21 @@ def add_diagram(app, what, name, obj, options, lines):
                 # do nothing if it is not a derived class
                 return
 
-            # Append the inheritance diagram to the docstring
+            # Append the inheritance diagram to the docstring. Note: we do this
+            # for HTML output only because SVG output creates multiple PDFs which
+            # are not supported by Read the Docs.
+            # https://github.com/readthedocs/readthedocs.org/issues/2045
             lines.append("\n")
-            lines.append(".. dropdown:: View inheritance diagram for this model")
-            lines.append("   :animate: fade-in-slide-down")
-            lines.append("   :icon: eye\n")
-            lines.append("   :class-title: sd-align-major-center sd-fs-6 \n")
-            lines.append("   :class-container: sd-text-info \n")
+            lines.append(".. only:: not latex\n")
             lines.append("\n")
-            lines.append("       .. inheritance-diagram:: " + cls_name)
-            lines.append("           :parts: 2\n")
+            lines.append("    .. dropdown:: View inheritance diagram for this model")
+            lines.append("        :animate: fade-in-slide-down")
+            lines.append("        :icon: eye\n")
+            lines.append("        :class-title: sd-align-major-center sd-fs-6 \n")
+            lines.append("        :class-container: sd-text-info \n")
+            lines.append("\n")
+            lines.append("            .. inheritance-diagram:: " + cls_name)
+            lines.append("                :parts: 2\n")
             lines.append("\n")
 
 
