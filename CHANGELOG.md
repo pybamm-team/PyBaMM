@@ -9,6 +9,7 @@
 
 ## Bug fixes
 
+- Attributes of `pybamm.Simulation` objects (models, parameter values, geometries, choice of solver, and output variables) are now private and as such cannot be edited in-place after the simulation has been created ([#3267](https://github.com/pybamm-team/PyBaMM/pull/3267)
 - Fixed a bug with `_Heaviside._evaluate_for_shape` which meant some expressions involving heaviside function and subtractions did not work ([#3306](https://github.com/pybamm-team/PyBaMM/pull/3306))
 - The `OneDimensionalX` thermal model has been updated to account for edge/tab cooling and account for the current collector volumetric heat capacity. It now gives the correct behaviour compared with a lumped model with the correct total heat transfer coefficient and surface area for cooling. ([#3042](https://github.com/pybamm-team/PyBaMM/pull/3042))
 - Fixed a bug where the "basic" lithium-ion models gave incorrect results when using nonlinear particle diffusivity ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
