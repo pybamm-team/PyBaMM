@@ -17,7 +17,7 @@ jobs:
         python-version: [3.8]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get current date
         run: |
@@ -26,7 +26,7 @@ jobs:
 
       - name: Fail the job if date < 20
         if: env.TODAY < 20
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: core.setFailed('This workflow should be triggered only at the end of the month, or else it will create a release for the wrong month.')
 

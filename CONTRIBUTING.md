@@ -149,9 +149,9 @@ nox -s tests
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
 
-### Testing notebooks
+### Testing the example notebooks
 
-To test all example scripts and notebooks, type
+To test all the example notebooks in the `docs/source/examples/` folder, type
 
 ```bash
 nox -s examples
@@ -169,6 +169,14 @@ If notebooks fail because of changes to PyBaMM, it can be a bit of a hassle to d
 
 ```bash
 python run-tests.py --debook docs/source/examples/notebooks/notebook-name.ipynb script.py
+```
+
+### Testing the example scripts
+
+To test all the example scripts in the `examples/` folder, type
+
+```bash
+nox -s scripts
 ```
 
 ### Debugging

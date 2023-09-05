@@ -13,7 +13,7 @@ jobs:
   benchmarks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
@@ -23,8 +23,9 @@ jobs:
           sudo apt-get update
           sudo apt install gfortran gcc libopenblas-dev
       - name: Install python dependencies
+      # Pin asv==0.5.1 to fix failing benchmarks. Related to https://github.com/airspeed-velocity/asv/issues/1323
         run: |
-          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
+          python -m pip install --upgrade pip wheel setuptools virtualenv asv==0.5.1 wget cmake casadi numpy
       - name: Install SuiteSparse and Sundials
         run: python scripts/install_KLU_Sundials.py
       - name: Fetch base branch

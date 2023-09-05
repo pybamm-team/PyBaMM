@@ -52,18 +52,15 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         symbol_mesh = self.mesh
         if symbol.name == "y":
-            vector = pybamm.Vector(
-                symbol_mesh["current collector"].coordinates[0, :][:, np.newaxis]
-            )
+            entries = symbol_mesh["current collector"].coordinates[0, :][:, np.newaxis]
+
         elif symbol.name == "z":
-            vector = pybamm.Vector(
-                symbol_mesh["current collector"].coordinates[1, :][:, np.newaxis]
-            )
+            entries = symbol_mesh["current collector"].coordinates[1, :][:, np.newaxis]
         else:
             raise pybamm.GeometryError(
                 "Spatial variable must be 'y' or 'z' not {}".format(symbol.name)
             )
-        return vector
+        return pybamm.Vector(entries, domains=symbol.domains)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator. The
