@@ -29,12 +29,12 @@ jobs:
           echo "VERSION=$(date +'v%y.%-m')${{ github.event.inputs.append_to_tag }}" >> $GITHUB_ENV
           echo "NON_RC_VERSION=$(date +'v%y.%-m')" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         if: github.event_name == 'schedule'
         with:
           ref: 'develop'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         if: github.event_name == 'workflow_dispatch'
         with:
           ref: '${{ env.NON_RC_VERSION }}'
