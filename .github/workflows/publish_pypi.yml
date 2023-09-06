@@ -27,9 +27,6 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.12.3
-
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
 
@@ -56,8 +53,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Build 64 bits wheels on Windows
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
+        run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=C:\vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
           CIBW_ARCHS: "AMD64"
@@ -82,28 +78,19 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.12.3
-
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       - name: Install SUNDIALS on macOS
         if: matrix.os == 'macos-latest'
         run: |
-          # https://github.com/actions/virtual-environments/issues/1280
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
           brew update
-          brew reinstall gcc
-          brew install libomp
+          brew install gcc gfortran libomp graphviz openblas
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
-      - name: Build wheels on Linux and MacOS
-        run: python -m cibuildwheel --output-dir wheelhouse
+      - name: Build wheels on Linux and macOS
+        run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           # TODO: openblas no longer available on centos 7 i686 image, use blas instead for now
           CIBW_BEFORE_ALL_LINUX: >
@@ -114,8 +101,7 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: >
             python -m pip
             install cmake casadi numpy &&
-            python scripts/fix_casadi_rpath_mac.py &&
-            scripts/fix_suitesparse_rpath_mac.sh
+            python scripts/fix_casadi_rpath_mac.py && python scripts/fix_suitesparse_rpath_mac.sh
           # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
           # it for mac
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
@@ -172,7 +158,7 @@ jobs:
   #     - name: Publish on PyPI
   #       if: |
   #         github.event.inputs.target == 'pypi' ||
-  #         (github.event_name == 'push' && github.ref == 'refs/heads/main')
+  #         (github.event-name == 'push' && github.ref == 'refs/heads/main')
   #       uses: pypa/gh-action-pypi-publish@release/v1
   #       with:
   #         user: __token__
@@ -185,5 +171,5 @@ jobs:
   #       with:
   #         user: __token__
   #         password: ${{ secrets.TESTPYPI_TOKEN }}
-  #         packages_dir: files/
-  #         repository_url: https://test.pypi.org/legacy/
+  #         packages-dir: files/
+  #         repository-url: https://test.pypi.org/legacy/
