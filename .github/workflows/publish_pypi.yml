@@ -86,7 +86,6 @@ jobs:
         run: |
           brew update
           brew install gfortran libomp graphviz openblas
-          brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
@@ -102,7 +101,7 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: >
             python -m pip
             install cmake casadi numpy &&
-            python scripts/fix_casadi_rpath_mac.py && python scripts/fix_suitesparse_rpath_mac.sh
+            python scripts/fix_casadi_rpath_mac.py && scripts/fix_suitesparse_rpath_mac.sh
           # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
           # it for mac
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
