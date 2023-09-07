@@ -81,7 +81,6 @@ find_package(SUNDIALS REQUIRED)
 message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
-set_property(TARGET idaklu APPEND PROPERTY INSTALL_RPATH "${CASADI_DIR}")
 
 # link suitesparse
 # if using vcpkg, use config mode to
