@@ -308,7 +308,8 @@ class Solution(object):
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                y_var = y[model.variables[var.name].y_slices[0]]
+                first_index = model.y_slices[var][0]
+                y_var = y[first_index]
                 if np.any(y_var > pybamm.settings.max_y_value):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
