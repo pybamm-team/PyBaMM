@@ -73,10 +73,12 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
           brew update
           brew install graphviz openblas gcc gfortran libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -206,10 +208,12 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
           brew update
           brew install graphviz openblas gcc gfortran libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
