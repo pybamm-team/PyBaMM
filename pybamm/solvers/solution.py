@@ -314,7 +314,9 @@ class Solution(object):
                 for node in var.pre_order():
                     if isinstance(node, pybamm.StateVector):
                         statevector = node
-                if statevector is None:
+
+                # there will always be a statevector, but just in case
+                if statevector is None:  # pragma: no cover
                     raise RuntimeError(
                         "Cannot find statevector corresponding to variable {}"
                         .format(var.name)
