@@ -48,9 +48,9 @@ public:
 public:
   std::vector<const double *> m_arg;
   std::vector<double *> m_res;
-
-//private:
   const Function &m_func;
+
+private:
   std::vector<casadi_int> m_iw;
   std::vector<double> m_w;
 };

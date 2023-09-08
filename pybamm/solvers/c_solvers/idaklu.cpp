@@ -18,7 +18,6 @@ Function generate_function(const std::string &data)
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
-//PYBIND11_MAKE_OPAQUE(std::vector<Function>);
 
 PYBIND11_MODULE(idaklu, m)
 {
