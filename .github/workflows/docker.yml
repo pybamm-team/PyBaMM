@@ -40,3 +40,11 @@ jobs:
         run: |
           docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
           docker push $IMAGE_NAME
+
+      - name: Build and Push Docker Image (With ODES & DAE Solver)
+        env:
+          IMAGE_NAME: pybamm/pybamm:odes
+          ARG_NAME: ODES
+        run: |
+          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
+          docker push $IMAGE_NAME
