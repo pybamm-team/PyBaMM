@@ -25,3 +25,10 @@ jobs:
 
       - name: List built images
         run: docker images
+
+      - name: Build and Push Docker Image (Without Solvers)
+        env:
+          IMAGE_NAME: pybamm/pybamm:latest
+        run: |
+          docker build -t $IMAGE_NAME -f scripts/Dockerfile .
+          docker push $IMAGE_NAME
