@@ -1,0 +1,11 @@
+name: Build & Push Docker Images
+
+on:
+    workflow_dispatch:
+    pull_request:
+      branches:
+      - main
+
+jobs:
+    pre_job:
+        runs-on: ubuntu-latest
