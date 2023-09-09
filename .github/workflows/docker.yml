@@ -1,11 +1,17 @@
 name: Build & Push Docker Images
 
 on:
-    workflow_dispatch:
-    pull_request:
-      branches:
-      - main
+  workflow_dispatch:
+  pull_request:
+    branches:
+    - main
 
 jobs:
-    pre_job:
-        runs-on: ubuntu-latest
+  pre_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
