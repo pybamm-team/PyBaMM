@@ -32,3 +32,11 @@ jobs:
         run: |
           docker build -t $IMAGE_NAME -f scripts/Dockerfile .
           docker push $IMAGE_NAME
+
+      - name: Build and Push Docker Image (With JAX Solver)
+        env:
+          IMAGE_NAME: pybamm/pybamm:jax
+          ARG_NAME: JAX
+        run: |
+          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
+          docker push $IMAGE_NAME
