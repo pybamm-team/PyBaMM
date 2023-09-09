@@ -48,3 +48,11 @@ jobs:
         run: |
           docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
           docker push $IMAGE_NAME
+
+      - name: Build and Push Docker Image (With IDAKLU Solver)
+        env:
+          IMAGE_NAME: pybamm/pybamm:idaklu
+          ARG_NAME: IDAKLU
+        run: |
+          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
+          docker push $IMAGE_NAME
