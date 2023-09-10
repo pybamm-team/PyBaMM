@@ -33,33 +33,27 @@ ARG ODES
 ARG JAX
 ARG ALL
 
+RUN pip install --upgrade --user pip setuptools wheel wget nox cmake
+
 RUN if [ "$IDAKLU" = "true" ]; then \
-    pip install --upgrade --user pip setuptools wheel wget nox && \
-    pip install cmake && \
     python scripts/install_KLU_Sundials.py && \
     git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs]"; \
     fi
 
 RUN if [ "$ODES" = "true" ]; then \
-    pip install --upgrade --user pip setuptools wheel wget nox && \
-    pip install cmake && \
     python scripts/install_KLU_Sundials.py && \
     git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs,odes]"; \
     fi
 
 RUN if [ "$JAX" = "true" ]; then \
-    pip install --upgrade --user pip setuptools wheel wget nox && \
-    pip install cmake && \
     python scripts/install_KLU_Sundials.py && \
     git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs,jax]"; \
     fi
 
 RUN if [ "$ALL" = "true" ]; then \
-    pip install --upgrade --user pip setuptools wheel wget nox && \
-    pip install cmake && \
     python scripts/install_KLU_Sundials.py && \
     git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs,jax,odes]"; \
