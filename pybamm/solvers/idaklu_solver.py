@@ -122,6 +122,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             root_method,
             root_tol,
             extrap_tol,
+            output_variables,
         )
         self.name = "IDA KLU solver"
 
@@ -221,7 +222,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError("KLU requires the Jacobian")
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
-        self.var_casadi_fcns = []
         if model.convert_to_format == "casadi":
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)

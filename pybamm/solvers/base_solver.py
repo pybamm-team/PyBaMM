@@ -67,6 +67,7 @@ class BaseSolver(object):
         self.ode_solver = False
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
+        self.var_casadi_fcns = {}
 
     @property
     def root_method(self):
@@ -240,7 +241,7 @@ class BaseSolver(object):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
                 t_casadi = vars_for_processing["t_casadi"]
-                y_casadi = vars_for_processing["t_casadi"]
+                y_casadi = vars_for_processing["y_casadi"]
                 y_and_S = vars_for_processing["y_and_S"]
                 p_casadi = vars_for_processing["p_casadi"]
                 p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
