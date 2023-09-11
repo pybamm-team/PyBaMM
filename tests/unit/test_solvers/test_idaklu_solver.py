@@ -616,7 +616,7 @@ class TestIDAKLUSolver(TestCase):
         # Mock a 1D current collector and initialise (none in the model)
         sol["x_s [m]"].domain = ["current collector"]
         sol["x_s [m]"].initialise_1D()
-    
+
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all vairables, then test
         # the 'output_variables' option for each variable in turn, confirming
