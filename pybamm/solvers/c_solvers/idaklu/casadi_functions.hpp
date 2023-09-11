@@ -75,7 +75,7 @@ public:
    * @brief Return the number of non-zero elements for the function output
    */
   casadi_int nnz_out();
-  
+
   /**
    * @brief Return the number of non-zero elements for the function output
    */

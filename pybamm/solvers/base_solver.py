@@ -38,6 +38,9 @@ class BaseSolver(object):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    output_variables : list[str], optional
+        List of variables to calculate and return. If none are specified then
+        the complete state vector is returned (can be very large) (default is [])
     """
 
     def __init__(
@@ -48,6 +51,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
+        output_variables=[],
     ):
         self.method = method
         self.rtol = rtol
@@ -55,6 +59,7 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
+        self.output_variables = output_variables
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -235,7 +240,9 @@ class BaseSolver(object):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
                 t_casadi = vars_for_processing["t_casadi"]
+                y_casadi = vars_for_processing["t_casadi"]
                 y_and_S = vars_for_processing["y_and_S"]
+                p_casadi = vars_for_processing["p_casadi"]
                 p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
                 mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                 explicit_rhs = mass_matrix_inv @ rhs(
@@ -250,7 +257,64 @@ class BaseSolver(object):
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
 
+            # if output_variables specified then convert functions to casadi
+            # expressions for evaluation within the respective solver
+            self.var_casadi_fcns = {}
+            self.dvar_dy_casadi_fcns = {}
+            self.dvar_dp_casadi_fcns = {}
+            for key in self.output_variables:
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
+                if isinstance(
+                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                ):
+                    continue
+                # Generate Casadi function to calculate variable
+                fcn_name = BaseSolver._wrangle_name(key)
+                var_casadi = model.variables_and_events[key].to_casadi(
+                    t_casadi, y_casadi, inputs=p_casadi
+                )
+                self.var_casadi_fcns[key] = casadi.Function(
+                    fcn_name, [t_casadi, y_casadi, p_casadi_stacked], [var_casadi]
+                )
+                # Generate derivative functions for sensitivities
+                if (len(inputs) > 0) and (model.calculate_sensitivities):
+                    dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+                    dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+                    self.dvar_dy_casadi_fcns[key] = casadi.Function(
+                        f"d{fcn_name}_dy",
+                        [t_casadi, y_casadi, p_casadi_stacked],
+                        [dvar_dy],
+                    )
+                    self.dvar_dp_casadi_fcns[key] = casadi.Function(
+                        f"d{fcn_name}_dp",
+                        [t_casadi, y_casadi, p_casadi_stacked],
+                        [dvar_dp],
+                    )
+
         pybamm.logger.info("Finish solver set-up")
+
+    @classmethod
+    def _wrangle_name(cls, name: str) -> str:
+        """
+        Wrangle a function name to replace special characters
+        """
+        replacements = [
+            (" ", "_"),
+            ("[", ""),
+            ("]", ""),
+            (".", "_"),
+            ("-", "_"),
+            ("(", ""),
+            (")", ""),
+            ("%", "prc"),
+            (",", ""),
+            (".", ""),
+        ]
+        name = "v_" + name.casefold()
+        for string, replacement in replacements:
+            name = name.replace(string, replacement)
+        return name
 
     def _check_and_prepare_model_inplace(self, model, inputs, ics_only):
         """

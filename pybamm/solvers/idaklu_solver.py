@@ -22,18 +22,6 @@ def have_idaklu():
     return idaklu_spec is not None
 
 
-def wrangle_name(name: str) -> str:
-    return "v_" + name.casefold().replace(" ", "_").replace("[", "").replace(
-        "]", ""
-    ).replace(".", "_").replace("-", "_").replace("(", "").replace(")", "").replace(
-        "%", "prc"
-    ).replace(
-        ",", ""
-    ).replace(
-        ".", ""
-    )
-
-
 class IDAKLUSolver(pybamm.BaseSolver):
     """
     Solve a discretised model, using sundials with the KLU sparse linear solver.
@@ -275,47 +263,28 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
             )
 
-            # if output_variables specified then convert functions to casadi
-            # expressions for evaluation within the idaklu solver
-            self.var_casadi_fcns = {}
-            self.var_casadi_idaklu_fcns = []
-            self.dvar_dy_fcns = []
-            self.dvar_dp_fcns = []
+            # if output_variables specified then convert 'variable' casadi
+            # function expressions to idaklu-compatible functions
+            self.var_idaklu_fcns = []
+            self.dvar_dy_idaklu_fcns = []
+            self.dvar_dp_idaklu_fcns = []
             for key in self.output_variables:
-                # variable functions
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
                 if isinstance(
                     model.variables_and_events[key], pybamm.ExplicitTimeIntegral
                 ):
                     continue
-                fcn_name = wrangle_name(key)
-                var_casadi = model.variables_and_events[key].to_casadi(
-                    t_casadi, y_casadi, inputs=p_casadi
-                )
-                self.var_casadi_fcns[key] = casadi.Function(
-                    fcn_name, [t_casadi, y_casadi, p_casadi_stacked], [var_casadi]
-                )
-                self.var_casadi_idaklu_fcns.append(
+                self.var_idaklu_fcns.append(
                     idaklu.generate_function(self.var_casadi_fcns[key].serialize())
                 )
-                # Generate derivative functions for sensitivities
+                # Convert derivative functions for sensitivities
                 if (len(inputs) > 0) and (model.calculate_sensitivities):
-                    dvar_dy = casadi.jacobian(var_casadi, y_casadi)
-                    dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
-                    dvar_dy_fcn = casadi.Function(
-                        f"d{fcn_name}_dy",
-                        [t_casadi, y_casadi, p_casadi_stacked],
-                        [dvar_dy],
+                    self.dvar_dy_idaklu_fcns.append(
+                        idaklu.generate_function(self.dvar_dy_casadi_fcns[key].serialize())
                     )
-                    dvar_dp_fcn = casadi.Function(
-                        f"d{fcn_name}_dp",
-                        [t_casadi, y_casadi, p_casadi_stacked],
-                        [dvar_dp],
-                    )
-                    self.dvar_dy_fcns.append(
-                        idaklu.generate_function(dvar_dy_fcn.serialize())
-                    )
-                    self.dvar_dp_fcns.append(
-                        idaklu.generate_function(dvar_dp_fcn.serialize())
+                    self.dvar_dp_idaklu_fcns.append(
+                        idaklu.generate_function(self.dvar_dp_casadi_fcns[key].serialize())
                     )
 
         else:
@@ -490,9 +459,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
                 "output_variables": self.output_variables,
                 "var_casadi_fcns": self.var_casadi_fcns,
-                "var_casadi_idaklu_fcns": self.var_casadi_idaklu_fcns,
-                "dvar_dy_fcns": self.dvar_dy_fcns,
-                "dvar_dp_fcns": self.dvar_dp_fcns,
+                "var_idaklu_fcns": self.var_idaklu_fcns,
+                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
+                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
             }
 
             solver = idaklu.create_casadi_solver(
@@ -514,9 +483,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 atol=atol,
                 rtol=rtol,
                 inputs=len(inputs),
-                var_casadi_fcns=self._setup["var_casadi_idaklu_fcns"],
-                dvar_dy_fcns=self._setup["dvar_dy_fcns"],
-                dvar_dp_fcns=self._setup["dvar_dp_fcns"],
+                var_casadi_fcns=self._setup["var_idaklu_fcns"],
+                dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
+                dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
                 options=self._options,
             )
 
@@ -675,6 +644,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
                 for vark, var in enumerate(self.output_variables):
+                    # ExplicitTimeIntegral's are not computed as part of the solver and
+                    # do not need to be converted
                     if isinstance(
                         model.variables_and_events[var], pybamm.ExplicitTimeIntegral
                     ):
