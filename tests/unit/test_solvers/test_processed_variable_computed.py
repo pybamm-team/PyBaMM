@@ -1,5 +1,5 @@
 #
-# Tests for the Processed Variable Var class
+# Tests for the Processed Variable Computed class
 #
 # This class forms a container for variables (and sensitivities) calculted
 #  by the idaklu solver, and does not possesses any capability to calculate
@@ -50,14 +50,14 @@ def process_and_check_2D_variable(
 
     var_casadi = to_casadi(var_sol, y_sol)
     model = tests.get_base_model_with_battery_geometry(**geometry_options)
-    pybamm.ProcessedVariableVar(
+    pybamm.ProcessedVariableComputed(
         [var_sol],
         [var_casadi],
         [y_sol],
         pybamm.Solution(t_sol, y_sol, model, {}),
         warn=False,
     )
-    # NB: ProcessedVariableVar does not interpret y in the same way as
+    # NB: ProcessedVariableComputed does not interpret y in the same way as
     #  ProcessedVariable; a better test of equivalence is to check that the
     #  results are the same between IDAKLUSolver with (and without)
     #  output_variables. This is implemented in the integration test:
@@ -66,7 +66,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariableVar(TestCase):
+class TestProcessedVariableComputed(TestCase):
     def test_processed_variable_0D(self):
         # without space
         y = pybamm.StateVector(slice(0, 1))
@@ -75,7 +75,7 @@ class TestProcessedVariableVar(TestCase):
         t_sol = np.array([0])
         y_sol = np.array([1])[:, np.newaxis]
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariableVar(
+        processed_var = pybamm.ProcessedVariableComputed(
             [var],
             [var_casadi],
             [y_sol],
@@ -104,7 +104,7 @@ class TestProcessedVariableVar(TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariableVar(
+        processed_var = pybamm.ProcessedVariableComputed(
             [var],
             [var_casadi],
             [y_sol],
@@ -125,7 +125,7 @@ class TestProcessedVariableVar(TestCase):
         y_sol = np.array([np.linspace(0, 5)])
         inputs = {"a": np.array([1.0])}
         var_casadi = to_casadi(var, y_sol, inputs=inputs)
-        processed_var = pybamm.ProcessedVariableVar(
+        processed_var = pybamm.ProcessedVariableComputed(
             [var],
             [var_casadi],
             [y_sol],
@@ -150,7 +150,7 @@ class TestProcessedVariableVar(TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         sol = pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {})
-        processed_var = pybamm.ProcessedVariableVar(
+        processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
             [y_sol],
@@ -176,7 +176,7 @@ class TestProcessedVariableVar(TestCase):
             processed_var.mesh.edges, processed_var.mesh.nodes
 
         # Check that there are no errors with domain-specific attributes
-        #  (see ProcessedVariableVar.initialise_1D() for details)
+        #  (see ProcessedVariableComputed.initialise_1D() for details)
         domain_list = [
             "particle",
             "separator",
@@ -214,7 +214,7 @@ class TestProcessedVariableVar(TestCase):
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
-        pybamm.ProcessedVariableVar([c], [c_casadi], [y_sol], solution, warn=False)
+        pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution, warn=False)
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
@@ -360,7 +360,7 @@ class TestProcessedVariableVar(TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariableVar(
+        processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
             [y_sol],
@@ -397,7 +397,7 @@ class TestProcessedVariableVar(TestCase):
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, u_sol)
-        processed_var = pybamm.ProcessedVariableVar(
+        processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
             [u_sol],
@@ -423,7 +423,7 @@ class TestProcessedVariableVar(TestCase):
         var_casadi = to_casadi(var_sol, u_sol)
 
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
-            pybamm.ProcessedVariableVar(
+            pybamm.ProcessedVariableComputed(
                 [var_sol],
                 [var_casadi],
                 [u_sol],
