@@ -59,6 +59,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/lead-acid.ipynb
     notebooks/models/lithium-plating.ipynb
     notebooks/models/MPM.ipynb
+    notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
     notebooks/models/rate-capability.ipynb
     notebooks/models/SEI-on-cracks.ipynb
