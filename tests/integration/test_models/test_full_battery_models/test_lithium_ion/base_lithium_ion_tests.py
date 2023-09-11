@@ -313,6 +313,8 @@ class BaseIntegrationTestLithiumIon:
         options = {
             "open-circuit potential": "MSMR",
             "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
         }
         parameter_values = pybamm.ParameterValues("MSMR_Example")
         model = self.model(options)

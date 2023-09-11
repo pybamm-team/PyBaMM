@@ -31,7 +31,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
-'number of MSMR reactions': 'none' (possible: ['none', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
+'number of MSMR reactions': 'none' (possible: ['none'])
 'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
@@ -387,6 +387,15 @@ class TestBaseBatteryModel(TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
             pybamm.BaseBatteryModel(
                 {"particle": "MSMR", "intercalation kinetics": "MSMR"}
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel(
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                    "number of MSMR reactions": "1.5",
+                }
             )
 
     def test_build_twice(self):

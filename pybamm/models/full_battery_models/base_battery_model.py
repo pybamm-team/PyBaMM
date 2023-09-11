@@ -7,6 +7,16 @@ from functools import cached_property
 import warnings
 
 
+def represents_positive_integer(s):
+    """Check if a string represents a positive integer"""
+    try:
+        val = int(s)
+    except ValueError:
+        return False
+    else:
+        return val > 0
+
+
 class BatteryModelOptions(pybamm.FuzzyDict):
     """
     Attributes
@@ -251,19 +261,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "current-driven",
                 "stress and reaction-driven",
             ],
-            "number of MSMR reactions": [
-                "none",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "10",
-            ],
+            "number of MSMR reactions": ["none"],
             "open-circuit potential": ["single", "current sigmoid", "MSMR"],
             "operating mode": [
                 "current",
@@ -646,7 +644,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         value_list.append(val)
                 for val in value_list:
                     if val not in self.possible_options[option]:
-                        if not (option == "operating mode" and callable(val)):
+                        if option == "operating mode" and callable(val):
+                            # "operating mode" can be a function
+                            pass
+                        elif (
+                            option == "number of MSMR reactions"
+                            and represents_positive_integer(val)
+                        ):
+                            # "number of MSMR reactions" can be a positive integer
+                            pass
+                        else:
                             raise pybamm.OptionError(
                                 f"\n'{val}' is not recognized in option '{option}'. "
                                 f"Possible values are {self.possible_options[option]}"

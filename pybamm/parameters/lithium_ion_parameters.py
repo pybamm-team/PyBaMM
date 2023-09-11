@@ -698,14 +698,16 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"j0_ref_{d}_{index}", {"Temperature [K]": T}
         )
 
-        # Equation 16, Baker et al 2018
+        # Equation 16, Baker et al 2018. The original formulation would be implemented
+        # as:
         # j0_j = (
         #    j0_ref_j
         #    * xj ** (wj * aj)
         #    * (Xj - xj) ** (wj * (1 - aj))
         #    * (c_e / c_e_ref) ** (1 - aj)
         # )
-        # Reformulate in terms of potential to avoid singularity as x_j approaches X_j
+        # However, we reformulate in terms of potential to avoid singularity as x_j
+        # approaches X_j
         j0_j = (
             j0_ref_j
             * xj**wj
