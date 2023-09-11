@@ -831,7 +831,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # if extra_options is a dict then process it into a BatteryModelOptions
         # this does not catch cases that subclass the dict type
         # so other submodels can pass in their own options class if needed
-        if extra_options is None or isinstance(extra_options, dict):
+        if extra_options is None or type(extra_options) == dict:  # noqa: E721
             options = BatteryModelOptions(extra_options)
         else:
             options = extra_options
