@@ -1,11 +1,21 @@
 # Battery Models
 
+## Reference Publications
+
 References for the battery models included in PyBaMM can be found by using
 the **print_citations()** method included with PyBaMM. However, a few of the
-papers are given here
+papers are provided in this section for anyone interested in reading the theory
+behind the models before doing the tutorials.
 
-## Single particle models
+### Lithium-Ion Batteries
+
+[Doyle-Fuller-Newman model](https://iopscience.iop.org/article/10.1149/1.2221597)
+
+[Single particle model](https://iopscience.iop.org/article/10.1149/2.0341915jes)
 
 
-## Doyle-Fuller-Newman
+### Lead-Acid Batteries
 
+[Isothermal porous-electrode model](https://iopscience.iop.org/article/10.1149/2.0301910jes)
+
+[Leading-Order Quasi-Static Model](https://iopscience.iop.org/article/10.1149/2.0441908jes)
