@@ -25,6 +25,14 @@ void CasadiFunction::operator()()
   m_func.release(mem);
 }
 
+casadi_int CasadiFunction::nnz_out() {
+  return m_func.nnz_out();
+}
+
+casadi::Sparsity CasadiFunction::sparsity_out(casadi_int ind) {
+  return m_func.sparsity_out(ind);
+}
+
 void CasadiFunction::operator()(std::vector<realtype*> inputs,
                                 std::vector<realtype*> results)
 {

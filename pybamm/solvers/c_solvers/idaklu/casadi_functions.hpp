@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "options.hpp"
 #include <casadi/casadi.hpp>
+#include <casadi/core/sparsity.hpp>
 #include <memory>
 
 /**
@@ -70,12 +71,22 @@ public:
   void operator()(std::vector<realtype*> inputs,
                   std::vector<realtype*> results);
 
+  /**
+   * @brief Return the number of non-zero elements for the function output
+   */
+  casadi_int nnz_out();
+  
+  /**
+   * @brief Return the number of non-zero elements for the function output
+   */
+  casadi::Sparsity sparsity_out(casadi_int ind);
+
 public:
   std::vector<const double *> m_arg;
   std::vector<double *> m_res;
-  const Function &m_func;
 
 private:
+  const Function &m_func;
   std::vector<casadi_int> m_iw;
   std::vector<double> m_w;
 };

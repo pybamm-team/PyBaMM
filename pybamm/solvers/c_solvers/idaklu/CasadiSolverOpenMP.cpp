@@ -205,7 +205,7 @@ void CasadiSolverOpenMP::CalcVars(
   for (auto& var_fcn : functions->var_casadi_fcns) {
     var_fcn({tret, yval, functions->inputs.data()}, {res});
     // store in return vector
-    for (size_t jj=0; jj<var_fcn.m_func.nnz_out(); jj++)
+    for (size_t jj=0; jj<var_fcn.nnz_out(); jj++)
       y_return[t_i*length_of_return_vector + j++] = res[jj];
   }
   // calculate sensitivities
@@ -229,10 +229,10 @@ void CasadiSolverOpenMP::CalcVarsSensitivities(
     CasadiFunction dvar_dp = functions->dvar_dp_fcns[dvar_k];
     // Calculate dvar/dy
     dvar_dy({tret, yval, functions->inputs.data()}, {res_dvar_dy});
-    casadi::Sparsity spdy = dvar_dy.m_func.sparsity_out(0);
+    casadi::Sparsity spdy = dvar_dy.sparsity_out(0);
     // Calculate dvar/dp and convert to dense array for indexing
     dvar_dp({tret, yval, functions->inputs.data()}, {res_dvar_dp});
-    casadi::Sparsity spdp = dvar_dp.m_func.sparsity_out(0);
+    casadi::Sparsity spdp = dvar_dp.sparsity_out(0);
     for(int k=0; k<number_of_parameters; k++)
       dens_dvar_dp[k]=0;
     for(int k=0; k<spdp.nnz(); k++)
@@ -240,7 +240,7 @@ void CasadiSolverOpenMP::CalcVarsSensitivities(
     // Calculate sensitivities
     for(int paramk=0; paramk<number_of_parameters; paramk++) {
       yS_return[*ySk] = dens_dvar_dp[paramk];
-      for(int spk=0; spk<dvar_dy.m_func.nnz_out(); spk++)
+      for(int spk=0; spk<dvar_dy.nnz_out(); spk++)
         yS_return[*ySk] += res_dvar_dy[spk] * ySval[paramk][spdy.get_col()[spk]];
       (*ySk)++;
     }
@@ -319,12 +319,12 @@ Solution CasadiSolverOpenMP::solve(
   if (functions->var_casadi_fcns.size() > 0) {
     // return only the requested variables list after computation
     for (auto& var_fcn : functions->var_casadi_fcns) {
-      max_res_size = std::max(max_res_size, size_t(var_fcn.m_func.nnz_out()));
-      length_of_return_vector += var_fcn.m_func.nnz_out();
+      max_res_size = std::max(max_res_size, size_t(var_fcn.nnz_out()));
+      length_of_return_vector += var_fcn.nnz_out();
       for (auto& dvar_fcn : functions->dvar_dy_fcns)
-        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn.m_func.nnz_out()));
+        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn.nnz_out()));
       for (auto& dvar_fcn : functions->dvar_dp_fcns)
-        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn.m_func.nnz_out()));
+        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn.nnz_out()));
     }
   } else {
     // Return full y state-vector
