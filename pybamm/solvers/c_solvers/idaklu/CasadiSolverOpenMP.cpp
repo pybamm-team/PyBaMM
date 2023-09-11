@@ -4,37 +4,6 @@
 #include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
 
-/*
- * This is an abstract class that implements an OpenMP solution but
- * requires a linear solver to create a concrete class. Hook functions
- * are intended to be overriden to support alternative solver
- * approaches, as needed.
- */
-
-/* Skeleton workflow:
-   https://sundials.readthedocs.io/en/latest/ida/Usage/index.html
-      1. (N/A) Initialize parallel or multi-threaded environment
-      2. Create the SUNDIALS context object
-      3. Create the vector of initial values
-      4. Create matrix object (if appropriate)
-      5. Create linear solver object
-      6. (N/A) Create nonlinear solver object
-      7. Create IDA object
-      8. Initialize IDA solver
-      9. Specify integration tolerances
-     10. Attach the linear solver
-     11. Set linear solver optional inputs
-     12. (N/A) Attach nonlinear solver module
-     13. (N/A) Set nonlinear solver optional inputs
-     14. Specify rootfinding problem (optional)
-     15. Set optional inputs
-     16. Correct initial values (optional)
-     17. Advance solution in time
-     18. Get optional outputs
-     19. Destroy objects
-     20. (N/A) Finalize MPI
-*/
-
 CasadiSolverOpenMP::CasadiSolverOpenMP(
   np_array atol_np,
   double rel_tol,

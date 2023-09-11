@@ -6,8 +6,18 @@
 #include <casadi/casadi.hpp>
 #include <memory>
 
-// Utility function for compressed-sparse-column (CSC) to/from
-// compressed-sparse-row (CSR) matrix representation.
+/**
+ * Utility function to convert compressed-sparse-column (CSC) to/from
+ * compressed-sparse-row (CSR) matrix representation. Conversion is symmetric /
+ * invertible using this function.
+ * @brief Utility function to convert to/from CSC/CSR matrix representations.
+ * @param f Data vector containing the sparse matrix elements
+ * @param c Index pointer to column starts
+ * @param r Array of row indices
+ * @param nf New data vector that will contain the transformed sparse matrix
+ * @param nc New array of column indices
+ * @param nr New index pointer to row starts
+ */
 template<typename T1, typename T2>
 void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int N, int cols) {
   int nn[cols+1];
@@ -35,13 +45,28 @@ void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int 
   }
 }
 
+
 using Function = casadi::Function;
 
+/**
+ * @brief Class for handling individual casadi functions
+ */
 class CasadiFunction
 {
 public:
+  /**
+   * @brief Constructor
+   */
   explicit CasadiFunction(const Function &f);
+
+  /**
+   * @brief Evaluation operator
+   */
   void operator()();
+
+  /**
+   * @brief Evaluation operator given data vectors
+   */
   void operator()(std::vector<realtype*> inputs,
                   std::vector<realtype*> results);
 
@@ -55,9 +80,15 @@ private:
   std::vector<double> m_w;
 };
 
+/**
+ * @brief Class for handling casadi functions
+ */
 class CasadiFunctions
 {
 public:
+  /**
+   * @brief Create a new CasadiFunctions object
+   */
   CasadiFunctions(
     const Function &rhs_alg,
     const Function &jac_times_cjmass,

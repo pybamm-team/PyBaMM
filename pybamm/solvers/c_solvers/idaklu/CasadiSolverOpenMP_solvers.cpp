@@ -1,9 +1,5 @@
 #include "CasadiSolverOpenMP_solvers.hpp"
 
-/*
- * CasadiSolver implementations compatible with the OPENMP vector class
- */
-
 void CasadiSolverOpenMP_Dense::SetLinearSolver() {
   LS = SUNLinSol_Dense(yy, J, sunctx);
 }

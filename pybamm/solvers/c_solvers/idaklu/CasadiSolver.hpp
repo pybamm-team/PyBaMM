@@ -10,16 +10,39 @@ using Function = casadi::Function;
 #include "solution.hpp"
 #include "sundials_legacy_wrapper.hpp"
 
+/**
+ * Abstract base class for solutions that can use different solvers and vector
+ * implementations.
+ * @brief An abstract base class for the Idaklu solver
+ */
 class CasadiSolver
 {
 public:
+
+  /**
+   * @brief Default constructor
+   */
   CasadiSolver();
+
+  /**
+   * @brief Default destructor
+   */
   ~CasadiSolver();
+
+  /**
+   * @brief Abstract solver method that returns a Solution class
+   */
   virtual Solution solve(
     np_array t_np,
     np_array y0_np,
     np_array yp0_np,
     np_array_dense inputs) = 0;
+
+  /**
+   * Abstract method to initialize the solver, once vectors and solver classes
+   * are set
+   * @brief Abstract initialization method
+   */
   virtual void Initialize() = 0;
 };
 

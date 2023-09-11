@@ -3,8 +3,7 @@
 #include "common.hpp"
 #include <type_traits>
 
-#define NV_DATA NV_DATA_OMP
-//#define NV_DATA NV_DATA_S
+#define NV_DATA NV_DATA_OMP  // Serial: NV_DATA_S
 
 int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data)

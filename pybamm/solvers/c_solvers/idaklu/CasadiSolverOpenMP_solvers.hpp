@@ -4,6 +4,9 @@
 #include "CasadiSolverOpenMP.hpp"
 #include "casadi_solver.hpp"
 
+/**
+ * @brief CasadiSolver Dense implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_Dense : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_Dense(
@@ -36,6 +39,9 @@ public:
   void SetLinearSolver() override;
 };
 
+/**
+ * @brief CasadiSolver KLU implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_KLU : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_KLU(
@@ -68,6 +74,9 @@ public:
   void SetLinearSolver() override;
 };
 
+/**
+ * @brief CasadiSolver Banded implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_Band : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_Band(
@@ -100,6 +109,9 @@ public:
   void SetLinearSolver() override;
 };
 
+/**
+ * @brief CasadiSolver SPBCGS implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_SPBCGS : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_SPBCGS(
@@ -132,6 +144,9 @@ public:
   void SetLinearSolver() override;
 };
 
+/**
+ * @brief CasadiSolver SPFGMR implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_SPFGMR : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_SPFGMR(
@@ -164,6 +179,9 @@ public:
   void SetLinearSolver() override;
 };
 
+/**
+ * @brief CasadiSolver SPGMR implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_SPGMR : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_SPGMR(
@@ -196,6 +214,9 @@ public:
   void SetLinearSolver() override;
 };
 
+/**
+ * @brief CasadiSolver SPTFQMR implementation with OpenMP class
+ */
 class CasadiSolverOpenMP_SPTFQMR : public CasadiSolverOpenMP {
 public:
   CasadiSolverOpenMP_SPTFQMR(

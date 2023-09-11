@@ -22,7 +22,9 @@ using event_type =
 using jac_get_type = std::function<np_array()>;
 
 
-
+/**
+ * @brief Interface to the python solver
+ */
 Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
                residual_type res, jacobian_type jac,
                sensitivities_type sens,
