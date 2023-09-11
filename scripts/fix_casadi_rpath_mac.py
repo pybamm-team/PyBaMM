@@ -36,12 +36,19 @@ print(" ".join(["install_name_tool"] + install_name_tool_args))
 subprocess.run(["install_name_tool"] + install_name_tool_args)
 subprocess.run(["otool"] + ["-L", os.path.join(casadi_dir, libcpp_name)])
 
-# Copy libcasadi.3.7.dylib to LD_LIBRARY_PATH ($HOME/.local/lib)
+# Copy libcasadi.3.7.dylib and libc++.1.0.dylib to LD_LIBRARY_PATH ($HOME/.local/lib)
 # This is needed for the casadi python bindings to work
 
 subprocess.run(
     ["cp",
     os.path.join(casadi_dir, libcasadi_37_name),
+    os.path.join(os.getenv("HOME"),".local/lib")
+    ]
+)
+
+subprocess.run(
+    ["cp",
+    os.path.join(casadi_dir, libcpp_name),
     os.path.join(os.getenv("HOME"),".local/lib")
     ]
 )
