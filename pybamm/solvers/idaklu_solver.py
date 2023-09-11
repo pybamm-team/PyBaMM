@@ -682,7 +682,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     len_of_var = (
                         self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
                     )
-                    newsol._variables[var] = pybamm.ProcessedVariableVar(
+                    newsol._variables[var] = pybamm.ProcessedVariableComputed(
                         [model.variables_and_events[var]],
                         [self._setup["var_casadi_fcns"][var]],
                         [sol.y[:, startk : (startk + len_of_var)]],

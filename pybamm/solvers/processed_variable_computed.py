@@ -8,10 +8,14 @@ from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 
 
-class ProcessedVariableVar(object):
+class ProcessedVariableComputed(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
+
+    The 'Computed' variant of ProcessedVariable deals with variables that have
+    been derived at solve time (see the 'output_variables' solver option),
+    where the full state-vector is not itself propogated and returned.
 
     Parameters
     ----------
