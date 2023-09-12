@@ -11,7 +11,7 @@ behind the models before doing the tutorials.
 
 [Review of physics-based lithium-ion battery models](https://iopscience.iop.org/article/10.1088/2516-1083/ac7d31)
 
-[Review of parameterisation and a novel database Li-ion battery models](https://iopscience.iop.org/article/10.1088/2516-1083/ac692c)
+[Review of parameterisation and a novel database for Li-ion battery models](https://iopscience.iop.org/article/10.1088/2516-1083/ac692c)
 
 ## Model References
 
@@ -26,4 +26,4 @@ behind the models before doing the tutorials.
 
 [Isothermal porous-electrode model](https://iopscience.iop.org/article/10.1149/2.0301910jes)
 
-[Leading-Order Quasi-Static Model](https://iopscience.iop.org/article/10.1149/2.0441908jes)
+[Leading-Order Quasi-Static model](https://iopscience.iop.org/article/10.1149/2.0441908jes)
