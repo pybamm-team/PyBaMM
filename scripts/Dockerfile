@@ -33,7 +33,7 @@ ARG ODES
 ARG JAX
 ARG ALL
 
-RUN pip install --upgrade --user pip setuptools wheel wget nox cmake
+RUN pip install --upgrade --user pip setuptools wheel wget cmake
 
 RUN if [ "$IDAKLU" = "true" ]; then \
     python scripts/install_KLU_Sundials.py && \
