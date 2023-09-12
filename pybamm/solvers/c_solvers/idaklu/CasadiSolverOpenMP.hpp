@@ -139,11 +139,6 @@ public:
    * @brief Allocate memory for matrices (noting appropriate matrix format/types)
    */
   void SetMatrix();
-
-  /**
-   * @Brief Abstract method to set the linear solver
-   */
-  virtual void SetLinearSolver() = 0;
 };
 
 #endif // PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP

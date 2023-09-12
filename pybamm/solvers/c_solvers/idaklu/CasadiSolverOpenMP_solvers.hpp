@@ -36,9 +36,9 @@ public: \
       options \
     ) \
   { \
+    LS = FCN_CALL; \
     Initialize(); \
   } \
-  void SetLinearSolver() override { LS = FCN_CALL; }; \
 };
 
 /**

@@ -29,6 +29,52 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
 {
   // Construction code moved to Initialize() which is called from the
   // (child) CasadiSolver_XXX class constructors.
+  DEBUG("CasadiSolverOpenMP::CasadiSolverOpenMP");
+  auto atol = atol_np.unchecked<1>();
+
+  // create SUNDIALS context object
+  SUNContext_Create(NULL, &sunctx);  // calls null-wrapper if Sundials Ver<6
+
+  // allocate memory for solver
+  ida_mem = IDACreate(sunctx);
+
+  // create the vector of initial values
+  AllocateVectors();
+  if (number_of_parameters > 0)
+  {
+    yyS = N_VCloneVectorArray(number_of_parameters, yy);
+    ypS = N_VCloneVectorArray(number_of_parameters, yp);
+  }
+  // set initial values
+  realtype *atval = N_VGetArrayPointer(avtol);
+  for (int i = 0; i < number_of_states; i++)
+    atval[i] = atol[i];
+  for (int is = 0; is < number_of_parameters; is++)
+  {
+    N_VConst(RCONST(0.0), yyS[is]);
+    N_VConst(RCONST(0.0), ypS[is]);
+  }
+
+  // create Matrix objects
+  SetMatrix();
+
+  // initialise solver
+  IDAInit(ida_mem, residual_casadi, 0, yy, yp);
+
+  // set tolerances
+  rtol = RCONST(rel_tol);
+  IDASVtolerances(ida_mem, rtol, avtol);
+
+  // set events
+  IDARootInit(ida_mem, number_of_events, events_casadi);
+  void *user_data = functions.get();
+  IDASetUserData(ida_mem, user_data);
+
+  // specify preconditioner type
+  precon_type = SUN_PREC_NONE;
+  if (options.preconditioner != "none") {
+    precon_type = SUN_PREC_LEFT;
+  }
 }
 
 void CasadiSolverOpenMP::AllocateVectors() {
@@ -79,55 +125,7 @@ void CasadiSolverOpenMP::SetMatrix() {
 }
 
 void CasadiSolverOpenMP::Initialize() {
-  DEBUG("CasadiSolverOpenMP::Initialize");
-  auto atol = atol_np.unchecked<1>();
-
-  // create SUNDIALS context object
-  SUNContext_Create(NULL, &sunctx);  // calls null-wrapper if Sundials Ver<6
-
-  // allocate memory for solver
-  ida_mem = IDACreate(sunctx);
-
-  // create the vector of initial values
-  AllocateVectors();
-  if (number_of_parameters > 0)
-  {
-    yyS = N_VCloneVectorArray(number_of_parameters, yy);
-    ypS = N_VCloneVectorArray(number_of_parameters, yp);
-  }
-  // set initial values
-  realtype *atval = N_VGetArrayPointer(avtol);
-  for (int i = 0; i < number_of_states; i++)
-    atval[i] = atol[i];
-  for (int is = 0; is < number_of_parameters; is++)
-  {
-    N_VConst(RCONST(0.0), yyS[is]);
-    N_VConst(RCONST(0.0), ypS[is]);
-  }
-
-  // create Matrix objects
-  SetMatrix();
-
-  // initialise solver
-  IDAInit(ida_mem, residual_casadi, 0, yy, yp);
-
-  // set tolerances
-  rtol = RCONST(rel_tol);
-  IDASVtolerances(ida_mem, rtol, avtol);
-
-  // set events
-  IDARootInit(ida_mem, number_of_events, events_casadi);
-  void *user_data = functions.get();
-  IDASetUserData(ida_mem, user_data);
-
-  // specify preconditioner type
-  precon_type = SUN_PREC_NONE;
-  if (options.preconditioner != "none") {
-    precon_type = SUN_PREC_LEFT;
-  }
-
-  // create linear solver object
-  SetLinearSolver();
+  // Call after setting the solver
 
   // attach the linear solver
   IDASetLinearSolver(ida_mem, LS, J);

@@ -22,12 +22,12 @@ public:
   /**
    * @brief Default constructor
    */
-  CasadiSolver();
+  CasadiSolver() = default;
 
   /**
    * @brief Default destructor
    */
-  ~CasadiSolver();
+  ~CasadiSolver() = default;
 
   /**
    * @brief Abstract solver method that returns a Solution class
