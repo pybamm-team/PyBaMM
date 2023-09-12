@@ -2,7 +2,7 @@
 Removes the rpath from libcasadi.dylib and libcasadi.3.7.dylib in the casadi python
 install and uses a fixed path
 
-Used when building the wheels for macOS and GNU/Linux
+Used when building the wheels for macOS
 """
 import casadi
 import os
@@ -53,7 +53,7 @@ subprocess.run(["install_name_tool"] + install_name_tool_args)
 
 subprocess.run(["otool"] + ["-L", os.path.join(casadi_dir, libcpp_name)])
 
-# Copy libcasadi.3.7.dylib and libc++.1.0.dylib to $HOME/.local/lib
+# Copy libcasadi.3.7.dylib and libc++.1.0.dylib to LD_LIBRARY_PATH
 # This is needed for the casadi python bindings to work while repairing the wheel
 
 subprocess.run(
