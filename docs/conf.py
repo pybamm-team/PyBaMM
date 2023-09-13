@@ -303,6 +303,41 @@ bibtex_tooltips = True
 # a conflict with the sphinx-docsearch extension for Algolia search
 
 nbsphinx_requirejs_path = ""
+
+# For notebook downloads (23.5 onwards), we get the version from the environment
+# variable READTHEDOCS_VERSION and set it accordingly.
+
+# If the version is set to "latest", then we are on the develop branch, and we
+# point to the notebook in the develop blob
+# If we are on "stable", we point to the notebook in the relevant release tree
+# for the PyBaMM version
+# On a PR build, we use READTHEDOCS_GIT_COMMIT_HASH which will always point to changes
+# made to a notebook, if any.
+# On local builds, the version is not set, so we use "latest".
+
+if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (os.environ.get("READTHEDOCS_VERSION") is None): # noqa: E501
+    notebooks_version = "develop"
+    github_download_url = (
+        "https://github.com/pybamm-team/PyBaMM/blob/" + notebooks_version
+    )
+if os.environ.get("READTHEDOCS_VERSION") == "stable":
+    notebooks_version = version
+    github_download_url = (
+        "https://github.com/pybamm-team/PyBaMM/tree/v" + notebooks_version
+    )
+if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
+    notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")
+    github_download_url = (
+        "https://github.com/pybamm-team/PyBaMM/blob/" + notebooks_version
+    )
+
+html_context.update(
+    {
+        "notebooks_version": notebooks_version,
+        "github_download_url": github_download_url,
+    }
+)
+
 nbsphinx_prolog = r"""
 
 {% set github_docname =
