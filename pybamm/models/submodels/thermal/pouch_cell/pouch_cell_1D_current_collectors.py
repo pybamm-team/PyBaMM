@@ -131,7 +131,7 @@ class CurrentCollector1D(BaseThermal):
         bottom_cooling_coefficient = (
             param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
             + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
-            + 10 * non_tab_bottom_area
+            + param.h_edge(L_y / 2, 0) * non_tab_bottom_area
         ) / total_area
 
         # just use left and right for clarity
