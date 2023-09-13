@@ -82,7 +82,7 @@ class CurrentCollector1D(BaseThermal):
 
         self.rhs = {
             T_av: (
-                pybamm.laplacian(T_av)
+                pybamm.div(self.param.lambda_eff(T_av) * pybamm.grad(T_av))
                 + Q_av
                 + total_cooling_coefficient * (T_av - T_amb)
             )
