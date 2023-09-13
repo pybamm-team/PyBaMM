@@ -82,9 +82,11 @@ class CurrentCollector2D(BaseThermal):
         # correct mass matrix when discretised. The first argument is the source term
         # and the second argument is the variable governed by the equation that the
         # source term appears in.
+        # Note: not correct if lambda_eff is a function of T_av - need to implement div
+        # in 2D rather than doing laplacian directly
         self.rhs = {
             T_av: (
-                pybamm.laplacian(T_av)
+                self.param.lambda_eff(T_av) * pybamm.laplacian(T_av)
                 + pybamm.source(Q_av, T_av)
                 + pybamm.source(yz_surface_cooling_coefficient * (T_av - T_amb), T_av)
                 + pybamm.source(

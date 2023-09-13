@@ -152,16 +152,16 @@ def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
     session.install("-e", ".[all,docs]")
-    with session.chdir("docs/"):
-        session.run(
-            "sphinx-autobuild",
-            "-j",
-            "auto",
-            "--open-browser",
-            "-qT",
-            ".",
-            f"{envbindir}/../tmp/html",
-        )
+    session.chdir("docs")
+    session.run(
+        "sphinx-autobuild",
+        "-j",
+        "auto",
+        "--open-browser",
+        "-qT",
+        ".",
+        f"{envbindir}/../tmp/html",
+    )
 
 
 @nox.session(name="pre-commit")
