@@ -131,6 +131,7 @@ class BaseParticle(pybamm.BaseSubModel):
             / c_scale,
             f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s)
             / c_scale,
+            f"Minimum {domain} {phase_name}particle "
             "surface concentration": pybamm.min(c_s_surf) / c_scale,
             f"Maximum {domain} {phase_name}particle "
             "surface concentration": pybamm.max(c_s_surf) / c_scale,
