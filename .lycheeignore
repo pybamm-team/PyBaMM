@@ -11,3 +11,7 @@ file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/pybam
 
 # Errors in docs/source/user_guide/index.md
 file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/api_docs
+
+# Ignore links in docs/conf.py
+https://github.com/pybamm-team/PyBaMM/blob/
+https://github.com/pybamm-team/PyBaMM/tree/v
