@@ -344,8 +344,8 @@ nbsphinx_prolog = r"""
 'github/pybamm-team/pybamm/blob/develop/docs/' +
 env.doc2path(env.docname, base=None) %}
 
-{% set readthedocs_download_url =
-'https://docs.pybamm.org/en/latest/' %}
+{% set notebooks_version = env.config.html_context.notebooks_version %}
+{% set github_download_url = env.config.html_context.github_download_url %}
 
 {% set doc_path = env.doc2path(env.docname, base=None) %}
 
@@ -366,7 +366,7 @@ env.doc2path(env.docname, base=None) %}
             <hr>
         <p>
             Alternatively, you may
-            <a href="{{ readthedocs_download_url | e }}{{ doc_path | e }}"
+            <a href="{{ github_download_url | e }}/docs/{{ doc_path | e }}"
             target="_blank" download>
             download this notebook</a> and run it offline.
         </p>
