@@ -1420,7 +1420,13 @@ class BaseSolver(object):
         return ordered_inputs
 
 
-def process(symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None):
+def process(
+    symbol,
+    name,
+    vars_for_processing,
+    use_jacobian=None,
+    return_jacp_stacked=None
+):
     """
     Parameters
     ----------
