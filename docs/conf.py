@@ -331,10 +331,13 @@ if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
         "https://github.com/pybamm-team/PyBaMM/blob/" + notebooks_version
     )
 
+google_colab_url = github_download_url.replace("github.com", "githubtocolab.com")
+
 html_context.update(
     {
         "notebooks_version": notebooks_version,
         "github_download_url": github_download_url,
+        "google_colab_url": google_colab_url,
     }
 )
 
@@ -346,6 +349,7 @@ env.doc2path(env.docname, base=None) %}
 
 {% set notebooks_version = env.config.html_context.notebooks_version %}
 {% set github_download_url = env.config.html_context.github_download_url %}
+{% set google_colab_url = env.config.html_context.google_colab_url %}
 
 {% set doc_path = env.doc2path(env.docname, base=None) %}
 
@@ -358,7 +362,7 @@ env.doc2path(env.docname, base=None) %}
         <p>
             An interactive online version of this notebook is available, which can be
             accessed via
-            <a href="https://colab.research.google.com/{{ github_docname | e }}"
+            <a href="{{ google_colab_url | e }}/docs/{{ doc_path | e }}"
             target="_blank">
             <img src="https://colab.research.google.com/assets/colab-badge.svg"
             alt="Open this notebook in Google Colab"/></a>
