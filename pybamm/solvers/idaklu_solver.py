@@ -276,15 +276,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ):
                     continue
                 self.var_idaklu_fcns.append(
-                    idaklu.generate_function(self.var_casadi_fcns[key].serialize())
+                    idaklu.generate_function(self.computed_var_fcns[key].serialize())
                 )
                 # Convert derivative functions for sensitivities
                 if (len(inputs) > 0) and (model.calculate_sensitivities):
                     self.dvar_dy_idaklu_fcns.append(
-                        idaklu.generate_function(self.dvar_dy_casadi_fcns[key].serialize())
+                        idaklu.generate_function(self.computed_dvar_dy_fcns[key].serialize())
                     )
                     self.dvar_dp_idaklu_fcns.append(
-                        idaklu.generate_function(self.dvar_dp_casadi_fcns[key].serialize())
+                        idaklu.generate_function(self.computed_dvar_dp_fcns[key].serialize())
                     )
 
         else:
@@ -458,7 +458,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "sensitivity_names": sensitivity_names,
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
                 "output_variables": self.output_variables,
-                "var_casadi_fcns": self.var_casadi_fcns,
+                "var_casadi_fcns": self.computed_var_fcns,
                 "var_idaklu_fcns": self.var_idaklu_fcns,
                 "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
                 "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
