@@ -674,6 +674,16 @@
         "ideas",
         "bug"
       ]
+    },
+    {
+      "login": "kratman",
+      "name": "Eric G. Kratz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10170302?v=4",
+      "profile": "https://github.com/kratman",
+      "contributions": [
+        "doc",
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
