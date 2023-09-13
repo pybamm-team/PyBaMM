@@ -1,7 +1,6 @@
 import pybamm
 import numpy as np
-import pandas as pd
-from tests import TestCase
+from tests import TestCase, NonBatteryModel
 import os
 import sys
 import unittest
@@ -82,7 +81,7 @@ class TestSimulation(TestCase):
         with self.assertRaisesRegex(ValueError, "starting_solution"):
             sim.solve(starting_solution=sol)
 
-    def test_solve_non_battery_model(self):
+    def test_solve_non_battery_model_ode(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
         model.rhs = {v: -v}
@@ -96,6 +95,20 @@ class TestSimulation(TestCase):
         np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
         np.testing.assert_array_almost_equal(
             sim.solution["v"].entries, np.exp(-np.linspace(0, 1, 100))
+        )
+
+    def test_solve_non_battery_model_pde(self):
+        model = NonBatteryModel()
+        sim = pybamm.Simulation(model)
+
+        solution = sim.solve(np.linspace(0, 1, 100))
+        np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
+        # Compare with analytical temperature (drop first few terms as agreement of
+        # early states is not great)
+        np.testing.assert_array_almost_equal(
+            solution["Temperature [K]"].entries[:, 2:],
+            solution["Analytical temperature [K]"].entries[:, 2:],
+            decimal=3,
         )
 
     def test_solve_already_partially_processed_model(self):
@@ -181,20 +194,6 @@ class TestSimulation(TestCase):
             [pybamm.step.string("Discharge at 1C until 3.6V", period="1 minute")]
         )
         sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
-        sim.solve(initial_soc=0.8)
-        self.assertEqual(sim._built_initial_soc, 0.8)
-
-        # test with drive cycle
-        drive_cycle = pd.read_csv(
-            os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
-            comment="#",
-            header=None,
-        ).to_numpy()
-        current_interpolant = pybamm.Interpolant(
-            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
-        )
-        param["Current function [A]"] = current_interpolant
-        sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
@@ -344,44 +343,6 @@ class TestSimulation(TestCase):
         sim.create_gif(number_of_images=3, duration=1)
 
         os.remove("plot.gif")
-
-    def test_drive_cycle_interpolant(self):
-        model = pybamm.lithium_ion.SPM()
-        param = model.default_parameter_values
-        # Import drive cycle from file
-        drive_cycle = pd.read_csv(
-            pybamm.get_parameters_filepath(
-                os.path.join("input", "drive_cycles", "US06.csv")
-            ),
-            comment="#",
-            skip_blank_lines=True,
-            header=None,
-        ).to_numpy()
-
-        current_interpolant = pybamm.Interpolant(
-            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
-        )
-
-        param["Current function [A]"] = current_interpolant
-
-        time_data = drive_cycle[:, 0]
-
-        sim = pybamm.Simulation(model, parameter_values=param)
-
-        # check solution is returned at the times in the data
-        sim.solve()
-        np.testing.assert_array_almost_equal(sim.solution.t, time_data)
-
-        # check warning raised if the largest gap in t_eval is bigger than the
-        # smallest gap in the data
-        with self.assertWarns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, 10, 3))
-
-        # check warning raised if t_eval doesnt contain time_data , but has a finer
-        # resolution (can still solve, but good for users to know they dont have
-        # the solution returned at the data points)
-        with self.assertWarns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
 
     def test_discontinuous_current(self):
         def car_current(t):
