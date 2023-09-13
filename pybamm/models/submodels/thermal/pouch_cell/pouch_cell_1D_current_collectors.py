@@ -137,19 +137,22 @@ class CurrentCollector1D(BaseThermal):
         # just use left and right for clarity
         # left = bottom of cell (z=0)
         # right = top of cell (z=L_z)
+        lambda_eff = param.lambda_eff(T_av)
         self.boundary_conditions = {
             T_av: {
                 "left": (
-                    bottom_cooling_coefficient
-                    * pybamm.boundary_value(
-                        T_av - T_amb,
+                    pybamm.boundary_value(
+                        bottom_cooling_coefficient * (T_av - T_amb),
                         "left",
-                    ),
+                    )
+                    / pybamm.boundary_value(lambda_eff, "left"),
                     "Neumann",
                 ),
                 "right": (
-                    -top_cooling_coefficient
-                    * pybamm.boundary_value(T_av - T_amb, "right"),
+                    pybamm.boundary_value(
+                        -top_cooling_coefficient * (T_av - T_amb), "right"
+                    )
+                    / pybamm.boundary_value(lambda_eff, "right"),
                     "Neumann",
                 ),
             }

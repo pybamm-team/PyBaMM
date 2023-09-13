@@ -114,10 +114,12 @@ class CurrentCollector2D(BaseThermal):
         )
 
         negative_tab_bc = pybamm.boundary_value(
-            -h_tab_n_corrected * (T_av - T_amb), "negative tab"
+            -h_tab_n_corrected * (T_av - T_amb) / self.param.n.lambda_cc(T_av),
+            "negative tab",
         )
         positive_tab_bc = pybamm.boundary_value(
-            -h_tab_p_corrected * (T_av - T_amb), "positive tab"
+            -h_tab_p_corrected * (T_av - T_amb) / self.param.p.lambda_cc(T_av),
+            "positive tab",
         )
 
         self.boundary_conditions = {
