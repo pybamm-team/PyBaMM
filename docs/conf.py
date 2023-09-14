@@ -320,18 +320,17 @@ if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
 ):
     notebooks_version = "develop"
     append_to_url = f"blob/{notebooks_version}"
-    )
+
 if os.environ.get("READTHEDOCS_VERSION") == "stable":
     notebooks_version = version
     append_to_url = f"tree/v{notebooks_version}"
-    )
+
 if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
     notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")
     append_to_url = f"blob/{notebooks_version}"
-    )
 
-google_colab_url = github_download_url.replace("github.com", "githubtocolab.com")
 github_download_url = f"https://github.com/pybamm-team/PyBaMM/{append_to_url}"
+google_colab_url = github_download_url.replace("github.com", "githubtocolab.com")
 
 html_context.update(
     {
