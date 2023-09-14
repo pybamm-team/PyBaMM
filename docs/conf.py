@@ -315,7 +315,9 @@ nbsphinx_requirejs_path = ""
 # made to a notebook, if any.
 # On local builds, the version is not set, so we use "latest".
 
-if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (os.environ.get("READTHEDOCS_VERSION") is None): # noqa: E501
+if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
+    os.environ.get("READTHEDOCS_VERSION") is None
+):
     notebooks_version = "develop"
     github_download_url = (
         "https://github.com/pybamm-team/PyBaMM/blob/" + notebooks_version
