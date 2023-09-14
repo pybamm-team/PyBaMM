@@ -317,21 +317,19 @@ nbsphinx_requirejs_path = ""
 
 if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (os.environ.get("READTHEDOCS_VERSION") is None): # noqa: E501
     notebooks_version = "develop"
-    github_download_url = (
-        "https://github.com/pybamm-team/PyBaMM/blob/" + notebooks_version
+    append_to_url = f"blob/{notebooks_version}"
     )
 if os.environ.get("READTHEDOCS_VERSION") == "stable":
     notebooks_version = version
-    github_download_url = (
-        "https://github.com/pybamm-team/PyBaMM/tree/v" + notebooks_version
+    append_to_url = f"tree/v{notebooks_version}"
     )
 if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
     notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")
-    github_download_url = (
-        "https://github.com/pybamm-team/PyBaMM/blob/" + notebooks_version
+    append_to_url = f"blob/{notebooks_version}"
     )
 
 google_colab_url = github_download_url.replace("github.com", "githubtocolab.com")
+github_download_url = f"https://github.com/pybamm-team/PyBaMM/{append_to_url}"
 
 html_context.update(
     {
