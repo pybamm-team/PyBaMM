@@ -18,7 +18,7 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import importlib_metadata as il
+import importlib.metadata as il
 
 import pybamm
 

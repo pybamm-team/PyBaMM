@@ -4,7 +4,7 @@
 from tests import TestCase
 
 import pybamm
-import importlib_metadata as il
+import importlib.metadata as il
 import unittest
 
 
