@@ -4,7 +4,7 @@
 from tests import TestCase
 
 import pybamm
-import pkg_resources
+import importlib_metadata as il
 import unittest
 
 
@@ -25,7 +25,7 @@ class TestParameterSets(TestCase):
         """Check that all parameter sets have been registered with the
         ``pybamm_parameter_sets`` entry point"""
         known_entry_points = set(
-            ep.name for ep in pkg_resources.iter_entry_points("pybamm_parameter_sets")
+            ep.name for ep in il.entry_points("pybamm_parameter_sets")
         )
         self.assertEqual(set(pybamm.parameter_sets.keys()), known_entry_points)
         self.assertEqual(len(known_entry_points), len(pybamm.parameter_sets))
