@@ -311,7 +311,20 @@ class Solution(object):
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                y_var = y[model.variables[var.name].y_slices[0]]
+                var = model.variables[var.name]
+                # find the statevector corresponding to this variable
+                statevector = None
+                for node in var.pre_order():
+                    if isinstance(node, pybamm.StateVector):
+                        statevector = node
+
+                # there will always be a statevector, but just in case
+                if statevector is None:  # pragma: no cover
+                    raise RuntimeError(
+                        "Cannot find statevector corresponding to variable {}"
+                        .format(var.name)
+                    )
+                y_var = y[statevector.y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_value):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
