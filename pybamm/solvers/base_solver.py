@@ -130,13 +130,14 @@ class BaseSolver(object):
         )
 
         # Process initial conditions
-        initial_conditions = process(
+        initial_conditions, _, jacp_ic, _ = process(
             model.concatenated_initial_conditions,
             "initial_conditions",
             vars_for_processing,
             use_jacobian=False,
-        )[0]
+        )
         model.initial_conditions_eval = initial_conditions
+        model.jacp_initial_conditions_eval = jacp_ic
 
         # evaluate initial condition
         y0_total_size = (
@@ -146,9 +147,25 @@ class BaseSolver(object):
         if model.convert_to_format == "casadi":
             # stack inputs
             inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
-            model.y0 = initial_conditions(0, y_zero, inputs_casadi)
+            model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
+            if jacp_ic is None:
+                model.y0S = None
+            else:
+                model.y0S = jacp_ic(0.0, y_zero, inputs_casadi)
         else:
-            model.y0 = initial_conditions(0, y_zero, inputs)
+            model.y0 = initial_conditions(0.0, y_zero, inputs)
+            if jacp_ic is None:
+                model.y0S = None
+            else:
+                # we are calculating the derivative wrt the inputs
+                # so need to make sure we convert int -> float
+                # This is to satisfy JAX jacfwd function which requires
+                # float inputs
+                inputs_float = {
+                    key: float(value) if isinstance(value, int) else value
+                    for key, value in inputs.items()
+                }
+                model.y0S = jacp_ic(0.0, y_zero, inputs_float)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -485,8 +502,12 @@ class BaseSolver(object):
                     # We only need to do this if the model is a DAE model
                     # see #1082
                     k = 20
+                    # address numpy 1.25 deprecation warning: array should have
+                    # ndim=0 before conversion
                     init_sign = float(
-                        np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
+                        np.sign(
+                            event.evaluate(0, model.y0.full(), inputs=inputs)
+                        ).item()
                     )
                     # We create a sigmoid for each event which will multiply the
                     # rhs. Doing * 2 - 1 ensures that when the event is crossed,

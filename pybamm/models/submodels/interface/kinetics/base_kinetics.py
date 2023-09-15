@@ -57,6 +57,7 @@ class BaseKinetics(BaseInterface):
         reaction_name = self.reaction_name
         phase_name = self.phase_name
 
+        # Get surface potential difference
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
                 "Lithium metal interface surface potential difference [V]"
@@ -77,8 +78,23 @@ class BaseKinetics(BaseInterface):
         ):
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, [f"{domain} particle size"])
 
-        # Get exchange-current density
-        j0 = self._get_exchange_current_density(variables)
+        # Get exchange-current density. For MSMR models we calculate the exchange
+        # current density for each reaction, then sum these to give a total exchange
+        # current density. Note: this is only used for the "exchange current density"
+        # variables. For the interfacial current density variables, we sum the
+        # interfacial currents from each reaction.
+        if domain_options["intercalation kinetics"] == "MSMR":
+            N = int(domain_options["number of MSMR reactions"])
+            j0 = 0
+            for i in range(N):
+                j0_j = self._get_exchange_current_density_by_reaction(variables, i)
+                variables.update(
+                    self._get_standard_exchange_current_by_reaction_variables(j0_j, i)
+                )
+                j0 += j0_j
+        else:
+            j0 = self._get_exchange_current_density(variables)
+
         # Get open-circuit potential variables and reaction overpotential
         if (
             domain_options["particle size"] == "distribution"
@@ -92,9 +108,16 @@ class BaseKinetics(BaseInterface):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open-circuit potential [V]"
             ]
-        # If ocp was broadcast, take only the orphan.
+        # If ocp was broadcast, and the reaction is lithium metal plating OR
+        # delta_phi's secondary domain is "current collector", then take only the
+        # orphan.
         if isinstance(ocp, pybamm.Broadcast):
-            ocp = ocp.orphans[0]
+            if self.reaction == "lithium metal plating":
+                ocp = ocp.orphans[0]
+            elif delta_phi.domains["secondary"] == ["current collector"]:
+                ocp = ocp.orphans[0]
+
+        # Get reaction overpotential
         eta_r = delta_phi - ocp
 
         # Get average interfacial current density
@@ -129,8 +152,15 @@ class BaseKinetics(BaseInterface):
                 eta_sei = pybamm.Scalar(0)
             eta_r += eta_sei
 
+        # Broadcast j0 to match eta_r's domain, if necessary
+        if j0.secondary_domain == ["current collector"] and eta_r.secondary_domain == [
+            f"{domain} electrode"
+        ]:
+            j0 = pybamm.SecondaryBroadcast(j0, [f"{domain} electrode"])
+
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
+
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
             T = variables["X-averaged cell temperature [K]"]
@@ -155,7 +185,17 @@ class BaseKinetics(BaseInterface):
         # Update j, except in the "distributed SEI resistance" model, where j will be
         # found by solving an algebraic equation.
         # (In the "distributed SEI resistance" model, we have already defined j)
-        j = self._get_kinetics(j0, ne, eta_r, T, u)
+        # For MSMR model we calculate the total current density by summing the current
+        # densities from each reaction
+        if domain_options["intercalation kinetics"] == "MSMR":
+            j = 0
+            for i in range(N):
+                j0_j = self._get_exchange_current_density_by_reaction(variables, i)
+                j_j = self._get_kinetics_by_reaction(j0_j, ne, eta_r, T, u, i)
+                variables.update(self._get_standard_icd_by_reaction_variables(j_j, i))
+                j += j_j
+        else:
+            j = self._get_kinetics(j0, ne, eta_r, T, u)
 
         if j.domain == [f"{domain} particle size"]:
             # If j depends on particle size, get size-dependent "distribution"

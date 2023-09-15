@@ -21,18 +21,21 @@ PRINT_OPTIONS_OUTPUT = """\
 'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
+'diffusivity': 'single' (possible: ['single', 'current sigmoid'])
 'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
+'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'heat of mixing': 'false' (possible: ['false', 'true'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
-'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey'])
+'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey', 'MSMR'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
-'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
-'open-circuit potential': 'single' (possible: ['single', 'current sigmoid'])
+'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
+'number of MSMR reactions': 'none' (possible: ['none'])
+'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
-'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
+'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
@@ -367,6 +370,35 @@ class TestBaseBatteryModel(TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
             pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
 
+        # msmr
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel({"open-circuit potential": "MSMR"})
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel({"particle": "MSMR"})
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel({"intercalation kinetics": "MSMR"})
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel(
+                {"open-circuit potential": "MSMR", "particle": "MSMR"}
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel(
+                {"open-circuit potential": "MSMR", "intercalation kinetics": "MSMR"}
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel(
+                {"particle": "MSMR", "intercalation kinetics": "MSMR"}
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.BaseBatteryModel(
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                    "number of MSMR reactions": "1.5",
+                }
+            )
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
@@ -415,6 +447,7 @@ class TestOptions(TestCase):
         with io.StringIO() as buffer, redirect_stdout(buffer):
             BatteryModelOptions(OPTIONS_DICT).print_options()
             output = buffer.getvalue()
+
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
 
     def test_option_phases(self):

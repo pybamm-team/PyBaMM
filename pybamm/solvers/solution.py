@@ -131,6 +131,9 @@ class Solution(object):
         # Initialize empty summary variables
         self._summary_variables = None
 
+        # Initialise initial start time
+        self.initial_start_time = None
+
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
@@ -308,7 +311,20 @@ class Solution(object):
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                y_var = y[model.variables[var.name].y_slices[0]]
+                var = model.variables[var.name]
+                # find the statevector corresponding to this variable
+                statevector = None
+                for node in var.pre_order():
+                    if isinstance(node, pybamm.StateVector):
+                        statevector = node
+
+                # there will always be a statevector, but just in case
+                if statevector is None:  # pragma: no cover
+                    raise RuntimeError(
+                        "Cannot find statevector corresponding to variable {}"
+                        .format(var.name)
+                    )
+                y_var = y[statevector.y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_value):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
@@ -420,6 +436,15 @@ class Solution(object):
     @property
     def summary_variables(self):
         return self._summary_variables
+
+    @property
+    def initial_start_time(self):
+        return self._initial_start_time
+
+    @initial_start_time.setter
+    def initial_start_time(self, value):
+        """Updates the reason for termination"""
+        self._initial_start_time = value
 
     def set_summary_variables(self, all_summary_variables):
         summary_variables = {var: [] for var in all_summary_variables[0]}
@@ -789,7 +814,7 @@ class EmptySolution:
             return self.copy()
 
     def copy(self):
-        return EmptySolution(self.termination)
+        return EmptySolution(termination=self.termination, t=self.t)
 
 
 def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
@@ -803,7 +828,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     esoh_solver : :class:`pybamm.lithium_ion.ElectrodeSOHSolver`
         Solver to calculate electrode SOH (eSOH) variables. If `None` (default)
         then only summary variables that do not require the eSOH calculation
-        are calculated. See [1] for more details on eSOH variables.
+        are calculated. See :footcite:t:`Mohtat2019` for more details on eSOH variables.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True
@@ -814,12 +839,6 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
         The Solution object for this cycle, or None (if save_this_cycle is False)
     cycle_summary_variables : dict
         Dictionary of summary variables for this cycle
-
-    References
-    ----------
-    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-    better estimability of electrode-specific state of health: Decoding the cell
-    expansion. Journal of Power Sources, 427, 101-111.
 
     """
     sum_sols = step_solutions[0].copy()

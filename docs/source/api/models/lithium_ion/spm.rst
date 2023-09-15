@@ -6,3 +6,5 @@ Single Particle Model (SPM)
 
 .. autoclass:: pybamm.lithium_ion.BasicSPM
     :members:
+
+.. footbibliography::

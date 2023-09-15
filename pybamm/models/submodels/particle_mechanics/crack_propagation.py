@@ -8,8 +8,8 @@ import numpy as np
 
 class CrackPropagation(BaseMechanics):
     """
-    Cracking behaviour in electrode particles. See [1]_ for mechanical model (thickness
-    change) and [2]_ for cracking model.
+    Cracking behaviour in electrode particles. See :footcite:t:`Ai2019` for mechanical
+    model (thickness change) and :footcite:t:`Deshpande2012` for cracking model.
 
     Parameters
     ----------
@@ -25,14 +25,6 @@ class CrackPropagation(BaseMechanics):
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    References
-    ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-           Cells. Journal of The Electrochemical Society, 167(1), 013512.
-    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
-           Battery cycle life prediction with coupled chemical degradation and
-           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
     """
 
     def __init__(self, param, domain, x_average, options, phase="primary"):

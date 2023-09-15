@@ -19,7 +19,7 @@ jobs:
     name: Build wheels on windows-latest
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
@@ -40,13 +40,13 @@ jobs:
           .\bootstrap-vcpkg.bat
 
       - name: Cache packages installed through vcpkg on windows
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: vckpg_binary_cache
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
           key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
-            
+
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
@@ -74,7 +74,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
@@ -85,7 +85,7 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
 
-      - name: Install sundials on macOS
+      - name: Install SUNDIALS on macOS
         if: matrix.os == 'macos-latest'
         run: |
           # https://github.com/actions/virtual-environments/issues/1280
@@ -95,6 +95,7 @@ jobs:
           rm -f /usr/local/bin/python3*
           brew update
           brew reinstall gcc
+          brew install libomp
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
@@ -104,7 +105,7 @@ jobs:
           # TODO: openblas no longer available on centos 7 i686 image, use blas instead for now
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install blas-devel lapack-devel &&
-            bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0
+            bash build_manylinux_wheels/install_sundials.sh 5.8.1 6.5.0
 
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
           CIBW_BEFORE_BUILD_MACOS: >
@@ -134,7 +135,7 @@ jobs:
         python-version: [3.8]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}

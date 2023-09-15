@@ -1,4 +1,4 @@
-Open circuit potential models
+Open-circuit potential models
 =============================
 
 .. toctree::
@@ -6,3 +6,4 @@ Open circuit potential models
   base_ocp
   current_sigmoid_ocp
   single_ocp
+  msmr_ocp

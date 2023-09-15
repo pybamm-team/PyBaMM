@@ -7,6 +7,7 @@
 #
 import re
 import os
+import shutil
 import pybamm
 import sys
 import argparse
@@ -65,7 +66,17 @@ def run_doc_tests():
     """
     print("Checking if docs can be built.")
     p = subprocess.Popen(
-        ["sphinx-build", "-b", "doctest", "docs", "docs/build/html", "-W"]
+        [
+            "sphinx-build",
+            "-j",
+            "auto",
+            "-b",
+            "doctest",
+            "docs",
+            "docs/build/html",
+            "-W",
+            "--keep-going",
+        ]
     )
     try:
         ret = p.wait()
@@ -80,24 +91,46 @@ def run_doc_tests():
     if ret != 0:
         print("FAILED")
         sys.exit(ret)
+    # delete the entire docs/source/build folder + files since it currently
+    # causes problems with nbsphinx in further docs or doctest builds
+    print("Deleting built files.")
+    shutil.rmtree("docs/build")
 
 
-def run_notebook_and_scripts(executable="python"):
+def run_notebooks(executable="python"):
     """
     Runs Jupyter notebook tests. Exits if they fail.
     """
 
     # Scan and run
-    print("Testing notebooks and scripts with executable `" + str(executable) + "`")
-    if not scan_for_nb_and_scripts("examples", True, executable):
+    print("Testing notebooks with executable `" + str(executable) + "`")
+
+    # Test notebooks in docs/source/examples
+    if not scan_for_notebooks("docs/source/examples", True, executable):
         print("\nErrors encountered in notebooks")
         sys.exit(1)
     print("\nOK")
 
 
-def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
+def run_scripts(executable="python"):
     """
-    Scans for, and tests, all notebooks and scripts in a directory.
+    Run example scripts tests. Exits if they fail.
+    """
+
+    # Scan and run
+    print("Testing scripts with executable `" + str(executable) + "`")
+
+    # Test scripts in examples
+    # TODO: add scripts to docs/source/examples
+    if not scan_for_scripts("examples", True, executable):
+        print("\nErrors encountered in scripts")
+        sys.exit(1)
+    print("\nOK")
+
+
+def scan_for_notebooks(root, recursive=True, executable="python"):
+    """
+    Scans for, and tests, all notebooks in a directory.
     """
     ok = True
     debug = False
@@ -111,7 +144,7 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
             # Ignore hidden directories
             if filename[:1] == ".":
                 continue
-            ok &= scan_for_nb_and_scripts(path, recursive, executable)
+            ok &= scan_for_notebooks(path, recursive, executable)
 
         # Test notebooks
         if os.path.splitext(path)[1] == ".ipynb":
@@ -119,6 +152,29 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
                 print(path)
             else:
                 ok &= test_notebook(path, executable)
+
+    # Return True if every notebook is ok
+    return ok
+
+
+def scan_for_scripts(root, recursive=True, executable="python"):
+    """
+    Scans for, and tests, all scripts in a directory.
+    """
+    ok = True
+    debug = False
+
+    # Scan path
+    for filename in os.listdir(root):
+        path = os.path.join(root, filename)
+
+        # Recurse into subdirectories
+        if recursive and os.path.isdir(path):
+            # Ignore hidden directories
+            if filename[:1] == ".":
+                continue
+            ok &= scan_for_scripts(path, recursive, executable)
+
         # Test scripts
         elif os.path.splitext(path)[1] == ".py":
             if debug:
@@ -126,13 +182,13 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
             else:
                 ok &= test_script(path, executable)
 
-    # Return True if every notebook is ok
+    # Return True if every script is ok
     return ok
 
 
 def test_notebook(path, executable="python"):
     """
-    Tests a single notebook, exists if it doesn't finish.
+    Tests a single notebook, exits if it doesn't finish.
     """
     import nbconvert
     import pybamm
@@ -141,20 +197,27 @@ def test_notebook(path, executable="python"):
     print("Test " + path + " ... ", end="")
     sys.stdout.flush()
 
-    # Make sure the notebook has a "%pip install pybamm -q" command, for using Google
-    # Colab
-    with open(path, "r") as f:
-        if "%pip install pybamm -q" not in f.read():
+    # Make sure the notebook has a
+    # "%pip install pybamm[plot,cite] -q" command, for using Google Colab
+    # specify UTF-8 encoding otherwise Windows chooses CP1252 by default
+    # attributed to https://stackoverflow.com/a/49562606
+    with open(path, "r", encoding="UTF-8") as f:
+        if "%pip install pybamm[plot,cite] -q" not in f.read():
             # print error and exit
             print("\n" + "-" * 70)
             print("ERROR")
             print("-" * 70)
-            print("Installation command '%pip install pybamm -q' not found in notebook")
+            print(
+                "Installation command '%pip install pybamm[plot,cite] -q'"
+                " not found in notebook"
+            )
             print("-" * 70)
             return False
 
     # Make sure the notebook has "pybamm.print_citations()" to print the relevant papers
-    with open(path, "r") as f:
+    # specify UTF-8 encoding otherwise Windows chooses CP1252 by default
+    # attributed to https://stackoverflow.com/a/49562606
+    with open(path, "r", encoding="UTF-8") as f:
         if "pybamm.print_citations()" not in f.read():
             # print error and exit
             print("\n" + "-" * 70)
@@ -220,7 +283,7 @@ def test_notebook(path, executable="python"):
 
 def test_script(path, executable="python"):
     """
-    Tests a single notebook, exists if it doesn't finish.
+    Tests a single script, exits if it doesn't finish.
     """
     import pybamm
 
@@ -313,11 +376,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Run unit tests without starting a subprocess.",
     )
-    # Notebook tests
+    # Example notebooks tests
     parser.add_argument(
         "--examples",
         action="store_true",
-        help="Test all Jupyter notebooks and scripts in `examples`.",
+        help="Test all Jupyter notebooks in `docs/source/examples/`.",
     )
     parser.add_argument(
         "-debook",
@@ -325,11 +388,12 @@ if __name__ == "__main__":
         metavar=("in", "out"),
         help="Export a Jupyter notebook to a Python file for manual testing.",
     )
-    # Flake8 (deprecated)
+    # Scripts tests
     parser.add_argument(
-        "--flake8",
+        "--scripts",
         action="store_true",
-        help="Run flake8 to check for style issues (deprecated, use pre-commit)",
+        help="Test all example scripts in `examples/`.",
+
     )
     # Doctests
     parser.add_argument(
@@ -372,9 +436,6 @@ if __name__ == "__main__":
     if args.nosub:
         has_run = True
         run_code_tests(folder="unit", interpreter=interpreter)
-    # Flake8
-    if args.flake8:
-        raise NotImplementedError("flake8 is no longer used. Use pre-commit instead.")
     # Doctests
     if args.doctest:
         has_run = True
@@ -382,10 +443,14 @@ if __name__ == "__main__":
     # Notebook tests
     elif args.examples:
         has_run = True
-        run_notebook_and_scripts(interpreter)
+        run_notebooks(interpreter)
     if args.debook:
         has_run = True
         export_notebook(*args.debook)
+    # Scripts tests
+    elif args.scripts:
+        has_run = True
+        run_scripts(interpreter)
     # Combined test sets
     if args.quick:
         has_run = True

@@ -294,6 +294,51 @@ class TestFiniteVolumeConvergence(TestCase):
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
 
+def solve_laplace_equation(coord_sys="cartesian"):
+    model = pybamm.BaseModel()
+    r = pybamm.SpatialVariable("r", domain="domain", coord_sys=coord_sys)
+    u = pybamm.Variable("u", domain="domain")
+    del_u = pybamm.div(pybamm.grad(u))
+    model.boundary_conditions = {
+        u: {
+            "left": (pybamm.Scalar(0), "Dirichlet"),
+            "right": (pybamm.Scalar(1), "Dirichlet"),
+        }
+    }
+    model.algebraic = {u: del_u}
+    model.initial_conditions = {u: pybamm.Scalar(0)}
+    model.variables = {"u": u, "r": r}
+    geometry = {"domain": {r: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}}}
+    submesh_types = {"domain": pybamm.Uniform1DSubMesh}
+    var_pts = {r: 500}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    spatial_methods = {"domain": pybamm.FiniteVolume()}
+    disc = pybamm.Discretisation(mesh, spatial_methods)
+    disc.process_model(model)
+    solver = pybamm.CasadiAlgebraicSolver()
+    return solver.solve(model)
+
+
+class TestFiniteVolumeLaplacian(TestCase):
+    def test_laplacian_cartesian(self):
+        solution = solve_laplace_equation(coord_sys="cartesian")
+        np.testing.assert_array_almost_equal(
+            solution["u"].entries, solution["r"].entries - 1, decimal=10
+        )
+
+    def test_laplacian_cylindrical(self):
+        solution = solve_laplace_equation(coord_sys="cylindrical polar")
+        np.testing.assert_array_almost_equal(
+            solution["u"].entries, np.log(solution["r"].entries) / np.log(2), decimal=5
+        )
+
+    def test_laplacian_spherical(self):
+        solution = solve_laplace_equation(coord_sys="spherical polar")
+        np.testing.assert_array_almost_equal(
+            solution["u"].entries, 2 - 2 / solution["r"].entries, decimal=5
+        )
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
