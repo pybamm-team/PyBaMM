@@ -15,10 +15,14 @@
 - Fixed a bug where the "basic" lithium-ion models gave incorrect results when using nonlinear particle diffusivity ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
 - Particle size distributions now work with SPMe and NewmanTobias models ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
 - Fix to simulate c_rate steps with drive cycles ([#3186](https://github.com/pybamm-team/PyBaMM/pull/3186))
-- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
-- Error generated when invalid parameter values are passed. ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
-- Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
+- Always save last cycle in experiment, to fix issues with `starting_solution` and `last_state` ([#3177](https://github.com/pybamm-team/PyBaMM/pull/3177))
+- Fix simulations with `starting_solution` to work with `start_time` experiments ([#3177](https://github.com/pybamm-team/PyBaMM/pull/3177))
 - Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
+- Thevenin() model is now constructed with standard variables: `Time [s]`, `Time [min]`, `Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
+- Error generated when invalid parameter values are passed ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
+- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019 ([#3096](https://github.com/pybamm-team/PyBaMM/pull/3096))
+
+
 
 ## Breaking changes
 
