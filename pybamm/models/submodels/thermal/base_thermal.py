@@ -21,6 +21,9 @@ class BaseThermal(pybamm.BaseSubModel):
         super().__init__(param, options=options)
         self.x_average = x_average
 
+        if self.options["heat of mixing"] == "true":
+            pybamm.citations.register("Richardson2021")
+
     def _get_standard_fundamental_variables(self, T_dict):
         """
         Note: here we explicitly pass in the averages for the temperature as computing
@@ -264,7 +267,7 @@ class BaseThermal(pybamm.BaseSubModel):
                     pybamm.SpatialVariable("r", domain=integrand_r_n.domain)
                 ]
                 integral_r_n = pybamm.Integral(integrand_r_n, integration_variable_r_n)
-                Q_mix_s_n = F * N_n * integral_r_n
+                Q_mix_s_n = -F * N_n * integral_r_n
 
             # Compute heat of mixing in positive electrode
             a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
@@ -285,7 +288,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 pybamm.SpatialVariable("r", domain=integrand_r_p.domain)
             ]
             integral_r_p = pybamm.Integral(integrand_r_p, integration_variable_r_p)
-            Q_mix_s_p = F * N_p * integral_r_p
+            Q_mix_s_p = -F * N_p * integral_r_p
             Q_mix_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         else:
             Q_mix_s_n = pybamm.FullBroadcast(
