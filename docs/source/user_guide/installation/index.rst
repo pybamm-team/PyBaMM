@@ -155,7 +155,7 @@ Dependency                                                                      
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
 `pytest <https://docs.pytest.org/en/stable/>`__                                  \-                 dev                For running Jupyter notebooks tests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
-`nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A `pytest` plugin for executing Jupyter notebooks.
+`nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:
