@@ -164,7 +164,7 @@ def build_docs(session):
         ".",
         f"{envbindir}/../tmp/html",
         )
-    # Runs in CI only
+    # Runs in CI only, treating warnings as errors
     else:
         session.run(
         "sphinx-build",
