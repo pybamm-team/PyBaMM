@@ -16,6 +16,7 @@ PyBaMM documentation
    User Guide <source/user_guide/index>
    source/api/index
    source/examples/index
+   Contributing <source/user_guide/contributing>
 
 **Version**: |version|
 
@@ -106,7 +107,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-link:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
+      .. button-link:: source/user_guide/contributing.html
          :expand:
          :color: secondary
          :click-parent:

@@ -23,6 +23,14 @@ maxdepth: 2
 fundamentals/index
 ```
 
+```{toctree}
+---
+caption: Contributing guide
+maxdepth: 1
+---
+contributing
+```
+
 # Example notebooks
 
 PyBaMM ships with example notebooks that demonstrate how to use it and reveal some of its
