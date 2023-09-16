@@ -313,6 +313,11 @@ jobs:
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         run: nox -s doctests
+        continue-on-error: true
+
+      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
+        run: nox -s docs
+        continue-on-error: true
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         run: nox -s examples

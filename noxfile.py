@@ -153,7 +153,9 @@ def build_docs(session):
     envbindir = session.bin
     session.install("-e", ".[all,docs]")
     session.chdir("docs")
-    session.run(
+    # Local development
+    if session.interactive:
+        session.run(
         "sphinx-autobuild",
         "-j",
         "auto",
@@ -161,7 +163,20 @@ def build_docs(session):
         "-qT",
         ".",
         f"{envbindir}/../tmp/html",
-    )
+        )
+    # Runs in CI only
+    else:
+        session.run(
+        "sphinx-build",
+        "-j",
+        "auto",
+        "-b",
+        "html",
+        "-W",
+        "--keep-going",
+        ".",
+        f"{envbindir}/../tmp/html",
+        )
 
 
 @nox.session(name="pre-commit")
