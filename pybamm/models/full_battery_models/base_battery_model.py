@@ -485,7 +485,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if isinstance(particle_size, tuple):
             if particle_size[0] == "distribution":
                 lithium_plating = options.get("lithium plating")
-    
+
                 if isinstance(lithium_plating, tuple):
                     lithium_plating = lithium_plating[0]
 
@@ -501,7 +501,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 if lithium_plating != "none":
                     raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
-                    "distributions."  
+                    "distributions."
                     )
             if options["particle"] in ["quadratic profile", "quartic profile"]:
                 raise NotImplementedError(
