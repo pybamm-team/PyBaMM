@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
 
+env:
+  FORCE_COLOR: 3
+
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
   # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
@@ -313,11 +316,9 @@ jobs:
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         run: nox -s doctests
-        continue-on-error: true
 
       - name: Check if the documentation can be built for GNU/Linux with Python 3.11
         run: nox -s docs
-        continue-on-error: true
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         run: nox -s examples
