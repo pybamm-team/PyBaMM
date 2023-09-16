@@ -39,7 +39,7 @@ def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        session.install("pip", "install", "wget", "cmake")
+        session.install("wget", "cmake")
         session.run("python", "scripts/install_KLU_Sundials.py")
         if not os.path.exists("./pybind11"):
             session.run(
