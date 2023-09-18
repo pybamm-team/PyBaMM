@@ -27,6 +27,13 @@ class TestBaseLeadAcidModel(TestCase):
             pybamm.lead_acid.BaseModel({"SEI": "constant"})
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
             pybamm.lead_acid.BaseModel({"lithium plating": "reversible"})
+        with self.assertRaisesRegex(pybamm.OptionError, "MSMR"):
+            pybamm.lead_acid.BaseModel(
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                }
+            )
 
 
 if __name__ == "__main__":

@@ -368,6 +368,16 @@ class BaseUnitTestLithiumIon:
         options = {"open-circuit potential": "current sigmoid"}
         self.check_well_posedness(options)
 
+    def test_well_posed_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+            "surface form": "differential",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_current_sigmoid_exchange_current(self):
         options = {"exchange-current density": "current sigmoid"}
         self.check_well_posedness(options)
