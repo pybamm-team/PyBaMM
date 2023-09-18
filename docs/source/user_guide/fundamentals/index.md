@@ -70,7 +70,7 @@ solution = sim.solve()
 solution.plot()
 ```
 
-Finally, PyBaMM provides cusotm visualization tools:
+Finally, PyBaMM provides custom visualization tools:
 
 - [](quick_plot): for easily plotting simulation outputs in a grid, including comparing multiple simulations
 - [](pybamm.plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
