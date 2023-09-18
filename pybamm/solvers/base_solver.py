@@ -1421,11 +1421,7 @@ class BaseSolver(object):
 
 
 def process(
-    symbol,
-    name,
-    vars_for_processing,
-    use_jacobian=None,
-    return_jacp_stacked=None
+    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
 ):
     """
     Parameters
@@ -1615,17 +1611,28 @@ def process(
                     "CasADi"
                 )
             )
-            # WARNING, jacp for convert_to_format=casadi does not return a dict
-            # instead it returns multiple return values, one for each param
-            # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
-            jacp = casadi.Function(
-                name + "_jacp",
-                [t_casadi, y_and_S, p_casadi_stacked],
-                [
-                    casadi.densify(casadi.jacobian(casadi_expression, p_casadi[pname]))
-                    for pname in model.calculate_sensitivities
-                ],
-            )
+            # Compute derivate wrt p-stacked (can be passed to solver to
+            # compute sensitivities online)
+            if return_jacp_stacked:
+                jacp = casadi.Function(
+                    f"d{name}_dp",
+                    [t_casadi, y_casadi, p_casadi_stacked],
+                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
+                )
+            else:
+                # WARNING, jacp for convert_to_format=casadi does not return a dict
+                # instead it returns multiple return values, one for each param
+                # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
+                jacp = casadi.Function(
+                    name + "_jacp",
+                    [t_casadi, y_and_S, p_casadi_stacked],
+                    [
+                        casadi.densify(
+                            casadi.jacobian(casadi_expression, p_casadi[pname])
+                        )
+                        for pname in model.calculate_sensitivities
+                    ],
+                )
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")
@@ -1648,14 +1655,6 @@ def process(
                 [t_casadi, y_and_S, p_casadi_stacked, v],
                 [jac_action_casadi],
             )
-            # Compute derivate wrt p-stacked (can be passed to solver to
-            # compute sensitivities online)
-            if return_jacp_stacked:
-                jacp = casadi.Function(
-                    f"d{name}_dp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
-                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
-                )
         else:
             jac = None
             jac_action = None
