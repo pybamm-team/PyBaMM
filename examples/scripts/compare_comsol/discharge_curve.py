@@ -53,6 +53,7 @@ plt.yscale("log")
 plt.grid(True)
 plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
 plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
+colors = iter(plt.cycler(color='bgrcmyk'))
 
 for key, C_rate in C_rates.items():
     current = 24 * C_rate
@@ -85,7 +86,7 @@ for key, C_rate in C_rates.items():
     voltage_difference = np.abs(voltage_sol[0:end_index] - comsol_voltage[0:end_index])
 
     # plot discharge curves and absolute voltage_difference
-    color = next(ax._get_lines.prop_cycler)["color"]
+    color = next(colors)["color"]
     discharge_curve.plot(
         comsol_discharge_capacity, comsol_voltage, color=color, linestyle=":"
     )

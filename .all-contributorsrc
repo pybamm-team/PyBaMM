@@ -692,7 +692,8 @@
       "profile": "https://github.com/kratman",
       "contributions": [
         "doc",
-        "infra"
+        "infra",
+        "bug"
       ]
     }
   ],
