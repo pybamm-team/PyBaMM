@@ -71,22 +71,25 @@ class _Step:
     ):
         self.type = typ
 
-        # Record all the args for repr
-        self.args = f"{typ}, {value}"
+        # Record all the args for repr and hash
+        self.repr_args = f"{typ}, {value}"
+        self.hash_args = f"{typ}, {value}"
         if duration:
-            self.args += f", duration={duration}"
+            self.repr_args += f", duration={duration}"
         if termination:
-            self.args += f", termination={termination}"
+            self.repr_args += f", termination={termination}"
+            self.hash_args += f", termination={termination}"
         if period:
-            self.args += f", period={period}"
+            self.repr_args += f", period={period}"
         if temperature:
-            self.args += f", temperature={temperature}"
+            self.repr_args += f", temperature={temperature}"
+            self.hash_args += f", temperature={temperature}"
         if tags:
-            self.args += f", tags={tags}"
+            self.repr_args += f", tags={tags}"
         if start_time:
-            self.args += f", start_time={start_time}"
+            self.repr_args += f", start_time={start_time}"
         if description:
-            self.args += f", description={description}"
+            self.repr_args += f", description={description}"
 
         # Check if drive cycle
         self.is_drive_cycle = isinstance(value, np.ndarray)
@@ -158,7 +161,15 @@ class _Step:
             return repr(self)
 
     def __repr__(self):
-        return f"_Step({self.args})"
+        return f"_Step({self.repr_args})"
+
+    def basic_repr(self):
+        """
+        Return a basic representation of the step, only with type, value, termination
+        and temperature, which are the variables involved in processing the model. Also
+        used for hashing.
+        """
+        return f"_Step({self.hash_args})"
 
     def to_dict(self):
         """
@@ -184,13 +195,11 @@ class _Step:
     def __eq__(self, other):
         return (
             isinstance(other, _Step)
-            and self.__repr__() == other.__repr__()
-            and self.next_start_time == other.next_start_time
-            and self.end_time == other.end_time
+            and self.hash_args == other.hash_args
         )
 
     def __hash__(self):
-        return hash(repr(self))
+        return hash(self.basic_repr())
 
     @property
     def unit(self):
