@@ -82,7 +82,7 @@ class CurrentCollector1D(BaseThermal):
 
         self.rhs = {
             T_av: (
-                pybamm.laplacian(T_av)
+                pybamm.div(self.param.lambda_eff(T_av) * pybamm.grad(T_av))
                 + Q_av
                 + total_cooling_coefficient * (T_av - T_amb)
             )
@@ -131,25 +131,28 @@ class CurrentCollector1D(BaseThermal):
         bottom_cooling_coefficient = (
             param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
             + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
-            + 10 * non_tab_bottom_area
+            + param.h_edge(L_y / 2, 0) * non_tab_bottom_area
         ) / total_area
 
         # just use left and right for clarity
         # left = bottom of cell (z=0)
         # right = top of cell (z=L_z)
+        lambda_eff = param.lambda_eff(T_av)
         self.boundary_conditions = {
             T_av: {
                 "left": (
-                    bottom_cooling_coefficient
-                    * pybamm.boundary_value(
-                        T_av - T_amb,
+                    pybamm.boundary_value(
+                        bottom_cooling_coefficient * (T_av - T_amb),
                         "left",
-                    ),
+                    )
+                    / pybamm.boundary_value(lambda_eff, "left"),
                     "Neumann",
                 ),
                 "right": (
-                    -top_cooling_coefficient
-                    * pybamm.boundary_value(T_av - T_amb, "right"),
+                    pybamm.boundary_value(
+                        -top_cooling_coefficient * (T_av - T_amb), "right"
+                    )
+                    / pybamm.boundary_value(lambda_eff, "right"),
                     "Neumann",
                 ),
             }
