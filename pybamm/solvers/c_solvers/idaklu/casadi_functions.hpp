@@ -68,8 +68,8 @@ public:
   /**
    * @brief Evaluation operator given data vectors
    */
-  void operator()(std::vector<realtype*> inputs,
-                  std::vector<realtype*> results);
+  void operator()(const std::vector<realtype*>& inputs,
+                  const std::vector<realtype*>& results);
 
   /**
    * @brief Return the number of non-zero elements for the function output

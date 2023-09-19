@@ -33,8 +33,8 @@ casadi::Sparsity CasadiFunction::sparsity_out(casadi_int ind) {
   return m_func.sparsity_out(ind);
 }
 
-void CasadiFunction::operator()(std::vector<realtype*> inputs,
-                                std::vector<realtype*> results)
+void CasadiFunction::operator()(const std::vector<realtype*>& inputs,
+                                const std::vector<realtype*>& results)
 {
   // Set-up input arguments, provide result vector, then execute function
   // Example call: fcn({in1, in2, in3}, {out1})
