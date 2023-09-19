@@ -3,6 +3,7 @@
 #
 from tests import TestCase
 import unittest
+import unittest.mock as mock
 
 import pybamm
 
@@ -43,6 +44,11 @@ class TestScalar(TestCase):
         a = pybamm.Scalar(5)
         b = a.create_copy()
         self.assertEqual(a, b)
+
+    def test_to_json(self):
+        a = pybamm.Scalar(5)
+
+        self.assertEqual(a.to_json(), {"name": "5.0", "id": mock.ANY, "value": 5.0})
 
 
 if __name__ == "__main__":

@@ -3,12 +3,20 @@
 #
 from tests import TestCase
 import unittest
+import unittest.mock as mock
 
 import numpy as np
 import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
+
+EMPTY_DOMAINS = {
+    "primary": [],
+    "secondary": [],
+    "tertiary": [],
+    "quaternary": [],
+}
 
 
 class TestBinaryOperators(TestCase):
@@ -769,6 +777,57 @@ class TestBinaryOperators(TestCase):
 
         # Test NotEqualHeaviside
         self.assertEqual(pybamm.NotEqualHeaviside(2, 4).to_equation(), True)
+
+    def test_to_json(self):
+        # Test Addition
+        self.assertEqual(
+            pybamm.Addition(2, 4).to_json(),
+            {
+                "name": "+",
+                "id": mock.ANY,
+                "domains": EMPTY_DOMAINS,
+            },
+        )
+
+        # Test Power
+        self.assertEqual(
+            pybamm.Power(7, 2).to_json(),
+            {
+                "name": "**",
+                "id": mock.ANY,
+                "domains": EMPTY_DOMAINS,
+            },
+        )
+
+        # Test Division
+        self.assertEqual(
+            pybamm.Division(10, 5).to_json(),
+            {
+                "name": "/",
+                "id": mock.ANY,
+                "domains": EMPTY_DOMAINS,
+            },
+        )
+
+        # Test EqualHeaviside
+        self.assertEqual(
+            pybamm.EqualHeaviside(2, 4).to_json(),
+            {
+                "name": "<=",
+                "id": mock.ANY,
+                "domains": EMPTY_DOMAINS,
+            },
+        )
+
+        # Test notEqualHeaviside
+        self.assertEqual(
+            pybamm.NotEqualHeaviside(2, 4).to_json(),
+            {
+                "name": "<",
+                "id": mock.ANY,
+                "domains": EMPTY_DOMAINS,
+            },
+        )
 
 
 if __name__ == "__main__":

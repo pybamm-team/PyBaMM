@@ -3,6 +3,7 @@
 #
 import unittest
 from tests import TestCase
+import unittest.mock as mock
 
 import numpy as np
 import sympy
@@ -667,6 +668,57 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.name, "explicit time integral")
         self.assertEqual(expr.new_copy(), expr)
         self.assertFalse(expr.is_constant())
+
+    def test_to_json(self):
+        # UnaryOperator
+        a = pybamm.Symbol("a", domain=["test"])
+        un = pybamm.UnaryOperator("unary test", a)
+        self.assertEqual(
+            un.to_json(),
+            {
+                "name": "unary test",
+                "id": mock.ANY,
+                "domains": {
+                    "primary": ["test"],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": [],
+                },
+            },
+        )
+
+        # Index
+        vec = pybamm.StateVector(slice(0, 5))
+        ind = pybamm.Index(vec, 3)
+        self.assertEqual(
+            ind.to_json(),
+            {
+                "name": "Index[3]",
+                "id": mock.ANY,
+                "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": [],
+                },
+                "check_size": False,
+            },
+        )
+
+        # SpatialOperator
+        spatial_vec = pybamm.SpatialOperator("name", vec)
+        with self.assertRaises(NotImplementedError):
+            spatial_vec.to_json()
+
+        # ExplicitTimeIntegral
+        expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
+        self.assertEqual(
+            expr.to_json(),
+            {
+                "name": "explicit time integral",
+                "id": mock.ANY,
+            },
+        )
 
 
 if __name__ == "__main__":

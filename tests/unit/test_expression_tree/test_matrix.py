@@ -4,8 +4,10 @@
 from tests import TestCase
 import pybamm
 import numpy as np
+from scipy.sparse import csr_matrix
 
 import unittest
+import unittest.mock as mock
 
 
 class TestMatrix(TestCase):
@@ -36,6 +38,28 @@ class TestMatrix(TestCase):
         )
         np.testing.assert_array_equal(
             (self.mat @ self.vect).evaluate(), np.array([[5], [2], [3]])
+        )
+
+    def test_to_json_matrix(self):
+        arr = pybamm.Matrix(csr_matrix([[0, 1, 0, 0], [0, 0, 0, 1]]))
+        self.assertEqual(
+            arr.to_json(),
+            {
+                "name": "Sparse Matrix (2, 4)",
+                "id": mock.ANY,  # The value of the ID will change, but want to check it is present
+                "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": [],
+                },
+                "entries": {
+                    "column_pointers": [0, 1, 2],
+                    "data": [1.0, 1.0],
+                    "row_indices": [1, 3],
+                    "shape": (2, 4),
+                },
+            },
         )
 
 

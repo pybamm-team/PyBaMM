@@ -6,6 +6,8 @@ import numpy as np
 import pybamm
 import unittest
 
+import unittest.mock as mock
+
 
 class TestInputParameter(TestCase):
     def test_input_parameter_init(self):
@@ -48,6 +50,18 @@ class TestInputParameter(TestCase):
         # if u is not provided it gets turned into a dictionary and then raises KeyError
         with self.assertRaises(KeyError):
             a.evaluate()
+
+    def test_to_json(self):
+        a = pybamm.InputParameter("a")
+
+        json_dict = {
+            "name": "a",
+            "id": mock.ANY,
+            "domain": [],
+            "expected_size": 1,
+        }
+
+        self.assertEqual(a.to_json(), json_dict)
 
 
 if __name__ == "__main__":

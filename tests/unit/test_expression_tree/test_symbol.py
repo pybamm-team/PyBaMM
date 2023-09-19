@@ -4,6 +4,7 @@
 from tests import TestCase
 import os
 import unittest
+import unittest.mock as mock
 
 import numpy as np
 from scipy.sparse import csr_matrix, coo_matrix
@@ -485,6 +486,25 @@ class TestSymbol(TestCase):
     def test_numpy_array_ufunc(self):
         x = pybamm.Symbol("x")
         self.assertEqual(np.exp(x), pybamm.exp(x))
+
+    def test_to_json(self):
+        symc1 = pybamm.Symbol("child1", domain=["domain_1"])
+        symc2 = pybamm.Symbol("child2", domain=["domain_2"])
+        symp = pybamm.Symbol("parent", domain=["domain_3"], children=[symc1, symc2])
+
+        self.assertEqual(
+            symp.to_json(),
+            {
+                "name": "parent",
+                "id": mock.ANY,
+                "domains": {
+                    "primary": ["domain_3"],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": [],
+                },
+            },
+        )
 
 
 class TestIsZero(TestCase):

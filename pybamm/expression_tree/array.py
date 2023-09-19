@@ -3,7 +3,7 @@
 #
 import numpy as np
 import sympy
-from scipy.sparse import csr_matrix, issparse, csr_array
+from scipy.sparse import csr_matrix, issparse
 
 import pybamm
 
@@ -176,7 +176,6 @@ class Array(pybamm.Symbol):
             "id": self.id,
             "domains": self.domains,
             "entries": matrix,
-            # "entries_string": self.entries_string.decode(),
         }
 
         return json_dict

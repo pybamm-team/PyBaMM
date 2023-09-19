@@ -3,6 +3,7 @@
 #
 from tests import TestCase
 import unittest
+import unittest.mock as mock
 
 import numpy as np
 import sympy
@@ -39,6 +40,23 @@ class TestArray(TestCase):
     def test_to_equation(self):
         self.assertEqual(
             pybamm.Array([1, 2]).to_equation(), sympy.Array([[1.0], [2.0]])
+        )
+
+    def test_to_json_array(self):
+        arr = pybamm.Array(np.array([1, 2, 3]))
+        self.assertEqual(
+            arr.to_json(),
+            {
+                "name": "Array of shape (3, 1)",
+                "id": mock.ANY,  # The value of the ID will change, but want to check it is present
+                "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": [],
+                },
+                "entries": [[1.0], [2.0], [3.0]],
+            },
         )
 
 

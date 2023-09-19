@@ -292,4 +292,6 @@ class Interpolant(pybamm.Function):
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
 
     def to_json(self):
-        raise NotImplementedError
+        raise NotImplementedError(
+            "pybamm.Interpolant: Serialisation is only implemented for discretised models."
+        )

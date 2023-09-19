@@ -350,6 +350,12 @@ class TestBroadcasts(TestCase):
         self.assertIsInstance(d, pybamm.Scalar)
         self.assertEqual(d.evaluate(y=y), 0)
 
+    def test_to_json(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.PrimaryBroadcast(a, "separator")
+        with self.assertRaises(NotImplementedError):
+            b.to_json()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -227,7 +227,6 @@ class StateVectorBase(pybamm.Symbol):
                 for y in self.y_slices
             ],
             "evaluation_array": list(self.evaluation_array),
-            # "children": self.children,  # might not need this, the anytree exporter handles children I think
         }
 
         return json_dict
