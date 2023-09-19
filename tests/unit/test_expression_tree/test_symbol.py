@@ -482,6 +482,10 @@ class TestSymbol(TestCase):
     def test_to_equation(self):
         self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
+    def test_numpy_array_ufunc(self):
+        x = pybamm.Symbol("x")
+        self.assertEqual(np.exp(x), pybamm.exp(x))
+
 
 class TestIsZero(TestCase):
     def test_is_scalar_zero(self):

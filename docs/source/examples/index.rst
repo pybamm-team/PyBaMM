@@ -59,6 +59,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/lead-acid.ipynb
     notebooks/models/lithium-plating.ipynb
     notebooks/models/MPM.ipynb
+    notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
     notebooks/models/rate-capability.ipynb
     notebooks/models/SEI-on-cracks.ipynb
@@ -66,7 +67,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/SPM.ipynb
     notebooks/models/SPMe.ipynb
     notebooks/models/submodel_cracking_DFN_or_SPM.ipynb
-    notebooks/models/submodel_loss_of_active_materials.ipynb
+    notebooks/models/loss_of_active_materials.ipynb
     notebooks/models/thermal-models.ipynb
     notebooks/models/unsteady-heat-equation.ipynb
     notebooks/models/using-model-options_thermal-example.ipynb

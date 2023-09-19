@@ -28,7 +28,7 @@ def battery_geometry(
         A geometry class for the battery
 
     """
-    if options is None or type(options) == dict:
+    if options is None or type(options) == dict:  # noqa: E721
         options = pybamm.BatteryModelOptions(options)
     geo = pybamm.GeometricParameters(options)
     L_n = geo.n.L

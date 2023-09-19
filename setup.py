@@ -205,7 +205,6 @@ setup(
     install_requires=[
         "numpy>=1.16",
         "scipy>=1.3",
-        "pandas>=0.24",
         "casadi>=3.6.0",
         "xarray",
     ],
@@ -253,7 +252,11 @@ setup(
         ],
         "dev": [
             "pre-commit",  # For code style checking
-            "ruff",  # For code style auto-formatting
+            "ruff", # For code style auto-formatting
+            "nox", # For running testing sessions
+        ],
+        "pandas": [
+            "pandas>=0.24",
         ],
         "jax": [
             "jax==0.4.8",
@@ -263,6 +266,7 @@ setup(
         "all": [
             "anytree>=2.4.3",
             "autograd>=1.2",
+            "pandas>=0.24",
             "scikit-fem>=0.2.0",
             "imageio>=2.9.0",
             "pybtex>=0.24.0",
@@ -296,6 +300,7 @@ setup(
             "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
             "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
             "ECM_Example = pybamm.input.parameters.ecm.example_set:get_parameter_values",  # noqa: E501
+            "MSMR_Example = pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values",  # noqa: E501
         ],
     },
 )
