@@ -45,6 +45,11 @@ class Broadcast(pybamm.SpatialOperator):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         return child
 
+    def _diff(self, variable):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Differentiate the child and broadcast the result in the same way
+        return self._unary_new_copy(self.child.diff(variable))
+
 
 class PrimaryBroadcast(Broadcast):
     """
