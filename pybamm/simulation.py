@@ -373,7 +373,7 @@ class Simulation:
         options = self.model.options
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
-            self.parameter_values = self._unprocessed_parameter_values.set_initial_ocps(
+            self._parameter_values = self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
                 initial_soc, param=param, inplace=False, options=options
             )
         else:
