@@ -68,11 +68,6 @@ class Experiment:
             termination,
         )
 
-        self.datetime_formats = [
-            "Day %j %H:%M:%S",
-            "%Y-%m-%d %H:%M:%S",
-        ]
-
         operating_conditions_cycles = []
         for cycle in operating_conditions:
             # Check types and convert to list
@@ -89,21 +84,36 @@ class Experiment:
 
         # Convert strings to pybamm.step._Step objects
         # We only do this once per unique step, do avoid unnecessary conversions
-        unique_steps_unprocessed = set(operating_conditions_steps_unprocessed)
+        # Assign experiment period and temperature if not specified in step
+        self.period = _convert_time_to_seconds(period)
+        self.temperature = _convert_temperature_to_kelvin(temperature)
+
         processed_steps = {}
-        for step in unique_steps_unprocessed:
-            if isinstance(step, str):
-                processed_steps[step] = pybamm.step.string(step)
+        for step in operating_conditions_steps_unprocessed:
+            if repr(step) in processed_steps:
+                continue
+            elif isinstance(step, str):
+                processed_step = pybamm.step.string(step)
             elif isinstance(step, pybamm.step._Step):
-                processed_steps[step] = step
+                processed_step = step
+
+            if processed_step.period is None:
+                processed_step.period = self.period
+            if processed_step.temperature is None:
+                processed_step.temperature = self.temperature
+
+            processed_steps[repr(step)] = processed_step
+
+        self.operating_conditions_steps = [
+            processed_steps[repr(step)]
+            for step in operating_conditions_steps_unprocessed
+        ]
 
         # Save the processed unique steps and the processed operating conditions
         # for every step
         self.unique_steps = set(processed_steps.values())
-        self.operating_conditions_steps = [
-            processed_steps[step] for step in operating_conditions_steps_unprocessed
-        ]
 
+        # Allocate experiment global variables
         self.initial_start_time = self.operating_conditions_steps[0].start_time
 
         if (
@@ -117,15 +127,6 @@ class Experiment:
 
         self.termination_string = termination
         self.termination = self.read_termination(termination)
-
-        # Modify steps with period and temperature in place
-        self.period = _convert_time_to_seconds(period)
-        self.temperature = _convert_temperature_to_kelvin(temperature)
-        for step in self.unique_steps:
-            if step.period is None:
-                step.period = self.period
-            if step.temperature is None:
-                step.temperature = self.temperature
 
     def __str__(self):
         return str(self.operating_conditions_cycles)

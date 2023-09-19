@@ -38,8 +38,12 @@ class TestSimulationExperiment(TestCase):
             [3600, 3 / Crate * 3600, 24 * 3600, 24 * 3600],
         )
 
-        model_I = sim.experiment_unique_steps_to_model[repr(op_conds[1])]  # CC charge
-        model_V = sim.experiment_unique_steps_to_model[repr(op_conds[2])]  # CV hold
+        model_I = sim.experiment_unique_steps_to_model[
+            op_conds[1].basic_repr()
+        ]  # CC charge
+        model_V = sim.experiment_unique_steps_to_model[
+            op_conds[2].basic_repr()
+        ]  # CV hold
         self.assertIn(
             "Current cut-off [A] [experiment]",
             [event.name for event in model_V.events],
@@ -728,6 +732,38 @@ class TestSimulationExperiment(TestCase):
 
         # test that the final time is correct (i.e. starting solution correctly set)
         self.assertEqual(new_solution["Time [s]"].entries[-1], 5400)
+
+    def test_experiment_start_time_identical_steps(self):
+        # Test that if we have the same step twice, with different start times,
+        # they get processed only once
+        model = pybamm.lithium_ion.SPM()
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string("Discharge at C/3 for 10 minutes"),
+                pybamm.step.string(
+                    "Discharge at C/2 for 10 minutes",
+                    start_time=datetime(2023, 1, 1, 10, 0, 0),
+                ),
+                pybamm.step.string("Discharge at C/3 for 10 minutes"),
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(calc_esoh=False)
+
+        # Check that there are 4 steps
+        self.assertEqual(len(experiment.operating_conditions_steps), 4)
+
+        # Check that there are only 2 unique steps
+        self.assertEqual(len(sim.experiment.unique_steps), 2)
+
+        # Check that there are only 3 built models (unique steps + padding rest)
+        self.assertEqual(len(sim.op_conds_to_built_models), 3)
 
 
 if __name__ == "__main__":
