@@ -18,7 +18,7 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import importlib.metadata as il
+import importlib.metadata
 
 import pybamm
 
@@ -272,8 +272,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        il.distribution("jax").version.startswith(JAX_VERSION)
-        and il.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
+        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
+        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
     )
 
 
