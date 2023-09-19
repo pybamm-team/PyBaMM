@@ -1,5 +1,5 @@
-Butler Volumer
-==============
+Butler Volmer
+=============
 
 .. autoclass:: pybamm.kinetics.SymmetricButlerVolmer
     :members:

@@ -9,5 +9,6 @@ Lithium-ion Models
   mpm
   dfn
   newman_tobias
+  msmr
   yang2017
   electrode_soh
