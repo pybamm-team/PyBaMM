@@ -23,8 +23,8 @@ import importlib.metadata as il
 import pybamm
 
 # versions of jax and jaxlib compatible with PyBaMM
-JAX_VERSION = "0.4.8"
-JAXLIB_VERSION = "0.4.7"
+JAX_VERSION = "0.4"
+JAXLIB_VERSION = "0.4"
 
 
 def root_dir():
@@ -272,8 +272,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        il.distribution("jax").version == JAX_VERSION
-        and il.distribution("jaxlib").version == JAXLIB_VERSION
+        il.distribution("jax").version.startswith(JAX_VERSION)
+        and il.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
     )
 
 
@@ -341,7 +341,7 @@ def install_jax(arguments=None):  # pragma: no cover
             "-m",
             "pip",
             "install",
-            f"jax=={JAX_VERSION}",
-            f"jaxlib=={JAXLIB_VERSION}",
+            f"jax>={JAX_VERSION}",
+            f"jaxlib>={JAXLIB_VERSION}",
         ]
     )
