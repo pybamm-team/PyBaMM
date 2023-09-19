@@ -338,6 +338,18 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Sripad2020", citations._papers_to_cite)
         self.assertIn("Sripad2020", citations._citation_tags.keys())
 
+    def test_msmr(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Baker2018", citations._papers_to_cite)
+        self.assertNotIn("Verbrugge2017", citations._papers_to_cite)
+        pybamm.particle.MSMRDiffusion(None, "negative", None, None, None)
+        self.assertIn("Baker2018", citations._papers_to_cite)
+        self.assertIn("Baker2018", citations._citation_tags.keys())
+        self.assertIn("Verbrugge2017", citations._papers_to_cite)
+        self.assertIn("Verbrugge2017", citations._citation_tags.keys())
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 
@@ -378,6 +390,13 @@ class TestCitations(unittest.TestCase):
         pybamm.ParameterValues("ORegan2022")
         self.assertIn("ORegan2022", citations._papers_to_cite)
         self.assertIn("ORegan2022", citations._citation_tags.keys())
+
+        citations._reset()
+        pybamm.ParameterValues("MSMR_Example")
+        self.assertIn("Baker2018", citations._papers_to_cite)
+        self.assertIn("Baker2018", citations._citation_tags.keys())
+        self.assertIn("Verbrugge2017", citations._papers_to_cite)
+        self.assertIn("Verbrugge2017", citations._citation_tags.keys())
 
     def test_solver_citations(self):
         # Test that solving each solver adds the right citations
