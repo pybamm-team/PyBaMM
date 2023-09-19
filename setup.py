@@ -258,7 +258,7 @@ setup(
             # For running testing sessions
             "nox",
             # For testing Jupyter notebooks
-            "pytest",
+            "pytest>=6",
             "pytest-xdist",
             "nbmake",
         ],
