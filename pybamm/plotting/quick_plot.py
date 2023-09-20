@@ -106,8 +106,7 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        input_solutions = solutions
-        solutions = self.preprocess_solutions(input_solutions)
+        solutions = self.preprocess_solutions(solutions)
 
         models = [solution.all_models[0] for solution in solutions]
 
@@ -230,17 +229,17 @@ class QuickPlot(object):
         self.reset_axis()
 
     @staticmethod
-    def preprocess_solutions(input_solutions):
-        solutions = []
-        input_solutions = QuickPlot.check_input_validity(input_solutions)
+    def preprocess_solutions(solutions):
+        input_solutions = QuickPlot.check_input_validity(solutions)
+        processed_solutions = []
         for sim_or_sol in input_solutions:
             if isinstance(sim_or_sol, pybamm.Simulation):
-                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                # 'sim_or_sol' is actually a 'Simulation' object here, so it has a
                 # 'Solution' attribute
-                solutions.append(sim_or_sol.solution)
+                processed_solutions.append(sim_or_sol.solution)
             elif isinstance(sim_or_sol, pybamm.Solution):
-                solutions.append(sim_or_sol)
-        return solutions
+                processed_solutions.append(sim_or_sol)
+        return processed_solutions
 
     @staticmethod
     def check_input_validity(input_solutions):
