@@ -464,8 +464,12 @@ class TestQuickPlot(TestCase):
         pybamm.close_plots()
 
     def test_failure(self):
-        with self.assertRaisesRegex(TypeError, "solutions must be"):
+        with self.assertRaisesRegex(TypeError, "Solutions must be"):
             pybamm.QuickPlot(1)
+
+    def test_empty_list_failure(self):
+        with self.assertRaisesRegex(TypeError, "QuickPlot requires at least 1"):
+            pybamm.QuickPlot([])
 
     def test_model_with_inputs(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
