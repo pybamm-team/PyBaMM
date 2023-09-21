@@ -210,12 +210,23 @@ if __name__ == "__main__":
         action="store_true",
         help="Run unit tests without starting a subprocess.",
     )
+    # Example notebooks tests
+    parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",  # noqa: E501
+    )
+    parser.add_argument(
+        "--debook",
+        nargs=2,
+        metavar=("in", "out"),
+        help="Export a Jupyter notebook to a Python file for manual testing.",
+    )
     # Scripts tests
     parser.add_argument(
         "--scripts",
         action="store_true",
         help="Test all example scripts in `examples/`.",
-
     )
     # Doctests
     parser.add_argument(
@@ -262,6 +273,15 @@ if __name__ == "__main__":
     if args.doctest:
         has_run = True
         run_doc_tests()
+    # Notebook tests (deprecated)
+    elif args.examples:
+        raise ValueError(
+            "Notebook tests are deprecated, use nox -s examples or pytest instead"
+        )
+    if args.debook:
+        raise ValueError(
+            "Notebook tests are deprecated, use nox -s examples or pytest instead"
+        )
     # Scripts tests
     elif args.scripts:
         has_run = True
