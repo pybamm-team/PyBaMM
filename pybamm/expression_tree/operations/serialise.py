@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import importlib
 import numpy as np
+import re
 
 from typing import TYPE_CHECKING
 
@@ -135,7 +136,9 @@ class Serialise:
             model_json["mesh"] = self._MeshEncoder().default(mesh)
 
         if variables:
-            model_json["geometry"] = dict(model._geometry)
+            model_json["geometry"] = self._deconstruct_pybamm_dicts(
+                dict(model._geometry)
+            )
             model_json["variables"] = {
                 k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
             }
@@ -184,27 +187,29 @@ class Serialise:
             "name": model_data["name"],
             "options": model_data["options"],
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
-            "concatenated_rhs": self._reconstruct_epression_tree(
+            "concatenated_rhs": self._reconstruct_expression_tree(
                 model_data["concatenated_rhs"]
             ),
-            "concatenated_algebraic": self._reconstruct_epression_tree(
+            "concatenated_algebraic": self._reconstruct_expression_tree(
                 model_data["concatenated_algebraic"]
             ),
-            "concatenated_initial_conditions": self._reconstruct_epression_tree(
+            "concatenated_initial_conditions": self._reconstruct_expression_tree(
                 model_data["concatenated_initial_conditions"]
             ),
             "events": [
-                self._reconstruct_epression_tree(event)
+                self._reconstruct_expression_tree(event)
                 for event in model_data["events"]
             ],
-            "mass_matrix": self._reconstruct_epression_tree(model_data["mass_matrix"]),
-            "mass_matrix_inv": self._reconstruct_epression_tree(
+            "mass_matrix": self._reconstruct_expression_tree(model_data["mass_matrix"]),
+            "mass_matrix_inv": self._reconstruct_expression_tree(
                 model_data["mass_matrix_inv"]
             ),
         }
 
         recon_model_dict["geometry"] = (
-            model_data["geometry"] if "geometry" in model_data.keys() else None
+            self._reconstruct_geometry(model_data["geometry"])
+            if "geometry" in model_data.keys()
+            else None
         )
 
         recon_model_dict["mesh"] = (
@@ -215,7 +220,7 @@ class Serialise:
 
         recon_model_dict["variables"] = (
             {
-                k: self._reconstruct_epression_tree(v)
+                k: self._reconstruct_expression_tree(v)
                 for k, v in model_data["variables"].items()
             }
             if "variables" in model_data.keys()
@@ -234,6 +239,8 @@ class Serialise:
             The PyBaMM battery model to use has not been provided.
             """
         )
+
+    # Helper functions
 
     def _get_pybamm_class(self, snippet: dict):
         """Find a pybamm class to initialise from object path"""
@@ -254,13 +261,55 @@ class Serialise:
 
         return empty_class
 
+    def _deconstruct_pybamm_dicts(self, dct: dict):
+        """
+        Converts dictionaries which contain pybamm classes as keys
+        into a json serialisable format.
+
+        Dictionary keys present as pybamm objects are given a seperate key
+        as "symbol_<symbol name>" to store the dictionary required to reconstruct
+        a symbol, and their seperate key is used in the original dictionary. E.G:
+
+        {'rod':
+            {SpatialVariable(name='spat_var'): {"min":0.0, "max":2.0} }
+            }
+
+        converts to
+
+        {'rod':
+            {'symbol_spat_var': {"min":0.0, "max":2.0} },
+        'spat_var':
+            {"py/object":pybamm....}
+        }
+
+        Dictionaries which don't contain pybamm symbols are returned unchanged.
+        """
+
+        def nested_convert(obj):
+            if isinstance(obj, dict):
+                new_dict = {}
+                for k, v in obj.items():
+                    if isinstance(k, pybamm.Symbol):
+                        new_k = self._SymbolEncoder().default(k)
+                        new_dict["symbol_" + new_k["name"]] = new_k
+                        k = new_k["name"]
+                    new_dict[k] = nested_convert(v)
+                return new_dict
+            return obj
+
+        try:
+            _ = json.dumps(dct)
+            return dict(dct)
+        except TypeError:  # dct must contain pybamm objects
+            return nested_convert(dct)
+
     def _reconstruct_symbol(self, dct: dict):
         """Reconstruct an individual pybamm Symbol"""
         symbol_class = self._get_pybamm_class(dct)
         symbol = symbol_class._from_json(dct)
         return symbol
 
-    def _reconstruct_epression_tree(self, node: dict):
+    def _reconstruct_expression_tree(self, node: dict):
         """
         Loop through an expression tree creating pybamm Symbol classes
 
@@ -275,10 +324,10 @@ class Serialise:
         """
         if "children" in node:
             for i, c in enumerate(node["children"]):
-                child_obj = self._reconstruct_epression_tree(c)
+                child_obj = self._reconstruct_expression_tree(c)
                 node["children"][i] = child_obj
         elif "expression" in node:
-            expression_obj = self._reconstruct_epression_tree(node["expression"])
+            expression_obj = self._reconstruct_expression_tree(node["expression"])
             node["expression"] = expression_obj
 
         obj = self._reconstruct_symbol(node)
@@ -295,3 +344,48 @@ class Serialise:
         new_mesh = self._reconstruct_symbol(node)
 
         return new_mesh
+
+    def _reconstruct_geometry(self, obj: dict):
+        """
+        pybamm.Geometry can contain PyBaMM symbols as dictionary keys.
+
+        Converts
+        {"rod":
+            {"symbol_spat_var":
+                {"min":0.0, "max":2.0} },
+            "spat_var":
+                {"py/object":"pybamm...."}
+        }
+
+        from an exported JSON file to
+
+        {"rod":
+            {SpatialVariable(name="spat_var"): {"min":0.0, "max":2.0} }
+            }
+        """
+
+        def recurse(obj):
+            if isinstance(obj, dict):
+                new_dict = {}
+                for k, v in obj.items():
+                    if "symbol_" in k:
+                        new_dict[k] = self._reconstruct_symbol(v)
+                    elif isinstance(v, dict):
+                        new_dict[k] = recurse(v)
+                    else:
+                        new_dict[k] = v
+
+                pattern = re.compile("symbol_")
+                symbol_keys = {k: v for k, v in new_dict.items() if pattern.match(k)}
+
+                # rearrange the dictionary to make pybamm objects the dictionary keys
+                if symbol_keys:
+                    for k, v in symbol_keys.items():
+                        new_dict[v] = new_dict[k.lstrip("symbol_")]
+                        del new_dict[k]
+                        del new_dict[k.lstrip("symbol_")]
+
+                return new_dict
+            return obj
+
+        return recurse(obj)

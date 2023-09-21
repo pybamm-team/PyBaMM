@@ -123,6 +123,12 @@ class BaseModel:
         self.is_discretised = False
         self.y_slices = None
 
+    @classmethod
+    def deserialise(cls, properties: dict):
+        raise NotImplementedError(
+            "BaseModel: Serialisation not yet implemented for non-battery models."
+        )
+
     @property
     def name(self):
         return self._name
@@ -1109,6 +1115,11 @@ class BaseModel:
         disc_symbol = disc.process_symbol(param_symbol)
 
         return disc_symbol
+
+    def save_model(self, filename=None, mesh=None, variables=None):
+        raise NotImplementedError(
+            "BaseModel: Serialisation not yet implemented for non-battery models."
+        )
 
 
 # helper functions for finding symbols
