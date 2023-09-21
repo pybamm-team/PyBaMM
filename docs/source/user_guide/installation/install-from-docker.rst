@@ -201,6 +201,16 @@ Using Git Inside a Running Docker Container
 
       git config --global user.email your@mail.com
 
+2. Setting a git remote
+
+.. code-block:: bash
+
+      git remote set-url origin <fork_url>
+
+      git remote add upstream https://github.com/pybamm-team/PyBaMM
+
+      git fetch --all
+
 Using Visual Studio Code Inside a Running Docker Container
 ----------------------------------------------------------
 
