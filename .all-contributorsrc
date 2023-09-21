@@ -693,7 +693,8 @@
       "contributions": [
         "doc",
         "infra",
-        "bug"
+        "bug",
+        "code"
       ]
     }
   ],
