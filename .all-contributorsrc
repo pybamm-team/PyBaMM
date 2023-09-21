@@ -694,7 +694,8 @@
         "doc",
         "infra",
         "bug",
-        "code"
+        "code",
+        "test"
       ]
     }
   ],
