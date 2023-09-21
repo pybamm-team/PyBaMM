@@ -325,7 +325,7 @@ class TestInterpolant(TestCase):
 
         self.assertEqual(interp, interp.new_copy())
 
-    def test_to_json(self):
+    def test_to_json_error(self):
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
         interp = pybamm.Interpolant(x, 2 * x, y)

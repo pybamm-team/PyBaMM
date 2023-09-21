@@ -63,7 +63,7 @@ class TestStateVector(TestCase):
         with self.assertRaisesRegex(TypeError, "all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
 
-    def test_to_json(self):
+    def test_to_from_json(self):
         array = np.array([1, 2, 3, 4, 5])
         sv = pybamm.StateVector(slice(0, 10), evaluation_array=array)
 
@@ -87,6 +87,8 @@ class TestStateVector(TestCase):
         }
 
         self.assertEqual(sv.to_json(), json_dict)
+
+        self.assertEqual(pybamm.StateVector._from_json(json_dict), sv)
 
 
 class TestStateVectorDot(TestCase):

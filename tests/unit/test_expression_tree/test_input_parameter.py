@@ -51,7 +51,7 @@ class TestInputParameter(TestCase):
         with self.assertRaises(KeyError):
             a.evaluate()
 
-    def test_to_json(self):
+    def test_to_from_json(self):
         a = pybamm.InputParameter("a")
 
         json_dict = {
@@ -61,7 +61,11 @@ class TestInputParameter(TestCase):
             "expected_size": 1,
         }
 
+        # to_json
         self.assertEqual(a.to_json(), json_dict)
+
+        # from_json
+        self.assertEqual(pybamm.InputParameter._from_json(json_dict), a)
 
 
 if __name__ == "__main__":

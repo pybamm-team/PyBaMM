@@ -45,10 +45,13 @@ class TestScalar(TestCase):
         b = a.create_copy()
         self.assertEqual(a, b)
 
-    def test_to_json(self):
+    def test_to_from_json(self):
         a = pybamm.Scalar(5)
+        json_dict = {"name": "5.0", "id": mock.ANY, "value": 5.0}
 
-        self.assertEqual(a.to_json(), {"name": "5.0", "id": mock.ANY, "value": 5.0})
+        self.assertEqual(a.to_json(), json_dict)
+
+        self.assertEqual(pybamm.Scalar._from_json(json_dict), a)
 
 
 if __name__ == "__main__":
