@@ -443,7 +443,7 @@ class Solution(object):
 
     @initial_start_time.setter
     def initial_start_time(self, value):
-        """Updates the reason for termination"""
+        """Updates the initial start time of the experiment"""
         self._initial_start_time = value
 
     def set_summary_variables(self, all_summary_variables):

@@ -115,6 +115,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s examples
 
+      - name: Run example scripts tests
+        if: matrix.os == 'ubuntu-latest'
+        run: nox -s scripts
+
   #M-series Mac Mini
   build-apple-mseries:
     needs: style
