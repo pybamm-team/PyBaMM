@@ -338,35 +338,34 @@ class TestScipySolver(TestCase):
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-    def test_model_solver_multiple_inputs_jax_format_error(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "jax"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+    def test_model_solver_multiple_inputs_jax_format(self):
+        if pybamm.have_jax():
+            # Create model
+            model = pybamm.BaseModel()
+            model.convert_to_format = "jax"
+            domain = ["negative electrode", "separator", "positive electrode"]
+            var = pybamm.Variable("var", domain=domain)
+            model.rhs = {var: -pybamm.InputParameter("rate") * var}
+            model.initial_conditions = {var: 1}
+            # create discretisation
+            mesh = get_mesh_for_testing()
+            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.process_model(model)
 
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        ninputs = 8
-        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+            solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8, method="RK45")
+            t_eval = np.linspace(0, 10, 100)
+            ninputs = 8
+            inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-        with self.assertRaisesRegex(
-            pybamm.SolverError,
-            (
-                "Cannot solve list of inputs with multiprocessing "
-                'when model in format "jax".'
-            ),
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            for i in range(ninputs):
+                with self.subTest(i=i):
+                    solution = solutions[i]
+                    np.testing.assert_array_equal(solution.t, t_eval)
+                    np.testing.assert_allclose(
+                        solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
+                    )
 
     def test_model_solver_with_event_with_casadi(self):
         # Create model

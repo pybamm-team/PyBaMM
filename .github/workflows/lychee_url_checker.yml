@@ -45,6 +45,7 @@ jobs:
             --accept 200,429
             --exclude-path ./CHANGELOG.md
             --exclude-path ./scripts/update_version.py
+            --exclude-path docs/conf.py
             './**/*.rst'
             './**/*.md'
             './**/*.py'

@@ -108,6 +108,16 @@ class TestMPM(TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
+    def test_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
 
 class TestMPMExternalCircuits(TestCase):
     def test_well_posed_voltage(self):

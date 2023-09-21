@@ -255,7 +255,7 @@ class Simulation:
             parameterised_model = new_parameter_values.process_model(
                 new_model, inplace=False
             )
-            self.experiment_unique_steps_to_model[repr(op)] = parameterised_model
+            self.experiment_unique_steps_to_model[op.basic_repr()] = parameterised_model
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
@@ -371,12 +371,19 @@ class Simulation:
             self.op_conds_to_built_models = None
             self.op_conds_to_built_solvers = None
 
+        options = self.model.options
         param = self.model.param
-        self.parameter_values = (
-            self._unprocessed_parameter_values.set_initial_stoichiometries(
-                initial_soc, param=param, inplace=False
+        if options["open-circuit potential"] == "MSMR":
+            self.parameter_values = self._unprocessed_parameter_values.set_initial_ocps(
+                initial_soc, param=param, inplace=False, options=options
             )
-        )
+        else:
+            self.parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometries(
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 
@@ -641,6 +648,21 @@ class Simulation:
                     starting_solution.all_first_states.copy()
                 )
 
+            # set simulation initial_start_time
+            if starting_solution is None:
+                initial_start_time = self.experiment.initial_start_time
+            else:
+                initial_start_time = starting_solution.initial_start_time
+
+            if (
+                initial_start_time is None
+                and self.experiment.initial_start_time is not None
+            ):
+                raise ValueError(
+                    "When using experiments with `start_time`, the starting_solution "
+                    "must have a `start_time` too."
+                )
+
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
             all_summary_variables = starting_solution_summary_variables
@@ -653,6 +675,49 @@ class Simulation:
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
+
+            # Add initial padding rest if current time is earlier than first start time
+            # This could be the case when using a starting solution
+            if starting_solution is not None:
+                op_conds = self.experiment.operating_conditions_steps[0]
+                if op_conds.start_time is not None:
+                    rest_time = (
+                        op_conds.start_time
+                        - (
+                            initial_start_time
+                            + timedelta(seconds=float(current_solution.t[-1]))
+                        )
+                    ).total_seconds()
+                    if rest_time > pybamm.settings.step_start_offset:
+                        # logs["step operating conditions"] = "Initial rest for padding"
+                        # callbacks.on_step_start(logs)
+
+                        kwargs["inputs"] = {
+                            **user_inputs,
+                            "Ambient temperature [K]": (
+                                op_conds.temperature or self._original_temperature
+                            ),
+                            "start time": current_solution.t[-1],
+                        }
+                        steps = current_solution.cycles[-1].steps
+                        step_solution = current_solution.cycles[-1].steps[-1]
+
+                        step_solution_with_rest = self.run_padding_rest(
+                            kwargs, rest_time, step_solution
+                        )
+                        steps[-1] = step_solution + step_solution_with_rest
+
+                        cycle_solution, _, _ = pybamm.make_cycle_solution(
+                            steps, esoh_solver=esoh_solver, save_this_cycle=True
+                        )
+                        old_cycles = current_solution.cycles.copy()
+                        old_cycles[-1] = cycle_solution
+                        current_solution += step_solution_with_rest
+                        current_solution.cycles = old_cycles
+
+                        # Update _solution
+                        self._solution = current_solution
+
             for cycle_num, cycle_length in enumerate(
                 # tqdm is the progress bar.
                 tqdm.tqdm(
@@ -676,6 +741,8 @@ class Simulation:
                 save_this_cycle = (
                     # always save cycle 1
                     cycle_num == 1
+                    # always save last cycle
+                    or cycle_num == num_cycles
                     # None: save all cycles
                     or save_at_cycles is None
                     # list: save all cycles in the list
@@ -703,7 +770,7 @@ class Simulation:
                             (
                                 op_conds.end_time
                                 - (
-                                    self.experiment.initial_start_time
+                                    initial_start_time
                                     + timedelta(seconds=float(start_time))
                                 )
                             ).total_seconds(),
@@ -711,8 +778,8 @@ class Simulation:
                     else:
                         dt = op_conds.duration
                     op_conds_str = str(op_conds)
-                    model = self.op_conds_to_built_models[repr(op_conds)]
-                    solver = self.op_conds_to_built_solvers[repr(op_conds)]
+                    model = self.op_conds_to_built_models[op_conds.basic_repr()]
+                    solver = self.op_conds_to_built_solvers[op_conds.basic_repr()]
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = op_conds_str
@@ -758,41 +825,25 @@ class Simulation:
                         rest_time = (
                             op_conds.next_start_time
                             - (
-                                self.experiment.initial_start_time
+                                initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
                             )
                         ).total_seconds()
                         if rest_time > pybamm.settings.step_start_offset:
-                            start_time = step_solution.t[-1]
-                            # Let me know if you have a better name
-                            op_conds_str = "Rest for padding"
-                            model = self.op_conds_to_built_models[op_conds_str]
-                            solver = self.op_conds_to_built_solvers[op_conds_str]
-
                             logs["step number"] = (step_num, cycle_length)
-                            logs["step operating conditions"] = op_conds_str
+                            logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)
 
-                            ambient_temp = (
-                                op_conds.temperature or self._original_temperature
-                            )
                             kwargs["inputs"] = {
                                 **user_inputs,
-                                "Ambient temperature [K]": ambient_temp,
-                                "start time": start_time,
+                                "Ambient temperature [K]": (
+                                    op_conds.temperature or self._original_temperature
+                                ),
+                                "start time": step_solution.t[-1],
                             }
-                            # Make sure we take at least 2 timesteps
-                            # The period is hardcoded to 10 minutes, the user can
-                            # always override it by adding a rest step
-                            npts = max(int(round(rest_time / 600)) + 1, 2)
 
-                            step_solution_with_rest = solver.step(
-                                step_solution,
-                                model,
-                                rest_time,
-                                npts=npts,
-                                save=False,
-                                **kwargs,
+                            step_solution_with_rest = self.run_padding_rest(
+                                kwargs, rest_time, step_solution
                             )
                             step_solution += step_solution_with_rest
 
@@ -896,7 +947,29 @@ class Simulation:
 
             callbacks.on_experiment_end(logs)
 
+            # record initial_start_time of the solution
+            self.solution.initial_start_time = initial_start_time
+
         return self.solution
+
+    def run_padding_rest(self, kwargs, rest_time, step_solution):
+        model = self.op_conds_to_built_models["Rest for padding"]
+        solver = self.op_conds_to_built_solvers["Rest for padding"]
+
+        # Make sure we take at least 2 timesteps. The period is hardcoded to 10
+        # minutes,the user can always override it by adding a rest step
+        npts = max(int(round(rest_time / 600)) + 1, 2)
+
+        step_solution_with_rest = solver.step(
+            step_solution,
+            model,
+            rest_time,
+            npts=npts,
+            save=False,
+            **kwargs,
+        )
+
+        return step_solution_with_rest
 
     def step(
         self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
@@ -948,7 +1021,7 @@ class Simulation:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self.parameter_values, self.model.param
+            self.parameter_values, self.model.param, options=self.model.options
         )
 
     def plot(self, output_variables=None, **kwargs):

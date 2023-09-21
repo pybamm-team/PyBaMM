@@ -72,6 +72,16 @@ class ThermalParameters(BaseParameters):
             + self.p.rho_c_p_cc(T) * self.geo.p.L_cc
         ) / self.geo.L
 
+    def lambda_eff(self, T):
+        """Effective thermal conductivity [W.m-1.K-1]"""
+        return (
+            self.n.lambda_cc(T) * self.geo.n.L_cc
+            + self.n.lambda_(T) * self.geo.n.L
+            + self.s.lambda_(T) * self.geo.s.L
+            + self.p.lambda_(T) * self.geo.p.L
+            + self.p.lambda_cc(T) * self.geo.p.L_cc
+        ) / self.geo.L
+
 
 class DomainThermalParameters(BaseParameters):
     def __init__(self, domain, main_param):
