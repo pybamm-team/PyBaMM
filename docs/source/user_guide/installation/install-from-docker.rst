@@ -189,6 +189,18 @@ If you want to exit the Docker container's shell, you can simply type:
 
       exit
 
+
+Using Git Inside a Running Docker Container
+-------------------------------------------
+
+1. Setting up git configuration
+
+.. code-block:: bash
+
+      git config --global user.name "Your Name"
+
+      git config --global user.email your@mail.com
+
 Using Visual Studio Code Inside a Running Docker Container
 ----------------------------------------------------------
 
