@@ -748,13 +748,6 @@ class BaseSolver(object):
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
-        # Cannot use multiprocessing with model in "jax" format
-        if (len(inputs_list) > 1) and model.convert_to_format == "jax":
-            raise pybamm.SolverError(
-                "Cannot solve list of inputs with multiprocessing "
-                'when model in format "jax".'
-            )
-
         # Check that calculate_sensitivites have not been updated
         calculate_sensitivities_list.sort()
         if not hasattr(model, "calculate_sensitivities"):
@@ -864,17 +857,25 @@ class BaseSolver(object):
                 )
                 new_solutions = [new_solution]
             else:
-                with mp.Pool(processes=nproc) as p:
-                    new_solutions = p.starmap(
-                        self._integrate,
-                        zip(
-                            [model] * ninputs,
-                            [t_eval[start_index:end_index]] * ninputs,
-                            model_inputs_list,
-                        ),
+                if model.convert_to_format == "jax":
+                    # Jax can parallelize over the inputs efficiently
+                    new_solutions = self._integrate(
+                        model,
+                        t_eval[start_index:end_index],
+                        model_inputs_list,
                     )
-                    p.close()
-                    p.join()
+                else:
+                    with mp.Pool(processes=nproc) as p:
+                        new_solutions = p.starmap(
+                            self._integrate,
+                            zip(
+                                [model] * ninputs,
+                                [t_eval[start_index:end_index]] * ninputs,
+                                model_inputs_list,
+                            ),
+                        )
+                        p.close()
+                        p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
