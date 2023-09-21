@@ -463,7 +463,7 @@ class TestQuickPlot(TestCase):
 
         pybamm.close_plots()
 
-    def test_failure(self):
+    def test_invalid_input_type_failure(self):
         with self.assertRaisesRegex(TypeError, "Solutions must be"):
             pybamm.QuickPlot(1)
 
