@@ -170,7 +170,7 @@ class ParameterValues:
         """
         return self._dict_items.search(key, print_values)
 
-    def update(self, values, check_conflict=False, check_already_exists=True, path=""):
+    def update(self, values, check_conflict=False, check_already_exists=True):
         """
         Update parameter dictionary, while also performing some basic checks.
 
