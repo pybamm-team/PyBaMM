@@ -188,8 +188,6 @@ class ParameterValues:
             update it. This is to avoid cases where an intended change in the parameters
             is ignored due a typo in the parameter name, and is True by default but can
             be manually overridden.
-        path : string, optional
-            Path from which to load functions
         """
         # check if values is not a dictionary
         if not isinstance(values, dict):
@@ -210,15 +208,22 @@ class ParameterValues:
                     )
                 )
             # check parameter already exists (for updating parameters)
-            if check_already_exists is True:
+            if check_already_exists:
                 try:
                     self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        "Cannot update parameter '{}' as it does not ".format(name)
-                        + "have a default value. ({}). If you are ".format(err.args[0])
+                        f"Cannot update parameter '{name}' as it does not "
+                        + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
+                    )
+            else:
+                if name in self._dict_items:
+                    raise KeyError(
+                        f"Parameter '{name}' already exists in that parameters. "
+                        + "If you want to update this parameter, use "
+                        + "param.update({{name: value}}, check_already_exists=True)"
                     )
             # if no conflicts, update
             if isinstance(value, str):
