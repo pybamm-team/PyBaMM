@@ -240,6 +240,7 @@ Doctests, examples, and coverage
 ``Nox`` can also be used to run doctests, run examples, and generate a coverage report using:
 
 - ``nox -s examples``: Run the Jupyter notebooks in ``docs/source/examples/notebooks/``.
+- ``nox -s examples -- <path-to-notebook-1.ipynb> <path-to_notebook-2.ipynb>``: Run specific Jupyter notebooks.
 - ``nox -s scripts``: Run the example scripts in ``examples/scripts/``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
@@ -270,8 +271,8 @@ i.e. ``pip install -e .``. This sets the installed location of the
 source files to your current directory.
 
 **Problem:** Errors when solving model
-``ValueError: Integrator name ida does not exsist``, or
-``ValueError: Integrator name cvode does not exsist``.
+``ValueError: Integrator name ida does not exist``, or
+``ValueError: Integrator name cvode does not exist``.
 
 **Solution:** This could mean that you have not installed
 ``scikits.odes`` correctly, check the instructions given above and make

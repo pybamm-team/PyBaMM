@@ -99,8 +99,9 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]")
-    session.run("python", "run-tests.py", "--examples")
+    session.install("-e", ".[all,dev]")
+    notebooks_to_test = session.posargs if session.posargs else []
+    session.run("pytest", "--nbmake", *notebooks_to_test, external=True)
 
 
 @nox.session(name="scripts")
