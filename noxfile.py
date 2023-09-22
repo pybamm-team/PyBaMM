@@ -88,7 +88,7 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]")
+    session.install("-e", ".[all]", silent=False)
     if sys.platform == "linux":
         session.install("-e", ".[odes]", silent=False)
         session.install("-e", ".[jax]", silent=False)
