@@ -44,7 +44,7 @@ class ParameterSets(Mapping):
     @staticmethod
     def get_entries(group_name):
         # Wrapper for the importlib version logic
-        if sys.version_info < (3, 10):
+        if sys.version_info < (3, 10): # pragma: no cover
             return importlib.metadata.entry_points()[group_name]
         else:
             return importlib.metadata.entry_points(group=group_name)
