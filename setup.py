@@ -251,9 +251,16 @@ setup(
             "tqdm",
         ],
         "dev": [
-            "pre-commit",  # For code style checking
-            "ruff", # For code style auto-formatting
-            "nox", # For running testing sessions
+            # For working with pre-commit hooks
+            "pre-commit",
+             # For code style checks: linting and auto-formatting
+            "ruff",
+            # For running testing sessions
+            "nox",
+            # For testing Jupyter notebooks
+            "pytest>=6",
+            "pytest-xdist",
+            "nbmake",
         ],
         "pandas": [
             "pandas>=0.24",
