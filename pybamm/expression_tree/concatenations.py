@@ -48,9 +48,9 @@ class Concatenation(pybamm.Symbol):
         # PL: update this one - I guess we still want it to take 'snippet' rather than the list? to be the same as the others?
         instance = cls.__new__(cls)
 
-        super(Concatenation, instance).__init__(name, children, domains=domains)
-
         instance.concatenation_function = concat_fun
+
+        super(Concatenation, instance).__init__(name, children, domains=domains)
 
         return instance
 

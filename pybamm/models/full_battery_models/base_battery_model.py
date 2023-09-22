@@ -604,6 +604,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             if option in ["working electrode"]:
                 pass
             else:
+                # serialised options save tuples as lists which need to be converted
+                if isinstance(value, list) and len(value) == 2:
+                    value = tuple(value)
+
                 if isinstance(value, str) or option in [
                     "dimensionality",
                     "operating mode",

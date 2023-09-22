@@ -64,6 +64,9 @@ class TestStateVector(TestCase):
             pybamm.StateVector(slice(0, 10), 1)
 
     def test_to_from_json(self):
+        original_debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = False
+
         array = np.array([1, 2, 3, 4, 5])
         sv = pybamm.StateVector(slice(0, 10), evaluation_array=array)
 
@@ -89,6 +92,9 @@ class TestStateVector(TestCase):
         self.assertEqual(sv.to_json(), json_dict)
 
         self.assertEqual(pybamm.StateVector._from_json(json_dict), sv)
+
+        # Turn debug mode back to what is was before
+        pybamm.settings.debug_mode = original_debug_mode
 
 
 class TestStateVectorDot(TestCase):
