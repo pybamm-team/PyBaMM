@@ -20,9 +20,9 @@
  * @param nr New index pointer to row starts
  */
 template<typename T1, typename T2>
-void csc_csr(realtype f[], T1 c[], T1 r[], realtype nf[], T2 nc[], T2 nr[], int N, int cols) {
+void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 nc[], T2 nr[], int N, int cols) {
   int nn[cols+1];
-  int rr[N];
+  std::vector<int> rr(N);
   for (int i=0; i<cols+1; i++)
     nc[i] = 0;
 
@@ -136,9 +136,12 @@ public:
   CasadiFunction jac_action;
   CasadiFunction mass_action;
   CasadiFunction events;
-  std::vector<CasadiFunction> var_casadi_fcns;
-  std::vector<CasadiFunction> dvar_dy_fcns;
-  std::vector<CasadiFunction> dvar_dp_fcns;
+
+  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
+  //     these members as unused even though they are important
+  std::vector<CasadiFunction> var_casadi_fcns;  // cppcheck-suppress unusedStructMember
+  std::vector<CasadiFunction> dvar_dy_fcns;  // cppcheck-suppress unusedStructMember
+  std::vector<CasadiFunction> dvar_dp_fcns;  // cppcheck-suppress unusedStructMember
 
   std::vector<int64_t> jac_times_cjmass_rowvals;
   std::vector<int64_t> jac_times_cjmass_colptrs;

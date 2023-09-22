@@ -128,6 +128,8 @@ void CasadiSolverOpenMP::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
+  if (LS == nullptr)
+    throw std::invalid_argument("Linear solver not set");
   IDASetLinearSolver(ida_mem, LS, J);
 
   if (options.preconditioner != "none")
@@ -307,7 +309,6 @@ Solution CasadiSolverOpenMP::solve(
     IDAGetSens(ida_mem, &t0, yyS);
 
   realtype tret;
-  realtype t_next;
   realtype t_final = t(number_of_timesteps - 1);
 
   // set return vectors
@@ -386,7 +387,7 @@ Solution CasadiSolverOpenMP::solve(
   t_i = 1;
   while (true)
   {
-    t_next = t(t_i);
+    realtype t_next = t(t_i);
     IDASetStopTime(ida_mem, t_next);
     DEBUG("IDASolve");
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);

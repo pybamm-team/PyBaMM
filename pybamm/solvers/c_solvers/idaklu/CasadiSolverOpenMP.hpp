@@ -42,28 +42,31 @@ using Function = casadi::Function;
  */
 class CasadiSolverOpenMP : public CasadiSolver
 {
+  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
+  //     these members as unused even though they are important in child
+  //     classes, but are passed by variadic arguments (and are therefore unnamed)
 public:
   void *ida_mem = nullptr;
   np_array atol_np;
-  double rel_tol;
   np_array rhs_alg_id;
-  int number_of_states;
-  int number_of_parameters;
-  int number_of_events;
-  int precon_type;
-  N_Vector yy, yp, avtol;   // y, y', and absolute tolerance
-  N_Vector *yyS, *ypS;      // y, y' for sensitivities
+  int number_of_states;  // cppcheck-suppress unusedStructMember
+  int number_of_parameters;  // cppcheck-suppress unusedStructMember
+  int number_of_events;  // cppcheck-suppress unusedStructMember
+  int precon_type;  // cppcheck-suppress unusedStructMember
+  N_Vector yy, yp, avtol;  // y, y', and absolute tolerance
+  N_Vector *yyS;  // cppcheck-suppress unusedStructMember
+  N_Vector *ypS;  // cppcheck-suppress unusedStructMember
   N_Vector id;              // rhs_alg_id
   realtype rtol;
-  const int jac_times_cjmass_nnz;
-  int jac_bandwidth_lower;
-  int jac_bandwidth_upper;
+  const int jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
+  int jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
+  int jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
-  SUNLinearSolver LS;
+  SUNLinearSolver LS = nullptr;
   std::unique_ptr<CasadiFunctions> functions;
-  realtype *res;
-  realtype *res_dvar_dy;
-  realtype *res_dvar_dp;
+  realtype *res = nullptr;
+  realtype *res_dvar_dy = nullptr;
+  realtype *res_dvar_dp = nullptr;
   Options options;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
