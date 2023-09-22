@@ -6,6 +6,8 @@ import pybamm
 from functools import cached_property
 import warnings
 
+from pybamm.expression_tree.operations.serialise import Serialise
+
 
 def represents_positive_integer(s):
     """Check if a string represents a positive integer"""
@@ -15,9 +17,6 @@ def represents_positive_integer(s):
         return False
     else:
         return val > 0
-
-
-from pybamm.expression_tree.operations.serialise import Serialise
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):

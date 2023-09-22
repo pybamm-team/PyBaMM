@@ -571,14 +571,6 @@ class _Heaviside(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__(name, left, right)
 
-    @classmethod
-    def _from_json(cls, snippet: dict):
-        """See :meth:`pybamm.BinaryOperator._from_json()`."""
-        instance = super()._from_json(
-            snippet["name"], snippet["children"][0], snippet["children"][1]
-        )
-        return instance
-
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         # Heaviside should always be multiplied by something else so hopefully don't
@@ -610,6 +602,14 @@ class EqualHeaviside(_Heaviside):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("<=", left, right)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.BinaryOperator._from_json()`."""
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["children"][0], snippet["children"][1])
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{!s} <= {!s}".format(self.left, self.right)
@@ -626,6 +626,14 @@ class NotEqualHeaviside(_Heaviside):
 
     def __init__(self, left, right):
         super().__init__("<", left, right)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.BinaryOperator._from_json()`."""
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["children"][0], snippet["children"][1])
+        return instance
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""

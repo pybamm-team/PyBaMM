@@ -150,6 +150,12 @@ class AbsoluteValue(UnaryOperator):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("abs", child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = super()._from_json("abs", snippet)
+        return instance
+
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         return sign(self.child) * self.child.diff(variable)
@@ -175,6 +181,12 @@ class Sign(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("sign", child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = super()._from_json("sign", snippet)
+        return instance
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -206,6 +218,12 @@ class Floor(UnaryOperator):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("floor", child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = super()._from_json("floor", snippet)
+        return instance
+
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         return pybamm.Scalar(0)
@@ -227,6 +245,12 @@ class Ceiling(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("ceil", child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = super()._from_json("ceil", snippet)
+        return instance
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -293,6 +317,25 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.clear_domains()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = cls.__new__(cls)
+
+        index = slice(
+            snippet["index"]["start"],
+            snippet["index"]["stop"],
+            snippet["index"]["step"],
+        )
+
+        instance.__init__(
+            snippet["children"][0],
+            index,
+            name=snippet["name"],
+            check_size=snippet["check_size"],
+        )
+        return instance
+
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
 
@@ -345,7 +388,11 @@ class Index(UnaryOperator):
         json_dict = {
             "name": self.name,
             "id": self.id,
-            "domains": self.domains,
+            "index": {
+                "start": self.slice.start,
+                "stop": self.slice.stop,
+                "step": self.slice.step,
+            },
             "check_size": False,
         }
 

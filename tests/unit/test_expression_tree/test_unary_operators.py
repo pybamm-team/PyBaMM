@@ -669,41 +669,42 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.new_copy(), expr)
         self.assertFalse(expr.is_constant())
 
-    def test_to_json(self):
+    def test_to_from_json(self):
         # UnaryOperator
         a = pybamm.Symbol("a", domain=["test"])
         un = pybamm.UnaryOperator("unary test", a)
-        self.assertEqual(
-            un.to_json(),
-            {
-                "name": "unary test",
-                "id": mock.ANY,
-                "domains": {
-                    "primary": ["test"],
-                    "secondary": [],
-                    "tertiary": [],
-                    "quaternary": [],
-                },
+
+        un_json = {
+            "name": "unary test",
+            "id": mock.ANY,
+            "domains": {
+                "primary": ["test"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
             },
-        )
+        }
+
+        self.assertEqual(un.to_json(), un_json)
+
+        un_json["children"] = [a]
+        self.assertEqual(pybamm.UnaryOperator._from_json("unary test", un_json), un)
 
         # Index
         vec = pybamm.StateVector(slice(0, 5))
         ind = pybamm.Index(vec, 3)
-        self.assertEqual(
-            ind.to_json(),
-            {
-                "name": "Index[3]",
-                "id": mock.ANY,
-                "domains": {
-                    "primary": [],
-                    "secondary": [],
-                    "tertiary": [],
-                    "quaternary": [],
-                },
-                "check_size": False,
-            },
-        )
+
+        ind_json = {
+            "name": "Index[3]",
+            "id": mock.ANY,
+            "index": {"start": 3, "stop": 4, "step": None},
+            "check_size": False,
+        }
+
+        self.assertEqual(ind.to_json(), ind_json)
+
+        ind_json["children"] = [vec]
+        self.assertEqual(pybamm.Index._from_json(ind_json), ind)
 
         # SpatialOperator
         spatial_vec = pybamm.SpatialOperator("name", vec)
@@ -712,13 +713,14 @@ class TestUnaryOperators(TestCase):
 
         # ExplicitTimeIntegral
         expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
-        self.assertEqual(
-            expr.to_json(),
-            {
-                "name": "explicit time integral",
-                "id": mock.ANY,
-            },
-        )
+
+        expr_json = {"name": "explicit time integral", "id": mock.ANY}
+
+        self.assertEqual(expr.to_json(), expr_json)
+
+        expr_json["children"] = [pybamm.Parameter("param")]
+        expr_json["initial_condition"] = [pybamm.Scalar(1)]
+        self.assertEqual(pybamm.ExplicitTimeIntegral._from_json(expr_json), expr)
 
 
 if __name__ == "__main__":

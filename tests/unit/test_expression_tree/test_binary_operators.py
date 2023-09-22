@@ -780,54 +780,69 @@ class TestBinaryOperators(TestCase):
 
     def test_to_json(self):
         # Test Addition
-        self.assertEqual(
-            pybamm.Addition(2, 4).to_json(),
-            {
-                "name": "+",
-                "id": mock.ANY,
-                "domains": EMPTY_DOMAINS,
-            },
-        )
+        add_json = {
+            "name": "+",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+        add = pybamm.Addition(2, 4)
+
+        self.assertEqual(add.to_json(), add_json)
+
+        add_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
+        self.assertEqual(pybamm.Addition._from_json(add_json), add)
 
         # Test Power
-        self.assertEqual(
-            pybamm.Power(7, 2).to_json(),
-            {
-                "name": "**",
-                "id": mock.ANY,
-                "domains": EMPTY_DOMAINS,
-            },
-        )
+        pow_json = {
+            "name": "**",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        pow = pybamm.Power(7, 2)
+        self.assertEqual(pow.to_json(), pow_json)
+
+        pow_json["children"] = [pybamm.Scalar(7), pybamm.Scalar(2)]
+        self.assertEqual(pybamm.Power._from_json(pow_json), pow)
 
         # Test Division
-        self.assertEqual(
-            pybamm.Division(10, 5).to_json(),
-            {
-                "name": "/",
-                "id": mock.ANY,
-                "domains": EMPTY_DOMAINS,
-            },
-        )
+        div_json = {
+            "name": "/",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        div = pybamm.Division(10, 5)
+        self.assertEqual(div.to_json(), div_json)
+
+        div_json["children"] = [pybamm.Scalar(10), pybamm.Scalar(5)]
+        self.assertEqual(pybamm.Division._from_json(div_json), div)
 
         # Test EqualHeaviside
-        self.assertEqual(
-            pybamm.EqualHeaviside(2, 4).to_json(),
-            {
-                "name": "<=",
-                "id": mock.ANY,
-                "domains": EMPTY_DOMAINS,
-            },
-        )
+        equal_json = {
+            "name": "<=",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        equal_h = pybamm.EqualHeaviside(2, 4)
+        self.assertEqual(equal_h.to_json(), equal_json)
+
+        equal_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
+        self.assertEqual(pybamm.EqualHeaviside._from_json(equal_json), equal_h)
 
         # Test notEqualHeaviside
-        self.assertEqual(
-            pybamm.NotEqualHeaviside(2, 4).to_json(),
-            {
-                "name": "<",
-                "id": mock.ANY,
-                "domains": EMPTY_DOMAINS,
-            },
-        )
+        not_equal_json = {
+            "name": "<",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        ne_h = pybamm.NotEqualHeaviside(2, 4)
+        self.assertEqual(ne_h.to_json(), not_equal_json)
+
+        not_equal_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
+        self.assertEqual(pybamm.NotEqualHeaviside._from_json(not_equal_json), ne_h)
 
 
 if __name__ == "__main__":

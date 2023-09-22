@@ -707,9 +707,14 @@ class BaseSolver(object):
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             if not isinstance(self, pybamm.DummySolver):
-                raise pybamm.ModelError(
-                    "Cannot solve empty model, use `pybamm.DummySolver` instead"
-                )
+                # check a discretised model without original paramaters is not being used
+                if not (
+                    model.concatenated_rhs is not None
+                    or model.concatenated_algebraic is not None
+                ):
+                    raise pybamm.ModelError(
+                        "Cannot solve empty model, use `pybamm.DummySolver` instead"
+                    )
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0

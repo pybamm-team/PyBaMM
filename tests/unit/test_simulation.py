@@ -327,6 +327,26 @@ class TestSimulation(TestCase):
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
 
+    def test_save_load_model(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        # test exception if not discretised
+        with self.assertRaises(NotImplementedError):
+            sim.save_model("sim_save")
+
+        # save after solving
+        sim.solve([0, 600])
+        sim.save_model("sim_save")
+
+        # load model
+        saved_model = pybamm.load_model("sim_save.json")
+
+        self.assertEqual(model.options, saved_model.options)
+
+        os.remove("sim_save.json")
+
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
