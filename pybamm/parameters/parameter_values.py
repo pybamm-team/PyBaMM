@@ -4,6 +4,7 @@
 import numpy as np
 import pybamm
 import numbers
+import warnings
 from pprint import pformat
 from collections import defaultdict
 
@@ -220,10 +221,9 @@ class ParameterValues:
                     )
             else:
                 if name in self._dict_items:
-                    raise KeyError(
-                        f"Parameter '{name}' already exists in that parameters. "
-                        + "If you want to update this parameter, use "
-                        + "param.update({{name: value}}, check_already_exists=True)"
+                    warnings.warn(
+                        message=f"Parameter '{name}' already exists in the parameters.",
+                        category=UserWarning,
                     )
             # if no conflicts, update
             if isinstance(value, str):
