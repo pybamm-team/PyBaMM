@@ -4,7 +4,6 @@
 import numpy as np
 import pybamm
 import numbers
-import warnings
 from pprint import pformat
 from collections import defaultdict
 
