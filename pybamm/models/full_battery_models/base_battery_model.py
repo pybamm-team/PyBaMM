@@ -510,10 +510,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             )
         if options["working electrode"] == "negative":
             raise pybamm.OptionError(
-                "The negative working elecrtrode option has been removed because the "
-                "voltage - and therefore the energy stored - would be negative."
-                "Use the positive working electrode option and set whatever would "
-                "normally be the negative electrode to be the positive electrode."
+                "The 'negative' working elecrtrode option has been removed because "
+                "the voltage - and therefore the energy stored - would be negative."
+                "Use the 'positive' working electrode option instead and set whatever "
+                "would normally be the negative electrode as the positive electrode."
             )
 
         # Some standard checks to make sure options are compatible

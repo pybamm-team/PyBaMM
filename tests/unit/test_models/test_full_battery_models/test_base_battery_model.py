@@ -25,7 +25,6 @@ PRINT_OPTIONS_OUTPUT = """\
 'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
-'half-cell': 'false' (possible: ['false', 'true'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
 'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
@@ -47,6 +46,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
+'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 """  # noqa: E501
 
@@ -209,6 +209,10 @@ class TestBaseBatteryModel(TestCase):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with self.assertRaisesRegex(pybamm.OptionError, "The 'fast diffusion'"):
             pybamm.BaseBatteryModel({"particle": "fast diffusion"})
+        with self.assertRaisesRegex(pybamm.OptionError, "working electrode"):
+            pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
+        with self.assertRaisesRegex(pybamm.OptionError, "The 'negative' working"):
+            pybamm.BaseBatteryModel({"working electrode": "negative"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
