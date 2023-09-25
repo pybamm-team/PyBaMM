@@ -251,8 +251,16 @@ setup(
             "tqdm",
         ],
         "dev": [
-            "pre-commit",  # For code style checking
-            "ruff",  # For code style auto-formatting
+            # For working with pre-commit hooks
+            "pre-commit",
+             # For code style checks: linting and auto-formatting
+            "ruff",
+            # For running testing sessions
+            "nox",
+            # For testing Jupyter notebooks
+            "pytest>=6",
+            "pytest-xdist",
+            "nbmake",
         ],
         "pandas": [
             "pandas>=0.24",
@@ -301,6 +309,7 @@ setup(
             "Ramadass2004 = pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values",  # noqa: E501
             "Xu2019 = pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values",  # noqa: E501
             "ECM_Example = pybamm.input.parameters.ecm.example_set:get_parameter_values",  # noqa: E501
+            "MSMR_Example = pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values",  # noqa: E501
         ],
     },
 )

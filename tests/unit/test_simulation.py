@@ -203,6 +203,13 @@ class TestSimulation(TestCase):
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
 
+        # test with MSMR
+        model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
+        param = pybamm.ParameterValues("MSMR_Example")
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.build(initial_soc=0.5)
+        self.assertEqual(sim._built_initial_soc, 0.5)
+
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values

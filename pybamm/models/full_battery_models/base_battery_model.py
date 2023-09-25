@@ -7,6 +7,16 @@ from functools import cached_property
 import warnings
 
 
+def represents_positive_integer(s):
+    """Check if a string represents a positive integer"""
+    try:
+        val = int(s)
+    except ValueError:
+        return False
+    else:
+        return val > 0
+
+
 class BatteryModelOptions(pybamm.FuzzyDict):
     """
     Attributes
@@ -64,10 +74,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "surface form" cannot be 'false'.
             * "intercalation kinetics" : str
                 Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
-                (default), "asymmetric Butler-Volmer", "linear", "Marcus", or
-                "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014).
-                A 2-tuple can be provided for different behaviour in negative and
-                positive electrodes.
+                (default), "asymmetric Butler-Volmer", "linear", "Marcus",
+                "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014),
+                or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be
+                provided for different behaviour in negative and positive electrodes.
             * "interface utilisation": str
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
@@ -82,9 +92,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
+            * "number of MSMR reactions" : str
+                Sets the number of reactions to use in the MSMR model in each electrode.
+                A 2-tuple can be provided to give a different number of reactions in
+                the negative and positive electrodes. Default is "none". Can be any
+                2-tuple of strings of integers. For example, set to ("6", "4") for a
+                negative electrode with 6 reactions and a positive electrode with 4
+                reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default) or "current sigmoid". A 2-tuple can be provided for different
+                (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
+                option must also be "MSMR". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
@@ -105,8 +123,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", or "quartic profile". A 2-tuple can be provided
-                for different behaviour in negative and positive electrodes.
+                "quadratic profile", "quartic profile", or "MSMR". If "MSMR" then the
+                "open-circuit potential" option must also be "MSMR". A 2-tuple can be
+                provided for different behaviour in negative and positive electrodes.
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle
                 swelling and cracking. Can be "none" (default), "swelling only",
@@ -225,6 +244,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "linear",
                 "Marcus",
                 "Marcus-Hush-Chidsey",
+                "MSMR",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
             "lithium plating": [
@@ -241,7 +261,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "current-driven",
                 "stress and reaction-driven",
             ],
-            "open-circuit potential": ["single", "current sigmoid"],
+            "number of MSMR reactions": ["none"],
+            "open-circuit potential": ["single", "current sigmoid", "MSMR"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -259,6 +280,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "uniform profile",
                 "quadratic profile",
                 "quartic profile",
+                "MSMR",
             ],
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
             "particle phases": ["1", "2"],
@@ -416,6 +438,25 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             name, options.get_best_matches(name)
                         )
                     )
+
+        # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
+        # "MSMR" then all of them must be "MSMR".
+        # Note: this check is currently performed on full cells, but is loosened for
+        # half-cells where you must pass a tuple of options to only set MSMR models in
+        # the working electrode
+        msmr_check_list = [
+            options[opt] == "MSMR"
+            for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
+        ]
+        if (
+            options["working electrode"] == "both"
+            and any(msmr_check_list)
+            and not all(msmr_check_list)
+        ):
+            raise pybamm.OptionError(
+                "If any of 'open-circuit potential', 'particle' or "
+                "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
+            )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
@@ -581,56 +622,69 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            if isinstance(value, str) or option in [
-                "dimensionality",
-                "operating mode",
-            ]:  # some options accept non-strings
-                value = (value,)
+            if option in ["working electrode"]:
+                pass
             else:
-                if not (
-                    (
-                        option
-                        in [
-                            "diffusivity",
-                            "exchange-current density",
-                            "intercalation kinetics",
-                            "interface utilisation",
-                            "lithium plating",
-                            "loss of active material",
-                            "open-circuit potential",
-                            "particle",
-                            "particle mechanics",
-                            "particle phases",
-                            "particle size",
-                            "SEI",
-                            "SEI on cracks",
-                            "stress-induced diffusion",
-                        ]
-                        and isinstance(value, tuple)
-                        and len(value) == 2
-                    )
-                ):
-                    # more possible options that can take 2-tuples to be added
-                    # as they come
-                    raise pybamm.OptionError(
-                        f"\n'{value}' is not recognized in option '{option}'. "
-                        "Values must be strings or (in some cases) "
-                        "2-tuples of strings"
-                    )
-            # flatten value
-            value_list = []
-            for val in value:
-                if isinstance(val, tuple):
-                    value_list.extend(list(val))
+                if isinstance(value, str) or option in [
+                    "dimensionality",
+                    "operating mode",
+                ]:  # some options accept non-strings
+                    value = (value,)
                 else:
-                    value_list.append(val)
-            for val in value_list:
-                if val not in self.possible_options[option]:
-                    if not (option == "operating mode" and callable(val)):
-                        raise pybamm.OptionError(
-                            f"\n'{val}' is not recognized in option '{option}'. "
-                            f"Possible values are {self.possible_options[option]}"
+                    if not (
+                        (
+                            option
+                            in [
+                                "diffusivity",
+                                "exchange-current density",
+                                "intercalation kinetics",
+                                "interface utilisation",
+                                "lithium plating",
+                                "loss of active material",
+                                "number of MSMR reactions",
+                                "open-circuit potential",
+                                "particle",
+                                "particle mechanics",
+                                "particle phases",
+                                "particle size",
+                                "SEI",
+                                "SEI on cracks",
+                                "stress-induced diffusion",
+                            ]
+                            and isinstance(value, tuple)
+                            and len(value) == 2
                         )
+                    ):
+                        # more possible options that can take 2-tuples to be added
+                        # as they come
+                        raise pybamm.OptionError(
+                            f"\n'{value}' is not recognized in option '{option}'. "
+                            "Values must be strings or (in some cases) "
+                            "2-tuples of strings"
+                        )
+                # flatten value
+                value_list = []
+                for val in value:
+                    if isinstance(val, tuple):
+                        value_list.extend(list(val))
+                    else:
+                        value_list.append(val)
+                for val in value_list:
+                    if val not in self.possible_options[option]:
+                        if option == "operating mode" and callable(val):
+                            # "operating mode" can be a function
+                            pass
+                        elif (
+                            option == "number of MSMR reactions"
+                            and represents_positive_integer(val)
+                        ):
+                            # "number of MSMR reactions" can be a positive integer
+                            pass
+                        else:
+                            raise pybamm.OptionError(
+                                f"\n'{val}' is not recognized in option '{option}'. "
+                                f"Possible values are {self.possible_options[option]}"
+                            )
 
         # Issue a warning to let users know that the 'lumped' thermal option (or
         # equivalently 'x-lumped' with 0D current collectors) now uses the total heat
@@ -855,7 +909,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # if extra_options is a dict then process it into a BatteryModelOptions
         # this does not catch cases that subclass the dict type
         # so other submodels can pass in their own options class if needed
-        if extra_options is None or type(extra_options) == dict:
+        if extra_options is None or type(extra_options) == dict:  # noqa: E721
             options = BatteryModelOptions(extra_options)
         else:
             options = extra_options
@@ -903,6 +957,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
             if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
+            if options["open-circuit potential"] == "MSMR":
+                raise pybamm.OptionError(
+                    "Lead-acid models cannot use the MSMR open-circuit potential model"
+                )
 
         if (
             isinstance(self, pybamm.lead_acid.LOQS)
@@ -1027,6 +1085,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             return pybamm.kinetics.Marcus
         elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
+        elif options["intercalation kinetics"] == "MSMR":
+            return pybamm.kinetics.MSMRButlerVolmer
 
     def get_inverse_intercalation_kinetics(self):
         if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
@@ -1271,17 +1331,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Battery voltage [V]": V * num_cells,
             }
         )
-        # Variables for calculating the equivalent circuit model (ECM) resistance
-        # Need to compare OCV to initial value to capture this as an overpotential
-        ocv_init = self.param.ocv_init
-        eta_ocv = ocv_bulk - ocv_init
-        # Current collector current density for working out euiqvalent resistance
-        # based on Ohm's Law
-        i_cc = self.variables["Current collector current density [A.m-2]"]
+
+        # Calculate equivalent resistance of an OCV-R Equivalent Circuit Model
         # ECM overvoltage is OCV minus voltage
         v_ecm = ocv_bulk - V
-        # Current collector area for turning resistivity into resistance
-        A_cc = self.param.A_cc
 
         # Hack to avoid division by zero if i_cc is exactly zero
         # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
@@ -1289,11 +1342,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         def x_not_zero(x):
             return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
 
+        i_cc = self.variables["Current collector current density [A.m-2]"]
         i_cc_not_zero = x_not_zero(i_cc)
+        A_cc = self.param.A_cc
 
         self.variables.update(
             {
-                "Change in open-circuit voltage [V]": eta_ocv,
                 "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
                 * v_ecm
                 / (i_cc_not_zero * A_cc),

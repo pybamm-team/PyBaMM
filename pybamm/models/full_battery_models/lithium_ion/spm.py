@@ -105,6 +105,10 @@ class SPM(BaseModel):
                     submod = pybamm.particle.XAveragedPolynomialProfile(
                         self.param, domain, self.options, phase=phase
                     )
+                elif particle == "MSMR":
+                    submod = pybamm.particle.MSMRDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=True
+                    )
                 self.submodels[f"{domain} {phase} particle"] = submod
                 self.submodels[
                     f"{domain} {phase} total particle concentration"
