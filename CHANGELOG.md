@@ -1,28 +1,43 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
-
 - The parameter "Ambient temperature [K]" can now be given as a function of position `(y,z)` and time `t`. The "edge" and "current collector" heat transfer coefficient parameters can also depend on `(y,z)` ([#3257](https://github.com/pybamm-team/PyBaMM/pull/3257))
 - Spherical and cylindrical shell domains can now be solved with any boundary conditions ([#3237](https://github.com/pybamm-team/PyBaMM/pull/3237))
 - Processed variables now get the spatial variables automatically, allowing plotting of more generic models ([#3234](https://github.com/pybamm-team/PyBaMM/pull/3234))
 - Numpy functions now work with PyBaMM symbols (e.g. `np.exp(pybamm.Symbol("a"))` returns `pybamm.Exp(pybamm.Symbol("a"))`). This means that parameter functions can be specified using numpy functions instead of pybamm functions. Additionally, combining numpy arrays with pybamm objects now works (the numpy array is converted to a pybamm array) ([#3205](https://github.com/pybamm-team/PyBaMM/pull/3205))
+- Implement the MSMR model ([#3116](https://github.com/pybamm-team/PyBaMM/pull/3116))
 - Added new example notebook `rpt-experiment` to demonstrate how to set up degradation experiments with RPTs ([#2851](https://github.com/pybamm-team/PyBaMM/pull/2851))
 
 ## Bug fixes
 
-- The `OneDimensionalX` thermal model has been updated to account for edge/tab cooling and account for the current collector volumetric heat capacity. It now gives the correct behaviour compared with a lumped model with the correct total heat transfer coefficient and surface area for cooling. ([#3042](https://github.com/pybamm-team/PyBaMM/pull/3042))
+- Fixed a bug where empty lists passed to QuickPlot resulted in an IndexError and did not return a meaningful error message ([#3359](https://github.com/pybamm-team/PyBaMM/pull/3359))
+- Fixed a bug where there was a missing thermal conductivity in the thermal pouch cell models ([#3330](https://github.com/pybamm-team/PyBaMM/pull/3330))
+- Fixed a bug that caused incorrect results of “{Domain} electrode thickness change [m]” due to the absence of dimension for the variable `electrode_thickness_change`([#3329](https://github.com/pybamm-team/PyBaMM/pull/3329)).
+- Fixed a bug that occured in `check_ys_are_not_too_large` when trying to reference `y-slice` where the referenced variable was not a `pybamm.StateVector` ([#3313](https://github.com/pybamm-team/PyBaMM/pull/3313)
+- Fixed a bug with `_Heaviside._evaluate_for_shape` which meant some expressions involving heaviside function and subtractions did not work ([#3306](https://github.com/pybamm-team/PyBaMM/pull/3306))
+- Attributes of `pybamm.Simulation` objects (models, parameter values, geometries, choice of solver, and output variables) are now private and as such cannot be edited in-place after the simulation has been created ([#3267](https://github.com/pybamm-team/PyBaMM/pull/3267)
+- Fixed bug causing incorrect activation energies using `create_from_bpx()` ([#3242](https://github.com/pybamm-team/PyBaMM/pull/3242))
 - Fixed a bug where the "basic" lithium-ion models gave incorrect results when using nonlinear particle diffusivity ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
 - Particle size distributions now work with SPMe and NewmanTobias models ([#3207](https://github.com/pybamm-team/PyBaMM/pull/3207))
 - Fix to simulate c_rate steps with drive cycles ([#3186](https://github.com/pybamm-team/PyBaMM/pull/3186))
-- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019.
-- Error generated when invalid parameter values are passed. ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
-- Thevenin() model is now constructed with standard variables: `Time [s], Time [min], Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
+- Always save last cycle in experiment, to fix issues with `starting_solution` and `last_state` ([#3177](https://github.com/pybamm-team/PyBaMM/pull/3177))
+- Fix simulations with `starting_solution` to work with `start_time` experiments ([#3177](https://github.com/pybamm-team/PyBaMM/pull/3177))
 - Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
+- Thevenin() model is now constructed with standard variables: `Time [s]`, `Time [min]`, `Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
+- Error generated when invalid parameter values are passed ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
+- Parameters in `Prada2013` have been updated to better match those given in the paper, which is a 2.3 Ah cell, instead of the mix-and-match with the 1.1 Ah cell from Lain2019 ([#3096](https://github.com/pybamm-team/PyBaMM/pull/3096))
+- The `OneDimensionalX` thermal model has been updated to account for edge/tab cooling and account for the current collector volumetric heat capacity. It now gives the correct behaviour compared with a lumped model with the correct total heat transfer coefficient and surface area for cooling. ([#3042](https://github.com/pybamm-team/PyBaMM/pull/3042))
+
+## Optimizations
+
+- Improved how steps are processed in simulations to reduce memory usage ([#3261](https://github.com/pybamm-team/PyBaMM/pull/3261))
+- Added parameter list support to JAX solver, permitting multithreading / GPU execution ([#3121](https://github.com/pybamm-team/PyBaMM/pull/3121))
 
 ## Breaking changes
 
 - The class `pybamm.thermal.OneDimensionalX` has been moved to `pybamm.thermal.pouch_cell.OneDimensionalX` to reflect the fact that the model formulation implicitly assumes a pouch cell geometry ([#3257](https://github.com/pybamm-team/PyBaMM/pull/3257))
 - The "lumped" thermal option now always used the parameters "Cell cooling surface area [m2]", "Cell volume [m3]" and "Total heat transfer coefficient [W.m-2.K-1]" to compute the cell cooling regardless of the chosen "cell geometry" option. The user must now specify the correct values for these parameters instead of them being calculated based on e.g. a pouch cell. An `OptionWarning` is raised to let users know to update their parameters ([#3257](https://github.com/pybamm-team/PyBaMM/pull/3257))
+- Numpy functions now work with PyBaMM symbols (e.g. `np.exp(pybamm.Symbol("a"))` returns `pybamm.Exp(pybamm.Symbol("a"))`). This means that parameter functions can be specified using numpy functions instead of pybamm functions. Additionally, combining numpy arrays with pybamm objects now works (the numpy array is converted to a pybamm array) ([#3205](https://github.com/pybamm-team/PyBaMM/pull/3205))
 - Added option to use an empirical hysteresis model for the diffusivity and exchange-current density ([#3194](https://github.com/pybamm-team/PyBaMM/pull/3194))
 - Double-layer capacity can now be provided as a function of temperature ([#3174](https://github.com/pybamm-team/PyBaMM/pull/3174))
 - `pybamm_install_jax` is deprecated. It is now replaced with `pip install pybamm[jax]` ([#3163](https://github.com/pybamm-team/PyBaMM/pull/3163))

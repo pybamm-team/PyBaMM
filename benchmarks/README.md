@@ -63,8 +63,8 @@ Note that benchmark functions _must_ start with the prefix `time_`, for instance
 
 ```python3
 def time_solve_SPM_ScipySolver(self):
-        solver = pb.ScipySolver()
-        solver.solve(self.model, [0, 3600])
+    solver = pb.ScipySolver()
+    solver.solve(self.model, [0, 3600])
 ```
 
 In the case where some setup is necessary, but should not be timed, a `setup` function
@@ -76,7 +76,7 @@ class TimeSPM:
         model = pb.lithium_ion.SPM()
         geometry = model.default_geometry
 
-	    # ...
+        # ...
 
         self.model = model
 

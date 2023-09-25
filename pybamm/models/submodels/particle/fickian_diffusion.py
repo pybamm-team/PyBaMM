@@ -122,6 +122,7 @@ class FickianDiffusion(BaseParticle):
             if self.x_average is True:
                 c_s = pybamm.SecondaryBroadcast(c_s, [f"{domain} electrode"])
 
+        # Standard concentration variables (size-independent)
         variables.update(self._get_standard_concentration_variables(c_s))
 
         return variables
@@ -169,7 +170,6 @@ class FickianDiffusion(BaseParticle):
                     f"{Domain} {phase_name}particle "
                     "concentration distribution [mol.m-3]"
                 ]
-
                 # broadcast T to "particle size" domain then again into "particle"
                 T = pybamm.PrimaryBroadcast(
                     variables[f"{Domain} electrode temperature [K]"],
@@ -185,7 +185,6 @@ class FickianDiffusion(BaseParticle):
                     f"X-averaged {domain} {phase_name}particle "
                     "concentration distribution [mol.m-3]"
                 ]
-
                 # broadcast to "particle size" domain then again into "particle"
                 T = pybamm.PrimaryBroadcast(
                     variables[f"X-averaged {domain} electrode temperature [K]"],
@@ -207,7 +206,7 @@ class FickianDiffusion(BaseParticle):
                     1 / (R_broad_nondim**2)
                 )
                 * pybamm.div(N_s),
-                f"{Domain} {phase_name}particle bc [mol.m-2]": -j
+                f"{Domain} {phase_name}particle bc [mol.m-4]": -j
                 * R_nondim
                 / param.F
                 / pybamm.surf(D_eff),
@@ -286,7 +285,7 @@ class FickianDiffusion(BaseParticle):
                     "concentration distribution [mol.m-3]"
                 ]
 
-        rbc = variables[f"{Domain} {phase_name}particle bc [mol.m-2]"]
+        rbc = variables[f"{Domain} {phase_name}particle bc [mol.m-4]"]
         self.boundary_conditions = {
             c_s: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }
