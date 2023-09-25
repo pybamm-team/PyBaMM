@@ -16,8 +16,8 @@ class LithiumIonParameters(BaseParameters):
         A dictionary of options to be passed to the parameters. The options that
         can be set are listed below.
 
-            * "half-cell": str
-                Can be "false" (default) for a standard battery or "true" for a
+            * "working electrode": str
+                Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
                 counter electrode.
             * "particle shape" : str, optional

@@ -10,7 +10,7 @@ import unittest
 
 class TestBasicHalfCellModels(TestCase):
     def test_runs_Xu2019(self):
-        options = {"half-cell": "true"}
+        options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
         # create geometry
@@ -40,7 +40,7 @@ class TestBasicHalfCellModels(TestCase):
 
     def test_runs_OKane2022_negative(self):
         # load model
-        options = {"half-cell": "true"}
+        options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
         # create geometry

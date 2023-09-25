@@ -58,10 +58,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the model for the exchange-current density. Can be "single"
                 (default) or "current sigmoid". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
-            * "half-cell" : str
-                Can be "false" (default) for a standard battery or "true" for a
-                half-cell where the negative electrode is replaced with a lithium metal
-                counter electrode.
             * "hydrolysis" : str
                 Whether to include hydrolysis in the model. Only implemented for
                 lead-acid models. Can be "false" (default) or "true". If "true", then
@@ -189,6 +185,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "working electrode" : str
+                Can be "both" (default) for a standard battery or "positive" for a
+                half-cell where the negative electrode is replaced with a lithium metal
+                counter electrode.
             * "x-average side reactions": str
                 Whether to average the side reactions (SEI growth, lithium plating and
                 the respective porosity change) over the x-axis in Single Particle
@@ -218,7 +218,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
-            "half-cell": ["false", "true"],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -283,6 +282,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
+            "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
 
@@ -291,7 +291,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         }
         extra_options = extra_options or {}
 
-        half_cell_option = extra_options.get("half-cell", "false")
+        working_electrode_option = extra_options.get("working electrode", "both")
         SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
         SEI_cr_option = extra_options.get("SEI on cracks", "false")
         plating_option = extra_options.get("lithium plating", "none")
@@ -299,7 +299,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # options are not provided as tuples, change them to tuples with "none" or
         # "false" on the positive electrode. To use these options on the positive
         # electrode of a full cell, the tuple must be provided by the user
-        if half_cell_option == "false":
+        if working_electrode_option == "both":
             if not (isinstance(SEI_option, tuple)) and SEI_option != "none":
                 extra_options["SEI"] = (SEI_option, "none")
             if not (isinstance(SEI_cr_option, tuple)) and SEI_cr_option != "false":
@@ -508,6 +508,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "SEI porosity change must now be given in string format "
                 "('true' or 'false')"
             )
+        if options["working electrode"] == "negative":
+            raise pybamm.OptionError(
+                "The negative working elecrtrode option has been removed because the "
+                "voltage - and therefore the energy stored - would be negative."
+                "Use the positive working electrode option and set whatever would "
+                "normally be the negative electrode to be the positive electrode."
+            )
 
         # Some standard checks to make sure options are compatible
         if options["dimensionality"] == 0:
@@ -543,7 +550,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "mechanics model"
                 )
 
-        if options["half-cell"] == "true":
+        if options["working electrode"] != "both":
             if options["thermal"] == "x-full":
                 raise pybamm.OptionError(
                     "X-full thermal submodel is not compatible with half-cell models"
@@ -661,10 +668,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
     @cached_property
     def whole_cell_domains(self):
-        if self["half-cell"] == "true":
+        if self["working electrode"] == "both":
             return ["separator", "positive electrode"]
-        else:
+        elif self["working electrode"] == "positive":
             return ["negative electrode", "separator", "positive electrode"]
+        else:
+            raise NotImplementedError  # future proofing
 
     @property
     def electrode_types(self):

@@ -285,7 +285,7 @@ class TestBaseBatteryModel(TestCase):
         self.assertEqual(model.options["stress-induced diffusion"], "true")
         model = pybamm.BaseBatteryModel(
             {
-                "half-cell": "true",
+                "working electrode": "positive",
                 "loss of active material": "stress-driven",
                 "SEI on cracks": "true",
             }
@@ -354,13 +354,18 @@ class TestBaseBatteryModel(TestCase):
 
         # thermal half-cell
         with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
-            pybamm.BaseBatteryModel({"thermal": "x-full", "half-cell": "true"})
+            pybamm.BaseBatteryModel(
+                {
+                    "thermal": "x-full",
+                    "working electrode": "positive"
+                }
+            )
         with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
             pybamm.BaseBatteryModel(
                 {
                     "dimensionality": 2,
                     "thermal": "x-lumped",
-                    "half-cell": "true",
+                    "working electrode": "positive",
                 }
             )
 
@@ -458,7 +463,7 @@ class TestOptions(TestCase):
         self.assertEqual(options.positive.secondary["particle mechanics"], "none")
 
     def test_whole_cell_domains(self):
-        options = BatteryModelOptions({"half-cell": "true"})
+        options = BatteryModelOptions({"working electrode": "positive"})
         self.assertEqual(
             options.whole_cell_domains, ["separator", "positive electrode"]
         )

@@ -8,18 +8,18 @@ import unittest
 
 class TestMPM(TestCase):
     def test_well_posed(self):
-        options = {"thermal": "isothermal", "half-cell": "true"}
+        options = {"thermal": "isothermal", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
         # Test build after init
-        model = pybamm.lithium_ion.MPM({"half-cell": "true"}, build=False)
+        model = pybamm.lithium_ion.MPM({"working electrode": "positive"}, build=False)
         model.build_model()
         model.check_well_posedness()
 
     def test_default_parameter_values(self):
         # check default parameters are added correctly
-        model = pybamm.lithium_ion.MPM({"half-cell": "true"})
+        model = pybamm.lithium_ion.MPM({"working electrode": "positive"})
         self.assertEqual(
             model.default_parameter_values[
                 "Positive minimum particle radius [m]"
@@ -28,19 +28,19 @@ class TestMPM(TestCase):
         )
 
     def test_lumped_thermal_model_1D(self):
-        options = {"thermal": "lumped", "half-cell": "true"}
+        options = {"thermal": "lumped", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
     def test_particle_uniform(self):
-        options = {"particle": "uniform profile", "half-cell": "true"}
+        options = {"particle": "uniform profile", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
     def test_differential_surface_form(self):
         options = {
             "surface form": "differential",
-            "half-cell": "true",
+            "working electrode": "positive",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
@@ -48,12 +48,12 @@ class TestMPM(TestCase):
 
 class TestMPMExternalCircuits(TestCase):
     def test_well_posed_voltage(self):
-        options = {"operating mode": "voltage", "half-cell": "true"}
+        options = {"operating mode": "voltage", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
     def test_well_posed_power(self):
-        options = {"operating mode": "power", "half-cell": "true"}
+        options = {"operating mode": "power", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
@@ -65,7 +65,7 @@ class TestMPMExternalCircuits(TestCase):
 
         options = {
             "operating mode": external_circuit_function,
-            "half-cell": "true",
+            "working electrode": "positive",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()

@@ -303,7 +303,7 @@ class TestQuickPlot(TestCase):
         for model in [
             pybamm.lithium_ion.SPMe(),
             pybamm.lead_acid.LOQS(),
-            pybamm.lithium_ion.SPMe({"half-cell": "true"}),
+            pybamm.lithium_ion.SPMe({"working electrode": "true"}),
         ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
@@ -343,7 +343,7 @@ class TestQuickPlot(TestCase):
             # test quick plot of particle for spme
             if (
                 model.name == "Single Particle Model with electrolyte"
-                and model.options["half-cell"] == "false"
+                and model.options["working electrode"] == "both"
             ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",

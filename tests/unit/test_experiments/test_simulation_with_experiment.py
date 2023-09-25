@@ -561,7 +561,7 @@ class TestSimulationExperiment(TestCase):
         experiment = pybamm.Experiment(
             [("Discharge at C/20 until 3.5V", "Charge at 1C until 3.8 V")]
         )
-        model = pybamm.lithium_ion.SPM({"half-cell": "true"})
+        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
         sim = pybamm.Simulation(
             model,
             experiment=experiment,

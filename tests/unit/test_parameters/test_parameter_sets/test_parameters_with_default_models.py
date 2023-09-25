@@ -21,7 +21,7 @@ class TestParameterValuesWithModel(TestCase):
             ),
             "Ecker2015": pybamm.lithium_ion.DFN(),
             "Ecker2015_graphite_halfcell": pybamm.lithium_ion.DFN(
-                {"half-cell": "true"}
+                {"working electrode": "positive"}
             ),
             "Mohtat2020": pybamm.lithium_ion.DFN(),
             "NCA_Kim2011": pybamm.lithium_ion.DFN(),
@@ -33,7 +33,7 @@ class TestParameterValuesWithModel(TestCase):
             ),
             "OKane2022_graphite_SiOx_halfcell": pybamm.lithium_ion.DFN(
                 {
-                    "half-cell": "true",
+                    "working electrode": "positive",
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "partially reversible",
                 }
@@ -41,7 +41,7 @@ class TestParameterValuesWithModel(TestCase):
             "ORegan2022": pybamm.lithium_ion.DFN(),
             "Prada2013": pybamm.lithium_ion.DFN(),
             "Ramadass2004": pybamm.lithium_ion.DFN(),
-            "Xu2019": pybamm.lithium_ion.DFN({"half-cell": "true"}),
+            "Xu2019": pybamm.lithium_ion.DFN({"working electrode": "positive"}),
         }
 
         # Loop over each parameter set, testing that parameters can be set

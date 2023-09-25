@@ -1,6 +1,6 @@
 #
 # Tests for the lithium-ion half-cell SPMe model
-# This is achieved by using the {"half-cell": "true"} option
+# This is achieved by using the {"working electrode": "positive"} option
 #
 import pybamm
 import unittest
