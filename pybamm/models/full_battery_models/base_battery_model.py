@@ -722,9 +722,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
     @cached_property
     def whole_cell_domains(self):
-        if self["working electrode"] == "both":
+        if self["working electrode"] == "positive":
             return ["separator", "positive electrode"]
-        elif self["working electrode"] == "positive":
+        elif self["working electrode"] == "both":
             return ["negative electrode", "separator", "positive electrode"]
         else:
             raise NotImplementedError  # future proofing

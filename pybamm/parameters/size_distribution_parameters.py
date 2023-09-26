@@ -16,7 +16,7 @@ def get_size_distribution_parameters(
     R_min_p=None,
     R_max_n=None,
     R_max_p=None,
-    halfcell="false",
+    working_electrode="both",
 ):
     """
     A convenience method to add standard area-weighted particle-size distribution
@@ -60,7 +60,7 @@ def get_size_distribution_parameters(
         "positive" to indicate a half-cell model, in which case size distribution
         parameters are only added for a single electrode.
     """
-    if halfcell == "false":
+    if working_electrode == "both":
         # Radii from given parameter set
         R_n_typ = param["Negative particle radius [m]"]
 
