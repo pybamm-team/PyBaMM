@@ -24,11 +24,11 @@ jobs:
           restore-keys: cache-lychee-
 
       # check URLs with Lychee
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # use stable version for now to avoid breaking changes
       - name: Lychee URL checker
-        uses: lycheeverse/lychee-action@v1.6.1
+        uses: lycheeverse/lychee-action@v1.8.0
         with:
           # arguments with file types to check
           args: >-
@@ -45,6 +45,7 @@ jobs:
             --accept 200,429
             --exclude-path ./CHANGELOG.md
             --exclude-path ./scripts/update_version.py
+            --exclude-path docs/conf.py
             './**/*.rst'
             './**/*.md'
             './**/*.py'

@@ -1,25 +1,25 @@
 name: Build and publish package to PyPI
 
 on:
-  push:
-    branches: main
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       target:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
         default: "pypi"
       debug_enabled:
-          type: boolean
-          description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-          required: false
-          default: false
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
 
 jobs:
   build_windows_wheels:
     name: Build wheels on windows-latest
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
@@ -74,7 +74,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
@@ -130,15 +130,12 @@ jobs:
   build_sdist:
     name: Build sdist
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
 
       - name: Install dependencies
         run: pip install wheel
