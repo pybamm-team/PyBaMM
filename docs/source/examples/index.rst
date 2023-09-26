@@ -54,6 +54,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
+    notebooks/models/half-cell.ipynb
     notebooks/models/jelly-roll-model.ipynb
     notebooks/models/latexify.ipynb
     notebooks/models/lead-acid.ipynb
