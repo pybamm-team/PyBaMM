@@ -303,7 +303,7 @@ class TestQuickPlot(TestCase):
         for model in [
             pybamm.lithium_ion.SPMe(),
             pybamm.lead_acid.LOQS(),
-            pybamm.lithium_ion.SPMe({"working electrode": "true"}),
+            pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
         ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
