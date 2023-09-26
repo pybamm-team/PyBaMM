@@ -171,7 +171,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             if output_jax and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
                 constant_symbols[symbol.id] = create_jax_coo_matrix(value)
-
             else:
                 constant_symbols[symbol.id] = value
         return
