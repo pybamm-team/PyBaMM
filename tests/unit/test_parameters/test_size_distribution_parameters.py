@@ -14,14 +14,20 @@ class TestSizeDistributionParameters(TestCase):
         param = pybamm.LithiumIonParameters()
 
         # add distribution parameter values for positive electrode
-        values = pybamm.get_size_distribution_parameters(values, halfcell="true")
+        values = pybamm.get_size_distribution_parameters(
+            values,
+            working_electrode="positive",
+        )
 
         # check negative parameters aren't there yet
         with self.assertRaises(KeyError):
             values["Negative maximum particle radius [m]"]
 
         # now add distribution parameter values for negative electrode
-        values = pybamm.get_size_distribution_parameters(values, halfcell="false")
+        values = pybamm.get_size_distribution_parameters(
+            values,
+            working_electrode="both",
+        )
 
         # check parameters
 
