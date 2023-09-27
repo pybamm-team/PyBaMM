@@ -1015,7 +1015,6 @@ class Symbol:
             "name": self.name,
             "id": self.id,
             "domains": self.domains,
-            # "children": self.children,  # the encoder deals with the children itself.
         }
 
         return json_dict

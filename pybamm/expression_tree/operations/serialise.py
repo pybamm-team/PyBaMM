@@ -207,7 +207,7 @@ class Serialise:
         }
 
         recon_model_dict["geometry"] = (
-            self._reconstruct_geometry(model_data["geometry"])
+            self._reconstruct_pybamm_dict(model_data["geometry"])
             if "geometry" in model_data.keys()
             else None
         )
@@ -255,7 +255,8 @@ class Serialise:
         try:
             empty_class = self._Empty()
             empty_class.__class__ = class_
-        except:
+        except TypeError:
+            # Mesh objects have a different layouts
             empty_class = self._EmptyDict()
             empty_class.__class__ = class_
 
@@ -345,7 +346,7 @@ class Serialise:
 
         return new_mesh
 
-    def _reconstruct_geometry(self, obj: dict):
+    def _reconstruct_pybamm_dict(self, obj: dict):
         """
         pybamm.Geometry can contain PyBaMM symbols as dictionary keys.
 
