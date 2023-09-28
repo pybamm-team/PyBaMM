@@ -3,7 +3,7 @@
 # Callbacks are used to perform actions (e.g. logging, saving)
 # at certain points in the simulation
 # Inspired by Keras callbacks
-# https://github.com/keras-team/keras/blob/master/keras/callbacks.py
+# https://github.com/keras-team/keras/blob/master/keras/callbacks/callback.py
 #
 import pybamm
 import numpy as np
