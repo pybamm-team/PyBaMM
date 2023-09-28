@@ -6,6 +6,7 @@ import os
 import sys
 import unittest
 import uuid
+from tempfile import TemporaryDirectory
 
 
 class TestSimulation(TestCase):
@@ -340,17 +341,19 @@ class TestSimulation(TestCase):
         sim.plot(testing=True)
 
     def test_create_gif(self):
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sim.solve(t_eval=[0, 10])
+        with TemporaryDirectory() as dir_name:
+            sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+            sim.solve(t_eval=[0, 10])
 
-        # create a GIF without calling the plot method
-        sim.create_gif(number_of_images=3, duration=1)
+            # Create a temporary file name
+            test_file = os.path.join(dir_name, "test_sim.gif")
 
-        # call the plot method before creating the GIF
-        sim.plot(testing=True)
-        sim.create_gif(number_of_images=3, duration=1)
+            # create a GIF without calling the plot method
+            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-        os.remove("plot.gif")
+            # call the plot method before creating the GIF
+            sim.plot(testing=True)
+            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()

@@ -3,6 +3,7 @@ import pybamm
 import unittest
 from tests import TestCase
 import numpy as np
+from tempfile import TemporaryDirectory
 
 
 class TestQuickPlot(TestCase):
@@ -290,10 +291,12 @@ class TestQuickPlot(TestCase):
         quick_plot.plot(0)
 
         # test creating a GIF
-        quick_plot.create_gif(number_of_images=3, duration=3)
-        assert not os.path.exists("plot*.png")
-        assert os.path.exists("plot.gif")
-        os.remove("plot.gif")
+        with TemporaryDirectory() as dir_name:
+            test_stub = os.path.join(dir_name, "spm_sim_test")
+            test_file = f"{test_stub}.gif"
+            quick_plot.create_gif(number_of_images=3, duration=3, output_filename=test_file)
+            assert not os.path.exists(f"{test_stub}*.png")
+            assert os.path.exists(test_file)
 
         pybamm.close_plots()
 
