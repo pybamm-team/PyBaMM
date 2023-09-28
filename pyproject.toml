@@ -109,10 +109,11 @@ dev = [
 pandas =  [
     "pandas>=0.24",
 ]
-# For the Jax solver
+# For the Jax solver. Note: these should be kept in sync with the versions defined
+# in noxfile.py and pybamm/util.py.
 jax = [
-    "jax==0.4.8",
-    "jaxlib==0.4.7",
+    "jax>=0.4,<=0.5",
+    "jaxlib>=0.4,<=0.5",
 ]
 # For the scikits.odes solver
 odes = [

@@ -18,9 +18,10 @@ PYBAMM_ENV = {
 }
 # Versions compatible with the current version of PyBaMM. Installed directly in the
 # sessions to skip redundant installation of dependencies and building wheels both in
-# the CI and locally
-JAX_VERSION = "0.4.8"
-JAXLIB_VERSION = "0.4.7"
+# the CI and locally. These should be updated when the version of PyBaMM is updated and
+# must be kept in sync with the constants defined in pybamm/util.py.
+JAX_VERSION = "0.4"
+JAXLIB_VERSION = "0.4"
 
 
 def set_environment_variables(env_dict, session):
