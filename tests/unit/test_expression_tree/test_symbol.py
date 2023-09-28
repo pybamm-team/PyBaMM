@@ -387,7 +387,7 @@ class TestSymbol(TestCase):
         )
 
     def test_symbol_visualise(self):
-        with TemporaryDirectory as dir_name:
+        with TemporaryDirectory() as dir_name:
             test_stub = os.path.join(dir_name, "test_visualize")
             test_name = f"{test_stub}.png"
             c = pybamm.Variable("c", "negative electrode")

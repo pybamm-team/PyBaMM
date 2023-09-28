@@ -11,7 +11,7 @@ import numpy as np
 
 class TestLithiumIonParameterValues(TestCase):
     def test_print_parameters(self):
-        with TemporaryDirectory as dir_name:
+        with TemporaryDirectory() as dir_name:
             parameters = pybamm.LithiumIonParameters()
             parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
             output_file = os.path.join(dir_name, "lithium_ion_parameters.txt")
