@@ -14,7 +14,7 @@ else:
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
-    "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
+    "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
 }
 # Versions compatible with the current version of PyBaMM. Installed directly in the
 # sessions to skip redundant installation of dependencies and building wheels both in
