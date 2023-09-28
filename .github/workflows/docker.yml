@@ -35,33 +35,41 @@ jobs:
           push: true
 
       - name: Build and Push Docker Image (With JAX Solver)
-        env:
-          IMAGE_NAME: pybamm/pybamm:jax
-          ARG_NAME: JAX
-        run: |
-          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
-          docker push $IMAGE_NAME
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:jax
+          push: true
+          build-args: |
+            JAX=true
 
       - name: Build and Push Docker Image (With ODES & DAE Solver)
-        env:
-          IMAGE_NAME: pybamm/pybamm:odes
-          ARG_NAME: ODES
-        run: |
-          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
-          docker push $IMAGE_NAME
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:odes
+          push: true
+          build-args: |
+            ODES=true
 
       - name: Build and Push Docker Image (With IDAKLU Solver)
-        env:
-          IMAGE_NAME: pybamm/pybamm:idaklu
-          ARG_NAME: IDAKLU
-        run: |
-          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
-          docker push $IMAGE_NAME
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:idaklu
+          push: true
+          build-args: |
+            IDAKLU=true
 
       - name: Build and Push Docker Image (With All Solvers)
-        env:
-          IMAGE_NAME: pybamm/pybamm:all
-          ARG_NAME: ALL
-        run: |
-          docker build -t $IMAGE_NAME -f scripts/Dockerfile --build-arg $ARG_NAME=true .
-          docker push $IMAGE_NAME
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:latest
+          push: true
+          build-args: |
+            ALL=true
