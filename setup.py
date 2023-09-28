@@ -9,16 +9,15 @@ import wheel.bdist_wheel as orig
 try:
     from setuptools import setup, Extension
     from setuptools.command.install import install
+    from setuptools.command.build_ext import build_ext
 except ImportError:
     from distutils.core import setup
     from distutils.command.install import install
-
-# ---------- cmakebuild was integrated into setup.py directly --------------------------
-
-try:
-    from setuptools.command.build_ext import build_ext
-except ImportError:
     from distutils.command.build_ext import build_ext
+
+
+# ---------- CMake steps for IDAKLU target (non-Windows) -------------------------------
+
 
 default_lib_dir = (
     "" if system() == "Windows" else os.path.join(os.getenv("HOME"), ".local")
@@ -171,9 +170,12 @@ class CMakeBuild(build_ext):
         dest_directory.mkdir(parents=True, exist_ok=True)
         self.copy_file(source_path, dest_path)
 
-# ---------- end of cmakebuild steps ---------------------------------------------------
+
+# ---------- end of CMake steps --------------------------------------------------------
+
 
 # ---------- configure setup logger ----------------------------------------------------
+
 
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("PyBaMM setup")
@@ -215,7 +217,9 @@ class CustomInstall(install):
     def run(self):
         install.run(self)
 
+
 # ---------- custom wheel build (non-Windows) ------------------------------------------
+
 
 class bdist_wheel(orig.bdist_wheel):
     """A custom install command to add 2 build options"""
