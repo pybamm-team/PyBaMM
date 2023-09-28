@@ -124,22 +124,22 @@ jobs:
           if-no-files-found: error
 
   build_sdist:
-    name: Build sdist
+    name: Build SDist
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Install dependencies
-        run: pip install wheel
+        run: pip install --upgrade pip setuptools wheel
 
-      - name: Build sdist
-        run: python setup.py sdist --formats=gztar
+      - name: Build SDist
+        run: pipx run build --sdist
 
-      - name: Upload sdist
+      - name: Upload SDist
         uses: actions/upload-artifact@v3
         with:
           name: sdist
