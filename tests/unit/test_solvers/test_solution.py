@@ -279,7 +279,8 @@ class TestSolution(TestCase):
                 solution.save_data(f"{test_stub}.mat", to_format="matlab")
             # Works if providing alternative name
             solution.save_data(
-                f"{test_stub}.mat", to_format="matlab", short_names={"c + d": "c_plus_d"}
+                f"{test_stub}.mat", to_format="matlab",
+                short_names={"c + d": "c_plus_d"}
             )
             data_load = loadmat(f"{test_stub}.mat")
             np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
@@ -318,15 +319,19 @@ class TestSolution(TestCase):
             np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
 
             # raise error if format is unknown
-            with self.assertRaisesRegex(ValueError, "format 'wrong_format' not recognised"):
+            with self.assertRaisesRegex(ValueError,
+                                        "format 'wrong_format' not recognised"):
                 solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
 
             # test save whole solution
             solution.save(f"{test_stub}.pickle")
             solution_load = pybamm.load(f"{test_stub}.pickle")
-            self.assertEqual(solution.all_models[0].name, solution_load.all_models[0].name)
-            np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
-            np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
+            self.assertEqual(solution.all_models[0].name,
+                             solution_load.all_models[0].name)
+            np.testing.assert_array_equal(solution["c"].entries,
+                                          solution_load["c"].entries)
+            np.testing.assert_array_equal(solution["d"].entries,
+                                          solution_load["d"].entries)
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()

@@ -275,7 +275,8 @@ class TestSimulation(TestCase):
             sim = pybamm.Simulation(model)
             sim.solve([0, 600])
             with self.assertRaisesRegex(
-                    NotImplementedError, "Cannot save simulation if model format is python"
+                    NotImplementedError,
+                    "Cannot save simulation if model format is python"
             ):
                 sim.save(test_name)
 

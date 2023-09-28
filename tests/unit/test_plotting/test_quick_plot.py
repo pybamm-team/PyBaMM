@@ -294,7 +294,8 @@ class TestQuickPlot(TestCase):
         with TemporaryDirectory() as dir_name:
             test_stub = os.path.join(dir_name, "spm_sim_test")
             test_file = f"{test_stub}.gif"
-            quick_plot.create_gif(number_of_images=3, duration=3, output_filename=test_file)
+            quick_plot.create_gif(number_of_images=3, duration=3,
+                                  output_filename=test_file)
             assert not os.path.exists(f"{test_stub}*.png")
             assert os.path.exists(test_file)
 
