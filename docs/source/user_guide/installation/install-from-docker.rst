@@ -193,6 +193,10 @@ If you want to exit the Docker container's shell, you can simply type:
 Using Git Inside a Running Docker Container
 -------------------------------------------
 
+.. note::
+      You might require re-configuring git while running the docker container for the first time.
+      You can run ``git config --list`` to ensure if you have desired git configuration already.
+
 1. Setting up git configuration
 
 .. code-block:: bash
