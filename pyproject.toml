@@ -155,6 +155,7 @@ Prada2013 = "pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values"
 Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values"
 Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
+MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 
 [tool.setuptools]
 include-package-data = true
