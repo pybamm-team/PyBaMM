@@ -189,6 +189,32 @@ If you want to exit the Docker container's shell, you can simply type:
 
       exit
 
+
+Using Git Inside a Running Docker Container
+-------------------------------------------
+
+.. note::
+      You might require re-configuring git while running the docker container for the first time.
+      You can run ``git config --list`` to ensure if you have desired git configuration already.
+
+1. Setting up git configuration
+
+.. code-block:: bash
+
+      git config --global user.name "Your Name"
+
+      git config --global user.email your@mail.com
+
+2. Setting a git remote
+
+.. code-block:: bash
+
+      git remote set-url origin <fork_url>
+
+      git remote add upstream https://github.com/pybamm-team/PyBaMM
+
+      git fetch --all
+
 Using Visual Studio Code Inside a Running Docker Container
 ----------------------------------------------------------
 
