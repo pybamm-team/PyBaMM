@@ -99,8 +99,7 @@ jobs:
             yum -y install blas-devel lapack-devel &&
             bash build_manylinux_wheels/install_sundials.sh 5.8.1 6.5.0
           CIBW_BEFORE_BUILD_LINUX: >
-            python -m pip install cmake casadi numpy &&
-            scripts/fix_casadi_rpath_linux.sh
+            python -m pip install cmake casadi numpy
           # override; point to casadi install path so that it can be found by the repair command
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
             LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:$(python -c 'import casadi; print(casadi.__path__[0])')" auditwheel repair -w {dest_dir} {wheel}
