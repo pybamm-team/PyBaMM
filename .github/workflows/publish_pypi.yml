@@ -101,6 +101,9 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: >
             python -m pip install cmake casadi numpy &&
             scripts/fix_casadi_rpath_linux.sh
+          # override; point to casadi install path so that it can be found by the repair command
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:$(python -c 'import casadi; print(casadi.__path__[0])')" auditwheel repair -w {dest_dir} {wheel}
           CIBW_BEFORE_BUILD_MACOS: >
             python -m pip
             install cmake casadi numpy &&
