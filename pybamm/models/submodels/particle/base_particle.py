@@ -49,7 +49,7 @@ class BaseParticle(pybamm.BaseSubModel):
             D_delith = phase_param.D(c, T, "delithiation")
             D = m_lith * D_lith + m_delith * D_delith
 
-        # Account for stress-induced difftusion by defining a multiplicative
+        # Account for stress-induced diffusion by defining a multiplicative
         # "stress factor"
         stress_option = getattr(self.options, domain)["stress-induced diffusion"]
 
@@ -71,7 +71,7 @@ class BaseParticle(pybamm.BaseSubModel):
         """
         All particle submodels must provide the particle concentration as an argument
         to this method. Some submodels solve for quantities other than the concentration
-        itself, for example the 'XAveragedFickianDiffusion' models solves for the
+        itself, for example the 'XAveragedPolynomialProfile' models solves for the
         x-averaged concentration. In such cases the variables being solved for (set in
         'get_fundamental_variables') must also be passed as keyword arguments. If not
         passed as keyword arguments, the various average concentrations and surface
@@ -98,44 +98,64 @@ class BaseParticle(pybamm.BaseSubModel):
             c_s_av = pybamm.r_average(c_s_xav)
 
         variables = {
-            f"{Domain} {phase_name}particle stoichiometry": c_s / c_scale,
-            f"{Domain} {phase_name}particle concentration": c_s / c_scale,
+            # Dimensional concentration
             f"{Domain} {phase_name}particle concentration [mol.m-3]": c_s,
-            f"X-averaged {domain} {phase_name}particle concentration": c_s_xav
-            / c_scale,
             f"X-averaged {domain} {phase_name}particle "
             "concentration [mol.m-3]": c_s_xav,
-            f"R-averaged {domain} {phase_name}particle concentration": c_s_rav
-            / c_scale,
             f"R-averaged {domain} {phase_name}particle "
             "concentration [mol.m-3]": c_s_rav,
-            f"Average {domain} {phase_name}particle concentration": c_s_av / c_scale,
             f"Average {domain} {phase_name}particle concentration [mol.m-3]": c_s_av,
-            f"{Domain} {phase_name}particle surface stoichiometry": c_s_surf / c_scale,
-            f"{Domain} {phase_name}particle surface concentration": c_s_surf / c_scale,
             f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_s_surf,
             f"X-averaged {domain} {phase_name}particle "
-            "surface concentration": c_s_surf_av / c_scale,
-            f"X-averaged {domain} {phase_name}particle "
             "surface concentration [mol.m-3]": c_s_surf_av,
-            f"{Domain} electrode extent of lithiation": c_s_rav / c_scale,
-            f"X-averaged {domain} electrode extent of lithiation": c_s_av / c_scale,
-            f"Minimum {domain} {phase_name}particle concentration": pybamm.min(c_s)
-            / c_scale,
-            f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s)
-            / c_scale,
             f"Minimum {domain} {phase_name}particle concentration [mol.m-3]"
             "": pybamm.min(c_s),
             f"Maximum {domain} {phase_name}particle concentration [mol.m-3]"
             "": pybamm.max(c_s),
             f"Minimum {domain} {phase_name}particle "
-            "surface concentration": pybamm.min(c_s_surf) / c_scale,
-            f"Maximum {domain} {phase_name}particle "
-            "surface concentration": pybamm.max(c_s_surf) / c_scale,
             f"Minimum {domain} {phase_name}particle "
             "surface concentration [mol.m-3]": pybamm.min(c_s_surf),
             f"Maximum {domain} {phase_name}particle "
             "surface concentration [mol.m-3]": pybamm.max(c_s_surf),
+            # Dimensionless concentration
+            f"{Domain} {phase_name}particle concentration": c_s / c_scale,
+            f"X-averaged {domain} {phase_name}particle concentration": c_s_xav
+            / c_scale,
+            f"R-averaged {domain} {phase_name}particle concentration": c_s_rav
+            / c_scale,
+            f"Average {domain} {phase_name}particle concentration": c_s_av / c_scale,
+            f"{Domain} {phase_name}particle surface concentration": c_s_surf / c_scale,
+            f"X-averaged {domain} {phase_name}particle "
+            "surface concentration": c_s_surf_av / c_scale,
+            f"Minimum {domain} {phase_name}particle concentration": pybamm.min(c_s)
+            / c_scale,
+            f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s)
+            / c_scale,
+            f"Minimum {domain} {phase_name}particle "
+            "surface concentration": pybamm.min(c_s_surf) / c_scale,
+            f"Maximum {domain} {phase_name}particle "
+            "surface concentration": pybamm.max(c_s_surf) / c_scale,
+            # Stoichiometry (equivalent to dimensionless concentration)
+            f"{Domain} {phase_name}particle stoichiometry": c_s / c_scale,
+            f"X-averaged {domain} {phase_name}particle stoichiometry": c_s_xav
+            / c_scale,
+            f"R-averaged {domain} {phase_name}particle stoichiometry": c_s_rav
+            / c_scale,
+            f"Average {domain} {phase_name}particle stoichiometry": c_s_av / c_scale,
+            f"{Domain} {phase_name}particle surface stoichiometry": c_s_surf / c_scale,
+            f"X-averaged {domain} {phase_name}particle "
+            "surface stoichiometry": c_s_surf_av / c_scale,
+            f"Minimum {domain} {phase_name}particle stoichiometry": pybamm.min(c_s)
+            / c_scale,
+            f"Maximum {domain} {phase_name}particle stoichiometry": pybamm.max(c_s)
+            / c_scale,
+            f"Minimum {domain} {phase_name}particle "
+            "surface stoichiometry": pybamm.min(c_s_surf) / c_scale,
+            f"Maximum {domain} {phase_name}particle "
+            "surface stoichiometry": pybamm.max(c_s_surf) / c_scale,
+            # Electrode extent of lithiation
+            f"{Domain} electrode extent of lithiation": c_s_rav / c_scale,
+            f"X-averaged {domain} electrode extent of lithiation": c_s_av / c_scale,
         }
 
         return variables
@@ -302,7 +322,7 @@ class BaseParticle(pybamm.BaseSubModel):
                 c_s_surf_xav_distribution, [f"{domain} {phase_name}particle"]
             )
 
-            # Concentration distribution in all domains.
+            # Concentration distribution in all domains
             c_s_distribution = pybamm.PrimaryBroadcast(
                 c_s_surf_distribution, [f"{domain} {phase_name}particle"]
             )
@@ -328,32 +348,49 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_av_distribution = pybamm.x_average(c_s_rav_distribution)
 
         variables = {
-            f"Average {domain} {phase_name}particle concentration "
-            "distribution": c_s_av_distribution / c_scale,
-            f"Average {domain} {phase_name}particle concentration "
-            "distribution [mol.m-3]": c_s_av_distribution,
-            f"{Domain} {phase_name}particle concentration "
-            "distribution": c_s_distribution / c_scale,
+            # Dimensional concentration
             f"{Domain} {phase_name}particle concentration distribution "
             "[mol.m-3]": c_s_distribution,
-            f"R-averaged {domain} {phase_name}particle concentration "
-            "distribution": c_s_rav_distribution / c_scale,
-            f"R-averaged {domain} {phase_name}particle concentration distribution "
-            "[mol.m-3]": c_s_rav_distribution,
-            f"X-averaged {domain} {phase_name}particle concentration "
-            "distribution": c_s_xav_distribution / c_scale,
             f"X-averaged {domain} {phase_name}particle concentration distribution "
             "[mol.m-3]": c_s_xav_distribution,
-            f"X-averaged {domain} {phase_name}particle surface concentration"
-            " distribution": c_s_surf_xav_distribution / c_scale,
-            f"X-averaged {domain} {phase_name}particle surface concentration "
-            "distribution [mol.m-3]": c_s_surf_xav_distribution,
-            f"{Domain} {phase_name}particle surface concentration"
-            " distribution": c_s_surf_distribution / c_scale,
-            f"{Domain} {phase_name}particle surface stoichiometry"
-            " distribution": c_s_surf_distribution / c_scale,
+            f"R-averaged {domain} {phase_name}particle concentration distribution "
+            "[mol.m-3]": c_s_rav_distribution,
+            f"Average {domain} {phase_name}particle concentration "
+            "distribution [mol.m-3]": c_s_av_distribution,
             f"{Domain} {phase_name}particle surface concentration"
             " distribution [mol.m-3]": c_s_surf_distribution,
+            f"X-averaged {domain} {phase_name}particle surface concentration "
+            "distribution [mol.m-3]": c_s_surf_xav_distribution,
+            # Dimensionless concentration
+            f"{Domain} {phase_name}particle concentration "
+            "distribution": c_s_distribution / c_scale,
+            f"X-averaged {domain} {phase_name}particle concentration "
+            "distribution": c_s_xav_distribution / c_scale,
+            f"R-averaged {domain} {phase_name}particle concentration "
+            "distribution": c_s_rav_distribution / c_scale,
+            f"Average {domain} {phase_name}particle concentration "
+            "distribution": c_s_av_distribution / c_scale,
+            f"{Domain} {phase_name}particle surface concentration"
+            " distribution": c_s_surf_distribution / c_scale,
+            f"X-averaged {domain} {phase_name}particle surface concentration"
+            " distribution": c_s_surf_xav_distribution / c_scale,
+            # Stoichiometry (equivalent to dimensionless concentration)
+            f"{Domain} {phase_name}particle stoichiometry "
+            "distribution": c_s_distribution / c_scale,
+            f"X-averaged {domain} {phase_name}particle stoichiometry "
+            "distribution": c_s_xav_distribution / c_scale,
+            f"R-averaged {domain} {phase_name}particle stoichiometry "
+            "distribution": c_s_rav_distribution / c_scale,
+            f"Average {domain} {phase_name}particle stoichiometry "
+            "distribution": c_s_av_distribution / c_scale,
+            f"{Domain} {phase_name}particle surface stoichiometry"
+            " distribution": c_s_surf_distribution / c_scale,
+            f"X-averaged {domain} {phase_name}particle surface stoichiometry"
+            " distribution": c_s_surf_xav_distribution / c_scale,
+            # Electrode extent of lithiation
+            f"{Domain} electrode extent of lithiation": c_s_rav_distribution / c_scale,
+            f"X-averaged {domain} electrode extent of lithiation": c_s_av_distribution
+            / c_scale,
         }
         return variables
 

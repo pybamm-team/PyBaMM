@@ -27,7 +27,7 @@ jobs:
   style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup python
         uses: actions/setup-python@v4
         with:
@@ -48,7 +48,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -99,6 +99,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: pipx run nox -s examples
 
+      - name: Run example scripts tests
+        if: matrix.os == 'ubuntu-latest'
+        run: nox -s scripts
+
   #M-series Mac Mini
   build-apple-mseries:
     needs: style
@@ -111,7 +115,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install python & create virtualenv
         shell: bash
         run: |

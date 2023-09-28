@@ -30,10 +30,10 @@ class ElectricalParameters(BaseParameters):
         )
         self.voltage_low_cut = pybamm.Parameter("Lower voltage cut-off [V]")
         self.voltage_high_cut = pybamm.Parameter("Upper voltage cut-off [V]")
-        self.opc_soc_0_dimensional = pybamm.Parameter(
+        self.ocp_soc_0_dimensional = pybamm.Parameter(
             "Open-circuit voltage at 0% SOC [V]"
         )
-        self.opc_soc_100_dimensional = pybamm.Parameter(
+        self.ocp_soc_100_dimensional = pybamm.Parameter(
             "Open-circuit voltage at 100% SOC [V]"
         )
         # Current as a function of time

@@ -215,7 +215,7 @@ class TimeBuildModelThermal:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
-        ["isothermal", "lumped", "x-lumped", "x-full"],
+        ["isothermal", "lumped", "x-full"],
     )
 
     def time_setup_model(self, model, params):
@@ -226,7 +226,7 @@ class TimeSolveThermal:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
-        ["isothermal", "lumped", "x-lumped", "x-full"],
+        ["isothermal", "lumped", "x-full"],
         [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
 

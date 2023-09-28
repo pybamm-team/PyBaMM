@@ -19,7 +19,7 @@ jobs:
   style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
@@ -123,7 +123,7 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
@@ -181,7 +181,7 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
@@ -258,7 +258,7 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
@@ -314,7 +314,7 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Install and cache apt packages
       - name: Install Linux system dependencies

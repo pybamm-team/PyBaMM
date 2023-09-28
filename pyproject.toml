@@ -100,6 +100,10 @@ dev = [
     "ruff",
     # For running testing sessions
     "nox",
+    # For testing Jupyter notebooks
+    "pytest>=6",
+    "pytest-xdist",
+    "nbmake",
 ]
 # Reading CSV files
 pandas =  [

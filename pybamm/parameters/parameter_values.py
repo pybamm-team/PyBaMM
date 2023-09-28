@@ -259,14 +259,15 @@ class ParameterValues:
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
+        options=None,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
         SOC or voltage
         """
-        param = param or pybamm.LithiumIonParameters()
+        param = param or pybamm.LithiumIonParameters(options)
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_value, self, param=param, known_value=known_value
+            initial_value, self, param=param, known_value=known_value, options=options
         )
         if inplace:
             parameter_values = self
@@ -278,6 +279,34 @@ class ParameterValues:
             {
                 "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
                 "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        return parameter_values
+
+    def set_initial_ocps(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial OCP of each electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            initial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+        parameter_values.update(
+            {
+                "Initial voltage in negative electrode [V]": Un,
+                "Initial voltage in positive electrode [V]": Up,
             }
         )
         return parameter_values

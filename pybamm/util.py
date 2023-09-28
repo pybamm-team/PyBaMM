@@ -19,12 +19,13 @@ import difflib
 from warnings import warn
 
 import numpy as np
-
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM, also in noxfile.py
-JAX_VERSION = "0.4.8"
-JAXLIB_VERSION = "0.4.7"
+# versions of jax and jaxlib compatible with PyBaMM. These are also defined in
+# noxfile.py and in the extras dependencies in pyproject.toml, and therefore must be
+# kept in sync.
+JAX_VERSION = "0.4"
+JAXLIB_VERSION = "0.4"
 
 
 def root_dir():
@@ -272,8 +273,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        importlib.metadata.version("jax") == JAX_VERSION
-        and importlib.metadata.version("jaxlib") == JAXLIB_VERSION
+        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
+        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
     )
 
 
@@ -341,7 +342,7 @@ def install_jax(arguments=None):  # pragma: no cover
             "-m",
             "pip",
             "install",
-            f"jax=={JAX_VERSION}",
-            f"jaxlib=={JAXLIB_VERSION}",
+            f"jax>={JAX_VERSION}",
+            f"jaxlib>={JAXLIB_VERSION}",
         ]
     )
