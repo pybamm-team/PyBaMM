@@ -385,21 +385,22 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ## Infrastructure
 
-### Setuptools
+### Installation
 
-Installation of PyBaMM _and dependencies_ is handled via [setuptools](http://setuptools.readthedocs.io/)
+Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/) and [setuptools](http://setuptools.readthedocs.io/). It uses `CMake` to compile C extensions using [`pybind11`](https://pybind11.readthedocs.io/en/stable/) and [`casadi`](https://web.casadi.org/) (non-Windows). The installation process is described in detail in the [source installation](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) page and is configured through the `CMakeLists.txt` file.
 
 Configuration files:
 
 ```
 setup.py
+pyproject.toml
 ```
 
-Note that this file must be kept in sync with the version number in [pybamm/**init**.py](pybamm/__init__.py).
+Note that this file must be kept in sync with the version number in [`pybamm/__init__.py`](pybamm/__init__.py).
 
-### Continuous Integration using GitHub actions
+### Continuous Integration using GitHub Actions
 
-Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub actions](https://github.com/features/actions).
+Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub Actions](https://github.com/features/actions).
 
 Tests are run for different operating systems, and for all Python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
