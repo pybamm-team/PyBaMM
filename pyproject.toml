@@ -163,6 +163,7 @@ include-package-data = true
 # List of files to include as package data. These are mainly the parameter CSV files in
 # the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
 # README.md files, and specific .txt files inside the pybamm/ directory are also included.
+# These are specified to be included in the SDist through MANIFEST.in.
 [tool.setuptools.package-data]
 pybamm = [
     "*.txt",
@@ -174,4 +175,4 @@ pybamm = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["pybamm", "pybamm.*"]
+include = ["pybamm"]
