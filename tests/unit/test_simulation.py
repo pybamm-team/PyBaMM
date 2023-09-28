@@ -249,32 +249,36 @@ class TestSimulation(TestCase):
         )
 
     def test_save_load(self):
-        model = pybamm.lead_acid.LOQS()
-        model.use_jacobian = True
-        sim = pybamm.Simulation(model)
+        with TemporaryDirectory() as dir_name:
+            test_name = os.path.join(dir_name, "tests.pickle")
 
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+            model = pybamm.lead_acid.LOQS()
+            model.use_jacobian = True
+            sim = pybamm.Simulation(model)
 
-        # save after solving
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
 
-        # with python formats
-        model.convert_to_format = None
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        model.convert_to_format = "python"
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        with self.assertRaisesRegex(
-            NotImplementedError, "Cannot save simulation if model format is python"
-        ):
-            sim.save("test.pickle")
+            # save after solving
+            sim.solve([0, 600])
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
+
+            # with python formats
+            model.convert_to_format = None
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 600])
+            sim.save(test_name)
+            model.convert_to_format = "python"
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 600])
+            with self.assertRaisesRegex(
+                    NotImplementedError, "Cannot save simulation if model format is python"
+            ):
+                sim.save(test_name)
+
 
     def test_load_param(self):
         # Test load_sim for parameters imports
@@ -300,33 +304,36 @@ class TestSimulation(TestCase):
         os.remove(filename)
 
     def test_save_load_dae(self):
-        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
-        model.use_jacobian = True
-        sim = pybamm.Simulation(model)
+        with TemporaryDirectory() as dir_name:
+            test_name = os.path.join(dir_name, "test.pickle")
 
-        # save after solving
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+            model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+            model.use_jacobian = True
+            sim = pybamm.Simulation(model)
 
-        # with python format
-        model.convert_to_format = None
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        sim.save("test.pickle")
+            # save after solving
+            sim.solve([0, 600])
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
 
-        # with Casadi solver & experiment
-        model.convert_to_format = "casadi"
-        sim = pybamm.Simulation(
-            model,
-            experiment="Discharge at 1C for 20 minutes",
-            solver=pybamm.CasadiSolver(),
-        )
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+            # with python format
+            model.convert_to_format = None
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 600])
+            sim.save(test_name)
+
+            # with Casadi solver & experiment
+            model.convert_to_format = "casadi"
+            sim = pybamm.Simulation(
+                model,
+                experiment="Discharge at 1C for 20 minutes",
+                solver=pybamm.CasadiSolver(),
+            )
+            sim.solve([0, 600])
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
 
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
