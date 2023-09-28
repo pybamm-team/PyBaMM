@@ -94,6 +94,8 @@ jobs:
       - name: Build wheels on ${{ matrix.os }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
+          # NumPy requires BLAS now which is no longer available on manylinux2014 i686, so skip it
+          CIBW_ARCHS_LINUX: x86_64
           # TODO: openblas no longer available on centos 7 i686 image, use blas instead for now
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install blas-devel lapack-devel &&
