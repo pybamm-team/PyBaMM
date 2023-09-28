@@ -27,8 +27,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          file: scripts/Dockerfile
           tags: latest
+          push: true
 
       - name: Build and Push Docker Image (With JAX Solver)
         env:
