@@ -24,11 +24,11 @@ jobs:
         run: docker images
 
       - name: Build and Push Docker Image (Without Solvers)
-        env:
-          IMAGE_NAME: pybamm/pybamm:latest
-        run: |
-          docker build -t $IMAGE_NAME -f scripts/Dockerfile .
-          docker push $IMAGE_NAME
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: latest
 
       - name: Build and Push Docker Image (With JAX Solver)
         env:
