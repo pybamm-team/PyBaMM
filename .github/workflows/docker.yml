@@ -31,7 +31,7 @@ jobs:
         with:
           context: .
           file: scripts/Dockerfile
-          tags: latest
+          tags: pybamm/pybamm:latest
           push: true
 
       - name: Build and Push Docker Image (With JAX Solver)
