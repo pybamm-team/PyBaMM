@@ -21,6 +21,7 @@ caption: Fundamentals and usage
 maxdepth: 2
 ---
 fundamentals/index
+fundamentals/battery_models
 ```
 
 # Example notebooks

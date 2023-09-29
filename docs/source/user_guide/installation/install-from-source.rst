@@ -42,16 +42,16 @@ You can install the above with
 
 	Where ``X`` is the version sub-number.
 
+	.. note::
+
+		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
+		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+
 .. tab:: MacOS
 
 	.. code:: bash
 
 		brew install python openblas gcc gfortran graphviz libomp
-
-.. note::
-
-	On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
-	follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
 You can install it with
@@ -114,7 +114,7 @@ Using Nox (recommended)
 	nox -s dev
 
 .. note::
-    It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
+	It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
 
 This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `ruff <https://beta.ruff.rs/docs/>`_.
@@ -131,7 +131,7 @@ You can now activate the environment with
 
 	.. code:: bash
 
-	  	.nox\dev\Scripts\activate.bat
+		.nox\dev\Scripts\activate.bat
 
 and run the tests to check your installation.
 
@@ -240,6 +240,7 @@ Doctests, examples, and coverage
 ``Nox`` can also be used to run doctests, run examples, and generate a coverage report using:
 
 - ``nox -s examples``: Run the Jupyter notebooks in ``docs/source/examples/notebooks/``.
+- ``nox -s examples -- <path-to-notebook-1.ipynb> <path-to_notebook-2.ipynb>``: Run specific Jupyter notebooks.
 - ``nox -s scripts``: Run the example scripts in ``examples/scripts/``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
@@ -268,8 +269,8 @@ i.e. ``pip install -e .``. This sets the installed location of the
 source files to your current directory.
 
 **Problem:** Errors when solving model
-``ValueError: Integrator name ida does not exsist``, or
-``ValueError: Integrator name cvode does not exsist``.
+``ValueError: Integrator name ida does not exist``, or
+``ValueError: Integrator name cvode does not exist``.
 
 **Solution:** This could mean that you have not installed
 ``scikits.odes`` correctly, check the instructions given above and make

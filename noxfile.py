@@ -106,8 +106,9 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run_always("pip", "install", "-e", ".[all]")
-    session.run("python", "run-tests.py", "--examples")
+    notebooks_to_test = session.posargs if session.posargs else []
+    session.run_always("pip", "install", "-e", ".[all,dev]")
+    session.run("pytest", "--nbmake", *notebooks_to_test, external=True)
 
 
 @nox.session(name="scripts")
@@ -152,16 +153,16 @@ def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
     session.install("-e", ".[all,docs]")
-    with session.chdir("docs/"):
-        session.run(
-            "sphinx-autobuild",
-            "-j",
-            "auto",
-            "--open-browser",
-            "-qT",
-            ".",
-            f"{envbindir}/../tmp/html",
-        )
+    session.chdir("docs")
+    session.run(
+        "sphinx-autobuild",
+        "-j",
+        "auto",
+        "--open-browser",
+        "-qT",
+        ".",
+        f"{envbindir}/../tmp/html",
+    )
 
 
 @nox.session(name="pre-commit")

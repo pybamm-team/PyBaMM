@@ -13,18 +13,8 @@ class LithiumIonParameters(BaseParameters):
     ----------
 
     options : dict, optional
-        A dictionary of options to be passed to the parameters. The options that
-        can be set are listed below.
-
-            * "particle shape" : str, optional
-                Sets the model shape of the electrode particles. This is used to
-                calculate the surface area to volume ratio. Can be "spherical"
-                (default). TODO: implement "cylindrical" and "platelet".
-            * "working electrode": str
-                Which electrode(s) intercalates and which is counter. If "both"
-                (default), the model is a standard battery. Otherwise can be "negative"
-                or "positive" to indicate a half-cell model.
-
+        A dictionary of options to be passed to the parameters, see
+        :class:`pybamm.BatteryModelOptions`.
     """
 
     def __init__(self, options=None):
@@ -63,6 +53,7 @@ class LithiumIonParameters(BaseParameters):
         self.h_edge = self.therm.h_edge
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
+        self.lambda_eff = self.therm.lambda_eff
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -84,8 +75,8 @@ class LithiumIonParameters(BaseParameters):
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut
         self.voltage_high_cut = self.elec.voltage_high_cut
-        self.opc_soc_0_dimensional = self.elec.opc_soc_0_dimensional
-        self.opc_soc_100_dimensional = self.elec.opc_soc_100_dimensional
+        self.ocp_soc_0_dimensional = self.elec.ocp_soc_0_dimensional
+        self.ocp_soc_100_dimensional = self.elec.ocp_soc_100_dimensional
 
         # Domain parameters
         for domain in self.domain_params.values():
@@ -330,7 +321,7 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode reaction-driven LAM factor [m3.mol-1]"
         )
 
-        # utilisation parameters
+        # Utilisation parameters
         self.u_init = pybamm.Parameter(
             f"Initial {domain} electrode interface utilisation"
         )
@@ -386,6 +377,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.geo = domain_param.geo.prim
         elif self.phase == "secondary":
             self.geo = domain_param.geo.sec
+        self.options = getattr(self.main_param.options, self.domain)
 
     def _set_parameters(self):
         main = self.main_param
@@ -469,6 +461,8 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.U_init = pybamm.Scalar(0)
             return
 
+        # Spatial variables for parameters that depend on position within the cell
+        # and/or particle
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
@@ -485,53 +479,59 @@ class ParticleLithiumIonParameters(BaseParameters):
             coord_sys="spherical polar",
         )
 
-        # Macroscale geometry
+        # Microscale geometry
         # Note: the surface area to volume ratio is defined later with the function
         # parameters. The particle size as a function of through-cell position is
         # already defined in geometric_parameters.py
         self.R = self.geo.R
         self.R_typ = self.geo.R_typ
-
-        # Particle properties
-        self.c_max = pybamm.Parameter(
-            f"{pref}Maximum concentration in {domain} electrode [mol.m-3]"
-        )
-
         # Particle-size distribution parameters
         self.R_min = self.geo.R_min
         self.R_max = self.geo.R_max
         self.f_a_dist = self.geo.f_a_dist
 
+        # Particle properties
         self.epsilon_s = pybamm.FunctionParameter(
             f"{pref}{Domain} electrode active material volume fraction",
             {"Through-cell distance (x) [m]": x},
         )
-        self.c_init = pybamm.FunctionParameter(
-            f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
-            {
-                "Radial distance (r) [m]": r,
-                "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
-                    x, f"{domain} {phase_name}particle"
-                ),
-            },
+        self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
+        self.c_max = pybamm.Parameter(
+            f"{pref}Maximum concentration in {domain} electrode [mol.m-3]"
         )
+        if self.options["open-circuit potential"] == "MSMR":
+            self.U_init = pybamm.Parameter(
+                f"{pref}Initial voltage in {domain} electrode [V]",
+            )
+            self.c_init = self.x(self.U_init) * self.c_max
+        else:
+            self.c_init = pybamm.FunctionParameter(
+                f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
+                {
+                    "Radial distance (r) [m]": r,
+                    "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+                        x, f"{domain} {phase_name}particle"
+                    ),
+                },
+            )
         self.c_init_av = pybamm.xyz_average(pybamm.r_average(self.c_init))
         self.sto_init_av = self.c_init_av / self.c_max
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
-        self.n_Li_init = eps_c_init_av * self.domain_param.L * main.A_cc
-        self.Q_Li_init = self.n_Li_init * main.F / 3600
 
-        self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
+        if self.options["open-circuit potential"] != "MSMR":
+            self.U_init = self.U(self.sto_init_av, main.T_init)
+
+        # Electrode loading and capacity
         self.elec_loading = (
             self.epsilon_s_av * self.domain_param.L * self.c_max * main.F / 3600
         )
+        self.n_Li_init = eps_c_init_av * self.domain_param.L * main.A_cc
+        self.Q_Li_init = self.n_Li_init * main.F / 3600
         self.Q_init = self.elec_loading * main.A_cc
 
-        self.U_init = self.U(self.sto_init_av, main.T_init)
-
-        if main.options["particle shape"] == "spherical":
+        if self.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
     def D(self, c_s, T, lithiation=None):
@@ -628,6 +628,114 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} electrode OCP entropic change [V.K-1]",
             inputs,
         )
+
+    def X_j(self, index):
+        "Available host sites indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        Xj = pybamm.Parameter(f"X_{d}_{index}")
+        return Xj
+
+    def U0_j(self, index):
+        "Equilibrium potential indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        U0j = pybamm.Parameter(f"U0_{d}_{index}")
+        return U0j
+
+    def w_j(self, index):
+        "Order parameter indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        wj = pybamm.Parameter(f"w_{d}_{index}")
+        return wj
+
+    def alpha_bv_j(self, index):
+        "Dimensional Butler-Volmer exchange-current density indexed by reaction j"
+        domain = self.domain
+        d = domain[0]
+        alpha_bv_j = pybamm.Parameter(f"a_{d}_{index}")
+        return alpha_bv_j
+
+    def x_j(self, U, index):
+        "Fractional occupancy of site j as a function of potential"
+        T = self.main_param.T_ref
+        f = self.main_param.F / (self.main_param.R * T)
+        U0j = self.U0_j(index)
+        wj = self.w_j(index)
+        Xj = self.X_j(index)
+        # Equation 5, Baker et al 2018
+        xj = Xj / (1 + pybamm.exp(f * (U - U0j) / wj))
+        return xj
+
+    def dxdU_j(self, U, index):
+        "Derivative of fractional occupancy of site j as a function of potential [V-1]"
+        T = self.main_param.T_ref
+        f = self.main_param.F / (self.main_param.R * T)
+        U0j = self.U0_j(index)
+        wj = self.w_j(index)
+        Xj = self.X_j(index)
+        e = pybamm.exp(f * (U - U0j) / wj)
+        # Equation 25, Baker et al 2018
+        dxjdU = -(f / wj) * (Xj * e) / (1 + e) ** 2
+        return dxjdU
+
+    def j0_j(self, c_e, U, T, index):
+        "Exchange-current density index by reaction j [A.m-2]"
+        domain = self.domain
+        d = domain[0]
+
+        tol = pybamm.settings.tolerances["j0__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
+        c_e_ref = self.main_param.c_e_init
+        xj = self.x_j(U, index)
+        # xj = pybamm.maximum(pybamm.minimum(xj, (1 - tol)), tol)
+
+        f = self.main_param.F / (self.main_param.R * T)
+        wj = self.w_j(index)
+        self.X_j(index)
+        aj = self.alpha_bv_j(index)
+        j0_ref_j = pybamm.FunctionParameter(
+            f"j0_ref_{d}_{index}", {"Temperature [K]": T}
+        )
+
+        # Equation 16, Baker et al 2018. The original formulation would be implemented
+        # as:
+        # j0_j = (
+        #    j0_ref_j
+        #    * xj ** (wj * aj)
+        #    * (Xj - xj) ** (wj * (1 - aj))
+        #    * (c_e / c_e_ref) ** (1 - aj)
+        # )
+        # However, we reformulate in terms of potential to avoid singularity as x_j
+        # approaches X_j
+        j0_j = (
+            j0_ref_j
+            * xj**wj
+            * pybamm.exp(f * (1 - aj) * (U - self.U0_j(index)))
+            * (c_e / c_e_ref) ** (1 - aj)
+        )
+        return j0_j
+
+    def x(self, U):
+        "Stoichiometry as a function of potential (for use with MSMR models)"
+        N = int(self.options["number of MSMR reactions"])
+        # Equation 6, Baker et al 2018
+        x = 0
+        for i in range(N):
+            x += self.x_j(U, i)
+        return x
+
+    def dxdU(self, U):
+        """
+        Differential stoichiometry as a function of potential (for use with MSMR models)
+        """
+        N = int(self.options["number of MSMR reactions"])
+        # Equation 25, Baker et al 2018
+        dxdU = 0
+        for i in range(N):
+            dxdU += self.dxdU_j(U, i)
+        return dxdU
 
     def t_change(self, sto):
         """

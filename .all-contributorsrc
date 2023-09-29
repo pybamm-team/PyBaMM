@@ -674,6 +674,29 @@
         "ideas",
         "bug"
       ]
+    },
+    {
+      "login": "bobonice",
+      "name": "bobonice",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22030806?v=4",
+      "profile": "https://github.com/bobonice",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "kratman",
+      "name": "Eric G. Kratz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10170302?v=4",
+      "profile": "https://github.com/kratman",
+      "contributions": [
+        "doc",
+        "infra",
+        "bug",
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
