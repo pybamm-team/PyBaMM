@@ -10,7 +10,7 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pybamm import BaseBatteryModel
+    from pybamm import BaseModel
 
 
 class Serialise:
@@ -136,9 +136,8 @@ class Serialise:
             model_json["mesh"] = self._MeshEncoder().default(mesh)
 
         if variables:
-            model_json["geometry"] = self._deconstruct_pybamm_dicts(
-                dict(model._geometry)
-            )
+            if model._geometry:
+                model_json["geometry"] = self._deconstruct_pybamm_dicts(model._geometry)
             model_json["variables"] = {
                 k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
             }
@@ -149,9 +148,7 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)
 
-    def load_model(
-        self, filename: str, battery_model: BaseBatteryModel = None
-    ) -> BaseBatteryModel:
+    def load_model(self, filename: str, battery_model: BaseModel = None) -> BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
 

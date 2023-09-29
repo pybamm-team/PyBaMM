@@ -171,7 +171,8 @@ class BaseModel:
                 else:
                     var.secondary_mesh = None
 
-            instance._geometry = pybamm.Geometry(properties["geometry"])
+            if properties["geometry"]:
+                instance._geometry = pybamm.Geometry(properties["geometry"])
         else:
             # Delete the default variables which have not been discretised
             instance._variables = pybamm.FuzzyDict({})
