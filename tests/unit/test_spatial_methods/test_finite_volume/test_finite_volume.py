@@ -74,6 +74,15 @@ class TestFiniteVolume(TestCase):
         with self.assertRaisesRegex(pybamm.ShapeError, "child must have size n_nodes"):
             fin_vol.concatenation(edges)
 
+    def test_invalid_coordinate_system(self):
+        with self.assertRaises(ValueError):
+            x_s_edge = pybamm.SpatialVariableEdge(
+                "x_s",
+                domain=["separator"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian_2",
+            )
+
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Setup mesh and discretisation
         mesh = get_mesh_for_testing()
