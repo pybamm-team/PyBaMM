@@ -781,10 +781,12 @@ class QuickPlot(object):
         images = []
 
         # create images/plots
+        stub_name = output_filename.split(".")[0]
         for val in time_array:
             self.plot(val)
-            images.append("plot" + str(val) + ".png")
-            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            temp_name = f"{stub_name}{val}.png"
+            images.append(temp_name)
+            self.fig.savefig(temp_name, dpi=300)
             plt.close()
 
         # compile the images/plots to create a GIF
