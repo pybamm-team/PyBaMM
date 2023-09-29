@@ -76,7 +76,7 @@ class TestFiniteVolume(TestCase):
 
     def test_invalid_coordinate_system(self):
         with self.assertRaises(ValueError):
-            x_s_edge = pybamm.SpatialVariableEdge(
+            pybamm.SpatialVariableEdge(
                 "x_s",
                 domain=["separator"],
                 auxiliary_domains={"secondary": "current collector"},
