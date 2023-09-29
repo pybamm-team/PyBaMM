@@ -9,6 +9,7 @@ import unittest
 
 import casadi
 import numpy as np
+from numpy import testing
 
 import pybamm
 
@@ -981,6 +982,32 @@ class TestBaseModel(TestCase):
             model.timescale = 1
         with self.assertRaises(NotImplementedError):
             model.length_scales = 1
+
+    def test_save_load_model(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+        model.variables["2c"] = 2 * c
+
+        # setup and discretise
+        solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
+
+        # save model
+        model.save_model(filename="test_base_model")
+
+        # raises warning if variables are saved
+        with self.assertWarns(pybamm.ModelWarning):
+            model.save_model(filename="test_base_model", variables=model.variables)
+
+        new_model = pybamm.load_model("test_base_model.json")
+
+        new_solution = pybamm.ScipySolver().solve(new_model, np.linspace(0, 1))
+
+        # model solutions match
+        testing.assert_array_equal(solution.all_ys, new_solution.all_ys)
+        os.remove("test_base_model.json")
 
 
 if __name__ == "__main__":

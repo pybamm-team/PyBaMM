@@ -2,6 +2,7 @@
 # Base model class
 #
 import numbers
+import warnings
 from collections import OrderedDict
 
 import copy
@@ -124,11 +125,8 @@ class BaseModel:
         self.is_discretised = False
         self.y_slices = None
 
-    # PL: Next up, how to pass in the non-standard variables, if necessary.
     @classmethod
-    def deserialise(
-        cls, properties: dict
-    ):  # PL: maybe option up here as output_mesh=true to output a tuple, (model, mesh) rather than just updating the variables and leaving it at that.
+    def deserialise(cls, properties: dict):
         """
         Create a model instance from a serialised object.
         """
@@ -137,7 +135,7 @@ class BaseModel:
         # append the model name with _saved to differentiate
         instance.__init__(name=properties["name"] + "_saved")
 
-        # PL: what to do with the options?
+        instance.options = properties["options"]
 
         # Initialise model with stored variables that have already been discretised
         instance._concatenated_rhs = properties["concatenated_rhs"]
@@ -176,9 +174,6 @@ class BaseModel:
         else:
             # Delete the default variables which have not been discretised
             instance._variables = pybamm.FuzzyDict({})
-
-        # PL: Simulation(new_model, new_mesh)
-        # doesn't work because the model is already discretised, you can't give it a new mesh.
 
         # Model has already been discretised
         instance.is_discretised = True
@@ -1183,11 +1178,31 @@ class BaseModel:
         based on the model name, and the current datetime.
         """
         if variables and not mesh:
-            raise ValueError(
-                "Serialisation: Please provide the mesh if variables are required"
+            warnings.warn(
+                """
+                Serialisation: Variables are being saved without a mesh. 
+                Plotting may not be available.
+                """,
+                pybamm.ModelWarning,
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+
+def load_model(filename, battery_model: BaseModel = None):
+    """
+    Load in a saved model from a JSON file
+
+    Parameters
+    ----------
+    filename: str
+        Path to the JSON file containing the serialised model file
+    battery_model: :class: pybamm.BaseBatteryModel, optional
+            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
+            any model names within the file. If None, the function will look for the saved object
+            path, present if the original model came from PyBaMM.
+    """
+    return Serialise().load_model(filename, battery_model)
 
 
 # helper functions for finding symbols

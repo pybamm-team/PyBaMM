@@ -34,6 +34,9 @@ class ScikitSubMesh2D(SubMesh):
         self.npts = len(self.edges["y"]) * len(self.edges["z"])
         self.coord_sys = coord_sys
 
+        # save tabs for serialisation
+        self.tabs = tabs
+
         # create mesh
         self.fem_mesh = skfem.MeshTri.init_tensor(self.edges["y"], self.edges["z"])
 
@@ -141,6 +144,15 @@ class ScikitSubMesh2D(SubMesh):
         else:
             raise pybamm.GeometryError("tab location not valid")
 
+    def to_json(self):
+        json_dict = {
+            "edges": {k: v.tolist() for k, v in self.edges.items()},
+            "coord_sys": self.coord_sys,
+            "tabs": self.tabs,
+        }
+
+        return json_dict
+
 
 class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     """
@@ -176,6 +188,18 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
                 )
 
         super().__init__(edges, coord_sys, tabs)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        edges = {k: np.array(v) for k, v in snippet["edges"].items()}
+
+        super(ScikitUniform2DSubMesh, instance).__init__(
+            edges, snippet["coord_sys"], snippet["tabs"]
+        )
+
+        return instance
 
 
 class ScikitExponential2DSubMesh(ScikitSubMesh2D):

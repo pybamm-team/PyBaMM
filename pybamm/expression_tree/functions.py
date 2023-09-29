@@ -212,9 +212,7 @@ class Function(pybamm.Symbol):
                 eq_list.append(eq)
             return self._sympy_operator(*eq_list)
 
-    def to_json(
-        self,
-    ):  # PL: I think these ones might actually be present when you build your own function.
+    def to_json(self):
         raise NotImplementedError(
             "pybamm.Function: Serialisation is only implemented for discretised models."
         )

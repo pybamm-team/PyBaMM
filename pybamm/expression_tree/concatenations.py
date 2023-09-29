@@ -45,7 +45,7 @@ class Concatenation(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, *children, name, domains, concat_fun=None):
-        # PL: update this one - I guess we still want it to take 'snippet' rather than the list? to be the same as the others?
+        """Creates a new Concatenation instance from a json object"""
         instance = cls.__new__(cls)
 
         instance.concatenation_function = concat_fun

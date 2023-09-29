@@ -605,7 +605,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             else:
                 # serialised options save tuples as lists which need to be converted
                 if isinstance(value, list) and len(value) == 2:
-                    value = tuple(value)
+                    value = tuple(tuple(v) if len(v) == 2 else v for v in value)
 
                 if isinstance(value, str) or option in [
                     "dimensionality",
@@ -805,11 +805,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         super().__init__(name)
         self.options = options
 
-    # PL: Next up, how to pass in the non-standard variables, if necessary.
     @classmethod
-    def deserialise(
-        cls, properties: dict
-    ):  # PL: maybe option up here as output_mesh=true to output a tuple, (model, mesh) rather than just updating the variables and leaving it at that.
+    def deserialise(cls, properties: dict):
         """
         Create a model instance from a serialised object.
         """
@@ -856,9 +853,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         else:
             # Delete the default variables which have not been discretised
             instance._variables = pybamm.FuzzyDict({})
-
-        # PL: Simulation(new_model, new_mesh)
-        # doesn't work because the model is already discretised, you can't give it a new mesh.
 
         # Model has already been discretised
         instance.is_discretised = True
@@ -1462,19 +1456,3 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
-
-
-def load_model(filename, battery_model: BaseBatteryModel = None):
-    """
-    Load in a saved model from a JSON file
-
-    Parameters
-    ----------
-    filename: str
-        Path to the JSON file containing the serialised model file
-    battery_model: :class: pybamm.BaseBatteryModel, optional
-            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
-            any model names within the file. If None, the function will look for the saved object
-            path, present if the original model came from PyBaMM.
-    """
-    return Serialise().load_model(filename, battery_model)

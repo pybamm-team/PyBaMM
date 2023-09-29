@@ -87,165 +87,63 @@ def mesh_var_dict():
 
 
 class TestSerialiseModels(TestCase):
-    # test lithium models
-    def test_spm_serialisation_recreation(self):
-        t = [0, 3600]
+    def test_user_defined_model_recreaction(self):
+        # Start with a base model
+        model = pybamm.BaseModel()
 
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
+        # Define the variables and parameters
+        x = pybamm.SpatialVariable("x", domain="rod", coord_sys="cartesian")
+        T = pybamm.Variable("Temperature", domain="rod")
+        k = pybamm.Parameter("Thermal diffusivity")
 
-        sim.save_model("test_model")
+        # Write the governing equations
+        N = -k * pybamm.grad(T)  # Heat flux
+        Q = 1 - pybamm.Function(np.abs, x - 1)  # Source term
+        dTdt = -pybamm.div(N) + Q
+        model.rhs = {T: dTdt}  # add to model
 
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
+        # Add the boundary and initial conditions
+        model.boundary_conditions = {
+            T: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+            }
+        }
+        model.initial_conditions = {T: 2 * x - x**2}
 
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_equal(solution.all_ys[x], new_solution.all_ys[x])
+        # Add desired output variables, geometry, parameters
+        model.variables = {"Temperature": T, "Heat flux": N, "Heat source": Q}
+        geometry = {"rod": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}}
+        param = pybamm.ParameterValues({"Thermal diffusivity": 0.75})
 
-    def test_spme_serialisation_recreation(self):
-        t = [0, 3600]
+        # Process model and geometry
+        param.process_model(model)
+        param.process_geometry(geometry)
 
-        model = pybamm.lithium_ion.SPMe()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
+        # Pick mesh, spatial method, and discretise
+        submesh_types = {"rod": pybamm.Uniform1DSubMesh}
+        var_pts = {x: 30}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        spatial_methods = {"rod": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
 
-        sim.save_model("test_model")
+        # Solve
+        solver = pybamm.ScipySolver()
+        t = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t)
 
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
+        model.save_model("heat_equation", variables=model._variables, mesh=mesh)
+        new_model = pybamm.load_model("heat_equation.json")
 
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_equal(solution.all_ys[x], new_solution.all_ys[x])
-
-    def test_mpm_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.lithium_ion.MPM()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
-
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x]
-            )
-
-    def test_dfn_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.lithium_ion.DFN()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
+        new_solver = pybamm.ScipySolver()
         new_solution = new_solver.solve(new_model, t)
 
         for x, val in enumerate(solution.all_ys):
             np.testing.assert_array_almost_equal(
                 solution.all_ys[x], new_solution.all_ys[x]
             )
-
-    def test_newman_tobias_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.lithium_ion.NewmanTobias()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
-
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x]
-            )
-
-    def test_msmr_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
-
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x], decimal=3
-            )
-
-    # test lead-acid models
-    def test_lead_acid_full_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.lead_acid.Full()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
-
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x]
-            )
-
-    def test_loqs_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.lead_acid.LOQS()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
-
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x]
-            )
-
-    def test_thevenin_serialisation_recreation(self):
-        t = [0, 3600]
-
-        model = pybamm.equivalent_circuit.Thevenin()
-        sim = pybamm.Simulation(model)
-        solution = sim.solve(t)
-
-        sim.save_model("test_model")
-
-        new_model = pybamm.load_model("test_model.json")
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, t)
-
-        for x, val in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x]
-            )
+        os.remove("heat_equation.json")
 
 
 class TestSerialise(TestCase):

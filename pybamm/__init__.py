@@ -191,7 +191,7 @@ from .meshes.scikit_fem_submeshes import (
 #
 # Serialisation
 #
-from .models.full_battery_models.base_battery_model import load_model
+from .models.base_model import load_model
 
 #
 # Spatial Methods

@@ -166,10 +166,6 @@ class Array(pybamm.Symbol):
                 "row_indices": self.entries.indices.tolist(),
                 "column_pointers": self.entries.indptr.tolist(),
             }
-        else:
-            raise TypeError(
-                f"Ah! Dense matrix! {self.entries}"
-            )  # PL: Double check this
 
         json_dict = {
             "name": self.name,

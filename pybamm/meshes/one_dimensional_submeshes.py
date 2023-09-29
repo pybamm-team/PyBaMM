@@ -34,7 +34,7 @@ class SubMesh1D(SubMesh):
         self.internal_boundaries = []
 
         # Add tab locations in terms of "left" and "right"
-        if tabs:
+        if tabs and "negative tab" not in tabs.keys():
             self.tabs = {}
             l_z = self.edges[-1]
 
@@ -52,6 +52,9 @@ class SubMesh1D(SubMesh):
                         f"{tab} tab located at {tab_location}, "
                         f"but must be at either 0 or {l_z}"
                     )
+        elif tabs:
+            # tabs have already been calculated by a serialised model
+            self.tabs = tabs
 
     def read_lims(self, lims):
         # Separate limits and tabs

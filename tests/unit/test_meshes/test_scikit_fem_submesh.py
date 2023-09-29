@@ -180,6 +180,44 @@ class TestScikitFiniteElement2DSubMesh(TestCase):
         param.process_geometry(geometry)
         pybamm.Mesh(geometry, submesh_types, var_pts)
 
+    def test_to_json(self):
+        param = get_param()
+        geometry = pybamm.battery_geometry(
+            include_particles=False, options={"dimensionality": 2}
+        )
+        param.process_geometry(geometry)
+
+        var_pts = {"x_n": 10, "x_s": 7, "x_p": 12, "y": 16, "z": 24}
+
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
+        }
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        mesh_json = mesh.to_json()
+
+        expected_json = {
+            "submesh_pts": {
+                "negative electrode": {"x_n": 10},
+                "separator": {"x_s": 7},
+                "positive electrode": {"x_p": 12},
+                "current collector": {"y": 16, "z": 24},
+            },
+            "base_domains": [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+                "current collector",
+            ],
+        }
+
+        self.assertEqual(mesh_json, expected_json)
+
 
 class TestScikitFiniteElementChebyshev2DSubMesh(TestCase):
     def test_mesh_creation(self):
