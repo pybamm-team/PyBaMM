@@ -343,14 +343,18 @@ class TestSimulation(TestCase):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve(t_eval=[0, 10])
 
+        # Create a temporary file name
+        test_stub = "test_sim"
+        test_file = f"{test_stub}.gif"
+
         # create a GIF without calling the plot method
-        sim.create_gif(number_of_images=3, duration=1)
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
         # call the plot method before creating the GIF
         sim.plot(testing=True)
-        sim.create_gif(number_of_images=3, duration=1)
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-        os.remove("plot.gif")
+        os.remove(test_file)
 
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()
