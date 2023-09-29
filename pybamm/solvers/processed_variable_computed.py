@@ -8,10 +8,14 @@ from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 
 
-class ProcessedVariable(object):
+class ProcessedVariableComputed(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
+
+    The 'Computed' variant of ProcessedVariable deals with variables that have
+    been derived at solve time (see the 'output_variables' solver option),
+    where the full state-vector is not itself propogated and returned.
 
     Parameters
     ----------
@@ -26,6 +30,8 @@ class ProcessedVariable(object):
     base_variable_casadis : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
+    base_variable_data : list of :numpy:array
+        A list of numpy arrays, the returned evaluations.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     warn : bool, optional
@@ -37,12 +43,14 @@ class ProcessedVariable(object):
         self,
         base_variables,
         base_variables_casadi,
+        base_variables_data,
         solution,
         warn=True,
         cumtrapz_ic=None,
     ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
+        self.base_variables_data = base_variables_data
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
@@ -55,15 +63,6 @@ class ProcessedVariable(object):
         self.warn = warn
         self.cumtrapz_ic = cumtrapz_ic
 
-        # Process spatial variables
-        geometry = solution.all_models[0].geometry
-        self.spatial_variables = {}
-        for domain_level, domain_names in self.domains.items():
-            variables = []
-            for domain in domain_names:
-                variables += list(geometry[domain].keys())
-            self.spatial_variables[domain_level] = variables
-
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -74,6 +73,7 @@ class ProcessedVariable(object):
         # Evaluate base variable at initial time
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
+        self.unroll_params = {}
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -110,20 +110,76 @@ class ProcessedVariable(object):
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 
-    def initialise_0D(self):
-        # initialise empty array of the correct size
-        entries = np.empty(len(self.t_pts))
-        idx = 0
-        # Evaluate the base_variable index-by-index
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[idx] = float(base_var_casadi(t, y, inputs))
+    def add_sensitivity(self, param, data):
+        # unroll from sparse representation into n-d matrix
+        # Note: then flatten and convert to casadi.DM for consistency with
+        #       full state-vector ProcessedVariable sensitivities
+        self._sensitivities[param] = casadi.DM(self.unroll(data).flatten())
 
-                idx += 1
+    def _unroll_nnz(self, realdata=None):
+        # unroll in nnz != numel, otherwise copy
+        if realdata is None:
+            realdata = self.base_variables_data
+        sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
+        if sp.nnz() != sp.numel():
+            data = [None] * len(realdata)
+            for datak in range(len(realdata)):
+                data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
+                var_data = realdata[0].flatten()
+                k = 0
+                for t_i in range(len(self.t_pts)):
+                    base = t_i * sp.numel()
+                    for r in sp.row():
+                        data[datak][base + r] = var_data[k]
+                        k = k + 1
+        else:
+            data = realdata
+        return data
+
+    def unroll_0D(self, realdata=None):
+        if realdata is None:
+            realdata = self.base_variables_data
+        return np.concatenate(realdata, axis=0).flatten()
+
+    def unroll_1D(self, realdata=None):
+        len_space = self.base_eval_shape[0]
+        return (
+            np.concatenate(self._unroll_nnz(realdata), axis=0)
+            .reshape((len(self.t_pts), len_space))
+            .transpose()
+        )
+
+    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=[]):
+        # initialise settings on first run
+        if not self.unroll_params:
+            self.unroll_params["n_dim1"] = n_dim1
+            self.unroll_params["n_dim2"] = n_dim2
+            self.unroll_params["axis_swaps"] = axis_swaps
+        # use stored settings on subsequent runs
+        if not n_dim1:
+            n_dim1 = self.unroll_params["n_dim1"]
+            n_dim2 = self.unroll_params["n_dim2"]
+            axis_swaps = self.unroll_params["axis_swaps"]
+        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
+            (len(self.t_pts), n_dim1, n_dim2)
+        )
+        for a, b in axis_swaps:
+            entries = np.moveaxis(entries, a, b)
+        return entries
+
+    def unroll(self, realdata=None):
+        if self.dimensions == 0:
+            return self.unroll_0D(realdata=realdata)
+        elif self.dimensions == 1:
+            return self.unroll_1D(realdata=realdata)
+        elif self.dimensions == 2:
+            return self.unroll_2D(realdata=realdata)
+        else:
+            # Raise error for 3D variable
+            raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
+
+    def initialise_0D(self):
+        entries = self.unroll_0D()
 
         if self.cumtrapz_ic is not None:
             entries = cumulative_trapezoid(
@@ -137,19 +193,7 @@ class ProcessedVariable(object):
         self.dimensions = 0
 
     def initialise_1D(self, fixed_t=False):
-        len_space = self.base_eval_shape[0]
-        entries = np.empty((len_space, len(self.t_pts)))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
-                idx += 1
+        entries = self.unroll_1D()
 
         # Get node and edge values
         nodes = self.mesh.nodes
@@ -172,11 +216,25 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        self.spatial_variable_names = {
-            k: self._process_spatial_variable_names(v)
-            for k, v in self.spatial_variables.items()
-        }
-        self.first_dimension = self.spatial_variable_names["primary"]
+        if self.domain[0].endswith("particle"):
+            self.first_dimension = "r"
+            self.r_sol = space
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
+            self.first_dimension = "x"
+            self.x_sol = space
+        elif self.domain == ["current collector"]:
+            self.first_dimension = "z"
+            self.z_sol = space
+        elif self.domain[0].endswith("particle size"):
+            self.first_dimension = "R"
+            self.R_sol = space
+        else:
+            self.first_dimension = "x"
+            self.x_sol = space
 
         # assign attributes for reference
         pts_for_interp = space
@@ -207,22 +265,13 @@ class ProcessedVariable(object):
         second_dim_pts = second_dim_nodes
         first_dim_size = len(first_dim_pts)
         second_dim_size = len(second_dim_pts)
-        entries = np.empty((first_dim_size, second_dim_size, len(self.t_pts)))
 
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                idx += 1
+        entries = self.unroll_2D(
+            realdata=None,
+            n_dim1=second_dim_size,
+            n_dim2=first_dim_size,
+            axis_swaps=[(0, 2), (0, 1)],
+        )
 
         # add points outside first dimension domain for extrapolation to
         # boundaries
@@ -271,13 +320,48 @@ class ProcessedVariable(object):
             axis=1,
         )
 
-        self.spatial_variable_names = {
-            k: self._process_spatial_variable_names(v)
-            for k, v in self.spatial_variables.items()
-        }
-
-        self.first_dimension = self.spatial_variable_names["primary"]
-        self.second_dimension = self.spatial_variable_names["secondary"]
+        # Process r-x, x-z, r-R, R-x, or R-z
+        if self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
+            self.first_dimension = "r"
+            self.second_dimension = "x"
+            self.r_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and self.domains["secondary"] == ["current collector"]:
+            self.first_dimension = "x"
+            self.second_dimension = "z"
+            self.x_sol = first_dim_pts
+            self.z_sol = second_dim_pts
+        elif self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("particle size"):
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
+            self.first_dimension = "R"
+            self.second_dimension = "x"
+            self.R_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
+            "current collector"
+        ]:
+            self.first_dimension = "R"
+            self.second_dimension = "z"
+            self.R_sol = first_dim_pts
+            self.z_sol = second_dim_pts
+        else:  # pragma: no cover
+            raise pybamm.DomainError(
+                f"Cannot process 2D object with domains '{self.domains}'."
+            )
 
         # assign attributes for reference
         self.entries = entries
@@ -304,22 +388,12 @@ class ProcessedVariable(object):
         len_y = len(y_sol)
         z_sol = self.mesh.edges["z"]
         len_z = len(z_sol)
-        entries = np.empty((len_y, len_z, len(self.t_pts)))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [len_y, len_z],
-                    order="C",
-                )
-                idx += 1
+        entries = self.unroll_2D(
+            realdata=None,
+            n_dim1=len_y,
+            n_dim2=len_z,
+            axis_swaps=[(0, 2)],
+        )
 
         # assign attributes for reference
         self.entries = entries
@@ -336,35 +410,6 @@ class ProcessedVariable(object):
             entries,
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
-
-    def _process_spatial_variable_names(self, spatial_variable):
-        if len(spatial_variable) == 0:
-            return None
-
-        # Extract names
-        raw_names = []
-        for var in spatial_variable:
-            # Ignore tabs in domain names
-            if var == "tabs":
-                continue
-            if isinstance(var, str):
-                raw_names.append(var)
-            else:
-                raw_names.append(var.name)
-
-        # Rename battery variables to match PyBaMM convention
-        if all([var.startswith("r") for var in raw_names]):
-            return "r"
-        elif all([var.startswith("x") for var in raw_names]):
-            return "x"
-        elif all([var.startswith("R") for var in raw_names]):
-            return "R"
-        elif len(raw_names) == 1:
-            return raw_names[0]
-        else:
-            raise NotImplementedError(
-                "Spatial variable name not recognized for {}".format(spatial_variable)
-            )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
@@ -393,71 +438,4 @@ class ProcessedVariable(object):
         # No sensitivities if there are no inputs
         if len(self.all_inputs[0]) == 0:
             return {}
-        # Otherwise initialise and return sensitivities
-        if self._sensitivities is None:
-            if self.solution_sensitivities != {}:
-                self.initialise_sensitivity_explicit_forward()
-            else:
-                raise ValueError(
-                    "Cannot compute sensitivities. The 'calculate_sensitivities' "
-                    "argument of the solver.solve should be changed from 'None' to "
-                    "allow sensitivities calculations. Check solver documentation for "
-                    "details."
-                )
         return self._sensitivities
-
-    def initialise_sensitivity_explicit_forward(self):
-        "Set up the sensitivity dictionary"
-        inputs_stacked = self.all_inputs_casadi[0]
-
-        # Set up symbolic variables
-        t_casadi = casadi.MX.sym("t")
-        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
-        p_casadi = {
-            name: casadi.MX.sym(name, value.shape[0])
-            for name, value in self.all_inputs[0].items()
-        }
-
-        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-
-        # Convert variable to casadi format for differentiating
-        var_casadi = self.base_variables[0].to_casadi(
-            t_casadi, y_casadi, inputs=p_casadi
-        )
-        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
-        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
-
-        # Convert to functions and evaluate index-by-index
-        dvar_dy_func = casadi.Function(
-            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
-        )
-        dvar_dp_func = casadi.Function(
-            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
-        )
-        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
-            for idx, t in enumerate(ts):
-                u = ys[:, idx]
-                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
-                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if index == 0 and idx == 0:
-                    dvar_dy_eval = next_dvar_dy_eval
-                    dvar_dp_eval = next_dvar_dp_eval
-                else:
-                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
-                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
-
-        # Compute sensitivity
-        dy_dp = self.solution_sensitivities["all"]
-        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
-
-        sensitivities = {"all": S_var}
-
-        # Add the individual sensitivity
-        start = 0
-        for name, inp in self.all_inputs[0].items():
-            end = start + inp.shape[0]
-            sensitivities[name] = S_var[:, start:end]
-            start = end
-
-        # Save attribute
-        self._sensitivities = sensitivities

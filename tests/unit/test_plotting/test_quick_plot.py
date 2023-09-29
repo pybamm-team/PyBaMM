@@ -298,7 +298,6 @@ class TestQuickPlot(TestCase):
                                   output_filename=test_file)
             assert not os.path.exists(f"{test_stub}*.png")
             assert os.path.exists(test_file)
-
         pybamm.close_plots()
 
     def test_loqs_spme(self):
