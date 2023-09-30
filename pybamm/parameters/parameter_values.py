@@ -221,7 +221,9 @@ class ParameterValues:
             else:
                 if name in self._dict_items:
                     pybamm.logger.warning(
-                        f"Parameter '{name}' already exists in the parameters."
+                        f"Parameter '{name}' already exists in the parameters. "
+                        + "Updating parameters should be done by setting "
+                        + "check_already_exists=True"
                     )
             # if no conflicts, update
             if isinstance(value, str):
