@@ -294,6 +294,11 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
+      - name: Install PyBaMM dependencies
+        run: |
+          pip install --upgrade pip wheel setuptools nox
+          pip install -e .[all,docs]
+
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         run: nox -s doctests
 
