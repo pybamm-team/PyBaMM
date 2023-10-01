@@ -109,8 +109,7 @@ dev = [
 pandas =  [
     "pandas>=0.24",
 ]
-# For the Jax solver. Note: these should be kept in sync with the versions defined
-# in noxfile.py and pybamm/util.py.
+# For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
     "jax>=0.4,<=0.5",
     "jaxlib>=0.4,<=0.5",

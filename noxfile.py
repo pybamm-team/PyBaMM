@@ -16,13 +16,6 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
 }
-# Versions compatible with the current version of PyBaMM. Installed directly in the
-# sessions to skip redundant installation of dependencies and building wheels both in
-# the CI and locally
-# Note: These should be updated when the version of PyBaMM is updated and
-# must be kept in sync with the constants defined in pybamm/util.py.
-JAX_VERSION = "0.4"
-JAXLIB_VERSION = "0.4"
 
 
 def set_environment_variables(env_dict, session):
@@ -65,11 +58,10 @@ def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("scikits.odes", silent=False)
-        session.install(f"jax=={JAX_VERSION}", silent=False)
-        session.install(f"jaxlib=={JAXLIB_VERSION}", silent=False)
+        session.install("-e", ".[all,odes,jax]", silent=False)
+    else:
+        session.install("-e", ".[all]", silent=False)
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -79,11 +71,10 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("scikits.odes", silent=False)
-        session.install(f"jax=={JAX_VERSION}", silent=False)
-        session.install(f"jaxlib=={JAXLIB_VERSION}", silent=False)
+        session.install("-e", ".[all,odes,jax]", silent=False)
+    else:
+        session.install("-e", ".[all]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -98,11 +89,10 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("scikits.odes", silent=False)
-        session.install(f"jax=={JAX_VERSION}", silent=False)
-        session.install(f"jaxlib=={JAXLIB_VERSION}", silent=False)
+        session.install("-e", ".[all,odes,jax]", silent=False)
+    else:
+        session.install("-e", ".[all]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -145,11 +135,10 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("scikits.odes", silent=False)
-        session.install(f"jax=={JAX_VERSION}", silent=False)
-        session.install(f"jaxlib=={JAXLIB_VERSION}", silent=False)
+            session.install("-e", ".[all,odes,jax]", silent=False)
+    else:
+        session.install("-e", ".[all]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
