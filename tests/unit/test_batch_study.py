@@ -93,14 +93,18 @@ class TestBatchStudy(TestCase):
         bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
         bs.solve([0, 10])
 
+        # Create a temporary file name
+        test_stub = "batch_study_test"
+        test_file = f"{test_stub}.gif"
+
         # create a GIF before calling the plot method
-        bs.create_gif(number_of_images=3, duration=1)
+        bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
         # create a GIF after calling the plot method
         bs.plot(testing=True)
-        bs.create_gif(number_of_images=3, duration=1)
+        bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-        os.remove("plot.gif")
+        os.remove(test_file)
 
 
 if __name__ == "__main__":

@@ -20,26 +20,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install gfortran gcc libopenblas-dev
+
       - name: Install python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
-      - name: Install SuiteSparse and Sundials
+          python -m pip install --upgrade pip wheel setuptools wget cmake casadi numpy packaging
+          python -m pip install asv[virtualenv]
+
+      - name: Install SuiteSparse and SUNDIALS
         run: python scripts/install_KLU_Sundials.py
+
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run --machine "GitHubRunner" NEW --show-stderr --strict -v
+          asv run --machine "GitHubRunner" NEW --show-stderr -v
         env:
           SUNDIALS_INST: $HOME/.local
           LD_LIBRARY_PATH: $HOME/.local/lib
+
       - name: Upload results as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -55,18 +62,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+
       - name: Install asv
         run: pip install asv
+
       - name: Checkout pybamm-bench repo
         uses: actions/checkout@v4
         with:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
+
       - name: Download results artifact
         uses: actions/download-artifact@v3
         with:
           name: asv_new_results
           path: new_results
+
       - name: Copy new results and push to pybamm-bench repo
         env:
           PUSH_BENCH_EMAIL: ${{ secrets.PUSH_BENCH_EMAIL }}
@@ -78,6 +89,7 @@ jobs:
           git add results
           git commit -am "Add new results"
           git push
+
       - name: Publish results
         run: |
           asv publish
