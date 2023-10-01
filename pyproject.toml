@@ -3,6 +3,7 @@ requires = [
     "setuptools",
     "wheel",
     "casadi>=3.6.0; platform_system!='Windows'",
+    # use CMake bundled from MSVC on Windows
     "cmake; platform_system!='Windows'",
     ]
 build-backend = "setuptools.build_meta"
@@ -12,7 +13,7 @@ name = "pybamm"
 version = "23.5"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
-authors = [{name = "The PyBaMM Team"}, {email = "pybamm@pybamm.org"}]
+authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 requires-python = ">=3.8, <3.12"
 readme = {file = "README.md", content-type = "text/markdown"}
