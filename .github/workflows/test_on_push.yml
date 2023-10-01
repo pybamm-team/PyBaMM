@@ -259,13 +259,54 @@ jobs:
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: nox -s integration
 
-  # Runs only on Ubuntu with Python 3.11
-  run_doctests_and_example_tests:
+# Runs only on Ubuntu with Python 3.11. Skips IDAKLU module compilation
+# for speedups, which is already tested in other jobs.
+  run_doctests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Doctests and notebooks (ubuntu-latest / Python 3.11)
+    name: Doctests (ubuntu-latest / Python 3.11)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      # Install and cache apt packages
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        with:
+          packages: gfortran gcc graphviz pandoc
+          execute_install_scripts: true
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        run: |
+          sudo apt-get update
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.11
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          cache: 'pip'
+          cache-dependency-path: setup.py
+
+      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
+        run: nox -s doctests
+
+      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
+        run: nox -s docs
+
+  # Runs only on Ubuntu with Python 3.11
+  run_example_tests:
+    needs: style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Example notebooks (ubuntu-latest / Python 3.11)
 
     steps:
       - name: Check out PyBaMM repository
@@ -313,12 +354,6 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: nox -s pybamm-requires
-
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        run: nox -s doctests
-
-      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
-        run: nox -s docs
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
         run: nox -s examples
