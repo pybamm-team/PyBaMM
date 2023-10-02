@@ -29,14 +29,16 @@ class TestSettings(TestCase):
         pybamm.settings.set_smoothing_parameters("exact")
 
         # Test errors
-        with self.assertRaisesRegex(ValueError, "strictly positive"):
+        with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.min_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "strictly positive"):
+        with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.max_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "strictly positive"):
+        with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.heaviside_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "strictly positive"):
+        with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.abs_smoothing = -10
+        with self.assertRaisesRegex(ValueError, "greater than 1"):
+            pybamm.settings.min_max_smoothing = 0.9
 
 
 if __name__ == "__main__":

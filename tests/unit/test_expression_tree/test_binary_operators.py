@@ -446,11 +446,12 @@ class TestBinaryOperators(TestCase):
         # Test that smooth min/max are used when the setting is changed
         pybamm.settings.min_smoothing = "smooth"
         pybamm.settings.max_smoothing = "smooth"
-        pybamm.settings.min_max_smoothing = 3000
 
+        pybamm.settings.min_max_smoothing = 1
         self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.smooth_minus(a, b, 1)))
         self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.smooth_plus(a, b, 1)))
 
+        pybamm.settings.min_max_smoothing = 3000
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
         self.assertEqual(str(pybamm.minimum(a, b)), str(a))
