@@ -185,7 +185,7 @@ You may also test multiple notebooks this way. Passing the path to a folder will
 nox -s examples -- docs/source/examples/notebooks/models/
 ```
 
-You may also use an appropriate [glob pattern](https://linux.die.net/man/7/glob) to run all notebooks matching a particular folder or name pattern.
+You may also use an appropriate [glob pattern](https://docs.python.org/3/library/glob.html) to run all notebooks matching a particular folder or name pattern.
 
 To edit the structure and how the Jupyter notebooks get rendered in the Sphinx documentation (using `nbsphinx`), install [Pandoc](https://pandoc.org/installing.html) on your system, either using `conda` (through the `conda-forge` channel)
 
