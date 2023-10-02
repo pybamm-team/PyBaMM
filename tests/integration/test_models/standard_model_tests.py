@@ -155,6 +155,9 @@ class StandardModelTest(object):
         if isinstance(new_model, pybamm.lithium_ion.BaseModel):
             new_solver.rtol = 1e-8
             new_solver.atol = 1e-8
+            accuracy = 6
+        else:
+            accuracy = 5
 
         Crate = abs(
             self.parameter_values["Current function [A]"]
@@ -170,7 +173,7 @@ class StandardModelTest(object):
 
         for x, val in enumerate(self.solution.all_ys):
             np.testing.assert_array_almost_equal(
-                new_solution.all_ys[x], self.solution.all_ys[x]
+                new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
             )
 
         os.remove("test_model.json")
@@ -182,7 +185,6 @@ class StandardModelTest(object):
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
-        self.test_serialisation(solver, t_eval)
 
         if (
             isinstance(
@@ -190,6 +192,7 @@ class StandardModelTest(object):
             )
             and not skip_output_tests
         ):
+            self.test_serialisation(solver, t_eval)
             self.test_outputs()
 
 

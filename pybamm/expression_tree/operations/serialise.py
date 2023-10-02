@@ -7,11 +7,6 @@ import importlib
 import numpy as np
 import re
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pybamm import BaseModel
-
 
 class Serialise:
     """
@@ -84,28 +79,27 @@ class Serialise:
 
     def save_model(
         self,
-        model: pybamm.BaseBatteryModel,
+        model: pybamm.BaseModel,
         mesh: pybamm.Mesh = None,
         variables: pybamm.FuzzyDict = None,
         filename: str = None,
     ):
-        """
-        Saves a discretised model to a JSON file.
+        """Saves a discretised model to a JSON file.
 
         As the model is discretised and ready to solve, only the right hand side,
         algebraic and initial condition variables are saved.
 
         Parameters
         ----------
-        model: : :class:`pybamm.BaseBatteryModel`
+        model : :class:`pybamm.BaseModel`
             The discretised model to be saved
-        mesh: :class: `pybamm.Mesh`, optional
+        mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not neccesary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: :class: `pybamm.FuzzyDict`, optional
+        variables: :class:`pybamm.FuzzyDict` (optional)
             The discretised model varaibles. Not necessary to solve a model, but
             required to use pybamm's plotting tools.
-        filename: str, optional
+        filename: str (optional)
             The desired name of the JSON file. If no name is provided, one will be
             created based on the model name, and the current datetime.
         """
@@ -148,7 +142,9 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)
 
-    def load_model(self, filename: str, battery_model: BaseModel = None) -> BaseModel:
+    def load_model(
+        self, filename: str, battery_model: pybamm.BaseModel = None
+    ) -> pybamm.BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
 
@@ -166,14 +162,14 @@ class Serialise:
 
         filename: str
             Path to the JSON file containing the serialised model file
-        battery_model: :class: pybamm.BaseBatteryModel, optional
+        battery_model:  :class:`pybamm.BaseModel` (optional)
             PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
             any model names within the file. If None, the function will look for the saved object
             path, present if the original model came from PyBaMM.
 
         Returns
         -------
-        :class: pybamm.BaseBatteryModel
+        :class:`pybamm.BaseModel`
             A PyBaMM model object, of type specified either in the JSON or in `battery_model`.
         """
 
