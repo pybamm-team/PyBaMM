@@ -9,6 +9,7 @@
 
 ## Bug fixes
 
+- Fixed a bug where there was an expired link related to glob pattern in the CONTRIBUTING.md file.([#3393](https://github.com/pybamm-team/PyBaMM/pull/3393))
 - Fixed a bug where empty lists passed to QuickPlot resulted in an IndexError and did not return a meaningful error message ([#3359](https://github.com/pybamm-team/PyBaMM/pull/3359))
 - Fixed a bug where there was a missing thermal conductivity in the thermal pouch cell models ([#3330](https://github.com/pybamm-team/PyBaMM/pull/3330))
 - Fixed a bug that caused incorrect results of “{Domain} electrode thickness change [m]” due to the absence of dimension for the variable `electrode_thickness_change`([#3329](https://github.com/pybamm-team/PyBaMM/pull/3329)).
