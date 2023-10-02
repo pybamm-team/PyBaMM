@@ -5,7 +5,7 @@ import sympy
 
 import pybamm
 
-KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
+KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar","none"]
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -132,11 +132,9 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
         # check coord_sys against KNOWN_COORD_SYS
-        if coord_sys in KNOWN_COORD_SYS:
-            pass
-        else:
+        if coord_sys not in KNOWN_COORD_SYS:
             raise ValueError(
-                f"Coordinate system is {coord_sys}, not in cartesian, cylindrical polar, spherical polar")
+                f"Coordinate system is {coord_sys}, not in cartesian, cylindrical polar, spherical polar, none")
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
