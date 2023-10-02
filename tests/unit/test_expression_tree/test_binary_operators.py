@@ -443,6 +443,23 @@ class TestBinaryOperators(TestCase):
             "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])",
         )
 
+        # Test that smooth min/max are used when the setting is changed
+        pybamm.settings.min_smoothing = "smooth"
+        pybamm.settings.max_smoothing = "smooth"
+        pybamm.settings.min_max_smoothing = 3000
+
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.smooth_minus(a, b, 1)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.smooth_plus(a, b, 1)))
+
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual(str(pybamm.minimum(a, b)), str(a))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(b))
+
+        # Change setting back for other tests
+        pybamm.settings.min_smoothing = "exact"
+        pybamm.settings.max_smoothing = "exact"
+
     def test_binary_simplifications(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)

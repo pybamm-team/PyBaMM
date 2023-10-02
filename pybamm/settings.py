@@ -8,6 +8,7 @@ class Settings(object):
     _simplify = True
     _min_smoothing = "exact"
     _max_smoothing = "exact"
+    _min_max_smoothing = 1000
     _heaviside_smoothing = "exact"
     _abs_smoothing = "exact"
     max_words_in_line = 4
@@ -43,16 +44,17 @@ class Settings(object):
         self._simplify = value
 
     def set_smoothing_parameters(self, k):
-        "Helper function to set all smoothing parameters"
+        """Helper function to set all smoothing parameters"""
         self.min_smoothing = k
         self.max_smoothing = k
         self.heaviside_smoothing = k
         self.abs_smoothing = k
 
-    def check_k(self, k):
-        if k != "exact" and k <= 0:
+    @staticmethod
+    def check_k(k):
+        if k != "exact" and k != "smooth" and k <= 0:
             raise ValueError(
-                "smoothing parameter must be 'exact' or a strictly positive number"
+                "Smoothing parameter must be 'exact', 'smooth', or a positive number"
             )
 
     @property
@@ -72,6 +74,18 @@ class Settings(object):
     def max_smoothing(self, k):
         self.check_k(k)
         self._max_smoothing = k
+
+    @property
+    def min_max_smoothing(self):
+        return self._min_max_smoothing
+
+    @min_max_smoothing.setter
+    def min_max_smoothing(self, k):
+        if k < 1:
+            raise ValueError(
+                "Smoothing parameter must be greater than 1"
+            )
+        self._min_max_smoothing = k
 
     @property
     def heaviside_smoothing(self):
