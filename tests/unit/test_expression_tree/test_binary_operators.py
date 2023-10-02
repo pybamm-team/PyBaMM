@@ -443,8 +443,6 @@ class TestBinaryOperators(TestCase):
             "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])",
         )
 
-
-
     def test_binary_simplifications(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
