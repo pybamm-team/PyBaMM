@@ -7,7 +7,7 @@ class Settings(object):
     _debug_mode = False
     _simplify = True
     _min_max_mode = "exact"
-    _min_max_smoothing = 1000
+    _min_max_smoothing = 10
     _heaviside_smoothing = "exact"
     _abs_smoothing = "exact"
     max_words_in_line = 4
