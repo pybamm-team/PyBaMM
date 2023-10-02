@@ -1211,13 +1211,14 @@ def minimum(left, right):
     if out is not None:
         return out
 
-    k = pybamm.settings.min_smoothing
+    mode = pybamm.settings.min_max_mode
+    k = pybamm.settings.min_max_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (left.is_constant() and right.is_constant()):
+    if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Minimum(left, right)
-    elif k == "smooth":
-        out = pybamm.smooth_minus(left, right, pybamm.settings.min_max_smoothing)
+    elif mode == "smooth":
+        out = pybamm.smooth_minus(left, right, k)
     else:
         out = pybamm.softminus(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1234,13 +1235,14 @@ def maximum(left, right):
     if out is not None:
         return out
 
-    k = pybamm.settings.max_smoothing
+    mode = pybamm.settings.min_max_mode
+    k = pybamm.settings.min_max_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (left.is_constant() and right.is_constant()):
+    if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Maximum(left, right)
-    elif k == "smooth":
-        out = pybamm.smooth_plus(left, right, pybamm.settings.min_max_smoothing)
+    elif mode == "smooth":
+        out = pybamm.smooth_plus(left, right, k)
     else:
         out = pybamm.softplus(left, right, k)
     return pybamm.simplify_if_constant(out)

@@ -16,29 +16,28 @@ class TestSettings(TestCase):
         pybamm.settings.simplify = True
 
     def test_smoothing_parameters(self):
-        self.assertEqual(pybamm.settings.min_smoothing, "exact")
-        self.assertEqual(pybamm.settings.max_smoothing, "exact")
+        self.assertEqual(pybamm.settings.min_max_mode, "exact")
         self.assertEqual(pybamm.settings.heaviside_smoothing, "exact")
         self.assertEqual(pybamm.settings.abs_smoothing, "exact")
 
         pybamm.settings.set_smoothing_parameters(10)
-        self.assertEqual(pybamm.settings.min_smoothing, 10)
-        self.assertEqual(pybamm.settings.max_smoothing, 10)
+        self.assertEqual(pybamm.settings.min_max_smoothing, 10)
         self.assertEqual(pybamm.settings.heaviside_smoothing, 10)
         self.assertEqual(pybamm.settings.abs_smoothing, 10)
         pybamm.settings.set_smoothing_parameters("exact")
 
         # Test errors
+        with self.assertRaisesRegex(ValueError, "greater than 1"):
+            pybamm.settings.min_max_mode = "smooth"
+            pybamm.settings.min_max_smoothing = 0.9
         with self.assertRaisesRegex(ValueError, "positive number"):
-            pybamm.settings.min_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "positive number"):
-            pybamm.settings.max_smoothing = -10
+            pybamm.settings.min_max_mode = "soft"
+            pybamm.settings.min_max_smoothing = -10
         with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.heaviside_smoothing = -10
         with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.abs_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "greater than 1"):
-            pybamm.settings.min_max_smoothing = 0.9
+        pybamm.settings.set_smoothing_parameters("exact")
 
 
 if __name__ == "__main__":
