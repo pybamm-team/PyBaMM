@@ -1180,7 +1180,7 @@ class BaseModel:
         if variables and not mesh:
             warnings.warn(
                 """
-                Serialisation: Variables are being saved without a mesh. 
+                Serialisation: Variables are being saved without a mesh.
                 Plotting may not be available.
                 """,
                 pybamm.ModelWarning,
@@ -1198,9 +1198,9 @@ def load_model(filename, battery_model: BaseModel = None):
     filename: str
         Path to the JSON file containing the serialised model file
     battery_model: :class: pybamm.BaseBatteryModel, optional
-            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
-            any model names within the file. If None, the function will look for the saved object
-            path, present if the original model came from PyBaMM.
+            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
+            override any model names within the file. If None, the function will look
+            for the saved object path, present if the original model came from PyBaMM.
     """
     return Serialise().load_model(filename, battery_model)
 

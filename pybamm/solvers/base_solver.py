@@ -707,7 +707,7 @@ class BaseSolver(object):
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             if not isinstance(self, pybamm.DummySolver):
-                # check a discretised model without original paramaters is not being used
+                # check for a discretised model without original parameters
                 if not (
                     model.concatenated_rhs is not None
                     or model.concatenated_algebraic is not None

@@ -52,13 +52,13 @@ class Broadcast(pybamm.SpatialOperator):
 
     def to_json(self):
         raise NotImplementedError(
-            "pybamm.Broadcast: Serialisation is only implemented for discretised models."
+            "pybamm.Broadcast: Serialisation is only implemented for discretised models"
         )
 
     @classmethod
     def _from_json(cls, snippet):
         raise NotImplementedError(
-            "pybamm.Broadcast: Please use a discretised model when reading in from JSON."
+            "pybamm.Broadcast: Please use a discretised model when reading in from JSON"
         )
 
 

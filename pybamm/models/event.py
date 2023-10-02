@@ -97,7 +97,9 @@ class Event:
         See :meth:`pybamm.Serialise._SymbolEncoder.default()`
         """
 
-        # event_type contains string name, for JSON readability, and value for deserialisation.
+        # event_type contains string name, for JSON readability,
+        # and value for deserialisation.
+
         json_dict = {
             "name": self._name,
             "event_type": [str(self._event_type), self._event_type.value],

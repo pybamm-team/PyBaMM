@@ -293,9 +293,10 @@ class Simulation:
                 # figure out whether the voltage event is greater than the starting
                 # voltage (charge) or less (discharge) and set the sign of the
                 # event accordingly
-                if (isinstance(op.value, pybamm.Interpolant) or
-                    isinstance(op.value, pybamm.Multiplication)):
-                    inpt = {"start time":0}
+                if isinstance(op.value, pybamm.Interpolant) or isinstance(
+                    op.value, pybamm.Multiplication
+                ):
+                    inpt = {"start time": 0}
                     init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
                     sign = np.sign(init_curr)
                 else:
@@ -1207,8 +1208,8 @@ class Simulation:
             tools will not be availble. Will automatically save meshes as well, required
             for plotting tools.
         filename: str, optional
-            The desired name of the JSON file. If no name is provided, one will be created
-            based on the model name, and the current datetime.
+            The desired name of the JSON file. If no name is provided, one will be
+            created based on the model name, and the current datetime.
         """
         mesh = self.mesh if (mesh or variables) else None
         variables = self.built_model.variables if variables else None

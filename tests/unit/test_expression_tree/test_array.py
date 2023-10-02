@@ -47,7 +47,7 @@ class TestArray(TestCase):
 
         json_dict = {
             "name": "Array of shape (3, 1)",
-            "id": mock.ANY,  # The value of the ID will change, but want to check it is present
+            "id": mock.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],

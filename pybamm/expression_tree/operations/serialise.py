@@ -101,7 +101,7 @@ class Serialise:
             The desired name of the JSON file. If no name is provided, one will be
             created based on the model name, and the current datetime.
         """
-        if model.is_discretised == False:
+        if model.is_discretised is False:
             raise NotImplementedError(
                 "PyBaMM can only serialise a discretised, ready-to-solve model."
             )
@@ -161,14 +161,15 @@ class Serialise:
         filename: str
             Path to the JSON file containing the serialised model file
         battery_model:  :class:`pybamm.BaseModel` (optional)
-            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will override
-            any model names within the file. If None, the function will look for the saved object
-            path, present if the original model came from PyBaMM.
+            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
+            override any model names within the file. If None, the function will look
+            for the saved object path, present if the original model came from PyBaMM.
 
         Returns
         -------
         :class:`pybamm.BaseModel`
-            A PyBaMM model object, of type specified either in the JSON or in `battery_model`.
+            A PyBaMM model object, of type specified either in the JSON or in
+            `battery_model`.
         """
 
         with open(filename, "r") as f:

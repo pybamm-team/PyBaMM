@@ -44,7 +44,7 @@ class TestMatrix(TestCase):
         arr = pybamm.Matrix(csr_matrix([[0, 1, 0, 0], [0, 0, 0, 1]]))
         json_dict = {
             "name": "Sparse Matrix (2, 4)",
-            "id": mock.ANY,  # The value of the ID will change, but want to check it is present
+            "id": mock.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],

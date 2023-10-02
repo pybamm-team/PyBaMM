@@ -426,13 +426,15 @@ class SpatialOperator(UnaryOperator):
 
     def to_json(self):
         raise NotImplementedError(
-            "pybamm.SpatialOperator: Serialisation is only implemented for discretised models."
+            "pybamm.SpatialOperator:"
+            "Serialisation is only implemented for discretised models."
         )
 
     @classmethod
     def _from_json(cls, snippet):
         raise NotImplementedError(
-            "pybamm.SpatialOperator: Please use a discretised model when reading in from JSON."
+            "pybamm.SpatialOperator:"
+            "Please use a discretised model when reading in from JSON."
         )
 
 
