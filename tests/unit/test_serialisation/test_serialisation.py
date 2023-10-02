@@ -3,6 +3,7 @@
 #
 from tests import TestCase
 import tests
+import json
 import os
 import unittest
 import unittest.mock as mock
@@ -305,6 +306,17 @@ class TestSerialise(TestCase):
 
         self.assertIsInstance(mesh_class, pybamm.Mesh)
 
+        with self.assertRaises(Exception):
+            unrecognised_symbol = {
+                "py/id": mock.ANY,
+                "py/object": "pybamm.expression_tree.scalar.Scale",
+                "name": "5.0",
+                "id": mock.ANY,
+                "value": 5.0,
+                "children": [],
+            }
+            Serialise()._get_pybamm_class(unrecognised_symbol)
+
     def test_reconstruct_symbol(self):
         scalar, scalar_dict = scalar_var_dict()
 
@@ -456,9 +468,7 @@ class TestSerialise(TestCase):
 
         # default save where filename isn't provided
         Serialise().save_model(model)
-        filename = (
-            "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S") + ".json"
-        )
+        filename = "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
         self.assertTrue(os.path.exists(filename))
         os.remove(filename)
 
@@ -480,6 +490,18 @@ class TestSerialise(TestCase):
         newest_model = Serialise().load_model(
             "test_model.json", battery_model=pybamm.lithium_ion.SPM
         )
+
+        # Test for error if no model type is provided
+        with open("test_model.json", "r") as f:
+            model_data = json.load(f)
+            del model_data["py/object"]
+
+        with open("test_model.json", "w") as f:
+            json.dump(model_data, f)
+
+        with self.assertRaises(TypeError):
+            Serialise().load_model("test_model.json")
+
         os.remove("test_model.json")
 
         # check new model solves

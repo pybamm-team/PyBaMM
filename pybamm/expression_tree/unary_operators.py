@@ -184,9 +184,7 @@ class Sign(UnaryOperator):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        """See :meth:`pybamm.UnaryOperator._from_json()`."""
-        instance = super()._from_json("sign", snippet)
-        return instance
+        raise NotImplementedError()
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -420,6 +418,11 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child, domains=None):
         super().__init__(name, child, domains)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # We shouldn't need this
+        raise NotImplementedError
 
     def to_json(self):
         raise NotImplementedError(

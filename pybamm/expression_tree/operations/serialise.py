@@ -40,9 +40,8 @@ class Serialise:
                 node_dict["expression"] = self.default(node._expression)
                 return node_dict
 
-            json_obj = json.JSONEncoder.default(self, node)  # pragma: no cover
-            node_dict["json"] = json_obj
-            return node_dict
+            node_dict["json"] = json.JSONEncoder.default(self, node)  # pragma: no cover
+            return node_dict  # pragma: no cover
 
     class _MeshEncoder(json.JSONEncoder):
         """Converts PyBaMM meshes into a JSON-serialisable format"""
@@ -63,9 +62,8 @@ class Serialise:
                 node_dict.update(node.to_json())
                 return node_dict
 
-            json_obj = json.JSONEncoder.default(self, node)  # pragma: no cover
-            node_dict["json"] = json_obj
-            return node_dict
+            node_dict["json"] = json.JSONEncoder.default(self, node)  # pragma: no cover
+            return node_dict  # pragma: no cover
 
     class _Empty:
         """A dummy class to aid deserialisation"""
@@ -137,7 +135,7 @@ class Serialise:
             }
 
         if filename is None:
-            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S")
+            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
 
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)

@@ -53,6 +53,20 @@ class TestUnaryOperators(TestCase):
             pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(nega, "test"), "test2"),
         )
 
+        # Test from_json
+        input_json = {
+            "name": "-",
+            "id": -2659857727954094888,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Negate._from_json(input_json), nega)
+
     def test_absolute(self):
         a = pybamm.Symbol("a")
         absa = pybamm.AbsoluteValue(a)
@@ -79,6 +93,20 @@ class TestUnaryOperators(TestCase):
             abs_broad,
             pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(absa, "test"), "test2"),
         )
+
+        # Test from_json
+        input_json = {
+            "name": "abs",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.AbsoluteValue._from_json(input_json), absa)
 
     def test_smooth_absolute_value(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -116,6 +144,11 @@ class TestUnaryOperators(TestCase):
             ),
         )
 
+        # Test from_json
+        with self.assertRaises(NotImplementedError):
+            # signs are always scalar/array types in a discretised model
+            pybamm.Sign._from_json({})
+
     def test_floor(self):
         a = pybamm.Symbol("a")
         floora = pybamm.Floor(a)
@@ -130,6 +163,20 @@ class TestUnaryOperators(TestCase):
         floorc = pybamm.Floor(c)
         self.assertEqual(floorc.evaluate(), -4)
 
+        # Test from_json
+        input_json = {
+            "name": "floor",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Floor._from_json(input_json), floora)
+
     def test_ceiling(self):
         a = pybamm.Symbol("a")
         ceila = pybamm.Ceiling(a)
@@ -143,6 +190,20 @@ class TestUnaryOperators(TestCase):
         c = pybamm.Scalar(-3.2)
         ceilc = pybamm.Ceiling(c)
         self.assertEqual(ceilc.evaluate(), -3)
+
+        # Test from_json
+        input_json = {
+            "name": "ceil",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Ceiling._from_json(input_json), ceila)
 
     def test_gradient(self):
         # gradient of scalar symbol should fail
@@ -710,6 +771,9 @@ class TestUnaryOperators(TestCase):
         spatial_vec = pybamm.SpatialOperator("name", vec)
         with self.assertRaises(NotImplementedError):
             spatial_vec.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.SpatialOperator._from_json({})
 
         # ExplicitTimeIntegral
         expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))

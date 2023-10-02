@@ -37,6 +37,9 @@ class TestParameter(TestCase):
         with self.assertRaises(NotImplementedError):
             func.to_json()
 
+        with self.assertRaises(NotImplementedError):
+            pybamm.Parameter._from_json({})
+
 
 class TestFunctionParameter(TestCase):
     def test_function_parameter_init(self):
@@ -120,6 +123,9 @@ class TestFunctionParameter(TestCase):
 
         with self.assertRaises(NotImplementedError):
             func.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.FunctionParameter._from_json({})
 
 
 if __name__ == "__main__":

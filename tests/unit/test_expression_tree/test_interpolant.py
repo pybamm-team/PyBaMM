@@ -331,41 +331,46 @@ class TestInterpolant(TestCase):
         y = pybamm.StateVector(slice(0, 2))
         interp = pybamm.Interpolant(x, 2 * x, y)
 
-        self.assertEqual(
-            interp.to_json(),
-            {
-                "name": "interpolating_function",
-                "id": mock.ANY,
-                "x": [
-                    [
-                        0.0,
-                        0.1111111111111111,
-                        0.2222222222222222,
-                        0.3333333333333333,
-                        0.4444444444444444,
-                        0.5555555555555556,
-                        0.6666666666666666,
-                        0.7777777777777777,
-                        0.8888888888888888,
-                        1.0,
-                    ]
-                ],
-                "y": [
+        print(interp.children)
+        expected_json = {
+            "name": "interpolating_function",
+            "id": mock.ANY,
+            "x": [
+                [
                     0.0,
+                    0.1111111111111111,
                     0.2222222222222222,
+                    0.3333333333333333,
                     0.4444444444444444,
+                    0.5555555555555556,
                     0.6666666666666666,
+                    0.7777777777777777,
                     0.8888888888888888,
-                    1.1111111111111112,
-                    1.3333333333333333,
-                    1.5555555555555554,
-                    1.7777777777777777,
-                    2.0,
-                ],
-                "interpolator": "linear",
-                "extrapolate": True,
-            },
-        )
+                    1.0,
+                ]
+            ],
+            "y": [
+                0.0,
+                0.2222222222222222,
+                0.4444444444444444,
+                0.6666666666666666,
+                0.8888888888888888,
+                1.1111111111111112,
+                1.3333333333333333,
+                1.5555555555555554,
+                1.7777777777777777,
+                2.0,
+            ],
+            "interpolator": "linear",
+            "extrapolate": True,
+        }
+
+        # check correct writing to json
+        self.assertEqual(interp.to_json(), expected_json)
+
+        expected_json["children"] = [y]
+        # check correct re-creation
+        self.assertEqual(pybamm.Interpolant._from_json(expected_json), interp)
 
 
 if __name__ == "__main__":
