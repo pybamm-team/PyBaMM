@@ -284,10 +284,10 @@ jobs:
           cache-dependency-path: setup.py
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        run: nox -s doctests
+        run: pipx run nox -s doctests
 
       - name: Check if the documentation can be built for GNU/Linux with Python 3.11
-        run: nox -s docs
+        run: pipx run nox -s docs
 
   # Runs only on Ubuntu with Python 3.11
   run_example_tests:
