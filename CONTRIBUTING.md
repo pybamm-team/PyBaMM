@@ -72,7 +72,7 @@ python -m pip install pre-commit
 pre-commit run ruff
 ```
 
-ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](https://github.com/pybamm-team/PyBaMM/issues)
 
 When you commit your changes they will be checked against ruff automatically (see [Pre-commit checks](#pre-commit-checks)).
 
@@ -347,17 +347,17 @@ Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs`
 
 ### Building the documentation
 
-To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type:
+To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type (on GNU/Linux, macOS, and Windows):
 
 ```
-nox -s docs (GNU/Linux, MacOS and Windows)
+nox -s docs
 ```
 
-And then visit the webpage served at http://127.0.0.1:8000. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded.
+And then visit the webpage served at `http://127.0.0.1:8000`. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded. In CI, the docs are built and tested using the `docs` session in the `noxfile.py` file with warnings turned into errors, to fail the build. The warnings can be removed or ignored by adding the appropriate warning identifier to the `suppress_warnings` list in `docs/conf.py`.
 
 ### Example notebooks
 
-Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](docs/source/examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
+Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
 All example notebooks should be listed in [docs/source/examples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
 
@@ -375,7 +375,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](pybamm/CITATIONS.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")
@@ -396,7 +396,7 @@ setup.py
 pyproject.toml
 ```
 
-Note that this file must be kept in sync with the version number in [`pybamm/__init__.py`](pybamm/__init__.py).
+Note that this file must be kept in sync with the version number in [`pybamm/__init__.py`](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/__init__.py).
 
 ### Continuous Integration using GitHub Actions
 
@@ -432,9 +432,9 @@ Editable notebooks are made available using [Google Colab](https://colab.researc
 
 GitHub does some magic with particular filenames. In particular:
 
-- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
-- The license for using PyBaMM is stored in [LICENSE](LICENSE.txt), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
-- This file, [CONTRIBUTING.md](CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
+- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
+- The license for using PyBaMM is stored in [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/develop/LICENSE.txt), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
+- This file, [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
 
 ## Acknowledgements
 
