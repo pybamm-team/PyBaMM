@@ -72,7 +72,7 @@ python -m pip install pre-commit
 pre-commit run ruff
 ```
 
-ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+ruff is configured inside the file `pre-commit-config.yaml`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](https://github.com/pybamm-team/PyBaMM/issues)
 
 When you commit your changes they will be checked against ruff automatically (see [Pre-commit checks](#pre-commit-checks)).
 
@@ -120,7 +120,9 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-If you have nox installed, to run unit tests, type
+We also use [pytest](https://docs.pytest.org/en/latest/) along with the [nbmake](https://github.com/treebeardtech/nbmake) and the [pytest-xdist](https://pypi.org/project/pytest-xdist/) plugins to test the example notebooks.
+
+If you have `nox` installed, to run unit tests, type
 
 ```bash
 nox -s unit
@@ -149,13 +151,41 @@ nox -s tests
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
 
-### Testing notebooks
+### Testing the example notebooks
 
-To test all example scripts and notebooks, type
+To test all the example notebooks in the `docs/source/examples/` folder with `pytest` and `nbmake`, type
 
 ```bash
 nox -s examples
 ```
+
+Alternatively, you may use `pytest` directly with the `--nbmake` flag:
+
+```bash
+pytest --nbmake
+```
+
+which runs all the notebooks in the `docs/source/examples/notebooks/` folder in parallel by default, using the `pytest-xdist` plugin.
+
+Sometimes, debugging a notebook can be a hassle. To run a single notebook, pass the path to it to `pytest`:
+
+```bash
+pytest --nbmake docs/source/examples/notebooks/notebook-name.ipynb
+```
+
+or, alternatively, you can use posargs to pass the path to the notebook to `nox`. For example:
+
+```bash
+nox -s examples -- docs/source/examples/notebooks/notebook-name.ipynb
+```
+
+You may also test multiple notebooks this way. Passing the path to a folder will run all the notebooks in that folder:
+
+```bash
+nox -s examples -- docs/source/examples/notebooks/models/
+```
+
+You may also use an appropriate [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns) to run all notebooks matching a particular folder or name pattern.
 
 To edit the structure and how the Jupyter notebooks get rendered in the Sphinx documentation (using `nbsphinx`), install [Pandoc](https://pandoc.org/installing.html) on your system, either using `conda` (through the `conda-forge` channel)
 
@@ -165,10 +195,12 @@ conda install -c conda-forge pandoc
 
 or refer to the [Pandoc installation instructions](https://pandoc.org/installing.html) specific to your platform.
 
-If notebooks fail because of changes to PyBaMM, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
+### Testing the example scripts
+
+To test all the example scripts in the `examples/` folder, type
 
 ```bash
-python run-tests.py --debook docs/source/examples/notebooks/notebook-name.ipynb script.py
+nox -s scripts
 ```
 
 ### Debugging
@@ -234,6 +266,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
+
    2. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
 
       ```python
@@ -243,6 +276,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
+
    3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
 
       ```python
@@ -250,8 +284,11 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc.
+
 3. To isolate whether a bug is in a model, its Jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
+
 4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
+
 5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
 
    ```python3
@@ -310,19 +347,19 @@ Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs`
 
 ### Building the documentation
 
-To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type:
+To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type (on GNU/Linux, macOS, and Windows):
 
 ```
-nox -s docs (GNU/Linux, MacOS and Windows)
+nox -s docs
 ```
 
-And then visit the webpage served at http://127.0.0.1:8000. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded.
+And then visit the webpage served at `http://127.0.0.1:8000`. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded. In CI, the docs are built and tested using the `docs` session in the `noxfile.py` file with warnings turned into errors, to fail the build. The warnings can be removed or ignored by adding the appropriate warning identifier to the `suppress_warnings` list in `docs/conf.py`.
 
 ### Example notebooks
 
-Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](docs/source/examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
+Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [docs/sourceexamples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [docs/source/examples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
 
 All the notebooks are tested daily.
 
@@ -338,7 +375,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](pybamm/CITATIONS.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")
@@ -358,7 +395,7 @@ Configuration files:
 setup.py
 ```
 
-Note that this file must be kept in sync with the version number in [pybamm/**init**.py](pybamm/__init__.py).
+Note that this file must be kept in sync with the version number in [pybamm/**init**.py](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/__init__.py).
 
 ### Continuous Integration using GitHub actions
 
@@ -394,9 +431,9 @@ Editable notebooks are made available using [Google Colab](https://colab.researc
 
 GitHub does some magic with particular filenames. In particular:
 
-- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
-- The license for using PyBaMM is stored in [LICENSE](LICENSE.txt), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
-- This file, [CONTRIBUTING.md](CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
+- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
+- The license for using PyBaMM is stored in [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/develop/LICENSE.txt), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
+- This file, [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
 
 ## Acknowledgements
 

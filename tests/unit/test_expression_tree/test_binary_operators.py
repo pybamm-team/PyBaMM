@@ -324,6 +324,12 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(1 < b + 2, -1 < b)
         self.assertEqual(b + 1 > 2, b > 1)
 
+        # expression with a subtract
+        expr = 2 * (b < 1) - (b > 3)
+        self.assertEqual(expr.evaluate(y=np.array([0])), 2)
+        self.assertEqual(expr.evaluate(y=np.array([2])), 0)
+        self.assertEqual(expr.evaluate(y=np.array([4])), -1)
+
     def test_equality(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))

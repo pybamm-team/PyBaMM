@@ -117,7 +117,7 @@ Installable with ``pip install "pybamm[docs]"``
 ================================================================================================= ================== ================== =======================================================================
 Dependency                                                                                        Minimum Version    pip extra          Notes
 ================================================================================================= ================== ================== =======================================================================
-`sphinx <https://www.sphinx-doc.org/en/master/>`__                                                1.5.0              docs               Sphinx makes it easy to create intelligent and beautiful documentation.
+`sphinx <https://www.sphinx-doc.org/en/master/>`__                                                \-                 docs               Sphinx makes it easy to create intelligent and beautiful documentation.
 `pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__                   \-                 docs               A clean, Bootstrap-based Sphinx theme.
 `sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__                               \-                 docs               A sphinx extension for designing.
 `sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__                       \-                 docs               To copy codeblocks.
@@ -152,6 +152,10 @@ Dependency                                                                      
 ================================================================================ ================== ================== =============================================================
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
+`nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
+`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running Jupyter notebooks tests.
+`pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
+`nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:
@@ -249,3 +253,4 @@ Installing a specific version? Installing from source? Check the advanced instal
    windows
    windows-wsl
    install-from-source
+   install-from-docker

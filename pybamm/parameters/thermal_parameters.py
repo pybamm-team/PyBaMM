@@ -35,15 +35,32 @@ class ThermalParameters(BaseParameters):
         self.T_ref = pybamm.Parameter("Reference temperature [K]")
 
         # Cooling coefficient
-        self.h_edge = pybamm.Parameter("Edge heat transfer coefficient [W.m-2.K-1]")
         self.h_total = pybamm.Parameter("Total heat transfer coefficient [W.m-2.K-1]")
 
         # Initial temperature
         self.T_init = pybamm.Parameter("Initial temperature [K]")
 
-    def T_amb(self, t):
-        """Dimensional ambient temperature"""
-        return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
+    def T_amb(self, y, z, t):
+        """Ambient temperature [K]"""
+        return pybamm.FunctionParameter(
+            "Ambient temperature [K]",
+            {
+                "Distance across electrode width [m]": y,
+                "Distance across electrode height [m]": z,
+                "Time [s]": t,
+            },
+        )
+
+    def h_edge(self, y, z):
+        """Cell edge heat transfer coefficient [W.m-2.K-1]"""
+        inputs = {
+            "Distance along electrode width [m]": y,
+            "Distance along electrode height [m]": z,
+        }
+        return pybamm.FunctionParameter(
+            "Edge heat transfer coefficient [W.m-2.K-1]",
+            inputs,
+        )
 
     def rho_c_p_eff(self, T):
         """Effective volumetric heat capacity [J.m-3.K-1]"""
@@ -55,6 +72,16 @@ class ThermalParameters(BaseParameters):
             + self.p.rho_c_p_cc(T) * self.geo.p.L_cc
         ) / self.geo.L
 
+    def lambda_eff(self, T):
+        """Effective thermal conductivity [W.m-1.K-1]"""
+        return (
+            self.n.lambda_cc(T) * self.geo.n.L_cc
+            + self.n.lambda_(T) * self.geo.n.L
+            + self.s.lambda_(T) * self.geo.s.L
+            + self.p.lambda_(T) * self.geo.p.L
+            + self.p.lambda_cc(T) * self.geo.p.L_cc
+        ) / self.geo.L
+
 
 class DomainThermalParameters(BaseParameters):
     def __init__(self, domain, main_param):
@@ -63,12 +90,22 @@ class DomainThermalParameters(BaseParameters):
 
     def _set_parameters(self):
         Domain = self.domain.capitalize()
-        self.h_cc = pybamm.Parameter(
-            f"{Domain} current collector surface heat transfer coefficient "
-            "[W.m-2.K-1]"
-        )
+
         self.h_tab = pybamm.Parameter(
             f"{Domain} tab heat transfer coefficient [W.m-2.K-1]"
+        )
+
+    def h_cc(self, y, z):
+        """Current collector surface heat transfer coefficient [W.m-2.K-1]"""
+        inputs = {
+            "Distance across electrode width [m]": y,
+            "Distance across electrode height [m]": z,
+        }
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{Domain} current collector surface heat transfer coefficient "
+            "[W.m-2.K-1]",
+            inputs,
         )
 
     def c_p(self, T):

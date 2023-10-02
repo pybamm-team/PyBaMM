@@ -32,7 +32,7 @@ jobs:
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup python
         uses: actions/setup-python@v4
         with:
@@ -53,7 +53,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -102,7 +102,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.1.4
 
       - name: Run integration tests
         run: nox -s integration
@@ -111,9 +111,17 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s doctests
 
+      - name: Check if the documentation can be built
+        if: matrix.os == 'ubuntu-latest'
+        run: nox -s docs
+
       - name: Install dev dependencies and run example tests
         if: matrix.os == 'ubuntu-latest'
         run: nox -s examples
+
+      - name: Run example scripts tests
+        if: matrix.os == 'ubuntu-latest'
+        run: nox -s scripts
 
   #M-series Mac Mini
   build-apple-mseries:
@@ -127,7 +135,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install python & create virtualenv
         shell: bash
         run: |

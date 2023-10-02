@@ -13,7 +13,9 @@ if pybamm.have_jax():
     import jax
     from jax.config import config
 
-    config.update("jax_enable_x64", True)
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:
@@ -171,7 +173,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             if output_jax and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
                 constant_symbols[symbol.id] = create_jax_coo_matrix(value)
-
             else:
                 constant_symbols[symbol.id] = value
         return
