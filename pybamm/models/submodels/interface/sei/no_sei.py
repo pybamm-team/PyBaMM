@@ -21,19 +21,20 @@ class NoSEI(BaseModel):
         Whether this is a submodel for standard SEI or SEI on cracks
     """
 
-    def __init__(self, param, options, phase="primary", cracks=False):
-        super().__init__(param, options=options, phase=phase, cracks=cracks)
-        if self.options.electrode_types[self.domain] == "planar":
+    def __init__(self, param, domain, options, phase="primary", cracks=False):
+        super().__init__(param, domain, options=options, phase=phase, cracks=cracks)
+        if self.options.electrode_types[domain] == "planar":
             self.reaction_loc = "interface"
         else:
             self.reaction_loc = "full electrode"
 
     def get_fundamental_variables(self):
+        domain = self.domain.lower()
         if self.reaction_loc == "interface":
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         else:
             zero = pybamm.FullBroadcast(
-                pybamm.Scalar(0), "negative electrode", "current collector"
+                pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
         variables = self._get_standard_thickness_variables(zero, zero)
         variables.update(self._get_standard_reaction_variables(zero, zero))

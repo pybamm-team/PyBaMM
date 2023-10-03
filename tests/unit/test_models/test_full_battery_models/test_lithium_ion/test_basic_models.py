@@ -39,9 +39,7 @@ class TestBasicModels(TestCase):
         model = pybamm.lithium_ion.BasicDFNHalfCell(
             options={"working electrode": "positive"}
         )
-        param = pybamm.ParameterValues("OKane2022")
-        param["Current function [A]"] = 2.5
-        sim = pybamm.Simulation(model=model, parameter_values=param)
+        sim = pybamm.Simulation(model=model)
         sim.solve([0, 100])
         self.assertTrue(isinstance(sim.solution, pybamm.solvers.solution.Solution))
 

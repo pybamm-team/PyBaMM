@@ -531,7 +531,8 @@
       "contributions": [
         "infra",
         "code",
-        "doc"
+        "doc",
+        "review"
       ]
     },
     {
@@ -699,6 +700,15 @@
       ]
     },
     {
+      "login": "aitorres",
+      "name": "Andrés Ignacio Torres",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26191851?v=4",
+      "profile": "https://aitorres.com",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
       "login": "Agnik7",
       "name": "Agnik Bakshi",
       "avatar_url": "https://avatars.githubusercontent.com/u/77234005?v=4",
@@ -706,7 +716,7 @@
       "contributions": [
         "doc"
       ]
-    }
+    },
   ],
   "contributorsPerLine": 7,
   "projectName": "PyBaMM",
