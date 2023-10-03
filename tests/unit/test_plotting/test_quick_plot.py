@@ -344,7 +344,7 @@ class TestQuickPlot(TestCase):
             # test quick plot of particle for spme
             if (
                 model.name == "Single Particle Model with electrolyte"
-                and model.options["working electrode"] != "positive"
+                and model.options["working electrode"] == "both"
             ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",

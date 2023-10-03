@@ -17,55 +17,44 @@ class BasePlating(BaseInterface):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, options=None):
+    def __init__(self, param, domain, options=None):
         reaction = "lithium plating"
-        domain = "negative"
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
         # Update some common variables
+        domain, Domain = self.domain_Domain
 
-        if self.options.electrode_types["negative"] == "porous":
-            j_plating = variables["Lithium plating interfacial current density [A.m-2]"]
-            j_plating_av = variables[
-                "X-averaged lithium plating interfacial current density [A.m-2]"
+        if self.options.electrode_types[domain] == "porous":
+            j_plating = variables[
+                f"{Domain} lithium plating interfacial current density [A.m-2]"
             ]
-            if self.options.negative["particle phases"] == "1":
-                a = variables["Negative electrode surface area to volume ratio [m-1]"]
+            j_plating_av = variables[
+                f"X-averaged {domain} lithium plating "
+                "interfacial current density [A.m-2]"
+            ]
+            particle_phases_option = getattr(self.options, domain)["particle phases"]
+            if particle_phases_option == "1":
+                a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
             else:
                 a = variables[
-                    "Negative electrode primary surface area to volume ratio [m-1]"
+                    f"{Domain} electrode primary surface area to volume ratio [m-1]"
                 ]
             a_j_plating = a * j_plating
             a_j_plating_av = pybamm.x_average(a_j_plating)
 
             variables.update(
                 {
-                    "Negative electrode lithium plating interfacial current "
+                    f"{Domain} electrode lithium plating interfacial current "
                     "density [A.m-2]": j_plating,
-                    "X-averaged negative electrode lithium plating "
+                    f"X-averaged {domain} electrode lithium plating "
                     "interfacial current density [A.m-2]": j_plating_av,
-                    "Lithium plating volumetric "
+                    f"{Domain} lithium plating volumetric "
                     "interfacial current density [A.m-3]": a_j_plating,
-                    "X-averaged lithium plating volumetric "
+                    f"X-averaged {domain} lithium plating volumetric "
                     "interfacial current density [A.m-3]": a_j_plating_av,
                 }
             )
-
-        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
-        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        variables.update(
-            {
-                "X-averaged positive electrode lithium plating "
-                "interfacial current density [A.m-2]": zero_av,
-                "X-averaged positive electrode lithium plating volumetric "
-                "interfacial current density [A.m-3]": zero_av,
-                "Positive electrode lithium plating "
-                "interfacial current density [A.m-2]": zero,
-                "Positive electrode lithium plating volumetric "
-                "interfacial current density [A.m-3]": zero,
-            }
-        )
 
         variables.update(
             self._get_standard_volumetric_current_density_variables(variables)
@@ -87,38 +76,45 @@ class BasePlating(BaseInterface):
             The variables which can be derived from the plated lithium thickness.
         """
         param = self.param
+        domain, Domain = self.domain_Domain
 
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general
         if isinstance(self, pybamm.lithium_plating.NoPlating):
             c_to_L = 1
-        else:
-            c_to_L = param.V_bar_plated_Li / param.n.prim.a_typ
+            L_k = 1
+        elif domain == "negative":
+            c_to_L = param.V_bar_Li / param.n.prim.a_typ
+            L_k = param.n.L
+        elif domain == "positive":
+            c_to_L = param.V_bar_Li / param.p.prim.a_typ
+            L_k = param.p.L
 
         c_plated_Li_av = pybamm.x_average(c_plated_Li)
         L_plated_Li = c_plated_Li * c_to_L  # plated Li thickness
         L_plated_Li_av = pybamm.x_average(L_plated_Li)
-        Q_plated_Li = c_plated_Li_av * param.n.L * param.L_y * param.L_z
+        Q_plated_Li = c_plated_Li_av * L_k * param.L_y * param.L_z
 
         c_dead_Li_av = pybamm.x_average(c_dead_Li)
         # dead Li "thickness", required by porosity submodel
         L_dead_Li = c_dead_Li * c_to_L
         L_dead_Li_av = pybamm.x_average(L_dead_Li)
-        Q_dead_Li = c_dead_Li_av * param.n.L * param.L_y * param.L_z
+        Q_dead_Li = c_dead_Li_av * L_k * param.L_y * param.L_z
 
         variables = {
-            "Lithium plating concentration [mol.m-3]": c_plated_Li,
-            "X-averaged lithium plating concentration [mol.m-3]": c_plated_Li_av,
-            "Dead lithium concentration [mol.m-3]": c_dead_Li,
-            "X-averaged dead lithium concentration [mol.m-3]": c_dead_Li_av,
-            "Lithium plating thickness [m]": L_plated_Li,
-            "X-averaged lithium plating thickness [m]": L_plated_Li_av,
-            "Dead lithium thickness [m]": L_dead_Li,
-            "X-averaged dead lithium thickness [m]": L_dead_Li_av,
-            "Loss of lithium to lithium plating [mol]": (Q_plated_Li + Q_dead_Li),
-            "Loss of capacity to lithium plating [A.h]": (Q_plated_Li + Q_dead_Li)
-            * param.F
-            / 3600,
+            f"{Domain} lithium plating concentration [mol.m-3]": c_plated_Li,
+            f"X-averaged {domain} lithium plating "
+            "concentration [mol.m-3]": c_plated_Li_av,
+            f"{Domain} dead lithium concentration [mol.m-3]": c_dead_Li,
+            f"X-averaged {domain} dead lithium concentration [mol.m-3]": c_dead_Li_av,
+            f"{Domain} lithium plating thickness [m]": L_plated_Li,
+            f"X-averaged {domain} lithium plating thickness [m]": L_plated_Li_av,
+            f"{Domain} dead lithium thickness [m]": L_dead_Li,
+            f"X-averaged {domain} dead lithium thickness [m]": L_dead_Li_av,
+            f"Loss of lithium to {domain} lithium plating "
+            "[mol]": (Q_plated_Li + Q_dead_Li),
+            f"Loss of capacity to {domain} lithium plating "
+            "[A.h]": (Q_plated_Li + Q_dead_Li) * param.F / 3600,
         }
 
         return variables
@@ -136,13 +132,13 @@ class BasePlating(BaseInterface):
         variables : dict
             The variables which can be derived from the plated lithium thickness.
         """
-        # Set scales to one for the "no plating" model so that they are not required
-        # by parameter values in general
+        domain, Domain = self.domain_Domain
         j_stripping_av = pybamm.x_average(j_stripping)
 
         variables = {
-            "Lithium plating interfacial current density [A.m-2]": j_stripping,
-            "X-averaged lithium plating "
+            f"{Domain} lithium plating interfacial current density "
+            "[A.m-2]": j_stripping,
+            f"X-averaged {domain} lithium plating "
             "interfacial current density [A.m-2]": j_stripping_av,
         }
 
