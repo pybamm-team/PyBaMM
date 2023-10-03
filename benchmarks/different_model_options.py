@@ -1,6 +1,5 @@
 import pybamm
 import numpy as np
-import importlib.util
 
 
 def compute_discretisation(model, param):
