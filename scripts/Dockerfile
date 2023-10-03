@@ -59,6 +59,11 @@ RUN if [ "$ALL" = "true" ]; then \
     pip install --user -e ".[all,dev,docs,jax,odes]"; \
     fi
 
-RUN pip install --user -e ".[all,dev,docs]"
+RUN if [ -z "$IDAKLU" ] \
+    && [ -z "$ODES" ] \
+    && [ -z "$JAX" ] \
+    && [ -z "$ALL" ]; then \
+    pip install --user -e ".[all,dev,docs]"; \
+    fi
 
 ENTRYPOINT ["/bin/bash"]
