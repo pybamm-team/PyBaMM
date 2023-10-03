@@ -37,6 +37,8 @@ class TestSettings(TestCase):
             pybamm.settings.heaviside_smoothing = -10
         with self.assertRaisesRegex(ValueError, "positive number"):
             pybamm.settings.abs_smoothing = -10
+        with self.assertRaisesRegex(ValueError, "'soft', or 'smooth'"):
+            pybamm.settings.min_max_mode = "unknown"
         pybamm.settings.set_smoothing_parameters("exact")
 
 
