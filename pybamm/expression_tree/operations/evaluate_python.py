@@ -13,7 +13,9 @@ if pybamm.have_jax():
     import jax
     from jax.config import config
 
-    config.update("jax_enable_x64", True)
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:

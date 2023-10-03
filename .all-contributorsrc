@@ -531,7 +531,8 @@
       "contributions": [
         "infra",
         "code",
-        "doc"
+        "doc",
+        "review"
       ]
     },
     {
@@ -693,7 +694,18 @@
       "contributions": [
         "doc",
         "infra",
-        "bug"
+        "bug",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "aitorres",
+      "name": "Andrés Ignacio Torres",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26191851?v=4",
+      "profile": "https://aitorres.com",
+      "contributions": [
+        "infra"
       ]
     }
   ],

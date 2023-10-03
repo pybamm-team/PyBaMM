@@ -483,13 +483,21 @@ class Solution(object):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
                 elif key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
                 else:
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
             var = pybamm.ProcessedVariable(
@@ -500,9 +508,9 @@ class Solution(object):
             self._variables[key] = var
             self.data[key] = var.data
 
-    def process_casadi_var(self, var_pybamm, inputs, ys):
+    def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", ys.shape[0])
+        y_MX = casadi.MX.sym("y", ys_shape[0])
         inputs_MX_dict = {
             key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
         }
