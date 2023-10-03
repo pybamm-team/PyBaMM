@@ -34,6 +34,9 @@ class TimeBuildSPM:
     param_names = ["parameter"]
     params = parameters
 
+    def setup(self):
+        pybamm.util.set_random_seed()
+
     def time_setup_SPM(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPM()
@@ -44,6 +47,9 @@ class TimeBuildSPM:
 class TimeBuildSPMe:
     param_names = ["parameter"]
     params = parameters
+
+    def setup(self):
+        pybamm.util.set_random_seed()
 
     def time_setup_SPMe(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -56,6 +62,9 @@ class TimeBuildDFN:
     param_names = ["parameter"]
     params = parameters
 
+    def setup(self):
+        pybamm.util.set_random_seed()
+
     def time_setup_DFN(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.DFN()
@@ -66,6 +75,9 @@ class TimeBuildDFN:
 class TimeBuildSPMSimulation:
     param_names = ["with experiment", "parameter"]
     params = ([False, True], parameters)
+
+    def setup(self):
+        pybamm.util.set_random_seed()
 
     def time_setup_SPM_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -85,6 +97,9 @@ class TimeBuildSPMeSimulation:
     param_names = ["with experiment", "parameter"]
     params = ([False, True], parameters)
 
+    def setup(self):
+        pybamm.util.set_random_seed()
+
     def time_setup_SPMe_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPMe()
@@ -102,6 +117,9 @@ class TimeBuildSPMeSimulation:
 class TimeBuildDFNSimulation:
     param_names = ["with experiment", "parameter"]
     params = ([False, True], parameters)
+
+    def setup(self):
+        pybamm.util.set_random_seed()
 
     def time_setup_DFN_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)

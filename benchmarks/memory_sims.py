@@ -7,6 +7,9 @@ class MemSPMSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
 
+    def setup(self):
+        pybamm.util.set_random_seed()
+
     def mem_setup_SPM_simulationCCCV(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPM()
@@ -51,6 +54,9 @@ class MemSPMSimulationGITT:
     param_names = ["parameter"]
     params = parameters
 
+    def setup(self):
+        pybamm.util.set_random_seed()
+
     def mem_setup_SPM_simulationGITT(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPM()
@@ -66,6 +72,9 @@ class MemSPMSimulationGITT:
 class MemDFNSimulationGITT:
     param_names = ["parameter"]
     params = parameters
+
+    def setup(self):
+        pybamm.util.set_random_seed()
 
     def mem_setup_DFN_simulationGITT(self, parameters):
         self.param = pybamm.ParameterValues(parameters)

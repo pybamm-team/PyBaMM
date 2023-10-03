@@ -3,6 +3,9 @@ import numpy as np
 
 
 class TimeCreateExpression:
+    def setup(self):
+        pybamm.util.set_random_seed()
+
     def time_create_expression(self):
         self.R = pybamm.Parameter("Particle radius [m]")
         D = pybamm.Parameter("Diffusion coefficient [m2.s-1]")
@@ -32,6 +35,7 @@ class TimeCreateExpression:
 
 class TimeParameteriseModel(TimeCreateExpression):
     def setup(self):
+        pybamm.util.set_random_seed()
         TimeCreateExpression.time_create_expression(self)
 
     def time_parameterise(self):
@@ -58,6 +62,7 @@ class TimeParameteriseModel(TimeCreateExpression):
 
 class TimeDiscretiseModel(TimeParameteriseModel):
     def setup(self):
+        pybamm.util.set_random_seed()
         TimeCreateExpression.time_create_expression(self)
         TimeParameteriseModel.time_parameterise(self)
 
@@ -75,6 +80,7 @@ class TimeDiscretiseModel(TimeParameteriseModel):
 
 class TimeSolveModel(TimeDiscretiseModel):
     def setup(self):
+        pybamm.util.set_random_seed()
         TimeCreateExpression.time_create_expression(self)
         TimeParameteriseModel.time_parameterise(self)
         TimeDiscretiseModel.time_discretise(self)

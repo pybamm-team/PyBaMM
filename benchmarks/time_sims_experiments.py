@@ -21,6 +21,7 @@ class TimeSimulation:
     }
 
     def setup(self, experiment, parameters, model_class, solver_class):
+        pybamm.util.set_random_seed()
         if (experiment, parameters, model_class, solver_class) == (
             "GITT",
             "Marquis2019",

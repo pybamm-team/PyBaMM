@@ -29,6 +29,7 @@ class TimeSolveSPM:
     )
 
     def setup(self, solve_first, parameters, solver_class):
+        pybamm.util.set_random_seed()
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPM()
         c_rate = 1
@@ -84,6 +85,7 @@ class TimeSolveSPMe:
     )
 
     def setup(self, solve_first, parameters, solver_class):
+        pybamm.util.set_random_seed()
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPMe()
         c_rate = 1
@@ -139,6 +141,7 @@ class TimeSolveDFN:
     )
 
     def setup(self, solve_first, parameters, solver_class):
+        pybamm.util.set_random_seed()
         if (parameters, solver_class) == (
             "ORegan2022",
             pybamm.CasadiSolver,
