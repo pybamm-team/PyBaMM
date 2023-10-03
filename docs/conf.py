@@ -142,12 +142,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    "external_links": [
-        {
-            "name": "Contributing",
-            "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
-        },
-    ],
     # should be kept versioned to use for the version warning bar
     "switcher": {
         "version_match": version,
@@ -303,14 +297,52 @@ bibtex_tooltips = True
 # a conflict with the sphinx-docsearch extension for Algolia search
 
 nbsphinx_requirejs_path = ""
+
+# For notebook downloads (23.5 onwards), we get the version from the environment
+# variable READTHEDOCS_VERSION and set it accordingly.
+
+# If the version is set to "latest", then we are on the develop branch, and we
+# point to the notebook in the develop blob
+# If we are on "stable", we point to the notebook in the relevant release tree
+# for the PyBaMM version
+# On a PR build, we use READTHEDOCS_GIT_COMMIT_HASH which will always point to changes
+# made to a notebook, if any.
+# On local builds, the version is not set, so we use "latest".
+
+if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
+    os.environ.get("READTHEDOCS_VERSION") is None
+):
+    notebooks_version = "develop"
+    append_to_url = f"blob/{notebooks_version}"
+
+if os.environ.get("READTHEDOCS_VERSION") == "stable":
+    notebooks_version = version
+    append_to_url = f"tree/v{notebooks_version}"
+
+if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
+    notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")
+    append_to_url = f"blob/{notebooks_version}"
+
+github_download_url = f"https://github.com/pybamm-team/PyBaMM/{append_to_url}"
+google_colab_url = github_download_url.replace("github.com", "githubtocolab.com")
+
+html_context.update(
+    {
+        "notebooks_version": notebooks_version,
+        "github_download_url": github_download_url,
+        "google_colab_url": google_colab_url,
+    }
+)
+
 nbsphinx_prolog = r"""
 
 {% set github_docname =
 'github/pybamm-team/pybamm/blob/develop/docs/' +
 env.doc2path(env.docname, base=None) %}
 
-{% set readthedocs_download_url =
-'https://docs.pybamm.org/en/latest/' %}
+{% set notebooks_version = env.config.html_context.notebooks_version %}
+{% set github_download_url = env.config.html_context.github_download_url %}
+{% set google_colab_url = env.config.html_context.google_colab_url %}
 
 {% set doc_path = env.doc2path(env.docname, base=None) %}
 
@@ -323,7 +355,7 @@ env.doc2path(env.docname, base=None) %}
         <p>
             An interactive online version of this notebook is available, which can be
             accessed via
-            <a href="https://colab.research.google.com/{{ github_docname | e }}"
+            <a href="{{ google_colab_url | e }}/docs/{{ doc_path | e }}"
             target="_blank">
             <img src="https://colab.research.google.com/assets/colab-badge.svg"
             alt="Open this notebook in Google Colab"/></a>
@@ -331,7 +363,7 @@ env.doc2path(env.docname, base=None) %}
             <hr>
         <p>
             Alternatively, you may
-            <a href="{{ readthedocs_download_url | e }}{{ doc_path | e }}"
+            <a href="{{ github_download_url | e }}/docs/{{ doc_path | e }}"
             target="_blank" download>
             download this notebook</a> and run it offline.
         </p>

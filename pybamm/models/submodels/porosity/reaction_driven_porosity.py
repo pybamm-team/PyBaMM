@@ -25,31 +25,36 @@ class ReactionDriven(BaseModel):
     def get_coupled_variables(self, variables):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
-            if domain == "negative electrode":
-                # Only the negative electrode porosity changes
-                L_sei_n = variables["Total SEI thickness [m]"]
-                L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
-                L_pl_n = variables["Lithium plating thickness [m]"]
-                L_dead_n = variables["Dead lithium thickness [m]"]
-                L_sei_cr_n = variables["Total SEI on cracks thickness [m]"]
-                roughness_n = variables["Negative electrode roughness ratio"]
+            if domain == "separator":
+                delta_eps_k = 0  # separator porosity does not change
+            else:
+                Domain = domain.split()[0].capitalize()
+                L_sei_k = variables[f"{Domain} total SEI thickness [m]"]
+                if Domain == "Negative":
+                    L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
+                elif Domain == "Positive":
+                    L_sei_0 = self.param.p.prim.L_inner_0 + self.param.p.prim.L_outer_0
+                L_pl_k = variables[f"{Domain} lithium plating thickness [m]"]
+                L_dead_k = variables[f"{Domain} dead lithium thickness [m]"]
+                L_sei_cr_k = variables[f"{Domain} total SEI on cracks thickness [m]"]
+                roughness_k = variables[f"{Domain} electrode roughness ratio"]
 
                 L_tot = (
-                    (L_sei_n - L_sei_0)
-                    + L_pl_n
-                    + L_dead_n
-                    + L_sei_cr_n * (roughness_n - 1)
+                    (L_sei_k - L_sei_0)
+                    + L_pl_k
+                    + L_dead_k
+                    + L_sei_cr_k * (roughness_k - 1)
                 )
 
-                a_n = variables["Negative electrode surface area to volume ratio [m-1]"]
+                a_k = variables[
+                    f"{Domain} electrode surface area to volume ratio [m-1]"
+                ]
 
                 # This assumes a thin film so curvature effects are neglected.
                 # They could be included (e.g. for a sphere it is
                 # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
                 # but it is not clear if it is relevant or not.
-                delta_eps_k = -a_n * L_tot
-            else:
-                delta_eps_k = 0
+                delta_eps_k = -a_k * L_tot
 
             domain_param = self.param.domain_params[domain.split()[0]]
             eps_k = domain_param.epsilon_init + delta_eps_k
@@ -60,6 +65,21 @@ class ReactionDriven(BaseModel):
         return variables
 
     def set_events(self, variables):
+        eps_p = variables["Positive electrode porosity"]
+        self.events.append(
+            pybamm.Event(
+                "Zero positive electrode porosity cut-off",
+                pybamm.min(eps_p),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Max positive electrode porosity cut-off",
+                1 - pybamm.max(eps_p),
+                pybamm.EventType.TERMINATION,
+            )
+        )
         if "negative electrode" in self.options.whole_cell_domains:
             eps_n = variables["Negative electrode porosity"]
             self.events.append(

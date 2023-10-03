@@ -54,11 +54,13 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
+    notebooks/models/half-cell.ipynb
     notebooks/models/jelly-roll-model.ipynb
     notebooks/models/latexify.ipynb
     notebooks/models/lead-acid.ipynb
     notebooks/models/lithium-plating.ipynb
     notebooks/models/MPM.ipynb
+    notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
     notebooks/models/rate-capability.ipynb
     notebooks/models/SEI-on-cracks.ipynb
@@ -110,6 +112,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/callbacks.ipynb
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
+    notebooks/rpt-experiment.ipynb
     notebooks/simulating-long-experiments.ipynb
     notebooks/simulation-class.ipynb
     notebooks/solution-data-and-processed-variables.ipynb

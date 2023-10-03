@@ -44,7 +44,20 @@ using np_array_int = py::array_t<int64_t>;
 
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
+#define DEBUG_VECTORn(vector)
 #else
+
+#define DEBUG_VECTORn(vector, N) {\
+  std::cout << #vector << "[n=" << N << "] = ["; \
+  auto array_ptr = N_VGetArrayPointer(vector); \
+  for (int i = 0; i < N; i++) { \
+    std::cout << array_ptr[i]; \
+    if (i < N-1) { \
+      std::cout << ", "; \
+    } \
+  } \
+  std::cout << "]" << std::endl;  }
+
 #define DEBUG_VECTOR(vector) {\
   std::cout << #vector << " = ["; \
   auto array_ptr = N_VGetArrayPointer(vector); \
@@ -56,6 +69,17 @@ using np_array_int = py::array_t<int64_t>;
     } \
   } \
   std::cout << "]" << std::endl;  }
+
+#define DEBUG_v(v, N) {\
+  std::cout << #v << "[n=" << N << "] = ["; \
+  for (int i = 0; i < N; i++) { \
+    std::cout << v[i]; \
+    if (i < N-1) { \
+      std::cout << ", "; \
+    } \
+  } \
+  std::cout << "]" << std::endl;  }
+
 #endif
 
 #endif // PYBAMM_IDAKLU_COMMON_HPP

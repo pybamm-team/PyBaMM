@@ -16,7 +16,7 @@ def FixRandomSeed(method):
     explicitely reinstate the random seed within their method bodies as desired,
     e.g. by calling np.random.seed(None) to restore normal behaviour.
 
-    Generatig a random seed from the method name allows particularly awkward
+    Generating a random seed from the method name allows particularly awkward
     sequences to be altered by changing the method name, such as by adding a
     trailing underscore, or other hash modifier, if required.
     """

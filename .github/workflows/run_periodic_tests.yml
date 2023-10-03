@@ -111,9 +111,17 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nox -s doctests
 
+      - name: Check if the documentation can be built
+        if: matrix.os == 'ubuntu-latest'
+        run: nox -s docs
+
       - name: Install dev dependencies and run example tests
         if: matrix.os == 'ubuntu-latest'
         run: nox -s examples
+
+      - name: Run example scripts tests
+        if: matrix.os == 'ubuntu-latest'
+        run: nox -s scripts
 
   #M-series Mac Mini
   build-apple-mseries:
