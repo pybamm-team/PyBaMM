@@ -111,6 +111,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/callbacks.ipynb
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
+    notebooks/rpt-experiment.ipynb
     notebooks/simulating-long-experiments.ipynb
     notebooks/simulation-class.ipynb
     notebooks/solution-data-and-processed-variables.ipynb
