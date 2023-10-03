@@ -38,6 +38,9 @@ class BaseSolver(object):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    output_variables : list[str], optional
+        List of variables to calculate and return. If none are specified then
+        the complete state vector is returned (can be very large) (default is [])
     """
 
     def __init__(
@@ -48,6 +51,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
+        output_variables=[],
     ):
         self.method = method
         self.rtol = rtol
@@ -55,6 +59,7 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
+        self.output_variables = output_variables
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -62,6 +67,7 @@ class BaseSolver(object):
         self.ode_solver = False
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
+        self.computed_var_fcns = {}
 
     @property
     def root_method(self):
@@ -250,7 +256,56 @@ class BaseSolver(object):
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
 
+            # if output_variables specified then convert functions to casadi
+            # expressions for evaluation within the respective solver
+            self.computed_var_fcns = {}
+            self.computed_dvar_dy_fcns = {}
+            self.computed_dvar_dp_fcns = {}
+            for key in self.output_variables:
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
+                if isinstance(
+                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                ):
+                    continue
+                # Generate Casadi function to calculate variable and derivates
+                # to enable sensitivites to be computed within the solver
+                (
+                    self.computed_var_fcns[key],
+                    self.computed_dvar_dy_fcns[key],
+                    self.computed_dvar_dp_fcns[key],
+                    _,
+                ) = process(
+                    model.variables_and_events[key],
+                    BaseSolver._wrangle_name(key),
+                    vars_for_processing,
+                    use_jacobian=True,
+                    return_jacp_stacked=True,
+                )
+
         pybamm.logger.info("Finish solver set-up")
+
+    @classmethod
+    def _wrangle_name(cls, name: str) -> str:
+        """
+        Wrangle a function name to replace special characters
+        """
+        replacements = [
+            (" ", "_"),
+            ("[", ""),
+            ("]", ""),
+            (".", "_"),
+            ("-", "_"),
+            ("(", ""),
+            (")", ""),
+            ("%", "prc"),
+            (",", ""),
+            (".", ""),
+        ]
+        name = "v_" + name.casefold()
+        for string, replacement in replacements:
+            name = name.replace(string, replacement)
+        return name
 
     def _check_and_prepare_model_inplace(self, model, inputs, ics_only):
         """
@@ -1366,7 +1421,9 @@ class BaseSolver(object):
         return ordered_inputs
 
 
-def process(symbol, name, vars_for_processing, use_jacobian=None):
+def process(
+    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+):
     """
     Parameters
     ----------
@@ -1376,6 +1433,8 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
         function evaluators created will have this base name
     use_jacobian: bool, optional
         whether to return Jacobian functions
+    return_jacp_stacked: bool, optional
+        returns Jacobian function wrt stacked parameters instead of jacp
 
     Returns
     -------
@@ -1553,17 +1612,28 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
                     "CasADi"
                 )
             )
-            # WARNING, jacp for convert_to_format=casadi does not return a dict
-            # instead it returns multiple return values, one for each param
-            # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
-            jacp = casadi.Function(
-                name + "_jacp",
-                [t_casadi, y_and_S, p_casadi_stacked],
-                [
-                    casadi.densify(casadi.jacobian(casadi_expression, p_casadi[pname]))
-                    for pname in model.calculate_sensitivities
-                ],
-            )
+            # Compute derivate wrt p-stacked (can be passed to solver to
+            # compute sensitivities online)
+            if return_jacp_stacked:
+                jacp = casadi.Function(
+                    f"d{name}_dp",
+                    [t_casadi, y_casadi, p_casadi_stacked],
+                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
+                )
+            else:
+                # WARNING, jacp for convert_to_format=casadi does not return a dict
+                # instead it returns multiple return values, one for each param
+                # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
+                jacp = casadi.Function(
+                    name + "_jacp",
+                    [t_casadi, y_and_S, p_casadi_stacked],
+                    [
+                        casadi.densify(
+                            casadi.jacobian(casadi_expression, p_casadi[pname])
+                        )
+                        for pname in model.calculate_sensitivities
+                    ],
+                )
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")
