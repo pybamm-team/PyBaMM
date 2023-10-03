@@ -13,7 +13,7 @@ def FixRandomSeed(method):
     Wraps a method so that the random seed is set to a hash of the method name
 
     As the wrapper fixes the random seed before calling the method, tests can
-    explicitely reinstate the random seed within their method bodies as desired,
+    explicitly reinstate the random seed within their method bodies as desired,
     e.g. by calling np.random.seed(None) to restore normal behaviour.
 
     Generating a random seed from the method name allows particularly awkward
