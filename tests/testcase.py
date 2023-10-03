@@ -3,9 +3,10 @@
 #
 import unittest
 import hashlib
-import numpy as np
 from functools import wraps
 from types import FunctionType
+
+import pybamm
 
 
 def FixRandomSeed(method):
@@ -23,7 +24,7 @@ def FixRandomSeed(method):
 
     @wraps(method)
     def wrapped(*args, **kwargs):
-        np.random.seed(
+        pybamm.util.set_random_seed(
             int(hashlib.sha256(method.__name__.encode()).hexdigest(), 16) % (2**32)
         )
         return method(*args, **kwargs)
