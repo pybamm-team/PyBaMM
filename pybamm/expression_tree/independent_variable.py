@@ -132,9 +132,9 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
         # check coord_sys against KNOWN_COORD_SYS
-        if coord_sys not in KNOWN_COORD_SYS:
+        if coord_sys is not None and coord_sys not in KNOWN_COORD_SYS:
             raise ValueError(
-                f"Coordinate system is {coord_sys}, not in cartesian, cylindrical polar, spherical polar, none")
+                f"Coordinate system is {coord_sys}, not in cartesian, cylindrical polar, spherical polar, None")
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
