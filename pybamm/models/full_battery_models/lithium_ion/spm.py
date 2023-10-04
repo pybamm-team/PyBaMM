@@ -48,7 +48,7 @@ class SPM(BaseModel):
             pybamm.citations.register("Marquis2019")
 
         if (
-            self.options["SEI"] not in ["none", "constant"]
+            self.options["SEI"] not in ["none", "constant", ("constant", "none")]
             or self.options["lithium plating"] != "none"
         ):
             pybamm.citations.register("BrosaPlanella2022")
