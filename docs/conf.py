@@ -142,12 +142,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    "external_links": [
-        {
-            "name": "Contributing",
-            "url": "https://github.com/pybamm-team/PyBaMM/tree/develop/CONTRIBUTING.md",
-        },
-    ],
     # should be kept versioned to use for the version warning bar
     "switcher": {
         "version_match": version,

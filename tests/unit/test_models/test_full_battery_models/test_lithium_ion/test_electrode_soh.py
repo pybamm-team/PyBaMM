@@ -244,7 +244,7 @@ class TestElectrodeSOHMSMR(TestCase):
 
 class TestElectrodeSOHHalfCell(TestCase):
     def test_known_solution(self):
-        model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell()
 
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
         parameter_values = pybamm.ParameterValues("Xu2019")
