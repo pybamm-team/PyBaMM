@@ -2,6 +2,7 @@
 # See "Writing benchmarks" in the asv docs for more information.
 
 import pybamm
+import pybamm.util
 import numpy as np
 
 

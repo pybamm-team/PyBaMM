@@ -1,4 +1,5 @@
 import pybamm
+import pybamm.util
 
 parameters = ["Marquis2019", "Chen2020"]
 
