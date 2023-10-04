@@ -148,13 +148,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 out = divergence_matrix @ (r_edges * discretised_symbol)
         elif submesh.coord_sys == "cartesian":
             out = divergence_matrix @ discretised_symbol
-        elif submesh.coord_sys == "none":
-            # what should we do now
-            print("It is none!")
-            out = divergence_matrix @ discretised_symbol
         else:
             raise ValueError(
-                f"Coordinate system is {submesh.coord_sys}, not in cartesian, cylindrical polar, spherical polar, none")
+                f"Coordinate system is {submesh.coord_sys}, not in cartesian, cylindrical polar, spherical polar")
         return out
 
     def check_coordinate_system(self, symbol):
@@ -162,7 +158,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         Double check coordinate system
         """
         submesh = self.mesh[symbol.domain]
-        if submesh.coord_sys not in ["cylindrical polar", "spherical polar","cartesian","none"]:
+        if submesh.coord_sys not in ["cylindrical polar", "spherical polar","cartesian"]:
             raise ValueError(
                 f"Coordinate system is {submesh.coord_sys}, not in cartesian, cylindrical polar, spherical polar")
         return
