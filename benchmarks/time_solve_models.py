@@ -2,7 +2,7 @@
 # See "Writing benchmarks" in the asv docs for more information.
 
 import pybamm
-import pybamm.util
+from pybamm.util import set_random_seed
 import numpy as np
 
 
@@ -30,7 +30,7 @@ class TimeSolveSPM:
     )
 
     def setup(self, solve_first, parameters, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPM()
         c_rate = 1
@@ -86,7 +86,7 @@ class TimeSolveSPMe:
     )
 
     def setup(self, solve_first, parameters, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPMe()
         c_rate = 1
@@ -142,7 +142,7 @@ class TimeSolveDFN:
     )
 
     def setup(self, solve_first, parameters, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         if (parameters, solver_class) == (
             "ORegan2022",
             pybamm.CasadiSolver,

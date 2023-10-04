@@ -1,5 +1,5 @@
 import pybamm
-import pybamm.util
+from pybamm.util import set_random_seed
 import numpy as np
 
 
@@ -84,7 +84,7 @@ class TimeBuildModelLossActiveMaterial:
     )
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_model(self, model, params):
         build_model("Ai2020", model, "loss of active material", params)
@@ -99,7 +99,7 @@ class TimeSolveLossActiveMaterial(SolveModel):
     )
 
     def setup(self, model, params, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         SolveModel.solve_setup(
             self, "Ai2020", model, "loss of active material", params, solver_class
         )
@@ -116,7 +116,7 @@ class TimeBuildModelLithiumPlating:
     )
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_model(self, model, params):
         build_model("OKane2022", model, "lithium plating", params)
@@ -131,7 +131,7 @@ class TimeSolveLithiumPlating(SolveModel):
     )
 
     def setup(self, model, params, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         SolveModel.solve_setup(
             self, "OKane2022", model, "lithium plating", params, solver_class
         )
@@ -156,7 +156,7 @@ class TimeBuildModelSEI:
     )
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_model(self, model, params):
         build_model("Marquis2019", model, "SEI", params)
@@ -179,7 +179,7 @@ class TimeSolveSEI(SolveModel):
     )
 
     def setup(self, model, params, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params, solver_class)
 
     def time_solve_model(self, model, params, solver_class):
@@ -199,7 +199,7 @@ class TimeBuildModelParticle:
     )
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_model(self, model, params):
         build_model("Marquis2019", model, "particle", params)
@@ -219,7 +219,7 @@ class TimeSolveParticle(SolveModel):
     )
 
     def setup(self, model, params, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         SolveModel.solve_setup(
             self, "Marquis2019", model, "particle", params, solver_class
         )
@@ -236,7 +236,7 @@ class TimeBuildModelThermal:
     )
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_model(self, model, params):
         build_model("Marquis2019", model, "thermal", params)
@@ -251,7 +251,7 @@ class TimeSolveThermal(SolveModel):
     )
 
     def setup(self, model, params, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         SolveModel.solve_setup(
             self, "Marquis2019", model, "thermal", params, solver_class
         )
@@ -268,7 +268,7 @@ class TimeBuildModelSurfaceForm:
     )
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_model(self, model, params):
         build_model("Marquis2019", model, "surface form", params)
@@ -283,7 +283,7 @@ class TimeSolveSurfaceForm(SolveModel):
     )
 
     def setup(self, model, params, solver_class):
-        pybamm.util.set_random_seed()
+        set_random_seed()
         if (model, params, solver_class) == (
             pybamm.lithium_ion.SPM,
             "differential",

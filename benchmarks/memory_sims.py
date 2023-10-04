@@ -1,5 +1,5 @@
 import pybamm
-import pybamm.util
+from pybamm.util import set_random_seed
 
 parameters = ["Marquis2019", "Chen2020"]
 
@@ -9,7 +9,7 @@ class MemSPMSimulationCCCV:
     params = parameters
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def mem_setup_SPM_simulationCCCV(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -56,7 +56,7 @@ class MemSPMSimulationGITT:
     params = parameters
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def mem_setup_SPM_simulationGITT(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -75,7 +75,7 @@ class MemDFNSimulationGITT:
     params = parameters
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def mem_setup_DFN_simulationGITT(self, parameters):
         self.param = pybamm.ParameterValues(parameters)

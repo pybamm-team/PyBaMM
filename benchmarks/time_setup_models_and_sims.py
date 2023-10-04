@@ -1,5 +1,5 @@
 import pybamm
-import pybamm.util
+from pybamm.util import set_random_seed
 
 parameters = [
     "Marquis2019",
@@ -36,7 +36,7 @@ class TimeBuildSPM:
     params = parameters
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_SPM(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -50,7 +50,7 @@ class TimeBuildSPMe:
     params = parameters
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_SPMe(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -64,7 +64,7 @@ class TimeBuildDFN:
     params = parameters
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_DFN(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -78,7 +78,7 @@ class TimeBuildSPMSimulation:
     params = ([False, True], parameters)
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_SPM_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -99,7 +99,7 @@ class TimeBuildSPMeSimulation:
     params = ([False, True], parameters)
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_SPMe_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -120,7 +120,7 @@ class TimeBuildDFNSimulation:
     params = ([False, True], parameters)
 
     def setup(self):
-        pybamm.util.set_random_seed()
+        set_random_seed()
 
     def time_setup_DFN_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
