@@ -1,5 +1,5 @@
 import pybamm
-from pybamm.util import set_random_seed
+from benchmark_utils import set_random_seed
 
 parameters = ["Marquis2019", "Chen2020"]
 

@@ -2,7 +2,7 @@
 # See "Writing benchmarks" in the asv docs for more information.
 
 import pybamm
-from pybamm.util import set_random_seed
+from benchmark_utils import set_random_seed
 import numpy as np
 
 

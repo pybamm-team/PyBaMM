@@ -27,10 +27,6 @@ JAX_VERSION = "0.4"
 JAXLIB_VERSION = "0.4"
 
 
-def set_random_seed(seed_value=42):
-    np.random.seed(seed_value)
-
-
 def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent)
