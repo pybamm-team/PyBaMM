@@ -1,6 +1,7 @@
 import nox
 import os
 import sys
+import pathlib
 
 
 # Options to modify nox behaviour
@@ -117,7 +118,11 @@ def set_dev(session):
     """Install PyBaMM in editable mode."""
     set_environment_variables(PYBAMM_ENV, session=session)
     envbindir = session.bin
-    session.install("-e", ".[all]", silent=False)
+    venv_dir = pathlib.Path('./venv').resolve()
+    session.install("virtualenv")
+    session.run("virtualenv", os.fsdecode(venv_dir), silent=True)
+    python = os.fsdecode(venv_dir.joinpath("bin/python"))
+    session.run(python, "-m", "pip", "install", "-e", ".[all]", silent=False)
     session.install("cmake", silent=False)
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run(
