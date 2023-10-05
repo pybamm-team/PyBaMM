@@ -265,17 +265,47 @@ class BaseIntegrationTestLithiumIon:
     def test_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         parameter_values = pybamm.ParameterValues("Ai2020")
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        var_pts = {
+            "x_n": 20,  # negative electrode
+            "x_s": 20,  # separator
+            "x_p": 20,  # positive electrode
+            "r_n": 26,  # negative particle
+            "r_p": 26,  # positive particle
+        }
+        self.run_basic_processing_test(options,
+                                       parameter_values=parameter_values,
+                                       var_pts=var_pts
+                                       )
 
     def test_positive_cracking(self):
         options = {"particle mechanics": ("none", "swelling and cracking")}
         parameter_values = pybamm.ParameterValues("Ai2020")
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        var_pts = {
+            "x_n": 20,  # negative electrode
+            "x_s": 20,  # separator
+            "x_p": 20,  # positive electrode
+            "r_n": 26,  # negative particle
+            "r_p": 26,  # positive particle
+        }
+        self.run_basic_processing_test(options,
+                                       parameter_values=parameter_values,
+                                       var_pts=var_pts
+                                       )
 
     def test_both_cracking(self):
         options = {"particle mechanics": "swelling and cracking"}
         parameter_values = pybamm.ParameterValues("Ai2020")
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        var_pts = {
+            "x_n": 20,  # negative electrode
+            "x_s": 20,  # separator
+            "x_p": 20,  # positive electrode
+            "r_n": 26,  # negative particle
+            "r_p": 26,  # positive particle
+        }
+        self.run_basic_processing_test(options,
+                                       parameter_values=parameter_values,
+                                       var_pts=var_pts
+                                       )
 
     def test_both_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
