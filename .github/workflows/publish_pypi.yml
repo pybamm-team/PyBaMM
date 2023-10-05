@@ -105,7 +105,7 @@ jobs:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
-            bash build_manylinux_wheels/install_sundials.sh 5.8.1 6.5.0
+            bash build_manylinux_wheels/install_sundials.sh 6.0.3 6.5.0
 
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
           CIBW_BEFORE_BUILD_MACOS: >
