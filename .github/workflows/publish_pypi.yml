@@ -28,14 +28,13 @@ jobs:
           python-version: 3.8
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      # remove when a new vcpkg version is released
-      - name: Install the latest commit of vcpkg on windows
+      - name: Install vcpkg on windows
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg
+          git clone https://github.com/microsoft/vcpkg --branch 2023.08.09
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
