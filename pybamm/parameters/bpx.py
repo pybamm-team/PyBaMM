@@ -7,22 +7,41 @@ from pybamm import constants
 from pybamm import exp
 
 
-import types
-import functools
+from functools import partial
 
 
-def _copy_func(f):
-    """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
-    g = types.FunctionType(
-        f.__code__,
-        f.__globals__,
-        name=f.__name__,
-        argdefs=f.__defaults__,
-        closure=f.__closure__,
-    )
-    g = functools.update_wrapper(g, f)
-    g.__kwdefaults__ = f.__kwdefaults__
-    return g
+def _callable_func(var, fun):
+    return fun(var)
+
+
+def _interpolant_func(var, name, x, y):
+    return pybamm.Interpolant(x, y, var, name=name, interpolator="linear")
+
+
+preamble = "from pybamm import exp, tanh, cosh\n\n"
+
+
+def process_float_function_table(value, name):
+    """
+    Process BPX FloatFunctionTable to a float, python function or data for a pybamm
+    Interpolant.
+    """
+    if value is None:
+        pass
+    elif isinstance(value, Function):
+        value = value.to_python_function(preamble=preamble)
+    elif isinstance(value, InterpolatedTable):
+        # return (name, (x, y)) to match the output of
+        # `pybamm.parameters.process_1D_data` we will create an interpolant on a
+        # case-by-case basis to get the correct argument for each parameter
+        x = np.array(value.x)
+        y = np.array(value.y)
+        # sort the arrays as CasADi requires x to be in ascending order
+        sort_idx = np.argsort(x)
+        x = x[sort_idx]
+        y = y[sort_idx]
+        value = (name, (x, y))
+    return value
 
 
 @dataclass
@@ -176,79 +195,15 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             domain.pre_name + "transport efficiency"
         ] ** (1.0 / 1.5)
 
-    # TODO: allow setting function parameters in a loop over domains
-
-    # ocp
-
-    # negative electrode (only need to check for data, other cases pass through)
-    U_n = pybamm_dict[negative_electrode.pre_name + "OCP [V]"]
-    if isinstance(U_n, tuple):
-
-        def _negative_electrode_ocp(sto):
-            name, (x, y) = U_n
-            return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
-
-        pybamm_dict[negative_electrode.pre_name + "OCP [V]"] = _negative_electrode_ocp
-
-    # positive electrode (only need to check for data, other cases pass through)
-    U_p = pybamm_dict[positive_electrode.pre_name + "OCP [V]"]
-    if isinstance(U_p, tuple):
-
-        def _positive_electrode_ocp(sto):
-            name, (x, y) = U_p
-            return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
-
-        pybamm_dict[positive_electrode.pre_name + "OCP [V]"] = _positive_electrode_ocp
+    # define functional forms for pybamm parameters that depend on more than one
+    # variable
 
     # entropic change
-
-    # negative electrode
-    dUdT_n = pybamm_dict[
-        negative_electrode.pre_name + "entropic change coefficient [V.K-1]"
-    ]
-    if callable(dUdT_n):
-
-        def _negative_electrode_entropic_change(sto, c_s_max):
-            return dUdT_n(sto)
-
-    elif isinstance(dUdT_n, tuple):
-
-        def _negative_electrode_entropic_change(sto, c_s_max):
-            name, (x, y) = dUdT_n
-            return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
-
-    else:
-
-        def _negative_electrode_entropic_change(sto, c_s_max):
-            return dUdT_n
-
-    pybamm_dict[
-        negative_electrode.pre_name + "OCP entropic change [V.K-1]"
-    ] = _negative_electrode_entropic_change
-
-    # positive electrode
-    dUdT_p = pybamm_dict[
-        positive_electrode.pre_name + "entropic change coefficient [V.K-1]"
-    ]
-    if callable(dUdT_p):
-
-        def _positive_electrode_entropic_change(sto, c_s_max):
-            return dUdT_p(sto)
-
-    elif isinstance(dUdT_p, tuple):
-
-        def _positive_electrode_entropic_change(sto, c_s_max):
-            name, (x, y) = dUdT_p
-            return pybamm.Interpolant(x, y, sto, name=name, interpolator="linear")
-
-    else:
-
-        def _positive_electrode_entropic_change(sto, c_s_max):
-            return dUdT_p
-
-    pybamm_dict[
-        positive_electrode.pre_name + "OCP entropic change [V.K-1]"
-    ] = _positive_electrode_entropic_change
+    def _entropic_change(sto, c_s_max, dUdT, constant=False):
+        if constant:
+            return dUdT
+        else:
+            return dUdT(sto)
 
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
@@ -256,125 +211,93 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     c_e = pybamm_dict["Initial concentration in electrolyte [mol.m-3]"]
     F = 96485
 
-    # negative electrode
-    c_n_max = pybamm_dict[
-        "Maximum concentration in " + negative_electrode.pre_name.lower() + "[mol.m-3]"
-    ]
-    k_n_norm = pybamm_dict[
-        negative_electrode.pre_name
-        + "reaction rate constant [mol.m-2.s-1]"
-    ]
-    Ea_k_n = pybamm_dict.get(
-        negative_electrode.pre_name
-        + "reaction rate constant activation energy [J.mol-1]", 0.0
-    )
-    # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
-    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
-    k_n = k_n_norm * F / (c_n_max * c_e**0.5)
-
-    def _negative_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
-        k_ref = k_n  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-
+    def _exchange_current_density(c_e, c_s_surf, c_s_max, T, k_ref, Ea):
         return (
             k_ref
-            * arrhenius(Ea_k_n, T)
+            * arrhenius(Ea, T)
             * c_e**0.5
             * c_s_surf**0.5
             * (c_s_max - c_s_surf) ** 0.5
         )
-
-    pybamm_dict[
-        negative_electrode.pre_name + "exchange-current density [A.m-2]"
-    ] = _copy_func(_negative_electrode_exchange_current_density)
-
-    # positive electrode
-    c_p_max = pybamm_dict[
-        "Maximum concentration in " + positive_electrode.pre_name.lower() + "[mol.m-3]"
-    ]
-    k_p_norm = pybamm_dict[
-        positive_electrode.pre_name
-        + "reaction rate constant [mol.m-2.s-1]"
-    ]
-    Ea_k_p = pybamm_dict.get(
-        positive_electrode.pre_name
-        + "reaction rate constant activation energy [J.mol-1]", 0.0
-    )
-    # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
-    # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
-    k_p = k_p_norm * F / (c_p_max * c_e**0.5)
-
-    def _positive_electrode_exchange_current_density(c_e, c_s_surf, c_s_max, T):
-        k_ref = k_p  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-
-        return (
-            k_ref
-            * arrhenius(Ea_k_p, T)
-            * c_e**0.5
-            * c_s_surf**0.5
-            * (c_s_max - c_s_surf) ** 0.5
-        )
-
-    pybamm_dict[domain.pre_name + "exchange-current density [A.m-2]"] = _copy_func(
-        _positive_electrode_exchange_current_density
-    )
 
     # diffusivity
+    def _diffusivity(sto, T, D_ref, Ea, constant=False):
+        if constant:
+            return arrhenius(Ea, T) * D_ref
+        else:
+            return arrhenius(Ea, T) * D_ref(sto)
 
-    # negative electrode
-    Ea_D_n = pybamm_dict.get(
-        negative_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
-    )
-    D_n_ref = pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"]
+    # conductivity
+    def _conductivity(c_e, T, Ea, sigma_ref, constant=False):
+        if constant:
+            return arrhenius(Ea, T) * sigma_ref
+        else:
+            return arrhenius(Ea, T) * sigma_ref(c_e)
 
-    if callable(D_n_ref):
-
-        def _negative_electrode_diffusivity(sto, T):
-            return arrhenius(Ea_D_n, T) * D_n_ref(sto)
-
-    elif isinstance(D_n_ref, tuple):
-
-        def _negative_electrode_diffusivity(sto, T):
-            name, (x, y) = D_n_ref
-            return arrhenius(Ea_D_n, T) * pybamm.Interpolant(
-                x, y, sto, name=name, interpolator="linear"
+    for domain in [negative_electrode, positive_electrode]:
+        # ocp
+        U = pybamm_dict[domain.pre_name + "OCP [V]"]
+        if isinstance(U, tuple):
+            pybamm_dict[domain.pre_name + "OCP [V]"] = partial(
+                _interpolant_func, name=U[0], x=U[1][0], y=U[1][1]
             )
 
-    else:
-
-        def _negative_electrode_diffusivity(sto, T):
-            return arrhenius(Ea_D_n, T) * D_n_ref
-
-    pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
-        _negative_electrode_diffusivity
-    )
-
-    # positive electrode
-    Ea_D_p = pybamm_dict.get(
-        positive_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
-    )
-    D_p_ref = pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"]
-
-    if callable(D_p_ref):
-
-        def _positive_electrode_diffusivity(sto, T):
-            return arrhenius(Ea_D_p, T) * D_p_ref(sto)
-
-    elif isinstance(D_p_ref, tuple):
-
-        def _positive_electrode_diffusivity(sto, T):
-            name, (x, y) = D_p_ref
-            return arrhenius(Ea_D_p, T) * pybamm.Interpolant(
-                x, y, sto, name=name, interpolator="linear"
+        # entropic change
+        dUdT = pybamm_dict[domain.pre_name + "entropic change coefficient [V.K-1]"]
+        if callable(dUdT):
+            pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = partial(
+                _entropic_change, dUdT=dUdT
+            )
+        elif isinstance(dUdT, tuple):
+            pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = partial(
+                _entropic_change,
+                dUdT=partial(
+                    _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
+                ),
+            )
+        else:
+            pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = partial(
+                _entropic_change, dUdT=dUdT, constant=True
             )
 
-    else:
+        # reaction rate
+        c_max = pybamm_dict[
+            "Maximum concentration in " + domain.pre_name.lower() + "[mol.m-3]"
+        ]
+        k_norm = pybamm_dict[domain.pre_name + "reaction rate constant [mol.m-2.s-1]"]
+        Ea_k = pybamm_dict.get(
+            domain.pre_name + "reaction rate constant activation energy [J.mol-1]",
+            0.0,
+        )
+        # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(),
+        # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
+        k = k_norm * F / (c_max * c_e**0.5)
+        pybamm_dict[domain.pre_name + "exchange-current density [A.m-2]"] = partial(
+            _exchange_current_density, k_ref=k, Ea=Ea_k
+        )
 
-        def _positive_electrode_diffusivity(sto, T):
-            return arrhenius(Ea_D_p, T) * D_p_ref
+        # diffusivity
+        Ea_D = pybamm_dict.get(
+            domain.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+        )
+        D_ref = pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"]
 
-    pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
-        _positive_electrode_diffusivity
-    )
+        if callable(D_ref):
+            pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = partial(
+                _diffusivity, D_ref=D_ref, Ea=Ea_D
+            )
+        elif isinstance(D_ref, tuple):
+            pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = partial(
+                _diffusivity,
+                D_ref=partial(
+                    _interpolant_func, name=D_ref[0], x=D_ref[1][0], y=D_ref[1][1]
+                ),
+                Ea=Ea_D,
+            )
+        else:
+            pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = partial(
+                _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
+            )
 
     # electrolyte
     Ea_D_e = pybamm_dict.get(
@@ -383,26 +306,21 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     D_e_ref = pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_e_ref):
-
-        def _electrolyte_diffusivity(sto, T):
-            return arrhenius(Ea_D_e, T) * D_e_ref(sto)
-
+        pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = partial(
+            _diffusivity, D_ref=D_e_ref, Ea=Ea_D_e
+        )
     elif isinstance(D_e_ref, tuple):
-
-        def _electrolyte_diffusivity(sto, T):
-            name, (x, y) = D_e_ref
-            return arrhenius(Ea_D_e, T) * pybamm.Interpolant(
-                x, y, sto, name=name, interpolator="linear"
-            )
-
+        pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = partial(
+            _diffusivity,
+            D_ref=partial(
+                _interpolant_func, name=D_e_ref[0], x=D_e_ref[1][0], y=D_e_ref[1][1]
+            ),
+            Ea=Ea_D_e,
+        )
     else:
-
-        def _electrolyte_diffusivity(sto, T):
-            return arrhenius(Ea_D_e, T) * D_e_ref
-
-    pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
-        _electrolyte_diffusivity
-    )
+        pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = partial(
+            _diffusivity, D_ref=D_e_ref, Ea=Ea_D_e, constant=True
+        )
 
     # conductivity
     Ea_sigma_e = pybamm_dict.get(
@@ -411,47 +329,46 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     sigma_e_ref = pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"]
 
     if callable(sigma_e_ref):
-
-        def _conductivity(c_e, T):
-            return arrhenius(Ea_sigma_e, T) * sigma_e_ref(c_e)
-
+        pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = partial(
+            _conductivity, sigma_ref=sigma_e_ref, Ea=Ea_sigma_e
+        )
     elif isinstance(sigma_e_ref, tuple):
-
-        def _conductivity(c_e, T):
-            name, (x, y) = sigma_e_ref
-            return arrhenius(Ea_sigma_e, T) * pybamm.Interpolant(
-                x, y, c_e, name=name, interpolator="linear"
-            )
-
+        pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = partial(
+            _conductivity,
+            sigma_ref=partial(
+                _interpolant_func,
+                name=sigma_e_ref[0],
+                x=sigma_e_ref[1][0],
+                y=sigma_e_ref[1][1],
+            ),
+            Ea=Ea_sigma_e,
+        )
     else:
+        pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = partial(
+            _conductivity, sigma_ref=sigma_e_ref, Ea=Ea_sigma_e, constant=True
+        )
 
-        def _conductivity(c_e, T):
-            return arrhenius(Ea_sigma_e, T) * sigma_e_ref
-
-    pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = _copy_func(
-        _conductivity
-    )
-
+    # Add user-defined parameters, if any
+    user_defined = bpx.parameterisation.user_defined
+    if user_defined:
+        for name in user_defined.__dict__.keys():
+            value = getattr(user_defined, name)
+            value = process_float_function_table(value, name)
+            if callable(value):
+                pybamm_dict[name] = partial(_callable_func, fun=value)
+            elif isinstance(value, tuple):
+                pybamm_dict[name] = partial(
+                    _interpolant_func, name=value[0], x=value[1][0], y=value[1][1]
+                )
+            else:
+                pybamm_dict[name] = value
     return pybamm_dict
-
-
-preamble = "from pybamm import exp, tanh, cosh\n\n"
 
 
 def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) -> dict:
     for name, field in instance.__fields__.items():
         value = getattr(instance, name)
-        if value is None:
-            continue
-        elif isinstance(value, Function):
-            value = value.to_python_function(preamble=preamble)
-        elif isinstance(value, InterpolatedTable):
-            # return (name, (x, y)) to match the output of
-            # `pybamm.parameters.process_1D_data` we will create an interpolant on a
-            # case-by-case basis to get the correct argument for each parameter
-            x = np.array(value.x)
-            y = np.array(value.y)
-            value = (name, (x, y))
+        value = process_float_function_table(value, name)
 
         pybamm_name = field.field_info.alias
         pybamm_name_lower = pybamm_name[:1].lower() + pybamm_name[1:]
