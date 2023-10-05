@@ -419,11 +419,6 @@ class SpatialOperator(UnaryOperator):
     def __init__(self, name, child, domains=None):
         super().__init__(name, child, domains)
 
-    def diff(self, variable):
-        """See :meth:`pybamm.Symbol.diff()`."""
-        # We shouldn't need this
-        raise NotImplementedError
-
     def to_json(self):
         raise NotImplementedError(
             "pybamm.SpatialOperator:"
