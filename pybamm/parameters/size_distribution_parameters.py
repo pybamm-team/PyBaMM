@@ -16,7 +16,7 @@ def get_size_distribution_parameters(
     R_min_p=None,
     R_max_n=None,
     R_max_p=None,
-    electrode="both",
+    working_electrode="both",
 ):
     """
     A convenience method to add standard area-weighted particle-size distribution
@@ -60,7 +60,7 @@ def get_size_distribution_parameters(
         "positive" to indicate a half-cell model, in which case size distribution
         parameters are only added for a single electrode.
     """
-    if electrode in ["both", "negative"]:
+    if working_electrode == "both":
         # Radii from given parameter set
         R_n_typ = param["Negative particle radius [m]"]
 
@@ -86,32 +86,30 @@ def get_size_distribution_parameters(
             },
             check_already_exists=False,
         )
-    if electrode in ["both", "positive"]:
-        # Radii from given parameter set
-        R_p_typ = param["Positive particle radius [m]"]
+    # Radii from given parameter set
+    R_p_typ = param["Positive particle radius [m]"]
 
-        # Set the mean particle radii
-        R_p_av = R_p_av or R_p_typ
+    # Set the mean particle radii
+    R_p_av = R_p_av or R_p_typ
 
-        # Minimum radii
-        R_min_p = R_min_p or np.max([0, 1 - sd_p * 5])
+    # Minimum radii
+    R_min_p = R_min_p or np.max([0, 1 - sd_p * 5])
 
-        # Max radii
-        R_max_p = R_max_p or (1 + sd_p * 5)
+    # Max radii
+    R_max_p = R_max_p or (1 + sd_p * 5)
 
-        # Area-weighted particle-size distribution
-        def f_a_dist_p(R):
-            return lognormal(R, R_p_av, sd_p * R_p_av)
+    # Area-weighted particle-size distribution
+    def f_a_dist_p(R):
+        return lognormal(R, R_p_av, sd_p * R_p_av)
 
-        param.update(
-            {
-                "Positive minimum particle radius [m]": R_min_p * R_p_av,
-                "Positive maximum particle radius [m]": R_max_p * R_p_av,
-                "Positive area-weighted "
-                + "particle-size distribution [m-1]": f_a_dist_p,
-            },
-            check_already_exists=False,
-        )
+    param.update(
+        {
+            "Positive minimum particle radius [m]": R_min_p * R_p_av,
+            "Positive maximum particle radius [m]": R_max_p * R_p_av,
+            "Positive area-weighted " + "particle-size distribution [m-1]": f_a_dist_p,
+        },
+        check_already_exists=False,
+    )
     return param
 
 

@@ -99,7 +99,7 @@ Lithium-ion Parameter Sets
 ==========================
 {% for k,v in parameter_sets.items() if v.chemistry == "lithium_ion" %}
 {{k}}
-----------------------------
+--------------------------------
 {{ parameter_sets.get_docstring(k) }}
 {% endfor %}
 

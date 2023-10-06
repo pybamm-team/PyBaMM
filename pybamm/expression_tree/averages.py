@@ -273,7 +273,7 @@ def r_average(symbol):
     # "positive electrode", take the r-average of the child then broadcast back
     elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
         "secondary"
-    ] in [["positive electrode"], ["negative electrode"], ["working electrode"]]:
+    ] in [["positive electrode"], ["negative electrode"]]:
         child = symbol.orphans[0]
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
