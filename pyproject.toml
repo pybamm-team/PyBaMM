@@ -178,4 +178,4 @@ pybamm = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["pybamm"]
+include = ["pybamm", "pybamm.*"]
