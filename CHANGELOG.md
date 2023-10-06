@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v23.9rc0](https://github.com/pybamm-team/PyBaMM/tree/v23.9rc0) - 2023-10-31
+
 ## Features
 - The parameter "Ambient temperature [K]" can now be given as a function of position `(y,z)` and time `t`. The "edge" and "current collector" heat transfer coefficient parameters can also depend on `(y,z)` ([#3257](https://github.com/pybamm-team/PyBaMM/pull/3257))
 - Spherical and cylindrical shell domains can now be solved with any boundary conditions ([#3237](https://github.com/pybamm-team/PyBaMM/pull/3237))
@@ -42,6 +44,7 @@
 
 ## Breaking changes
 
+- Dropped support for i686 (32-bit) architectures on GNU/Linux distributions ([#3412](https://github.com/pybamm-team/PyBaMM/pull/3412))
 - The class `pybamm.thermal.OneDimensionalX` has been moved to `pybamm.thermal.pouch_cell.OneDimensionalX` to reflect the fact that the model formulation implicitly assumes a pouch cell geometry ([#3257](https://github.com/pybamm-team/PyBaMM/pull/3257))
 - The "lumped" thermal option now always used the parameters "Cell cooling surface area [m2]", "Cell volume [m3]" and "Total heat transfer coefficient [W.m-2.K-1]" to compute the cell cooling regardless of the chosen "cell geometry" option. The user must now specify the correct values for these parameters instead of them being calculated based on e.g. a pouch cell. An `OptionWarning` is raised to let users know to update their parameters ([#3257](https://github.com/pybamm-team/PyBaMM/pull/3257))
 - Numpy functions now work with PyBaMM symbols (e.g. `np.exp(pybamm.Symbol("a"))` returns `pybamm.Exp(pybamm.Symbol("a"))`). This means that parameter functions can be specified using numpy functions instead of pybamm functions. Additionally, combining numpy arrays with pybamm objects now works (the numpy array is converted to a pybamm array) ([#3205](https://github.com/pybamm-team/PyBaMM/pull/3205))
