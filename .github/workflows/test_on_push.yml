@@ -97,7 +97,9 @@ jobs:
 
       - name: Test pybamm_install_odes on MacOS (for only this PR)
         if: matrix.os == 'macos-latest'
-        run: pybamm_install_odes
+        run: |
+          pip install wget
+          pybamm_install_odes
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
