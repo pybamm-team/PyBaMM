@@ -98,7 +98,7 @@ jobs:
           # TODO: openblas no longer available on centos 7 i686 image, use blas instead for now
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install blas-devel lapack-devel &&
-            bash build_manylinux_wheels/install_sundials.sh 5.8.1 6.5.0
+            bash scripts/install_sundials.sh 5.8.1 6.5.0
           CIBW_BEFORE_BUILD_LINUX: >
             python -m pip install cmake casadi numpy
           # override; point to casadi install path so that it can be found by the repair command
