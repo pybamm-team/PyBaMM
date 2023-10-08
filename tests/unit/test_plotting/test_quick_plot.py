@@ -3,6 +3,7 @@ import pybamm
 import unittest
 from tests import TestCase
 import numpy as np
+from tempfile import TemporaryDirectory
 
 
 class TestQuickPlot(TestCase):
@@ -290,12 +291,13 @@ class TestQuickPlot(TestCase):
         quick_plot.plot(0)
 
         # test creating a GIF
-        test_stub = "spm_sim_test"
-        test_file = f"{test_stub}.gif"
-        quick_plot.create_gif(number_of_images=3, duration=3, output_filename=test_file)
-        assert not os.path.exists(f"{test_stub}*.png")
-        assert os.path.exists(test_file)
-        os.remove(test_file)
+        with TemporaryDirectory() as dir_name:
+            test_stub = os.path.join(dir_name, "spm_sim_test")
+            test_file = f"{test_stub}.gif"
+            quick_plot.create_gif(number_of_images=3, duration=3,
+                                  output_filename=test_file)
+            assert not os.path.exists(f"{test_stub}*.png")
+            assert os.path.exists(test_file)
         pybamm.close_plots()
 
     def test_loqs_spme(self):
@@ -344,7 +346,7 @@ class TestQuickPlot(TestCase):
             # test quick plot of particle for spme
             if (
                 model.name == "Single Particle Model with electrolyte"
-                and model.options["working electrode"] != "positive"
+                and model.options["working electrode"] == "both"
             ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",
