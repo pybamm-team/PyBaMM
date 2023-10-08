@@ -1,0 +1,75 @@
+name: Build & Push Docker Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - develop
+
+jobs:
+  pre_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: List built images
+        run: docker images
+
+      - name: Build and Push Docker Image (Without Solvers)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:latest
+          push: true
+
+      - name: Build and Push Docker Image (With JAX Solver)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:jax
+          push: true
+          build-args: |
+            JAX=true
+
+      - name: Build and Push Docker Image (With ODES & DAE Solver)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:odes
+          push: true
+          build-args: |
+            ODES=true
+
+      - name: Build and Push Docker Image (With IDAKLU Solver)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:idaklu
+          push: true
+          build-args: |
+            IDAKLU=true
+
+      - name: Build and Push Docker Image (With All Solvers)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:latest
+          push: true
+          build-args: |
+            ALL=true
