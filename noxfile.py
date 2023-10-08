@@ -118,11 +118,11 @@ def run_scripts(session):
 def set_dev(session):
     """Install PyBaMM in editable mode."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("virtualenv","cmake")
+    session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", silent=False)
-    if sys.platform == "linux" or sys.platform == "macos":
+    if sys.platform == "linux" or sys.platform == "darwin":
         session.run(python, "-m", "pip", "install", ".[jax,odes]", silent=False)
 
 
