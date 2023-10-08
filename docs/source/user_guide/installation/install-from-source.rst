@@ -116,7 +116,7 @@ Using Nox (recommended)
 .. note::
 	It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
 
-This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
+This creates a virtual environment ``venv/`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `ruff <https://beta.ruff.rs/docs/>`_.
 
 You can now activate the environment with
@@ -125,13 +125,13 @@ You can now activate the environment with
 
 	.. code:: bash
 
-		source .nox/dev/bin/activate
+		source venv/bin/activate
 
 .. tab:: Windows
 
 	.. code:: bash
 
-		.nox\dev\Scripts\activate.bat
+		venv\Scripts\activate.bat
 
 and run the tests to check your installation.
 
