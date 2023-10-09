@@ -148,9 +148,9 @@ class TestParameterValues(TestCase):
         with self.assertRaisesRegex(ValueError, "Thermodynamic factor"):
             pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
         with self.assertRaisesRegex(
-            ValueError, "Exchange-current density for lithium-metal electrode"):
+            ValueError, "Exchange-current density for plating [A.m-2]"):
             pybamm.ParameterValues(
-                {"Exchange-current density for plating": 0.001})
+                {"Exchange-current density for lithium-metal electrode [A.m-2]": 0.001})
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
