@@ -14,7 +14,9 @@ class TestOKane2022(TestCase):
 
         fun_test = {
             # Lithium plating
-            "Exchange-current density for plating [A.m-2]": ([1e3, 1e4, T], 9.6485e-2),
+            "Exchange-current density for lithium-metal electrode [A.m-2]": (
+                [1e3, 1e4, T], 9.6485e-2
+            ),
             "Exchange-current density for stripping [A.m-2]": (
                 [1e3, 1e4, T],
                 9.6485e-1,

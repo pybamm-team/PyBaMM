@@ -199,14 +199,14 @@ class LithiumIonParameters(BaseParameters):
         )
 
     def j0_plating(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for plating [A.m-2]"""
+        """Dimensional exchange-current density for lithium-metal electrode [A.m-2]"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             "Plated lithium concentration [mol.m-3]": c_Li,
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            "Exchange-current density for plating [A.m-2]", inputs
+            "Exchange-current density for lithium-metal electrode [A.m-2]", inputs
         )
 
     def dead_lithium_decay_rate(self, L_sei):

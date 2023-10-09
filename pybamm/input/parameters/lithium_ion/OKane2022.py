@@ -515,7 +515,7 @@ def get_parameter_values():
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
-        "Exchange-current density for plating [A.m-2]"
+        "Exchange-current density for lithium-metal electrode [A.m-2]"
         "": plating_exchange_current_density_OKane2020,
         "Exchange-current density for stripping [A.m-2]"
         "": stripping_exchange_current_density_OKane2020,
