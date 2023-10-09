@@ -39,15 +39,15 @@ jobs:
         id: tags
         run: |
           if [ "${{ matrix.build-args }}" = "" ]; then
-            echo "::set-output name=tag::latest" >> $GITHUB_OUTPUT
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "JAX=true" ]; then
-            echo "::set-output name=tag::jax" >> $GITHUB_OUTPUT
+            echo "tag=jax" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "ODES=true" ]; then
-            echo "::set-output name=tag::odes" >> $GITHUB_OUTPUT
+            echo "tag=odes" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "IDAKLU=true" ]; then
-            echo "::set-output name=tag::idaklu" >> $GITHUB_OUTPUT
+            echo "tag=idaklu" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "ALL=true" ]; then
-            echo "::set-output name=tag::all" >> $GITHUB_OUTPUT
+            echo "tag=all" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and push Docker image to Docker Hub
