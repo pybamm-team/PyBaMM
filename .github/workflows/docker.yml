@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         build-args: ["", "JAX=true", "ODES=true", "IDAKLU=true", "ALL=true"]
+      fail-fast: true
 
     steps:
       - name: Checkout
