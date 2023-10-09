@@ -17,7 +17,6 @@ jobs:
     strategy:
       matrix:
         build-args: ["", "JAX=true", "ODES=true", "IDAKLU=true", "ALL=true"]
-        architectures: [amd64, arm64]
 
     steps:
       - name: Checkout
@@ -58,7 +57,7 @@ jobs:
           tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
           push: false # temporary
           build-args: ${{ matrix.build-args }}
-          platforms: linux/${{ matrix.architectures }}
+          platforms: linux/amd64, linux/arm64
 
       - name: List built image(s)
         run: docker images
