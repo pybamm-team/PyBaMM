@@ -324,6 +324,11 @@ class ParameterValues:
                 raise ValueError(
                     f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
                 )
+            if "Exchange-current density for plating [A.m-2]" in param:
+                raise ValueError(
+                    f"parameter '{param}' has been renamed to "
+                    "'Exchange-current density for lithium-metal electrode [A.m-2]'"
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
