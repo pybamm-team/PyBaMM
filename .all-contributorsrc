@@ -708,7 +708,16 @@
       "contributions": [
         "infra"
       ]
-    }
+    },
+    {
+      "login": "Agnik7",
+      "name": "Agnik Bakshi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/77234005?v=4",
+      "profile": "https://github.com/Agnik7",
+      "contributions": [
+        "doc"
+      ]
+    },
   ],
   "contributorsPerLine": 7,
   "projectName": "PyBaMM",
