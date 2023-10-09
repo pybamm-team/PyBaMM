@@ -152,6 +152,11 @@ html[data-theme="dark"] .DocSearch-Commands-Key {
 .DocSearch-Hit-source {
   background: var(--pst-color-background);
 }
+
+.DocSearch-Hit-icon {
+  height: 30px;
+}
+
 .DocSearch-Button {
   border-radius: 6px;
 }
@@ -187,5 +192,5 @@ html[data-theme="light"] .DocSearch-Logo svg rect.cls-1 {
 /* Search field dark theme corrections */
 
 html[data-theme="dark"] .DocSearch-Button {
-  background: var(--pst-color-on-surface);
+  background: var(--pst-color-background);
 }

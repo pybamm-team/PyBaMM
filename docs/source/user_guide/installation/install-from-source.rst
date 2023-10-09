@@ -246,8 +246,9 @@ Doctests, examples, and coverage
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
 - ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
-Extra tips while using Nox
---------------------------
+Extra tips while using ``Nox``
+------------------------------
+
 Here are some additional useful commands you can run with ``Nox``:
 
 - ``--verbose or -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
@@ -257,6 +258,7 @@ Here are some additional useful commands you can run with ``Nox``:
 - ``--install-only``: Skips the test execution and only performs the installation step defined in the Nox sessions.
 - ``--nocolor``: Disables the color output in the console during the execution of Nox sessions.
 - ``--report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".
+- ``nox -s docs --non-interactive``: Builds the documentation without serving it locally (using ``sphinx-build`` instead of ``sphinx-autobuild``).
 
 Troubleshooting
 ===============
