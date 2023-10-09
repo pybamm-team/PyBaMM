@@ -215,7 +215,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         y = []
         platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if platform.startswith("cpu"):
+        if len(inputs) <= 1 or platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():
                 async def solve_model_async(inputs_v):
