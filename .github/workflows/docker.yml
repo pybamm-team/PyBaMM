@@ -1,75 +1,64 @@
-name: Build & Push Docker Images
+name: Build and push Docker images to Docker Hub
 
 on:
   workflow_dispatch:
   push:
     branches:
     - develop
+  # temporary
+  pull_request:
 
 jobs:
-  pre_job:
+  build_docker_images:
+    # This workflow is only of value to PyBaMM and would always be skipped in forks
+    if: github.repository_owner == 'pybamm-team'
+    name: Build image ({{ matrix.build-args }} / {{ matrix.architectures }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build-args: ["", "JAX=true", "ODES=true", "IDAKLU=true", "ALL=true"]
+        architectures: [amd64, arm64]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: List built images
+      - name: Create tags for Docker images based on build-time arguments
+        id: tags
+        run: |
+          if [ "${{ matrix.build-args }}" = "" ]; then
+            echo "::set-output name=tag::latest" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.build-args }}" = "JAX=true" ]; then
+            echo "::set-output name=tag::jax" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.build-args }}" = "ODES=true" ]; then
+            echo "::set-output name=tag::odes" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.build-args }}" = "IDAKLU=true" ]; then
+            echo "::set-output name=tag::idaklu" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.build-args }}" = "ALL=true" ]; then
+            echo "::set-output name=tag::all" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
+          push: false # temporary
+          build-args: ${{ matrix.build-args }}
+          platforms: linux/${{ matrix.architectures }}
+
+      - name: List built image(s)
         run: docker images
-
-      - name: Build and Push Docker Image (Without Solvers)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:latest
-          push: true
-
-      - name: Build and Push Docker Image (With JAX Solver)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:jax
-          push: true
-          build-args: |
-            JAX=true
-
-      - name: Build and Push Docker Image (With ODES & DAE Solver)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:odes
-          push: true
-          build-args: |
-            ODES=true
-
-      - name: Build and Push Docker Image (With IDAKLU Solver)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:idaklu
-          push: true
-          build-args: |
-            IDAKLU=true
-
-      - name: Build and Push Docker Image (With All Solvers)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:latest
-          push: true
-          build-args: |
-            ALL=true
