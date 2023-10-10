@@ -10,11 +10,11 @@ jobs:
   build_docker_images:
     # This workflow is only of value to PyBaMM and would always be skipped in forks
     # if: github.repository_owner == 'pybamm-team'
-    name: Build image (${{ matrix.build-args }})
+    name: Image (${{ matrix.build-args }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        build-args: ["", "JAX=true", "ODES=true", "IDAKLU=true", "ALL=true"]
+        build-args: ["No solvers", "JAX", "ODES", "IDAKLU", "ALL"]
       fail-fast: true
 
     steps:
@@ -36,27 +36,51 @@ jobs:
       - name: Create tags for Docker images based on build-time arguments
         id: tags
         run: |
-          if [ "${{ matrix.build-args }}" = "" ]; then
+          if [ "${{ matrix.build-args }}" = "No solvers" ]; then
             echo "tag=latest" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "JAX=true" ]; then
+          elif [ "${{ matrix.build-args }}" = "JAX" ]; then
             echo "tag=jax" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "ODES=true" ]; then
+          elif [ "${{ matrix.build-args }}" = "ODES" ]; then
             echo "tag=odes" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "IDAKLU=true" ]; then
+          elif [ "${{ matrix.build-args }}" = "IDAKLU" ]; then
             echo "tag=idaklu" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "ALL=true" ]; then
+          elif [ "${{ matrix.build-args }}" = "ALL" ]; then
             echo "tag=all" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and push Docker image to Docker Hub
+      - name: Build and push Docker image to Docker Hub (no solvers)
+        if: matrix.build-args == 'No solvers'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: scripts/Dockerfile
           tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
           push: true
-          build-args: ${{ matrix.build-args }}
           platforms: linux/amd64, linux/arm64
+
+      - name: Build and push Docker image to Docker Hub (with ODES and IDAKLU solvers)
+        if: matrix.build-args == 'ODES' || matrix.build-args == 'IDAKLU'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
+          push: true
+          build-args: ${{ matrix.build-args }}=true
+          platforms: linux/amd64, linux/arm64
+
+      - name: Build and push Docker image to Docker Hub (with ALL and JAX solvers)
+        if: matrix.build-args == 'ALL' || matrix.build-args == 'JAX'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
+          push: true
+          build-args: ${{ matrix.build-args }}=true
+          # exclude arm64 for JAX and ALL builds for now, see
+          # https://github.com/google/jax/issues/13608
+          platforms: linux/amd64
 
       - name: List built image(s)
         run: docker images
