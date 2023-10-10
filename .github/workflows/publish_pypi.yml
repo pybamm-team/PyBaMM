@@ -185,7 +185,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
-    needs: [build_windows_wheels, buld_wheels, build_sdist]
+    needs: [build_windows_wheels, build_wheels, build_sdist]
     if: ${{ always() && contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     steps:
