@@ -183,3 +183,15 @@ jobs:
           password: ${{ secrets.TESTPYPI_TOKEN }}
           packages-dir: files/
           repository-url: https://test.pypi.org/legacy/
+
+  open_failure_issue:
+    needs: [build_windows_wheels, buld_wheels, build_sdist]
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: JasonEtco/create-an-issue@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      with:
+        filename: .github/wheel_failure.md
