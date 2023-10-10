@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+**/*.py[cod]
+
+# Python cache
+**/__pycache__/
+*.cache
+.ipynb_checkpoints/
+
+# Running files
+.~lock*
+*.swp
+
+# Sphinx build files
+docs/_build/
+docs/build/
+
+# Installation files
+setup.log
+
+# Virtual environments
+env/
+venv/
+.env/
+.venv/
+PyBaMM-env/
+pyvenv.cfg
+.vscode/
+
+# Linters and pre-commit hooks
+.ruff_cache/
+
+# Test runner venvs
+.nox/
