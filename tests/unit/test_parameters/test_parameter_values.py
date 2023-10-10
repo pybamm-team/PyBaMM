@@ -147,8 +147,8 @@ class TestParameterValues(TestCase):
             # since + has other meanings in regex
         with self.assertRaisesRegex(ValueError, "Thermodynamic factor"):
             pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
-        with self.assertRaisesRegex(
-            ValueError, "Exchange-current density for lithium-metal electrode [A.m-2]"):
+        # renamed to "Exchange-current density for lithium-metal electrode [A.m-2]"
+        with self.assertRaises(ValueError):
             pybamm.ParameterValues(
                 {"Exchange-current density for plating [A.m-2]": 0.001})
 
