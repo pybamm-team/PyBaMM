@@ -3,6 +3,9 @@ name: Build and publish package to PyPI
 on:
   release:
     types: [published]
+  schedule:
+    # Run at 10 am UTC on day-of-month 1 and 15.
+    - cron: "0 10 1,15 * *"
   workflow_dispatch:
     inputs:
       target:
@@ -151,6 +154,7 @@ jobs:
           if-no-files-found: error
 
   publish_pypi:
+    if: github.event_name != 'schedule'
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
@@ -164,9 +168,7 @@ jobs:
           mv windows_wheels/* wheels/* sdist/* files/
 
       - name: Publish on PyPI
-        if: |
-          github.event.inputs.target == 'pypi' ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
