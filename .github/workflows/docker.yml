@@ -5,8 +5,6 @@ on:
   push:
     branches:
     - develop
-  # temporary
-  pull_request:
 
 jobs:
   build_docker_images:
@@ -17,7 +15,7 @@ jobs:
     strategy:
       matrix:
         build-args: ["", "JAX=true", "ODES=true", "IDAKLU=true", "ALL=true"]
-      fail-fast: false
+      fail-fast: true
 
     steps:
       - name: Checkout
@@ -56,7 +54,7 @@ jobs:
           context: .
           file: scripts/Dockerfile
           tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
-          push: false # temporary
+          push: true
           build-args: ${{ matrix.build-args }}
           platforms: linux/amd64, linux/arm64
 
