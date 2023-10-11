@@ -22,6 +22,7 @@ class GeneralTransportEfficiency(BaseModel):
         super().__init__(param, component, options=options)
 
     def _tortuosity_factor_model(self, eps_k):
+        pybamm.citations.register("shen2007critical")
         if self.options["transport efficiency"] == "ordered packing":
             pybamm.citations.register("akanni1987effective")
             tor_k = (3 - eps_k)*0.5
