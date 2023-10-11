@@ -1,2 +1,3 @@
 from .base_transport_efficiency import BaseModel
 from .bruggeman_transport_efficiency import Bruggeman
+from .general_transport_efficiency import GeneralTransportEfficiency

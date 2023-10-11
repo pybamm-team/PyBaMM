@@ -237,6 +237,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
+            "transport efficiency": [
+                "Bruggeman",
+                "log square root",
+                "log",
+                "linear",
+                "tortuosity factor",
+                "half volume fraction",
+            ],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -1145,12 +1153,14 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_transport_efficiency_submodels(self):
         self.submodels[
             "electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(
+        ] = pybamm.transport_efficiency.GeneralTransportEfficiency(
             self.param, "Electrolyte", self.options
         )
         self.submodels[
             "electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
+        ] = pybamm.transport_efficiency.GeneralTransportEfficiency(
+            self.param, "Electrode", self.options
+        )
 
     def set_thermal_submodel(self):
         if self.options["thermal"] == "isothermal":
