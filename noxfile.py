@@ -121,7 +121,6 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
-    session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", external=True)
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run(python, "-m", "pip", "install", ".[jax,odes]", external=True)
 
