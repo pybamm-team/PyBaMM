@@ -413,4 +413,3 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_transport_efficiency_cation_exchange_membrane(self):
         options = {"transport efficiency": "cation-exchange membrane"}
         self.check_well_posedness(options)
-
