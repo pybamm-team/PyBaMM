@@ -122,7 +122,7 @@ def set_dev(session):
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.run(python, "-m", "pip", "install", ".[jax,odes]", external=True)
+        session.run(python, "-m", "pip", "install", ".[all,dev,jax,odes]", external=True)
 
 
 
