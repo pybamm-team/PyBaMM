@@ -6,7 +6,7 @@ from .base_transport_efficiency import BaseModel
 
 
 class GeneralTransportEfficiency(BaseModel):
-    """Submodel for Bruggeman transport_efficiency
+    """Submodel for transport_efficiency
 
     Parameters
     ----------

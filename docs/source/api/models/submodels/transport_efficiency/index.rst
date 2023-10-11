@@ -5,4 +5,4 @@ transport_efficiency
   :maxdepth: 1
 
   base_transport_efficiency
-  bruggeman_transport_efficiency
+  general_transport_efficiency

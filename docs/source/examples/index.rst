@@ -70,7 +70,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/submodel_cracking_DFN_or_SPM.ipynb
     notebooks/models/loss_of_active_materials.ipynb
     notebooks/models/thermal-models.ipynb
-    notebooks/models/tortusity_models.ipynb
+    notebooks/models/tortuosity_models.ipynb
     notebooks/models/unsteady-heat-equation.ipynb
     notebooks/models/using-model-options_thermal-example.ipynb
     notebooks/models/using-submodels.ipynb
