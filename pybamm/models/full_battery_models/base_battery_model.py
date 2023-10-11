@@ -237,14 +237,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
-            "transport efficiency": [
-                "Bruggeman",
-                "log square root",
-                "log",
-                "linear",
-                "tortuosity factor",
-                "half volume fraction",
-            ],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -312,6 +304,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
+            "transport efficiency": [
+                "Bruggeman",
+                "ordered packing",
+                "hyperbola of revolution",
+                "overlapping spheres",
+                "tortuosity factor",
+                "random overlapping cylinders",
+                "heterogeneous catalyst",
+                "cation-exchange membrane",
+            ],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
