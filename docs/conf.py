@@ -155,6 +155,10 @@ html_theme_options = {
     # add Algolia to the persistent navbar, this removes the default search icon
     "navbar_persistent": "algolia-searchbox",
     "use_edit_page_button": True,
+    "analytics": {
+        "plausible_analytics_domain": "docs.pybamm.org",
+        "plausible_analytics_url": "https://plausible.io/js/script.js",
+    },
     "pygment_light_style": "xcode",
     "pygment_dark_style": "monokai",
     "footer_start": [
