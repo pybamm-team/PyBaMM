@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-64-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-65-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -233,7 +233,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/chuckliu1979"><img src="https://avatars.githubusercontent.com/u/13491954?v=4?s=100" width="100px;" alt="Chuck Liu"/><br /><sub><b>Chuck Liu</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Achuckliu1979" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=chuckliu1979" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/partben"><img src="https://avatars.githubusercontent.com/u/88316576?v=4?s=100" width="100px;" alt="partben"/><br /><sub><b>partben</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=partben" title="Documentation">📖</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://wigging.me"><img src="https://avatars.githubusercontent.com/u/6828967?v=4?s=100" width="100px;" alt="Gavin Wiggins"/><br /><sub><b>Gavin Wiggins</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Awigging" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=wigging" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://gavinw.me"><img src="https://avatars.githubusercontent.com/u/6828967?v=4?s=100" width="100px;" alt="Gavin Wiggins"/><br /><sub><b>Gavin Wiggins</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Awigging" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=wigging" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/dion-w"><img src="https://avatars.githubusercontent.com/u/91852142?v=4?s=100" width="100px;" alt="Dion Wilde"/><br /><sub><b>Dion Wilde</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Adion-w" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=dion-w" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://www.ehtec.co"><img src="https://avatars.githubusercontent.com/u/48386220?v=4?s=100" width="100px;" alt="Elias Hohl"/><br /><sub><b>Elias Hohl</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=ehtec" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/KAschad"><img src="https://avatars.githubusercontent.com/u/93784399?v=4?s=100" width="100px;" alt="KAschad"/><br /><sub><b>KAschad</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AKAschad" title="Bug reports">🐛</a></td>
@@ -268,6 +268,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://aitorres.com"><img src="https://avatars.githubusercontent.com/u/26191851?v=4?s=100" width="100px;" alt="Andrés Ignacio Torres"/><br /><sub><b>Andrés Ignacio Torres</b></sub></a><br /><a href="#infra-aitorres" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Agnik7"><img src="https://avatars.githubusercontent.com/u/77234005?v=4?s=100" width="100px;" alt="Agnik Bakshi"/><br /><sub><b>Agnik Bakshi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Agnik7" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
