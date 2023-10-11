@@ -123,7 +123,8 @@ def set_dev(session):
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     if sys.platform == "linux" or sys.platform == "darwin":
         session.run(python, "-m", "pip", "install", ".[all,dev,jax,odes]", external=True)
-
+    else:
+        session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", external=True)
 
 
 @nox.session(name="tests")
