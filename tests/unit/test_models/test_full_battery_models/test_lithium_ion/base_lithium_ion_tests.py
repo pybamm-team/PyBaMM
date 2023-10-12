@@ -414,3 +414,11 @@ class BaseUnitTestLithiumIon:
         options = {"transport efficiency": "cation-exchange membrane"}
         self.check_well_posedness(options)
 
+    def test_well_posed_transport_efficiency_hyperbola(self):
+        options = {"transport efficiency": "hyperbola of revolution"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_tortuosity_factor(self):
+        options = {"transport efficiency": "tortuosity factor"}
+        self.check_well_posedness(options)
+
