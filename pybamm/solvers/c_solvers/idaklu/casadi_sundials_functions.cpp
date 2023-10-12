@@ -219,7 +219,8 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
         jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
       }
     } else if (SUNSparseMatrix_SparseType(JJ) == CSR_MAT) {
-      realtype newjac[SUNSparseMatrix_NNZ(JJ)];
+      const int JJ_nnz = SUNSparseMatrix_NNZ(JJ);
+      realtype newjac[JJ_nnz];
       sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
 
