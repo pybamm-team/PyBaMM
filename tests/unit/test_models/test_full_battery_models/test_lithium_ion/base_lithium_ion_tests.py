@@ -421,4 +421,3 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_transport_efficiency_tortuosity_factor(self):
         options = {"transport efficiency": "tortuosity factor"}
         self.check_well_posedness(options)
-
