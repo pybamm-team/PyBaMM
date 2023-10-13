@@ -95,12 +95,6 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           pip install -e .[all,docs]
 
-      - name: Test pybamm_install_odes on MacOS (for only this PR)
-        if: matrix.os == 'macos-latest'
-        run: |
-          pip install wget
-          pybamm_install_odes
-
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
         if: matrix.os == 'ubuntu-latest'
@@ -182,6 +176,50 @@ jobs:
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
+
+  test_install_odes:
+    needs: style
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+    name: Test pybamm_install_odes on MacOS
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      - name: Install macOS system dependencies
+        if: matrix.os == 'macos-latest'
+        env:
+          # Homebrew environment variables
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        run: |
+          brew analytics off
+          brew update
+          brew install graphviz openblas
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: setup.py
+
+      - name: Install PyBaMM dependencies
+        run: |
+          pip install --upgrade pip wheel setuptools nox
+          pip install -e .[all,docs]
+
+      - name: Test pybamm_install_odes on MacOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          pip install wget
+          pybamm_install_odes
 
   run_integration_tests:
     needs: style
