@@ -1,4 +1,5 @@
 from bpx import BPX, Function, InterpolatedTable
+from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 import pybamm
 import math
 from dataclasses import dataclass
@@ -78,18 +79,49 @@ electrolyte = Domain(name="electrolyte", pre_name="Electrolyte ", short_pre_name
 separator = Domain(name="separator", pre_name="Separator ", short_pre_name="")
 experiment = Domain(name="experiment", pre_name="", short_pre_name="")
 
+PHASE_NAMES = ["Primary: ", "Secondary: "]
+
+
+def _get_phase_names(domain):
+    """
+    Return a list of the phase names in a given domain
+    """
+    if isinstance(domain, (ElectrodeBlended, ElectrodeBlendedSPM)):
+        phases = len(getattr(domain, "particle").keys())
+    else:
+        phases = 1
+    if phases == 1:
+        return [""]
+    elif phases == 2:
+        return ["Primary: ", "Secondary: "]
+    else:
+        raise NotImplementedError(
+            "PyBaMM does not support more than two "
+            "particle phases in blended electrodes"
+        )
+
 
 def _bpx_to_param_dict(bpx: BPX) -> dict:
+    """
+    Turns a BPX object in to a dictionary of parameters for PyBaMM
+    """
+    domain_phases = {
+        "negative electrode": _get_phase_names(bpx.parameterisation.negative_electrode),
+        "positive electrode": _get_phase_names(bpx.parameterisation.positive_electrode),
+    }
+
+    # Loop over each component of BPX and add to pybamm dictionary
     pybamm_dict = {}
+    pybamm_dict = _bpx_to_domain_param_dict(
+        bpx.parameterisation.positive_electrode, pybamm_dict, positive_electrode
+    )
     pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.cell, pybamm_dict, cell
     )
     pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.negative_electrode, pybamm_dict, negative_electrode
     )
-    pybamm_dict = _bpx_to_domain_param_dict(
-        bpx.parameterisation.positive_electrode, pybamm_dict, positive_electrode
-    )
+
     pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.electrolyte, pybamm_dict, electrolyte
     )
@@ -107,7 +139,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # activity
     pybamm_dict["Thermodynamic factor"] = 1.0
 
-    # assume Bruggeman relation for effection electrolyte properties
+    # assume Bruggeman relation for effective electrolyte properties
     for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
 
@@ -137,9 +169,6 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
 
     # reference temperature
     T_ref = pybamm_dict["Reference temperature [K]"]
-
-    def arrhenius(Ea, T):
-        return exp(Ea / constants.R * (1 / T_ref - 1 / T))
 
     # lumped parameters
     for name in [
@@ -182,13 +211,6 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         {"Total heat transfer coefficient [W.m-2.K-1]": 0}, check_already_exists=False
     )
 
-    # BET surface area
-    for domain in [negative_electrode, positive_electrode]:
-        pybamm_dict[domain.pre_name + "active material volume fraction"] = (
-            pybamm_dict[domain.pre_name + "surface area per unit volume [m-1]"]
-            * pybamm_dict[domain.short_pre_name + "particle radius [m]"]
-        ) / 3.0
-
     # transport efficiency
     for domain in [negative_electrode, separator, positive_electrode]:
         pybamm_dict[domain.pre_name + "porosity"] = pybamm_dict[
@@ -198,7 +220,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # define functional forms for pybamm parameters that depend on more than one
     # variable
 
-    # entropic change
+    def _arrhenius(Ea, T):
+        return exp(Ea / constants.R * (1 / T_ref - 1 / T))
+
     def _entropic_change(sto, c_s_max, dUdT, constant=False):
         if constant:
             return dUdT
@@ -214,90 +238,114 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     def _exchange_current_density(c_e, c_s_surf, c_s_max, T, k_ref, Ea):
         return (
             k_ref
-            * arrhenius(Ea, T)
+            * _arrhenius(Ea, T)
             * c_e**0.5
             * c_s_surf**0.5
             * (c_s_max - c_s_surf) ** 0.5
         )
 
-    # diffusivity
     def _diffusivity(sto, T, D_ref, Ea, constant=False):
         if constant:
-            return arrhenius(Ea, T) * D_ref
+            return _arrhenius(Ea, T) * D_ref
         else:
-            return arrhenius(Ea, T) * D_ref(sto)
+            return _arrhenius(Ea, T) * D_ref(sto)
 
-    # conductivity
     def _conductivity(c_e, T, Ea, sigma_ref, constant=False):
         if constant:
-            return arrhenius(Ea, T) * sigma_ref
+            return _arrhenius(Ea, T) * sigma_ref
         else:
-            return arrhenius(Ea, T) * sigma_ref(c_e)
+            return _arrhenius(Ea, T) * sigma_ref(c_e)
 
+    # Loop over electrodes and construct derived parameters
     for domain in [negative_electrode, positive_electrode]:
-        # ocp
-        U = pybamm_dict[domain.pre_name + "OCP [V]"]
-        if isinstance(U, tuple):
-            pybamm_dict[domain.pre_name + "OCP [V]"] = partial(
-                _interpolant_func, name=U[0], x=U[1][0], y=U[1][1]
-            )
+        for phase_pre_name in domain_phases[domain.name]:
+            phase_domain_pre_name = phase_pre_name + domain.pre_name
 
-        # entropic change
-        dUdT = pybamm_dict[domain.pre_name + "entropic change coefficient [V.K-1]"]
-        if callable(dUdT):
-            pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = partial(
-                _entropic_change, dUdT=dUdT
-            )
-        elif isinstance(dUdT, tuple):
-            pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = partial(
-                _entropic_change,
-                dUdT=partial(
-                    _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
-                ),
-            )
-        else:
-            pybamm_dict[domain.pre_name + "OCP entropic change [V.K-1]"] = partial(
-                _entropic_change, dUdT=dUdT, constant=True
-            )
+            # BET surface area
+            pybamm_dict[phase_domain_pre_name + "active material volume fraction"] = (
+                pybamm_dict[
+                    phase_domain_pre_name + "surface area per unit volume [m-1]"
+                ]
+                * pybamm_dict[
+                    phase_pre_name + domain.short_pre_name + "particle radius [m]"
+                ]
+            ) / 3.0
 
-        # reaction rate
-        c_max = pybamm_dict[
-            "Maximum concentration in " + domain.pre_name.lower() + "[mol.m-3]"
-        ]
-        k_norm = pybamm_dict[domain.pre_name + "reaction rate constant [mol.m-2.s-1]"]
-        Ea_k = pybamm_dict.get(
-            domain.pre_name + "reaction rate constant activation energy [J.mol-1]",
-            0.0,
-        )
-        # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(),
-        # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
-        k = k_norm * F / (c_max * c_e**0.5)
-        pybamm_dict[domain.pre_name + "exchange-current density [A.m-2]"] = partial(
-            _exchange_current_density, k_ref=k, Ea=Ea_k
-        )
+            # ocp
+            U = pybamm_dict[phase_domain_pre_name + "OCP [V]"]
+            if isinstance(U, tuple):
+                pybamm_dict[phase_domain_pre_name + "OCP [V]"] = partial(
+                    _interpolant_func, name=U[0], x=U[1][0], y=U[1][1]
+                )
 
-        # diffusivity
-        Ea_D = pybamm_dict.get(
-            domain.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
-        )
-        D_ref = pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"]
+            # entropic change
+            dUdT = pybamm_dict[
+                phase_domain_pre_name + "entropic change coefficient [V.K-1]"
+            ]
+            if callable(dUdT):
+                pybamm_dict[
+                    phase_domain_pre_name + "OCP entropic change [V.K-1]"
+                ] = partial(_entropic_change, dUdT=dUdT)
+            elif isinstance(dUdT, tuple):
+                pybamm_dict[
+                    phase_domain_pre_name + "OCP entropic change [V.K-1]"
+                ] = partial(
+                    _entropic_change,
+                    dUdT=partial(
+                        _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
+                    ),
+                )
+            else:
+                pybamm_dict[
+                    phase_domain_pre_name + "OCP entropic change [V.K-1]"
+                ] = partial(_entropic_change, dUdT=dUdT, constant=True)
 
-        if callable(D_ref):
-            pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = partial(
-                _diffusivity, D_ref=D_ref, Ea=Ea_D
+            # reaction rate
+            c_max = pybamm_dict[
+                phase_pre_name
+                + "Maximum concentration in "
+                + domain.pre_name.lower()
+                + "[mol.m-3]"
+            ]
+            k_norm = pybamm_dict[
+                phase_domain_pre_name + "reaction rate constant [mol.m-2.s-1]"
+            ]
+            Ea_k = pybamm_dict.get(
+                phase_domain_pre_name
+                + "reaction rate constant activation energy [J.mol-1]",
+                0.0,
             )
-        elif isinstance(D_ref, tuple):
-            pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = partial(
-                _diffusivity,
-                D_ref=partial(
-                    _interpolant_func, name=D_ref[0], x=D_ref[1][0], y=D_ref[1][1]
-                ),
-                Ea=Ea_D,
+            # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))...
+            # *sinh(),
+            # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
+            k = k_norm * F / (c_max * c_e**0.5)
+            pybamm_dict[
+                phase_domain_pre_name + "exchange-current density [A.m-2]"
+            ] = partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
+
+            # diffusivity
+            Ea_D = pybamm_dict.get(
+                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]",
+                0.0,
             )
-        else:
-            pybamm_dict[domain.pre_name + "diffusivity [m2.s-1]"] = partial(
-                _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
-            )
+            D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
+
+            if callable(D_ref):
+                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                    _diffusivity, D_ref=D_ref, Ea=Ea_D
+                )
+            elif isinstance(D_ref, tuple):
+                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                    _diffusivity,
+                    D_ref=partial(
+                        _interpolant_func, name=D_ref[0], x=D_ref[1][0], y=D_ref[1][1]
+                    ),
+                    Ea=Ea_D,
+                )
+            else:
+                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                    _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
+                )
 
     # electrolyte
     Ea_D_e = pybamm_dict.get(
@@ -365,31 +413,65 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     return pybamm_dict
 
 
+def _get_pybamm_name(pybamm_name, domain):
+    """
+    Process pybamm name to include domain name and handle special cases
+    """
+    pybamm_name_lower = pybamm_name[:1].lower() + pybamm_name[1:]
+    if pybamm_name.startswith("Initial concentration") or pybamm_name.startswith(
+        "Maximum concentration"
+    ):
+        init_len = len("Initial concentration ")
+        pybamm_name = (
+            pybamm_name[:init_len]
+            + "in "
+            + domain.pre_name.lower()
+            + pybamm_name[init_len:]
+        )
+    elif pybamm_name.startswith("Particle radius"):
+        pybamm_name = domain.short_pre_name + pybamm_name_lower
+    elif pybamm_name.startswith("OCP"):
+        pybamm_name = domain.pre_name + pybamm_name
+    elif pybamm_name.startswith("Cation transference number"):
+        pybamm_name = pybamm_name
+    elif domain.pre_name != "":
+        pybamm_name = domain.pre_name + pybamm_name_lower
+    return pybamm_name
+
+
 def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) -> dict:
+    """
+    Turns a BPX instance in to a dictionary of parameters for PyBaMM for a given domain
+    """
+    # Loop over fields in BPX instance and add to pybamm dictionary
     for name, field in instance.__fields__.items():
         value = getattr(instance, name)
-        value = process_float_function_table(value, name)
-
-        pybamm_name = field.field_info.alias
-        pybamm_name_lower = pybamm_name[:1].lower() + pybamm_name[1:]
-        if pybamm_name.startswith("Initial concentration") or pybamm_name.startswith(
-            "Maximum concentration"
+        # Handle blended electrodes, where the field is now an instance of
+        # ElectrodeBlended or ElectrodeBlendedSPM
+        if (
+            isinstance(instance, (ElectrodeBlended, ElectrodeBlendedSPM))
+            and name == "particle"
         ):
-            init_len = len("Initial concentration ")
-            pybamm_name = (
-                pybamm_name[:init_len]
-                + "in "
-                + domain.pre_name.lower()
-                + pybamm_name[init_len:]
-            )
-        elif pybamm_name.startswith("Particle radius"):
-            pybamm_name = domain.short_pre_name + pybamm_name_lower
-        elif pybamm_name.startswith("OCP"):
-            pybamm_name = domain.pre_name + pybamm_name
-        elif pybamm_name.startswith("Cation transference number"):
-            pybamm_name = pybamm_name
-        elif domain.pre_name != "":
-            pybamm_name = domain.pre_name + pybamm_name_lower
-
-        pybamm_dict[pybamm_name] = value
+            particle_instance = getattr(instance, "particle")
+            if len(particle_instance.keys()) > 2:
+                raise NotImplementedError(
+                    "PyBaMM does not support more than two "
+                    "particle phases in blended electrodes"
+                )
+            # Loop over phases
+            for i, phase_name in enumerate(particle_instance.keys()):
+                phase_instance = particle_instance[phase_name]
+                # Loop over fields in phase instance and add to pybamm dictionary
+                for name, field in phase_instance.__fields__.items():
+                    value = getattr(phase_instance, name)
+                    pybamm_name = PHASE_NAMES[i] + _get_pybamm_name(
+                        field.field_info.alias, domain
+                    )
+                    value = process_float_function_table(value, name)
+                    pybamm_dict[pybamm_name] = value
+        # Handle other fields, which correspond directly to parameters
+        else:
+            pybamm_name = _get_pybamm_name(field.field_info.alias, domain)
+            value = process_float_function_table(value, name)
+            pybamm_dict[pybamm_name] = value
     return pybamm_dict
