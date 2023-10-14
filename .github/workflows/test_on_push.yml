@@ -218,7 +218,7 @@ jobs:
       - name: Test pybamm_install_odes on MacOS
         if: matrix.os == 'macos-latest'
         run: |
-          pip install wget
+          pip install wget pathlib
           pybamm_install_odes
 
   run_integration_tests:
