@@ -189,7 +189,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-latest'
         env:
           # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
@@ -218,7 +217,7 @@ jobs:
       - name: Test pybamm_install_odes on MacOS
         if: matrix.os == 'macos-latest'
         run: |
-          pip install wget pathlib
+          pip install wget
           pybamm_install_odes
 
   run_integration_tests:
