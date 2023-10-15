@@ -90,7 +90,7 @@ class TimeBuildModelLossActiveMaterial:
         build_model("Ai2020", model, "loss of active material", params)
 
 
-class TimeSolveLossActiveMaterial(SolveModel):
+class TimeSolveLossActiveMaterial:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -122,7 +122,7 @@ class TimeBuildModelLithiumPlating:
         build_model("OKane2022", model, "lithium plating", params)
 
 
-class TimeSolveLithiumPlating(SolveModel):
+class TimeSolveLithiumPlating:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -162,7 +162,7 @@ class TimeBuildModelSEI:
         build_model("Marquis2019", model, "SEI", params)
 
 
-class TimeSolveSEI(SolveModel):
+class TimeSolveSEI:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -205,7 +205,7 @@ class TimeBuildModelParticle:
         build_model("Marquis2019", model, "particle", params)
 
 
-class TimeSolveParticle(SolveModel):
+class TimeSolveParticle:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -242,7 +242,7 @@ class TimeBuildModelThermal:
         build_model("Marquis2019", model, "thermal", params)
 
 
-class TimeSolveThermal(SolveModel):
+class TimeSolveThermal:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -274,7 +274,7 @@ class TimeBuildModelSurfaceForm:
         build_model("Marquis2019", model, "surface form", params)
 
 
-class TimeSolveSurfaceForm(SolveModel):
+class TimeSolveSurfaceForm:
     param_names = ["model", "model option", "solver class"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],

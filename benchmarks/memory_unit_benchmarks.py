@@ -35,7 +35,7 @@ class MemCreateExpression:
         return self.model
 
 
-class MemParameteriseModel(MemCreateExpression):
+class MemParameteriseModel:
     def setup(self):
         set_random_seed()
         MemCreateExpression.mem_create_expression(self)
@@ -63,7 +63,7 @@ class MemParameteriseModel(MemCreateExpression):
         return param
 
 
-class MemDiscretiseModel(MemParameteriseModel):
+class MemDiscretiseModel:
     def setup(self):
         set_random_seed()
         MemCreateExpression.mem_create_expression(self)
@@ -82,7 +82,7 @@ class MemDiscretiseModel(MemParameteriseModel):
         return disc
 
 
-class MemSolveModel(MemDiscretiseModel):
+class MemSolveModel:
     def setup(self):
         set_random_seed()
         MemCreateExpression.mem_create_expression(self)
