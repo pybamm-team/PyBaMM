@@ -62,7 +62,7 @@ class TimeSolveSPM:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters, solver_class):
+    def time_solve_model(self, _solve_first, _parameters, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -118,7 +118,7 @@ class TimeSolveSPMe:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters, solver_class):
+    def time_solve_model(self, _solve_first, _parameters, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -179,5 +179,5 @@ class TimeSolveDFN:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters, solver_class):
+    def time_solve_model(self, _solve_first, _parameters, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)

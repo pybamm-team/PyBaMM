@@ -8,11 +8,11 @@ class MemSPMSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
 
-    def setup(self):
+    def setup(self, _params):
         set_random_seed()
 
-    def mem_setup_SPM_simulationCCCV(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def mem_setup_SPM_simulationCCCV(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(
             [
@@ -33,8 +33,11 @@ class MemDFNSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
 
-    def mem_setup_DFN_simulationCCCV(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def setup(self, _params):
+        set_random_seed()
+
+    def mem_setup_DFN_simulationCCCV(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.DFN()
         exp = pybamm.Experiment(
             [
@@ -55,11 +58,11 @@ class MemSPMSimulationGITT:
     param_names = ["parameter"]
     params = parameters
 
-    def setup(self):
+    def setup(self, _params):
         set_random_seed()
 
-    def mem_setup_SPM_simulationGITT(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def mem_setup_SPM_simulationGITT(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(
             [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20
@@ -74,11 +77,11 @@ class MemDFNSimulationGITT:
     param_names = ["parameter"]
     params = parameters
 
-    def setup(self):
+    def setup(self, _params):
         set_random_seed()
 
-    def mem_setup_DFN_simulationGITT(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def mem_setup_DFN_simulationGITT(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(
             [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20

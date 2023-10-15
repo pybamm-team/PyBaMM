@@ -48,5 +48,5 @@ class TimeSimulation:
         exp = pybamm.Experiment(self.experiment_descriptions[experiment])
         pybamm.Simulation(model, parameter_values=param, experiment=exp, solver=solver)
 
-    def time_solve(self, experiment, parameters, model_class, solver_class):
+    def time_solve(self, _experiment, _parameters, _model_class, _solver_class):
         self.sim.solve()
