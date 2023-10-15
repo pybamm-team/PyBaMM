@@ -29,7 +29,7 @@ class BaseModel(BaseInterface):
         num_sei_layers = self.options.get("number of SEI layers") 
 
         # Flag to indicate single layer SEI
-        if num_sei_layers == 1:
+        if num_sei_layers == "1":
             self.single_layer_sei = True
 
     def get_coupled_variables(self, variables):
@@ -256,7 +256,7 @@ class BaseModel(BaseInterface):
             # Case for single layer SEI
             if self.single_layer_sei:
                 L_sei_cr = variables[f"{Domain} outer {reaction_name}thickness [m]"]
-                roughness - variables[f"{Domain} electrode roughness ratio"]
+                roughness = variables[f"{Domain} electrode roughness ratio"]
 
                 n_SEI_cr = L_sei_cr * L_to_n_outer * (roughness - 1)
 
