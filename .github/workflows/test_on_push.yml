@@ -181,6 +181,9 @@ jobs:
     needs: style
     runs-on: macos-latest
     strategy:
+        matrix:
+            os: [ubuntu-latest, macos-latest]
+            python-version: ["3.8", "3.9", "3.10", "3.11"]
       fail-fast: false
     name: Test pybamm_install_odes on MacOS
 
@@ -199,7 +202,7 @@ jobs:
         run: |
           brew analytics off
           brew update
-          brew install graphviz openblas
+          brew install openblas
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
@@ -212,12 +215,12 @@ jobs:
       - name: Install PyBaMM dependencies
         run: |
           pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
+          pip install -e .[all]
 
       - name: Test pybamm_install_odes on MacOS
         if: matrix.os == 'macos-latest'
         run: |
-          pip install wget
+          pip install wget cmake
           pybamm_install_odes
 
   run_integration_tests:
