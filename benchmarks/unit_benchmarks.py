@@ -34,7 +34,7 @@ class TimeCreateExpression:
         }
 
 
-class TimeParameteriseModel:
+class TimeParameteriseModel(TimeCreateExpression):
     def setup(self):
         set_random_seed()
         TimeCreateExpression.time_create_expression(self)
@@ -61,7 +61,7 @@ class TimeParameteriseModel:
         param.process_geometry(self.geometry)
 
 
-class TimeDiscretiseModel:
+class TimeDiscretiseModel(TimeParameteriseModel):
     def setup(self):
         set_random_seed()
         TimeCreateExpression.time_create_expression(self)
@@ -79,7 +79,7 @@ class TimeDiscretiseModel:
         disc.process_model(self.model)
 
 
-class TimeSolveModel:
+class TimeSolveModel(TimeDiscretiseModel):
     def setup(self):
         set_random_seed()
         TimeCreateExpression.time_create_expression(self)
