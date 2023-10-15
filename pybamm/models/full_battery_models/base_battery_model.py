@@ -99,10 +99,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 2-tuple of strings of integers. For example, set to ("6", "4") for a
                 negative electrode with 6 reactions and a positive electrode with 4
                 reactions.
-            * "number of SEI layers" : int
+            * "number of SEI layers" : str
                 Sets the number of SEI layers.
-                If set to 1: use a single layer SEI model.
-                If set to 2: use an SEI model with an inner and an outer layer.
+                If set to "1": use a single layer SEI model.
+                If set to "2": use an SEI model with an inner and an outer layer.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
                 (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
@@ -266,7 +266,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
-            "number of SEI layers": [1 , 2]
+            "number of SEI layers": ["1" , "2"],
             "open-circuit potential": ["single", "current sigmoid", "MSMR"],
             "operating mode": [
                 "current",
