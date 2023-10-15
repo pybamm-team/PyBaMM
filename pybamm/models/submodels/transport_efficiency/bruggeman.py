@@ -46,5 +46,3 @@ class Bruggeman(BaseModel):
         variables.update(self._get_standard_transport_efficiency_variables(tor_dict))
 
         return variables
-
-
