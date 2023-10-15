@@ -185,7 +185,7 @@ jobs:
             os: [ubuntu-latest, macos-latest]
             python-version: ["3.8", "3.9", "3.10", "3.11"]
         fail-fast: false
-    name: Test pybamm_install_odes on MacOS
+    name: Test pybamm_install_odes on ${{ matrix.os }}
 
     steps:
       - name: Check out PyBaMM repository
@@ -203,6 +203,7 @@ jobs:
           brew analytics off
           brew update
           brew install openblas
+          brew reinstall gcc gfortran
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
@@ -217,8 +218,7 @@ jobs:
           pip install --upgrade pip wheel setuptools nox
           pip install -e .[all]
 
-      - name: Test pybamm_install_odes on MacOS
-        if: matrix.os == 'macos-latest'
+      - name: Test pybamm_install_odes on ${{ matrix.os }}
         run: |
           pip install wget cmake
           pybamm_install_odes
