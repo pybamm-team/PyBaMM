@@ -31,6 +31,8 @@ class BaseModel(BaseInterface):
         # Flag to indicate single layer SEI
         if num_sei_layers == "1":
             self.single_layer_sei = True
+        else:
+            self.single_layer_sei = False
 
     def get_coupled_variables(self, variables):
         # Update some common variables
