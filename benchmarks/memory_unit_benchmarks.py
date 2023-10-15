@@ -4,6 +4,9 @@ import numpy as np
 
 
 class MemCreateExpression:
+    R: pybamm.Parameter
+    model: pybamm.BaseModel
+
     def setup(self):
         set_random_seed()
 
@@ -36,6 +39,9 @@ class MemCreateExpression:
 
 
 class MemParameteriseModel(MemCreateExpression):
+    r: pybamm.SpatialVariable
+    geometry: dict
+
     def setup(self):
         set_random_seed()
         MemCreateExpression.mem_create_expression(self)

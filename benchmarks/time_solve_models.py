@@ -28,6 +28,9 @@ class TimeSolveSPM:
             pybamm.IDAKLUSolver,
         ],
     )
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    t_eval: np.ndarray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -84,6 +87,9 @@ class TimeSolveSPMe:
             pybamm.IDAKLUSolver,
         ],
     )
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    t_eval: np.ndarray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -140,6 +146,9 @@ class TimeSolveDFN:
             pybamm.IDAKLUSolver,
         ],
     )
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    t_eval: np.ndarray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()

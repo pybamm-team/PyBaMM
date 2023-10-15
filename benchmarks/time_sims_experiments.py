@@ -20,6 +20,11 @@ class TimeSimulation:
         ],
         "GITT": [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 10,
     }
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    exp: pybamm.Experiment
+    sim: pybamm.Simulation
 
     def setup(self, experiment, parameters, model_class, solver_class):
         set_random_seed()

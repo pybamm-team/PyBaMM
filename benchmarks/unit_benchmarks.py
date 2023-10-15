@@ -4,6 +4,9 @@ from benchmarks.benchmark_utils import set_random_seed
 
 
 class TimeCreateExpression:
+    R: pybamm.Parameter
+    model: pybamm.BaseModel
+
     def setup(self):
         set_random_seed()
 
@@ -35,6 +38,9 @@ class TimeCreateExpression:
 
 
 class TimeParameteriseModel(TimeCreateExpression):
+    r: pybamm.SpatialVariable
+    geometry: dict
+
     def setup(self):
         set_random_seed()
         TimeCreateExpression.time_create_expression(self)

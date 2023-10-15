@@ -34,6 +34,8 @@ def compute_discretisation(model, param):
 class TimeBuildSPM:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
 
     def setup(self, _params):
         set_random_seed()
@@ -62,6 +64,8 @@ class TimeBuildSPMe:
 class TimeBuildDFN:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
 
     def setup(self, _params):
         set_random_seed()
@@ -76,6 +80,8 @@ class TimeBuildDFN:
 class TimeBuildSPMSimulation:
     param_names = ["with experiment", "parameter"]
     params = ([False, True], parameters)
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
 
     def setup(self, _with_experiment, _params):
         set_random_seed()
@@ -97,6 +103,8 @@ class TimeBuildSPMSimulation:
 class TimeBuildSPMeSimulation:
     param_names = ["with experiment", "parameter"]
     params = ([False, True], parameters)
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
 
     def setup(self, _with_experiment, _params):
         set_random_seed()
@@ -118,6 +126,8 @@ class TimeBuildSPMeSimulation:
 class TimeBuildDFNSimulation:
     param_names = ["with experiment", "parameter"]
     params = ([False, True], parameters)
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
 
     def setup(self, _with_experiment, _params):
         set_random_seed()

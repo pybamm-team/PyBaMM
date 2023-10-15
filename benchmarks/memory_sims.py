@@ -7,6 +7,9 @@ parameters = ["Marquis2019", "Chen2020"]
 class MemSPMSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
     def setup(self, _params):
         set_random_seed()
@@ -32,6 +35,9 @@ class MemSPMSimulationCCCV:
 class MemDFNSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
     def setup(self, _params):
         set_random_seed()
@@ -57,6 +63,9 @@ class MemDFNSimulationCCCV:
 class MemSPMSimulationGITT:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
     def setup(self, _params):
         set_random_seed()
@@ -76,6 +85,9 @@ class MemSPMSimulationGITT:
 class MemDFNSimulationGITT:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
     def setup(self, _params):
         set_random_seed()
