@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-65-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-66-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -269,6 +269,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://aitorres.com"><img src="https://avatars.githubusercontent.com/u/26191851?v=4?s=100" width="100px;" alt="Andrés Ignacio Torres"/><br /><sub><b>Andrés Ignacio Torres</b></sub></a><br /><a href="#infra-aitorres" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Agnik7"><img src="https://avatars.githubusercontent.com/u/77234005?v=4?s=100" width="100px;" alt="Agnik Bakshi"/><br /><sub><b>Agnik Bakshi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Agnik7" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/RuiheLi"><img src="https://avatars.githubusercontent.com/u/84007676?v=4?s=100" width="100px;" alt="RuiheLi"/><br /><sub><b>RuiheLi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=RuiheLi" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=RuiheLi" title="Tests">⚠️</a></td>
     </tr>
   </tbody>
 </table>
