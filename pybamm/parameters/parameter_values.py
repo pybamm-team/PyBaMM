@@ -119,7 +119,25 @@ class ParameterValues:
         return pybamm.ParameterValues(pybamm_dict)
 
     def __getitem__(self, key):
-        return self._dict_items[key]
+        try:
+            return self._dict_items[key]
+        except KeyError as err:
+            if (
+                "Exchange-current density for lithium metal electrode [A.m-2]"
+                in err.args[0]
+                and "Exchange-current density for plating [A.m-2]" in self._dict_items
+            ):
+                raise KeyError(
+                    "'Exchange-current density for plating [A.m-2]' has been renamed "
+                    "to 'Exchange-current density for lithium metal electrode [A.m-2]' "
+                    "when referring to the reaction at the surface of a lithium metal "
+                    "electrode. This is to avoid confusion with the exchange-current "
+                    "density for the lithium plating reaction in a porous negative "
+                    "electrode. To avoid this error, change your parameter file to use "
+                    "the new name."
+                )
+            else:
+                raise err
 
     def get(self, key, default=None):
         """Return item corresponding to key if it exists, otherwise return default"""
