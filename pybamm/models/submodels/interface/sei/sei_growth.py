@@ -250,12 +250,17 @@ class SEIGrowth(BaseModel):
             else:
                 l_cr = variables[f"{Domain} particle crack length [m]"]
                 dl_cr = variables[f"{Domain} particle cracking rate [m.s-1]"]
-            spreading_outer = (
+            if self.single_layer_sei:
+                spreading_outer = (
                 dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)
-            )
-            spreading_inner = (
-                dl_cr / l_cr * (self.phase_param.L_inner_crack_0 - L_inner)
-            )
+                )   
+            else:
+                spreading_outer = (
+                    dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)
+                )
+                spreading_inner = (
+                    dl_cr / l_cr * (self.phase_param.L_inner_crack_0 - L_inner)
+                )
         else:
             spreading_outer = 0
             spreading_inner = 0
