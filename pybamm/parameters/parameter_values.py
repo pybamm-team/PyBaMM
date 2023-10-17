@@ -271,6 +271,42 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_stoichiometry_half_cell(
+        self,
+        intial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial stoichiometry of the working electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            intial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+
+        if options["working electrode"] == "positive":
+            c_max = self.evaluate(param.p.prim.c_max)
+        else:
+            c_max = self.evaluate(param.n.prim.c_max)
+
+        parameter_values.update(
+            {
+                "Initial concentration in {} electrode [mol.m-3]".format(
+                    options["working electrode"]
+                ): x
+                * c_max
+            }
+        )
+        return parameter_values
+
     def set_initial_stoichiometries(
         self,
         initial_value,
