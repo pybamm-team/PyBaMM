@@ -32,6 +32,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
 'number of MSMR reactions': 'none' (possible: ['none'])
+'number of SEI layers': '1' (possible: ['1', '2'])
 'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
