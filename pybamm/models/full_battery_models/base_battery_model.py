@@ -502,12 +502,28 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
 
         # Options not yet compatible with particle-size distributions
-        if options["particle size"] == "distribution":
-            if options["lithium plating"] != "none":
-                raise NotImplementedError(
+        particle_size = options.get("particle size")
+        if isinstance(particle_size, tuple):
+            if particle_size[0] == "distribution":
+                lithium_plating = options.get("lithium plating")
+
+                if isinstance(lithium_plating, tuple):
+                    lithium_plating = lithium_plating[0]
+
+                if lithium_plating != "none":
+                    raise NotImplementedError(
+                        "Lithium plating submodels do not yet support particle-size "
+                        "distributions."
+                        )
+        else:
+            if particle_size == "distribution":
+                lithium_plating = options["lithium plating"]
+
+                if lithium_plating != "none":
+                    raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
                     "distributions."
-                )
+                    )
             if options["particle"] in ["quadratic profile", "quartic profile"]:
                 raise NotImplementedError(
                     "'quadratic' and 'quartic' concentration profiles have not yet "
