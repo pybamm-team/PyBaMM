@@ -1,3 +1,4 @@
+from pathlib import Path
 import nox
 import os
 import sys
@@ -36,7 +37,7 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""
+    """Download, compile, and install the build-time requirements for Linux and macOS"""
     force_rebuild = "--force" in session.posargs
     sundials_path = Path("/path/to/sundials")
     suitesparse_path = Path("/path/to/suitesparse")
