@@ -2,8 +2,8 @@
 requires = [
     "setuptools",
     "wheel",
+    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.0; platform_system!='Windows'",
-    # use CMake bundled from MSVC on Windows
     "cmake; platform_system!='Windows'",
     ]
 build-backend = "setuptools.build_meta"
@@ -72,7 +72,7 @@ examples = [
 # Plotting functionality
 plot = [
     "imageio>=2.9.0",
-    # Note: matplotlib is loaded for debug plots, but to ensure pybamm runs
+    # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
     # outside of plot() methods.
     "matplotlib>=2.0",

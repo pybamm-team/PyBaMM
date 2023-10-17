@@ -16,13 +16,11 @@ except ImportError:
     from distutils.command.build_ext import build_ext
 
 
-# ---------- CMake steps for IDAKLU target (non-Windows) -------------------------------
-
-
 default_lib_dir = (
     "" if system() == "Windows" else os.path.join(os.getenv("HOME"), ".local")
 )
 
+# ---------- set environment variables for vcpkg on Windows ----------------------------
 
 def set_vcpkg_environment_variables():
     if not os.getenv("VCPKG_ROOT_DIR"):
@@ -41,6 +39,7 @@ def set_vcpkg_environment_variables():
         os.getenv("VCPKG_FEATURE_FLAGS"),
     )
 
+# ---------- CMakeBuild class (custom build_ext for IDAKLU target) ---------------------
 
 class CMakeBuild(build_ext):
     user_options = build_ext.user_options + [
@@ -119,6 +118,8 @@ class CMakeBuild(build_ext):
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             os.remove(os.path.join(build_dir, "CMakeError.log"))
 
+# ---------- configuration for vcpkg on Windows ----------------------------------------
+
         build_env = os.environ
         if os.getenv("PYBAMM_USE_VCPKG"):
             (
@@ -130,26 +131,29 @@ class CMakeBuild(build_ext):
             build_env["vcpkg_default_triplet"] = vcpkg_default_triplet
             build_env["vcpkg_feature_flags"] = vcpkg_feature_flags
 
+# ---------- Run CMake and build IDAKLU module -----------------------------------------
+
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
-        print("-" * 10, "Running CMake for idaklu solver", "-" * 40)
+        print("-" * 10, "Running CMake for IDAKLU solver", "-" * 40)
         subprocess.run(
             ["cmake", cmake_list_dir] + cmake_args, cwd=build_dir, env=build_env
-        )
+        , check=True)
 
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             msg = (
-                "cmake configuration steps encountered errors, and the idaklu module"
+                "cmake configuration steps encountered errors, and the IDAKLU module"
                 " could not be built. Make sure dependencies are correctly "
                 "installed. See "
                 "https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html" # noqa: E501
             )
             raise RuntimeError(msg)
         else:
-            print("-" * 10, "Building idaklu module", "-" * 40)
+            print("-" * 10, "Building IDAKLU module", "-" * 40)
             subprocess.run(
                 ["cmake", "--build", ".", "--config", "Release"],
                 cwd=build_dir,
                 env=build_env,
+                check=True,
             )
 
             # Move from build temp to final position
@@ -218,7 +222,7 @@ class CustomInstall(install):
         install.run(self)
 
 
-# ---------- custom wheel build (non-Windows) ------------------------------------------
+# ---------- Custom class for building wheels ------------------------------------------
 
 
 class bdist_wheel(orig.bdist_wheel):
@@ -250,8 +254,7 @@ def compile_KLU():
     # Return True if:
     # - Not running on Windows AND
     # - CMake is found AND
-    # - The pybind11 and casadi-headers directories are found
-    #   in the PyBaMM project directory
+    # - The pybind11/ directory is found in the PyBaMM project directory
     CMakeFound = True
     PyBind11Found = True
     windows = (not system()) or system() == "Windows"
