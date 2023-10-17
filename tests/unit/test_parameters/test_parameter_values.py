@@ -977,6 +977,19 @@ class TestParameterValues(TestCase):
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
 
+    def test_exchange_current_density_plating(self):
+        parameter_values = pybamm.ParameterValues(
+            {"Exchange-current density for plating [A.m-2]": 1}
+        )
+        param = pybamm.Parameter(
+            "Exchange-current density for lithium metal electrode [A.m-2]"
+        )
+        with self.assertRaisesRegex(
+            KeyError,
+            "referring to the reaction at the surface of a lithium metal electrode",
+        ):
+            parameter_values.evaluate(param)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

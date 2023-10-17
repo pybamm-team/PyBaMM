@@ -275,7 +275,7 @@ Solution CasadiSolverOpenMP::solve(
 
   // set inputs
   auto p_inputs = inputs.unchecked<2>();
-  for (uint i = 0; i < functions->inputs.size(); i++)
+  for (int i = 0; i < functions->inputs.size(); i++)
     functions->inputs[i] = p_inputs(i, 0);
 
   // set initial conditions
