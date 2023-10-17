@@ -9,6 +9,7 @@ This file contains the workflow required to make a `PyBaMM` release on GitHub an
    - `pybamm/version.py`
    - `docs/conf.py`
    - `CITATION.cff`
+   - `pyproject.toml`
    - `vcpkg.json`
    - `docs/_static/versions.json`
    - `CHANGELOG.md`
@@ -32,6 +33,7 @@ If a new release candidate is required after the release of `rc0` -
    - `pybamm/version.py`
    - `docs/conf.py`
    - `CITATION.cff`
+   - `pyproject.toml`
    - `vcpkg.json`
    - `docs/_static/versions.json`
    - `CHANGELOG.md`
@@ -53,6 +55,7 @@ Once satisfied with the release candidates -
    - `pybamm/version.py`
    - `docs/conf.py`
    - `CITATION.cff`
+   - `pyproject.toml`
    - `vcpkg.json`
    - `docs/_static/versions.json`
    - `CHANGELOG.md`
@@ -70,7 +73,7 @@ Once satisfied with the release candidates -
 Some other essential things to check throughout the release process -
 
 - If updating our custom vcpkg registory entries [pybamm-team/sundials-vcpkg-registry](https://github.com/pybamm-team/sundials-vcpkg-registry) or [pybamm-team/casadi-vcpkg-registry](https://github.com/pybamm-team/casadi-vcpkg-registry) (used to build Windows wheels), make sure to update the baseline of the registories in vcpkg-configuration.json to the latest commit id.
-- Update jax and jaxlib to the latest version in `pybamm.util` and `setup.py`, fixing any bugs that arise
+- Update jax and jaxlib to the latest version in `pybamm.util` and `pyproject.toml`, fixing any bugs that arise
 - Make sure the URLs in `docs/_static/versions.json` are valid
 - As the release workflow is initiated by the `release` event, it's important to note that the default `GITHUB_REF` used by `actions/checkout` during the checkout process will correspond to the tag created during the release process. Consequently, the workflows will consistently build PyBaMM based on the commit associated with this tag. Should new commits be introduced to the `vYY.MM` branch, such as those addressing build issues, it becomes necessary to manually update this tag to point to the most recent commit -
   ```

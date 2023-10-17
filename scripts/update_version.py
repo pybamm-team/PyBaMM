@@ -48,7 +48,7 @@ def update_version():
         file.seek(0)
         file.write(replace_version)
 
-    # docs/source/_static/versions.json for readthedocs build
+    # docs/_static/versions.json for readthedocs build
     if "rc" not in release_version:
         with open(
             os.path.join(pybamm.root_dir(), "docs", "_static", "versions.json"),
