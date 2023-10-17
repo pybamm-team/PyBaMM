@@ -300,7 +300,7 @@ class BaseModel(BaseInterface):
                 # Update variables based on single layer SEI on cracks
                 variables.update(
                 {
-                    f"{Domain} inner {reaction_name}"
+                    f"{Domain} {reaction_name}"
                     "concentration [mol.m-3]": n_SEI_cr,
                     f"X-averaged {domain} {reaction_name}"
                     "concentration [mol.m-3]": n_SEI_cr_av,
