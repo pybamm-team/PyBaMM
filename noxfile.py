@@ -36,11 +36,19 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
-    set_environment_variables(PYBAMM_ENV, session=session)
+    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  
+    force_rebuild = "--force" in session.posargs
+    sundials_path = Path("/path/to/sundials")
+    suitesparse_path = Path("/path/to/suitesparse")
+    if (sundials_path.exists() and suitesparse_path.exists()) and not force_rebuild:
+        session.log("Found existing build dependencies")
+        return
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
-        session.run("python", "scripts/install_KLU_Sundials.py")
+        if not os.path.exists("/path/to/klu"):
+            session.run("python", "scripts/install_klu.py") 
+        if not os.path.exists(sundials_path):
+            session.run("python", "scripts/install_sundials.py")
         if not os.path.exists("./pybind11"):
             session.run(
                 "git",
