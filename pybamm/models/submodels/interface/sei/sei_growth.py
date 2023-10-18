@@ -198,7 +198,8 @@ class SEIGrowth(BaseModel):
 
         if self.reaction_loc == "x-average":
             if self.single_layer_sei:
-                # In case of a single layer only use the values defined for the outer layer
+                # In case of a single layer only use the values defined
+                # for the outer layer
                 L_outer = variables[
                     f"X-averaged {domain} {self.reaction_name}thickness [m]"
                 ]
@@ -227,7 +228,7 @@ class SEIGrowth(BaseModel):
                 L_outer = variables[f"{Domain} total {self.reaction_name}thickness [m]"]
                 j_outer = variables[
                     f"{Domain} electrode {self.reaction_name}"
-                    "interfacial current density [A.m-2]"           
+                    "interfacial current density [A.m-2]"
                 ]
             else:
                 L_inner = variables[f"{Domain} inner {self.reaction_name}thickness [m]"]
@@ -253,7 +254,7 @@ class SEIGrowth(BaseModel):
             if self.single_layer_sei:
                 spreading_outer = (
                 dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)
-                )   
+                )
             else:
                 spreading_outer = (
                     dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)

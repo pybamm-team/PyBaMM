@@ -26,7 +26,7 @@ class BaseModel(BaseInterface):
         else:
             reaction = "SEI"
         super().__init__(param, domain, reaction, options=options, phase=phase)
-        num_sei_layers = self.options.get("number of SEI layers") 
+        num_sei_layers = self.options.get("number of SEI layers")
 
         # Flag to indicate single layer SEI
         if num_sei_layers == "1":
@@ -186,7 +186,7 @@ class BaseModel(BaseInterface):
             # Case for single layer SEI:
             if self.single_layer_sei:
                 L_sei = variables[f"{Domain} outer {reaction_name}thickness [m]"]
-                
+
                 n_SEI = L_sei * L_to_n_outer  # single layer SEI concentration
 
             # Case for two layer SEI
@@ -235,22 +235,22 @@ class BaseModel(BaseInterface):
                         / 3600,
                     }
                 )
-            else:   
+            else:
                 variables.update(
                     {
-                        f"{Domain} inner {reaction_name}concentration [mol.m-3]": n_inner,
-                        f"X-averaged {domain} inner {reaction_name}"
-                        "concentration [mol.m-3]": n_inner_av,
-                        f"{Domain} outer {reaction_name}concentration [mol.m-3]": n_outer,
-                        f"X-averaged {domain} outer {reaction_name}"
-                        "concentration [mol.m-3]": n_outer_av,
-                        f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI,
-                        f"X-averaged {domain} {reaction_name}"
-                        "concentration [mol.m-3]": n_SEI_xav,
-                        f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei,
-                        f"Loss of capacity to {domain} {reaction_name}[A.h]": Q_sei
-                        * self.param.F
-                        / 3600,
+                    f"{Domain} inner {reaction_name}concentration [mol.m-3]": n_inner,
+                    f"X-averaged {domain} inner {reaction_name}"
+                    "concentration [mol.m-3]": n_inner_av,
+                    f"{Domain} outer {reaction_name}concentration [mol.m-3]": n_outer,
+                    f"X-averaged {domain} outer {reaction_name}"
+                    "concentration [mol.m-3]": n_outer_av,
+                    f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI,
+                    f"X-averaged {domain} {reaction_name}"
+                    "concentration [mol.m-3]": n_SEI_xav,
+                    f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei,
+                    f"Loss of capacity to {domain} {reaction_name}[A.h]": Q_sei
+                    * self.param.F
+                    / 3600,
                     }
                 )
         # Concentration variables are handled slightly differently for SEI on cracks
@@ -275,7 +275,7 @@ class BaseModel(BaseInterface):
                 n_outer_cr_av = pybamm.x_average(n_outer_cr)
 
                 n_SEI_cr = n_inner_cr + n_outer_cr  # SEI on cracks concentration
-            
+
             # Same calculation for both cases
             n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
             n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
@@ -355,7 +355,7 @@ class BaseModel(BaseInterface):
         if self.single_layer_sei:
             j_sei = j_outer
             j_sei_xav = pybamm.x_average(j_sei)
-            
+
             variables = {
                 f"{Domain} electrode {self.reaction_name}"
                 "interfacial current density [A.m-2]": j_sei,
