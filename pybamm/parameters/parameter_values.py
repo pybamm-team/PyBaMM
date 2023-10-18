@@ -292,10 +292,7 @@ class ParameterValues:
         else:
             parameter_values = self.copy()
 
-        if options["working electrode"] == "positive":
-            c_max = self.evaluate(param.p.prim.c_max)
-        else:
-            c_max = self.evaluate(param.n.prim.c_max)
+        c_max = self.evaluate(param.p.prim.c_max)
 
         parameter_values.update(
             {

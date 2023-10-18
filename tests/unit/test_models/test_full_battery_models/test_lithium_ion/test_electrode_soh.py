@@ -346,6 +346,9 @@ class TestGetInitialSOC(TestCase):
 
     def test_error(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values_half_cell = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
 
         with self.assertRaisesRegex(
             ValueError, "Initial SOC should be between 0 and 1"
@@ -359,15 +362,21 @@ class TestGetInitialSOC(TestCase):
             pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
 
         with self.assertRaisesRegex(ValueError, "outside the voltage limits"):
-            pybamm.lithium_ion.get_initial_stoichiometry_half_cell("1 V", parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "1 V", parameter_values_half_cell
+            )
 
         with self.assertRaisesRegex(ValueError, "must be a float"):
-            pybamm.lithium_ion.get_initial_stoichiometry_half_cell("5 A", parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "5 A", parameter_values_half_cell
+            )
 
         with self.assertRaisesRegex(
             ValueError, "Initial SOC should be between 0 and 1"
         ):
-            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(2, parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                2, parameter_values_half_cell
+            )
 
 
 class TestGetInitialOCP(TestCase):
