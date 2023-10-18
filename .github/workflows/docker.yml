@@ -9,7 +9,7 @@ on:
 jobs:
   build_docker_images:
     # This workflow is only of value to PyBaMM and would always be skipped in forks
-    # if: github.repository_owner == 'pybamm-team'
+    if: github.repository_owner == 'pybamm-team'
     name: Image (${{ matrix.build-args }})
     runs-on: ubuntu-latest
     strategy:
