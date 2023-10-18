@@ -358,6 +358,17 @@ class TestGetInitialSOC(TestCase):
         with self.assertRaisesRegex(ValueError, "must be a float"):
             pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
 
+        with self.assertRaisesRegex(ValueError, "outside the voltage limits"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell("1 V", parameter_values)
+
+        with self.assertRaisesRegex(ValueError, "must be a float"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell("5 A", parameter_values)
+
+        with self.assertRaisesRegex(
+            ValueError, "Initial SOC should be between 0 and 1"
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(2, parameter_values)
+
 
 class TestGetInitialOCP(TestCase):
     def test_get_initial_ocp(self):

@@ -273,7 +273,7 @@ class ParameterValues:
 
     def set_initial_stoichiometry_half_cell(
         self,
-        intial_value,
+        initial_value,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -285,7 +285,7 @@ class ParameterValues:
         """
         param = param or pybamm.LithiumIonParameters(options)
         x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-            intial_value, self, param=param, known_value=known_value, options=options
+            initial_value, self, param=param, known_value=known_value, options=options
         )
         if inplace:
             parameter_values = self
