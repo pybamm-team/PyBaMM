@@ -42,7 +42,7 @@ def run_pybamm_requires(session):
     sundials_path = Path("/path/to/sundials")
     suitesparse_path = Path("/path/to/suitesparse")
     if (sundials_path.exists() and suitesparse_path.exists()) and not force_rebuild:
-        session.log("Found existing build dependencies")
+        session.warn("Found existing build-time requirements, skipping installation. Note: run with the --force flag (nox -s pybamm-requires -- --force) to invoke re-installation.")
         return
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
