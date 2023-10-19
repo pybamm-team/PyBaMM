@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
 
+env:
+  FORCE_COLOR: 3
+
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
   # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
@@ -89,7 +92,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -108,10 +111,10 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: nox -s unit
+        run: pipx run nox -s unit
 
   # Runs only on Ubuntu with Python 3.11
   check_coverage:
@@ -166,10 +169,10 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
-        run: nox -s coverage
+        run: pipx run nox -s coverage
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
@@ -232,7 +235,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -251,18 +254,19 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: nox -s integration
+        run: pipx run nox -s integration
 
-  # Runs only on Ubuntu with Python 3.11
-  run_doctests_and_example_tests:
+# Runs only on Ubuntu with Python 3.11. Skips IDAKLU module compilation
+# for speedups, which is already tested in other jobs.
+  run_doctests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Doctests and notebooks (ubuntu-latest / Python 3.11)
+    name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
       - name: Check out PyBaMM repository
@@ -292,7 +296,52 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
+          pip install -e .[all,docs]
+
+      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
+        run: pipx run nox -s doctests
+
+      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
+        run: pipx run nox -s docs
+
+  # Runs only on Ubuntu with Python 3.11
+  run_example_tests:
+    needs: style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Example notebooks (ubuntu-latest / Python 3.11)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      # Install and cache apt packages
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        with:
+          packages: gfortran gcc graphviz pandoc
+          execute_install_scripts: true
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        run: |
+          sudo apt-get update
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.11
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          cache: 'pip'
+          cache-dependency-path: setup.py
+
+      - name: Install PyBaMM dependencies
+        run: |
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -309,13 +358,10 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: nox -s pybamm-requires
-
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        run: nox -s doctests
+        run: pipx run nox -s pybamm-requires
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
-        run: nox -s examples
+        run: pipx run nox -s examples
 
   # Runs only on Ubuntu with Python 3.11
   run_scripts_tests:
@@ -353,7 +399,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -370,7 +416,7 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Install dev dependencies and run example scripts tests for GNU/Linux with Python 3.11
-        run: nox -s scripts
+        run: pipx run nox -s scripts

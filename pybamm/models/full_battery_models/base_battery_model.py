@@ -206,10 +206,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
-            * "working electrode": str
-                Which electrode(s) intercalates and which is counter. If "both"
-                (default), the model is a standard battery. Otherwise can be "negative"
-                or "positive" to indicate a half-cell model.
+            * "working electrode" : str
+                Can be "both" (default) for a standard battery or "positive" for a
+                half-cell where the negative electrode is replaced with a lithium metal
+                counter electrode.
             * "x-average side reactions": str
                 Whether to average the side reactions (SEI growth, lithium plating and
                 the respective porosity change) over the x-axis in Single Particle
@@ -306,7 +306,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
-            "working electrode": ["both", "negative", "positive"],
+            "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
 
@@ -314,6 +314,22 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
         extra_options = extra_options or {}
+
+        working_electrode_option = extra_options.get("working electrode", "both")
+        SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
+        SEI_cr_option = extra_options.get("SEI on cracks", "false")
+        plating_option = extra_options.get("lithium plating", "none")
+        # For the full cell model, if "SEI", "SEI on cracks" and "lithium plating"
+        # options are not provided as tuples, change them to tuples with "none" or
+        # "false" on the positive electrode. To use these options on the positive
+        # electrode of a full cell, the tuple must be provided by the user
+        if working_electrode_option == "both":
+            if not (isinstance(SEI_option, tuple)) and SEI_option != "none":
+                extra_options["SEI"] = (SEI_option, "none")
+            if not (isinstance(SEI_cr_option, tuple)) and SEI_cr_option != "false":
+                extra_options["SEI on cracks"] = (SEI_cr_option, "false")
+            if not (isinstance(plating_option, tuple)) and plating_option != "none":
+                extra_options["lithium plating"] = (plating_option, "none")
 
         # Change the default for cell geometry based on the current collector
         # dimensionality
@@ -343,12 +359,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for particle mechanics based on which SEI on cracks and LAM
-        # options are provided
-        # return "false" and "none" respectively if options not given
+        # Change the default for particle mechanics based on which half-cell,
+        # SEI on cracks and LAM options are provided
+        # return "false", "false" and "none" respectively if options not given
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
         LAM_opt = extra_options.get("loss of active material", "none")
         if SEI_cracks_option == "true":
+            default_options["particle mechanics"] = "swelling and cracking"
+        elif SEI_cracks_option == ("true", "false"):
             if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
                 default_options["particle mechanics"] = (
                     "swelling and cracking",
@@ -393,11 +411,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["surface form"] = "algebraic"
         # The "surface form" option will still be overridden by
         # extra_options if provided
+
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
         if plating_option == "partially reversible":
             default_options["SEI"] = "constant"
+        elif plating_option == ("partially reversible", "none"):
+            default_options["SEI"] = ("constant", "none")
         else:
             default_options["SEI"] = "none"
         # The "SEI" option will still be overridden by extra_options if provided
@@ -530,6 +551,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "SEI porosity change must now be given in string format "
                 "('true' or 'false')"
             )
+        if options["working electrode"] == "negative":
+            raise pybamm.OptionError(
+                "The 'negative' working electrode option has been removed because "
+                "the voltage - and therefore the energy stored - would be negative."
+                "Use the 'positive' working electrode option instead and set whatever "
+                "would normally be the negative electrode as the positive electrode."
+            )
 
         # Some standard checks to make sure options are compatible
         if options["dimensionality"] == 0:
@@ -576,10 +604,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     f"X-lumped thermal submodels do not yet support {n}D "
                     "current collectors in a half-cell configuration"
                 )
-            elif options["SEI on cracks"] == "true":
-                raise NotImplementedError(
-                    "SEI on cracks not yet implemented for half-cell models"
-                )
 
         if options["particle phases"] != "1":
             if not (
@@ -600,70 +624,70 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            if option in ["working electrode"]:
-                pass
+            if isinstance(value, str) or option in [
+                "dimensionality",
+                "operating mode",
+            ]:  # some options accept non-strings
+                value = (value,)
             else:
                 # serialised options save tuples as lists which need to be converted
                 if isinstance(value, list) and len(value) == 2:
                     value = tuple(tuple(v) if len(v) == 2 else v for v in value)
 
-                if isinstance(value, str) or option in [
-                    "dimensionality",
-                    "operating mode",
-                ]:  # some options accept non-strings
-                    value = (value,)
+                if not (
+                    (
+                        option
+                        in [
+                            "diffusivity",
+                            "exchange-current density",
+                            "intercalation kinetics",
+                            "interface utilisation",
+                            "lithium plating",
+                            "loss of active material",
+                            "number of MSMR reactions",
+                            "open-circuit potential",
+                            "particle",
+                            "particle mechanics",
+                            "particle phases",
+                            "particle size",
+                            "SEI",
+                            "SEI on cracks",
+                            "stress-induced diffusion",
+                        ]
+                        and isinstance(value, tuple)
+                        and len(value) == 2
+                    )
+                ):
+                    # more possible options that can take 2-tuples to be added
+                    # as they come
+                    raise pybamm.OptionError(
+                        f"\n'{value}' is not recognized in option '{option}'. "
+                        "Values must be strings or (in some cases) "
+                        "2-tuples of strings"
+                    )
+            # flatten value
+            value_list = []
+            for val in value:
+                if isinstance(val, tuple):
+                    value_list.extend(list(val))
                 else:
-                    if not (
-                        (
-                            option
-                            in [
-                                "diffusivity",
-                                "exchange-current density",
-                                "intercalation kinetics",
-                                "interface utilisation",
-                                "loss of active material",
-                                "number of MSMR reactions",
-                                "open-circuit potential",
-                                "particle",
-                                "particle mechanics",
-                                "particle phases",
-                                "particle size",
-                                "stress-induced diffusion",
-                            ]
-                            and isinstance(value, tuple)
-                            and len(value) == 2
-                        )
+                    value_list.append(val)
+            for val in value_list:
+                if val not in self.possible_options[option]:
+                    if option == "operating mode" and callable(val):
+                        # "operating mode" can be a function
+                        pass
+                    elif (
+                        option == "number of MSMR reactions"
+                        and represents_positive_integer(val)
                     ):
-                        # more possible options that can take 2-tuples to be added
-                        # as they come
-                        raise pybamm.OptionError(
-                            f"\n'{value}' is not recognized in option '{option}'. "
-                            "Values must be strings or (in some cases) "
-                            "2-tuples of strings"
-                        )
-                # flatten value
-                value_list = []
-                for val in value:
-                    if isinstance(val, tuple):
-                        value_list.extend(list(val))
+                        # "number of MSMR reactions" can be a positive integer
+                        pass
                     else:
-                        value_list.append(val)
-                for val in value_list:
-                    if val not in self.possible_options[option]:
-                        if option == "operating mode" and callable(val):
-                            # "operating mode" can be a function
-                            pass
-                        elif (
-                            option == "number of MSMR reactions"
-                            and represents_positive_integer(val)
-                        ):
-                            # "number of MSMR reactions" can be a positive integer
-                            pass
-                        else:
-                            raise pybamm.OptionError(
-                                f"\n'{val}' is not recognized in option '{option}'. "
-                                f"Possible values are {self.possible_options[option]}"
-                            )
+                        raise pybamm.OptionError(
+                            f"\n'{val}' is not recognized in option '{option}'. "
+                            f"Possible values are {self.possible_options[option]}"
+                        )
 
         # Issue a warning to let users know that the 'lumped' thermal option (or
         # equivalently 'x-lumped' with 0D current collectors) now uses the total heat
@@ -703,10 +727,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def whole_cell_domains(self):
         if self["working electrode"] == "positive":
             return ["separator", "positive electrode"]
-        elif self["working electrode"] == "negative":
-            return ["negative electrode", "separator"]
         elif self["working electrode"] == "both":
             return ["negative electrode", "separator", "positive electrode"]
+        else:
+            raise NotImplementedError  # future proofing
 
     @property
     def electrode_types(self):
@@ -1302,11 +1326,17 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # SEI film overpotential
         if self.options.electrode_types["negative"] == "planar":
-            eta_sei_av = self.variables["SEI film overpotential [V]"]
-        else:
-            eta_sei_av = self.variables[
-                f"X-averaged {phase_n}SEI film overpotential [V]"
+            eta_sei_n_av = self.variables[
+                "Negative electrode SEI film overpotential [V]"
             ]
+        else:
+            eta_sei_n_av = self.variables[
+                f"X-averaged negative electrode {phase_n}SEI film overpotential [V]"
+            ]
+        eta_sei_p_av = self.variables[
+            f"X-averaged positive electrode {phase_p}SEI film overpotential [V]"
+        ]
+        eta_sei_av = eta_sei_n_av + eta_sei_p_av
 
         # TODO: add current collector losses to the voltage in 3D
 
