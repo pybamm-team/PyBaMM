@@ -56,7 +56,7 @@ class TestUnaryOperators(TestCase):
         # Test from_json
         input_json = {
             "name": "-",
-            "id": -2659857727954094888,
+            "id": mock.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -749,7 +749,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(un.to_json(), un_json)
 
         un_json["children"] = [a]
-        self.assertEqual(pybamm.UnaryOperator._from_json("unary test", un_json), un)
+        self.assertEqual(pybamm.UnaryOperator._from_json(un_json), un)
 
         # Index
         vec = pybamm.StateVector(slice(0, 5))

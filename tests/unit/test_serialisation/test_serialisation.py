@@ -481,7 +481,7 @@ class TestSerialise(TestCase):
         # check an error is raised when plotting the solution
         with self.assertRaisesRegex(
             AttributeError,
-            "Variables not provided by the serialised model",
+            "No variables to plot",
         ):
             new_solution.plot()
 

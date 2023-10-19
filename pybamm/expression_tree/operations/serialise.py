@@ -109,6 +109,7 @@ class Serialise:
         model_json = {
             "py/object": str(type(model))[8:-2],
             "py/id": id(model),
+            "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
             "bounds": [bound.tolist() for bound in model.bounds],

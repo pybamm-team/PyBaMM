@@ -156,7 +156,7 @@ class QuickPlot(object):
 
         # check variables have been provided after any serialisation
         if any(len(m.variables) == 0 for m in models):
-            raise AttributeError("Variables not provided by the serialised model")
+            raise AttributeError("No variables to plot")
 
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))

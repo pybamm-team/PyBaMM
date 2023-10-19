@@ -35,13 +35,13 @@ class UnaryOperator(pybamm.Symbol):
         self.child = self.children[0]
 
     @classmethod
-    def _from_json(cls, name, snippet: dict):
+    def _from_json(cls, snippet: dict):
         """Use to instantiate when deserialising"""
 
         instance = cls.__new__(cls)
 
         super(UnaryOperator, instance).__init__(
-            name,
+            snippet["name"],
             snippet["children"],
             domains=snippet["domains"],
         )
@@ -114,12 +114,6 @@ class Negate(UnaryOperator):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("-", child)
 
-    @classmethod
-    def _from_json(cls, snippet: dict):
-        """See :meth:`pybamm.UnaryOperator._from_json()`."""
-        instance = super()._from_json("-", snippet)
-        return instance
-
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}{!s}".format(self.name, self.child)
@@ -149,12 +143,6 @@ class AbsoluteValue(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("abs", child)
-
-    @classmethod
-    def _from_json(cls, snippet: dict):
-        """See :meth:`pybamm.UnaryOperator._from_json()`."""
-        instance = super()._from_json("abs", snippet)
-        return instance
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -216,12 +204,6 @@ class Floor(UnaryOperator):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("floor", child)
 
-    @classmethod
-    def _from_json(cls, snippet: dict):
-        """See :meth:`pybamm.UnaryOperator._from_json()`."""
-        instance = super()._from_json("floor", snippet)
-        return instance
-
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         return pybamm.Scalar(0)
@@ -243,12 +225,6 @@ class Ceiling(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("ceil", child)
-
-    @classmethod
-    def _from_json(cls, snippet: dict):
-        """See :meth:`pybamm.UnaryOperator._from_json()`."""
-        instance = super()._from_json("ceil", snippet)
-        return instance
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
