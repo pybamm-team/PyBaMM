@@ -45,8 +45,6 @@ RUN if [ "$IDAKLU" = "true" ]; then \
 
 RUN if [ "$ODES" = "true" ]; then \
     python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs,odes]"; \
     fi
 
