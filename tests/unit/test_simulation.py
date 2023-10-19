@@ -203,6 +203,33 @@ class TestSimulation(TestCase):
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
 
+        # Test whether initial_soc works with half cell (solve)
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.DFN(options)
+        sim = pybamm.Simulation(model)
+        sim.solve([0,1], initial_soc = 0.9)
+        self.assertEqual(sim._built_initial_soc, 0.9)
+
+        # Test whether initial_soc works with half cell (build)
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.DFN(options)
+        sim = pybamm.Simulation(model)
+        sim.build(initial_soc = 0.9)
+        self.assertEqual(sim._built_initial_soc, 0.9)
+
+        # Test whether initial_soc works with half cell when it is a voltage
+        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
+        parameter_values = model.default_parameter_values
+        ucv = parameter_values["Open-circuit voltage at 100% SOC [V]"]
+        parameter_values["Open-circuit voltage at 100% SOC [V]"] = ucv + 1e-12
+        parameter_values["Upper voltage cut-off [V]"] = ucv + 1e-12
+        options = {"working electrode": "positive"}
+        parameter_values["Current function [A]"] = 0.0
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0,1], initial_soc = "{} V".format(ucv))
+        voltage = sol["Terminal voltage [V]"].entries
+        self.assertAlmostEqual(voltage[0], ucv, places=5)
+
         # test with MSMR
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
         param = pybamm.ParameterValues("MSMR_Example")
