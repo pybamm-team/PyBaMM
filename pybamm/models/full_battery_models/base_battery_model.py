@@ -630,10 +630,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ]:  # some options accept non-strings
                 value = (value,)
             else:
-                # serialised options save tuples as lists which need to be converted
-                if isinstance(value, list) and len(value) == 2:
-                    value = tuple(tuple(v) if len(v) == 2 else v for v in value)
-
                 if not (
                     (
                         option

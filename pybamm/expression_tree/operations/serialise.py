@@ -178,7 +178,7 @@ class Serialise:
 
         recon_model_dict = {
             "name": model_data["name"],
-            "options": model_data["options"],
+            "options": self._convert_options(model_data["options"]),
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
             "concatenated_rhs": self._reconstruct_expression_tree(
                 model_data["concatenated_rhs"]
@@ -383,3 +383,15 @@ class Serialise:
             return obj
 
         return recurse(obj)
+
+    def _convert_options(self, d):
+        """
+        Converts a dictionary with nested lists to nested tuples,
+        used to convert model options back into correct format
+        """
+        if isinstance(d, dict):
+            return {k: self._convert_options(v) for k, v in d.items()}
+        elif isinstance(d, list):
+            return tuple(self._convert_options(item) for item in d)
+        else:
+            return d
