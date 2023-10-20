@@ -8,6 +8,12 @@ import subprocess
 
 from pybamm.util import root_dir
 
+def check_platform():
+    if sys.platform == "win32":
+        raise Exception("pybamm_install_odes is not supported on Windows.")
+
+check_platform()
+
 def install_required_module(module):
     try:
         __import__(module)
