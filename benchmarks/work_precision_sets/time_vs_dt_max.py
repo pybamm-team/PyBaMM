@@ -41,7 +41,6 @@ for ax, model_, model_name in zip(
 ):
     for params in parameters:
         time_points = []
-        # solver = pybamm.CasadiSolver()
 
         model = model_.new_copy()
         c_rate = 10
