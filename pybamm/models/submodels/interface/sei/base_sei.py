@@ -29,7 +29,10 @@ class BaseModel(BaseInterface):
         num_sei_layers = self.options.get("number of SEI layers")
 
         # Flag to indicate single layer SEI
-        self.single_layer_sei = num_sei_layers == "1"
+        if num_sei_layers == "1":
+            self.single_layer_sei = True
+        else:
+            self.single_layer_sei = False
 
     def get_coupled_variables(self, variables):
         # Update some common variables
@@ -94,8 +97,6 @@ class BaseModel(BaseInterface):
                 }
             )
         # Get variables related to the total thickness
-        # In case of single layer SEI
-        # Inner layer is usually set to zero
         L_sei = L_outer
         if not self.single_layer_sei:
             L_sei = L_inner + L_outer
@@ -179,6 +180,7 @@ class BaseModel(BaseInterface):
             # Case for single layer SEI:
             if self.single_layer_sei:
                 L_sei = variables[f"{Domain} outer {reaction_name}thickness [m]"]
+
                 n_SEI = L_sei * L_to_n_outer  # single layer SEI concentration
 
             # Case for two layer SEI
@@ -194,7 +196,6 @@ class BaseModel(BaseInterface):
 
                 n_SEI = n_inner + n_outer  # SEI concentration
 
-            # Same calculation for both cases
             n_SEI_xav = pybamm.x_average(n_SEI)
             n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
@@ -268,7 +269,6 @@ class BaseModel(BaseInterface):
 
                 n_SEI_cr = n_inner_cr + n_outer_cr  # SEI on cracks concentration
 
-            # Same calculation for both cases
             n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
             n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
@@ -343,7 +343,6 @@ class BaseModel(BaseInterface):
             The variables which can be derived from the SEI currents.
         """
         domain, Domain = self.domain_Domain
-        # Case for a single layer
         if self.single_layer_sei:
             j_sei = j_outer
             j_sei_xav = pybamm.x_average(j_sei)
