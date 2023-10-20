@@ -708,6 +708,25 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "Agnik7",
+      "name": "Agnik Bakshi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/77234005?v=4",
+      "profile": "https://github.com/Agnik7",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "RuiheLi",
+      "name": "RuiheLi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/84007676?v=4",
+      "profile": "https://github.com/RuiheLi",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,

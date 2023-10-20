@@ -1,6 +1,7 @@
 import nox
 import os
 import sys
+from pathlib import Path
 
 
 # Options to modify nox behaviour
@@ -16,6 +17,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
 }
+VENV_DIR = Path('./venv').resolve()
 
 
 def set_environment_variables(env_dict, session):
@@ -116,18 +118,19 @@ def run_scripts(session):
 def set_dev(session):
     """Install PyBaMM in editable mode."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    envbindir = session.bin
-    session.install("-e", ".[all]", silent=False)
-    session.install("cmake", silent=False)
-    if sys.platform == "linux" or sys.platform == "darwin":
-        session.run(
-            "echo",
-            "export",
-            f"LD_LIBRARY_PATH={PYBAMM_ENV['LD_LIBRARY_PATH']}",
-            ">>",
-            f"{envbindir}/activate",
-            external=True,  # silence warning about echo being an external command
+    session.install("virtualenv", "cmake")
+    session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
+    python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    if sys.platform == "linux":
+        session.run(python,
+                    "-m",
+                    "pip",
+                    "install",
+                    ".[all,dev,jax,odes]",
+                    external=True,
         )
+    else:
+        session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", external=True)
 
 
 @nox.session(name="tests")
