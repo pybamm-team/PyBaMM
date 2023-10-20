@@ -125,9 +125,11 @@ Currently, only GNU/Linux and macOS are supported.
 
    .. code:: bash
 
-	  pip install scikits.odes
+      brew install openblas
+      pybamm_install_odes
 
-   Assuming that SUNDIALS was installed as described :ref:`above<user-install-label>`.
+   The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
+   system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
