@@ -196,7 +196,6 @@ class BaseModel(BaseInterface):
 
                 n_SEI = n_inner + n_outer  # SEI concentration
 
-            # Same calculation for both cases
             n_SEI_xav = pybamm.x_average(n_SEI)
             n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
