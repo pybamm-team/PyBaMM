@@ -119,7 +119,25 @@ class ParameterValues:
         return pybamm.ParameterValues(pybamm_dict)
 
     def __getitem__(self, key):
-        return self._dict_items[key]
+        try:
+            return self._dict_items[key]
+        except KeyError as err:
+            if (
+                "Exchange-current density for lithium metal electrode [A.m-2]"
+                in err.args[0]
+                and "Exchange-current density for plating [A.m-2]" in self._dict_items
+            ):
+                raise KeyError(
+                    "'Exchange-current density for plating [A.m-2]' has been renamed "
+                    "to 'Exchange-current density for lithium metal electrode [A.m-2]' "
+                    "when referring to the reaction at the surface of a lithium metal "
+                    "electrode. This is to avoid confusion with the exchange-current "
+                    "density for the lithium plating reaction in a porous negative "
+                    "electrode. To avoid this error, change your parameter file to use "
+                    "the new name."
+                )
+            else:
+                raise err
 
     def get(self, key, default=None):
         """Return item corresponding to key if it exists, otherwise return default"""
@@ -252,6 +270,39 @@ class ParameterValues:
                 self._dict_items[name] = value
         # reset processed symbols
         self._processed_symbols = {}
+
+    def set_initial_stoichiometry_half_cell(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial stoichiometry of the working electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            initial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+
+        c_max = self.evaluate(param.p.prim.c_max)
+
+        parameter_values.update(
+            {
+                "Initial concentration in {} electrode [mol.m-3]".format(
+                    options["working electrode"]
+                ): x
+                * c_max
+            }
+        )
+        return parameter_values
 
     def set_initial_stoichiometries(
         self,

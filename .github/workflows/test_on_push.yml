@@ -92,7 +92,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -111,10 +111,10 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: nox -s unit
+        run: pipx run nox -s unit
 
   # Runs only on Ubuntu with Python 3.11
   check_coverage:
@@ -169,10 +169,10 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
-        run: nox -s coverage
+        run: pipx run nox -s coverage
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
@@ -281,7 +281,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -300,10 +300,10 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: nox -s integration
+        run: pipx run nox -s integration
 
 # Runs only on Ubuntu with Python 3.11. Skips IDAKLU module compilation
 # for speedups, which is already tested in other jobs.
@@ -342,14 +342,14 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        run: nox -s doctests
+        run: pipx run nox -s doctests
 
       - name: Check if the documentation can be built for GNU/Linux with Python 3.11
-        run: nox -s docs
+        run: pipx run nox -s docs
 
   # Runs only on Ubuntu with Python 3.11
   run_example_tests:
@@ -387,7 +387,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -404,10 +404,10 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
-        run: nox -s examples
+        run: pipx run nox -s examples
 
   # Runs only on Ubuntu with Python 3.11
   run_scripts_tests:
@@ -445,7 +445,7 @@ jobs:
 
       - name: Install PyBaMM dependencies
         run: |
-          pip install --upgrade pip wheel setuptools nox
+          pip install --upgrade pip wheel setuptools
           pip install -e .[all,docs]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
@@ -462,7 +462,7 @@ jobs:
           key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Install dev dependencies and run example scripts tests for GNU/Linux with Python 3.11
-        run: nox -s scripts
+        run: pipx run nox -s scripts
