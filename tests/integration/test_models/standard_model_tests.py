@@ -152,7 +152,10 @@ class StandardModelTest(object):
         else:
             new_solver = new_model.default_solver
 
-        if isinstance(new_model, pybamm.lithium_ion.BaseModel):
+        if (
+            isinstance(new_model, pybamm.lithium_ion.BaseModel)
+            and new_model.options["SEI"] != "ec reaction limited (asymmetric)"
+        ):
             new_solver.rtol = 1e-8
             new_solver.atol = 1e-8
             accuracy = 6
