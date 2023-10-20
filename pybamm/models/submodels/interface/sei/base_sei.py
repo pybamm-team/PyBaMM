@@ -343,7 +343,6 @@ class BaseModel(BaseInterface):
             The variables which can be derived from the SEI currents.
         """
         domain, Domain = self.domain_Domain
-        # Case for a single layer
         if self.single_layer_sei:
             j_sei = j_outer
             j_sei_xav = pybamm.x_average(j_sei)
