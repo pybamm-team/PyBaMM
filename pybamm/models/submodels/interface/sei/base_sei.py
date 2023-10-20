@@ -231,19 +231,19 @@ class BaseModel(BaseInterface):
             else:
                 variables.update(
                     {
-                    f"{Domain} inner {reaction_name}concentration [mol.m-3]": n_inner,
-                    f"X-averaged {domain} inner {reaction_name}"
-                    "concentration [mol.m-3]": n_inner_av,
-                    f"{Domain} outer {reaction_name}concentration [mol.m-3]": n_outer,
-                    f"X-averaged {domain} outer {reaction_name}"
-                    "concentration [mol.m-3]": n_outer_av,
-                    f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI,
-                    f"X-averaged {domain} {reaction_name}"
-                    "concentration [mol.m-3]": n_SEI_xav,
-                    f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei,
-                    f"Loss of capacity to {domain} {reaction_name}[A.h]": Q_sei
-                    * self.param.F
-                    / 3600,
+                        f"{Domain} inner {reaction_name}concentration [mol.m-3]": n_inner,
+                        f"X-averaged {domain} inner {reaction_name}"
+                        "concentration [mol.m-3]": n_inner_av,
+                        f"{Domain} outer {reaction_name}concentration [mol.m-3]": n_outer,
+                        f"X-averaged {domain} outer {reaction_name}"
+                        "concentration [mol.m-3]": n_outer_av,
+                        f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI,
+                        f"X-averaged {domain} {reaction_name}"
+                        "concentration [mol.m-3]": n_SEI_xav,
+                        f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei,
+                        f"Loss of capacity to {domain} {reaction_name}[A.h]": Q_sei
+                        * self.param.F
+                        / 3600,
                     }
                 )
         # Concentration variables are handled slightly differently for SEI on cracks
