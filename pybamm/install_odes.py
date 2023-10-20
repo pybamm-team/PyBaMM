@@ -8,23 +8,22 @@ import subprocess
 
 from pybamm.util import root_dir
 
-try:
-    # wget module is required to download SUNDIALS or SuiteSparse.
-    import wget
+def install_required_module(module):
+    try:
+        __import__(module)
+    except ModuleNotFoundError:
+        print(f"{module} module not found. Installing {module}...")
+        subprocess.run(["pip", "install", module], check=True)
 
-    NO_WGET = False
-except ModuleNotFoundError:
-    NO_WGET = True
+required_modules = ["wget", "cmake"]
 
+for module in required_modules:
+    install_required_module(module)
+
+import wget # noqa: E402
 
 def download_extract_library(url, directory):
     # Download and extract archive at url
-    if NO_WGET:
-        error_msg = (
-            "Could not find wget module."
-            " Please install wget module (pip install wget)."
-        )
-        raise ModuleNotFoundError(error_msg)
     archive = wget.download(url, out=directory)
     tar = tarfile.open(archive)
     tar.extractall(directory)
