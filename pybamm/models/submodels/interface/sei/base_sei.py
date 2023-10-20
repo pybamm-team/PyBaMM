@@ -269,7 +269,6 @@ class BaseModel(BaseInterface):
 
                 n_SEI_cr = n_inner_cr + n_outer_cr  # SEI on cracks concentration
 
-            # Same calculation for both cases
             n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
             n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
