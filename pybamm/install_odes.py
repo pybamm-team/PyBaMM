@@ -89,13 +89,19 @@ def update_LD_LIBRARY_PATH(install_dir):
     if venv_path:
         script_path = os.path.join(venv_path, "bin/activate")
     else:
-        script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+        if sys.platform == "linux":
+            script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+        if sys.platform == "darwin":
+            script_path = os.path.join(os.environ.get("HOME"), ".zshrc")
 
     if os.getenv("LD_LIBRARY_PATH") and "{}/lib".format(install_dir) in os.getenv(
         "LD_LIBRARY_PATH"
     ):
         print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
-        print("--> Not updating venv activate or .bashrc scripts")
+        if sys.platform == "linux":
+            print("--> Not updating venv activate or .bashrc scripts")
+        if sys.platform == "darwin":
+            print("--> Not updating venv activate or .zshrc scripts")
     else:
         with open(script_path, "a+") as fh:
             # Just check that export statement is not already there.
