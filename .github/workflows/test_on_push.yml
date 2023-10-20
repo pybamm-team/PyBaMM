@@ -220,6 +220,7 @@ jobs:
 
       - name: Test pybamm_install_odes on ${{ matrix.os }}
         run: |
+          pip cache purge
           pip install wget cmake
           pybamm_install_odes
 
