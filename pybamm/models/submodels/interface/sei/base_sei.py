@@ -97,16 +97,10 @@ class BaseModel(BaseInterface):
                 }
             )
         # Get variables related to the total thickness
-        if self.single_layer_sei:
-            # In case of single layer SEI
-            # Inner layer is usually set to zero
-            L_sei = L_outer
-            variables.update(self._get_standard_total_thickness_variables(L_sei))
-
-        else:
-            # In case of two SEI layers
+        L_sei = L_outer
+        if not self.single_layer_sei:
             L_sei = L_inner + L_outer
-            variables.update(self._get_standard_total_thickness_variables(L_sei))
+        variables.update(self._get_standard_total_thickness_variables(L_sei))
 
         return variables
 
