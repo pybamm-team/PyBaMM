@@ -1,4 +1,5 @@
 import pybamm
+from benchmarks.benchmark_utils import set_random_seed
 
 parameters = ["Marquis2019", "Chen2020"]
 
@@ -6,9 +7,15 @@ parameters = ["Marquis2019", "Chen2020"]
 class MemSPMSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
-    def mem_setup_SPM_simulationCCCV(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def setup(self, _params):
+        set_random_seed()
+
+    def mem_setup_SPM_simulationCCCV(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(
             [
@@ -28,9 +35,15 @@ class MemSPMSimulationCCCV:
 class MemDFNSimulationCCCV:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
-    def mem_setup_DFN_simulationCCCV(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def setup(self, _params):
+        set_random_seed()
+
+    def mem_setup_DFN_simulationCCCV(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.DFN()
         exp = pybamm.Experiment(
             [
@@ -50,9 +63,15 @@ class MemDFNSimulationCCCV:
 class MemSPMSimulationGITT:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
-    def mem_setup_SPM_simulationGITT(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def setup(self, _params):
+        set_random_seed()
+
+    def mem_setup_SPM_simulationGITT(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(
             [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20
@@ -66,9 +85,15 @@ class MemSPMSimulationGITT:
 class MemDFNSimulationGITT:
     param_names = ["parameter"]
     params = parameters
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    sim: pybamm.Simulation
 
-    def mem_setup_DFN_simulationGITT(self, parameters):
-        self.param = pybamm.ParameterValues(parameters)
+    def setup(self, _params):
+        set_random_seed()
+
+    def mem_setup_DFN_simulationGITT(self, params):
+        self.param = pybamm.ParameterValues(params)
         self.model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(
             [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20
