@@ -40,10 +40,59 @@ def set_environment_variables(env_dict, session):
 def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
     set_environment_variables(PYBAMM_ENV, session=session)
+    force_rebuild = "--force" in session.posargs
+    sundials_so_path = [
+            Path("/path/to/sundials/libsundials_idas.so"),
+            Path("/path/to/sundials/libsundials_idas.dylib"),
+
+            Path("/path/to/sundials/libsundials_sunlinsolklu.so"),
+            Path("/path/to/sundials/libsundials_sunlinsolklu.dylib"),
+
+            Path("/path/to/sundials/libsundials_sunlinsoldense.so"),
+            Path("/path/to/sundials/libsundials_sunlinsoldense.dylib"),
+
+            Path("/path/to/sundials/libsundials_sunlinsolspbcgs.so"),
+            Path("/path/to/sundials/libsundials_sunlinsolspbcgs.dylib"),
+
+            Path("/path/to/sundials/libsundials_sunlinsollapackdense.so"),
+            Path("/path/to/sundials/libsundials_sunlinsollapackdense.dylib"),
+
+            Path("/path/to/sundials/libsundials_sunmatrixsparse.so"),
+            Path("/path/to/sundials/libsundials_sunmatrixsparse.dylib"),
+
+            Path("/path/to/sundials/libsundials_nvecserial.so"),
+            Path("/path/to/sundials/libsundials_nvecserial.dylib"),
+
+            Path("/path/to/sundials/libsundials_nvecopenmp.so"),
+            Path("/path/to/sundials/libsundials_nvecopenmp.dylib")
+        ]
+    klu_so_path = [
+            Path("/path/to/suitesparse/libsuitesparseconfig.so"),
+            Path("/path/to/suitesparse/libsuitesparseconfig.dylib"), # for MacOS
+            
+            Path("/path/to/suitesparse/libklu.so"),
+            Path("/path/to/suitesparse/libklu.dylib"),
+            
+            Path("/path/to/suitesparse/libamd.so"),
+            Path("/path/to/suitesparse/libamd.dylib"),
+            
+            Path("/path/to/suitesparse/libcolamd.so"),
+            Path("/path/to/suitesparse/libcolamd.dylib"),
+            
+            Path("/path/to/suitesparse/libbtf.so"),
+            Path("/path/to/suitesparse/libbtf.dylib"),
+        ]
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
-        session.run("python", "scripts/install_KLU_Sundials.py")
-        if not os.path.exists("./pybind11"):
+        
+        if (sundials_so_path.exists() and 
+            klu_so_path.exists()) and not force_rebuild:
+            session.warn("Found existing build-time requirements, skipping installation. Note: run with the --force flag (nox -s pybamm-requires -- --force) to invoke re-installation.")  # noqa: E501
+            return
+            session.run("python", "scripts/install_Klu_Sundials.py")
+        elif os.path.exists("./pybind11"):
+            session.log("Found pybind11")
+            return
             session.run(
                 "git",
                 "clone",
