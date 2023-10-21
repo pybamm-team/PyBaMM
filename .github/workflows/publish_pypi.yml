@@ -1,7 +1,4 @@
-# name: Build and publish package to PyPI
-name: Test building wheels
-# Temporarily disable publishing to PyPI and enable
-# building wheels on pull requests
+name: Build and publish package to PyPI
 on:
   release:
     types: [published]
@@ -33,15 +30,15 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      - name: Install vcpkg on windows
+      - name: Install vcpkg on Windows
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2023.08.09
+          git clone https://github.com/microsoft/vcpkg
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
-      - name: Cache packages installed through vcpkg on windows
+      - name: Cache packages installed through vcpkg on Windows
         uses: actions/cache@v3
         env:
           cache-name: vckpg_binary_cache
@@ -54,13 +51,13 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Build 64 bits wheels on Windows
+      - name: Build 64-bit wheels on Windows
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=C:\vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
           CIBW_ARCHS: "AMD64"
 
-      - name: Upload windows wheels
+      - name: Upload Windows wheels
         uses: actions/upload-artifact@v3
         with:
           name: windows_wheels
@@ -109,8 +106,6 @@ jobs:
             python -m pip
             install cmake casadi numpy &&
             python scripts/fix_casadi_rpath_mac.py && scripts/fix_suitesparse_rpath_mac.sh
-          # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
-          # it for mac
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             delocate-listdeps {wheel} &&
             delocate-wheel -v -w {dest_dir} {wheel}
@@ -146,47 +141,47 @@ jobs:
           path: ./dist/*.tar.gz
           if-no-files-found: error
 
-  # publish_pypi:
-  #   if: github.event_name != 'schedule'
-  #   name: Upload package to PyPI
-  #   needs: [build_wheels, build_windows_wheels, build_sdist]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Download all artifacts
-  #       uses: actions/download-artifact@v3
+  publish_pypi:
+    if: github.event_name != 'schedule'
+    name: Upload package to PyPI
+    needs: [build_wheels, build_windows_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
 
-  #     - name: Move all package files to files/
-  #       run: |
-  #         mkdir files
-  #         mv windows_wheels/* wheels/* sdist/* files/
+      - name: Move all package files to files/
+        run: |
+          mkdir files
+          mv windows_wheels/* wheels/* sdist/* files/
 
-  #     - name: Publish on PyPI
-  #       if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
-  #       uses: pypa/gh-action-pypi-publish@release/v1
-  #       with:
-  #         user: __token__
-  #         password: ${{ secrets.PYPI_TOKEN }}
-  #         packages-dir: files/
+      - name: Publish on PyPI
+        if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages-dir: files/
 
-  #     - name: Publish on TestPyPI
-  #       if: github.event.inputs.target == 'testpypi'
-  #       uses: pypa/gh-action-pypi-publish@release/v1
-  #       with:
-  #         user: __token__
-  #         password: ${{ secrets.TESTPYPI_TOKEN }}
-  #         packages-dir: files/
-  #         repository-url: https://test.pypi.org/legacy/
+      - name: Publish on TestPyPI
+        if: github.event.inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TESTPYPI_TOKEN }}
+          packages-dir: files/
+          repository-url: https://test.pypi.org/legacy/
 
-  # open_failure_issue:
-  #   needs: [build_windows_wheels, build_wheels, build_sdist]
-  #   name: Open an issue if build fails
-  #   if: ${{ always() && contains(needs.*.result, 'failure') }}
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - uses: JasonEtco/create-an-issue@v2
-  #     env:
-  #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  #     with:
-  #       filename: .github/wheel_failure.md
+  open_failure_issue:
+    needs: [build_windows_wheels, build_wheels, build_sdist]
+    name: Open an issue if build fails
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: JasonEtco/create-an-issue@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      with:
+        filename: .github/wheel_failure.md
