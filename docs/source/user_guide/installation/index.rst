@@ -76,7 +76,7 @@ Optional Dependencies
 PyBaMM has a number of optional dependencies for different functionalities.
 If the optional dependency is not installed, PyBaMM will raise an ImportError when the method requiring that dependency is called.
 
-If you are using ``pip``, optional PyBaMM dependencies can be installed or managed in a file (e.g. requirements.txt, setup.py, or pyproject.toml)
+If you are using ``pip``, optional PyBaMM dependencies can be installed or managed in a file (e.g., setup.py, or pyproject.toml)
 as optional extras (e.g.,``pybamm[dev,plot]``). All optional dependencies can be installed with ``pybamm[all]``,
 and specific sets of dependencies are listed in the sections below.
 
