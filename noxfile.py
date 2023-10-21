@@ -69,23 +69,23 @@ def run_pybamm_requires(session):
     klu_so_path = [
             Path("/path/to/suitesparse/libsuitesparseconfig.so"),
             Path("/path/to/suitesparse/libsuitesparseconfig.dylib"), # for MacOS
-            
+
             Path("/path/to/suitesparse/libklu.so"),
             Path("/path/to/suitesparse/libklu.dylib"),
-            
+
             Path("/path/to/suitesparse/libamd.so"),
             Path("/path/to/suitesparse/libamd.dylib"),
-            
+
             Path("/path/to/suitesparse/libcolamd.so"),
             Path("/path/to/suitesparse/libcolamd.dylib"),
-            
+
             Path("/path/to/suitesparse/libbtf.so"),
             Path("/path/to/suitesparse/libbtf.dylib"),
         ]
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
-        
-        if (sundials_so_path.exists() and 
+
+        if (sundials_so_path.exists() and
             klu_so_path.exists()) and not force_rebuild:
             session.warn("Found existing build-time requirements, skipping installation. Note: run with the --force flag (nox -s pybamm-requires -- --force) to invoke re-installation.")  # noqa: E501
             return
