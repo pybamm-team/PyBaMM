@@ -11,9 +11,9 @@ on:
     - cron: "0 10 1,15 * *"
   workflow_dispatch:
     inputs:
-      # target:
-      #   description: 'Deployment target. Can be "pypi" or "testpypi"'
-      #   default: "pypi"
+      target:
+        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        default: "testpypi"
       debug_enabled:
         type: boolean
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'

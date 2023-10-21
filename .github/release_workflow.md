@@ -78,5 +78,5 @@ Some other essential things to check throughout the release process -
 - As the release workflow is initiated by the `release` event, it's important to note that the default `GITHUB_REF` used by `actions/checkout` during the checkout process will correspond to the tag created during the release process. Consequently, the workflows will consistently build PyBaMM based on the commit associated with this tag. Should new commits be introduced to the `vYY.MM` branch, such as those addressing build issues, it becomes necessary to manually update this tag to point to the most recent commit -
   ```
   git tag -f <tag_name> <commit_hash>
-  git push origin <tag_name>  # can only be carried out by the maintainers
+  git push -f <pybamm-team/PyBaMM_remote_name> <tag_name>  # can only be carried out by the maintainers
   ```
