@@ -5,6 +5,7 @@ from tests import TestCase
 import os
 import pybamm
 import unittest
+from tempfile import TemporaryDirectory
 
 spm = pybamm.lithium_ion.SPM()
 spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
@@ -90,17 +91,19 @@ class TestBatchStudy(TestCase):
             self.assertIn(output_experiment, experiments_list)
 
     def test_create_gif(self):
-        bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
-        bs.solve([0, 10])
+        with TemporaryDirectory() as dir_name:
+            bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
+            bs.solve([0, 10])
 
-        # create a GIF before calling the plot method
-        bs.create_gif(number_of_images=3, duration=1)
+            # Create a temporary file name
+            test_file = os.path.join(dir_name, "batch_study_test.gif")
 
-        # create a GIF after calling the plot method
-        bs.plot(testing=True)
-        bs.create_gif(number_of_images=3, duration=1)
+            # create a GIF before calling the plot method
+            bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-        os.remove("plot.gif")
+            # create a GIF after calling the plot method
+            bs.plot(testing=True)
+            bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
 
 if __name__ == "__main__":

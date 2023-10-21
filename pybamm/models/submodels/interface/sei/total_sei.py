@@ -19,24 +19,25 @@ class TotalSEI(pybamm.BaseSubModel):
         See :class:`pybamm.BaseBatteryModel`
     """
 
-    def __init__(self, param, options, cracks=False):
+    def __init__(self, param, domain, options, cracks=False):
         if cracks is True:
             self.reaction = "SEI on cracks"
         else:
             self.reaction = "SEI"
-        super().__init__(param, options=options)
+        super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
-        phases = self.options.phases["negative"]
+        domain, Domain = self.domain_Domain
+        phases = self.options.phases[domain]
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
-            f"Negative electrode {{}}{self.reaction} volumetric "
+            f"{Domain} electrode {{}}{self.reaction} volumetric "
             "interfacial current density [A.m-3]",
-            f"X-averaged negative electrode {{}}{self.reaction} volumetric "
+            f"X-averaged {domain} electrode {{}}{self.reaction} volumetric "
             "interfacial current density [A.m-3]",
-            f"Loss of lithium to {{}}{self.reaction} [mol]",
-            f"Loss of capacity to {{}}{self.reaction} [A.h]",
+            f"Loss of lithium to {domain} {{}}{self.reaction} [mol]",
+            f"Loss of capacity to {domain} {{}}{self.reaction} [A.h]",
         ]:
             sumvar = sum(
                 variables[variable_template.format(phase + " ")] for phase in phases

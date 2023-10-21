@@ -18,7 +18,9 @@ if pybamm.have_jax():
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten
     from jax.util import cache, safe_map, split_list
 
-    config.update("jax_enable_x64", True)
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        config.update("jax_enable_x64", True)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4

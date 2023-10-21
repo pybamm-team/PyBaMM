@@ -84,36 +84,44 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco install graphviz --version=2.38.0.20190211
 
-      - name: Install standard python dependencies
+      - name: Install standard Python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools nox
+          python -m pip install --upgrade pip wheel setuptools
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s pybamm-requires
+        run: pipx run nox -s pybamm-requires
 
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
-        run: nox -s unit
+        run: pipx run nox -s unit
 
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        run: nox -s coverage
+        run: pipx run nox -s coverage
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v3.1.4
 
       - name: Run integration tests
-        run: nox -s integration
+        run: pipx run nox -s integration
 
       - name: Install docs dependencies and run doctests
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s doctests
+        run: pipx run nox -s doctests
+
+      - name: Check if the documentation can be built
+        if: matrix.os == 'ubuntu-latest'
+        run: pipx run nox -s docs
 
       - name: Install dev dependencies and run example tests
         if: matrix.os == 'ubuntu-latest'
-        run: nox -s examples
+        run: pipx run nox -s examples
+
+      - name: Run example scripts tests
+        if: matrix.os == 'ubuntu-latest'
+        run: pipx run nox -s scripts
 
   #M-series Mac Mini
   build-apple-mseries:

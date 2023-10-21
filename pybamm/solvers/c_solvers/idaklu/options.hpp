@@ -3,6 +3,9 @@
 
 #include "common.hpp"
 
+/**
+ * @brief Options passed to the idaklu solver by pybamm
+ */
 struct Options {
   bool print_stats;
   bool using_sparse_matrix;

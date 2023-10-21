@@ -38,7 +38,7 @@ class TestBasicHalfCellModels(TestCase):
         solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
         solver.solve(model, t_eval)
 
-    def test_runs_OKane2022(self):
+    def test_runs_OKane2022_negative(self):
         # load model
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
@@ -47,9 +47,9 @@ class TestBasicHalfCellModels(TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        param = pybamm.ParameterValues("OKane2022")
+        param = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
 
-        param["Current function [A]"] = 2.5
+        param["Current function [A]"] = -2.5  # C/2 charge
 
         # process model and geometry
         param.process_model(model)

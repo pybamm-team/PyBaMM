@@ -1,6 +1,7 @@
 #
 # Tests for the Solution class
 #
+import os
 from tests import TestCase
 import json
 import pybamm
@@ -9,6 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 from tests import get_discretisation_for_testing
+from tempfile import TemporaryDirectory
 
 
 class TestSolution(TestCase):
@@ -233,95 +235,103 @@ class TestSolution(TestCase):
         solution.plot(["c", "2c"], testing=True)
 
     def test_save(self):
-        model = pybamm.BaseModel()
-        # create both 1D and 2D variables
-        c = pybamm.Variable("c")
-        d = pybamm.Variable("d", domain="negative electrode")
-        model.rhs = {c: -c, d: 1}
-        model.initial_conditions = {c: 1, d: 2}
-        model.variables = {"c": c, "d": d, "2c": 2 * c, "c + d": c + d}
+        with TemporaryDirectory() as dir_name:
+            test_stub = os.path.join(dir_name, "test")
 
-        disc = get_discretisation_for_testing()
-        disc.process_model(model)
-        solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
+            model = pybamm.BaseModel()
+            # create both 1D and 2D variables
+            c = pybamm.Variable("c")
+            d = pybamm.Variable("d", domain="negative electrode")
+            model.rhs = {c: -c, d: 1}
+            model.initial_conditions = {c: 1, d: 2}
+            model.variables = {"c": c, "d": d, "2c": 2 * c, "c + d": c + d}
 
-        # test save data
-        with self.assertRaises(ValueError):
-            solution.save_data("test.pickle")
+            disc = get_discretisation_for_testing()
+            disc.process_model(model)
+            solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
-        # set variables first then save
-        solution.update(["c", "d"])
-        with self.assertRaisesRegex(ValueError, "pickle"):
-            solution.save_data(to_format="pickle")
-        solution.save_data("test.pickle")
+            # test save data
+            with self.assertRaises(ValueError):
+                solution.save_data(f"{test_stub}.pickle")
 
-        data_load = pybamm.load("test.pickle")
-        np.testing.assert_array_equal(solution.data["c"], data_load["c"])
-        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+            # set variables first then save
+            solution.update(["c", "d"])
+            with self.assertRaisesRegex(ValueError, "pickle"):
+                solution.save_data(to_format="pickle")
+            solution.save_data(f"{test_stub}.pickle")
 
-        # to matlab
-        solution.save_data("test.mat", to_format="matlab")
-        data_load = loadmat("test.mat")
-        np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
-        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+            data_load = pybamm.load(f"{test_stub}.pickle")
+            np.testing.assert_array_equal(solution.data["c"], data_load["c"])
+            np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        with self.assertRaisesRegex(ValueError, "matlab"):
-            solution.save_data(to_format="matlab")
+            # to matlab
+            solution.save_data(f"{test_stub}.mat", to_format="matlab")
+            data_load = loadmat(f"{test_stub}.mat")
+            np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
+            np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        # to matlab with bad variables name fails
-        solution.update(["c + d"])
-        with self.assertRaisesRegex(ValueError, "Invalid character"):
-            solution.save_data("test.mat", to_format="matlab")
-        # Works if providing alternative name
-        solution.save_data(
-            "test.mat", to_format="matlab", short_names={"c + d": "c_plus_d"}
-        )
-        data_load = loadmat("test.mat")
-        np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
+            with self.assertRaisesRegex(ValueError, "matlab"):
+                solution.save_data(to_format="matlab")
 
-        # to csv
-        with self.assertRaisesRegex(
-            ValueError, "only 0D variables can be saved to csv"
-        ):
-            solution.save_data("test.csv", to_format="csv")
-        # only save "c" and "2c"
-        solution.save_data("test.csv", ["c", "2c"], to_format="csv")
-        csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
+            # to matlab with bad variables name fails
+            solution.update(["c + d"])
+            with self.assertRaisesRegex(ValueError, "Invalid character"):
+                solution.save_data(f"{test_stub}.mat", to_format="matlab")
+            # Works if providing alternative name
+            solution.save_data(
+                f"{test_stub}.mat", to_format="matlab",
+                short_names={"c + d": "c_plus_d"}
+            )
+            data_load = loadmat(f"{test_stub}.mat")
+            np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
-        # check string is the same as the file
-        with open("test.csv") as f:
-            # need to strip \r chars for windows
-            self.assertEqual(csv_str.replace("\r", ""), f.read())
+            # to csv
+            with self.assertRaisesRegex(
+                    ValueError, "only 0D variables can be saved to csv"
+            ):
+                solution.save_data(f"{test_stub}.csv", to_format="csv")
+            # only save "c" and "2c"
+            solution.save_data(f"{test_stub}.csv", ["c", "2c"], to_format="csv")
+            csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
 
-        # read csv
-        df = pd.read_csv("test.csv")
-        np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
-        np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+            # check string is the same as the file
+            with open(f"{test_stub}.csv") as f:
+                # need to strip \r chars for windows
+                self.assertEqual(csv_str.replace("\r", ""), f.read())
 
-        # to json
-        solution.save_data("test.json", to_format="json")
-        json_str = solution.save_data(to_format="json")
+            # read csv
+            df = pd.read_csv(f"{test_stub}.csv")
+            np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
+            np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
 
-        # check string is the same as the file
-        with open("test.json") as f:
-            # need to strip \r chars for windows
-            self.assertEqual(json_str.replace("\r", ""), f.read())
+            # to json
+            solution.save_data(f"{test_stub}.json", to_format="json")
+            json_str = solution.save_data(to_format="json")
 
-        # check if string has the right values
-        json_data = json.loads(json_str)
-        np.testing.assert_array_almost_equal(json_data["c"], solution.data["c"])
-        np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
+            # check string is the same as the file
+            with open(f"{test_stub}.json") as f:
+                # need to strip \r chars for windows
+                self.assertEqual(json_str.replace("\r", ""), f.read())
 
-        # raise error if format is unknown
-        with self.assertRaisesRegex(ValueError, "format 'wrong_format' not recognised"):
-            solution.save_data("test.csv", to_format="wrong_format")
+            # check if string has the right values
+            json_data = json.loads(json_str)
+            np.testing.assert_array_almost_equal(json_data["c"], solution.data["c"])
+            np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
 
-        # test save whole solution
-        solution.save("test.pickle")
-        solution_load = pybamm.load("test.pickle")
-        self.assertEqual(solution.all_models[0].name, solution_load.all_models[0].name)
-        np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
-        np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
+            # raise error if format is unknown
+            with self.assertRaisesRegex(ValueError,
+                                        "format 'wrong_format' not recognised"):
+                solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
+
+            # test save whole solution
+            solution.save(f"{test_stub}.pickle")
+            solution_load = pybamm.load(f"{test_stub}.pickle")
+            self.assertEqual(solution.all_models[0].name,
+                             solution_load.all_models[0].name)
+            np.testing.assert_array_equal(solution["c"].entries,
+                                          solution_load["c"].entries)
+            np.testing.assert_array_equal(solution["d"].entries,
+                                          solution_load["d"].entries)
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()

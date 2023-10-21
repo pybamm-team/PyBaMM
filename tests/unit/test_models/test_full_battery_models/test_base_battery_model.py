@@ -47,7 +47,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
-'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
+'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 """  # noqa: E501
 
@@ -210,6 +210,10 @@ class TestBaseBatteryModel(TestCase):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with self.assertRaisesRegex(pybamm.OptionError, "The 'fast diffusion'"):
             pybamm.BaseBatteryModel({"particle": "fast diffusion"})
+        with self.assertRaisesRegex(pybamm.OptionError, "working electrode"):
+            pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
+        with self.assertRaisesRegex(pybamm.OptionError, "The 'negative' working"):
+            pybamm.BaseBatteryModel({"working electrode": "negative"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
@@ -284,6 +288,15 @@ class TestBaseBatteryModel(TestCase):
             ("swelling and cracking", "swelling only"),
         )
         self.assertEqual(model.options["stress-induced diffusion"], "true")
+        model = pybamm.BaseBatteryModel(
+            {
+                "working electrode": "positive",
+                "loss of active material": "stress-driven",
+                "SEI on cracks": "true",
+            }
+        )
+        self.assertEqual(model.options["particle mechanics"], "swelling and cracking")
+        self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
@@ -294,13 +307,6 @@ class TestBaseBatteryModel(TestCase):
         # SEI on cracks
         with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
-        with self.assertRaisesRegex(NotImplementedError, "SEI on cracks not yet"):
-            pybamm.BaseBatteryModel(
-                {
-                    "SEI on cracks": "true",
-                    "working electrode": "positive",
-                }
-            )
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
@@ -354,7 +360,10 @@ class TestBaseBatteryModel(TestCase):
         # thermal half-cell
         with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
             pybamm.BaseBatteryModel(
-                {"thermal": "x-full", "working electrode": "positive"}
+                {
+                    "thermal": "x-full",
+                    "working electrode": "positive"
+                }
             )
         with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
             pybamm.BaseBatteryModel(
@@ -492,11 +501,6 @@ class TestOptions(TestCase):
         options = BatteryModelOptions({"working electrode": "positive"})
         self.assertEqual(
             options.whole_cell_domains, ["separator", "positive electrode"]
-        )
-
-        options = BatteryModelOptions({"working electrode": "negative"})
-        self.assertEqual(
-            options.whole_cell_domains, ["negative electrode", "separator"]
         )
 
         options = BatteryModelOptions({})
