@@ -106,7 +106,7 @@ Installing PyBaMM
 You should now have everything ready to build and install PyBaMM successfully.
 
 Using ``Nox`` (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
