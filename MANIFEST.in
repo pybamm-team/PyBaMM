@@ -1,4 +1,5 @@
 graft pybamm
+include CITATION.cff
 prune tests
 
 exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md GOVERNANCE.md CMakeLists.txt
