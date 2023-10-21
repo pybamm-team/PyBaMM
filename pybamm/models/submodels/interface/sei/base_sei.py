@@ -29,10 +29,7 @@ class BaseModel(BaseInterface):
         num_sei_layers = self.options.get("number of SEI layers")
 
         # Flag to indicate single layer SEI
-        if num_sei_layers == "1":
-            self.single_layer_sei = True
-        else:
-            self.single_layer_sei = False
+        self.single_layer_sei = num_sei_layers == "1":
 
     def get_coupled_variables(self, variables):
         # Update some common variables
