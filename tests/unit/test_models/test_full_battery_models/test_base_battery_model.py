@@ -23,6 +23,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'diffusivity': 'single' (possible: ['single', 'current sigmoid'])
 'dimensionality': 0 (possible: [0, 1, 2])
+'double SEI layer': 'false' (possible: ['false', 'true'])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
