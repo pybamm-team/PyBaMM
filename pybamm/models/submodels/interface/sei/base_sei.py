@@ -95,7 +95,7 @@ class BaseModel(BaseInterface):
             )
         # Get variables related to the total thickness
         L_sei = L_outer
-        if self.double_layer_sei_layer_sei:
+        if self.double_layer_sei:
             L_sei = L_inner + L_outer
         variables.update(self._get_standard_total_thickness_variables(L_sei))
 
