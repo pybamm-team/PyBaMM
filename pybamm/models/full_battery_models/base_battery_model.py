@@ -62,8 +62,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
             * "double SEI layer" : str
-                Whether we are using two SEI layers. Can be "false" (default) 
-                meaning we use the single-layer SEI model, or "true" 
+                Whether we are using two SEI layers. Can be "false" (default)
+                meaning we use the single-layer SEI model, or "true"
             * "electrolyte conductivity" : str
                 Can be "default" (default), "full", "leading order", "composite" or
                 "integrated".
