@@ -552,7 +552,7 @@ class Simulation:
                 )
             if (
                 self.operating_mode == "without experiment"
-                or self._model.name == "ElectrodeSOH model"
+                or "ElectrodeSOH" in self._model.name
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
