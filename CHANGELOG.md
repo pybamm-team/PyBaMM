@@ -2,7 +2,7 @@
 
 ## Features
 
-- Extend `pybamm_install_odes` to include support for macOS systems ([#3417](https://github.com/pybamm-team/PyBaMM/pull/3417))
+- The `pybamm_install_odes` command now includes support for macOS systems and can be used to set up SUNDIALS and install the `scikits.odes` solver on macOS ([#3417](https://github.com/pybamm-team/PyBaMM/pull/3417))
 
 # [v23.9rc0](https://github.com/pybamm-team/PyBaMM/tree/v23.9rc0) - 2023-10-31
 
