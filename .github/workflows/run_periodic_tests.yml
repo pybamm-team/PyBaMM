@@ -164,3 +164,48 @@ jobs:
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
           pyenv uninstall -f $( python --version )
+
+  test_install_odes:
+    needs: style
+    runs-on: macos-latest
+    strategy:
+        matrix:
+            os: [ubuntu-latest, macos-latest]
+            python-version: ["3.8", "3.9", "3.10", "3.11"]
+        fail-fast: false
+    name: Test pybamm_install_odes on ${{ matrix.os }}
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      - name: Install macOS system dependencies
+        env:
+          # Homebrew environment variables
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        run: |
+          brew analytics off
+          brew update
+          brew install openblas
+          brew reinstall gcc gfortran
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install PyBaMM dependencies
+        run: |
+          pip install --upgrade pip wheel setuptools nox
+          pip install -e .[all]
+
+      - name: Test pybamm_install_odes on ${{ matrix.os }}
+        run: |
+          pip cache purge
+          pip install wget cmake
+          pybamm_install_odes
