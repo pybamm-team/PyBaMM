@@ -11,9 +11,12 @@ This file contains the workflow required to make a `PyBaMM` release on GitHub an
    - `CITATION.cff`
    - `vcpkg.json`
    - `docs/_static/versions.json`
-   - `CHANGELOG.md`
 
-      These changes will be automatically pushed to a new branch `vYY.MM` and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
+   and the `CHANGELOG.md` file will be generated via [Towncrier](https://towncrier.readthedocs.io/en/stable/) for the updated version string. The news fragments will be deleted at the end of the process for further release candidates or for the actual release.
+
+   If further commits and changes are required to be made to the `develop` branch, the pull request branch titled "Make release `vYY.MMrc0`" will require manual updates to the `CHANGELOG.md` file and related sorting of pull requests (i.e., not using `Towncrier`), since the `newsfragments/` directory shall remain empty after the automated release process and the `develop` branch would have updated with new commits.
+
+   These changes will be automatically pushed to a new branch `vYY.MM` and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
 
 2. Create a new GitHub _pre-release_ with the tag `vYY.MMrc0` from the `vYY.MM` branch and a description copied from `CHANGELOG.md`.
 
@@ -23,24 +26,25 @@ This file contains the workflow required to make a `PyBaMM` release on GitHub an
 
 If a new release candidate is required after the release of `rc0` -
 
-1. Fix a bug in `vYY.MM` (no new features should be added to `vYY.MM` once `rc0` is released) and `develop` individually.
+1. Fix a bug in `vYY.MM` (no new features should be added to `vYY.MM` once `rc0` is released) and `develop` individually and add a news fragment if needed.
 
 2. Run `update_version.yml` manually while using `append_to_tag` to specify the release candidate version number (`rc1`, `rc2`, ...).
 
-3. This will increment the version to `vYY.MMrcX` by running `scripts/update_version.py` in the following files -
+   This will increment the version to `vYY.MMrcX` by running `scripts/update_version.py` in the following files -
 
    - `pybamm/version.py`
    - `docs/conf.py`
    - `CITATION.cff`
    - `vcpkg.json`
    - `docs/_static/versions.json`
-   - `CHANGELOG.md`
 
-      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
+   and the `CHANGELOG.md` file will be generated via [Towncrier](https://towncrier.readthedocs.io/en/stable/) for the updated version string. The news fragments will be deleted at the end of the process for further release candidates or for the actual release.
 
-4. Create a new GitHub _pre-release_ with the same tag (`vYY.MMrcX`) from the `vYY.MM` branch and a description copied from `CHANGELOG.md`.
+   These changes will be automatically pushed to the existing `vYY.MM` branch and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
 
-5. This release will automatically trigger `publish_pypi.yml` and create a _pre-release_ on PyPI.
+3. Create a new GitHub _pre-release_ with the same tag (`vYY.MMrcX`) from the `vYY.MM` branch and a description copied from `CHANGELOG.md`.
+
+4. This release will automatically trigger `publish_pypi.yml` and create a _pre-release_ on PyPI.
 
 ## Actual release (manual)
 
@@ -48,16 +52,17 @@ Once satisfied with the release candidates -
 
 1. Run `update_version.yml` manually, leaving the `append_to_tag` field blank ("") for an actual release.
 
-2. This will increment the version to `vYY.MMrcX` by running `scripts/update_version.py` in the following files -
+   This will increment the version to `vYY.MM` by running `scripts/update_version.py` in the following files -
 
    - `pybamm/version.py`
    - `docs/conf.py`
    - `CITATION.cff`
    - `vcpkg.json`
    - `docs/_static/versions.json`
-   - `CHANGELOG.md`
 
-      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
+   If and after the release candidates are satisfactory, the `newsfragments/` directory shall not contain any new entries and the CHANGELOG shall have been updated at the time of the release candidates already. In this case, manually edit the `CHANGELOG.md` file to remove the `rcX` suffix from the version string to be used for the actual release (i.e., `vYY.MMrcX` -> `vYY.MM`), and edit the date of the release as necessary.
+
+   These changes will be automatically pushed to the existing `vYY.MM` branch and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
 
 3. Next, a PR from `vYY.MM` to `main` will be generated that should be merged once all the tests pass.
 
