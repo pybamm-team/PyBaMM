@@ -6,11 +6,12 @@ Fixes # (issue)
 
 ## Type of change
 
-Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s. If necessary, also add to the list of breaking changes.
+Please add a [news entry](TODO: add a link) using `Towncrier` in the `newsfragments/` directory (TODO: add link) for the relevant section in the [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s. If necessary, also add it to the list of breaking changes.
 
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Optimization (back-end change that speeds up the code)
 - [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 
 # Key checklist:
 
