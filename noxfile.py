@@ -51,7 +51,7 @@ def run_pybamm_requires(session):
         "libsundials_nvecserial",
         "libsundials_nvecopenmp"
     ]
-    
+
     KLU_LIBS = [
         "libsuitesparseconfig",
         "libklu",
@@ -64,7 +64,7 @@ def run_pybamm_requires(session):
         fileext = ".so"
     elif sys.platform == "darwin":
         fileext = ".dylib"
-    
+
     sundials_so_path = [
         Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib + fileext)
         for lib in SUNDIALS_LIBS
@@ -81,7 +81,7 @@ def run_pybamm_requires(session):
             session.warn("Found existing build-time requirements, skipping installation. Note: run with the --force flag (nox -s pybamm-requires -- --force) to invoke re-installation.")
         else:
             session.run("python", "scripts/install_KLU_Sundials.py")
-        
+
         if os.path.exists("./pybind11"):
             session.log("Found pybind11")
             return
