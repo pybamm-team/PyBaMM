@@ -4,7 +4,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.0.292"
+    rev: "v0.1.1"
     hooks:
       - id: ruff
         args: [--fix, --ignore=E741, --exclude=__init__.py]
