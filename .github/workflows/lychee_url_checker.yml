@@ -44,6 +44,7 @@ jobs:
             --exclude https://www.rse.ox.ac.uk
             --accept 200,429
             --exclude-path ./CHANGELOG.md
+            --exclude-path newsfragments/*.md
             --exclude-path ./scripts/update_version.py
             --exclude-path docs/conf.py
             './**/*.rst'
