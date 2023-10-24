@@ -1,4 +1,32 @@
-## [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+<!--
+
+Note: this file is managed by Towncrier and new entries must NOT be added here manually.
+However, older entries can be edited to correct typos, improve formatting, add more details, etc.
+
+The Contributing Guide contains a section on managing the CHANGELOG.md file: TODO: add link
+
+There are two ways to add a Towncrier entry for PyBaMM.
+
+Names of news entries must start with the PR number they are associated with, followed by the type of change. The list of allowed types for PyBaMM includes:
+"feature", "bugfix", "optimization", and "breaking".
+
+1. Manually add a news entry in a file.
+
+In the newsfragments/ directory, create a news entry with the specification given above. For example, a news entry for PR 6174 is to be named
+in a file called `6174.feature` or `6174.feature.md`. The file must contain a single line with the contents of the news entry in a single line, followed by a newline.
+Similarly, a news entry for PR 6174 that fixes a bug is to be named in a file called `6174.bugfix` or `6174.bugfix.md`.
+
+2. Add a news entry using Towncrier (recommended) via the command line.
+
+If Towncrier is not installed already, install it using `pip install towncrier`. Alternatively, you may install it using `pipx`, a tool that allows you to run Python command-line tools in isolated environments, i.e., you may run `pipx run towncrier` instead of `python -m towncrier`.
+
+Once or if Towncrier is installed, you can add a news entry for PR 6174 by running the following command from the root directory of the repository:
+
+`towncrier create --content "The number 6174 is known as Kaprekar's constant and returns to its fixed point in at most seven iterations!" 6174.optimization`
+
+For more options on how to use Towncrier, please run the `towncrier --help` command or refer to the Towncrier documentation at https://towncrier.readthedocs.io/en/latest/usage.html.
+
+ -->
 
 <!-- towncrier release notes start -->
 

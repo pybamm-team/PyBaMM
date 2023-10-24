@@ -56,6 +56,7 @@ You now have everything you need to start making changes!
 12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
 13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
 14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
+15. If your PR needs a CHANGELOG entry, refer to the [CHANGELOG Management](#changelog-management) section for details on how to add one.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
@@ -362,6 +363,53 @@ Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/)
 All example notebooks should be listed in [docs/source/examples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
 
 All the notebooks are tested daily.
+
+## CHANGELOG Management
+
+### Adding news entries
+
+:::{attention}
+The `CHANGELOG.md` file must not be edited manually except for issuing corrections or to improve its formatting, and must not be built locally with the Towncrier tool except to override changes manually. Please refer to the contents of this section for instructions on how to add a news entry to the CHANGELOG.
+:::
+
+PyBaMM keeps a `CHANGELOG.md` file for making users aware of new features, bug fixes, and other changes between releases. The CHANGELOG file is automatically generated using [Towncrier](https://towncrier.readthedocs.io/en/stable/), a tool that allows you to maintain a news fragment file in your repository and generate news files for your package.
+
+If you are working on a PR that introduces a new feature, fixes a bug, or makes any other change that you would like to be included in the CHANGELOG, please add a news entry for it in the `newsfragments/` directory. The specification for a news entry is as follows:
+
+Names of news entries must start with the PR number they are associated with, followed by the type of change. The list of allowed types for PyBaMM includes:
+`feature`, `bugfix`, `optimization`, and `breaking`, which correspond to the Features, Bug fixes, Optimizations, and Breaking changes headers for each release section of the `CHANGELOG.md` file, respectively.
+
+There are two ways to add a CHANGELOG entry for PyBaMM.
+
+1. Manually add a news entry in a file.
+
+In the `newsfragments/` directory, create a news entry with the specification given above. For example, a news entry for PR 6174 is to be named
+in a file called `6174.feature` or `6174.feature.md`. The file must contain a single line with the contents of the news entry in a single line, followed by a newline.
+Similarly, a news entry for PR 6174 that fixes a bug is to be named in a file called `6174.bugfix` or `6174.bugfix.md`.
+
+2. Add a news entry using Towncrier (recommended) via the command line.
+
+If Towncrier is not installed already, you may install it using `pip install towncrier`. Alternatively, you may install it using `pipx`, a tool that allows you to run Python command-line tools in isolated environments, i.e., you may run `pipx run towncrier` instead of `python -m towncrier`.
+
+Once or if Towncrier is installed, you can add a news entry for PR 6174 by running the following command from the root directory of the repository:
+
+`python -m towncrier create --content "The number 6174 is known as Kaprekar's constant and returns to its fixed point in at most seven iterations!" 6174.optimization`
+
+Alternatively, using `pipx`, you may run
+
+`pipx run towncrier`, followed with the same command-line arguments as above.
+
+For more options on how to use Towncrier, please run the `towncrier --help` command or refer to the [Towncrier documentation](https://towncrier.readthedocs.io/en/stable/usage.html).
+
+### Building the CHANGELOG file
+
+The CHANGELOG is built automatically when the version string is bumped, i.e., when a new release is made, as a step in the [`update_version.yml` workflow](https://github.com/pybamm-team/PyBaMM/blob/develop/.github/workflows/update_version.yml) on GitHub Actions. To test building the CHANGELOG locally, you may run the following command from the root directory of the repository:
+
+`python -m towncrier build --draft --version <version>`
+
+where `<version>` is the version number of the release you are building the CHANGELOG for. This command will not edit the CHANGELOG but display all changes that would be made to the file if it were to be built.
+
+When a release is created, the news fragments directory is then purged of all news files in preparation for the next release. The directory will then contain only news fragments with unreleased changes after that, which will be included in the next release.
 
 ## Citations
 
