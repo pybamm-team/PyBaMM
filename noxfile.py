@@ -51,7 +51,7 @@ def run_pybamm_requires(session):
         "libsundials_nvecserial",
         "libsundials_nvecopenmp"
     ]
-    
+
     KLU_LIBS = [
         "libsuitesparseconfig",
         "libklu",
@@ -79,7 +79,7 @@ def run_pybamm_requires(session):
             Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib + ".dylib")
             for lib in KLU_LIBS
     ]
-    
+
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
 
