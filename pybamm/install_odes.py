@@ -12,6 +12,8 @@ from pybamm.util import root_dir
 if sys.platform == "win32":
     raise Exception("pybamm_install_odes is not supported on Windows.")
 
+SUNDIALS_VERSION = "6.5.0"
+
 def install_required_module(module):
     try:
         import_module(module)
@@ -35,7 +37,6 @@ def download_extract_library(url, directory):
 def install_sundials(download_dir, install_dir):
     # Download the SUNDIALS library and compile it.
     logger = logging.getLogger("scikits.odes setup")
-    sundials_version = "6.5.0"
 
     try:
         subprocess.run(["cmake", "--version"])
@@ -43,7 +44,7 @@ def install_sundials(download_dir, install_dir):
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
     url = (
-        f"https://github.com/LLNL/sundials/releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"
+        f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     )
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)
@@ -65,7 +66,7 @@ def install_sundials(download_dir, install_dir):
 
     print("-" * 10, "Running CMake prepare", "-" * 40)
     subprocess.run(
-        ["cmake", f"../sundials-{sundials_version}"] + cmake_args,
+        ["cmake", f"../sundials-{SUNDIALS_VERSION}"] + cmake_args,
         cwd=build_directory,
         check=True,
     )
