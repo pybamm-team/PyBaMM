@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get current date for the first release candidate
+      - name: Get current date for the first release candidate (rc0)
         if: github.event_name == 'schedule'
         run: |
           echo "VERSION=$(date +'v%y.%-m')rc0" >> $GITHUB_ENV
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Install dependencies
         run: |
@@ -51,6 +51,15 @@ jobs:
 
       - name: Update version
         run: python scripts/update_version.py
+
+      - name: Build the CHANGELOG and purge news fragments
+        # On schedule, we bump to rc0 and therefore we need to build the CHANGELOG for the first time.
+        # On workflow_dispatch, we bump to rcX and therefore we need to update the CHANGELOG with the
+        # latest news fragments and delete them.
+        # on workflow_dispatch for the actual release (when the append_to_tag input is empty), we do not run this step, since
+        # we manually edit the version number in the CHANGELOG (since it would have already been built by the previous RC).
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.append_to_tag != '')
+        run: pipx run towncrier build --yes
 
       - uses: EndBug/add-and-commit@v9
         if: github.event_name == 'schedule'
