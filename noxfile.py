@@ -82,9 +82,7 @@ def run_pybamm_requires(session):
         else:
             session.run("python", "scripts/install_KLU_Sundials.py")
 
-        if os.path.exists("./pybind11"):
-            session.log("Found pybind11")
-            return
+        if not os.path.exists("./pybind11"):
             session.run(
                 "git",
                 "clone",
