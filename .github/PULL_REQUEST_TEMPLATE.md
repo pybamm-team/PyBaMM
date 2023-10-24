@@ -6,7 +6,7 @@ Fixes # (issue)
 
 ## Type of change
 
-Please add a [news entry](TODO: add a link) using `Towncrier` in the `newsfragments/` directory (TODO: add link) for the relevant section in the [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s. If necessary, also add it to the list of breaking changes.
+Please add a [news entry](https://docs.pybamm.org/en/latest/source/user_guide/contributing.html) using `towncrier` in the [`newsfragments/` directory](https://github.com/pybamm-team/PyBaMM/tree/develop/newsfragments/) for the relevant section in the [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s. If necessary, also add it to the list of breaking changes.
 
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Optimization (back-end change that speeds up the code)
