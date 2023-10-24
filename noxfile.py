@@ -51,7 +51,7 @@ def run_pybamm_requires(session):
         "libsundials_nvecserial",
         "libsundials_nvecopenmp"
     ]
-
+    
     KLU_LIBS = [
         "libsuitesparseconfig",
         "libklu",
@@ -61,38 +61,45 @@ def run_pybamm_requires(session):
     ]
 
     if sys.platform == "linux":
-        fileext = ".so"
+        sundials_so_path = [
+            Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib)
+            for lib in SUNDIALS_LIBS
+        ]
+        klu_so_path = [
+            Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib)
+            for lib in KLU_LIBS
+        ]
+
     elif sys.platform == "darwin":
-        fileext = ".dylib"
-
-    sundials_so_path = [
-        Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib + fileext)
-        for lib in SUNDIALS_LIBS
+        sundials_so_path = [
+            Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib + ".dylib")
+            for lib in SUNDIALS_LIBS
     ]
-
-    klu_so_path = [
-        Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib + fileext)
-        for lib in KLU_LIBS
+        klu_so_path = [
+            Path(PYBAMM_ENV["LD_LIBRARY_PATH"], lib + ".dylib")
+            for lib in KLU_LIBS
     ]
+    
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
 
-        if all(path.exists() for path in sundials_so_path) and all(path.exists() for path in klu_so_path) and not force_rebuild:
+        if sundials_so_path != [] and klu_so_path != [] and not force_rebuild:
             session.warn("Found existing build-time requirements, skipping installation. Note: run with the --force flag (nox -s pybamm-requires -- --force) to invoke re-installation.")
         else:
             session.run("python", "scripts/install_KLU_Sundials.py")
-            if os.path.exists("./pybind11"):
-                session.log("Found pybind11")
-            elif not os.path.exists("./pybind11"):
-                session.run(
-                    "git",
-                    "clone",
-                    "https://github.com/pybind/pybind11.git",
-                    "pybind11/",
-                    external=True,
-            )
-            else:
-                session.error("nox -s pybamm-requires is only available on Linux & macOS.")
+
+        if os.path.exists("./pybind11"):
+            session.log("Found pybind11")
+        elif not os.path.exists("./pybind11"):
+            session.run(
+                "git",
+                "clone",
+                "https://github.com/pybind/pybind11.git",
+                "pybind11/",
+                external=True,
+        )
+        else:
+            session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 
 
 @nox.session(name="coverage")
