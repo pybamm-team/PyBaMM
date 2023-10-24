@@ -5,6 +5,7 @@ import argparse
 import sys
 import logging
 import subprocess
+from importlib import import_module
 
 from pybamm.util import root_dir
 
@@ -13,7 +14,7 @@ if sys.platform == "win32":
 
 def install_required_module(module):
     try:
-        __import__(module)
+        import_module(module)
     except ModuleNotFoundError:
         print(f"{module} module not found. Installing {module}...")
         subprocess.run(["pip", "install", module], check=True)
