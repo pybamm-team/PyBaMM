@@ -81,17 +81,16 @@ def run_pybamm_requires(session):
             session.warn("Found existing build-time requirements, skipping installation. Note: run with the --force flag (nox -s pybamm-requires -- --force) to invoke re-installation.")
         else:
             session.run("python", "scripts/install_KLU_Sundials.py")
-
-        if not os.path.exists("./pybind11"):
-            session.run(
-                "git",
-                "clone",
-                "https://github.com/pybind/pybind11.git",
-                "pybind11/",
-                external=True,
+            if not os.path.exists("./pybind11"):
+                session.run(
+                    "git",
+                    "clone",
+                    "https://github.com/pybind/pybind11.git",
+                    "pybind11/",
+                    external=True,
             )
-        else:
-            session.error("nox -s pybamm-requires is only available on Linux & macOS.")
+            else:
+                session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 
 
 @nox.session(name="coverage")
