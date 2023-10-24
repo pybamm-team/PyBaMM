@@ -86,16 +86,16 @@ def update_LD_LIBRARY_PATH(install_dir):
     if venv_path:
         script_path = os.path.join(venv_path, "bin/activate")
     else:
-        if sys.platform == "linux":
+        if 'BASH' in os.environ:
             script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
-        if sys.platform == "darwin":
+        if 'ZSH' in os.environ:
             script_path = os.path.join(os.environ.get("HOME"), ".zshrc")
 
     if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv("LD_LIBRARY_PATH"):  # noqa: E501
         print(f"{install_dir}/lib was found in LD_LIBRARY_PATH.")
-        if sys.platform == "linux":
+        if 'BASH' in os.environ:
             print("--> Not updating venv activate or .bashrc scripts")
-        if sys.platform == "darwin":
+        if 'ZSH' in os.environ:
             print("--> Not updating venv activate or .zshrc scripts")
     else:
         with open(script_path, "a+") as fh:
