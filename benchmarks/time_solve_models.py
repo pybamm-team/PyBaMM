@@ -2,6 +2,7 @@
 # See "Writing benchmarks" in the asv docs for more information.
 
 import pybamm
+from benchmarks.benchmark_utils import set_random_seed
 import numpy as np
 
 
@@ -18,9 +19,7 @@ class TimeSolveSPM:
             "ORegan2022",
             "NCA_Kim2011",
             "Prada2013",
-            # "Ai2020",
             "Ramadass2004",
-            # "Mohtat2020",
             "Chen2020",
             "Ecker2015",
         ],
@@ -29,8 +28,12 @@ class TimeSolveSPM:
             pybamm.IDAKLUSolver,
         ],
     )
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    t_eval: np.ndarray
 
     def setup(self, solve_first, parameters, solver_class):
+        set_random_seed()
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPM()
         c_rate = 1
@@ -62,7 +65,7 @@ class TimeSolveSPM:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters, solver_class):
+    def time_solve_model(self, _solve_first, _parameters, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -75,9 +78,7 @@ class TimeSolveSPMe:
             "ORegan2022",
             "NCA_Kim2011",
             "Prada2013",
-            # "Ai2020",
             "Ramadass2004",
-            # "Mohtat2020",
             "Chen2020",
             "Ecker2015",
         ],
@@ -86,8 +87,12 @@ class TimeSolveSPMe:
             pybamm.IDAKLUSolver,
         ],
     )
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    t_eval: np.ndarray
 
     def setup(self, solve_first, parameters, solver_class):
+        set_random_seed()
         self.solver = solver_class()
         self.model = pybamm.lithium_ion.SPMe()
         c_rate = 1
@@ -119,7 +124,7 @@ class TimeSolveSPMe:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters, solver_class):
+    def time_solve_model(self, _solve_first, _parameters, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)
 
 
@@ -130,11 +135,9 @@ class TimeSolveDFN:
         [
             "Marquis2019",
             "ORegan2022",
-            # "NCA_Kim2011",
             "Prada2013",
             "Ai2020",
             "Ramadass2004",
-            # "Mohtat2020",
             "Chen2020",
             "Ecker2015",
         ],
@@ -143,8 +146,12 @@ class TimeSolveDFN:
             pybamm.IDAKLUSolver,
         ],
     )
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    t_eval: np.ndarray
 
     def setup(self, solve_first, parameters, solver_class):
+        set_random_seed()
         if (parameters, solver_class) == (
             "ORegan2022",
             pybamm.CasadiSolver,
@@ -181,5 +188,5 @@ class TimeSolveDFN:
         if solve_first:
             solve_model_once(self.model, self.solver, self.t_eval)
 
-    def time_solve_model(self, solve_first, parameters, solver_class):
+    def time_solve_model(self, _solve_first, _parameters, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval)

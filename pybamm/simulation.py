@@ -290,9 +290,10 @@ class Simulation:
                 # figure out whether the voltage event is greater than the starting
                 # voltage (charge) or less (discharge) and set the sign of the
                 # event accordingly
-                if (isinstance(op.value, pybamm.Interpolant) or
-                    isinstance(op.value, pybamm.Multiplication)):
-                    inpt = {"start time":0}
+                if isinstance(op.value, pybamm.Interpolant) or isinstance(
+                    op.value, pybamm.Multiplication
+                ):
+                    inpt = {"start time": 0}
                     init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
                     sign = np.sign(init_curr)
                 else:
@@ -373,8 +374,16 @@ class Simulation:
         options = self.model.options
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
-            self._parameter_values = self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
-                initial_soc, param=param, inplace=False, options=options
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+        elif options["working electrode"] == "positive":
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
+                    initial_soc, param=param, inplace=False, options=options
+                )
             )
         else:
             self._parameter_values = (

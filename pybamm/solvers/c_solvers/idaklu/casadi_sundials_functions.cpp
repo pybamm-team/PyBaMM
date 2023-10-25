@@ -219,7 +219,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
         jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
       }
     } else if (SUNSparseMatrix_SparseType(JJ) == CSR_MAT) {
-      realtype newjac[SUNSparseMatrix_NNZ(JJ)];
+      std::vector<realtype> newjac(SUNSparseMatrix_NNZ(JJ));
       sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
 
@@ -229,7 +229,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       p_python_functions->jac_times_cjmass.m_arg[2] =
         p_python_functions->inputs.data();
       p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-      p_python_functions->jac_times_cjmass.m_res[0] = newjac;
+      p_python_functions->jac_times_cjmass.m_res[0] = newjac.data();
       p_python_functions->jac_times_cjmass();
 
       // convert (casadi's) CSC format to CSR
@@ -237,7 +237,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
           std::remove_pointer_t<decltype(p_python_functions->jac_times_cjmass_rowvals.data())>,
           std::remove_pointer_t<decltype(jac_vals)>
       >(
-        newjac,
+        newjac.data(),
         p_python_functions->jac_times_cjmass_rowvals.data(),
         p_python_functions->jac_times_cjmass_colptrs.data(),
         jac_data,

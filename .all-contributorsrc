@@ -718,6 +718,16 @@
         "doc"
       ]
     },
+    {
+      "login": "RuiheLi",
+      "name": "RuiheLi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/84007676?v=4",
+      "profile": "https://github.com/RuiheLi",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    }
   ],
   "contributorsPerLine": 7,
   "projectName": "PyBaMM",

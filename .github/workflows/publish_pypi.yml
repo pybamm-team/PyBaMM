@@ -3,11 +3,14 @@ name: Build and publish package to PyPI
 on:
   release:
     types: [published]
+  schedule:
+    # Run at 10 am UTC on day-of-month 1 and 15.
+    - cron: "0 10 1,15 * *"
   workflow_dispatch:
     inputs:
       target:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
-        default: "pypi"
+        default: "testpypi"
       debug_enabled:
         type: boolean
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
@@ -151,6 +154,7 @@ jobs:
           if-no-files-found: error
 
   publish_pypi:
+    if: github.event_name != 'schedule'
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
@@ -164,9 +168,7 @@ jobs:
           mv windows_wheels/* wheels/* sdist/* files/
 
       - name: Publish on PyPI
-        if: |
-          github.event.inputs.target == 'pypi' ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
@@ -181,3 +183,17 @@ jobs:
           password: ${{ secrets.TESTPYPI_TOKEN }}
           packages-dir: files/
           repository-url: https://test.pypi.org/legacy/
+
+  open_failure_issue:
+    needs: [build_windows_wheels, build_wheels, build_sdist]
+    name: Open an issue if build fails
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: JasonEtco/create-an-issue@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      with:
+        filename: .github/wheel_failure.md
