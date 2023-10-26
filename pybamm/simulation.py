@@ -8,7 +8,10 @@ import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-import tqdm
+try:
+    import tqdm
+except ImportError:
+    pass
 
 
 def is_notebook():
