@@ -1157,7 +1157,7 @@ class TestProcessedVariable(TestCase):
         self.assertIsInstance(result, np.ndarray)
 
     def test_call_with_R(self):
-        R_test = 0.5 
+        R_test = 0.5
         result = call_func(R=R_test)
         self.assertIsInstance(result, np.ndarray)
 
