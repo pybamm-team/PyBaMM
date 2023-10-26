@@ -3,10 +3,14 @@
 #
 import numbers
 
-import anytree
+
+try:
+    import anytree
+    from anytree.exporter import DotExporter
+except ImportError:
+    pass
 import numpy as np
 import sympy
-from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
 
