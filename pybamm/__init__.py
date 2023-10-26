@@ -52,7 +52,13 @@ from .util import (
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
-from .citations import Citations, citations, print_citations
+try:
+    import pybtex
+
+    if pybtex is not None:
+        from .citations import Citations, citations, print_citations
+except ImportError:
+    pass
 
 #
 # Classes for the Expression Tree
