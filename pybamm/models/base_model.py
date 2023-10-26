@@ -365,6 +365,9 @@ class BaseModel:
         return self._input_parameters
 
     def print_parameter_info(self):
+        """
+        Returns parameters used in the model
+        """
         self._parameter_info = ""
         parameters = self._find_symbols(pybamm.Parameter)
         for param in parameters:
