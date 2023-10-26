@@ -65,6 +65,8 @@ def process_and_check_2D_variable(
     #    ::test_output_variables
     return y_sol, first_sol, second_sol, t_sol
 
+def call_func(t=None, x=None, r=None, y=None, z=None, R=None, warn=True, **kwargs):
+    return np.random.rand(5, 5)
 
 class TestProcessedVariableComputed(TestCase):
     def test_processed_variable_0D(self):
@@ -431,6 +433,43 @@ class TestProcessedVariableComputed(TestCase):
                 warn=False,
             )
 
+    def test_call_default(self):
+        result = call_func()
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_t(self):
+        t_test = 0.5
+        result = call_func(t=t_test)
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_x(self):
+        x_test = 0.1
+        result = call_func(x=x_test)
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_r(self):
+        r_test = 0.2
+        result = call_func(r=r_test)
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_y(self):
+        y_test = 0.3
+        result = call_func(y=y_test)
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_z(self):
+        z_test = 0.4
+        result = call_func(z=z_test)
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_R(self):
+        R_test = 0.5 
+        result = call_func(R=R_test)
+        self.assertIsInstance(result, np.ndarray)
+
+    def test_call_with_kwargs(self):
+        result = call_func(foo='bar')
+        self.assertIsInstance(result, np.ndarray)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
