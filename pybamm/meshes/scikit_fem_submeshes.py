@@ -4,7 +4,10 @@
 import pybamm
 from .meshes import SubMesh
 
-import skfem
+try:
+    import skfem
+except ImportError:
+    pass
 import numpy as np
 
 

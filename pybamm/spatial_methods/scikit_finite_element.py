@@ -6,7 +6,10 @@ import pybamm
 from scipy.sparse import csr_matrix, csc_matrix
 from scipy.sparse.linalg import inv
 import numpy as np
-import skfem
+try:
+    import skfem
+except ImportError:
+    pass
 
 
 class ScikitFiniteElement(pybamm.SpatialMethod):
