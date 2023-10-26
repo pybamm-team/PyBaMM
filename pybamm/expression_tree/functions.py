@@ -3,7 +3,10 @@
 #
 import numbers
 
-import autograd
+try:
+    import autograd
+except ImportError:
+    pass
 import numpy as np
 import sympy
 from scipy import special
