@@ -9,7 +9,10 @@ from .electrode_soh import (
     get_initial_ocps,
     get_min_max_ocps,
 )
-from .electrode_soh_half_cell import ElectrodeSOHHalfCell
+from .electrode_soh_half_cell import (
+    ElectrodeSOHHalfCell,
+    get_initial_stoichiometry_half_cell
+)
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN

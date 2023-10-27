@@ -41,7 +41,7 @@ class CasadiSolver(pybamm.BaseSolver):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
-    max_step_decrease_counts : float, optional
+    max_step_decrease_count : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
     dt_max : float, optional

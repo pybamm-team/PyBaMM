@@ -4,7 +4,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.0.290"
+    rev: "v0.1.1"
     hooks:
       - id: ruff
         args: [--fix, --ignore=E741, --exclude=__init__.py]
@@ -23,7 +23,7 @@ repos:
          additional_dependencies: [black==22.12.0]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
         - id: check-added-large-files
         - id: check-case-conflict
