@@ -8,7 +8,7 @@ repos:
     hooks:
       - id: ruff
         types_or: [python, pyi, jupyter]
-        args: [--fix, --ignore=E741 , --exclude=__init__.py]
+        args: [--fix, --ignore=E741, --exclude=__init__.py]
 
   - repo: https://github.com/adamchainz/blacken-docs
     rev: "1.16.0"
