@@ -7,6 +7,12 @@ repos:
     rev: "v0.1.1"
     hooks:
       - id: ruff
+        args: [--fix, --ignore=E741 , --exclude=__init__.py]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.3
+    hooks:
+      - id: ruff
         types_or: [python, pyi, jupyter]
         args: [--fix, --ignore=E741, --exclude=__init__.py]
 
