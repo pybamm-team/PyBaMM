@@ -89,6 +89,12 @@ class CMakeBuild(build_ext):
             "-DPYTHON_EXECUTABLE={}".format(sys.executable),
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
         ]
+        # check if CIBUILDWHEEL environment variable is set to 1
+        # if so, we are building a wheel and should enable the arm64 architecture.
+        # note: cross-compilation on macOS is enabled via Xcode.
+        if os.getenv("CIBUILDWHEEL", "0") == "1":
+            cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64")
+
         if self.suitesparse_root:
             cmake_args.append(
                 "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))
