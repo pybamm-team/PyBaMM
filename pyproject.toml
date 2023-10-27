@@ -1,0 +1,8 @@
+[tool.ruff]
+extend-include = ["*.ipynb"]
+allowed-confusables = [";"]
+
+
+[tool.ruff.lint]
+ignore = ["E402"]
+
