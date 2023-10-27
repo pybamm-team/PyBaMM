@@ -147,6 +147,12 @@ if platform.system() == "Darwin":
         "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
     ]
 
+# For cross-compilation on macOS with Xcode while building wheels, we need to
+# set the CMAKE_OSX_ARCHITECTURES variable properly. This is because GitHub Actions
+# runners are Intel-based, but the wheels are to be built for both architectures.
+if os.getenv("CIBUILDWHEEL", "0") == "1":
+    cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64")
+
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
 # download_dir
 build_dir = os.path.abspath(os.path.join(download_dir, "build_sundials"))
