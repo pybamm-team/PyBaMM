@@ -1,2 +1,2 @@
-[lint]
-ignore = ["E402","E703"]
+[lint.per-file-ignores]
+"**.ipynb" = ["E402", "E703"]
