@@ -8,7 +8,9 @@ try:
     import anytree
     from anytree.exporter import DotExporter
 except ImportError:
-    pass
+    _has_anytree = False
+else:
+    _has_anytree = True
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
@@ -446,6 +448,8 @@ class Symbol:
         """
         Print out a visual representation of the tree (this node and its children)
         """
+        if not _has_anytree:
+            raise ImportError("Module 'anytree' is required to do this")
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
                 print("{}{} = {}".format(pre, node.name, node.value))
@@ -463,6 +467,8 @@ class Symbol:
         filename : str
             filename to output, must end in ".png"
         """
+        if not _has_anytree:
+            raise ImportError("Module 'anytree' is required to do this")
 
         # check that filename ends in .png.
         if filename[-4:] != ".png":
@@ -483,6 +489,8 @@ class Symbol:
         Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
         """
+        if not _has_anytree:
+            raise ImportError("Module 'anytree' is required to do this")
         name = symbol.name
         if name == "div":
             name = "&nabla;&sdot;"
@@ -526,6 +534,8 @@ class Symbol:
         a
         b
         """
+        if not _has_anytree:
+            raise ImportError("Module 'anytree' is required to do this")
         return anytree.PreOrderIter(self)
 
     def __str__(self):
