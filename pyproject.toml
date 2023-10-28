@@ -1,6 +1,0 @@
-[tool.ruff]
-extend-include = ["*.ipynb"]
-
-
-[tool.ruff.lint]
-ignore = ["E402","E703"]
