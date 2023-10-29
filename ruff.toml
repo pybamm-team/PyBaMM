@@ -1,2 +1,4 @@
+extend-include = ["*.ipynb"]
+
 [lint.per-file-ignores]
 "**.ipynb" = ["E402", "E703"]
