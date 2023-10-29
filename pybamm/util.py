@@ -345,3 +345,12 @@ def install_jax(arguments=None):  # pragma: no cover
             f"jaxlib>={JAXLIB_VERSION}",
         ]
     )
+
+
+def have_optional_dependency(module):
+    try:
+        importlib.import_module(module)
+        _has_module = True
+    except ImportError:
+        _has_module = False
+    return _has_module
