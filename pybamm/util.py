@@ -353,17 +353,13 @@ def have_optional_dependency(module_name, attribute=None):
         if attribute:
             if hasattr(module, attribute):
                 imported_attribute = getattr(module, attribute)
-                print(f"The {module_name}.{attribute} is available.")
                 return imported_attribute
             else:
-                print(f"The {module_name}.{attribute} is not available.")
-                return None
+                raise ImportError(f"{module_name}.{attribute} is not available.")
         else:
-            print(f"The {module_name} module is available.")
             return module
     except ImportError:
         if attribute:
-            print(f"The {module_name}.{attribute} is not available.")
+            raise ImportError(f"{module_name}.{attribute} is not available.")
         else:
-            print(f"The {module_name} module is not available.")
-        return None
+            raise ImportError(f"{module_name} module is not available.")
