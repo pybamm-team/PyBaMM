@@ -115,18 +115,28 @@ class Plating(BasePlating):
             ]
             L_sei = variables[f"{Domain} total SEI thickness [m]"]
 
-        # In the partially reversible plating model, coupling term turns reversible
-        # lithium into dead lithium. In other plating models, it is zero.
         lithium_plating_option = getattr(self.options, domain)["lithium plating"]
-        if lithium_plating_option == "partially reversible":
+        if lithium_plating_option == "reversible":
+            # In the reversible plating model, there is no dead lithium
+            dc_plated_Li = -a_j_stripping / self.param.F
+            dc_dead_Li = pybamm.Scalar(0)
+        elif lithium_plating_option == "irreversible":
+            # In the irreversible plating model, all plated lithium is dead lithium
+            dc_plated_Li = pybamm.Scalar(0)
+            dc_dead_Li = -a_j_stripping / self.param.F
+        elif lithium_plating_option == "partially reversible":
+            # In the partially reversible plating model, the coupling term turns
+            # reversible lithium into dead lithium over time.
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li
-        else:
-            coupling_term = pybamm.Scalar(0)
+            dc_plated_Li = -a_j_stripping / self.param.F - coupling_term
+            dc_dead_Li = coupling_term
+        else:  # should be impossible to get here
+            raise NotImplementedError
 
         self.rhs = {
-            c_plated_Li: -a_j_stripping / self.param.F - coupling_term,
-            c_dead_Li: coupling_term,
+            c_plated_Li: dc_plated_Li,
+            c_dead_Li: dc_dead_Li,
         }
 
     def set_initial_conditions(self, variables):
