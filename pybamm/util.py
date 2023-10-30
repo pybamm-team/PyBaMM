@@ -347,10 +347,25 @@ def install_jax(arguments=None):  # pragma: no cover
     )
 
 
-def have_optional_dependency(module):
-    try:
-        importlib.import_module(module)
-        _has_module = True
-    except ImportError:
-        _has_module = False
-    return _has_module
+def have_optional_dependency(module_name, attribute=None):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                module = importlib.import_module(module_name)
+                if attribute:
+                    if hasattr(module, attribute):
+                        imported_attribute = getattr(module, attribute)
+                        print(f"The {module_name}.{attribute} is available.")
+                        kwargs[attribute] = imported_attribute
+                    else:
+                        print(f"The {module_name}.{attribute} is not available.")
+                else:
+                    print(f"The {module_name} module is available.")
+                return func(*args, **kwargs)
+            except ImportError:
+                if attribute:
+                    print(f"The {module_name}.{attribute} is not available.")
+                else:
+                    print(f"The {module_name} module is not available.")
+        return wrapper
+    return decorator

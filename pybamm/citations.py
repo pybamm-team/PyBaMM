@@ -177,6 +177,7 @@ class Citations:
             for key, entry in self._citation_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
 
+    @pybamm.util.have_optional_dependency("pybtex")
     def print(self, filename=None, output_format="text", verbose=False):
         """Print all citations that were used for running simulations. The verbose
         option is provided to print tags for citations in the output such that it can
