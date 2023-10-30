@@ -6,10 +6,10 @@
 import pybamm
 import os
 import warnings
-import pybtex
+# import pybtex
 from sys import _getframe
-from pybtex.database import parse_file, parse_string, Entry
-from pybtex.scanner import PybtexError
+# from pybtex.database import parse_file, parse_string, Entry
+# from pybtex.scanner import PybtexError
 
 
 class Citations:
@@ -76,6 +76,7 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
+        parse_file = pybamm.util.have_optional_dependency("pybtex.database","parse_file")
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
         bib_data = parse_file(citations_file, bib_format="bibtex")
         for key, entry in bib_data.entries.items():
@@ -86,6 +87,7 @@ class Citations:
         previous entry is overwritten
         """
 
+        Entry = pybamm.util.have_optional_dependency("pybtex.database","Entry")
         # Check input types are correct
         if not isinstance(key, str) or not isinstance(entry, Entry):
             raise TypeError()
@@ -151,6 +153,8 @@ class Citations:
         key: str
             A BibTeX formatted citation
         """
+        PybtexError = pybamm.util.have_optional_dependency("pybtex.scanner","PybtexError")
+        parse_string = pybamm.util.have_optional_dependency("pybtex.database","parse_string")
         try:
             # Parse string as a bibtex citation, and check that a citation was found
             bib_data = parse_string(key, bib_format="bibtex")
@@ -177,7 +181,6 @@ class Citations:
             for key, entry in self._citation_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
 
-    @pybamm.util.have_optional_dependency("pybtex")
     def print(self, filename=None, output_format="text", verbose=False):
         """Print all citations that were used for running simulations. The verbose
         option is provided to print tags for citations in the output such that it can
@@ -218,6 +221,7 @@ class Citations:
         """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
+        pybtex = pybamm.util.have_optional_dependency("pybtex")
         try:
             for key in self._unknown_citations:
                 self._parse_citation(key)
