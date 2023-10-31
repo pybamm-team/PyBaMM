@@ -131,8 +131,6 @@ class Plating(BasePlating):
             coupling_term = dead_lithium_decay_rate * c_plated_Li
             dc_plated_Li = -a_j_stripping / self.param.F - coupling_term
             dc_dead_Li = coupling_term
-        else:  # should be impossible to get here
-            raise NotImplementedError
 
         self.rhs = {
             c_plated_Li: dc_plated_Li,
