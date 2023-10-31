@@ -10,6 +10,9 @@ repos:
         args: [--fix, --show-fixes]
         types_or: [python, pyi, jupyter]
 
+      - id: ruff-format
+        args: [--check]
+
   - repo: https://github.com/adamchainz/blacken-docs
     rev: "1.16.0"
     hooks:
