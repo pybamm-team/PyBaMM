@@ -1,0 +1,51 @@
+name: Test random failures for half-cell models example notebook (no fixed seed)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test_half_cell_example_notebook:
+    name: Execute half-cell models example notebook / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install SuiteSparse and SUNDIALS
+        run: pipx run nox -s pybamm-requires
+
+      - name: Install Python dependencies and PyBaMM
+        run: |
+          pip install --upgrade pip setuptools wheel cmake
+          pip install -e .[all,dev]
+
+
+      - name: Run half-cell models example notebook
+        run: |
+          for i in {1..500}
+          do
+            pytest --nbmake docs/source/examples/notebooks/models/half-cell.ipynb >> logs-${{ matrix.python-version }}.txt || true
+          done
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Results
+          path: logs-${{ matrix.python-version }}.txt
+          if-no-files-found: error
