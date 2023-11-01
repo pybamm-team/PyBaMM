@@ -123,17 +123,6 @@ class Simulation:
         self._solver = solver or self._model.default_solver
         self._output_variables = output_variables
 
-        # If the solver being used is CasadiSolver or its variant, set a fixed
-        # random seed during class initialization to the SHA-256 hash of the class
-        # name for purposes of reproducibility.
-        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
-            self._solver, pybamm.CasadiAlgebraicSolver
-        ):
-            np.random.seed(
-                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
-                % (2**32)
-            )
-
         # Initialize empty built states
         self._model_with_set_params = None
         self._built_model = None
@@ -144,6 +133,9 @@ class Simulation:
         self._disc = None
         self._solution = None
         self.quick_plot = None
+
+        # Initialise instances of Simulation class with the same random seed
+        self.set_random_seed()
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -167,6 +159,18 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    # If the solver being used is CasadiSolver or its variant, set a fixed
+    # random seed during class initialization to the SHA-256 hash of the class
+    # name for purposes of reproducibility.
+    def set_random_seed(self):
+        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
+            self._solver, pybamm.CasadiAlgebraicSolver
+        ):
+            np.random.seed(
+                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
+                % (2**32)
+            )
 
     def set_up_and_parameterise_experiment(self):
         """
