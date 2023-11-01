@@ -193,10 +193,7 @@ class _Step:
         }
 
     def __eq__(self, other):
-        return (
-            isinstance(other, _Step)
-            and self.hash_args == other.hash_args
-        )
+        return isinstance(other, _Step) and self.hash_args == other.hash_args
 
     def __hash__(self):
         return hash(self.basic_repr())

@@ -629,28 +629,26 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 value = (value,)
             else:
                 if not (
-                    (
-                        option
-                        in [
-                            "diffusivity",
-                            "exchange-current density",
-                            "intercalation kinetics",
-                            "interface utilisation",
-                            "lithium plating",
-                            "loss of active material",
-                            "number of MSMR reactions",
-                            "open-circuit potential",
-                            "particle",
-                            "particle mechanics",
-                            "particle phases",
-                            "particle size",
-                            "SEI",
-                            "SEI on cracks",
-                            "stress-induced diffusion",
-                        ]
-                        and isinstance(value, tuple)
-                        and len(value) == 2
-                    )
+                    option
+                    in [
+                        "diffusivity",
+                        "exchange-current density",
+                        "intercalation kinetics",
+                        "interface utilisation",
+                        "lithium plating",
+                        "loss of active material",
+                        "number of MSMR reactions",
+                        "open-circuit potential",
+                        "particle",
+                        "particle mechanics",
+                        "particle phases",
+                        "particle size",
+                        "SEI",
+                        "SEI on cracks",
+                        "stress-induced diffusion",
+                    ]
+                    and isinstance(value, tuple)
+                    and len(value) == 2
                 ):
                     # more possible options that can take 2-tuples to be added
                     # as they come
@@ -966,9 +964,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ):
             raise pybamm.OptionError(
                 """must use surface formulation to solve {!s} with hydrolysis
-                    """.format(
-                    self
-                )
+                    """.format(self)
             )
 
         self._options = options

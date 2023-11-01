@@ -855,9 +855,7 @@ class BaseModel:
                     No key set for variable '{}'. Make sure it is included in either
                     model.rhs or model.algebraic, in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        var
-                    )
+                    """.format(var)
                 )
 
     def check_no_repeated_keys(self):
@@ -1214,9 +1212,7 @@ class BoundaryConditionsDict(dict):
                     raise pybamm.ModelError(
                         """
                         boundary condition types must be Dirichlet or Neumann, not '{}'
-                        """.format(
-                            bc[1]
-                        )
+                        """.format(bc[1])
                     )
 
         return boundary_conditions

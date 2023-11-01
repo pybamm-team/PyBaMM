@@ -312,9 +312,7 @@ class MatrixMultiplication(BinaryOperator):
             raise NotImplementedError(
                 """jac of 'MatrixMultiplication' is only
              implemented for left of type 'pybamm.Array',
-             not {}""".format(
-                    left.__class__
-                )
+             not {}""".format(left.__class__)
             )
 
     def _binary_evaluate(self, left, right):
@@ -1341,9 +1339,7 @@ def source(left, right, boundary=False):
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
             """'source' only implemented in the 'current collector' domain,
-            but symbols have domains {} and {}""".format(
-                left.domain, right.domain
-            )
+            but symbols have domains {} and {}""".format(left.domain, right.domain)
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

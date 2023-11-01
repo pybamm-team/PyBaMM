@@ -887,9 +887,7 @@ class Symbol:
         """
         raise NotImplementedError(
             """method self.new_copy() not implemented
-            for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            for symbol {!s} of type {}""".format(self, type(self))
         )
 
     def new_copy(self):

@@ -217,9 +217,7 @@ if pybamm.have_jax():
         state["rtol"] = rtol
         state["M"] = mass
         EPS = jnp.finfo(y0.dtype).eps
-        state["newton_tol"] = jnp.maximum(
-            10 * EPS / rtol, jnp.minimum(0.03, rtol**0.5)
-        )
+        state["newton_tol"] = jnp.maximum(10 * EPS / rtol, jnp.minimum(0.03, rtol**0.5))
 
         scale_y0 = atol + rtol * jnp.abs(y0)
         y0, not_converged = _select_initial_conditions(
@@ -645,7 +643,8 @@ if pybamm.have_jax():
             # try again
             (state, updated_jacobian) = tree_map(
                 partial(
-                    jnp.where, not_converged * (updated_jacobian == False)  # noqa: E712
+                    jnp.where,
+                    not_converged * (updated_jacobian == False),  # noqa: E712
                 ),
                 (_update_jacobian(state, jac), True),
                 (state, False + updated_jacobian),

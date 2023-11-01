@@ -298,8 +298,7 @@ class ParameterValues:
             {
                 "Initial concentration in {} electrode [mol.m-3]".format(
                     options["working electrode"]
-                ): x
-                * c_max
+                ): x * c_max
             }
         )
         return parameter_values

@@ -360,10 +360,7 @@ class TestBaseBatteryModel(TestCase):
         # thermal half-cell
         with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
             pybamm.BaseBatteryModel(
-                {
-                    "thermal": "x-full",
-                    "working electrode": "positive"
-                }
+                {"thermal": "x-full", "working electrode": "positive"}
             )
         with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
             pybamm.BaseBatteryModel(

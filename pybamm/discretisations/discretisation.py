@@ -514,9 +514,7 @@ class Discretisation(object):
         if domain != "current collector":
             raise pybamm.ModelError(
                 """Boundary conditions can only be applied on the tabs in the domain
-            'current collector', but {} has domain {}""".format(
-                    symbol, domain
-                )
+            'current collector', but {} has domain {}""".format(symbol, domain)
             )
         # Replace keys with "left" and "right" as appropriate for 1D meshes
         if isinstance(mesh, pybamm.SubMesh1D):
@@ -900,9 +898,7 @@ class Discretisation(object):
                     No key set for variable '{}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        symbol.name
-                    )
+                    """.format(symbol.name)
                 )
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1

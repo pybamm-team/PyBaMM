@@ -252,7 +252,7 @@ setup(
         "dev": [
             # For working with pre-commit hooks
             "pre-commit",
-             # For code style checks: linting and auto-formatting
+            # For code style checks: linting and auto-formatting
             "ruff",
             # For running testing sessions
             "nox",

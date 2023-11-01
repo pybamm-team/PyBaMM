@@ -19,7 +19,6 @@ def update_version():
     release_version = os.getenv("VERSION")[1:]
     last_day_of_month = date.today() + relativedelta(day=31)
 
-
     # pybamm/version.py
     with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
         output = file.read()

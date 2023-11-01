@@ -129,7 +129,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             # If there are no symbolic inputs, check the function is below the tol
             # Skip this check if there are symbolic inputs
             if success and (
-                (not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol))
+                not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol)
             ):
                 # update initial guess for the next iteration
                 y0_alg = y_alg_sol
@@ -153,9 +153,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     Could not find acceptable solution: solver terminated
                     successfully, but maximum solution error ({})
                     above tolerance ({})
-                    """.format(
-                        casadi.mmax(casadi.fabs(fun)), self.tol
-                    )
+                    """.format(casadi.mmax(casadi.fabs(fun)), self.tol)
                 )
 
         # Concatenate differential part

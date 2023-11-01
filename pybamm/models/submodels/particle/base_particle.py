@@ -197,9 +197,7 @@ class BaseParticle(pybamm.BaseSubModel):
         f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)  # [m-1]
 
         # Number-based particle-size distribution
-        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(
-            f_a_dist / R**2, R
-        )  # [m-1]
+        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(f_a_dist / R**2, R)  # [m-1]
 
         # True mean radii and standard deviations, calculated from the f_a_dist that
         # was given, all have units [m]

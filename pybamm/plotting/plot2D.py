@@ -53,7 +53,7 @@ def plot2D(x, y, z, ax=None, testing=False, **kwargs):
         z.entries,
         vmin=ax_min(z.entries),
         vmax=ax_max(z.entries),
-        **kwargs
+        **kwargs,
     )
     plt.colorbar(plot, ax=ax)
 

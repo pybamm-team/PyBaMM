@@ -321,8 +321,9 @@ class Solution(object):
                 # there will always be a statevector, but just in case
                 if statevector is None:  # pragma: no cover
                     raise RuntimeError(
-                        "Cannot find statevector corresponding to variable {}"
-                        .format(var.name)
+                        "Cannot find statevector corresponding to variable {}".format(
+                            var.name
+                        )
                     )
                 y_var = y[statevector.y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_value):

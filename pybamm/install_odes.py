@@ -102,13 +102,13 @@ def update_LD_LIBRARY_PATH(install_dir):
             if export_statement not in fh.read():
                 fh.write(export_statement)
                 print(
-                    "Adding {}/lib to LD_LIBRARY_PATH"
-                    " in {}".format(install_dir, script_path)
+                    "Adding {}/lib to LD_LIBRARY_PATH" " in {}".format(
+                        install_dir, script_path
+                    )
                 )
 
 
 def main(arguments=None):
-
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logger = logging.getLogger("scikits.odes setup")
 

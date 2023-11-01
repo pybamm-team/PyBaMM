@@ -211,7 +211,5 @@ class CasadiConverter(object):
                 """
                 Cannot convert symbol of type '{}' to CasADi. Symbols must all be
                 'linear algebra' at this stage.
-                """.format(
-                    type(symbol)
-                )
+                """.format(type(symbol))
             )

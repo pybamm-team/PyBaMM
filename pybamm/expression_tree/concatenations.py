@@ -179,7 +179,7 @@ class NumpyConcatenation(Concatenation):
             *children,
             name="numpy_concatenation",
             check_domain=False,
-            concat_fun=np.concatenate
+            concat_fun=np.concatenate,
         )
 
     def _concatenation_jac(self, children_jacs):
@@ -340,7 +340,7 @@ class SparseStack(Concatenation):
             *children,
             name="sparse_stack",
             check_domain=False,
-            concat_fun=concatenation_function
+            concat_fun=concatenation_function,
         )
 
     def _concatenation_new_copy(self, children):

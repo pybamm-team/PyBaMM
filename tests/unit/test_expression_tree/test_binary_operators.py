@@ -96,9 +96,7 @@ class TestBinaryOperators(TestCase):
         self.assertEqual((a**b).diff(b).evaluate(y=y), 5**3 * np.log(5))
         self.assertEqual((a**b).diff(a).evaluate(y=y), 3 * 5**2)
         self.assertEqual((a**b).diff(a**b).evaluate(), 1)
-        self.assertEqual(
-            (a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4
-        )
+        self.assertEqual((a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4)
         self.assertEqual((a**a).diff(b).evaluate(y=y), 0)
 
         # addition
