@@ -40,12 +40,12 @@ jobs:
         run: |
           for i in {1..500}
           do
-            pytest --nbmake docs/source/examples/notebooks/models/half-cell.ipynb >> logs-${{ matrix.python-version }}.txt || true
+            pytest --nbmake docs/source/examples/notebooks/models/half-cell.ipynb >> new-logs-${{ matrix.python-version }}.txt || true
           done
 
       - name: Upload results
         uses: actions/upload-artifact@v3
         with:
           name: Results
-          path: logs-${{ matrix.python-version }}.txt
+          path: new-logs-${{ matrix.python-version }}.txt
           if-no-files-found: error
