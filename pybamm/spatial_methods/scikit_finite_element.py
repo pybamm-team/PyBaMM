@@ -6,10 +6,8 @@ import pybamm
 from scipy.sparse import csr_matrix, csc_matrix
 from scipy.sparse.linalg import inv
 import numpy as np
-try:
-    import skfem
-except ImportError:
-    pass
+
+from pybamm.util import have_optional_dependency
 
 
 class ScikitFiniteElement(pybamm.SpatialMethod):
@@ -90,6 +88,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             to the y-component of the gradient and the second column corresponds
             to the z component of the gradient.
         """
+        skfem = have_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
 
@@ -145,6 +144,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) finite element gradient matrix for the domain
         """
+        skfem = have_optional_dependency("skfem")
         # get primary domain mesh
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
@@ -190,6 +190,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             Contains the result of acting the discretised gradient on
             the child discretised_symbol
         """
+        skfem = have_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
 
@@ -261,6 +262,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) finite element stiffness matrix for the domain
         """
+        skfem = have_optional_dependency("skfem")
         # get primary domain mesh
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
@@ -323,6 +325,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The finite element integral vector for the domain
         """
+        skfem = have_optional_dependency("skfem")
         # get primary domain mesh
         domain = child.domain[0]
         mesh = self.mesh[domain]
@@ -384,6 +387,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The finite element integral vector for the domain
         """
+        skfem = have_optional_dependency("skfem")
         # get primary domain mesh
         mesh = self.mesh[domain[0]]
 
@@ -501,6 +505,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) mass matrix for the spatial method.
         """
+        skfem = have_optional_dependency("skfem")
         # get primary domain mesh
         domain = symbol.domain[0]
         mesh = self.mesh[domain]

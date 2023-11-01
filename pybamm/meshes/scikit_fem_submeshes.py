@@ -3,12 +3,9 @@
 #
 import pybamm
 from .meshes import SubMesh
-
-try:
-    import skfem
-except ImportError:
-    pass
 import numpy as np
+
+from pybamm.util import have_optional_dependency
 
 
 class ScikitSubMesh2D(SubMesh):
@@ -30,6 +27,7 @@ class ScikitSubMesh2D(SubMesh):
     """
 
     def __init__(self, edges, coord_sys, tabs):
+        skfem = have_optional_dependency("skfem")
         self.edges = edges
         self.nodes = dict.fromkeys(["y", "z"])
         for var in self.nodes.keys():
