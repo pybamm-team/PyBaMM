@@ -355,11 +355,11 @@ def have_optional_dependency(module_name, attribute=None):
                 imported_attribute = getattr(module, attribute)
                 return imported_attribute
             else:
-                raise ImportError(f"{module_name}.{attribute} is not available.")
+                raise ImportError(f"Optional dependency {module_name}.{attribute} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details.")
         else:
             return module
     except ImportError:
         if attribute:
-            raise ImportError(f"{module_name}.{attribute} is not available.")
+            raise ImportError(f"Optional dependency {module_name}.{attribute} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details.")
         else:
-            raise ImportError(f"{module_name} module is not available.")
+            raise ImportError(f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details.")
