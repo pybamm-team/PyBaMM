@@ -2,7 +2,7 @@
 # IndependentVariable class
 #
 import pybamm
-from pybamm.utili import have_optional_dependency
+from pybamm.util import have_optional_dependency
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
