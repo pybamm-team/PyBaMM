@@ -8,10 +8,7 @@ import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-try:
-    import tqdm
-except ImportError:
-    pass
+from pybamm.util import have_optional_dependency
 
 
 def is_notebook():
@@ -535,6 +532,7 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
+        tqdm = have_optional_dependency("tqdm")
         # Setup
         if solver is None:
             solver = self._solver
