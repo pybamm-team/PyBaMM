@@ -30,39 +30,6 @@ def is_notebook():
         return False  # Probably standard Python interpreter
 
 
-def fix_random_seed_for_class(cls):
-    """
-    Wraps a class so that a random seed is set to a SHA-256 hash of the class name.
-
-    As the wrapper fixes the random seed during class initialization, instances of
-    the class will be initialized with the same random seed for reproducibility.
-
-    Generating a random seed from the class name allows one to alter the seed by
-    changing the class name if needed.
-
-    Usage: as a decorator on class definition.
-
-    ```
-    @FixRandomSeedClass
-    class Simulation:
-        def __init__(self, model, solver, other_args):
-            # Your class initialization code here
-    ```
-    """
-
-    original_init = cls.__init__
-
-    def new_init(self, *args, **kwargs):
-        np.random.seed(
-            int(hashlib.sha256(cls.__name__.encode()).hexdigest(), 16) % (2**32)
-        )
-        original_init(self, *args, **kwargs)
-
-    cls.__init__ = new_init
-    return cls
-
-
-@fix_random_seed_for_class
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
 
@@ -155,6 +122,17 @@ class Simulation:
         self._spatial_methods = spatial_methods or self._model.default_spatial_methods
         self._solver = solver or self._model.default_solver
         self._output_variables = output_variables
+
+        # If the solver being used is CasadiSolver or its variant, set a fixed
+        # random seed during class initialization to the SHA-256 hash of the class
+        # name for purposes of reproducibility.
+        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
+            self._solver, pybamm.CasadiAlgebraicSolver
+        ):
+            np.random.seed(
+                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
+                % (2**32)
+            )
 
         # Initialize empty built states
         self._model_with_set_params = None
