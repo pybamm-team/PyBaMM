@@ -135,7 +135,7 @@ class Simulation:
         self.quick_plot = None
 
         # Initialise instances of Simulation class with the same random seed
-        self.set_random_seed()
+        self._set_random_seed()
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -160,10 +160,10 @@ class Simulation:
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
 
-    # If the solver being used is CasadiSolver or its variant, set a fixed
+    # If the solver being used is CasadiSolver or its variants, set a fixed
     # random seed during class initialization to the SHA-256 hash of the class
     # name for purposes of reproducibility.
-    def set_random_seed(self):
+    def _set_random_seed(self):
         if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
             self._solver, pybamm.CasadiAlgebraicSolver
         ):
