@@ -100,9 +100,9 @@ On the other hand... We _do_ want to compare several tools, to generate document
 
 Only 'core pybamm' is installed by default. The others have to be specified explicitly when running the installation command.
 
-### Matplotlib
+### Managing Optional Dependencies and Their Imports
 
-We use Matplotlib in PyBaMM, but with two caveats:
+PyBaMM utilizes optional dependencies to allow users to choose which additional libraries they want to use. Managing these optional dependencies and their imports is essential to provide flexibility to PyBaMM users.
 
 First, Matplotlib should only be used in plotting methods, and these should _never_ be called by other PyBaMM methods. So users who don't like Matplotlib will not be forced to use it in any way. Use in notebooks is OK and encouraged.
 
