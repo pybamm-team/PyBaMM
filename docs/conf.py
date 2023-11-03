@@ -154,6 +154,7 @@ html_theme_options = {
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     # add Algolia to the persistent navbar, this removes the default search icon
     "navbar_persistent": "algolia-searchbox",
+    "navigation_with_keys": False,
     "use_edit_page_button": True,
     "analytics": {
         "plausible_analytics_domain": "docs.pybamm.org",
