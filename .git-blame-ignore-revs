@@ -4,3 +4,5 @@
 a63e49ece0f9336d1f5c2562f7459e555c6e6693
 # activated standard pre-commits - https://github.com/pybamm-team/PyBaMM/pull/3192
 5273214b585c5a4286609aed40e0b092d0e05f42
+# activated standard pre-commits for ruff-format - https://github.com/pybamm-team/PyBaMM/pull/3492
+948030c5eddcae78e5faf2401e16be3080af30fb
