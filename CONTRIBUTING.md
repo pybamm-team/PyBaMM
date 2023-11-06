@@ -54,7 +54,7 @@ You now have everything you need to start making changes!
 10. [Test your code!](#testing)
 11. PyBaMM has online documentation at http://docs.pybamm.org/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
-13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
+13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM&#39;s GitHub page](https://github.com/pybamm-team/PyBaMM).
 14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
@@ -104,17 +104,25 @@ Only 'core pybamm' is installed by default. The others have to be specified expl
 
 PyBaMM utilizes optional dependencies to allow users to choose which additional libraries they want to use. Managing these optional dependencies and their imports is essential to provide flexibility to PyBaMM users.
 
-First, Matplotlib should only be used in plotting methods, and these should _never_ be called by other PyBaMM methods. So users who don't like Matplotlib will not be forced to use it in any way. Use in notebooks is OK and encouraged.
+PyBaMM provides a utility function `have_optional_dependency`, to check for the availability of optional dependencies within methods. This function can be used to conditionally import optional dependencies only if they are available. Here's how to use it:
 
-Second, Matplotlib should never be imported at the module level, but always inside methods. For example:
+Optional Dependencies should never be imported at the module level, but always inside methods. For example:
 
 ```
-def plot_great_things(self, x, y, z):
-    import matplotlib.pyplot as pl
+def use_pybtex(x,y,z):
+    pybtex = have_optional_dependency("pybtex")
     ...
 ```
 
-This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) configure Matplotlib's back-end in their scripts, which _must_ be done before e.g. `pyplot` is first imported.
+While importing a specific attribute instead of whole module:
+
+```
+def use_parse_file(x,y,z):
+    parse_file = have_optional_dependency("pybtex.database","parse_file")
+    ...
+```
+
+This allows people to (1) use PyBaMM without importing Optional dependency by default and (2) configure module dependent functionality in their scripts, which _must_ be done before e.g. `print_citations` method is first imported.
 
 ## Testing
 
@@ -266,7 +274,6 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
-
    2. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
 
       ```python
@@ -276,7 +283,6 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-
    3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
 
       ```python
@@ -284,11 +290,8 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc.
-
 3. To isolate whether a bug is in a model, its Jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
-
 4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
-
 5. To get more information about what is going on under the hood, and hence understand what is causing the bug, you can set the [logging](https://realpython.com/python-logging/) level to `DEBUG` by adding the following line to your test or script:
 
    ```python3
