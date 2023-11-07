@@ -66,19 +66,14 @@ jobs:
           sudo apt install gfortran gcc libopenblas-dev graphviz pandoc
           sudo apt install texlive-full
 
-      # Added fixes to homebrew installs:
-      # rm -f /usr/local/bin/2to3
-      # (see https://github.com/actions/virtual-environments/issues/2322)
+      # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install MacOS system dependencies
         if: matrix.os == 'macos-latest'
-        run: |
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
+        run:
           brew update
           brew install graphviz
           brew install openblas
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
