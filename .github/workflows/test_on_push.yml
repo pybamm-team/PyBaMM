@@ -222,8 +222,9 @@ jobs:
         run: |
           brew analytics off
           brew update
-          brew install graphviz openblas
+          brew install graphviz
           brew reinstall gcc
+          brew reinstall openblas
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'

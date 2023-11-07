@@ -72,7 +72,7 @@ jobs:
         run:
           brew update
           brew install graphviz
-          brew install openblas
+          brew reinstall openblas
           brew reinstall gcc
 
       - name: Install Windows system dependencies
