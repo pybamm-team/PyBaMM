@@ -390,7 +390,7 @@ class TestMesh(TestCase):
         # positive tab should be "left"
         self.assertEqual(mesh["current collector"].tabs["positive tab"], "left")
 
-    def test_to_from_json(self):
+    def test_to_json(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
         )

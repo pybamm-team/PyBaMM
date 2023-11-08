@@ -326,7 +326,7 @@ class TestInterpolant(TestCase):
 
         self.assertEqual(interp, interp.new_copy())
 
-    def test_to_json(self):
+    def test_to_from_json(self):
         x = np.linspace(0, 1, 10)
         y = pybamm.StateVector(slice(0, 2))
         interp = pybamm.Interpolant(x, 2 * x, y)
@@ -370,6 +370,20 @@ class TestInterpolant(TestCase):
         expected_json["children"] = [y]
         # check correct re-creation
         self.assertEqual(pybamm.Interpolant._from_json(expected_json), interp)
+
+        # test to_from_json for 2d x & y
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.01))
+        xx, yy = np.meshgrid(x[0], x[1], indexing="ij")
+        z = np.sin(xx**2 + yy**2)
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        # linear
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
+
+        interp2d_json = interp.to_json()
+        interp2d_json["children"] = (var1, var2)
+
+        self.assertEqual(pybamm.Interpolant._from_json(interp2d_json), interp)
 
 
 if __name__ == "__main__":
