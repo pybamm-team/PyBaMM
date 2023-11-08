@@ -88,6 +88,10 @@ class TestUtil(TestCase):
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
 
+    def test_have_optional_dependency(self):
+        with self.assertRaisesRegex(ImportError,"Optional dependency pybtex is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+            pybamm.print_citations()
+
 
 class TestSearch(TestCase):
     def test_url_gets_to_stdout(self):
