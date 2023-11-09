@@ -89,7 +89,8 @@ class TestUtil(TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
     def test_have_optional_dependency(self):
-        with self.assertRaisesRegex(ImportError,"Optional dependency pybtex is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex.database is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+            sys.modules['pybtex'] = None
             pybamm.print_citations()
 
 
