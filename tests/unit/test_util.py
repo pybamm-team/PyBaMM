@@ -11,7 +11,8 @@ import unittest
 from unittest.mock import patch
 from io import StringIO
 
-
+def test_function(arg):
+    return arg + arg
 class TestUtil(TestCase):
     """
     Test the functionality in util.py
@@ -89,9 +90,21 @@ class TestUtil(TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
     def test_have_optional_dependency(self):
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex.database is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
             sys.modules['pybtex'] = None
             pybamm.print_citations()
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency tqdm is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+            sys.modules['tqdm'] = None
+            model = pybamm.BaseModel()
+            v = pybamm.Variable("v")
+            model.rhs = {v: -v}
+            model.initial_conditions = {v: 1}
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 1])
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency autograd is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+            sys.modules['autograd'] = None
+            a = pybamm.StateVector(slice(0, 1))
+            pybamm.Function(test_function, a)
 
 
 class TestSearch(TestCase):
