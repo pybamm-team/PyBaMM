@@ -367,7 +367,7 @@ class Gradient(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy_Gradient = have_optional_dependency("sympy.vector.operators","Gradient")
+        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
         return sympy_Gradient(child)
 
 
@@ -403,7 +403,7 @@ class Divergence(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy_Divergence = have_optional_dependency("sympy.vector.operators","Divergence")
+        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
         return sympy_Divergence(child)
 
 

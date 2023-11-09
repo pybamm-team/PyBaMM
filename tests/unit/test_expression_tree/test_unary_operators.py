@@ -613,8 +613,8 @@ class TestUnaryOperators(TestCase):
     def test_to_equation(self):
 
         sympy = have_optional_dependency("sympy")
-        sympy_Divergence = have_optional_dependency("sympy.vector.operators","Divergence")
-        sympy_Gradient = have_optional_dependency("sympy.vector.operators","Gradient")
+        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
+        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
 
         a = pybamm.Symbol("a", domain="negative particle")
         b = pybamm.Symbol("b", domain="current collector")

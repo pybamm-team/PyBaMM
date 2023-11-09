@@ -106,7 +106,7 @@ PyBaMM utilizes optional dependencies to allow users to choose which additional 
 
 PyBaMM provides a utility function `have_optional_dependency`, to check for the availability of optional dependencies within methods. This function can be used to conditionally import optional dependencies only if they are available. Here's how to use it:
 
-Optional Dependencies should never be imported at the module level, but always inside methods. For example:
+Optional dependencies should never be imported at the module level, but always inside methods. For example:
 
 ```
 def use_pybtex(x,y,z):
@@ -114,15 +114,15 @@ def use_pybtex(x,y,z):
     ...
 ```
 
-While importing a specific attribute instead of whole module:
+While importing a specific module instead of an entire package/library:
 
-```
+```python
 def use_parse_file(x,y,z):
     parse_file = have_optional_dependency("pybtex.database","parse_file")
     ...
 ```
 
-This allows people to (1) use PyBaMM without importing Optional dependency by default and (2) configure module dependent functionality in their scripts, which _must_ be done before e.g. `print_citations` method is first imported.
+This allows people to (1) use PyBaMM without importing optional dependencies by default and (2) configure module-dependent functionalities in their scripts, which _must_ be done before e.g. `print_citations` method is first imported.
 
 ## Testing
 
