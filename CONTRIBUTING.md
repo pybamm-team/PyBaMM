@@ -117,8 +117,8 @@ def use_pybtex(x,y,z):
 While importing a specific module instead of an entire package/library:
 
 ```python
-def use_parse_file(x,y,z):
-    parse_file = have_optional_dependency("pybtex.database","parse_file")
+def use_parse_file(x, y, z):
+    parse_file = have_optional_dependency("pybtex.database", "parse_file")
     ...
 ```
 
