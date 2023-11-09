@@ -91,6 +91,7 @@ class TestUtil(TestCase):
 
     def test_have_optional_dependency(self):
         with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+            pybtex = sys.modules['pybtex']
             sys.modules['pybtex'] = None
             pybamm.print_citations()
         with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency tqdm is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
@@ -102,7 +103,8 @@ class TestUtil(TestCase):
             sim = pybamm.Simulation(model)
             sim.solve([0, 1])
 
-        sys.modules['pybtex'] = pybamm.util.have_optional_dependency("pybtex")
+        sys.modules['pybtex'] = pybtex
+        pybamm.util.have_optional_dependency("pybtex")
         pybamm.print_citations()
 
 
