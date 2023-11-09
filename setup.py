@@ -241,7 +241,7 @@ setup(
             "pybtex>=0.24.0",
         ],
         "latexify": [
-            "sympy>=1.8",
+            "sympy>=1.12",
         ],
         "bpx": [
             "bpx",
