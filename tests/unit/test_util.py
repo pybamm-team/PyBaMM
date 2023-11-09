@@ -14,6 +14,8 @@ from tempfile import TemporaryDirectory
 
 def test_function(arg):
     return arg + arg
+
+anytree = sys.modules['anytree']
 class TestUtil(TestCase):
     """
     Test the functionality in util.py
@@ -31,6 +33,7 @@ class TestUtil(TestCase):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
     def test_is_constant_and_can_evaluate(self):
+        sys.modules['anytree'] = anytree
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
         symbol = pybamm.StateVector(slice(0, 1))
