@@ -276,7 +276,7 @@ setup(
             "scikit-fem>=0.2.0",
             "imageio>=2.9.0",
             "pybtex>=0.24.0",
-            "sympy>=1.8",
+            "sympy>=1.12",
             "bpx",
             "tqdm",
             "matplotlib>=2.0",
