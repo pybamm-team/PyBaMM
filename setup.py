@@ -203,9 +203,9 @@ setup(
     ],
     # List of dependencies
     install_requires=[
-        "numpy",
-        "scipy",
-        "casadi",
+        "numpy>=1.24.4",
+        "scipy>=1.10.1",
+        "casadi>=3.6.3",
         "xarray",
     ],
     extras_require={
