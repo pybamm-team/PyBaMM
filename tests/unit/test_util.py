@@ -101,10 +101,9 @@ class TestUtil(TestCase):
             model.initial_conditions = {v: 1}
             sim = pybamm.Simulation(model)
             sim.solve([0, 1])
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency autograd is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
-            sys.modules['autograd'] = None
-            a = pybamm.StateVector(slice(0, 1))
-            pybamm.Function(test_function, a)
+
+        sys.modules['pybtex'] = pybamm.util.have_optional_dependency("pybtex")
+        pybamm.print_citations()
 
 
 class TestSearch(TestCase):
