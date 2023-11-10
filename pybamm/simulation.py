@@ -777,7 +777,7 @@ class Simulation:
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if op_conds_unproc.end_time:
+                    if getattr(op_conds_unproc, "end_time", None):
                         dt = min(
                             op_conds.duration,
                             (
@@ -834,7 +834,7 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds_unproc.next_start_time is not None:
+                    if getattr(op_conds_unproc, "next_start_time", None) is not None:
                         rest_time = (
                             op_conds_unproc.next_start_time
                             - (
