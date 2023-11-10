@@ -348,6 +348,7 @@ def install_jax(arguments=None):  # pragma: no cover
 
 # https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
 def have_optional_dependency(module_name, attribute=None):
+    err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
     try:
         # Attempt to import the specified module
         module = importlib.import_module(module_name)
@@ -359,11 +360,11 @@ def have_optional_dependency(module_name, attribute=None):
                 return imported_attribute  # Return the imported attribute
             else:
                 # Raise an ModuleNotFoundError if the attribute is not available
-                raise ModuleNotFoundError(f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details.")
+                raise ModuleNotFoundError(err_msg)
         else:
             # Return the entire module if no attribute is specified
             return module
 
     except ModuleNotFoundError:
         # Raise an ModuleNotFoundError if the module or attribute is not available
-        raise ModuleNotFoundError(f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details.")
+        raise ModuleNotFoundError(err_msg)

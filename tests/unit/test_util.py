@@ -118,6 +118,9 @@ class TestUtil(TestCase):
         pybamm.util.have_optional_dependency("pybtex")
         pybamm.print_citations()
 
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency flask is not available."):
+            pybamm.util.have_optional_dependency("flask","Flask")
+
 
 class TestSearch(TestCase):
     def test_url_gets_to_stdout(self):
