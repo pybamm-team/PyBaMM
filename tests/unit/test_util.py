@@ -12,10 +12,8 @@ from unittest.mock import patch
 from io import StringIO
 from tempfile import TemporaryDirectory
 
-def test_function(arg):
-    return arg + arg
-
 anytree = sys.modules['anytree']
+
 class TestUtil(TestCase):
     """
     Test the functionality in util.py
@@ -94,11 +92,11 @@ class TestUtil(TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
     def test_have_optional_dependency(self):
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex is not available."):
             pybtex = sys.modules['pybtex']
             sys.modules['pybtex'] = None
             pybamm.print_citations()
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency tqdm is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency tqdm is not available."):
             sys.modules['tqdm'] = None
             model = pybamm.BaseModel()
             v = pybamm.Variable("v")
@@ -106,7 +104,7 @@ class TestUtil(TestCase):
             model.initial_conditions = {v: 1}
             sim = pybamm.Simulation(model)
             sim.solve([0, 1])
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency anytree is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."):
+        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency anytree is not available."):
             with TemporaryDirectory() as dir_name:
                 sys.modules['anytree'] = None
                 test_stub = os.path.join(dir_name, "test_visualize")
