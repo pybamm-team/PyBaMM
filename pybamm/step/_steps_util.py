@@ -70,6 +70,7 @@ class _Step:
         description=None,
     ):
         self.type = typ
+        self.raw_termination = termination
 
         # Record all the args for repr and hash
         self.repr_args = f"{typ}, {value}"
@@ -170,6 +171,19 @@ class _Step:
         used for hashing.
         """
         return f"_Step({self.hash_args})"
+
+    def copy(self):
+        return _Step(
+            typ=self.type,
+            value=self.value,
+            duration=self.duration,
+            termination=self.raw_termination,
+            period=self.period,
+            temperature=self.temperature,
+            tags=self.tags,
+            start_time=self.start_time,
+            description=self.description,
+        )
 
     def to_dict(self):
         """
