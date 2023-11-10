@@ -169,8 +169,10 @@ class Simulation:
         # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
         for op_conds in self.experiment.operating_conditions_steps:
+            print(op_conds.type)
             if op_conds.type == "C-rate":
                 op_conds.type = "current"
+                print("    ", op_conds.type)
                 op_conds.value = op_conds.value * capacity
 
             # Update terminations
@@ -207,9 +209,12 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         self.experiment_unique_steps_to_model = {}
-        for op_number, op in enumerate(self.experiment.unique_steps):
+        for op_number, op in enumerate(set(self.experiment.operating_conditions_steps)):
             new_model = self._model.new_copy()
             new_parameter_values = self._parameter_values.copy()
+
+            if op.type == "C-rate":
+                print(op)
 
             if op.type != "current":
                 # Voltage or power control
@@ -769,14 +774,19 @@ class Simulation:
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions_steps[idx]
 
+                    # Hacky patch to allow correct processing of end_time and next_starting time
+                    # For efficiency purposes, op_conds treats identical steps as the same object
+                    # regardless of the initial time. Should be refactored as part of #3176
+                    op_conds_unproc = self.experiment.operating_conditions_steps_unprocessed[idx]
+
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if op_conds.end_time:
+                    if op_conds_unproc.end_time:
                         dt = min(
                             op_conds.duration,
                             (
-                                op_conds.end_time
+                                op_conds_unproc.end_time
                                 - (
                                     initial_start_time
                                     + timedelta(seconds=float(start_time))
@@ -829,9 +839,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds.next_start_time is not None:
+                    if op_conds_unproc.next_start_time is not None:
                         rest_time = (
-                            op_conds.next_start_time
+                            op_conds_unproc.next_start_time
                             - (
                                 initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
