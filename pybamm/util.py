@@ -360,7 +360,7 @@ def have_optional_dependency(module_name, attribute=None):
                 return imported_attribute  # Return the imported attribute
             else:
                 # Raise an ModuleNotFoundError if the attribute is not available
-                raise ModuleNotFoundError(err_msg)
+                raise ModuleNotFoundError(err_msg)      # pragma: no cover
         else:
             # Return the entire module if no attribute is specified
             return module

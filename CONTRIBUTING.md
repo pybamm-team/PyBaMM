@@ -124,6 +124,29 @@ def use_parse_file(x, y, z):
 
 This allows people to (1) use PyBaMM without importing optional dependencies by default and (2) configure module-dependent functionalities in their scripts, which _must_ be done before e.g. `print_citations` method is first imported.
 
+**Writing Tests for Optional Dependencies**
+
+Whenever a new optional dependency is added for optional functionality, it is recommended to write a corresponding unit test in _test_util.py_. This ensures that an error is raised upon the absence of said dependency. Here's an example:
+
+```python
+from tests import TestCase
+import pybamm
+
+
+class TestUtil(TestCase):
+    def test_optional_dependency(self):
+        # Test that an error is raised when pybtex is not available
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "Optional dependency pybtex is not available"
+        ):
+            sys.modules["pybtex"] = None
+            pybamm.function_using_pybtex(x, y, z)
+
+        # Test that the function works when pybtex is available
+        sys.modules["pybtex"] = pybamm.util.have_optional_dependency("pybtex")
+        pybamm.function_using_pybtex(x, y, z)
+```
+
 ## Testing
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
