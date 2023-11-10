@@ -6,7 +6,7 @@ import re
 from pybamm.util import have_optional_dependency
 
 
-LatexPrinter = have_optional_dependency("sympy.printing.latex","LatexPrinter")
+LatexPrinter = have_optional_dependency("sympy.printing.latex", "LatexPrinter")
 class CustomPrint(LatexPrinter):
     """Override SymPy methods to match PyBaMM's requirements"""
 
@@ -22,5 +22,5 @@ class CustomPrint(LatexPrinter):
 
 
 def custom_print_func(expr, **settings):
-    have_optional_dependency("sympy.printing.latex","LatexPrinter")
+    have_optional_dependency("sympy.printing.latex", "LatexPrinter")
     return CustomPrint().doprint(expr)

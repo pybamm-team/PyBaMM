@@ -459,7 +459,7 @@ class Symbol:
             filename to output, must end in ".png"
         """
 
-        DotExporter = have_optional_dependency("anytree.exporter","DotExporter")
+        DotExporter = have_optional_dependency("anytree.exporter", "DotExporter")
         # check that filename ends in .png.
         if filename[-4:] != ".png":
             raise ValueError("filename should end in .png")

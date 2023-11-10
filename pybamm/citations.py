@@ -74,7 +74,7 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        parse_file = have_optional_dependency("pybtex.database","parse_file")
+        parse_file = have_optional_dependency("pybtex.database", "parse_file")
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
         bib_data = parse_file(citations_file, bib_format="bibtex")
         for key, entry in bib_data.entries.items():
@@ -85,7 +85,7 @@ class Citations:
         previous entry is overwritten
         """
 
-        Entry = have_optional_dependency("pybtex.database","Entry")
+        Entry = have_optional_dependency("pybtex.database", "Entry")
         # Check input types are correct
         if not isinstance(key, str) or not isinstance(entry, Entry):
             raise TypeError()
@@ -151,8 +151,8 @@ class Citations:
         key: str
             A BibTeX formatted citation
         """
-        PybtexError = have_optional_dependency("pybtex.scanner","PybtexError")
-        parse_string = have_optional_dependency("pybtex.database","parse_string")
+        PybtexError = have_optional_dependency("pybtex.scanner", "PybtexError")
+        parse_string = have_optional_dependency("pybtex.database", "parse_string")
         try:
             # Parse string as a bibtex citation, and check that a citation was found
             bib_data = parse_string(key, bib_format="bibtex")
