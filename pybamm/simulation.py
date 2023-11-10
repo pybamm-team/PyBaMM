@@ -169,10 +169,8 @@ class Simulation:
         # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
         for op_conds in self.experiment.operating_conditions_steps:
-            print(op_conds.type)
             if op_conds.type == "C-rate":
                 op_conds.type = "current"
-                print("    ", op_conds.type)
                 op_conds.value = op_conds.value * capacity
 
             # Update terminations
@@ -209,12 +207,9 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         self.experiment_unique_steps_to_model = {}
-        for op_number, op in enumerate(set(self.experiment.operating_conditions_steps)):
+        for op_number, op in enumerate(self.experiment.unique_steps):
             new_model = self._model.new_copy()
             new_parameter_values = self._parameter_values.copy()
-
-            if op.type == "C-rate":
-                print(op)
 
             if op.type != "current":
                 # Voltage or power control
