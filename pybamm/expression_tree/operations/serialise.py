@@ -238,10 +238,7 @@ class Serialise:
     def _get_pybamm_class(self, snippet: dict):
         """Find a pybamm class to initialise from object path"""
         parts = snippet["py/object"].split(".")
-        try:
-            module = importlib.import_module(".".join(parts[:-1]))
-        except Exception as ex:
-            print(ex)
+        module = importlib.import_module(".".join(parts[:-1]))
 
         class_ = getattr(module, parts[-1])
 

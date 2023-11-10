@@ -305,7 +305,7 @@ class TestSerialise(TestCase):
 
         self.assertIsInstance(mesh_class, pybamm.Mesh)
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(AttributeError):
             unrecognised_symbol = {
                 "py/id": mock.ANY,
                 "py/object": "pybamm.expression_tree.scalar.Scale",
@@ -442,6 +442,27 @@ class TestSerialise(TestCase):
         new_dict = Serialise()._reconstruct_pybamm_dict(ser_dict)
 
         self.assertEqual(new_dict, test_dict)
+
+        # test recreation if not passed a dict
+        test_list = ["left", "right"]
+        new_list = Serialise()._reconstruct_pybamm_dict(test_list)
+
+        self.assertEqual(test_list, new_list)
+
+    def test_convert_options(self):
+        options_dict = {
+            "current collector": "uniform",
+            "particle phases": ["2", "1"],
+            "open-circuit potential": [["single", "current sigmoid"], "single"],
+        }
+
+        options_result = {
+            "current collector": "uniform",
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+        }
+
+        self.assertEqual(Serialise()._convert_options(options_dict), options_result)
 
     def test_save_load_model(self):
         model = pybamm.lithium_ion.SPM(name="test_spm")

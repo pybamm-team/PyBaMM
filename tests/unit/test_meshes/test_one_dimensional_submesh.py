@@ -44,6 +44,10 @@ class TestSubMesh1D(TestCase):
 
         self.assertEqual(mesh_json, expected_json)
 
+        # check tabs work
+        new_mesh = pybamm.Uniform1DSubMesh._from_json(mesh_json)
+        self.assertEqual(mesh.tabs, new_mesh.tabs)
+
 
 class TestUniform1DSubMesh(TestCase):
     def test_exceptions(self):
