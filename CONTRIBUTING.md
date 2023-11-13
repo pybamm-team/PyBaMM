@@ -54,7 +54,7 @@ You now have everything you need to start making changes!
 10. [Test your code!](#testing)
 11. PyBaMM has online documentation at http://docs.pybamm.org/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
-13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM&#39;s GitHub page](https://github.com/pybamm-team/PyBaMM).
+13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
 14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
@@ -126,7 +126,7 @@ This allows people to (1) use PyBaMM without importing optional dependencies by 
 
 **Writing Tests for Optional Dependencies**
 
-Whenever a new optional dependency is added for optional functionality, it is recommended to write a corresponding unit test in _test_util.py_. This ensures that an error is raised upon the absence of said dependency. Here's an example:
+Whenever a new optional dependency is added for optional functionality, it is recommended to write a corresponding unit test in `test_util.py`. This ensures that an error is raised upon the absence of said dependency. Here's an example:
 
 ```python
 from tests import TestCase
