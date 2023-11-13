@@ -47,7 +47,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    plt = have_optional_dependency("matplotlib", "pyplot")
+    plt = have_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 

@@ -7,8 +7,8 @@ from pybamm.util import have_optional_dependency
 
 
 def custom_latex_printer(expr, **settings):
-    latex = have_optional_dependency("sympy","latex")
-    Derivative = have_optional_dependency("sympy","Derivative")
+    latex = have_optional_dependency("sympy", "latex")
+    Derivative = have_optional_dependency("sympy", "Derivative")
     if isinstance(expr, Derivative) and getattr(expr, "force_partial", False):
         latex_str = latex(expr, **settings)
         var1, var2 = re.findall(r"^\\frac{(\w+)}{(\w+) .+", latex_str)[0]
