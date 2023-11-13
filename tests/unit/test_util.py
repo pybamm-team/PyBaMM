@@ -92,11 +92,11 @@ class TestUtil(TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
     def test_have_optional_dependency(self):
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency pybtex is not available."):
+        with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency pybtex is not available."):
             pybtex = sys.modules['pybtex']
             sys.modules['pybtex'] = None
             pybamm.print_citations()
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency tqdm is not available."):
+        with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency tqdm is not available."):
             sys.modules['tqdm'] = None
             model = pybamm.BaseModel()
             v = pybamm.Variable("v")
@@ -104,7 +104,7 @@ class TestUtil(TestCase):
             model.initial_conditions = {v: 1}
             sim = pybamm.Simulation(model)
             sim.solve([0, 1])
-        with self.assertRaisesRegex(ModuleNotFoundError,"Optional dependency anytree is not available."):
+        with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency anytree is not available."):
             with TemporaryDirectory() as dir_name:
                 sys.modules['anytree'] = None
                 test_stub = os.path.join(dir_name, "test_visualize")

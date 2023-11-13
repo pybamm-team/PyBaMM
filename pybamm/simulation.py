@@ -532,10 +532,6 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
-        try:
-            tqdm = have_optional_dependency("tqdm")
-        except ModuleNotFoundError:
-            tqdm = False
         # Setup
         if solver is None:
             solver = self._solver
@@ -730,18 +726,18 @@ class Simulation:
                         # Update _solution
                         self._solution = current_solution
 
-            if tqdm:
-                iterator = tqdm.tqdm(
+            # check if a user has tqdm installed
+            if showprogress:
+                tqdm = have_optional_dependency("tqdm")
+                cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
-                    disable=(not showprogress),
                     desc="Cycling",
                 )
             else:
-                iterator = self.experiment.cycle_lengths
+                cycle_lengths = self.experiment.cycle_lengths
 
             for cycle_num, cycle_length in enumerate(
-                # tqdm is the progress bar.
-                iterator,
+                cycle_lengths,
                 start=1,
             ):
                 logs["cycle number"] = (
