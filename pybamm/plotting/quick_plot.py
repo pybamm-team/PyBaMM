@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
+from pybamm.util import have_optional_dependency
 
 
 class LoopList(list):
@@ -46,7 +47,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    import matplotlib.pyplot as plt
+    plt = have_optional_dependency("matplotlib", "pyplot")
 
     plt.close("all")
 
@@ -469,9 +470,10 @@ class QuickPlot(object):
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
-        from matplotlib import cm, colors
+        plt = have_optional_dependency("matplotlib.pyplot")
+        gridspec = have_optional_dependency("matplotlib.gridspec")
+        cm = have_optional_dependency("matplotlib", "cm")
+        colors = have_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -668,8 +670,8 @@ class QuickPlot(object):
                 continuous_update=False,
             )
         else:
-            import matplotlib.pyplot as plt
-            from matplotlib.widgets import Slider
+            plt = have_optional_dependency("matplotlib.pyplot")
+            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -773,8 +775,8 @@ class QuickPlot(object):
             Name of the generated GIF file.
 
         """
-        import imageio.v2 as imageio
-        import matplotlib.pyplot as plt
+        imageio = have_optional_dependency("imageio.v2")
+        plt = have_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
