@@ -51,6 +51,12 @@ class ThermalParameters(BaseParameters):
             },
         )
 
+    def T_amb_av(self, t):
+        """YZ-averaged ambient temperature [K]"""
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        return pybamm.yz_average(self.T_amb(y, z, t))
+
     def h_edge(self, y, z):
         """Cell edge heat transfer coefficient [W.m-2.K-1]"""
         inputs = {
