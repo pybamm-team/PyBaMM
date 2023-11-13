@@ -1,6 +1,6 @@
 # Release workflow
 
-This file contains the workflow required to make a `PyBaMM` release on GitHub and PyPI by the maintainers.
+This file contains the workflow required to make a `PyBaMM` release on GitHub, PyPI, and conda-forge by the maintainers.
 
 ## rc0 releases (automated)
 
@@ -75,5 +75,7 @@ Some other essential things to check throughout the release process -
 - As the release workflow is initiated by the `release` event, it's important to note that the default `GITHUB_REF` used by `actions/checkout` during the checkout process will correspond to the tag created during the release process. Consequently, the workflows will consistently build PyBaMM based on the commit associated with this tag. Should new commits be introduced to the `vYY.MM` branch, such as those addressing build issues, it becomes necessary to manually update this tag to point to the most recent commit -
   ```
   git tag -f <tag_name> <commit_hash>
-  git push origin <tag_name>  # can only be carried out by the maintainers
+  git push -f <pybamm-team/PyBaMM_remote_name> <tag_name>  # can only be carried out by the maintainers
   ```
+- If changes are made to the API, console scripts, entry points, new optional dependencies are added, support for major Python versions is dropped or added, or core project information and metadata are modified at the time of the release, make sure to update the `meta.yaml` file in the `recipe/` folder of the [conda-forge/pybamm-feedstock](https://github.com/conda-forge/pybamm-feedstock) repository accordingly by following the instructions in the [conda-forge documentation](https://conda-forge.org/docs/maintainer/updating_pkgs.html#updating-the-feedstock-repository) and re-rendering the recipe
+- The conda-forge release workflow will automatically be triggered following a stable PyPI release, and the aforementioned updates should be carried out directly in the main repository by pushing changes to the automated PR created by the conda-forge-bot. A manual PR can also be created if the updates are not included in the automated PR for some reason. This manual PR **must** bump the build number in `meta.yaml` and **must** be from a personal fork of the repository.

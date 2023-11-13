@@ -15,6 +15,7 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
     lico2_diffusivity_Dualfoil1998,
 )
+from pybamm.expression_tree.exceptions import OptionError
 import casadi
 
 
@@ -118,6 +119,56 @@ class TestParameterValues(TestCase):
         y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
+    def test_set_initial_stoichiometry_half_cell(self):
+        param = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param = param.set_initial_stoichiometry_half_cell(
+            0.4, inplace=False, options={"working electrode": "positive"}
+        )
+        param_0 = param.set_initial_stoichiometry_half_cell(
+            0, inplace=False, options={"working electrode": "positive"}
+        )
+        param_100 = param.set_initial_stoichiometry_half_cell(
+            1, inplace=False, options={"working electrode": "positive"}
+        )
+
+        y = param["Initial concentration in positive electrode [mol.m-3]"]
+        y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
+        y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
+        self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
+        # inplace for 100% coverage
+        param_t = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param_t.set_initial_stoichiometry_half_cell(
+            0.4, inplace=True, options={"working electrode": "positive"}
+        )
+        y = param_t["Initial concentration in positive electrode [mol.m-3]"]
+        param_0 = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param_0.set_initial_stoichiometry_half_cell(
+            0, inplace=True, options={"working electrode": "positive"}
+        )
+        y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
+        param_100 = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param_100.set_initial_stoichiometry_half_cell(
+            1, inplace=True, options={"working electrode": "positive"}
+        )
+        y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
+        self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
+        # test error
+        param = pybamm.ParameterValues("Chen2020")
+        with self.assertRaisesRegex(OptionError, "working electrode"):
+            param.set_initial_stoichiometry_half_cell(
+                0.1, options={"working electrode": "negative"}
+            )
 
     def test_set_initial_ocps(self):
         options = {
@@ -976,6 +1027,19 @@ class TestParameterValues(TestCase):
         y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
+
+    def test_exchange_current_density_plating(self):
+        parameter_values = pybamm.ParameterValues(
+            {"Exchange-current density for plating [A.m-2]": 1}
+        )
+        param = pybamm.Parameter(
+            "Exchange-current density for lithium metal electrode [A.m-2]"
+        )
+        with self.assertRaisesRegex(
+            KeyError,
+            "referring to the reaction at the surface of a lithium metal electrode",
+        ):
+            parameter_values.evaluate(param)
 
 
 if __name__ == "__main__":
