@@ -6,7 +6,7 @@ from .base_transport_efficiency import BaseModel
 
 
 class TortuosityFactor(BaseModel):
-    """Submodel for transport_efficiency
+    """Submodel for user supplied tortusoity factor transport_efficiency
 
     Parameters
     ----------

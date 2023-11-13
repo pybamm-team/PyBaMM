@@ -6,8 +6,10 @@ from .base_transport_efficiency import BaseModel
 
 
 class OrderedPacking(BaseModel):
-    """Submodel for transport_efficiency
-
+    """Submodel for Ordered Packing transport_efficiency
+    KA Akanni, JW Evans, and IS Abramson. Effective transport coefficients in
+    heterogeneous media. Chemical Engineering Science, 42(8):1945–1954, 1987.
+    
     Parameters
     ----------
     param : parameter class
