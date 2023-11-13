@@ -17,5 +17,6 @@ class CustomPrint(LatexPrinter):
 
         return eqn
 
+
 def custom_print_func(expr, **settings):
     return CustomPrint().doprint(expr)
