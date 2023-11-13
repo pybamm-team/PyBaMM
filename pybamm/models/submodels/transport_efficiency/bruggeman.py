@@ -10,7 +10,7 @@ class Bruggeman(BaseModel):
     Von DAG Bruggeman. Berechnung verschiedener physikalischer konstanten von heterogenen
     substanzen. i. dielektrizitätskonstanten und leitfähigkeiten der mischkörper aus
     isotropen substanzen. Annalen der physik, 416(7):636–664, 1935.
-    
+
     Parameters
     ----------
     param : parameter class

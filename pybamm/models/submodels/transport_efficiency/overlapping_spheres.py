@@ -9,7 +9,7 @@ class OverlappingSpheres(BaseModel):
     """Submodel for Overlapping Spheres transport_efficiency
     Harold L Weissberg. Effective diffusion coefficient in porous media.
     Journal of Applied Physics, 34(9):2636–2639, 1963.
-    
+
     Parameters
     ----------
     param : parameter class
