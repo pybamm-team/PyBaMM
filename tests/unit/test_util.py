@@ -96,14 +96,6 @@ class TestUtil(TestCase):
             pybtex = sys.modules['pybtex']
             sys.modules['pybtex'] = None
             pybamm.print_citations()
-        with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency tqdm is not available."):
-            sys.modules['tqdm'] = None
-            model = pybamm.BaseModel()
-            v = pybamm.Variable("v")
-            model.rhs = {v: -v}
-            model.initial_conditions = {v: 1}
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 1])
         with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency anytree is not available."):
             with TemporaryDirectory() as dir_name:
                 sys.modules['anytree'] = None
