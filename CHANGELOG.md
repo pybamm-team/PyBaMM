@@ -4,12 +4,11 @@
 
 - Fixed bug in calculation of theoretical energy that made it very slow ([#3506](https://github.com/pybamm-team/PyBaMM/pull/3506))
 
-# [v23.9rc1](https://github.com/pybamm-team/PyBaMM/tree/v23.9rc0) - 2023-10-31
+# [v23.9rc1](https://github.com/pybamm-team/PyBaMM/tree/v23.9rc0) - 2023-11-15
 
 - Fixed a bug where the JaxSolver would fails when using GPU support with no input parameters ([#3423](https://github.com/pybamm-team/PyBaMM/pull/3423))
 - Make pybamm importable with minimal dependencies ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044), [#3475](https://github.com/pybamm-team/PyBaMM/pull/3475))
 - Fixed a bug where supplying an initial soc did not work with half cell models ([#3456](https://github.com/pybamm-team/PyBaMM/pull/3456))
-
 
 # [v23.9rc0](https://github.com/pybamm-team/PyBaMM/tree/v23.9rc0) - 2023-10-31
 
