@@ -6,7 +6,7 @@ from .base_transport_efficiency import BaseModel
 
 
 class RandomOverlappingCylinders(BaseModel):
-    """Submodel for Random Overlapping Cylinders transport_efficiency, 
+    """Submodel for Random Overlapping Cylinders transport_efficiency,
     :footcite:t:`tomadakis1993transport`, :footcite:t:`shen2007critical`
 
     Parameters
