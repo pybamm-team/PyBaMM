@@ -66,13 +66,11 @@ jobs:
           sudo apt install gfortran gcc libopenblas-dev graphviz pandoc
           sudo apt install texlive-full
 
-      # sometimes gfortran cannot be found, so reinstall gcc just to be sure
-      - name: Install MacOS system dependencies
+      - name: Install macOS system dependencies
         if: matrix.os == 'macos-latest'
         run:
           brew update
-          brew install graphviz
-          brew reinstall openblas
+          brew install graphviz openblas
           brew reinstall gcc
 
       - name: Install Windows system dependencies
