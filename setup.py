@@ -271,17 +271,9 @@ setup(
         ],
         "odes": ["scikits.odes"],
         "all": [
-            "anytree>=2.12.0",
             "autograd>=1.6.2",
-            "pandas>=2.0.3",
             "scikit-fem>=8.1.0",
-            "imageio>=2.32.0",
-            "pybtex>=0.24.0",
-            "sympy>=1.12",
-            "bpx",
-            "tqdm",
-            "matplotlib>=3.7.3",
-            "jupyter",
+            "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]"
         ],
     },
     entry_points={
