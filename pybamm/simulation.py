@@ -8,7 +8,7 @@ import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-import tqdm
+from pybamm.util import have_optional_dependency
 
 
 def is_notebook():
@@ -726,13 +726,18 @@ class Simulation:
                         # Update _solution
                         self._solution = current_solution
 
-            for cycle_num, cycle_length in enumerate(
-                # tqdm is the progress bar.
-                tqdm.tqdm(
+            # check if a user has tqdm installed
+            if showprogress:
+                tqdm = have_optional_dependency("tqdm")
+                cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
-                    disable=(not showprogress),
                     desc="Cycling",
-                ),
+                )
+            else:
+                cycle_lengths = self.experiment.cycle_lengths
+
+            for cycle_num, cycle_length in enumerate(
+                cycle_lengths,
                 start=1,
             ):
                 logs["cycle number"] = (

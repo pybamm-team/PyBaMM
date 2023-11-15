@@ -50,7 +50,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -126,7 +126,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -186,7 +186,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -263,7 +263,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -305,7 +305,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -360,7 +360,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true

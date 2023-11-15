@@ -207,6 +207,7 @@ setup(
         "scipy>=1.9.3",
         "casadi>=3.6.3",
         "xarray",
+        "anytree>=2.4.3",
     ],
     extras_require={
         "docs": [
