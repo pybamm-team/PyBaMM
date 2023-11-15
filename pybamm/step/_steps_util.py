@@ -172,19 +172,6 @@ class _Step:
         """
         return f"_Step({self.hash_args})"
 
-    def copy(self):
-        return _Step(
-            typ=self.type,
-            value=self.value,
-            duration=self.duration,
-            termination=self.raw_termination,
-            period=self.period,
-            temperature=self.temperature,
-            tags=self.tags,
-            start_time=self.start_time,
-            description=self.description,
-        )
-
     def to_dict(self):
         """
         Convert the step to a dictionary.
