@@ -70,7 +70,6 @@ class _Step:
         description=None,
     ):
         self.type = typ
-        self.raw_termination = termination
 
         # Record all the args for repr and hash
         self.repr_args = f"{typ}, {value}"
