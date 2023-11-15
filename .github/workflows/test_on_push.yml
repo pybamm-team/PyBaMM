@@ -75,7 +75,6 @@ jobs:
           NONINTERACTIVE: 1
         run: |
           brew analytics off
-          brew update
           brew install graphviz openblas
 
       - name: Install Windows system dependencies
@@ -212,7 +211,6 @@ jobs:
           NONINTERACTIVE: 1
         run: |
           brew analytics off
-          brew update
           brew install graphviz openblas
 
       - name: Install Windows system dependencies
