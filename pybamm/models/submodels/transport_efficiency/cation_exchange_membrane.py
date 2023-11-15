@@ -6,10 +6,8 @@ from .base_transport_efficiency import BaseModel
 
 
 class CationExchangeMembrane(BaseModel):
-    """Submodel for Cation Exchange Membrane transport_efficiency
-    JS Mackie and P Meares. The diffusion of electrolytes in a cation-exchange resin
-    membrane i. theoretical. Proceedings of the Royal Society of London.
-    Series A. Mathematical and Physical Sciences, 232(1191):498–509, 1955.
+    """Submodel for Cation Exchange Membrane transport_efficiency,
+    :footcite:t:`bruggeman1935berechnung`, :footcite:t:`shen2007critical`
 
     Parameters
     ----------

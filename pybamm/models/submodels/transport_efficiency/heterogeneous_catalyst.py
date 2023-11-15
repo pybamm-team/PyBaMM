@@ -7,8 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class HeterogeneousCatalyst(BaseModel):
     """Submodel for Heterogeneous Catalyst transport_efficiency
-    JW Beeckman. Mathematical description of heterogeneous materials.
-    Chemical engineering science, 45(8):2603–2610, 1990.
+    :footcite:t:`beeckman1990mathematical`, :footcite:t:`shen2007critical`
 
     Parameters
     ----------

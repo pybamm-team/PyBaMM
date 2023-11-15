@@ -6,10 +6,8 @@ from .base_transport_efficiency import BaseModel
 
 
 class Bruggeman(BaseModel):
-    """Submodel for Bruggeman transport_efficiency
-    Von DAG Bruggeman. Berechnung verschiedener physikalischer konstanten von heterogenen
-    substanzen. i. dielektrizitätskonstanten und leitfähigkeiten der mischkörper aus
-    isotropen substanzen. Annalen der physik, 416(7):636–664, 1935.
+    """Submodel for Bruggeman transport_efficiency,
+    :footcite:t:`bruggeman1935berechnung`
 
     Parameters
     ----------

@@ -7,8 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class HyperbolaOfRevolution(BaseModel):
     """Submodel for Hyperbola of revolution transport_efficiency
-    EE Petersen. Diffusion in a pore of varying cross section. AIChE Journal,
-    4(3):343–345, 1958.
+    :footcite:t:`petersen1958diffusion`, :footcite:t:`shen2007critical`
 
     Parameters
     ----------

@@ -6,10 +6,8 @@ from .base_transport_efficiency import BaseModel
 
 
 class RandomOverlappingCylinders(BaseModel):
-    """Submodel for Random Overlapping Cylinders transport_efficiency
-    Manolis M Tomadakis and Stratis V Sotirchos. Transport properties of random
-    arrays of freely overlapping cylinders with various orientation distributions.
-    The Journal of chemical physics, 98(1):616–626, 1993.
+    """Submodel for Random Overlapping Cylinders transport_efficiency, 
+    :footcite:t:`tomadakis1993transport`, :footcite:t:`shen2007critical`
 
     Parameters
     ----------

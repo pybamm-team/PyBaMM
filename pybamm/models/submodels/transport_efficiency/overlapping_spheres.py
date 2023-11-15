@@ -7,8 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class OverlappingSpheres(BaseModel):
     """Submodel for Overlapping Spheres transport_efficiency
-    Harold L Weissberg. Effective diffusion coefficient in porous media.
-    Journal of Applied Physics, 34(9):2636–2639, 1963.
+    :footcite:t:`weissberg1963effective`, :footcite:t:`shen2007critical`
 
     Parameters
     ----------
