@@ -206,7 +206,7 @@ setup(
         "numpy>=1.24.4",
         "scipy>=1.10.1",
         "casadi>=3.6.3",
-        "xarray",
+        "xarray>=23.1.0",
         "anytree>=2.12.0",
     ],
     extras_require={
@@ -263,7 +263,7 @@ setup(
             "nbmake",
         ],
         "pandas": [
-            "pandas",
+            "pandas>=2.0.3",
         ],
         "jax": [
             "jax==0.4.8",
