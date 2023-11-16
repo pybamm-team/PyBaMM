@@ -86,6 +86,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: setup.py
 
       - name: Install standard Python dependencies
         run: |
@@ -143,6 +145,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
+          cache: 'pip'
+          cache-dependency-path: setup.py
 
       - name: Install standard Python dependencies
         run: |
@@ -222,6 +226,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: setup.py
 
       - name: Install standard Python dependencies
         run: |
@@ -280,6 +286,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
+          cache: 'pip'
+          cache-dependency-path: setup.py
 
       - name: Install standard Python dependencies
         run: |
@@ -322,6 +330,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
+          cache: 'pip'
+          cache-dependency-path: setup.py
 
       - name: Install standard Python dependencies
         run: |
@@ -377,6 +387,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
+          cache: 'pip'
+          cache-dependency-path: setup.py
 
       - name: Install standard Python dependencies
         run: |
